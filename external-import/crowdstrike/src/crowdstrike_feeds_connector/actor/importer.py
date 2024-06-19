@@ -115,12 +115,12 @@ class ActorImporter(BaseImporter):
         for actor in actors:
             self._process_actor(actor)
 
-            created_date = actor.created_date
+            created_date = actor["created_date"]
             if created_date is None:
                 self._error(
                     "Missing created date for actor {0} ({1})",
-                    actor.name,
-                    actor.id,
+                    actor["name"],
+                    actor["id"],
                 )
                 continue
 
@@ -139,7 +139,7 @@ class ActorImporter(BaseImporter):
         return latest_created_datetime
 
     def _process_actor(self, actor) -> None:
-        self._info("Processing actor {0} ({1})...", actor.name, actor.id)
+        self._info("Processing actor {0} ({1})...", actor["name"], actor["id"])
 
         actor_bundle = self._create_actor_bundle(actor)
 

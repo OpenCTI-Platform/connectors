@@ -12,6 +12,6 @@ class ActorsAPI(BaseCrowdstrikeClient):
             limit=limit, offset=offset, sort=sort, filter=fql_filter, fields=fields)
 
         self.handle_api_error(response)
-        self.helper.connector_logger.info("hello")
+        self.helper.connector_logger.info("Getting combined actor entities...")
 
         return response["body"]

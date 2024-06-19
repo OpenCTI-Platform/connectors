@@ -180,13 +180,13 @@ def paginate(
                 for error in errors:
                     logger.error("Error: %s (code: %s)", error.message, error.code)
 
-            meta = response.meta
-            if meta.pagination is not None:
-                pagination = meta.pagination
+            meta = response["meta"]
+            if meta["pagination"] is not None:
+                pagination = meta["pagination"]
 
-                _meta_limit = pagination.limit
-                _meta_offset = pagination.offset
-                _meta_total = pagination.total
+                _meta_limit = pagination["limit"]
+                _meta_offset = pagination["offset"]
+                _meta_total = pagination["total"]
 
                 logger.info(
                     "Query pagination info limit: %s, offset: %s, total: %s",
@@ -198,7 +198,7 @@ def paginate(
                 _offset = _offset + _limit
                 _total = _meta_total
 
-            resources = response.resources
+            resources = response["resources"]
             resources_count = len(resources)
 
             logger.info("Query fetched %s resources", resources_count)
@@ -911,7 +911,7 @@ def create_regions_and_countries_from_entities(
     countries = []
 
     for entity in entities:
-        if entity.slug is None or entity.value is None:
+        if entity["slug"] is None or entity["value"] is None:
             continue
 
         # Do not create region/country for unknown.

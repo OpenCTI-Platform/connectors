@@ -153,7 +153,6 @@ class CrowdStrike:
         if self._CONFIG_SCOPE_ACTOR in scopes:
             actor_importer = ActorImporter(
                 self.helper,
-                client.intel_api.actors,
                 update_existing_data,
                 author,
                 actor_start_timestamp,
