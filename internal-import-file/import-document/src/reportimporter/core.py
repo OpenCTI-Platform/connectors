@@ -15,7 +15,6 @@ from pycti import (
     get_config_variable,
 )
 from pydantic import BaseModel
-
 from reportimporter.constants import (
     ANALYSIS_TYPE,
     ENTITY_CLASS,
