@@ -67,7 +67,7 @@ class IndicatorImporter(BaseImporter):
             msg = "'create_observables' and 'create_indicators' false at the same time"
             raise ValueError(msg)
 
-        self.report_fetcher = ReportFetcher(config.reports_api)
+        self.report_fetcher = ReportFetcher(config.helper)
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""

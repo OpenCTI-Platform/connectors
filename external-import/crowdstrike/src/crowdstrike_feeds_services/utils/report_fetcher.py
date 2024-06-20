@@ -4,8 +4,7 @@
 import logging
 from typing import Any, Dict, List, Mapping, Optional, Union
 
-from crowdstrike_client.api.intel import Reports
-from crowdstrike_client.api.models.report import Report
+from crowdstrike_feeds_services.client.reports import ReportsAPI
 from pydantic import BaseModel
 
 from . import create_file_from_download
@@ -16,7 +15,7 @@ logger = logging.getLogger(__name__)
 class FetchedReport(BaseModel):
     """Fetched report model."""
 
-    report: Report
+    report: dict
     files: List[Mapping[str, str]] = []
 
 
@@ -25,9 +24,9 @@ class ReportFetcher:
 
     _NOT_FOUND = object()
 
-    def __init__(self, report_api: Reports) -> None:
+    def __init__(self, helper) -> None:
         """Initialize CrowdStrike report fetcher."""
-        self.reports_api = report_api
+        self.reports_api_cs = ReportsAPI(helper)
 
         self.fetched_report_cache: Dict[str, Union[FetchedReport, object]] = {}
 
@@ -91,22 +90,19 @@ class ReportFetcher:
 
         return fetched_report
 
-    def _fetch_report(self, code: str) -> Optional[Report]:
+    def _fetch_report(self, code: str) -> Optional:
         self._info("Fetching report by code '%s'...", code)
 
         ids = [code]
         fields = ["__full__"]
 
-        response = self.reports_api.get_entities(ids, fields)
+        response = self.reports_api_cs.get_report_entities(ids, fields)
 
-        errors = response.errors
-        if errors:
-            self._error("Fetching report completed with errors")
-            for error in errors:
-                self._error("Error: %s (code: %d)", error.message, error.code)
-
-        resources = response.resources
-        resources_count = len(resources)
+        resources = response["resources"]
+        if resources is not None:
+            resources_count = len(resources)
+        else:
+            resources_count = 0
 
         if resources_count == 0:
             self._info("Report code '%s' returned nothing", code)
@@ -125,7 +121,7 @@ class ReportFetcher:
     def _get_report_pdf(self, report_id: int) -> Optional[Mapping[str, str]]:
         self._info("Fetching report PDF by id '%s'...", report_id)
 
-        download = self.reports_api.get_pdf(str(report_id))
+        download = self.reports_api_cs.get_report_pdf(str(report_id))
         if download is None:
             self._info("No report PDF for id '%s'", report_id)
             return None

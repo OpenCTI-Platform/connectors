@@ -197,13 +197,17 @@ def paginate(func):
                 _total = _meta_total
 
             resources = response["resources"]
-            resources_count = len(resources)
 
-            logger.info("Query fetched %s resources", resources_count)
+            if resources is not None:
+                resources_count = len(resources)
 
-            total_count += resources_count
+                logger.info("Query fetched %s resources", resources_count)
 
-            yield resources
+                total_count += resources_count
+
+                yield resources
+            else:
+                total_count = 0
 
         logger.info("Fetched %s resources in total", total_count)
 
@@ -761,9 +765,9 @@ def create_object_refs(
 
 def create_tag(entity, source_name: str, color: str) -> Mapping[str, str]:
     """Create a tag."""
-    value = entity.value
+    value = entity["value"]
     if value is None:
-        value = f"NO_VALUE_{entity.id}"
+        value = f'NO_VALUE_{entity["id"]}'
 
     return {"tag_type": source_name, "value": value, "color": color}
 
@@ -837,19 +841,19 @@ def create_stix2_report_from_report(
     x_opencti_files: Optional[List[Mapping[str, Union[str, bool]]]] = None,
 ) -> stix2.Report:
     """Create a STIX2 report from Report."""
-    report_name = report.name
+    report_name = report["name"]
 
-    report_created_date = report.created_date
+    report_created_date = report["created_date"]
     if report_created_date is None:
         report_created_date = datetime_utc_now()
 
-    report_last_modified_date = report.last_modified_date
+    report_last_modified_date = report["last_modified_date"]
     if report_last_modified_date is None:
         report_last_modified_date = report_created_date
 
-    report_description = report.description
-    report_rich_text_description = report.rich_text_description
-    report_short_description = report.short_description
+    report_description = report["description"]
+    report_rich_text_description = report["rich_text_description"]
+    report_short_description = report["short_description"]
 
     description = None
     if report_rich_text_description is not None and report_rich_text_description:
@@ -860,20 +864,20 @@ def create_stix2_report_from_report(
         description = report_short_description
 
     labels = []
-    report_tags = report.tags
+    report_tags = report["tags"]
     if report_tags is not None:
         for tag in report_tags:
-            value = tag.value
+            value = tag["value"]
             if value is None or not value:
                 continue
 
             labels.append(value)
 
     external_references = []
-    report_url = report.url
+    report_url = report["url"]
     if report_url is not None and report_url:
         external_reference = create_external_reference(
-            source_name, str(report.id), report_url
+            source_name, str(report["id"]), report_url
         )
         external_references.append(external_reference)
 
@@ -926,7 +930,7 @@ def create_regions_and_countries_from_entities(
 
 def create_file_from_download(download) -> Mapping[str, Union[str, bool]]:
     """Create file mapping from Download model."""
-    filename = download.filename
+    filename = download["filename"]
     if filename is None or not filename:
         logger.error("File download missing a filename")
         filename = "DOWNLOAD_MISSING_FILENAME"

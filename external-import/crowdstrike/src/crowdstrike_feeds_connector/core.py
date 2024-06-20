@@ -157,7 +157,6 @@ class CrowdStrike:
         if self._CONFIG_SCOPE_REPORT in scopes:
             report_importer = ReportImporter(
                 self.helper,
-                client.intel_api.reports,
                 update_existing_data,
                 author,
                 report_start_timestamp,
