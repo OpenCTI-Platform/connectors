@@ -18,7 +18,6 @@ from crowdstrike_feeds_services.utils import (
 from crowdstrike_feeds_services.utils.config_variables import ConfigCrowdstrike
 from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
 from pycti import OpenCTIConnectorHelper  # type: ignore
-from pycti.connector.opencti_connector_helper import get_config_variable  # type: ignore
 
 from .actor.importer import ActorImporter
 from .importer import BaseImporter
