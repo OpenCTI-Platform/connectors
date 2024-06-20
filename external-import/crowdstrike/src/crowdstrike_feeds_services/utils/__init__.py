@@ -148,9 +148,7 @@ OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT = ObservationFactory(
 )
 
 
-def paginate(
-    func
-):
+def paginate(func):
     """Paginate API calls."""
 
     @functools.wraps(func)
@@ -481,11 +479,9 @@ def create_sector(name: str, created_by: stix2.Identity) -> stix2.Identity:
     )
 
 
-def create_sector_from_entity(
-    entity, created_by
-) -> Optional[stix2.Identity]:
+def create_sector_from_entity(entity, created_by) -> Optional[stix2.Identity]:
     """Create a sector from an entity."""
-    name = entity.value
+    name = entity["value"]
     if name is None or not name:
         return None
 
@@ -543,11 +539,9 @@ def create_region(name: str, created_by: stix2.Identity) -> stix2.Location:
     )
 
 
-def create_region_from_entity(
-    entity, created_by: stix2.Identity
-) -> stix2.Location:
+def create_region_from_entity(entity, created_by: stix2.Identity) -> stix2.Location:
     """Create a region from an entity."""
-    name = entity.value
+    name = entity["value"]
     if name is None:
         raise TypeError("Entity value is None")
 
@@ -569,15 +563,13 @@ def create_country(name: str, code: str, created_by: stix2.Identity) -> stix2.Lo
     )
 
 
-def create_country_from_entity(
-    entity, created_by: stix2.Identity
-) -> stix2.Location:
+def create_country_from_entity(entity, created_by: stix2.Identity) -> stix2.Location:
     """Create a country from an entity."""
-    name = entity.value
+    name = entity["value"]
     if name is None:
         raise TypeError("Entity value is None")
 
-    code = entity.slug
+    code = entity["slug"]
     if code is None:
         raise TypeError("Entity slug is None")
 
@@ -915,12 +907,12 @@ def create_regions_and_countries_from_entities(
             continue
 
         # Do not create region/country for unknown.
-        if entity.slug == "unknown":
+        if entity["slug"] == "unknown":
             continue
 
         # Target countries may also contain regions.
         # Use hack to differentiate between countries and regions.
-        if len(entity.slug) > 2:
+        if len(entity["slug"]) > 2:
             target_region = create_region_from_entity(entity, author)
 
             regions.append(target_region)

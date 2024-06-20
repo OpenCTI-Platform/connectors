@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Mapping, Optional
 
 import stix2
 import yaml
-from crowdstrike_client.client import CrowdStrikeClient
 from crowdstrike_feeds_services.client.base_api import BaseCrowdstrikeClient
 from crowdstrike_feeds_services.utils import (
     convert_comma_separated_str_to_list,
@@ -61,11 +60,6 @@ class CrowdStrike:
 
         # Load configuration file and connection helper
         self.config = ConfigCrowdstrike()
-
-        # CrowdStrike connector configuration
-        base_url = self.config.base_url
-        client_id = self.config.client_id
-        client_secret = self.config.client_secret
 
         self.interval_sec = self.config.interval_sec
 
@@ -145,7 +139,7 @@ class CrowdStrike:
         self.helper = OpenCTIConnectorHelper(self.config.load)
 
         # Create CrowdStrike client and importers.
-        client = CrowdStrikeClient(base_url, client_id, client_secret)
+        client = BaseCrowdstrikeClient(self.helper)
 
         # Create importers.
         importers: List[BaseImporter] = []

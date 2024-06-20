@@ -15,7 +15,7 @@ from crowdstrike_feeds_services.utils import (
     datetime_utc_now,
     normalize_start_time_and_stop_time,
     remove_html_tags,
-    timestamp_to_datetime
+    timestamp_to_datetime,
 )
 from stix2 import Identity  # type: ignore
 from stix2 import (

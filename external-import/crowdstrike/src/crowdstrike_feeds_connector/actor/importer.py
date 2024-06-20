@@ -102,7 +102,8 @@ class ActorImporter(BaseImporter):
         )
 
         actors = self.actors_api_cs.get_combined_actor_entities(
-            limit=limit, offset=offset, sort=sort, fql_filter=fql_filter, fields=fields)
+            limit=limit, offset=offset, sort=sort, fql_filter=fql_filter, fields=fields
+        )
 
         return actors
 
@@ -136,15 +137,12 @@ class ActorImporter(BaseImporter):
             latest_created_datetime,
         )
 
-        return latest_created_datetime
+        return timestamp_to_datetime(latest_created_datetime)
 
     def _process_actor(self, actor) -> None:
         self._info("Processing actor {0} ({1})...", actor["name"], actor["id"])
 
         actor_bundle = self._create_actor_bundle(actor)
-
-        # with open(f"actor_bundle_{actor.id}.json", "w") as f:
-        #     f.write(actor_bundle.serialize(pretty=True))
 
         self._send_bundle(actor_bundle)
 
