@@ -93,38 +93,36 @@ class ZeroFoxConnector:
             work_id=work_id,
         )
 
-    def _parse_last_run(self, endpoint, current_state):
-        if (
-            current_state
-            and endpoint in current_state
-            and "last_run" in current_state[endpoint]
-        ):
-            last_run = current_state[endpoint]["last_run"]
-            last_run_date = datetime.fromtimestamp(last_run, UTC)
-            self.helper.log_info(
-                f"{self.helper.connect_name} connector last run for {endpoint}: "
-                f'{datetime.fromtimestamp(last_run, UTC).strftime("%Y-%m-%d %H:%M:%S")}'
-            )
-            return last_run, last_run_date
-        last_run_date = datetime.now(UTC) - delta_from_interval(self.first_run_interval)
-        last_run = last_run_date.timestamp()
-        self.helper.log_info(
-            f"{self.helper.connect_name} connector has never run on endpoint {endpoint}, parsing data"
-        )
-        return last_run, last_run_date
-
     def collect_intelligence_for_endpoint(
         self,
-        timestamp: int,
+        current_time: int,
         last_run,
-        last_run_date: datetime,
         collector_name: str,
         collector: Collector,
     ):
-        # If the last_run is less than interval, skip
-        if (timestamp - last_run) < seconds_from_interval(self.interval):
+
+        self.helper.log_debug(f"Collector name: {collector_name}")
+        self.helper.log_debug(f"Last run: {last_run}")
+        self.helper.log_debug(f"Current time: {current_time}")
+        if last_run is not None:
+            self.helper.log_debug(f"Difference (Seconds): {current_time - last_run}")
+        self.helper.log_debug(
+            f"Collector Interval (Seconds): {seconds_from_interval(self.interval)}"
+        )
+
+        if last_run is None:
+            self.helper.log_info(
+                f"{self.helper.connect_name} will run on endpoint {collector_name}!"
+            )
+            last_run_date = datetime.now(UTC) - delta_from_interval(
+                self.first_run_interval
+            )
+            last_run = last_run_date.timestamp()
+        elif (current_time - last_run) < seconds_from_interval(self.interval):
             self.helper.metric.state("idle")
-            new_interval = seconds_from_interval(self.interval) - (timestamp - last_run)
+            new_interval = seconds_from_interval(self.interval) - (
+                current_time - last_run
+            )
             self.helper.log_info(
                 f"{self.helper.connect_name} connector will not run for {collector_name}, "
                 f"next run in: {round(new_interval / 60 / 60, 2)} hours"
@@ -133,10 +131,7 @@ class ZeroFoxConnector:
 
         self.helper.metric.inc("run_count")
         self.helper.metric.state("running")
-        self.helper.log_info(
-            f"{self.helper.connect_name} will run on endpoint {collector_name}!"
-        )
-        now = datetime.fromtimestamp(timestamp, UTC)
+        now = datetime.fromtimestamp(current_time, UTC)
         friendly_name = f'{self.helper.connect_name} - {collector_name} run @ {now.strftime("%Y-%m-%d %H:%M:%S")}'
         work_id = self.helper.api.work.initiate_work(
             str(self.helper.connect_id), friendly_name
@@ -149,7 +144,7 @@ class ZeroFoxConnector:
             )
             self.helper.log_info(f"Running collector: {collector_name}")
             missed_entries, bundle_objects = collector.collect_intelligence(
-                now, last_run_date, self.helper.connector_logger
+                now, datetime.fromtimestamp(last_run, UTC), self.helper.connector_logger
             )
             if missed_entries > 0:
                 self.helper.log_warning(
@@ -162,7 +157,7 @@ class ZeroFoxConnector:
             self.helper.log_error(str(e))
 
             # Store the current timestamp as a last run
-        message = f"{self.helper.connect_name} connector successfully run for endpoint {collector_name}, storing last_run as {timestamp}"
+        message = f"{self.helper.connect_name} connector successfully run for endpoint {collector_name}, storing last_run as {current_time}"
         self.helper.log_info(message)
 
         self.helper.log_debug(
@@ -170,9 +165,9 @@ class ZeroFoxConnector:
         )
         current_state = self.helper.get_state()
         if current_state:
-            current_state[collector_name] = {"last_run": timestamp}
+            current_state[collector_name] = {"last_run": current_time}
         else:
-            current_state = {collector_name: {"last_run": timestamp}}
+            current_state = {collector_name: {"last_run": current_time}}
         self.helper.set_state(current_state)
 
         self.helper.api.work.to_processed(work_id, message)
@@ -186,15 +181,27 @@ class ZeroFoxConnector:
         while True:
             try:
                 # Get the current timestamp and check
-                timestamp = int(time.time())
+                current_time = int(time.time())
                 current_state = self.helper.get_state()
+
                 for collector_name, collector in self.collectors.items():
-                    last_run, last_run_date = self._parse_last_run(
-                        endpoint=collector_name, current_state=current_state
-                    )
+                    if (
+                        current_state is not None
+                        and "last_run" in current_state[collector_name]
+                    ):
+                        last_run = current_state[collector_name]["last_run"]
+                        self.helper.log_info(
+                            f"{self.helper.connect_name} connector last run for {collector_name}: "
+                            f'{datetime.fromtimestamp(last_run, UTC).strftime("%Y-%m-%d %H:%M:%S")}'
+                        )
+                    else:
+                        last_run = None
+                        self.helper.log_info(
+                            f"Collector has never run. Doing an initial pull of {self.first_run_interval}"
+                        )
 
                     self.collect_intelligence_for_endpoint(
-                        timestamp, last_run, last_run_date, collector_name, collector
+                        current_time, last_run, collector_name, collector
                     )
 
             except (KeyboardInterrupt, SystemExit):
