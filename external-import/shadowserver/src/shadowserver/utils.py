@@ -95,14 +95,17 @@ def note_timestamp_to_datetime(date_string: str):
 
 def dicts_to_markdown(dicts_list):
     """
-    Converts a list of dictionaries to a Markdown formatted string.
+    Converts a list of dictionaries or a single dictionary to a Markdown formatted string.
     
     Args:
-    dicts_list (list of dict): A list of dictionaries to be converted to Markdown.
+    dicts_list (list of dict or dict): A list of dictionaries or a single dictionary to be converted to Markdown.
     
     Returns:
     str: A Markdown string representing all the dictionaries.
     """
+    if isinstance(dicts_list, dict):
+        dicts_list = [dicts_list]
+    
     markdown_output = ""
     
     for data_dict in dicts_list:
@@ -120,6 +123,7 @@ def dicts_to_markdown(dicts_list):
         markdown_output += markdown + "\n\n"  # Add an extra newline for spacing between tables
 
     return markdown_output
+
 
 def check_ip_address(ip_str):
     try:

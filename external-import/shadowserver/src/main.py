@@ -47,7 +47,7 @@ class CustomConnector(ExternalImportConnector):
 
         for subscription in subscription_list:
             # TODO: Need to handle date, potentially also address paging for lists? 
-            report_list = shadowserver_api.get_report_list(date='2024-05-08', type=subscription)
+            report_list = shadowserver_api.get_report_list(date='2024-06-20', type=subscription)
 
             self.helper.log_debug(f"Found {len(report_list)} reports.")
             for report in report_list:

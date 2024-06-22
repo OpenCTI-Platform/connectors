@@ -1,8 +1,8 @@
 import copy
 import base64
 from datetime import datetime
-from stix2 import MarkingDefinition, Identity, Artifact, AutonomousSystem, Vulnerability, IPv4Address, IPv6Address, DomainName, MACAddress, NetworkTraffic, X509Certificate, ObservedData
-from pycti import OpenCTIConnectorHelper, Identity as pycti_identity, CustomObjectCaseIncident
+from stix2 import MarkingDefinition, Identity, Artifact, AutonomousSystem, Vulnerability, IPv4Address, IPv6Address, DomainName, MACAddress, NetworkTraffic, X509Certificate, ObservedData, Note
+from pycti import OpenCTIConnectorHelper, Identity as pycti_identity, CustomObjectCaseIncident, Note as pycti_note
 import magic
 from .utils import datetime_to_string, string_to_datetime, note_timestamp_to_datetime, dicts_to_markdown, check_ip_address, from_list_to_csv, get_stix_id_precedence, calculate_hashes, find_stix_object_by_id
 
@@ -161,25 +161,8 @@ class ShadowServerStixTransformation:
         self.upload_stix2_artifact(self.report_list)
         for element in self.report_list:
             label_list = self.map_to_stix(element)
+        self.create_stix_note_from_data(labels=label_list)
         self.create_opencti_case(labels=label_list)
-        
-        # TODO: Create note for each element?
-        # TODO: Create Report? 
-        # self.stix_report = Report(
-        #     id=pycti_report.generate_id(name=self.report.get("id"), published=self.published),
-        #     report_types=['tool'],
-        #     name=f"ShadowServer Report: {self.type}",
-        #     published=self.published,
-        #     object_refs = self.object_refs,
-        #     external_references=[self.external_ref],
-        #     description='\n---\n'.join(description),
-        #     created_by_ref=self.author_id.id,
-        #     object_marking_refs=self.marking_refs,
-        #     labels = self.labels,
-        # )
-        # self.stix_objects.append(
-        #     self.stix_report
-        # )
     
     def add_default_labels(self, stix_obj: dict):
         """Adds default labels to the specified STIX object."""
@@ -482,20 +465,34 @@ class ShadowServerStixTransformation:
         except Exception as e:
             self.helper.log_error(f"Error creating observed data: {e}")
 
-    # def create_stix_note_from_data(self):
-    #     for element in self.report_list:
-    #         content = dicts_to_markdown(element)
-    #         abstract = f'ShadowServer {self.type} Report {element.get("timestamp")}'
-    #         stix_object = Note(
-    #             id = pycti_note.generate_id(abstract, content),
-    #             abstract=abstract,
-    #             content=content,
-    #             created=note_timestamp_to_datetime(element.get("timestamp")),
-    #             created_by_ref=self.author_id.id,
-    #             object_refs=[self.report_id],
-    #             object_marking_refs=self.marking_refs,
-    #             labels=self.labels,
-    #             external_references=[self.external_ref],
-    #         )
-    #         self.stix_objects.append(stix_object)
-    #         self.object_refs.append(stix_object.id)
+    def create_stix_note_from_data(self, labels: list = []):
+        for element in self.report_list:
+            if isinstance(element, list) and all(isinstance(item, dict) for item in element):
+                content = dicts_to_markdown(element)
+            elif isinstance(element, dict):
+                content = dicts_to_markdown([element])
+            else:
+                content = str(element)
+
+            abstract = f'ShadowServer {self.type} Report {element.get("timestamp", "") if isinstance(element, dict) else ""}'
+
+            kwargs = {
+                "id": pycti_note.generate_id(abstract, content),
+                "abstract": abstract,
+                "content": content,
+                "created": note_timestamp_to_datetime(element.get("timestamp", "")) if isinstance(element, dict) else datetime.now(),
+                "created_by_ref": self.author_id,
+                "object_marking_refs": self.marking_refs,
+                "labels": labels,
+                "external_references": [self.external_reference],
+                "object_refs": self.object_refs,
+                "custom_properties": {
+                    "note_types": "external"
+                }
+            }
+            stix_object = Note(
+                **kwargs
+            )
+            if stix_object:
+                self.stix_objects.append(stix_object)
+                self.object_refs.append(stix_object.id)
