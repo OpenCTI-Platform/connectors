@@ -2,14 +2,15 @@
 import os
 import sys
 import time
-
 from datetime import datetime, timedelta
+
 from lib.external_import import ExternalImportConnector
 from shadowserver import ShadowServerAPI
 
 # Lookback in days
 LOOKBACK = 3
 INITIAL_LOOKBACK = 30
+
 
 class CustomConnector(ExternalImportConnector):
     def __init__(self):
@@ -29,6 +30,7 @@ class CustomConnector(ExternalImportConnector):
             self.first_run = False
         else:
             self.lookback = INITIAL_LOOKBACK
+
     def _collect_intelligence(self) -> []:
         """Collects intelligence from channels
 

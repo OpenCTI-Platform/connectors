@@ -1,14 +1,13 @@
 import base64
 import copy
+import uuid
 from datetime import datetime
 
 import magic
-import uuid
 from pycti import CustomObjectCaseIncident
 from pycti import Identity as pycti_identity
 from pycti import Note as pycti_note
 from pycti import OpenCTIConnectorHelper
-from stix2.canonicalization.Canonicalize import canonicalize
 from stix2 import (
     Artifact,
     AutonomousSystem,
@@ -24,6 +23,7 @@ from stix2 import (
     Vulnerability,
     X509Certificate,
 )
+from stix2.canonicalization.Canonicalize import canonicalize
 
 from .utils import (
     calculate_hashes,
