@@ -1,16 +1,15 @@
 # import os
+import os
 import sys
 import time
-import os
-from lib.external_import import ExternalImportConnector
 
+from lib.external_import import ExternalImportConnector
 from shadowserver import ShadowServerAPI
 
 
 class CustomConnector(ExternalImportConnector):
     def __init__(self):
-        """Initialization of the connector
-        """
+        """Initialization of the connector"""
         super().__init__()
         # TODO: Raise errors for missing environment variables, or incorrect values.
         self.api_key = os.environ.get("SHADOWSERVER_API_KEY", None)
@@ -46,16 +45,18 @@ class CustomConnector(ExternalImportConnector):
         self.helper.log_info(f"Available report types: {subscription_list}.")
 
         for subscription in subscription_list:
-            # TODO: Need to handle date, potentially also address paging for lists? 
-            report_list = shadowserver_api.get_report_list(date='2024-06-20', type=subscription)
+            # TODO: Need to handle date, potentially also address paging for lists?
+            report_list = shadowserver_api.get_report_list(
+                date="2024-06-18", type=subscription
+            )
 
             self.helper.log_debug(f"Found {len(report_list)} reports.")
             for report in report_list:
                 report_stix_objects = shadowserver_api.get_stix_report(
-                        report=report,
-                        api_helper=self.helper,
-                    )
-                
+                    report=report,
+                    api_helper=self.helper,
+                )
+
                 # Filter out duplicates and append to stix_objects.
                 for stix_object in report_stix_objects:
                     if stix_object not in stix_objects and stix_object:

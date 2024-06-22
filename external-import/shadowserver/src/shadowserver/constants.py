@@ -1,4 +1,5 @@
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, Identity, MarkingDefinition
+
 BASE_URL = "https://transform.shadowserver.org/api2/"
 TIMEOUT = 500
 
