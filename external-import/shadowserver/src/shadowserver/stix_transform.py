@@ -3,10 +3,12 @@ import copy
 from datetime import datetime
 
 import magic
+import uuid
 from pycti import CustomObjectCaseIncident
 from pycti import Identity as pycti_identity
 from pycti import Note as pycti_note
 from pycti import OpenCTIConnectorHelper
+from stix2.canonicalization.Canonicalize import canonicalize
 from stix2 import (
     Artifact,
     AutonomousSystem,
@@ -540,13 +542,18 @@ class ShadowServerStixTransformation:
         dst_value = find_stix_object_by_id(self.stix_objects, dst_ref)
         self.helper.log_debug(f"Value of stix object: {dst_value}")
 
+        # Generate custom ID for network traffic
+        data = canonicalize(kwargs, utf8=False)
+        id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), data))
+        kwargs["id"] = f"network-traffic--{id}"
+
         description = f"Network Traffic {dst_value} - {protocol}:{port}"
         self.extend_stix_object(kwargs, labels)
         kwargs["custom_properties"].update({"x_opencti_description": description})
 
         stix_object = NetworkTraffic(**kwargs)
 
-        if stix_object:
+        if stix_object and not stix_object.get("id") in self.object_refs:
             self.helper.log_debug(
                 f"Created network traffic STIX object: {stix_object.get('id')}"
             )
