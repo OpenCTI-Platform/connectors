@@ -1,6 +1,7 @@
 import base64
 import datetime
 import io
+import json
 import os
 import sys
 import time
@@ -92,17 +93,26 @@ class ExportReportPdf:
 
     def _process_message(self, data):
         file_name = data["file_name"]
-        if "entity_type" not in data or "entity_id" not in data:
-            raise ValueError(
-                'This Connector currently only handles direct export (single entity and no list) of the following entity types: "Report", "Intrusion-Set", "Threat-Actor-Individual", "Threat-Actor-Group","Case-Incident", "Case-Rfi", "Case-Rft"'
-            )
+        entity_id = data.get("entity_id")
+        export_scope = data["export_scope"]
+        main_filter = data.get("main_filter")
         entity_type = data["entity_type"]
-        entity_id = data["entity_id"]
         access_filter = data.get("access_filter")
-
-        # Retrieve markings for export push
+        list_params = data.get("list_params")
         file_markings = data["file_markings"]
-        if entity_type == "Report":
+
+        if export_scope != "single":
+            self._process_list(
+                file_name,
+                entity_id,
+                entity_type,
+                file_markings,
+                main_filter,
+                list_params,
+                access_filter,
+                export_scope,
+            )
+        elif entity_type == "Report":
             self._process_report(entity_id, file_name, file_markings, access_filter)
         elif entity_type == "Case-Incident":
             self._process_case(
@@ -128,6 +138,154 @@ class ExportReportPdf:
             )
 
         return "Export done"
+
+    def _process_list(
+        self,
+        file_name,
+        entity_id,
+        entity_type,
+        file_markings,
+        main_filter,
+        list_params,
+        access_filter,
+        export_scope,
+    ):
+        if export_scope == "selection":
+            list_filters = "selected_ids"
+            entity_data_sdo = self.helper.api_impersonate.stix_domain_object.list(
+                filters=main_filter,
+            )
+            entity_data_sco = self.helper.api_impersonate.stix_cyber_observable.list(
+                filters=main_filter
+            )
+            entity_data_scr = self.helper.api_impersonate.stix_core_relationship.list(
+                filters=main_filter
+            )
+            entities_list = entity_data_sdo + entity_data_sco + entity_data_scr
+        else:  # export_scope = 'query'
+            list_params_filters = (
+                list_params.get("filters") if list_params is not None else None
+            )
+            access_filter_content = (
+                access_filter.get("filters") if access_filter is not None else None
+            )
+            if len(access_filter_content) != 0 and list_params_filters is not None:
+                export_query_filter = {
+                    "mode": "and",
+                    "filterGroups": [list_params_filters, access_filter],
+                    "filters": [],
+                }
+            elif len(access_filter_content) == 0:
+                export_query_filter = list_params_filters
+            else:
+                export_query_filter = access_filter
+
+            entities_list = self.helper.api_impersonate.stix2.export_entities_list(
+                entity_type=entity_type,
+                search=list_params.get("search"),
+                filters=export_query_filter,
+                orderBy=list_params.get("orderBy"),
+                orderMode=list_params.get("orderMode"),
+                getAll=True,
+            )
+            self.helper.log_info("Uploading: " + entity_type + " to " + file_name)
+            list_filters = json.dumps(list_params)
+
+        if entities_list is not None:
+            list_marking = None
+            if file_markings:
+                list_marking = file_markings[-1]["definition"]
+            list_report_date = datetime.datetime.now().strftime("%b %d %Y")
+            # Store context for usage in html template
+            context = {
+                "list_name": "Export of " + entity_type,
+                "list_search": list_params.get("search", "No search keyword"),
+                "list_filters": str(main_filter),
+                "list_marking": list_marking,
+                "list_report_date": list_report_date,
+                "company_address_line_1": self.company_address_line_1,
+                "company_address_line_2": self.company_address_line_2,
+                "company_address_line_3": self.company_address_line_3,
+                "company_phone_number": self.company_phone_number,
+                "company_email": self.company_email,
+                "company_website": self.company_website,
+                "entities": {},
+                "observables": {},
+            }
+            # Process each STIX Object
+            for entity in entities_list:
+                obj_entity_type = entity["entity_type"]
+                if obj_entity_type == "StixFile" or StixCyberObservableTypes.has_value(
+                    obj_entity_type
+                ):
+                    # If only include indicators and
+                    # the observable doesn't have an indicator, skip it
+                    if self.indicators_only and not entity["indicators"]:
+                        self.helper.log_info(
+                            f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
+                        )
+                        continue
+
+                    if obj_entity_type not in context["observables"]:
+                        context["observables"][obj_entity_type] = []
+
+                    # Defang urls
+                    if self.defang_urls and obj_entity_type == "Url":
+                        entity["observable_value"] = entity["observable_value"].replace(
+                            "http", "hxxp", 1
+                        )
+
+                    context["observables"][obj_entity_type].append(entity)
+                else:
+                    if obj_entity_type not in context["entities"]:
+                        context["entities"][obj_entity_type] = []
+
+                    context["entities"][obj_entity_type].append(entity)
+
+                # Render html with input variables
+                env = Environment(
+                    loader=FileSystemLoader(self.current_dir), finalize=self._finalize
+                )
+
+                template = env.get_template("resources/list.html")
+                html_string = template.render(context)
+
+                # Generate pdf from html string
+                pdf_contents = HTML(
+                    string=html_string, base_url=f"{self.current_dir}/resources"
+                ).write_pdf()
+
+                # Upload the output pdf
+                self.helper.log_info(f"Uploading: {file_name}")
+                if entity_type == "Stix-Cyber-Observable":
+                    self.helper.api.stix_cyber_observable.push_list_export(
+                        entity_id,
+                        entity_type,
+                        file_name,
+                        file_markings,
+                        pdf_contents,
+                        list_filters,
+                    )
+                elif entity_type == "Stix-Core-Object":
+                    self.helper.api.stix_core_object.push_list_export(
+                        entity_id,
+                        entity_type,
+                        file_name,
+                        file_markings,
+                        pdf_contents,
+                        list_filters,
+                    )
+                else:
+                    self.helper.api.stix_domain_object.push_list_export(
+                        entity_id,
+                        entity_type,
+                        file_name,
+                        file_markings,
+                        pdf_contents,
+                        list_filters,
+                    )
+        else:
+            raise ValueError("An error occurred, the list is empty")
 
     def _process_report(self, entity_id, file_name, file_markings, access_filter):
         """

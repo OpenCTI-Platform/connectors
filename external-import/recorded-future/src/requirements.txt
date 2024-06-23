@@ -8,7 +8,6 @@ python-dateutil
 pytz
 PyYAML
 regex
-requests
 rfapi
 simplejson
 six

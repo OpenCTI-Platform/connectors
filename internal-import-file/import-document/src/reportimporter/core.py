@@ -1,9 +1,10 @@
 import base64
+import json
 import os
-import tempfile
+import re
 import time
 from datetime import datetime
-from typing import IO, Callable, Dict, List
+from typing import Callable, Dict, List
 
 import stix2
 import yaml
@@ -15,6 +16,7 @@ from pycti import (
 )
 from pydantic import BaseModel
 from reportimporter.constants import (
+    ANALYSIS_TYPE,
     ENTITY_CLASS,
     OBSERVABLE_CLASS,
     RESULT_FORMAT_CATEGORY,
@@ -67,37 +69,153 @@ class ReportImporter:
 
     def _process_message(self, data: Dict) -> str:
         self.helper.log_info("Processing new message")
+        self.file = None
 
-        with tempfile.TemporaryFile(mode="w+b") as file_data:
-            self._download_import_file(data, file_data)
-            entity_id = data.get("entity_id", None)
-            bypass_validation = data.get("bypass_validation", False)
-            entity = (
-                self.helper.api.stix_domain_object.read(id=entity_id)
-                if entity_id is not None
-                else None
-            )
-            if self.helper.get_only_contextual() and entity is None:
-                return "Connector is only contextual and entity is not defined. Nothing was imported"
+        event_type = data.get("event_type", None)
+        if event_type == "INTERNAL_ANALYSIS":
+            content_type = data.get("content_type", None)
+            if content_type == "file":
+                return self._process_file_analysis(data)
+            elif content_type == "fields":
+                return self._process_fields_analysis(data)
+            else:
+                return "Analysis type not recognized"
+        else:
+            return self._process_import(data)
 
-            # Retrieve entity set from OpenCTI
-            entity_indicators = self._collect_stix_objects(self.entity_config)
+    def _process_file_analysis(self, data: Dict) -> str:
+        file_name = self._download_import_file(data)
 
-            # Parse report
-            parser = ReportParser(
-                self.helper, entity_indicators, self.observable_config
-            )
+        # Retrieve entity set from OpenCTI
+        entity_indicators = self._collect_stix_objects(self.entity_config)
 
-            if data["file_id"].startswith("import/global"):
-                file_data.seek(0)
-                file_data_encoded = base64.b64encode(file_data.read())
-                self.file = {
-                    "name": data["file_id"].replace("import/global/", ""),
-                    "data": file_data_encoded,
-                    "mime_type": "application/pdf",
-                }
-            file_data.seek(0)
-            parsed = parser.run_parser(file_data, data["file_mime"])
+        # Parse content
+        parser = ReportParser(self.helper, entity_indicators, self.observable_config)
+        if data["file_id"].startswith("import/global"):
+            file_data = open(file_name, "rb").read()
+            file_data_encoded = base64.b64encode(file_data)
+            self.file = {
+                "name": data["file_id"].replace("import/global/", ""),
+                "data": file_data_encoded,
+                "mime_type": "application/pdf",
+            }
+        parsed_data = parser.run_raw_parser(file_name, data["file_mime"])
+        os.remove(file_name)
+
+        parsed_result = self._extract_elements_id(parsed_data)
+        self._push_analysis_results(data, parsed_result)
+
+        return "Analysis finished, found " + str(len(parsed_result)) + " elements"
+
+    def _process_fields_analysis(self, data: Dict) -> str:
+        if "content_fields" not in data:
+            return "Connector couldn't retrieve fields to analyse"
+        fields = data.get("content_fields")
+
+        if "entity_id" not in data or "entity_type" not in data:
+            return "Connector couldn't retrieve entity to analyse"
+        entity_id = data.get("entity_id")
+        entity_type = data.get("entity_type")
+
+        fields_to_analyze = self._resolve_fields_to_analyze(
+            entity_id, entity_type, fields
+        )
+        raw_text_to_analyze = " ".join(fields_to_analyze.values())
+
+        # Retrieve entity set from OpenCTI
+        entity_indicators = self._collect_stix_objects(self.entity_config)
+
+        # Parse content
+        parser = ReportParser(self.helper, entity_indicators, self.observable_config)
+        parsed_data = parser.parse(raw_text_to_analyze)
+
+        parsed_result = self._extract_elements_id(parsed_data)
+        self._push_analysis_results(data, parsed_result)
+
+        return "Analysis finished, found " + str(len(parsed_result)) + " elements"
+
+    def _push_analysis_results(self, request_data: Dict, parsed_data: Dict):
+        analysis_name = request_data.get("analysis_name", None)
+        content_source = request_data.get("content_source", None)
+        content_type = request_data.get("content_type", None)
+        entity_id = request_data.get("entity_id", None)
+        parsed_data_json = json.dumps(parsed_data)
+        self.helper.api.stix_core_object.push_analysis(
+            entity_id,
+            analysis_name,
+            parsed_data_json,
+            content_source,
+            content_type,
+            ANALYSIS_TYPE,
+        )
+
+    def _extract_elements_id(self, parsed_elements: Dict):
+        result = {}
+        for parse_element_key in parsed_elements:
+            parsed_element_value = parsed_elements[parse_element_key]
+            if parsed_element_value[RESULT_FORMAT_TYPE] == ENTITY_CLASS:
+                result[parse_element_key] = parsed_element_value["match"]
+            elif parsed_element_value[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
+                element_id = self._extract_element_id(parsed_element_value)
+                if element_id is not None:
+                    result[parse_element_key] = element_id
+
+        return result
+
+    def _extract_element_id(self, data: Dict):
+        stix_object = self._process_observable(data)
+        if stix_object is None:
+            return None
+        stix_id = stix_object["id"]
+        if stix_id is not None:
+            return stix_id
+
+    def _resolve_fields_to_analyze(
+        self, entity_id: str, entity_type: str, fields: str
+    ) -> Dict:
+        fields_list = fields.split(" ")
+
+        reader_func = self.helper.api.stix2.get_reader(entity_type)
+        entity = reader_func(id=entity_id, customAttributes=fields)
+        fields_dict = {}
+        if entity is None:
+            return fields_dict
+
+        for field in fields_list:
+            field_value = entity.get(field)
+            if field_value:
+                fields_dict[field] = field_value
+
+        return fields_dict
+
+    def _process_import(self, data: Dict) -> str:
+        file_name = self._download_import_file(data)
+        entity_id = data.get("entity_id", None)
+        bypass_validation = data.get("bypass_validation", False)
+        entity = (
+            self.helper.api.stix_domain_object.read(id=entity_id)
+            if entity_id is not None
+            else None
+        )
+        if self.helper.get_only_contextual() and entity is None:
+            return "Connector is only contextual and entity is not defined. Nothing was imported"
+
+        # Retrieve entity set from OpenCTI
+        entity_indicators = self._collect_stix_objects(self.entity_config)
+
+        # Parse report
+        parser = ReportParser(self.helper, entity_indicators, self.observable_config)
+
+        if data["file_id"].startswith("import/global"):
+            file_data = open(file_name, "rb").read()
+            file_data_encoded = base64.b64encode(file_data)
+            self.file = {
+                "name": data["file_id"].replace("import/global/", ""),
+                "data": file_data_encoded,
+                "mime_type": "application/pdf",
+            }
+        parsed = parser.run_parser(file_name, data["file_mime"])
+        os.remove(file_name)
 
         if not parsed:
             return "No information extracted from report"
@@ -107,7 +225,7 @@ class ReportImporter:
         observables, entities = self._process_parsing_results(parsed, entity)
         # Send results to OpenCTI
         observable_cnt = self._process_parsed_objects(
-            entity, observables, entities, bypass_validation, data["file_fetch"]
+            entity, observables, entities, bypass_validation, file_name
         )
         entity_cnt = len(entities)
 
@@ -122,15 +240,29 @@ class ReportImporter:
     def start(self) -> None:
         self.helper.listen(self._process_message)
 
-    def _download_import_file(self, data: Dict, file_data: IO) -> None:
+    def _download_import_file(self, data: Dict) -> str:
         file_fetch = data["file_fetch"]
         file_uri = self.helper.opencti_url + file_fetch
 
         # Downloading and saving file to connector
         self.helper.log_info("Importing the file " + file_uri)
+        file_name = os.path.basename(file_fetch)
         file_content = self.helper.api.fetch_opencti_file(file_uri, True)
 
-        file_data.write(file_content)
+        """
+        On Windows, the invalid characters are different, so the behavior is not the same as Linux
+        It only happens with free text on local setup running on windows. Never on prod.
+        """
+        os_system = os.name
+
+        # If windows detection, replacement of invalid characters
+        if os_system == "nt":
+            file_name = re.sub(r'[\\/:*?"<>|]', "_", file_name)
+
+        with open(file_name, "wb") as f:
+            f.write(file_content)
+
+        return file_name
 
     def _collect_stix_objects(
         self, entity_config_list: List[EntityConfig]
@@ -185,185 +317,9 @@ class ReportImporter:
             author = author.get("standard_id", None)
         for match in parsed:
             if match[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
-                if match[RESULT_FORMAT_CATEGORY] == "Vulnerability.name":
-                    entity = self.helper.api.vulnerability.read(
-                        filters={
-                            "mode": "and",
-                            "filters": [
-                                {"key": "name", "values": [match[RESULT_FORMAT_MATCH]]}
-                            ],
-                            "filterGroups": [],
-                        }
-                    )
-                    if entity is None:
-                        self.helper.log_info(
-                            f"Vulnerability with name '{match[RESULT_FORMAT_MATCH]}' could not be "
-                            f"found. Is the CVE Connector activated?"
-                        )
-                        continue
-                    entity_stix_bundle = (
-                        self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
-                            entity_type=entity["entity_type"], entity_id=entity["id"]
-                        )
-                    )
-                    if len(entity_stix_bundle["objects"]) == 0:
-                        raise ValueError("Entity cannot be found or exported")
-                    entity_stix = [
-                        object
-                        for object in entity_stix_bundle["objects"]
-                        if "x_opencti_id" in object
-                        and object["x_opencti_id"] == entity["id"]
-                    ][0]
-                    entities.append(entity_stix)
-                elif match[RESULT_FORMAT_CATEGORY] == "Attack-Pattern.x_mitre_id":
-                    entity = self.helper.api.attack_pattern.read(
-                        filters={
-                            "mode": "and",
-                            "filters": [
-                                {
-                                    "key": "x_mitre_id",
-                                    "values": [match[RESULT_FORMAT_MATCH]],
-                                }
-                            ],
-                            "filterGroups": [],
-                        }
-                    )
-                    if entity is None:
-                        self.helper.log_info(
-                            f"AttackPattern with MITRE ID '{match[RESULT_FORMAT_MATCH]}' could not be "
-                            f"found. Is the MITRE Connector activated?"
-                        )
-                        continue
-                    entity_stix_bundle = (
-                        self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
-                            entity_type=entity["entity_type"], entity_id=entity["id"]
-                        )
-                    )
-                    if len(entity_stix_bundle["objects"]) == 0:
-                        raise ValueError("Entity cannot be found or exported")
-                    entity_stix = [
-                        object
-                        for object in entity_stix_bundle["objects"]
-                        if "x_opencti_id" in object
-                        and object["x_opencti_id"] == entity["id"]
-                    ][0]
-                    entities.append(entity_stix)
-                else:
-                    observable = None
-                    if match[RESULT_FORMAT_CATEGORY] == "Autonomous-System.number":
-                        observable = stix2.AutonomousSystem(
-                            number=match[RESULT_FORMAT_MATCH],
-                            object_marking_refs=object_markings,
-                            custom_properties={
-                                "x_opencti_create_indicator": self.create_indicator,
-                                "created_by_ref": author,
-                            },
-                        )
-                    elif match[RESULT_FORMAT_CATEGORY] == "Domain-Name.value":
-                        observable = stix2.DomainName(
-                            value=match[RESULT_FORMAT_MATCH],
-                            object_marking_refs=object_markings,
-                            custom_properties={
-                                "x_opencti_create_indicator": self.create_indicator,
-                                "created_by_ref": author,
-                            },
-                        )
-                    elif match[RESULT_FORMAT_CATEGORY] == "Email-Addr.value":
-                        observable = stix2.EmailAddress(
-                            value=match[RESULT_FORMAT_MATCH],
-                            object_marking_refs=object_markings,
-                            custom_properties={
-                                "x_opencti_create_indicator": self.create_indicator,
-                                "created_by_ref": author,
-                            },
-                        )
-                    elif match[RESULT_FORMAT_CATEGORY] == "File.name":
-                        observable = stix2.File(
-                            name=match[RESULT_FORMAT_MATCH],
-                            object_marking_refs=object_markings,
-                            custom_properties={
-                                "x_opencti_create_indicator": self.create_indicator,
-                                "created_by_ref": author,
-                            },
-                        )
-                    elif match[RESULT_FORMAT_CATEGORY] == "IPv4-Addr.value":
-                        observable = stix2.IPv4Address(
-                            value=match[RESULT_FORMAT_MATCH],
-                            object_marking_refs=object_markings,
-                            custom_properties={
-                                "x_opencti_create_indicator": self.create_indicator,
-                                "created_by_ref": author,
-                            },
-                        )
-                    elif match[RESULT_FORMAT_CATEGORY] == "IPv6-Addr.value":
-                        observable = stix2.IPv6Address(
-                            value=match[RESULT_FORMAT_MATCH],
-                            object_marking_refs=object_markings,
-                            custom_properties={
-                                "x_opencti_create_indicator": self.create_indicator,
-                                "created_by_ref": author,
-                            },
-                        )
-                    elif match[RESULT_FORMAT_CATEGORY] == "Mac-Addr.value":
-                        observable = stix2.MACAddress(
-                            value=match[RESULT_FORMAT_MATCH],
-                            object_marking_refs=object_markings,
-                            custom_properties={
-                                "x_opencti_create_indicator": self.create_indicator,
-                                "created_by_ref": author,
-                            },
-                        )
-                    elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.MD5":
-                        observable = stix2.File(
-                            hashes={"MD5": match[RESULT_FORMAT_MATCH]},
-                            object_marking_refs=object_markings,
-                            custom_properties={
-                                "x_opencti_create_indicator": self.create_indicator,
-                                "created_by_ref": author,
-                            },
-                        )
-                    elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-1":
-                        observable = stix2.File(
-                            hashes={"SHA-1": match[RESULT_FORMAT_MATCH]},
-                            object_marking_refs=object_markings,
-                            custom_properties={
-                                "x_opencti_create_indicator": self.create_indicator,
-                                "created_by_ref": author,
-                            },
-                        )
-                    elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-256":
-                        observable = stix2.File(
-                            hashes={"SHA-256": match[RESULT_FORMAT_MATCH]},
-                            object_marking_refs=object_markings,
-                            custom_properties={
-                                "x_opencti_create_indicator": self.create_indicator,
-                                "created_by_ref": author,
-                            },
-                        )
-                    elif match[RESULT_FORMAT_CATEGORY] == "Windows-Registry-Key.key":
-                        observable = stix2.WindowsRegistryKey(
-                            key=match[RESULT_FORMAT_MATCH],
-                            object_marking_refs=object_markings,
-                            custom_properties={
-                                "x_opencti_create_indicator": self.create_indicator,
-                                "created_by_ref": author,
-                            },
-                        )
-                    elif match[RESULT_FORMAT_CATEGORY] == "Url.value":
-                        value = match[RESULT_FORMAT_MATCH]
-                        if match[RESULT_FORMAT_MATCH].endswith(","):
-                            value = match[RESULT_FORMAT_MATCH][:-1]
-                        observable = stix2.URL(
-                            value=value,
-                            object_marking_refs=object_markings,
-                            custom_properties={
-                                "x_opencti_create_indicator": self.create_indicator,
-                                "created_by_ref": author,
-                            },
-                        )
-                    if observable is not None:
-                        observables.append(observable)
-
+                self._process_observable(
+                    match, object_markings, author, entities, observables
+                )
             elif match[RESULT_FORMAT_TYPE] == ENTITY_CLASS:
                 stix_type = "-".join(
                     x[:1].upper() + x[1:]
@@ -376,16 +332,216 @@ class ReportImporter:
                 )
                 if len(entity_stix_bundle["objects"]) == 0:
                     raise ValueError("Entity cannot be found or exported")
+
                 entity_stix = [
                     object
                     for object in entity_stix_bundle["objects"]
                     if object["id"] == match[RESULT_FORMAT_MATCH]
-                ][0]
-                entities.append(entity_stix)
+                ]
+                if len(entity_stix) == 0:
+                    log_message = "Couldn't find entity {} bundle {}".format(
+                        match, entity_stix_bundle
+                    )
+                    self.helper.log_error(log_message)
+                    raise ValueError("Entity cannot be found in bundle")
+
+                entities.append(entity_stix[0])
             else:
                 self.helper.log_info("Odd data received: {}".format(match))
 
         return observables, entities
+
+    def _process_observable(
+        self,
+        match: Dict,
+        object_markings=None,
+        author=None,
+        entities=None,
+        observables=None,
+    ):
+        if object_markings is None:
+            object_markings = []
+        if match[RESULT_FORMAT_CATEGORY] == "Vulnerability.name":
+            entity = self.helper.api.vulnerability.read(
+                filters={
+                    "mode": "and",
+                    "filters": [
+                        {"key": "name", "values": [match[RESULT_FORMAT_MATCH]]}
+                    ],
+                    "filterGroups": [],
+                }
+            )
+            if entity is None:
+                self.helper.log_info(
+                    f"Vulnerability with name '{match[RESULT_FORMAT_MATCH]}' could not be "
+                    f"found. Is the CVE Connector activated?"
+                )
+                return
+            entity_stix_bundle = (
+                self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                    entity_type=entity["entity_type"], entity_id=entity["id"]
+                )
+            )
+            if len(entity_stix_bundle["objects"]) == 0:
+                raise ValueError("Entity cannot be found or exported")
+            entity_stix = [
+                object
+                for object in entity_stix_bundle["objects"]
+                if "x_opencti_id" in object and object["x_opencti_id"] == entity["id"]
+            ][0]
+            if entities is not None:
+                entities.append(entity_stix)
+            return entity_stix
+        elif match[RESULT_FORMAT_CATEGORY] == "Attack-Pattern.x_mitre_id":
+            entity = self.helper.api.attack_pattern.read(
+                filters={
+                    "mode": "and",
+                    "filters": [
+                        {
+                            "key": "x_mitre_id",
+                            "values": [match[RESULT_FORMAT_MATCH]],
+                        }
+                    ],
+                    "filterGroups": [],
+                }
+            )
+            if entity is None:
+                self.helper.log_info(
+                    f"AttackPattern with MITRE ID '{match[RESULT_FORMAT_MATCH]}' could not be "
+                    f"found. Is the MITRE Connector activated?"
+                )
+                return
+            entity_stix_bundle = (
+                self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                    entity_type=entity["entity_type"], entity_id=entity["id"]
+                )
+            )
+            if len(entity_stix_bundle["objects"]) == 0:
+                raise ValueError("Entity cannot be found or exported")
+            entity_stix = [
+                object
+                for object in entity_stix_bundle["objects"]
+                if "x_opencti_id" in object and object["x_opencti_id"] == entity["id"]
+            ][0]
+            if entities is not None:
+                entities.append(entity_stix)
+            return entity_stix
+        else:
+            observable = None
+            if match[RESULT_FORMAT_CATEGORY] == "Autonomous-System.number":
+                observable = stix2.AutonomousSystem(
+                    number=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "Domain-Name.value":
+                observable = stix2.DomainName(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "Email-Addr.value":
+                observable = stix2.EmailAddress(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "File.name":
+                observable = stix2.File(
+                    name=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "IPv4-Addr.value":
+                observable = stix2.IPv4Address(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "IPv6-Addr.value":
+                observable = stix2.IPv6Address(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "Mac-Addr.value":
+                observable = stix2.MACAddress(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.MD5":
+                observable = stix2.File(
+                    hashes={"MD5": match[RESULT_FORMAT_MATCH]},
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-1":
+                observable = stix2.File(
+                    hashes={"SHA-1": match[RESULT_FORMAT_MATCH]},
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-256":
+                observable = stix2.File(
+                    hashes={"SHA-256": match[RESULT_FORMAT_MATCH]},
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "Windows-Registry-Key.key":
+                observable = stix2.WindowsRegistryKey(
+                    key=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "Url.value":
+                value = match[RESULT_FORMAT_MATCH]
+                if match[RESULT_FORMAT_MATCH].endswith(","):
+                    value = match[RESULT_FORMAT_MATCH][:-1]
+                observable = stix2.URL(
+                    value=value,
+                    object_marking_refs=object_markings,
+                    custom_properties={
+                        "x_opencti_create_indicator": self.create_indicator,
+                        "created_by_ref": author,
+                    },
+                )
+            if observable is not None and observables is not None:
+                observables.append(observable)
+            return observable
 
     def _convert_id(self, type, standard_id):
         if type == "Case-Incident":

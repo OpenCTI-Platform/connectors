@@ -1,5 +1,5 @@
-pycti==6.1.0
-weasyprint==61.2
+pycti==6.1.12
+weasyprint==62.1
 html2text==2024.2.26
 pdfminer.six==20231228
 pdfkit==1.0.0

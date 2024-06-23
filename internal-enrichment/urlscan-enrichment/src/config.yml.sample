@@ -1,0 +1,19 @@
+opencti:
+  url: "http://localhost:8080"
+  token: "ChangeMe"
+
+connector:
+  id: "ChangeMe"
+  type: "INTERNAL_ENRICHMENT"
+  name: "UrlScan"
+  scope: "url,ipv4-addr,ipv6-addr" # Availables => scope-submission: url or hostname or domain-name / scope-search: ipv4-addr,ipv6-addr
+  auto: false # Enable/disable auto-enrichment of observables
+  log_level: "error"
+
+urlscan_enrichment:
+  api_key: "ChangeMe"
+  api_base_url: "https://urlscan.io/api/v1/" # Required
+  import_screenshot: false
+  visibility: "public" # Available values : public, unlisted, private
+  search_filtered_by_date: ">now-2d" # Available : ">now-1d", ">now-1y", "[2022 TO 2023]", "[2022/01/01 TO 2023/12/01"
+  max_tlp: "TLP:AMBER" # Required, Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED

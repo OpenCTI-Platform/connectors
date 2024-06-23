@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true
+  live_stream_no_dependencies: true # Necessary to detect observables in the stream
+  name: 'Qradar'
+  scope: 'qradar' # Reserved:
+  log_level: 'error'
+
+qradar:
+  url: 'https://QRADAR1.ChangeMe.com'
+  url_reference: '/api/reference_data_collections/sets'
+  ssl_verify: true
+  token: 'ChangeMe' # Token for bearer auth (if set, will ignore basic auth params)
+  reference_name: 'OpenCTI'
+  ignore_types: label,marking-definition,identity

@@ -1,5 +1,6 @@
 import io
 import logging
+import os
 from typing import IO, Dict, List, Pattern, Tuple
 
 import chardet
@@ -77,7 +78,7 @@ class ReportParser(object):
             OBSERVABLE_CLASS, observable.stix_target, ind_match, match_range
         )
 
-    def _parse(self, data: str) -> Dict[str, Dict]:
+    def parse(self, data: str) -> Dict[str, Dict]:
         list_matches = {}
 
         # Defang text
@@ -101,7 +102,7 @@ class ReportParser(object):
                         text = element.get_text()
                         # Parsing with newlines has been deprecated
                         no_newline_text = text.replace("\n", "")
-                        parse_info.update(self._parse(no_newline_text))
+                        parse_info.update(self.parse(no_newline_text))
 
                 # TODO also extract information from images/figures using OCR
                 # https://pdfminersix.readthedocs.io/en/latest/topic/converting_pdf_to_text.html#topic-pdf-to-text-layout
@@ -116,9 +117,9 @@ class ReportParser(object):
         text = file_data.read()
         encoding = chardet.detect(text)["encoding"]
         if encoding == "UTF-16":
-            parse_info.update(self._parse(text.decode("utf-16")))
+            parse_info.update(self.parse(text.decode("utf-16")))
         else:
-            parse_info.update(self._parse(text.decode("utf-8")))
+            parse_info.update(self.parse(text.decode("utf-8")))
         return parse_info
 
     def _parse_html(self, file_data: IO) -> Dict[str, Dict]:
@@ -126,24 +127,32 @@ class ReportParser(object):
         soup = BeautifulSoup(file_data, "html.parser")
         buf = io.StringIO(soup.get_text(separator=" "))
         for text in buf.readlines():
-            parse_info.update(self._parse(text))
+            parse_info.update(self.parse(text))
         return parse_info
 
-    def run_parser(self, file_data: IO, file_type: str) -> List[Dict]:
+    def run_raw_parser(self, file_path: str, file_type: str) -> Dict:
         parsing_results = []
 
         file_parser = self.supported_file_types.get(file_type, None)
         if not file_parser:
             raise NotImplementedError(f"No parser available for file type {file_type}")
 
-        self.helper.log_info(f"Parsing report as {file_type}")
+        if not os.path.isfile(file_path):
+            raise IOError(f"File path is not a file: {file_path}")
+
+        self.helper.log_info(f"Parsing report {file_path} {file_type}")
 
         try:
-            parsing_results = file_parser(file_data)
+            with open(file_path, "rb") as file_data:
+                parsing_results = file_parser(file_data)
         except Exception as e:
             logging.exception(f"Parsing Error: {e}")
 
-        parsing_results = list(parsing_results.values())
+        return parsing_results
+
+    def run_parser(self, file_path: str, file_type: str) -> List[Dict]:
+        raw_result = self.run_raw_parser(file_path, file_type)
+        parsing_results = list(raw_result.values())
 
         return parsing_results
 

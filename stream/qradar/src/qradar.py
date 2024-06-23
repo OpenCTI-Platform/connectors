@@ -20,19 +20,25 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 class QradarReference:
     def __init__(
         self,
+        helper,
         qradar_url: str,
+        qradar_url_reference: str,
         qradar_token: str,
         qradar_reference_name: str,
         qradar_ssl_verify: bool,
     ) -> None:
+        self.helper = helper
         self.qradar_url = qradar_url
+        self.qradar_url_reference = qradar_url_reference
         self.qradar_token = qradar_token
         self.qradar_reference_name = qradar_reference_name
         self.qradar_ssl_verify = qradar_ssl_verify
 
     @property
     def collection_url(self) -> str:
-        return f"{self.qradar_url}/api/reference_data/sets/{self.qradar_reference_name}"
+        return (
+            f"{self.qradar_url}{self.qradar_url_reference}/{self.qradar_reference_name}"
+        )
 
     @property
     def headers(self) -> dict:
@@ -40,35 +46,82 @@ class QradarReference:
             "SEC": f"{self.qradar_token}",
         }
 
-    def init(self) -> bool:
+    @staticmethod
+    def init() -> bool:
         return True
 
-    def get_type(self, payload):
-        return re.search(
-            "main_observable_type': '(.*?)'", str(payload["extensions"])
-        ).group(1)
-
-    def create_refernce(self, name: str):
-        r = requests.post(
-            f"{self.qradar_url}/api/reference_data/sets?element_type=ALN&name={self.qradar_reference_name}_{name}",
-            headers=self.headers,
-            verify=self.qradar_ssl_verify,
+    @staticmethod
+    def get_type(payload):
+        main_type = "main_observable_type" if payload["type"] == "indicator" else "type"
+        get_extension = OpenCTIConnectorHelper.get_attribute_in_extension(
+            main_type, payload
         )
-        return r.status_code < 300
+        return get_extension
 
-    def create(self, id: str, payload: dict):
-        payload["_key"] = id
-        r = requests.post(
-            f"{self.collection_url}_{self.get_type(payload)}",
-            {"value": payload.get("name")},
-            headers=self.headers,
-            verify=self.qradar_ssl_verify,
-        )
-        if r.status_code == 404:
-            self.create_refernce(self.get_type(payload))
-            self.create(id, payload)
-        else:
+    def create(self, id: str, payload: dict, create_alphanumeric: bool = False):
+        try:
+            url_request = (
+                f"{self.collection_url}_{self.get_type(payload)}"
+                if not create_alphanumeric
+                else f"{self.qradar_url}{self.qradar_url_reference}?element_type=ALN&name={self.qradar_reference_name}_{self.get_type(payload)}"
+            )
+            payload["_key"] = id
+
+            if payload["type"] == "file":
+                payload_value = next(iter(payload["hashes"].values()))
+            else:
+                payload_value = payload.get("name", payload.get("value"))
+
+            if payload_value is None:
+                return self.helper.connector_logger.info(
+                    "[CREATE] The creation was canceled because the entity value was not correctly identified.",
+                    {
+                        "entity_id": payload["id"],
+                        "entity_type -> type": f"{payload['type']} -> {self.get_type(payload)}",
+                    },
+                )
+
+            prepared_value = {"value": payload_value}
+            r = requests.post(
+                url_request,
+                prepared_value,
+                headers=self.headers,
+                verify=self.qradar_ssl_verify,
+            )
             r.raise_for_status()
+            return self.helper.connector_logger.info(
+                "[API] The API request was successful",
+                {
+                    "entity_id": payload["id"],
+                    "entity_type -> type": f"{payload['type']} -> {self.get_type(payload)}",
+                    "status_code": r.status_code,
+                },
+            )
+
+        except requests.exceptions.HTTPError as e:
+            text_without_tags = re.sub(
+                r"<[^>]*>", "", e.response.text.replace("\n", " ")
+            )
+            logger_message = (
+                (
+                    "[ERROR-API] API request failed during creation. "
+                    "Attempted to create with ALN for alphanumeric values."
+                )
+                if not create_alphanumeric
+                else "[ERROR-API] API request failed during second attempted creation."
+            )
+            self.helper.connector_logger.error(
+                logger_message,
+                {
+                    "entity_id": payload["id"],
+                    "entity_type -> type": f"{payload['type']} -> {self.get_type(payload)}",
+                    "status_code": e.response.status_code,
+                    "reason": e.response.reason,
+                    "error": text_without_tags.strip(),
+                },
+            )
+            if not create_alphanumeric:
+                return self.create(id, payload, True)
 
     def update(self, id: str, payload: dict):
         payload["_key"] = id
@@ -266,6 +319,12 @@ if __name__ == "__main__":
         "QRADAR_IGNORE_TYPES", ["qradar", "ignore_types"], config
     ).split(",")
     qradar_url = get_config_variable("QRADAR_URL", ["qradar", "url"], config)
+    qradar_url_reference = get_config_variable(
+        "QRADAR_URL_REFERENCE",
+        ["qradar", "url_reference"],
+        config,
+        default="/api/reference_data_collections/sets",
+    )
     qradar_token = get_config_variable("QRADAR_TOKEN", ["qradar", "token"], config)
     qradar_ssl_verify = get_config_variable(
         "QRADAR_SSL_VERIFY", ["qradar", "ssl_verify"], config, False, True
@@ -296,7 +355,9 @@ if __name__ == "__main__":
 
     # create reference_set instance
     reference_set = QradarReference(
+        helper,
         qradar_url,
+        qradar_url_reference,
         qradar_token,
         qradar_reference_name,
         qradar_ssl_verify,

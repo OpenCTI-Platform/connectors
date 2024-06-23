@@ -1,4 +1,4 @@
-pycti==6.1.0
+pycti==6.1.12
 antlr4-python3-runtime
 chardet
 datefinder
@@ -7,9 +7,7 @@ pika
 python-dateutil
 python-magic
 pytz
-PyYAML
 regex
-requests
 simplejson
 six
 sseclient
