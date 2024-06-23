@@ -127,7 +127,9 @@ class TestShadowserverStixTransformation(unittest.TestCase):
             "shadowserver.utils.find_stix_object_by_id", return_value="192.168.0.1"
         ):
             network_traffic = self.transformation.create_network_traffic(
-                dst_port=80, protocol="tcp", dst_ref="ipv4-addr--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+                dst_port=80,
+                protocol="tcp",
+                dst_ref="ipv4-addr--613f2e26-407d-48c7-9eca-b8e91df99dc9",
             )
             self.assertTrue(isinstance(network_traffic, str))
             self.assertTrue(network_traffic.startswith("network-traffic--"))

@@ -30,6 +30,7 @@ from stix2.canonicalization.Canonicalize import canonicalize
 from .utils import (
     calculate_hashes,
     check_ip_address,
+    check_keys,
     compare_severity,
     datetime_to_string,
     dicts_to_markdown,
@@ -38,7 +39,6 @@ from .utils import (
     get_stix_id_precedence,
     note_timestamp_to_datetime,
     string_to_datetime,
-    check_keys,
 )
 
 
@@ -100,9 +100,7 @@ class ShadowserverStixTransformation:
             # Compare severity with the incident severity.
             severity = self.incident.get("severity", "low")
             if "severity" in element:
-                severity = compare_severity(
-                    severity, element.get("severity", "low")
-                )
+                severity = compare_severity(severity, element.get("severity", "low"))
             if "vendor_severity" in element:
                 severity = compare_severity(
                     severity, element.get("vendor_severity", "low")
@@ -446,9 +444,15 @@ class ShadowserverStixTransformation:
                 observed_data_list.append(stix_object_str)
 
         # If src_port, dst_port, src_ip, dst_ip, and protocol are in the element, create network traffic
-        if check_keys(element, ["src_port", "dst_port", "src_ip", "dst_ip", "protocol"]):
-            dst_ip_stix_object = self.create_ip(element.get("dst_ip"), labels=labels_list)
-            src_ip_stix_object = self.create_ip(element.get("src_ip"), labels=labels_list)
+        if check_keys(
+            element, ["src_port", "dst_port", "src_ip", "dst_ip", "protocol"]
+        ):
+            dst_ip_stix_object = self.create_ip(
+                element.get("dst_ip"), labels=labels_list
+            )
+            src_ip_stix_object = self.create_ip(
+                element.get("src_ip"), labels=labels_list
+            )
 
             stix_object_str = self.create_network_traffic(
                 src_port=element.get("src_port"),
@@ -590,12 +594,16 @@ class ShadowserverStixTransformation:
         return MACAddress(**kwargs)
 
     def create_network_traffic(
-        self, src_port: int = None, dst_port: int = None, protocol: str = None, src_ref: str = None, dst_ref: str = None, labels: list = []
+        self,
+        src_port: int = None,
+        dst_port: int = None,
+        protocol: str = None,
+        src_ref: str = None,
+        dst_ref: str = None,
+        labels: list = [],
     ):
         """Creates a network traffic STIX object."""
-        self.helper.log_debug(
-            f"Creating network traffic STIX object."
-        )
+        self.helper.log_debug("Creating network traffic STIX object.")
         kwargs = {
             "type": "network-traffic",
             "protocols": [protocol],
@@ -606,13 +614,13 @@ class ShadowserverStixTransformation:
 
         if dst_port:
             kwargs["dst_port"] = dst_port
-        
+
         if src_port:
             kwargs["src_port"] = src_port
-        
+
         if src_ref:
             kwargs["src_ref"] = src_ref
-        
+
         if dst_ref:
             kwargs["dst_ref"] = dst_ref
 
@@ -621,7 +629,12 @@ class ShadowserverStixTransformation:
 
         # Generate custom ID for network traffic
         data = canonicalize(kwargs, utf8=False)
-        id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), f"{self.report_id}-{data}"))
+        id = str(
+            uuid.uuid5(
+                uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"),
+                f"{self.report_id}-{data}",
+            )
+        )
         kwargs["id"] = f"network-traffic--{id}"
 
         description = f"Network Traffic {dst_value} - {protocol}"

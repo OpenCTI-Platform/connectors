@@ -272,6 +272,7 @@ def compare_severity(severity1, severity2):
     else:
         return severity2
 
+
 def check_keys(dictionary, required_keys):
     """
     Checks if all required keys are present in the dictionary.
