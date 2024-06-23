@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timedelta
 
 from lib.external_import import ExternalImportConnector
-from shadowserver import ShadowServerAPI, get_tlp_keys
+from shadowserver import ShadowserverAPI, get_tlp_keys
 
 # Lookback in days
 LOOKBACK = 3
@@ -33,14 +33,14 @@ class CustomConnector(ExternalImportConnector):
         self.api_key = os.environ.get("SHADOWSERVER_API_KEY", None)
         self.api_secret = os.environ.get("SHADOWSERVER_API_SECRET", None)
         self.marking = os.environ.get("SHADOWSERVER_MARKING", "TLP:CLEAR")
-        
+
         # Create incident Dict: create, severity, priority
         create_incident = os.environ.get("SHADOWSERVER_CREATE_INCIDENT", False)
         if create_incident in ["true", "false", True, False] or not create_incident:
             create_incident = True if create_incident in ("true", True) else False
-        else: 
+        else:
             raise ValueError(
-                f"You must set the SHADOWSERVER_CREATE_INCIDENT environment variable to 'true' or 'false'."
+                "You must set the SHADOWSERVER_CREATE_INCIDENT environment variable to 'true' or 'false'."
             )
         incident_severity = os.environ.get("SHADOWSERVER_INCIDENT_SEVERITY")
         incident_priority = os.environ.get("SHADOWSERVER_INCIDENT_PRIORITY")
@@ -55,20 +55,19 @@ class CustomConnector(ExternalImportConnector):
         self.incident = {
             "create": create_incident,
             "severity": incident_severity,
-            "priority": incident_priority
+            "priority": incident_priority,
         }
         self.helper.log_info(f"Setting incident: {self.incident}")
-        
+
         # Error logic to check if the environment variables are set.
         if not self.api_key or not self.api_secret:
             raise ValueError(
                 "You must set the SHADOWSERVER_API_KEY and SHADOWSERVER_API_SECRET environment variables."
             )
-        if not self.marking or not self.marking in get_tlp_keys():
+        if not self.marking or self.marking not in get_tlp_keys():
             raise ValueError(
                 f"You must set the SHADOWSERVER_MARKING environment variable to a valid TLP. ({get_tlp_keys()})"
             )
-        
 
     def _collect_intelligence(self) -> []:
         """Collects intelligence from channels
@@ -87,7 +86,7 @@ class CustomConnector(ExternalImportConnector):
         # ===========================
         # === Add your code below ===
         # ===========================
-        shadowserver_api = ShadowServerAPI(
+        shadowserver_api = ShadowserverAPI(
             api_key=self.api_key,
             api_secret=self.api_secret,
             marking_refs=self.marking,

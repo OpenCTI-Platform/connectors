@@ -1,20 +1,20 @@
 [
     {
-        "asn": 11351,
-        "banner": "RFB 003.008",
-        "city": "SARATOGA SPRINGS",
+        "asn": 98765,
+        "banner": "RFB 003.009",
+        "city": "LOS ANGELES",
         "geo": "US",
-        "hostname": "024-097-024-242.biz.spectrum.com",
+        "hostname": "123-456-789-012.biz.spectrum.com",
         "hostname_source": "ptr",
-        "ip": "24.97.24.242",
-        "naics": 517311,
-        "port": 5900,
-        "product": "VNC protocol 3.8",
+        "ip": "123.456.789.12",
+        "naics": 123456,
+        "port": 5901,
+        "product": "VNC protocol 3.9",
         "protocol": "tcp",
-        "region": "NEW YORK",
+        "region": "CALIFORNIA",
         "sector": "Communications, Service Provider, and Hosting Service",
-        "severity": "high",
+        "severity": "medium",
         "tag": "vnc",
-        "timestamp": "2024-01-04 17:01:06Z"
+        "timestamp": "2022-12-31 23:59:59Z"
     }
 ]

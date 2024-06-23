@@ -7,7 +7,7 @@ import pandas as pd
 from stix2 import parse, properties
 from stix2.base import _Observable as Observable
 
-from .constants import REQUEST_DATE_FORMAT, TLP_MAP
+from .constants import REQUEST_DATE_FORMAT, SEVERITY_MAP, TLP_MAP
 
 
 # Function to calculate different hashes
@@ -245,6 +245,7 @@ def find_stix_object_by_id(
             return obj.get("value", None)
     return None
 
+
 def get_tlp_keys():
     """
     Get the TLP keys from the TLP_MAP dictionary.
@@ -253,3 +254,20 @@ def get_tlp_keys():
         list: A list of TLP keys.
     """
     return list(TLP_MAP.keys())
+
+
+def compare_severity(severity1, severity2):
+    """
+    Compare two severity values and return the higher severity..
+
+    Args:
+        severity1 (str): The first severity value.
+        severity2 (str): The second severity value.
+
+    Returns:
+        str: The higher severity value.
+    """
+    if SEVERITY_MAP.get(severity1, 0) >= SEVERITY_MAP.get(severity2, 0):
+        return severity1
+    else:
+        return severity2

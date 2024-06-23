@@ -1,96 +1,96 @@
 [
     {
-        "file": "2024-01-04-blocklist-rivian-ip.csv",
-        "id": "9C0PGmdRzhfi4DzQ26nTLlGeLPY?GRqA7QTvibRyJufyV4QoGA",
-        "report": "rivian",
+        "file": "2024-01-04-blocklist-company-ip.csv",
+        "id": "**************",
+        "report": "company",
         "timestamp": "2024-01-04",
         "type": "blocklist",
         "url": "https://www.shadowserver.org/what-we-do/network-reporting/blocklist-report/"
     },
     {
-        "file": "2024-01-04-device_id-rivian-ip.csv",
-        "id": "UIBBkymmxl5Rr9gmWbbWfq0qwU4?mmmZWkQgTKgwBicJSNE7yg",
-        "report": "rivian",
+        "file": "2024-01-04-device_id-company-ip.csv",
+        "id": "**************",
+        "report": "company",
         "timestamp": "2024-01-04",
         "type": "device_id",
         "url": "https://www.shadowserver.org/what-we-do/network-reporting/device-identification-report/"
     },
     {
-        "file": "2024-01-04-scan_cwmp-rivian-ip.csv",
-        "id": "qpbdHKNGhsYVoxA9b6CyBIGbQYY?0sDErI_WT64DwWEHAdoq_w",
-        "report": "rivian",
+        "file": "2024-01-04-scan_cwmp-company-ip.csv",
+        "id": "**************",
+        "report": "company",
         "timestamp": "2024-01-04",
         "type": "scan_cwmp",
         "url": "https://www.shadowserver.org/what-we-do/network-reporting/open-cwmp-report/"
     },
     {
-        "file": "2024-01-04-scan_http-rivian-ip.csv",
-        "id": "u6Qn6pGWXOS94W3WWRluSWl6h8E?nvN5wXYHv5F9OXDf01546Q",
-        "report": "rivian",
+        "file": "2024-01-04-scan_http-company-ip.csv",
+        "id": "**************",
+        "report": "company",
         "timestamp": "2024-01-04",
         "type": "scan_http",
         "url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-http-report/"
     },
     {
-        "file": "2024-01-04-scan_ics-rivian-ip.csv",
-        "id": "c7rHle6C-JWxgF79uH2_lzVyGjI?3szcfL3MYAHEAIfyYWy_Ig",
-        "report": "rivian",
+        "file": "2024-01-04-scan_ics-company-ip.csv",
+        "id": "**************",
+        "report": "company",
         "timestamp": "2024-01-04",
         "type": "scan_ics",
         "url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-ics-report/"
     },
     {
-        "file": "2024-01-04-scan_ntp-rivian-ip.csv",
-        "id": "QGgJ5spTRhLQbsfsrWth_JunXqc?2Vf8u2gvf5znEV-osFB5bw",
-        "report": "rivian",
+        "file": "2024-01-04-scan_ntp-company-ip.csv",
+        "id": "**************",
+        "report": "company",
         "timestamp": "2024-01-04",
         "type": "scan_ntp",
         "url": "https://www.shadowserver.org/what-we-do/network-reporting/ntp-version-report/"
     },
     {
-        "file": "2024-01-04-scan_snmp-rivian-ip.csv",
-        "id": "mEXrafbRO05NOIzk8MFSIFr4ufk?rSOfB0fkDe1QbGWnZ9fq5Q",
-        "report": "rivian",
+        "file": "2024-01-04-scan_snmp-company-ip.csv",
+        "id": "**************",
+        "report": "company",
         "timestamp": "2024-01-04",
         "type": "scan_snmp",
         "url": "https://www.shadowserver.org/what-we-do/network-reporting/open-snmp-report/"
     },
     {
-        "file": "2024-01-04-scan_ssh-rivian-ip.csv",
-        "id": "3Ph-WqKsx3Vd0AqXAZ33tqH3_TQ?erGpwxNMui8NjB6EgbSX1w",
-        "report": "rivian",
+        "file": "2024-01-04-scan_ssh-company-ip.csv",
+        "id": "**************",
+        "report": "company",
         "timestamp": "2024-01-04",
         "type": "scan_ssh",
         "url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-ssh-report/"
     },
     {
-        "file": "2024-01-04-scan_ssl-rivian-ip.csv",
-        "id": "2lz-uwZ1WNE5FujwSMAR9_GkFPY?X2x958g_f4cxW3qplQ-poA",
-        "report": "rivian",
+        "file": "2024-01-04-scan_ssl-company-ip.csv",
+        "id": "**************",
+        "report": "company",
         "timestamp": "2024-01-04",
         "type": "scan_ssl",
         "url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-ssl-report/"
     },
     {
-        "file": "2024-01-04-scan_ssl_freak-rivian-ip.csv",
-        "id": "eQF45brBAMKjPx78Ke1se7-rPhE?OpQK1xlUZzn0s5ErN0ONug",
-        "report": "rivian",
+        "file": "2024-01-04-scan_ssl_freak-company-ip.csv",
+        "id": "**************",
+        "report": "company",
         "timestamp": "2024-01-04",
         "type": "scan_ssl_freak",
         "url": "https://www.shadowserver.org/what-we-do/network-reporting/ssl-freak-report/"
     },
     {
-        "file": "2024-01-04-scan_ssl_poodle-rivian-ip.csv",
-        "id": "PeKDrZi9T7EkvM9zJ1S9gaU-GTQ?--Gj0p694OXwC8YMnb1BuQ",
-        "report": "rivian",
+        "file": "2024-01-04-scan_ssl_poodle-company-ip.csv",
+        "id": "**************",
+        "report": "company",
         "timestamp": "2024-01-04",
         "type": "scan_ssl_poodle",
         "url": "https://www.shadowserver.org/what-we-do/network-reporting/ssl-poodle-report/"
     },
     {
-        "file": "2024-01-04-scan_vnc-rivian-ip.csv",
-        "id": "CWmtiWQ_5Cenl7uOwGvHO5uy-xI?Km3LVSihoixGxyik7LAa8g",
-        "report": "rivian",
+        "file": "2024-01-04-scan_vnc-company-ip.csv",
+        "id": "**************",
+        "report": "company",
         "timestamp": "2024-01-04",
         "type": "scan_vnc",
         "url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-vnc-report/"

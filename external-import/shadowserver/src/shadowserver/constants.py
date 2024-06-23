@@ -14,3 +14,5 @@ TLP_MAP = {
     "TLP:AMBER": TLP_AMBER,
     "TLP:RED": TLP_RED,
 }
+
+SEVERITY_MAP = {"info": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}

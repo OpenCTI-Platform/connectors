@@ -4,11 +4,11 @@ import os
 import pytest
 import requests
 
-from shadowserver.api import ShadowServerAPI
+from shadowserver.api import ShadowserverAPI
 from shadowserver.constants import BASE_URL
 
 
-class TestShadowServerAPI:
+class TestShadowserverAPI:
     api_key = "test_api_key"
     api_secret = "test_api_secret"
     marking_refs = "TLP:WHITE"
@@ -17,7 +17,7 @@ class TestShadowServerAPI:
     @pytest.fixture
     def shadow_server_api(self):
         """Create an instance of the API class."""
-        return ShadowServerAPI(self.api_key, self.api_secret, self.marking_refs)
+        return ShadowserverAPI(self.api_key, self.api_secret, self.marking_refs)
 
     def load_fixture(self, filename):
         """Load a fixture file and return its content.
@@ -60,7 +60,7 @@ class TestShadowServerAPI:
 
     def test_init_marking_refs_invalid(self):
         with pytest.raises(ValueError):
-            ShadowServerAPI(
+            ShadowserverAPI(
                 api_key="test_api_key",
                 api_secret="test_api_secret",
                 marking_refs="invalid_marking_refs",

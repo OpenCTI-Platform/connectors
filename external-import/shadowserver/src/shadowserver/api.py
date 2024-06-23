@@ -11,15 +11,15 @@ from pycti import OpenCTIConnectorHelper
 from requests.exceptions import RequestException
 
 from .constants import BASE_URL, LIMIT, TIMEOUT, TLP_MAP
-from .stix_transform import ShadowServerStixTransformation
+from .stix_transform import ShadowserverStixTransformation
 from .utils import validate_date_format, validate_marking_refs
 
 LOGGER = logging.getLogger(__name__)
 
 
-class ShadowServerAPI:
+class ShadowserverAPI:
     """
-    This class interacts with the ShadowServer API to retrieve and process reports.
+    This class interacts with the Shadowserver API to retrieve and process reports.
     """
 
     def __init__(self, api_key: str, api_secret: str, marking_refs: str = "TLP:WHITE"):
@@ -139,7 +139,7 @@ class ShadowServerAPI:
 
     def get_subscriptions(self) -> Optional[Dict]:
         """
-        Retrieves the list of available report types from the ShadowServer API.
+        Retrieves the list of available report types from the Shadowserver API.
 
         Returns:
             dict or None: The JSON response from the request, or None if an error occurred.
@@ -152,7 +152,7 @@ class ShadowServerAPI:
         api_helper: OpenCTIConnectorHelper,
         limit: int = LIMIT,
         incident: dict = {},
-        labels: List[str] = ["ShadowServer"],
+        labels: List[str] = ["Shadowserver"],
     ) -> Optional[Dict]:
         """
         Retrieves a STIX report based on the specified report parameters.
@@ -161,7 +161,7 @@ class ShadowServerAPI:
             report (dict): The report parameters containing 'id' and 'report' keys.
             api_helper (OpenCTIConnectorHelper): The OpenCTI connector helper instance.
             limit (int, optional): The maximum number of results to return. Defaults to LIMIT.
-            labels (list, optional): Labels to apply to the STIX objects. Defaults to ['ShadowServer'].
+            labels (list, optional): Labels to apply to the STIX objects. Defaults to ['Shadowserver'].
 
         Returns:
             dict or None: The retrieved STIX report in dictionary format, or None if an error occurred.
@@ -178,7 +178,7 @@ class ShadowServerAPI:
 
         if report_list:
             LOGGER.debug(f"Report list length: {len(report_list)}")
-            stix_transformation = ShadowServerStixTransformation(
+            stix_transformation = ShadowserverStixTransformation(
                 marking_refs=self.marking_refs,
                 report_list=report_list,
                 report=report,

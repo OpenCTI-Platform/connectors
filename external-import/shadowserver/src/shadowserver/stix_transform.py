@@ -5,9 +5,10 @@ from datetime import datetime
 
 import magic
 from pycti import CustomObjectCaseIncident
-from pycti import Identity as pycti_identity, Report as pycti_report
+from pycti import Identity as pycti_identity
 from pycti import Note as pycti_note
 from pycti import OpenCTIConnectorHelper
+from pycti import Report as pycti_report
 from stix2 import (
     Artifact,
     AutonomousSystem,
@@ -29,6 +30,7 @@ from stix2.canonicalization.Canonicalize import canonicalize
 from .utils import (
     calculate_hashes,
     check_ip_address,
+    compare_severity,
     datetime_to_string,
     dicts_to_markdown,
     find_stix_object_by_id,
@@ -39,7 +41,7 @@ from .utils import (
 )
 
 
-class ShadowServerStixTransformation:
+class ShadowserverStixTransformation:
     def __init__(
         self,
         marking_refs: MarkingDefinition,
@@ -47,17 +49,17 @@ class ShadowServerStixTransformation:
         report: dict,
         api_helper: OpenCTIConnectorHelper,
         incident: dict = {},
-        labels: list = ["ShadowServer"],
+        labels: list = ["Shadowserver"],
     ):
         """
-        Initializes a ShadowServerStixTransformation object with the provided parameters.
+        Initializes a ShadowserverStixTransformation object with the provided parameters.
 
         Parameters:
             marking_refs (MarkingDefinition): The marking references for the transformation.
             report_list (list): The list of reports for transformation.
             report (dict): The report details for transformation.
             api_helper (OpenCTIConnectorHelper): The helper for the OpenCTI connector.
-            labels (list): The labels associated with the transformation (default is ['ShadowServer']).
+            labels (list): The labels associated with the transformation (default is ['Shadowserver']).
 
         Returns:
             None
@@ -74,7 +76,7 @@ class ShadowServerStixTransformation:
         self.custom_properties = {}
         self.external_reference = None
         self.author_id = None
-        self.case_id = None 
+        self.case_id = None
         self.report_id = None
         self.incident = incident
 
@@ -94,10 +96,28 @@ class ShadowServerStixTransformation:
         label_list = []
         for element in self.report_list:
             label_list = self.map_to_stix(element)
-        if self.incident.get("create", False):
-            self.create_opencti_case(labels=label_list)
-        self.create_stix_report(labels=label_list)
-        self.create_stix_note_from_data(labels=label_list)
+            # Compare severity with the incident severity.
+            if "severity" in element:
+                self.incident["severity"] = compare_severity(
+                    self.incident["severity"], element["severity"]
+                )
+            if "vendor_severity" in element:
+                self.incident["severity"] = compare_severity(
+                    self.incident["severity"], element["vendor_severity"]
+                )
+        if self.object_refs:
+            if self.incident.get("create", False):
+                self.create_opencti_case(labels=label_list)
+            else:
+                self.helper.log_info(
+                    "Not creating incident because 'create' is set to False."
+                )
+            self.create_stix_report(labels=label_list)
+            self.create_stix_note_from_data(labels=label_list)
+        else:
+            self.helper.log_error(
+                "No object references found, not creating incident, report, or note."
+            )
 
     def create_custom_properties(self):
         """Creates custom properties in OpenCTI."""
@@ -184,18 +204,18 @@ class ShadowServerStixTransformation:
 
     def get_stix_objects(self):
         """
-        Returns the STIX objects associated with the ShadowServerStixTransformation.
+        Returns the STIX objects associated with the ShadowserverStixTransformation.
         """
         return self.stix_objects
 
     def create_external_reference(self):
         """
-        Creates an external reference with source name 'source', description 'ShadowServer Report', and URL based on the provided self.url.
+        Creates an external reference with source name 'source', description 'Shadowserver Report', and URL based on the provided self.url.
         """
         self.helper.log_info(f"Creating external reference: ({self.url}).")
         self.external_reference = {
             "source_name": "source",
-            "description": "ShadowServer Report",
+            "description": "Shadowserver Report",
             "url": f"{self.url}",
         }
 
@@ -212,7 +232,7 @@ class ShadowServerStixTransformation:
         self.helper.log_debug(f"Creating OpenCTI case: {self.report.get('id')}")
         description = self.create_description()
         kwargs = {
-            "name": f"ShadowServer Report {self.type}: {self.report.get('id')}",
+            "name": f"Shadowserver Report {self.type}: {self.report.get('id')}",
             "severity": self.incident.get("severity", "low"),
             "priority": self.incident.get("priority", "P4"),
             "created": self.published,
@@ -244,7 +264,7 @@ class ShadowServerStixTransformation:
 
     def upload_stix2_artifact(self, report_list):
         """
-        Uploads the given report list as a ShadowServer artifact.
+        Uploads the given report list as a Shadowserver artifact.
 
         Parameters:
             report_list: A list of reports to be uploaded.
@@ -252,7 +272,7 @@ class ShadowServerStixTransformation:
         Returns:
             None
         """
-        self.helper.log_debug("Uploading ShadowServer report as artifact.")
+        self.helper.log_debug("Uploading Shadowserver report as artifact.")
         csv_str_enc = from_list_to_csv(report_list).encode()
         mime_type = magic.from_buffer(csv_str_enc, mime=True)
         base64_encoded_str = base64.b64encode(csv_str_enc).decode("utf-8")
@@ -265,7 +285,7 @@ class ShadowServerStixTransformation:
         }
 
         self.helper.log_info(
-            f"Uploading ShadowServer report as artifact: {self.report}."
+            f"Uploading Shadowserver report as artifact: {self.report}."
         )
 
         custom_properties = self.get_custom_properties()
@@ -280,19 +300,19 @@ class ShadowServerStixTransformation:
             self.stix_objects.append(artifact)
         else:
             self.helper.log_error(
-                f"Failed to upload ShadowServer report as artifact: {self.report}."
+                f"Failed to upload Shadowserver report as artifact: {self.report}."
             )
 
     def get_custom_properties(self):
         """
-        Get the custom properties for the ShadowServer report.
+        Get the custom properties for the Shadowserver report.
 
         :return: Dictionary containing custom properties for the report.
         """
         custom_properties = copy.deepcopy(self.custom_properties)
         custom_properties[
             "x_opencti_description"
-        ] = f"ShadowServer Report Type ({self.type}) Report ID ({self.report.get('id')})"
+        ] = f"Shadowserver Report Type ({self.type}) Report ID ({self.report.get('id')})"
         custom_properties["x_opencti_additional_names"] = [
             self.report.get("file", "default_file_name.csv")
         ]
@@ -304,9 +324,11 @@ class ShadowServerStixTransformation:
     def create_stix_report(self, labels):
         description = self.create_description()
         kwargs = {
-            "id": pycti_report.generate_id(name=self.report.get("id"), published=self.published),
-            "report_types": ['tool'],
-            "name": f"ShadowServer Report {self.type}: {self.report.get('id')}",
+            "id": pycti_report.generate_id(
+                name=self.report.get("id"), published=self.published
+            ),
+            "report_types": ["tool"],
+            "name": f"Shadowserver Report {self.type}: {self.report.get('id')}",
             "published": self.published,
             "object_refs": self.object_refs,
             "external_references": [self.external_reference],
@@ -315,9 +337,7 @@ class ShadowServerStixTransformation:
             "object_marking_refs": self.marking_refs,
             "labels": labels,
         }
-        stix_report = Report(
-            **kwargs
-        )
+        stix_report = Report(**kwargs)
         self.report_id = stix_report.get("id", None)
         if self.report_id:
             self.stix_objects.append(stix_report)
@@ -358,13 +378,13 @@ class ShadowServerStixTransformation:
 
     def create_author(self):
         """Creates the author of the report."""
-        self.helper.log_debug("Creating author: ShadowServer Connector")
+        self.helper.log_debug("Creating author: Shadowserver Connector")
         kwargs = {
-            "id": pycti_identity.generate_id("ShadowServer Connector", "Organization"),
-            "name": "ShadowServer Connector",
+            "id": pycti_identity.generate_id("Shadowserver Connector", "Organization"),
+            "name": "Shadowserver Connector",
             "identity_class": "Organization",
             "type": "identity",
-            "description": "ShadowServer Connector",
+            "description": "Shadowserver Connector",
             "sectors": "non-profit",
         }
 
@@ -392,7 +412,7 @@ class ShadowServerStixTransformation:
 
     def map_to_stix(self, element):
         """
-        A method that maps elements to STIX objects for a ShadowServer report.
+        A method that maps elements to STIX objects for a Shadowserver report.
 
         Parameters:
             element: The element to map to STIX objects.
@@ -406,7 +426,7 @@ class ShadowServerStixTransformation:
             "hostname": self.create_hostname,
             "mac_address": self.create_mac_address,
         }
-        self.helper.log_debug("Mapping ShadowServer report to STIX.")
+        self.helper.log_debug("Mapping Shadowserver report to STIX.")
         observed_data_list = []
         labels_list = self.custom_properties.get("x_opencti_labels", []).copy()
 
@@ -663,7 +683,7 @@ class ShadowServerStixTransformation:
 
     def create_stix_note_from_data(self, labels: list = []):
         """
-        A function that creates STIX notes from data in the ShadowServer report list.
+        A function that creates STIX notes from data in the Shadowserver report list.
 
         Parameters:
             labels (list): A list of labels to be assigned to the STIX note.
@@ -681,7 +701,7 @@ class ShadowServerStixTransformation:
             else:
                 content = str(element)
 
-            abstract = f'ShadowServer {self.type} Report {element.get("timestamp", "") if isinstance(element, dict) else ""}'
+            abstract = f'Shadowserver {self.type} Report {element.get("timestamp", "") if isinstance(element, dict) else ""}'
 
             kwargs = {
                 "id": pycti_note.generate_id(abstract, content),
@@ -704,7 +724,12 @@ class ShadowServerStixTransformation:
             if self.report_id:
                 kwargs["object_refs"].append(self.report_id)
 
-            stix_object = Note(**kwargs)
-            if stix_object:
-                self.stix_objects.append(stix_object)
-                self.object_refs.append(stix_object.get("id"))
+            if kwargs["object_refs"]:
+                stix_object = Note(**kwargs)
+                if stix_object:
+                    self.stix_objects.append(stix_object)
+                    self.object_refs.append(stix_object.get("id"))
+            else:
+                self.helper.log_error(
+                    f"Failed to create STIX note from data: {element}"
+                )

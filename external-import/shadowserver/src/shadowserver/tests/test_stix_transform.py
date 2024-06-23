@@ -5,24 +5,19 @@ from unittest.mock import MagicMock, patch
 from pycti import CustomObjectCaseIncident, OpenCTIConnectorHelper
 from stix2 import (
     Artifact,
-    AutonomousSystem,
     DomainName,
     Identity,
     IPv4Address,
     IPv6Address,
     MACAddress,
     MarkingDefinition,
-    NetworkTraffic,
-    Note,
-    ObservedData,
-    X509Certificate,
 )
 
-from shadowserver.stix_transform import ShadowServerStixTransformation
+from shadowserver.stix_transform import ShadowserverStixTransformation
 from shadowserver.utils import datetime_to_string
 
 
-class TestShadowServerStixTransformation(unittest.TestCase):
+class TestShadowserverStixTransformation(unittest.TestCase):
     def setUp(self):
         self.api_helper = MagicMock(spec=OpenCTIConnectorHelper)
         self.api_helper.log_debug = MagicMock()
@@ -44,14 +39,19 @@ class TestShadowServerStixTransformation(unittest.TestCase):
             "id": "test_report_id",
             "url": "http://example.com/report",
         }
-        self.labels = ["ShadowServer"]
+        self.labels = ["Shadowserver"]
 
-        self.transformation = ShadowServerStixTransformation(
+        self.transformation = ShadowserverStixTransformation(
             marking_refs=self.marking_refs,
             report_list=self.report_list,
             report=self.report,
             api_helper=self.api_helper,
             labels=self.labels,
+            incident={
+                "create": True,
+                "severity": "medium",
+                "priority": "P4",
+            },
         )
 
     def test_create_author(self):
@@ -105,7 +105,7 @@ class TestShadowServerStixTransformation(unittest.TestCase):
     def test_create_stix_note_from_data(self):
         self.transformation.create_stix_note_from_data()
         self.assertTrue(
-            any(isinstance(obj, Note) for obj in self.transformation.stix_objects)
+            obj.startswith("note--") for obj in self.transformation.stix_objects
         )
 
     def test_create_ip(self):

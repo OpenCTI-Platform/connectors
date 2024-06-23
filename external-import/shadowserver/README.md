@@ -1,13 +1,29 @@
-# External Ingestion Template Connector
+# Shadowserver Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+The integration uses Shadowservers reports API to query the available Shadowserver reports and transform them into Stix objects making them available within OpenCTI. All available reports are downloaded and an `Artifact` object is created with the original file. Stix `Note` objects are added to both the `Report` and the `CustomObjectCaseIncident` with a mark-down rendition of each finding from the report.
+
+API and report references from The Shadowserver Foundation
+ - https://github.com/The-Shadowserver-Foundation/api_utils/wiki/API:-Reports-Query
+ - https://interchange.shadowserver.org/schema/reports.json
+
+ The integration creates the following types of Stix objects and relationships between them.
+ - Artifact
+ - AutonomousSystem
+ - CustomObjectCaseIncident (optional)
+ - DomainName
+ - Identity
+ - IPv4Address
+ - IPv6Address
+ - MACAddress
+ - MarkingDefinition
+ - NetworkTraffic
+ - Note
+ - ObservedData
+ - Report
+ - Vulnerability
+ - X509Certificate
+
+On the initial run, the integration defaults to the last 30-days of reports. Every run after that, it provides an update for the last 3-days. 
 
 ## Installation
 
@@ -53,7 +69,12 @@ Finally, the ones that follow are connector's specific execution parameters expe
 
 | Parameter                            | Docker envvar                       | Mandatory    | Description                                                                                                                                                |
 | ------------------------------------ | ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `extra_parameter`                    | `EXTRA_PARAMETER`                   | Yes          | Any extra parameter.                                                                                                                                       |
+| `shadowserver_api_key`               | `SHADOWSERVER_API_KEY`              | Yes          | The API key for Shadowserver.                                                                                                                              |
+| `shadowserver_api_secret`            | `SHADOWSERVER_API_SECRET`           | Yes          | The API secret for Shadowserver.                                                                                                                           |
+| `shadowserver_marking`               | `SHADOWSERVER_MARKING`              | Yes          | The marking for the data, e.g., `TLP:CLEAR`, `TLP:GREEN`, `TLP:AMBER`, `TLP:RED`.                                                                                                               |
+| `shadowserver_create_incident`       | `SHADOWSERVER_CREATE_INCIDENT`      | Yes          | Whether to create an incident (`true` or `false`).                                                                                                         |
+| `shadowserver_incident_severity`     | `SHADOWSERVER_INCIDENT_SEVERITY`    | Yes          | The severity of the incident, e.g., `low` (Default: `low`).                                                                                                                 |
+| `shadowserver_incident_priority`     | `SHADOWSERVER_INCIDENT_PRIORITY`    | Yes          | The priority of the incident, e.g., `P4` (Default: `P4`).   
 
 ### Debugging ###
 
