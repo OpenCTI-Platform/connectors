@@ -29,7 +29,7 @@ On the initial run, the integration defaults to the last 30-days of reports. Eve
 
 ### Requirements
 
-- OpenCTI Platform >= 5.12.15
+- OpenCTI Platform >= 6.1.12
 
 ### Configuration
 

@@ -589,7 +589,7 @@ class ShadowserverStixTransformation:
 
         # Generate custom ID for network traffic
         data = canonicalize(kwargs, utf8=False)
-        id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), data))
+        id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), f"{data}-{self.report_id}"))
         kwargs["id"] = f"network-traffic--{id}"
 
         description = f"Network Traffic {dst_value} - {protocol}:{port}"
@@ -701,7 +701,7 @@ class ShadowserverStixTransformation:
             else:
                 content = str(element)
 
-            abstract = f'Shadowserver {self.type} Report {element.get("timestamp", "") if isinstance(element, dict) else ""}'
+            abstract = f'Shadowserver {self.type} Report {self.report_id} - {element.get("timestamp", "") if isinstance(element, dict) else ""}'
 
             kwargs = {
                 "id": pycti_note.generate_id(abstract, content),

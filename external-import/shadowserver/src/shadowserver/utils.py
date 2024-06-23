@@ -267,7 +267,7 @@ def compare_severity(severity1, severity2):
     Returns:
         str: The higher severity value.
     """
-    if SEVERITY_MAP.get(severity1, 0) >= SEVERITY_MAP.get(severity2, 0):
+    if SEVERITY_MAP.get(severity1, 4) <= SEVERITY_MAP.get(severity2, 4):
         return severity1
     else:
         return severity2
