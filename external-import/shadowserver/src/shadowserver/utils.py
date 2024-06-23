@@ -244,3 +244,12 @@ def find_stix_object_by_id(
         if obj.id == target_id:
             return obj.get("value", None)
     return None
+
+def get_tlp_keys():
+    """
+    Get the TLP keys from the TLP_MAP dictionary.
+
+    Returns:
+        list: A list of TLP keys.
+    """
+    return list(TLP_MAP.keys())

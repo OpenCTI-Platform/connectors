@@ -5,7 +5,7 @@ from datetime import datetime
 
 import magic
 from pycti import CustomObjectCaseIncident
-from pycti import Identity as pycti_identity
+from pycti import Identity as pycti_identity, Report as pycti_report
 from pycti import Note as pycti_note
 from pycti import OpenCTIConnectorHelper
 from stix2 import (
@@ -20,6 +20,7 @@ from stix2 import (
     NetworkTraffic,
     Note,
     ObservedData,
+    Report,
     Vulnerability,
     X509Certificate,
 )
@@ -45,6 +46,7 @@ class ShadowServerStixTransformation:
         report_list: list,
         report: dict,
         api_helper: OpenCTIConnectorHelper,
+        create_incident: bool = True,
         labels: list = ["ShadowServer"],
     ):
         """
@@ -72,6 +74,9 @@ class ShadowServerStixTransformation:
         self.custom_properties = {}
         self.external_reference = None
         self.author_id = None
+        self.case_id = None 
+        self.report_id = None
+        self.create_incident = create_incident
 
         self.published = self.get_published_date(report_list)
         self.marking_refs = (
@@ -85,7 +90,14 @@ class ShadowServerStixTransformation:
         self.create_author()
         self.create_external_reference()
         self.create_custom_properties()
-        self.create_report()
+        self.upload_stix2_artifact(self.report_list)
+        label_list = []
+        for element in self.report_list:
+            label_list = self.map_to_stix(element)
+        if self.create_incident:
+            self.create_opencti_case(labels=label_list)
+        self.create_stix_report(labels=label_list)
+        self.create_stix_note_from_data(labels=label_list)
 
     def create_custom_properties(self):
         """Creates custom properties in OpenCTI."""
@@ -289,17 +301,30 @@ class ShadowServerStixTransformation:
         ] = 0  # Set score to 0 due to trusted source.
         return custom_properties
 
-    def create_report(self):
-        """
-        A function that creates a report, uploads Stix2 artifact, maps elements to Stix, creates an OpenCTI case, and creates a Stix note from the data.
-        """
-        self.helper.log_debug(f"Creating report: {self.report.get('id')}")
-        self.upload_stix2_artifact(self.report_list)
-        label_list = []
-        for element in self.report_list:
-            label_list = self.map_to_stix(element)
-        self.create_opencti_case(labels=label_list)
-        self.create_stix_note_from_data(labels=label_list)
+    def create_stix_report(self, labels):
+        description = self.create_description()
+        kwargs = {
+            "id": pycti_report.generate_id(name=self.report.get("id"), published=self.published),
+            "report_types": ['tool'],
+            "name": f"ShadowServer Report {self.type}: {self.report.get('id')}",
+            "published": self.published,
+            "object_refs": self.object_refs,
+            "external_references": [self.external_reference],
+            "description": description,
+            "created_by_ref": self.author_id,
+            "object_marking_refs": self.marking_refs,
+            "labels": labels,
+        }
+        stix_report = Report(
+            **kwargs
+        )
+        self.report_id = stix_report.get("id", None)
+        if self.report_id:
+            self.stix_objects.append(stix_report)
+        else:
+            self.helper.log_error(
+                f"Failed to create OpenCTI case: {self.report.get('id', None)}"
+            )
 
     def add_default_labels(self, stix_obj: dict):
         """Adds default labels to the specified STIX object."""
@@ -669,9 +694,15 @@ class ShadowServerStixTransformation:
                 "object_marking_refs": self.marking_refs,
                 "labels": labels,
                 "external_references": [self.external_reference],
-                "object_refs": [self.case_id],
+                "object_refs": [],
                 "custom_properties": {"note_types": "external"},
             }
+
+            # Add the case and report to the object refs
+            if self.case_id:
+                kwargs["object_refs"].append(self.case_id)
+            if self.report_id:
+                kwargs["object_refs"].append(self.report_id)
 
             stix_object = Note(**kwargs)
             if stix_object:
