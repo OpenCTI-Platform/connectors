@@ -38,6 +38,7 @@ from .utils import (
     get_stix_id_precedence,
     note_timestamp_to_datetime,
     string_to_datetime,
+    check_keys,
 )
 
 
@@ -426,6 +427,10 @@ class ShadowserverStixTransformation:
             "ip": self.create_ip,
             "hostname": self.create_hostname,
             "mac_address": self.create_mac_address,
+            "src_asn": self.create_asn,
+            "dst_asn": self.create_asn,
+            "src_ip": self.create_ip,
+            "dst_ip": self.create_ip,
         }
         self.helper.log_debug("Mapping Shadowserver report to STIX.")
         observed_data_list = []
@@ -440,10 +445,26 @@ class ShadowserverStixTransformation:
             if stix_object_str:
                 observed_data_list.append(stix_object_str)
 
+        # If src_port, dst_port, src_ip, dst_ip, and protocol are in the element, create network traffic
+        if check_keys(element, ["src_port", "dst_port", "src_ip", "dst_ip", "protocol"]):
+            dst_ip_stix_object = self.create_ip(element.get("dst_ip"), labels=labels_list)
+            src_ip_stix_object = self.create_ip(element.get("src_ip"), labels=labels_list)
+
+            stix_object_str = self.create_network_traffic(
+                src_port=element.get("src_port"),
+                protocol=element.get("protocol"),
+                dst_port=element.get("dst_port"),
+                src_ref=src_ip_stix_object.get("id"),
+                dst_ref=dst_ip_stix_object.get("id"),
+                labels=labels_list,
+            )
+            if stix_object_str:
+                observed_data_list.append(stix_object_str)
+
         if element.get("port") and element.get("protocol"):
             dst_ref = get_stix_id_precedence(observed_data_list)
             stix_object_str = self.create_network_traffic(
-                port=element.get("port"),
+                dst_port=element.get("port"),
                 protocol=element.get("protocol"),
                 dst_ref=dst_ref,
                 labels=labels_list,
@@ -569,21 +590,31 @@ class ShadowserverStixTransformation:
         return MACAddress(**kwargs)
 
     def create_network_traffic(
-        self, port: int, protocol: str, dst_ref: str = None, labels: list = []
+        self, src_port: int = None, dst_port: int = None, protocol: str = None, src_ref: str = None, dst_ref: str = None, labels: list = []
     ):
         """Creates a network traffic STIX object."""
         self.helper.log_debug(
-            f"Creating network traffic STIX object. Port: {port}, Protocol: {protocol}."
+            f"Creating network traffic STIX object."
         )
         kwargs = {
             "type": "network-traffic",
-            "dst_port": port,
             "protocols": [protocol],
-            "dst_ref": dst_ref,
             "is_active": False,
             "start": self.published,
             "end": self.published,
         }
+
+        if dst_port:
+            kwargs["dst_port"] = dst_port
+        
+        if src_port:
+            kwargs["src_port"] = src_port
+        
+        if src_ref:
+            kwargs["src_ref"] = src_ref
+        
+        if dst_ref:
+            kwargs["dst_ref"] = dst_ref
 
         dst_value = find_stix_object_by_id(self.stix_objects, dst_ref)
         self.helper.log_debug(f"Value of stix object: {dst_value}")
@@ -593,7 +624,7 @@ class ShadowserverStixTransformation:
         id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), f"{self.report_id}-{data}"))
         kwargs["id"] = f"network-traffic--{id}"
 
-        description = f"Network Traffic {dst_value} - {protocol}:{port}"
+        description = f"Network Traffic {dst_value} - {protocol}"
         self.extend_stix_object(kwargs, labels)
         kwargs["custom_properties"].update({"x_opencti_description": description})
 
