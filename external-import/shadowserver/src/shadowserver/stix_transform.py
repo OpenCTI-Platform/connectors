@@ -46,7 +46,7 @@ class ShadowServerStixTransformation:
         report_list: list,
         report: dict,
         api_helper: OpenCTIConnectorHelper,
-        create_incident: bool = True,
+        incident: dict = {},
         labels: list = ["ShadowServer"],
     ):
         """
@@ -76,7 +76,7 @@ class ShadowServerStixTransformation:
         self.author_id = None
         self.case_id = None 
         self.report_id = None
-        self.create_incident = create_incident
+        self.incident = incident
 
         self.published = self.get_published_date(report_list)
         self.marking_refs = (
@@ -94,7 +94,7 @@ class ShadowServerStixTransformation:
         label_list = []
         for element in self.report_list:
             label_list = self.map_to_stix(element)
-        if self.create_incident:
+        if self.incident.get("create", False):
             self.create_opencti_case(labels=label_list)
         self.create_stix_report(labels=label_list)
         self.create_stix_note_from_data(labels=label_list)
@@ -213,8 +213,8 @@ class ShadowServerStixTransformation:
         description = self.create_description()
         kwargs = {
             "name": f"ShadowServer Report {self.type}: {self.report.get('id')}",
-            "severity": "low",  # TODO: hardcoded, may want to adjust?
-            "priority": "P4",  # TODO: hardcoded, may want to adjust?
+            "severity": self.incident.get("severity", "low"),
+            "priority": self.incident.get("priority", "P4"),
             "created": self.published,
             "created_by_ref": self.author_id,
             "description": description,

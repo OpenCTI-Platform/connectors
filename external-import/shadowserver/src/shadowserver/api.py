@@ -151,7 +151,7 @@ class ShadowServerAPI:
         report: dict,
         api_helper: OpenCTIConnectorHelper,
         limit: int = LIMIT,
-        create_incident: bool = True,
+        incident: dict = {},
         labels: List[str] = ["ShadowServer"],
     ) -> Optional[Dict]:
         """
@@ -184,7 +184,7 @@ class ShadowServerAPI:
                 report=report,
                 labels=labels,
                 api_helper=api_helper,
-                create_incident=create_incident,
+                incident=incident,
             )
             return stix_transformation.get_stix_objects()
         else:

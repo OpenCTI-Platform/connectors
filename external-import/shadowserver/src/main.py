@@ -33,15 +33,31 @@ class CustomConnector(ExternalImportConnector):
         self.api_key = os.environ.get("SHADOWSERVER_API_KEY", None)
         self.api_secret = os.environ.get("SHADOWSERVER_API_SECRET", None)
         self.marking = os.environ.get("SHADOWSERVER_MARKING", "TLP:CLEAR")
-        self.create_incident = os.environ.get("SHADOWSERVER_CREATE_INCIDENT", "true")
-
-        # Make sure create_incident is boolean 
-        if self.create_incident in ["true", "false", True, False]:
-            self.create_incident = True if self.create_incident in ("true", True) else False
+        
+        # Create incident Dict: create, severity, priority
+        create_incident = os.environ.get("SHADOWSERVER_CREATE_INCIDENT", False)
+        if create_incident in ["true", "false", True, False] or not create_incident:
+            create_incident = True if create_incident in ("true", True) else False
         else: 
             raise ValueError(
-                "You must set the SHADOWSERVER_CREATE_INCIDENT environment variable to 'true' or 'false'."
+                f"You must set the SHADOWSERVER_CREATE_INCIDENT environment variable to 'true' or 'false'."
             )
+        incident_severity = os.environ.get("SHADOWSERVER_INCIDENT_SEVERITY")
+        incident_priority = os.environ.get("SHADOWSERVER_INCIDENT_PRIORITY")
+
+        # Set default values if not provided
+        if not incident_severity:
+            incident_severity = "low"
+        if not incident_priority:
+            incident_priority = "P4"
+
+        # Set incident Dict
+        self.incident = {
+            "create": create_incident,
+            "severity": incident_severity,
+            "priority": incident_priority
+        }
+        self.helper.log_info(f"Setting incident: {self.incident}")
         
         # Error logic to check if the environment variables are set.
         if not self.api_key or not self.api_secret:
@@ -95,7 +111,7 @@ class CustomConnector(ExternalImportConnector):
                         report_stix_objects = shadowserver_api.get_stix_report(
                             report=report,
                             api_helper=self.helper,
-                            create_incident=self.create_incident,
+                            incident=self.incident,
                         )
 
                         # Filter out duplicates and append to stix_objects.
