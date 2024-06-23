@@ -97,17 +97,18 @@ class ShadowserverStixTransformation:
         for element in self.report_list:
             label_list = self.map_to_stix(element)
             # Compare severity with the incident severity.
+            severity = self.incident.get("severity", "low")
             if "severity" in element:
-                self.incident["severity"] = compare_severity(
-                    self.incident["severity"], element["severity"]
+                severity = compare_severity(
+                    severity, element.get("severity", "low")
                 )
             if "vendor_severity" in element:
-                self.incident["severity"] = compare_severity(
-                    self.incident["severity"], element["vendor_severity"]
+                severity = compare_severity(
+                    severity, element.get("vendor_severity", "low")
                 )
         if self.object_refs:
             if self.incident.get("create", False):
-                self.create_opencti_case(labels=label_list)
+                self.create_opencti_case(labels=label_list, severity=severity)
             else:
                 self.helper.log_info(
                     "Not creating incident because 'create' is set to False."
@@ -219,7 +220,7 @@ class ShadowserverStixTransformation:
             "url": f"{self.url}",
         }
 
-    def create_opencti_case(self, labels: list = []):
+    def create_opencti_case(self, labels: list = [], severity: str = "low"):
         """
         Creates an OpenCTI case with the provided labels and other attributes.
 
@@ -233,7 +234,7 @@ class ShadowserverStixTransformation:
         description = self.create_description()
         kwargs = {
             "name": f"Shadowserver Report {self.type}: {self.report.get('id')}",
-            "severity": self.incident.get("severity", "low"),
+            "severity": severity,
             "priority": self.incident.get("priority", "P4"),
             "created": self.published,
             "created_by_ref": self.author_id,
@@ -589,7 +590,7 @@ class ShadowserverStixTransformation:
 
         # Generate custom ID for network traffic
         data = canonicalize(kwargs, utf8=False)
-        id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), f"{data}-{self.report_id}"))
+        id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), f"{self.report_id}-{data}"))
         kwargs["id"] = f"network-traffic--{id}"
 
         description = f"Network Traffic {dst_value} - {protocol}:{port}"
@@ -598,7 +599,7 @@ class ShadowserverStixTransformation:
 
         stix_object = NetworkTraffic(**kwargs)
 
-        if stix_object and not stix_object.get("id") in self.object_refs:
+        if stix_object and not self.stix_object_exists(kwargs.get("id")):
             self.helper.log_debug(
                 f"Created network traffic STIX object: {stix_object.get('id')}"
             )
@@ -726,10 +727,22 @@ class ShadowserverStixTransformation:
 
             if kwargs["object_refs"]:
                 stix_object = Note(**kwargs)
-                if stix_object:
+                if stix_object and not self.stix_object_exists(kwargs.get("id")):
                     self.stix_objects.append(stix_object)
                     self.object_refs.append(stix_object.get("id"))
             else:
                 self.helper.log_error(
                     f"Failed to create STIX note from data: {element}"
                 )
+
+    def stix_object_exists(self, stix_object_id: str) -> bool:
+        """
+        A function that checks if a STIX object with the given ID exists in the list of STIX objects.
+
+        Parameters:
+            stix_object_id (str): The ID of the STIX object to check.
+
+        Returns:
+            bool: True if the STIX object exists in the list, False otherwise.
+        """
+        True if stix_object_id in self.object_refs else False
