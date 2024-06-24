@@ -603,29 +603,42 @@ class ShadowserverStixTransformation:
         labels: list = [],
     ):
         """Creates a network traffic STIX object."""
+        description = []
+
         self.helper.log_debug("Creating network traffic STIX object.")
         kwargs = {
             "type": "network-traffic",
-            "protocols": [protocol],
             "is_active": False,
             "start": self.published,
             "end": self.published,
         }
 
-        if dst_port:
-            kwargs["dst_port"] = dst_port
-
-        if src_port:
-            kwargs["src_port"] = src_port
-
         if src_ref:
+            src_str = str
             kwargs["src_ref"] = src_ref
+            src_value = find_stix_object_by_id(self.stix_objects, src_ref)
+            src_str = f"src: {src_value}"
+            if src_port:
+                kwargs["src_port"] = src_port
+                src_str = f"{src_str}:{src_port}"
+            if src_str:
+                description.append(src_str)
 
         if dst_ref:
+            dst_str = str
             kwargs["dst_ref"] = dst_ref
-
-        dst_value = find_stix_object_by_id(self.stix_objects, dst_ref)
-        self.helper.log_debug(f"Value of stix object: {dst_value}")
+            dst_value = find_stix_object_by_id(self.stix_objects, dst_ref)
+            dst_str = f"dst: {dst_value}"
+            if dst_port:
+                kwargs["dst_port"] = dst_port
+                dst_str = f"{dst_str}:{dst_port}"
+            if dst_str:
+                description.append(dst_str)
+        
+        if protocol:
+            kwargs["protocols"] = [protocol.lower()]
+            protocol_str = f"proto: {protocol.lower()}"
+            description.append(protocol_str)
 
         # Generate custom ID for network traffic
         data = canonicalize(kwargs, utf8=False)
@@ -637,9 +650,11 @@ class ShadowserverStixTransformation:
         )
         kwargs["id"] = f"network-traffic--{id}"
 
-        description = f"Network Traffic {dst_value} - {protocol}"
+        description_str = f"Shadowserver Network Traffic: {', '.join(description)}"
         self.extend_stix_object(kwargs, labels)
-        kwargs["custom_properties"].update({"x_opencti_description": description})
+        kwargs["custom_properties"].update({"x_opencti_description": description_str})
+        # Name isn't supported for Network Traffic.
+        # kwargs["custom_properties"].update({"x_opencti_name": ', '.join(description)})
 
         stix_object = NetworkTraffic(**kwargs)
 

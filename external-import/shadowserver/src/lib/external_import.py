@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, UTC
 
 import stix2
 from pycti import OpenCTIConnectorHelper
@@ -100,10 +100,8 @@ class ExternalImportConnector:
                 if current_state is not None and "last_run" in current_state:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
-                        f"{self.helper.connect_name} connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
+                        f"{self.helper.connect_name} connector last run @ {datetime.fromtimestamp(last_run, tz=UTC).isoformat()}"
+                        
                     )
                 else:
                     last_run = None
@@ -114,10 +112,7 @@ class ExternalImportConnector:
                 # If the last_run is more than interval-1 day
                 if last_run is None or ((timestamp - last_run) >= self._get_interval()):
                     self.helper.log_info(f"{self.helper.connect_name} will run!")
-                    now = datetime.utcfromtimestamp(timestamp)
-                    friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
+                    friendly_name = f"{self.helper.connect_name} run @ {datetime.fromtimestamp(timestamp, tz=UTC).isoformat()}"
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
