@@ -79,14 +79,13 @@ class WebhookConnector:
         helper: OpenCTIConnectorHelper,
         webhook_reference: WebhookReference,
         queue: Queue,
-        ignore_types: list[str],
         consumer_count: int,
         metrics: Metrics | None = None,
     ) -> None:
         self.queue = queue
         self.helper = helper
-        self.ignore_types = ignore_types
         self.metrics = metrics
+        self.webhook_reference = webhook_reference
         self.consumer_count = consumer_count
 
     def is_filtered(self, data: dict):
@@ -116,9 +115,9 @@ class WebhookConnector:
 
     def _consume(self):
         while True:
+            
             msg = self.queue.get()
-
-            payload = json.loads(msg.data)
+            payload = json.loads(msg.data)["data"]
             id = OpenCTIConnectorHelper.get_attribute_in_extension("id", payload)
 
             self.helper.log_debug(f"processing message with id {id}")
@@ -131,6 +130,7 @@ class WebhookConnector:
                 self.metrics.state(msg.id)
 
     def start(self):
+        helper.log_info("register_producer")
         self.register_producer()
         self.start_consumers()
 
@@ -184,6 +184,7 @@ if __name__ == "__main__":
         default=10,
     )
 
+
     # metrics conf
     enable_prom_metrics: bool = get_config_variable(
         "METRICS_ENABLE", ["metrics", "enable"], config, default=False
@@ -196,6 +197,7 @@ if __name__ == "__main__":
     )
 
     # create reference_set instance
+
     webhook_reference = WebhookReference(
         url=webhook_url,
         header=webhook_header,
@@ -203,7 +205,7 @@ if __name__ == "__main__":
         token=webhook_token,
         dest_type=webhook_type,
     )
-    
+        
     # create queue
     queue = Queue(maxsize=2 * consumer_count)
 
@@ -216,10 +218,11 @@ if __name__ == "__main__":
         metrics = None
 
     # create connector and start
+        
     WebhookConnector(
         helper,
-        webhook_reference,
-        queue,
-        consumer_count,
+        webhook_reference=webhook_reference,
+        queue=queue,
+        consumer_count=consumer_count,
         metrics=metrics,
     ).start()
