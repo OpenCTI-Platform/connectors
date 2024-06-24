@@ -4,7 +4,6 @@ import os
 import pytest
 import requests
 from shadowserver.api import ShadowserverAPI
-from shadowserver.constants import BASE_URL
 
 
 class TestShadowserverAPI:
