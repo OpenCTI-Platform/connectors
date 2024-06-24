@@ -118,7 +118,7 @@ class WebhookConnector:
         while True:
             msg = self.queue.get()
 
-            payload = json.loads(msg.data)["data"]
+            payload = json.loads(msg.data)
             id = OpenCTIConnectorHelper.get_attribute_in_extension("id", payload)
 
             self.helper.log_debug(f"processing message with id {id}")
