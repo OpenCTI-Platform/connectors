@@ -2,7 +2,7 @@
 import os
 import sys
 import time
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 
 from lib.external_import import ExternalImportConnector
 from shadowserver import ShadowserverAPI, get_tlp_keys
@@ -20,12 +20,12 @@ class CustomConnector(ExternalImportConnector):
         self.first_run = True
         self.lookback = None
         self.now = datetime.now(UTC)
-        self.last_run_date = None 
+        self.last_run_date = None
 
         # Get last run state or set the initial date.
         self.current_state = self.helper.get_state()
         if self.current_state and "last_run" in self.current_state:
-            # convert epoch to datetime 
+            # convert epoch to datetime
             self.last_run_date = datetime.fromtimestamp(
                 self.current_state["last_run"], tz=UTC
             )
@@ -112,7 +112,9 @@ class CustomConnector(ExternalImportConnector):
                 for days_lookback in range(self.lookback, -1, -1):
                     date = self.now - timedelta(days=days_lookback)
                     date_str = date.strftime("%Y-%m-%d")
-                    self.helper.log_info(f"Getting ({subscription}) reports from ({date_str}).")
+                    self.helper.log_info(
+                        f"Getting ({subscription}) reports from ({date_str})."
+                    )
 
                     report_list = shadowserver_api.get_report_list(
                         date=date_str, type=subscription

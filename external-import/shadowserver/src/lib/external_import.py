@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 import stix2
 from pycti import OpenCTIConnectorHelper
@@ -101,7 +101,6 @@ class ExternalImportConnector:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         f"{self.helper.connect_name} connector last run @ {datetime.fromtimestamp(last_run, tz=UTC).isoformat()}"
-                        
                     )
                 else:
                     last_run = None

@@ -634,7 +634,7 @@ class ShadowserverStixTransformation:
                 dst_str = f"{dst_str}:{dst_port}"
             if dst_str:
                 description.append(dst_str)
-        
+
         if protocol:
             kwargs["protocols"] = [protocol.lower()]
             protocol_str = f"proto: {protocol.lower()}"
