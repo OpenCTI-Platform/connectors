@@ -103,26 +103,27 @@ class VirusTotalBuilder:
 
     def create_asn_belongs_to(self):
         """Create AutonomousSystem and Relationship between the observable."""
-        self.helper.log_debug(f'[VirusTotal] creating asn {self.attributes["asn"]}')
-        as_stix = stix2.AutonomousSystem(
-            number=self.attributes["asn"],
-            name=self.attributes["as_owner"],
-            rir=self.attributes["regional_internet_registry"],
-        )
-        relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                "belongs-to",
-                self.stix_entity["id"],
-                as_stix.id,
-            ),
-            relationship_type="belongs-to",
-            created_by_ref=self.author,
-            source_ref=self.stix_entity["id"],
-            target_ref=as_stix.id,
-            confidence=self.helper.connect_confidence_level,
-            allow_custom=True,
-        )
-        self.bundle += [as_stix, relationship]
+        if self.attributes.get("asn") is not None:
+            self.helper.log_debug(f'[VirusTotal] creating asn {self.attributes["asn"]}')
+            as_stix = stix2.AutonomousSystem(
+                number=self.attributes["asn"],
+                name=self.attributes["as_owner"],
+                rir=self.attributes["regional_internet_registry"],
+            )
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "belongs-to",
+                    self.stix_entity["id"],
+                    as_stix.id,
+                ),
+                relationship_type="belongs-to",
+                created_by_ref=self.author,
+                source_ref=self.stix_entity["id"],
+                target_ref=as_stix.id,
+                confidence=self.helper.connect_confidence_level,
+                allow_custom=True,
+            )
+            self.bundle += [as_stix, relationship]
 
     def _create_external_reference(
         self,
