@@ -71,11 +71,12 @@ class Intel471Stream(ABC):
         return f"{self.label}_cursor"
 
     def run(self) -> None:
-        for bundle in self.get_bundle():
+        for bundle in self.get_bundles():
             self.send_to_server(bundle)
 
-    def get_bundle(self) -> Iterator[Bundle]:
-        cursor = self._fetch_cursor()
+    def get_bundles(self) -> Iterator[Bundle]:
+        cursor = self._get_cursor()
+        offsets = self._get_offsets()
         with titan_client.ApiClient(self.api_config) as api_client:
             api_client.user_agent = (
                 f"{api_client.user_agent}; OpenCTI-Connector/{version}"
@@ -83,36 +84,45 @@ class Intel471Stream(ABC):
             api_instance = getattr(titan_client, self.api_class_name)(api_client)
         while True:
             kwargs = self._get_api_kwargs(cursor)
-            self.helper.log_info(
-                "{} calls Titan API with arguments: {}.".format(
-                    self.__class__.__name__, str(kwargs)
-                )
-            )
-            api_response = getattr(api_instance, self.api_method_name)(**kwargs)
-            api_payload_objects = (
-                getattr(api_response, self.api_payload_objects_key) or []
-            )
-            self.helper.log_info(
-                "{} got {} items from Titan API.".format(
-                    self.__class__.__name__, len(api_payload_objects)
-                )
-            )
-            if not api_payload_objects:
-                break
-            cursor = self._get_cursor_value(api_response)
-            self._update_cursor(cursor)
-            try:
-                bundle = api_response.to_stix(
-                    STIXMapperSettings(
-                        titan_client, api_client, report_attachments_opencti=True
+            for offset in offsets:
+                if offset is not None:
+                    kwargs["offset"] = offset
+                self.helper.log_info(
+                    "{} calls Titan API with arguments: {}.".format(
+                        self.__class__.__name__, str(kwargs)
                     )
                 )
-            except EmptyBundle:
-                self.helper.log_info(
-                    f"{self.__class__.__name__} got empty bundle from STIX converter."
+                api_response = getattr(api_instance, self.api_method_name)(**kwargs)
+                api_payload_objects = (
+                    getattr(api_response, self.api_payload_objects_key) or []
                 )
+                self.helper.log_info(
+                    "{} got {} items from Titan API.".format(
+                        self.__class__.__name__, len(api_payload_objects)
+                    )
+                )
+                if not api_payload_objects:
+                    break
+                cursor = self._get_cursor_value(api_response)
+                try:
+                    bundle = api_response.to_stix(
+                        STIXMapperSettings(
+                            titan_client, api_client, report_attachments_opencti=True
+                        )
+                    )
+                except EmptyBundle:
+                    self.helper.log_info(
+                        f"{self.__class__.__name__} got empty bundle from STIX converter."
+                    )
+                else:
+                    yield bundle
             else:
-                yield bundle
+                # executes when there was no break in the inner loop, i.e. there are still results to fetch,
+                # but we need to shift dates as the offset was exhausted
+                self._update_cursor(cursor)
+                continue
+            self._update_cursor(cursor)
+            break
 
     def send_to_server(self, bundle: Bundle) -> None:
         self.helper.log_info(
@@ -126,7 +136,7 @@ class Intel471Stream(ABC):
         )
         self.helper.api.work.to_processed(work_id, "Done")
 
-    def _fetch_cursor(self) -> Union[str, None]:
+    def _get_cursor(self) -> Union[str, None]:
         return self._get_state(self.cursor_name)
 
     def _update_cursor(self, value: str) -> None:
@@ -168,3 +178,6 @@ class Intel471Stream(ABC):
         return str(
             getattr(api_response, self.api_payload_objects_key)[-1].activity.last + 1
         )
+
+    def _get_offsets(self) -> list[Union[None, int]]:
+        return list(range(0, 1100, 100))
