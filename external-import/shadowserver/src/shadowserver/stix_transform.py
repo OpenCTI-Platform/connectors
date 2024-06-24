@@ -310,15 +310,15 @@ class ShadowserverStixTransformation:
         :return: Dictionary containing custom properties for the report.
         """
         custom_properties = copy.deepcopy(self.custom_properties)
-        custom_properties[
-            "x_opencti_description"
-        ] = f"Shadowserver Report Type ({self.type}) Report ID ({self.report.get('id')})"
+        custom_properties["x_opencti_description"] = (
+            f"Shadowserver Report Type ({self.type}) Report ID ({self.report.get('id')})"
+        )
         custom_properties["x_opencti_additional_names"] = [
             self.report.get("file", "default_file_name.csv")
         ]
-        custom_properties[
-            "x_opencti_score"
-        ] = 0  # Set score to 0 due to trusted source.
+        custom_properties["x_opencti_score"] = (
+            0  # Set score to 0 due to trusted source.
+        )
         return custom_properties
 
     def create_stix_report(self, labels):
@@ -404,9 +404,9 @@ class ShadowserverStixTransformation:
         A method to retrieve the custom properties of the author.
         """
         custom_properties = copy.deepcopy(self.custom_properties)
-        custom_properties[
-            "x_opencti_reliability"
-        ] = "A - Completely reliable"  # TODO: Make it configurable
+        custom_properties["x_opencti_reliability"] = (
+            "A - Completely reliable"  # TODO: Make it configurable
+        )
         custom_properties["x_opencti_organization_type"] = "non-profit"
         return custom_properties
 
@@ -767,9 +767,11 @@ class ShadowserverStixTransformation:
                 "id": pycti_note.generate_id(abstract, content),
                 "abstract": abstract,
                 "content": content,
-                "created": note_timestamp_to_datetime(element.get("timestamp", ""))
-                if isinstance(element, dict)
-                else datetime.now(),
+                "created": (
+                    note_timestamp_to_datetime(element.get("timestamp", ""))
+                    if isinstance(element, dict)
+                    else datetime.now()
+                ),
                 "created_by_ref": self.author_id,
                 "object_marking_refs": self.marking_refs,
                 "labels": labels,
