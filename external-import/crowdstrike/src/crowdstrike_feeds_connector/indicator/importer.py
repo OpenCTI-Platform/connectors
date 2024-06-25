@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator importer module."""
 
-from datetime import datetime
 from typing import Any, Dict, Generator, List, NamedTuple, Optional, Set
 
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI

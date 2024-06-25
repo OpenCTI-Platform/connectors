@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Mapping, Optional
 
 import stix2
 import yaml
+
+# from crowdstrike_client.client import CrowdStrikeClient
 from crowdstrike_feeds_services.client.base_api import BaseCrowdstrikeClient
 from crowdstrike_feeds_services.utils import (
     convert_comma_separated_str_to_list,
@@ -139,6 +141,7 @@ class CrowdStrike:
 
         # Create CrowdStrike client and importers.
         client = BaseCrowdstrikeClient(self.helper)
+        # client = CrowdStrikeClient(self.config.base_url, self.config.client_id, self.config.client_secret)
 
         # Create importers.
         importers: List[BaseImporter] = []
@@ -191,8 +194,6 @@ class CrowdStrike:
         if self._CONFIG_SCOPE_YARA_MASTER in scopes:
             yara_master_importer = YaraMasterImporter(
                 self.helper,
-                client.intel_api.rules,
-                client.intel_api.reports,
                 author,
                 tlp_marking,
                 update_existing_data,
@@ -205,8 +206,6 @@ class CrowdStrike:
         if self._CONFIG_SCOPE_SNORT_SURICATA_MASTER in scopes:
             snort_master_importer = SnortMasterImporter(
                 self.helper,
-                client.intel_api.rules,
-                client.intel_api.reports,
                 author,
                 tlp_marking,
                 update_existing_data,

@@ -38,7 +38,7 @@ class ReportsAPI(BaseCrowdstrikeClient):
         response = self.cs_intel.get_report_entities(ids=ids, fields=fields)
 
         self.handle_api_error(response)
-        self.helper.connector_logger.info("Getting combined actor entities...")
+        self.helper.connector_logger.info("Getting report entities...")
 
         return response["body"]
 
@@ -51,6 +51,6 @@ class ReportsAPI(BaseCrowdstrikeClient):
         response = self.cs_intel.get_report_pdf(id=report_id)
 
         self.handle_api_error(response)
-        self.helper.connector_logger.info("Getting combined actor entities...")
+        self.helper.connector_logger.info("Getting report PDF...")
 
         return response["body"]

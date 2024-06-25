@@ -25,7 +25,7 @@ class IndicatorsAPI(BaseCrowdstrikeClient):
             response_body["next_page_details"] = next_page_details
 
         self.handle_api_error(response)
-        self.helper.connector_logger.info("Getting combined actor entities...")
+        self.helper.connector_logger.info("Getting combined indicator entities...")
 
         return response_body
 
