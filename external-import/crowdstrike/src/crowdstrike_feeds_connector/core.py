@@ -172,8 +172,6 @@ class CrowdStrike:
         if self._CONFIG_SCOPE_INDICATOR in scopes:
             indicator_importer_config = IndicatorImporterConfig(
                 helper=self.helper,
-                indicators_api=client.intel_api.indicators,
-                reports_api=client.intel_api.reports,
                 update_existing_data=update_existing_data,
                 author=author,
                 default_latest_timestamp=indicator_start_timestamp,
