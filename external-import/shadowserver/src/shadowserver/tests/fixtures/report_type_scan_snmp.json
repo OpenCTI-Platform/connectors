@@ -1,0 +1,33 @@
+[
+    {
+        "amplification": "1.23",
+        "asn": 12345,
+        "city": "Sample City",
+        "community": "private",
+        "device_model": "Sample Model",
+        "device_sector": "Sample Sector",
+        "device_type": "Sample Type",
+        "device_vendor": "Sample Vendor",
+        "device_version": "1.0",
+        "geo": "US",
+        "hostname": "sample-host",
+        "hostname_source": "DNS",
+        "ip": "192.168.1.1",
+        "mac_address": "00:11:22:33:44:55",
+        "naics": 54321,
+        "port": 1234,
+        "protocol": "tcp",
+        "region": "Sample Region",
+        "response_size": 123,
+        "sector": "Sample Sector",
+        "severity": "low",
+        "sysdesc": "Sample Description",
+        "sysname": "Sample Name",
+        "tag": "sample",
+        "timestamp": "2022-01-01 12:34:56Z",
+        "uptime": 123456789,
+        "vendor": "Sample Vendor",
+        "vendor_id": 123,
+        "version": 3
+    }
+]
