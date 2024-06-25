@@ -414,7 +414,7 @@ class IndicatorBundleBuilder:
 
         for indicator_report in self.indicator_reports:
             report = self._create_report(
-                indicator_report.report, indicator_report.files, objects
+                indicator_report["report"], indicator_report["files"], objects
             )
             reports.append(report)
 

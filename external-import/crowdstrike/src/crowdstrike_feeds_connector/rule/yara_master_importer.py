@@ -7,7 +7,6 @@ from datetime import datetime
 from io import BytesIO
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple
 
-from crowdstrike_client.api.intel import Rules
 from crowdstrike_feeds_services.client.rules import RulesAPI
 from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
@@ -76,7 +75,7 @@ class YaraMasterImporter(BaseImporter):
         # yara_master = self._fetch_yara_master(e_tag, last_modified)
         yara_master = self._fetch_yara_master()
 
-        latest_e_tag = yara_master["e_tag"]
+        latest_e_tag = yara_master.e_tag
         latest_last_modified = yara_master.last_modified
 
         if (
@@ -167,7 +166,7 @@ class YaraMasterImporter(BaseImporter):
         )
 
     def _parse_download(self, download) -> List[YaraRule]:
-        yara_str = self._unzip_content(download.content)
+        yara_str = self._unzip_content(download["content"])
         return self._parse_yara_rules(yara_str)
 
     @staticmethod

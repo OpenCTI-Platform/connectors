@@ -4,7 +4,6 @@
 from datetime import date, datetime, timezone
 from typing import List, Mapping
 
-from crowdstrike_client.api.models.report import Report
 from crowdstrike_feeds_services.utils import (
     create_indicates_relationships,
     create_indicator,
@@ -184,9 +183,9 @@ class YaraRuleBundleBuilder:
 
         for rule_report in self.reports:
             report = self._create_report(
-                rule_report.report,
+                rule_report["report"],
                 objects,
-                rule_report.files,
+                rule_report["files"],
             )
             reports.append(report)
 
@@ -194,7 +193,7 @@ class YaraRuleBundleBuilder:
 
     def _create_report(
         self,
-        report: Report,
+        report: dict,
         objects: List[_DomainObject],
         files: List[Mapping[str, str]],
     ) -> STIXReport:
