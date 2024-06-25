@@ -2,4 +2,4 @@ pycti==6.1.12
 maec==4.1.0.17
 numpy==1.26.4
 stix2-elevator==4.1.7
-typing-extensions==4.11.0
+typing-extensions==4.12.2
