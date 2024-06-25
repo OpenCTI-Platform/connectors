@@ -1,5 +1,5 @@
 pycti==6.1.12
-urllib3==2.2.1
+urllib3==2.2.2
 beautifulsoup4==4.12.3
 pdfminer.six==20231228
 stix==1.2.0.11
