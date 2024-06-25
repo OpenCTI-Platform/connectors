@@ -18,7 +18,9 @@ misp:
   key: 'ChangeMe' # Required
   ssl_verify: true # Required
   client_cert: '' # Optional, Path to the client certificate eg. /app/cert/clientcert.pem
-  datetime_attribute: 'timestamp' # Required, filter to be used in query for new MISP events
+  MISP_DATE_FILTER_FIELD=from_date
+  date_filter_field: 'from_date' # Required, filter to be used in query for new MISP events
+  datetime_attribute: 'timestamp' # Required, field to be used to get the date of the event
   create_reports: true # Required, create report for MISP event
   create_indicators: true # Required, create indicators for attributes
   create_observables: true # Required, create observables for attributes
