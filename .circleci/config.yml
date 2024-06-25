@@ -714,6 +714,10 @@ jobs:
           name: Build Docker image opencti/connector-red-flag-domains
           command: docker build -t opencti/connector-red-flag-domains:latest . && docker tag opencti/connector-red-flag-domains:latest opencti/connector-red-flag-domains:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/shadowserver
+          name: Build Docker image opencti/connector-shadowserver
+          command: docker build -t opencti/connector-shadowserver:latest . && docker tag opencti/connector-shadowserver:latest opencti/connector-shadowserver:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -837,6 +841,8 @@ jobs:
             docker push opencti/connector-rst-noise-control:${CIRCLE_TAG}
             docker push opencti/connector-red-flag-domains:latest
             docker push opencti/connector-red-flag-domains:${CIRCLE_TAG}
+            docker push opencti/connector-shadowserver:latest
+            docker push opencti/connector-shadowserver:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1485,6 +1491,10 @@ jobs:
           name: Build Docker image opencti/connector-red-flag-domains
           command: docker build -t opencti/connector-red-flag-domains:rolling .
       - run:
+          working_directory: ~/opencti/external-import/shadowserver
+          name: Build Docker image opencti/connector-shadowserver
+          command: docker build -t opencti/connector-shadowserver:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1549,6 +1559,7 @@ jobs:
             docker push opencti/connector-greynoise-feed:rolling
             docker push opencti/connector-rst-noise-control:rolling
             docker push opencti/connector-red-flag-domains:rolling
+            docker push opencti/connector-shadowserver:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
