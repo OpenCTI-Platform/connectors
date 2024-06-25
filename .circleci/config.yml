@@ -718,6 +718,10 @@ jobs:
           name: Build Docker image opencti/connector-shadowserver
           command: docker build -t opencti/connector-shadowserver:latest . && docker tag opencti/connector-shadowserver:latest opencti/connector-shadowserver:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/reversinglabs-malware-presence
+          name: Build Docker image opencti/connector-reversinglabs-malware-presence
+          command: docker build -t opencti/connector-reversinglabs-malware-presence:latest . && docker tag opencti/connector-reversinglabs-malware-presence:latest opencti/connector-reversinglabs-malware-presence:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -843,6 +847,8 @@ jobs:
             docker push opencti/connector-red-flag-domains:${CIRCLE_TAG}
             docker push opencti/connector-shadowserver:latest
             docker push opencti/connector-shadowserver:${CIRCLE_TAG}
+            docker push opencti/connector-reversinglabs-malware-presence:latest
+            docker push opencti/connector-reversinglabs-malware-presence:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1495,6 +1501,10 @@ jobs:
           name: Build Docker image opencti/connector-shadowserver
           command: docker build -t opencti/connector-shadowserver:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/reversinglabs-malware-presence
+          name: Build Docker image opencti/connector-reversinglabs-malware-presence
+          command: docker build -t opencti/connector-reversinglabs-malware-presence:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1560,6 +1570,7 @@ jobs:
             docker push opencti/connector-rst-noise-control:rolling
             docker push opencti/connector-red-flag-domains:rolling
             docker push opencti/connector-shadowserver:rolling
+            docker push opencti/connector-reversinglabs-malware-presence:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
