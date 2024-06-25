@@ -134,10 +134,10 @@ class Misp:
         )
         self.misp_filter_date_attribute = get_config_variable(
             "MISP_DATE_FILTER_FIELD",
-            ["misp","date_filter_field"],
+            ["misp", "date_filter_field"],
             config,
             False,
-            "date_from"
+            "date_from",
         )
         self.misp_report_description_attribute_filter = parse_filter_config(
             get_config_variable(
