@@ -1,0 +1,30 @@
+version: '3'
+services:
+  connector:
+    build: .
+    container_name: ${CONTAINER_NAME}
+    environment:
+      # Connector's definition parameters:
+      - CONNECTOR_TYPE=${CONNECTOR_TYPE}
+      - CONNECTOR_NAME=${CONNECTOR_NAME}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE}
+      # Connector's generic execution parameters:
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_CONFIDENCE_LEVEL} # From 0 (Unknown) to 100 (Fully trusted).
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL}
+      - CONNECTOR_RUN_EVERY=${CONNECTOR_RUN_EVERY}
+      # Connector's custom execution parameters:
+      - SHADOWSERVER_API_KEY=${SHADOWSERVER_API_KEY}
+      - SHADOWSERVER_API_SECRET=${SHADOWSERVER_API_SECRET}
+      - SHADOWSERVER_MARKING=${SHADOWSERVER_MARKING}
+      - SHADOWSERVER_CREATE_INCIDENT=${SHADOWSERVER_CREATE_INCIDENT}
+      - SHADOWSERVER_INCIDENT_SEVERITY=${SHADOWSERVER_INCIDENT_SEVERITY}
+      - SHADOWSERVER_INCIDENT_PRIORITY=${SHADOWSERVER_INCIDENT_PRIORITY}
+    restart: always
+
+networks:
+  default:
+    external: true
+    name: docker_default
