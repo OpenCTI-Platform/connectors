@@ -92,9 +92,9 @@ class SnortRuleBundleBuilder:
         reports = []
         for rule_report in self.reports:
             report = self._create_report(
-                rule_report["report"],
+                rule_report.report,
                 objects,
-                rule_report["files"],
+                rule_report.files,
             )
             reports.append(report)
 

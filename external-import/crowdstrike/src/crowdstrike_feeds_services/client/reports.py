@@ -46,11 +46,14 @@ class ReportsAPI(BaseCrowdstrikeClient):
         """
         Return a Report PDF attachment
         :param report_id: ID of a report in string
-        """
+        :return: Binary object on SUCCESS, dict object containing API response on FAILURE
 
+        """
         response = self.cs_intel.get_report_pdf(id=report_id)
 
-        self.handle_api_error(response)
+        if type(response) is dict:
+            self.handle_api_error(response)
+
         self.helper.connector_logger.info("Getting report PDF...")
 
-        return response["body"]
+        return response

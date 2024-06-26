@@ -171,22 +171,25 @@ class ReportImporter(BaseImporter):
     def _process_report(self, report) -> None:
         self._info("Processing report {0} ({1})...", report["name"], report["id"])
 
-        report_file = self._get_report_pdf(report["id"])
+        report_file = self._get_report_pdf(report["id"], report["name"])
         report_bundle = self._create_report_bundle(report, report_file)
 
         # with open(f"report_bundle_{report.id}.json", "w") as f:
         #     f.write(report_bundle.serialize(pretty=True))
         self._send_bundle(report_bundle)
 
-    def _get_report_pdf(self, report_id: int) -> Optional[Mapping[str, str]]:
+    def _get_report_pdf(
+        self, report_id: int, report_name: str
+    ) -> Optional[Mapping[str, str]]:
         self._info("Fetching report PDF for {0}...", report_id)
 
         download = self.reports_api_cs.get_report_pdf(str(report_id))
-        if download is None:
-            self._info("No report PDF for {0}q", report_id)
-            return None
 
-        return create_file_from_download(download)
+        if type(download) is dict:
+            self._info("No report PDF for id '%s'", report_id)
+            return None
+        else:
+            return create_file_from_download(download, report_name)
 
     def _create_report_bundle(
         self, report, report_file: Optional[Mapping[str, str]] = None

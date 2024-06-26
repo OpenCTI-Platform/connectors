@@ -6,6 +6,7 @@ import calendar
 import functools
 import logging
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 from typing import (
     Any,
     Callable,
@@ -843,11 +844,11 @@ def create_stix2_report_from_report(
     """Create a STIX2 report from Report."""
     report_name = report["name"]
 
-    report_created_date = report["created_date"]
+    report_created_date = timestamp_to_datetime(report["created_date"])
     if report_created_date is None:
         report_created_date = datetime_utc_now()
 
-    report_last_modified_date = report["last_modified_date"]
+    report_last_modified_date = timestamp_to_datetime(report["last_modified_date"])
     if report_last_modified_date is None:
         report_last_modified_date = report_created_date
 
@@ -928,14 +929,18 @@ def create_regions_and_countries_from_entities(
     return regions, countries
 
 
-def create_file_from_download(download) -> Mapping[str, Union[str, bool]]:
-    """Create file mapping from Download model."""
-    filename = download["filename"]
+def create_file_from_download(
+    download, report_name: str
+) -> Mapping[str, Union[str, bool]]:
+
+    converted_report_pdf = BytesIO(download)
+
+    filename = report_name.lower().replace(" ", "-") + ".pdf"
     if filename is None or not filename:
         logger.error("File download missing a filename")
         filename = "DOWNLOAD_MISSING_FILENAME"
 
-    base64_data = base64.b64encode(download.content.read())
+    base64_data = base64.b64encode(converted_report_pdf.read())
 
     return {
         "name": filename,

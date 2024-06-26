@@ -151,10 +151,11 @@ class YaraMasterImporter(BaseImporter):
         download = self._fetch_latest_yara_master(
             e_tag=e_tag, last_modified=last_modified
         )
+        download_converted = BytesIO(download)
         return YaraMaster(
-            rules=self._parse_download(download),
-            e_tag=download["e_tag"],
-            last_modified=download["last_modified"],
+            rules=self._parse_download(download_converted),
+            e_tag=None,
+            last_modified=None,
         )
 
     def _fetch_latest_yara_master(
@@ -166,7 +167,7 @@ class YaraMasterImporter(BaseImporter):
         )
 
     def _parse_download(self, download) -> List[YaraRule]:
-        yara_str = self._unzip_content(download["content"])
+        yara_str = self._unzip_content(download)
         return self._parse_yara_rules(yara_str)
 
     @staticmethod

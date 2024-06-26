@@ -151,10 +151,11 @@ class SnortMasterImporter(BaseImporter):
         download = self._fetch_latest_snort_master(
             e_tag=e_tag, last_modified=last_modified
         )
+        download_converted = BytesIO(download)
         return SnortMaster(
-            rules=self._parse_download(download),
-            e_tag=download["e_tag"],
-            last_modified=download["last_modified"],
+            rules=self._parse_download(download_converted),
+            e_tag=None,
+            last_modified=None,
         )
 
     def _fetch_latest_snort_master(
@@ -166,7 +167,7 @@ class SnortMasterImporter(BaseImporter):
         )
 
     def _parse_download(self, download) -> List[SnortRule]:
-        snort_str = self._unzip_content(download["content"])
+        snort_str = self._unzip_content(download)
         return self._parse_snort_rules(snort_str)
 
     @staticmethod
@@ -218,7 +219,7 @@ class SnortMasterImporter(BaseImporter):
         snort_rules: List[SnortRule],
     ) -> List[Tuple[str, List[SnortRule]]]:
         def _key_func(item: SnortRule) -> str:
-            reports = item["reports"]
+            reports = item.reports
             if reports:
                 sorted_reports = sorted(reports)
                 return "_".join(sorted_reports)

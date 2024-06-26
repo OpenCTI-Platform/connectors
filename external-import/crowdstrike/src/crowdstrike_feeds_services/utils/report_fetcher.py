@@ -16,7 +16,7 @@ class FetchedReport(BaseModel):
     """Fetched report model."""
 
     report: dict
-    files: List[Mapping[str, str]] = []
+    files: Any
 
 
 class ReportFetcher:
@@ -80,7 +80,7 @@ class ReportFetcher:
             return None
 
         files = []
-        file = self._get_report_pdf(report.id)
+        file = self._get_report_pdf(report["id"], report["name"])
         if file is not None:
             files.append(file)
 
@@ -114,16 +114,19 @@ class ReportFetcher:
 
         report = resources[0]
 
-        self._info("Fetched report (id: '%s') by code '%s'", report.id, code)
+        self._info("Fetched report (id: '%s') by code '%s'", report["id"], code)
 
         return report
 
-    def _get_report_pdf(self, report_id: int) -> Optional[Mapping[str, str]]:
+    def _get_report_pdf(
+        self, report_id: int, report_name: str
+    ) -> Optional[Mapping[str, str]]:
         self._info("Fetching report PDF by id '%s'...", report_id)
 
         download = self.reports_api_cs.get_report_pdf(str(report_id))
-        if download is None:
+
+        if type(download) is dict:
             self._info("No report PDF for id '%s'", report_id)
             return None
-
-        return create_file_from_download(download)
+        else:
+            return create_file_from_download(download, report_name)
