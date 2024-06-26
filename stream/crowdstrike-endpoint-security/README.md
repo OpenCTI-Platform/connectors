@@ -47,7 +47,7 @@ The connector will use the [FalconPy SDK](https://www.falconpy.io/Home.html) tha
 
 ## Requirements
 
-To use the connector, you need to have a Recorded Future account.
+To use the connector, you need to have a Crowdstrike account.
 
 - OpenCTI Platform version 5.0.0 or higher
 - An API Key for accessing
