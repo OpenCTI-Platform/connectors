@@ -4,7 +4,7 @@
 import logging
 from typing import List, Mapping, Optional, Tuple, Union
 
-from crowdstrike.utils import (
+from crowdstrike_feeds_services.utils import (
     create_external_reference,
     create_intrusion_set_from_name,
     create_malware,
@@ -18,9 +18,8 @@ from crowdstrike.utils import (
     datetime_utc_epoch_start,
     datetime_utc_now,
     normalize_start_time_and_stop_time,
+    timestamp_to_datetime,
 )
-from crowdstrike_client.api.models.base import Entity
-from crowdstrike_client.api.models.report import Actor, Report
 from stix2 import (
     Bundle,
     ExternalReference,
@@ -44,7 +43,7 @@ class ReportBundleBuilder:
 
     def __init__(
         self,
-        report: Report,
+        report: dict,
         author: Identity,
         source_name: str,
         object_markings: List[MarkingDefinition],
@@ -66,11 +65,11 @@ class ReportBundleBuilder:
         self.guessed_malwares = guessed_malwares
 
         # Use report dates for start time and stop time.
-        start_time = self.report.created_date
+        start_time = timestamp_to_datetime(self.report["created_date"])
         if start_time is None:
             start_time = datetime_utc_epoch_start()
 
-        stop_time = self.report.last_modified_date
+        stop_time = timestamp_to_datetime(self.report["last_modified_date"])
         if stop_time is None:
             stop_time = datetime_utc_now()
 
@@ -102,7 +101,7 @@ class ReportBundleBuilder:
         )
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
-        report_actors = self.report.actors
+        report_actors = self.report["actors"]
         if report_actors is None:
             return []
 
@@ -114,17 +113,17 @@ class ReportBundleBuilder:
 
         return intrusion_sets
 
-    def _create_intrusion_set_from_actor(self, actor: Actor) -> Optional[IntrusionSet]:
-        actor_name = actor.name
+    def _create_intrusion_set_from_actor(self, actor: dict) -> Optional[IntrusionSet]:
+        actor_name = actor["name"]
         if actor_name is None or not actor_name:
             return None
 
         external_references = []
 
-        actor_url = actor.url
+        actor_url = actor["url"]
         if actor_url is not None and actor_url:
             external_reference = self._create_external_reference(
-                str(actor.id), actor_url
+                str(actor["id"]), actor_url
             )
             external_references.append(external_reference)
 
@@ -168,7 +167,7 @@ class ReportBundleBuilder:
         )
 
     def _create_targeted_sectors(self) -> List[Identity]:
-        target_industries = self.report.target_industries
+        target_industries = self.report["target_industries"]
         if target_industries is None or not target_industries:
             return []
 
@@ -177,14 +176,14 @@ class ReportBundleBuilder:
     def _create_targeted_regions_and_countries(
         self,
     ) -> Tuple[List[Location], List[Location]]:
-        report_target_countries = self.report.target_countries
+        report_target_countries = self.report["target_countries"]
         if report_target_countries is None or not report_target_countries:
             return [], []
 
         return self._create_regions_and_countries_from_entities(report_target_countries)
 
     def _create_regions_and_countries_from_entities(
-        self, entities: List[Entity]
+        self, entities: List
     ) -> Tuple[List[Location], List[Location]]:
         return create_regions_and_countries_from_entities(entities, self.author)
 

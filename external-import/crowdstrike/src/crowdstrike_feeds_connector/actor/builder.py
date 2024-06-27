@@ -4,7 +4,7 @@
 import logging
 from typing import List, Optional, Tuple
 
-from crowdstrike.utils import (
+from crowdstrike_feeds_services.utils import (
     create_external_reference,
     create_intrusion_set,
     create_originates_from_relationships,
@@ -15,9 +15,8 @@ from crowdstrike.utils import (
     datetime_utc_now,
     normalize_start_time_and_stop_time,
     remove_html_tags,
+    timestamp_to_datetime,
 )
-from crowdstrike_client.api.models.actor import Actor
-from crowdstrike_client.api.models.base import Entity
 from stix2 import Identity  # type: ignore
 from stix2 import (
     Bundle,
@@ -49,7 +48,7 @@ class ActorBundleBuilder:
 
     def __init__(
         self,
-        actor: Actor,
+        actor: dict,
         author: Identity,
         source_name: str,
         object_markings: List[MarkingDefinition],
@@ -62,11 +61,11 @@ class ActorBundleBuilder:
         self.object_markings = object_markings
         self.confidence_level = confidence_level
 
-        first_seen = self.actor.first_activity_date
+        first_seen = timestamp_to_datetime(self.actor["first_activity_date"])
         if first_seen is None:
             first_seen = datetime_utc_epoch_start()
 
-        last_seen = self.actor.last_activity_date
+        last_seen = timestamp_to_datetime(self.actor["last_activity_date"])
         if last_seen is None:
             last_seen = datetime_utc_now()
 
@@ -79,10 +78,10 @@ class ActorBundleBuilder:
 
     def _create_external_references(self) -> List[ExternalReference]:
         external_references = []
-        actor_url = self.actor.url
+        actor_url = self.actor["url"]
         if actor_url:
             external_reference = create_external_reference(
-                self.source_name, str(self.actor.id), actor_url
+                self.source_name, str(self.actor["id"]), actor_url
             )
             external_references.append(external_reference)
         return external_references
@@ -94,7 +93,7 @@ class ActorBundleBuilder:
         external_references = self._create_external_references()
 
         return create_intrusion_set(
-            self.actor.name,
+            self.actor["name"],
             created_by=self.author,
             description=description,
             aliases=aliases,
@@ -110,9 +109,9 @@ class ActorBundleBuilder:
     def _get_description(self) -> Optional[str]:
         actor = self.actor
 
-        actor_description = actor.description
-        actor_rich_text_description = actor.rich_text_description
-        actor_short_description = actor.short_description
+        actor_description = actor["description"]
+        actor_rich_text_description = actor["rich_text_description"]
+        actor_short_description = actor["short_description"]
 
         final_description = None
 
@@ -128,8 +127,8 @@ class ActorBundleBuilder:
     def _get_aliases(self) -> List[str]:
         actor = self.actor
 
-        name = actor.name
-        known_as = actor.known_as
+        name = actor["name"]
+        known_as = actor["known_as"]
 
         aliases = [name.replace(" ", "")]
 
@@ -151,14 +150,14 @@ class ActorBundleBuilder:
     def _get_motivations(self) -> Tuple[Optional[str], Optional[List[str]]]:
         actor = self.actor
 
-        actor_motivations = actor.motivations
+        actor_motivations = actor["motivations"]
         if actor_motivations is None:
             return None, None
 
         motivations = []
 
         for actor_motivation in actor_motivations:
-            value = actor_motivation.value
+            value = actor_motivation["value"]
             if not value:
                 continue
 
@@ -182,7 +181,7 @@ class ActorBundleBuilder:
     def _create_origin_regions_and_countries(
         self,
     ) -> Tuple[List[Location], List[Location]]:
-        actor_origins = self.actor.origins
+        actor_origins = self.actor["origins"]
         if actor_origins is None:
             return [], []
 
@@ -191,25 +190,25 @@ class ActorBundleBuilder:
     def _create_targeted_regions_and_countries(
         self,
     ) -> Tuple[List[Location], List[Location]]:
-        actor_target_countries = self.actor.target_countries
+        actor_target_countries = self.actor["target_countries"]
         if actor_target_countries is None:
             return [], []
 
         return self._create_regions_and_countries_from_entities(actor_target_countries)
 
     def _create_regions_and_countries_from_entities(
-        self, entities: List[Entity]
+        self, entities: List
     ) -> Tuple[List[Location], List[Location]]:
         return create_regions_and_countries_from_entities(entities, self.author)
 
     def _create_targeted_sectors(self) -> List[Identity]:
-        actor_target_industries = self.actor.target_industries
+        actor_target_industries = self.actor["target_industries"]
         if actor_target_industries is None:
             return []
 
         return self._create_sectors_from_entities(actor_target_industries)
 
-    def _create_sectors_from_entities(self, entities: List[Entity]) -> List[Identity]:
+    def _create_sectors_from_entities(self, entities: List) -> List[Identity]:
         return create_sectors_from_entities(entities, self.author)
 
     def _create_targets_relationships(
