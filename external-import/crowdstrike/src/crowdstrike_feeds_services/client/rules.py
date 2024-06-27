@@ -10,12 +10,14 @@ class RulesAPI(BaseCrowdstrikeClient):
 
     def get_latest_rule_file(
         self, rule_set_type: str, e_tag: str, last_modified: datetime
-    ):
+    ) -> dict | bytes:
         """
-        :param rule_set_type: Type of rule in str
-        :param e_tag: Etag in str
-        :param last_modified: Last modified date in datetime
-        :return: Binary object on SUCCESS, dict object containing API response on FAILURE
+        Download the latest rule set,
+        :param rule_set_type: The rule news report type in string
+        :param e_tag: Download the latest rule set only if it doesn't have an ETag
+        matching the given ones in string
+        :param last_modified: Download the latest rule set only if the rule was modified after this date in datetime
+        :return: Binary object on SUCCESS defaults format is zip, dict object containing API response on FAILURE
         """
         response = self.cs_intel.get_latest_rule_file(
             type=rule_set_type, if_none_match=e_tag, if_modified_since=last_modified

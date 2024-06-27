@@ -11,12 +11,13 @@ class ReportsAPI(BaseCrowdstrikeClient):
     ) -> dict:
         """
         Get info about reports that match provided FQL filters
-        :param limit: In
-        :param offset:
-        :param sort:
-        :param fql_filter:
-        :param fields:
-        :return:
+        :param limit: Maximum number of records to return (Max: 5000) in integer
+        :param offset: Starting index of overall result set from which to return ids in integer
+        :param sort: The property to sort by. (Ex: created_date|desc) in str
+        :param fql_filter: FQL query expression that should be used to limit the results in str
+        :param fields: The fields to return, or a predefined set of fields in the form of the collection name
+        surrounded by two underscores like: __<collection>__. Ex: slug __full__. Defaults to __basic__.
+        :return: Dict object containing API response
         """
 
         response = self.cs_intel.query_report_entities(
@@ -33,6 +34,7 @@ class ReportsAPI(BaseCrowdstrikeClient):
         Retrieve specific reports using their report IDs
         :param ids: List of IDs
         :param fields: List of fields
+        :return: Dict object containing API response
         """
 
         response = self.cs_intel.get_report_entities(ids=ids, fields=fields)
@@ -47,7 +49,6 @@ class ReportsAPI(BaseCrowdstrikeClient):
         Return a Report PDF attachment
         :param report_id: ID of a report in string
         :return: Binary object on SUCCESS, dict object containing API response on FAILURE
-
         """
         response = self.cs_intel.get_report_pdf(id=report_id)
 

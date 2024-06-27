@@ -11,7 +11,7 @@ class BaseCrowdstrikeClient:
     def __init__(self, helper):
         """
         Initialize API with necessary configurations
-        :param helper:
+        :param helper: Helper OpenCTI
         """
         self.config = ConfigCrowdstrike()
         self.helper = helper
