@@ -16,7 +16,7 @@ crowdstrike:
   tlp: 'Amber'
   create_observables: true
   create_indicators: true
-  scopes: 'actor,report,indicator,yara_master'
+  scopes: 'actor,report,indicator,yara_master,snort_suricata_master' # One or all of the following: actor,report,indicator,yara_master,snort_suricata_master
   actor_start_timestamp: 0                                          # BEWARE! All the actors!
   report_start_timestamp: 0                                         # BEWARE! All the reports!
   report_status: 'New'

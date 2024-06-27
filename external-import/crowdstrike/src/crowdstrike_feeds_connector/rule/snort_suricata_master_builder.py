@@ -4,14 +4,13 @@
 from datetime import date, datetime, timezone
 from typing import List, Mapping
 
-from crowdstrike.utils import (
+from crowdstrike_feeds_services.utils import (
     create_indicator,
     create_object_refs,
     create_stix2_report_from_report,
 )
-from crowdstrike.utils.report_fetcher import FetchedReport
-from crowdstrike.utils.snort_parser import SnortRule
-from crowdstrike_client.api.models.report import Report
+from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport
+from crowdstrike_feeds_services.utils.snort_parser import SnortRule
 from stix2 import Bundle, Identity, Indicator, MarkingDefinition
 from stix2 import Report as STIXReport  # type: ignore
 from stix2.v21 import _DomainObject  # type: ignore
@@ -103,7 +102,7 @@ class SnortRuleBundleBuilder:
 
     def _create_report(
         self,
-        report: Report,
+        report: dict,
         objects: List[_DomainObject],
         files: List[Mapping[str, str]],
     ) -> STIXReport:

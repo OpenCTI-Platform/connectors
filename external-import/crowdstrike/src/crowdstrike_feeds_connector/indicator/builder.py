@@ -4,7 +4,7 @@
 import logging
 from typing import List, Mapping, NamedTuple, Optional, Set
 
-from crowdstrike.utils import (
+from crowdstrike_feeds_services.utils import (
     DEFAULT_X_OPENCTI_SCORE,
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
     OBSERVATION_FACTORY_DOMAIN_NAME,
@@ -33,10 +33,9 @@ from crowdstrike.utils import (
     create_uses_relationships,
     create_vulnerability,
     create_vulnerability_external_references,
+    timestamp_to_datetime,
 )
-from crowdstrike.utils.report_fetcher import FetchedReport
-from crowdstrike_client.api.models import Indicator
-from crowdstrike_client.api.models.report import Report
+from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport
 from stix2 import Bundle, Identity
 from stix2 import Indicator as STIXIndicator  # type: ignore
 from stix2 import IntrusionSet, KillChainPhase, Malware, MarkingDefinition, Relationship
@@ -58,7 +57,7 @@ class Observation(NamedTuple):
 class IndicatorBundleBuilderConfig(NamedTuple):
     """Indicator bundle builder configuration."""
 
-    indicator: Indicator
+    indicator: dict
     author: Identity
     source_name: str
     object_markings: List[MarkingDefinition]
@@ -138,9 +137,9 @@ class IndicatorBundleBuilder:
         self.indicator_low_score = config.indicator_low_score
         self.indicator_low_score_labels = config.indicator_low_score_labels
 
-        self.observation_factory = self._get_observation_factory(self.indicator.type)
+        self.observation_factory = self._get_observation_factory(self.indicator["type"])
 
-        self.first_seen = self.indicator.published_date
+        self.first_seen = timestamp_to_datetime(self.indicator["published_date"])
 
     @classmethod
     def _get_observation_factory(cls, indicator_type: str) -> ObservationFactory:
@@ -150,7 +149,7 @@ class IndicatorBundleBuilder:
         return factory
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
-        indicator_actors = self.indicator.actors
+        indicator_actors = self.indicator["actors"]
         if not indicator_actors:
             return []
 
@@ -164,7 +163,7 @@ class IndicatorBundleBuilder:
     def _create_kill_chain_phases(self) -> List[KillChainPhase]:
         kill_chain_phases = []
 
-        for kill_chain in self.indicator.kill_chains:
+        for kill_chain in self.indicator["kill_chains"]:
             lh_kill_chain = self._CS_KILL_CHAIN_TO_LOCKHEED_MARTIN_CYBER_KILL_CHAIN.get(
                 kill_chain
             )
@@ -184,7 +183,7 @@ class IndicatorBundleBuilder:
     def _create_malwares(
         self, kill_chain_phases: List[KillChainPhase]
     ) -> List[Malware]:
-        indicator_malware_families = self.indicator.malware_families
+        indicator_malware_families = self.indicator["malware_families"]
         if not indicator_malware_families:
             return []
 
@@ -222,7 +221,7 @@ class IndicatorBundleBuilder:
 
     def _create_targeted_sectors(self) -> List[Identity]:
         target_sectors = []
-        for target in self.indicator.targets:
+        for target in self.indicator["targets"]:
             target_sector = create_sector(target, self.author)
             target_sectors.append(target_sector)
         return target_sectors
@@ -253,7 +252,7 @@ class IndicatorBundleBuilder:
     def _create_vulnerabilities(self) -> List[Vulnerability]:
         vulnerabilities = []
 
-        for vulnerability_name in self.indicator.vulnerabilities:
+        for vulnerability_name in self.indicator["vulnerabilities"]:
             vulnerability = self._create_vulnerability(vulnerability_name)
             vulnerabilities.append(vulnerability)
 
@@ -290,9 +289,9 @@ class IndicatorBundleBuilder:
     def _get_labels(self) -> List[str]:
         labels = []
 
-        indicator_labels = self.indicator.labels
+        indicator_labels = self.indicator["labels"]
         for indicator_label in indicator_labels:
-            label = indicator_label.name
+            label = indicator_label["name"]
             if not label:
                 continue
 
@@ -306,7 +305,7 @@ class IndicatorBundleBuilder:
         if not self.create_observables:
             return None
 
-        indicator_value = self.indicator.indicator
+        indicator_value = self.indicator["indicator"]
 
         observable_properties = self._create_observable_properties(
             indicator_value, labels, score
@@ -348,12 +347,12 @@ class IndicatorBundleBuilder:
         if not self.create_indicators:
             return None
 
-        indicator_value = self.indicator.indicator
+        indicator_value = self.indicator["indicator"]
         indicator_pattern = self.observation_factory.create_indicator_pattern(
             indicator_value
         )
         indicator_pattern_type = self._INDICATOR_PATTERN_TYPE_STIX
-        indicator_published = self.indicator.published_date
+        indicator_published = timestamp_to_datetime(self.indicator["published_date"])
 
         return create_indicator(
             indicator_pattern.pattern,
@@ -394,7 +393,7 @@ class IndicatorBundleBuilder:
 
     def _create_report(
         self,
-        report: Report,
+        report: dict,
         report_files: List[Mapping[str, str]],
         objects: List[_DomainObject],
     ) -> STIXReport:
@@ -415,7 +414,7 @@ class IndicatorBundleBuilder:
 
         for indicator_report in self.indicator_reports:
             report = self._create_report(
-                indicator_report.report, indicator_report.files, objects
+                indicator_report["report"], indicator_report["files"], objects
             )
             reports.append(report)
 
@@ -481,7 +480,7 @@ class IndicatorBundleBuilder:
         # Create observations.
         observation = self._create_observation(kill_chain_phases)
         if observation is None:
-            logger.error("No indicator nor observable for %s", self.indicator.id)
+            logger.error("No indicator nor observable for %s", self.indicator["id"])
             return None
 
         # Get observables and add to bundle.

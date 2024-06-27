@@ -6,6 +6,7 @@ import calendar
 import functools
 import logging
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 from typing import (
     Any,
     Callable,
@@ -20,7 +21,14 @@ from typing import (
 )
 
 import stix2
-from crowdstrike.utils.constants import (
+from lxml.html import fromstring  # type: ignore
+from pycti import Identity, Indicator, IntrusionSet, Location, Malware
+from pycti import Report as PyCTIReport
+from pycti import StixCoreRelationship, Vulnerability
+from pycti.utils.constants import LocationTypes  # type: ignore
+from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
+
+from .constants import (
     DEFAULT_X_OPENCTI_SCORE,
     TLP_MARKING_DEFINITION_MAPPING,
     X_OPENCTI_ALIASES,
@@ -31,7 +39,7 @@ from crowdstrike.utils.constants import (
     X_OPENCTI_SCORE,
     T,
 )
-from crowdstrike.utils.indicators import (
+from .indicators import (
     IndicatorPattern,
     create_indicator_pattern_cryptocurrency_wallet,
     create_indicator_pattern_domain_name,
@@ -51,7 +59,7 @@ from crowdstrike.utils.indicators import (
     create_indicator_pattern_x509_certificate_serial_number,
     create_indicator_pattern_x509_certificate_subject,
 )
-from crowdstrike.utils.observables import (
+from .observables import (
     ObservableProperties,
     create_observable_cryptocurrency_wallet,
     create_observable_domain_name,
@@ -71,15 +79,6 @@ from crowdstrike.utils.observables import (
     create_observable_x509_certificate_serial_number,
     create_observable_x509_certificate_subject,
 )
-from crowdstrike_client.api.models import Response
-from crowdstrike_client.api.models.download import Download
-from crowdstrike_client.api.models.report import Entity, Report
-from lxml.html import fromstring  # type: ignore
-from pycti import Identity, Indicator, IntrusionSet, Location, Malware
-from pycti import Report as PyCTIReport
-from pycti import StixCoreRelationship, Vulnerability
-from pycti.utils.constants import LocationTypes  # type: ignore
-from stix2.v21 import _DomainObject, _Observable, _RelationshipObject  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -150,9 +149,7 @@ OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT = ObservationFactory(
 )
 
 
-def paginate(
-    func: Callable[..., Response[T]]
-) -> Callable[..., Generator[List[T], None, None]]:
+def paginate(func):
     """Paginate API calls."""
 
     @functools.wraps(func)
@@ -176,19 +173,19 @@ def paginate(
         while _next_batch(_limit, _offset, _total):
             response = func(*args, limit=_limit, offset=_offset, **kwargs)
 
-            errors = response.errors
+            errors = response["errors"]
             if errors:
                 logger.error("Query completed with errors")
                 for error in errors:
                     logger.error("Error: %s (code: %s)", error.message, error.code)
 
-            meta = response.meta
-            if meta.pagination is not None:
-                pagination = meta.pagination
+            meta = response["meta"]
+            if meta["pagination"] is not None:
+                pagination = meta["pagination"]
 
-                _meta_limit = pagination.limit
-                _meta_offset = pagination.offset
-                _meta_total = pagination.total
+                _meta_limit = pagination["limit"]
+                _meta_offset = pagination["offset"]
+                _meta_total = pagination["total"]
 
                 logger.info(
                     "Query pagination info limit: %s, offset: %s, total: %s",
@@ -200,14 +197,18 @@ def paginate(
                 _offset = _offset + _limit
                 _total = _meta_total
 
-            resources = response.resources
-            resources_count = len(resources)
+            resources = response["resources"]
 
-            logger.info("Query fetched %s resources", resources_count)
+            if resources is not None:
+                resources_count = len(resources)
 
-            total_count += resources_count
+                logger.info("Query fetched %s resources", resources_count)
 
-            yield resources
+                total_count += resources_count
+
+                yield resources
+            else:
+                total_count = 0
 
         logger.info("Fetched %s resources in total", total_count)
 
@@ -483,11 +484,9 @@ def create_sector(name: str, created_by: stix2.Identity) -> stix2.Identity:
     )
 
 
-def create_sector_from_entity(
-    entity: Entity, created_by: stix2.Identity
-) -> Optional[stix2.Identity]:
+def create_sector_from_entity(entity, created_by) -> Optional[stix2.Identity]:
     """Create a sector from an entity."""
-    name = entity.value
+    name = entity["value"]
     if name is None or not name:
         return None
 
@@ -495,7 +494,7 @@ def create_sector_from_entity(
 
 
 def create_sectors_from_entities(
-    entities: List[Entity], created_by: stix2.Identity
+    entities, created_by: stix2.Identity
 ) -> List[stix2.Identity]:
     """Create sectors from entities."""
     sectors = []
@@ -545,11 +544,9 @@ def create_region(name: str, created_by: stix2.Identity) -> stix2.Location:
     )
 
 
-def create_region_from_entity(
-    entity: Entity, created_by: stix2.Identity
-) -> stix2.Location:
+def create_region_from_entity(entity, created_by: stix2.Identity) -> stix2.Location:
     """Create a region from an entity."""
-    name = entity.value
+    name = entity["value"]
     if name is None:
         raise TypeError("Entity value is None")
 
@@ -571,15 +568,13 @@ def create_country(name: str, code: str, created_by: stix2.Identity) -> stix2.Lo
     )
 
 
-def create_country_from_entity(
-    entity: Entity, created_by: stix2.Identity
-) -> stix2.Location:
+def create_country_from_entity(entity, created_by: stix2.Identity) -> stix2.Location:
     """Create a country from an entity."""
-    name = entity.value
+    name = entity["value"]
     if name is None:
         raise TypeError("Entity value is None")
 
-    code = entity.slug
+    code = entity["slug"]
     if code is None:
         raise TypeError("Entity slug is None")
 
@@ -769,16 +764,16 @@ def create_object_refs(
     return object_refs
 
 
-def create_tag(entity: Entity, source_name: str, color: str) -> Mapping[str, str]:
+def create_tag(entity, source_name: str, color: str) -> Mapping[str, str]:
     """Create a tag."""
-    value = entity.value
+    value = entity["value"]
     if value is None:
-        value = f"NO_VALUE_{entity.id}"
+        value = f'NO_VALUE_{entity["id"]}'
 
     return {"tag_type": source_name, "value": value, "color": color}
 
 
-def create_tags(entities: List[Entity], source_name: str) -> List[Mapping[str, str]]:
+def create_tags(entities, source_name: str) -> List[Mapping[str, str]]:
     """Create tags."""
     color = "#cf3217"
 
@@ -836,7 +831,7 @@ def create_report(
 
 
 def create_stix2_report_from_report(
-    report: Report,
+    report,
     source_name: str,
     created_by: stix2.Identity,
     objects: List[Union[_DomainObject, _RelationshipObject]],
@@ -847,19 +842,19 @@ def create_stix2_report_from_report(
     x_opencti_files: Optional[List[Mapping[str, Union[str, bool]]]] = None,
 ) -> stix2.Report:
     """Create a STIX2 report from Report."""
-    report_name = report.name
+    report_name = report["name"]
 
-    report_created_date = report.created_date
+    report_created_date = timestamp_to_datetime(report["created_date"])
     if report_created_date is None:
         report_created_date = datetime_utc_now()
 
-    report_last_modified_date = report.last_modified_date
+    report_last_modified_date = timestamp_to_datetime(report["last_modified_date"])
     if report_last_modified_date is None:
         report_last_modified_date = report_created_date
 
-    report_description = report.description
-    report_rich_text_description = report.rich_text_description
-    report_short_description = report.short_description
+    report_description = report["description"]
+    report_rich_text_description = report["rich_text_description"]
+    report_short_description = report["short_description"]
 
     description = None
     if report_rich_text_description is not None and report_rich_text_description:
@@ -870,20 +865,20 @@ def create_stix2_report_from_report(
         description = report_short_description
 
     labels = []
-    report_tags = report.tags
+    report_tags = report["tags"]
     if report_tags is not None:
         for tag in report_tags:
-            value = tag.value
+            value = tag["value"]
             if value is None or not value:
                 continue
 
             labels.append(value)
 
     external_references = []
-    report_url = report.url
+    report_url = report["url"]
     if report_url is not None and report_url:
         external_reference = create_external_reference(
-            source_name, str(report.id), report_url
+            source_name, str(report["id"]), report_url
         )
         external_references.append(external_reference)
 
@@ -906,23 +901,23 @@ def create_stix2_report_from_report(
 
 
 def create_regions_and_countries_from_entities(
-    entities: List[Entity], author: stix2.Identity
+    entities: list, author: stix2.Identity
 ) -> Tuple[List[stix2.Location], List[stix2.Location]]:
     """Create regions and countries from given entities."""
     regions = []
     countries = []
 
     for entity in entities:
-        if entity.slug is None or entity.value is None:
+        if entity["slug"] is None or entity["value"] is None:
             continue
 
         # Do not create region/country for unknown.
-        if entity.slug == "unknown":
+        if entity["slug"] == "unknown":
             continue
 
         # Target countries may also contain regions.
         # Use hack to differentiate between countries and regions.
-        if len(entity.slug) > 2:
+        if len(entity["slug"]) > 2:
             target_region = create_region_from_entity(entity, author)
 
             regions.append(target_region)
@@ -934,14 +929,18 @@ def create_regions_and_countries_from_entities(
     return regions, countries
 
 
-def create_file_from_download(download: Download) -> Mapping[str, Union[str, bool]]:
-    """Create file mapping from Download model."""
-    filename = download.filename
+def create_file_from_download(
+    download, report_name: str
+) -> Mapping[str, Union[str, bool]]:
+
+    converted_report_pdf = BytesIO(download)
+
+    filename = report_name.lower().replace(" ", "-") + ".pdf"
     if filename is None or not filename:
         logger.error("File download missing a filename")
         filename = "DOWNLOAD_MISSING_FILENAME"
 
-    base64_data = base64.b64encode(download.content.read())
+    base64_data = base64.b64encode(converted_report_pdf.read())
 
     return {
         "name": filename,
