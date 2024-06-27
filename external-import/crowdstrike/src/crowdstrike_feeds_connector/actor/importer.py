@@ -4,16 +4,19 @@
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Optional
 
-from crowdstrike.actor.builder import ActorBundleBuilder
-from crowdstrike.importer import BaseImporter
-from crowdstrike.utils import datetime_to_timestamp, paginate, timestamp_to_datetime
-from crowdstrike_client.api.intel.actors import Actors
-from crowdstrike_client.api.models import Response
-from crowdstrike_client.api.models.actor import Actor
+from crowdstrike_feeds_services.client.actors import ActorsAPI
+from crowdstrike_feeds_services.utils import (
+    datetime_to_timestamp,
+    paginate,
+    timestamp_to_datetime,
+)
 from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
     OpenCTIConnectorHelper,
 )
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+
+from ..importer import BaseImporter
+from .builder import ActorBundleBuilder
 
 
 class ActorImporter(BaseImporter):
@@ -24,7 +27,6 @@ class ActorImporter(BaseImporter):
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        actors_api: Actors,
         update_existing_data: bool,
         author: Identity,
         default_latest_timestamp: int,
@@ -32,9 +34,7 @@ class ActorImporter(BaseImporter):
     ) -> None:
         """Initialize CrowdStrike actor importer."""
         super().__init__(helper, author, tlp_marking, update_existing_data)
-
-        self.actors_api = actors_api
-
+        self.actors_api_cs = ActorsAPI(helper)
         self.default_latest_timestamp = default_latest_timestamp
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -72,7 +72,7 @@ class ActorImporter(BaseImporter):
 
         return {self._LATEST_ACTOR_TIMESTAMP: latest_actor_timestamp}
 
-    def _fetch_actors(self, start_timestamp: int) -> Generator[List[Actor], None, None]:
+    def _fetch_actors(self, start_timestamp: int) -> Generator[List, None, None]:
         limit = 50
         sort = "created_date|asc"
         fql_filter = f"created_date:>{start_timestamp}"
@@ -91,7 +91,7 @@ class ActorImporter(BaseImporter):
         sort: Optional[str] = None,
         fql_filter: Optional[str] = None,
         fields: Optional[List[str]] = None,
-    ) -> Response[Actor]:
+    ):
         self._info(
             "Query actors limit: {0}, offset: {1}, sort: {2}, filter: {3}, fields: {4}",
             limit,
@@ -101,11 +101,13 @@ class ActorImporter(BaseImporter):
             fields,
         )
 
-        return self.actors_api.query_entities(
+        actors = self.actors_api_cs.get_combined_actor_entities(
             limit=limit, offset=offset, sort=sort, fql_filter=fql_filter, fields=fields
         )
 
-    def _process_actors(self, actors: List[Actor]) -> Optional[datetime]:
+        return actors
+
+    def _process_actors(self, actors: List) -> Optional[datetime]:
         actor_count = len(actors)
         self._info("Processing {0} actors...", actor_count)
 
@@ -114,12 +116,12 @@ class ActorImporter(BaseImporter):
         for actor in actors:
             self._process_actor(actor)
 
-            created_date = actor.created_date
+            created_date = actor["created_date"]
             if created_date is None:
                 self._error(
                     "Missing created date for actor {0} ({1})",
-                    actor.name,
-                    actor.id,
+                    actor["name"],
+                    actor["id"],
                 )
                 continue
 
@@ -135,19 +137,16 @@ class ActorImporter(BaseImporter):
             latest_created_datetime,
         )
 
-        return latest_created_datetime
+        return timestamp_to_datetime(latest_created_datetime)
 
-    def _process_actor(self, actor: Actor) -> None:
-        self._info("Processing actor {0} ({1})...", actor.name, actor.id)
+    def _process_actor(self, actor) -> None:
+        self._info("Processing actor {0} ({1})...", actor["name"], actor["id"])
 
         actor_bundle = self._create_actor_bundle(actor)
 
-        # with open(f"actor_bundle_{actor.id}.json", "w") as f:
-        #     f.write(actor_bundle.serialize(pretty=True))
-
         self._send_bundle(actor_bundle)
 
-    def _create_actor_bundle(self, actor: Actor) -> Bundle:
+    def _create_actor_bundle(self, actor) -> Bundle:
         author = self.author
         source_name = self._source_name()
         object_marking_refs = [self.tlp_marking]

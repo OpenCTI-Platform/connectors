@@ -4,22 +4,20 @@
 from datetime import datetime
 from typing import Any, Dict, Generator, List, Mapping, Optional
 
-from crowdstrike.importer import BaseImporter
-from crowdstrike.report.builder import ReportBundleBuilder
-from crowdstrike.utils import (
+from crowdstrike_feeds_services.client.reports import ReportsAPI
+from crowdstrike_feeds_services.utils import (
     create_file_from_download,
     datetime_to_timestamp,
     paginate,
     timestamp_to_datetime,
 )
-from crowdstrike_client.api.intel import Reports
-from crowdstrike_client.api.models import Response
-from crowdstrike_client.api.models.base import Entity
-from crowdstrike_client.api.models.report import Report
 from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
     OpenCTIConnectorHelper,
 )
 from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+
+from ..importer import BaseImporter
+from .builder import ReportBundleBuilder
 
 
 class ReportImporter(BaseImporter):
@@ -32,7 +30,6 @@ class ReportImporter(BaseImporter):
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        reports_api: Reports,
         update_existing_data: bool,
         author: Identity,
         default_latest_timestamp: int,
@@ -45,7 +42,7 @@ class ReportImporter(BaseImporter):
         """Initialize CrowdStrike report importer."""
         super().__init__(helper, author, tlp_marking, update_existing_data)
 
-        self.reports_api = reports_api
+        self.reports_api_cs = ReportsAPI(helper)
         self.default_latest_timestamp = default_latest_timestamp
         self.include_types = include_types
         self.report_status = report_status
@@ -101,9 +98,7 @@ class ReportImporter(BaseImporter):
     def _clear_malware_guess_cache(self):
         self.malware_guess_cache.clear()
 
-    def _fetch_reports(
-        self, start_timestamp: int
-    ) -> Generator[List[Report], None, None]:
+    def _fetch_reports(self, start_timestamp: int) -> Generator[List, None, None]:
         limit = 30
         sort = "created_date|asc"
         fields = ["__full__"]
@@ -126,7 +121,7 @@ class ReportImporter(BaseImporter):
         sort: Optional[str] = None,
         fql_filter: Optional[str] = None,
         fields: Optional[List[str]] = None,
-    ) -> Response[Report]:
+    ) -> dict:
         self._info(
             "Query reports limit: {0}, offset: {1}, sort: {2}, filter: {3}, fields: {4}",  # noqa: E501
             limit,
@@ -135,12 +130,13 @@ class ReportImporter(BaseImporter):
             fql_filter,
             fields,
         )
-
-        return self.reports_api.query_entities(
+        reports = self.reports_api_cs.get_combined_report_entities(
             limit=limit, offset=offset, sort=sort, fql_filter=fql_filter, fields=fields
         )
 
-    def _process_reports(self, reports: List[Report]) -> Optional[datetime]:
+        return reports
+
+    def _process_reports(self, reports: List) -> Optional[datetime]:
         report_count = len(reports)
         self._info("Processing {0} reports...", report_count)
 
@@ -149,12 +145,12 @@ class ReportImporter(BaseImporter):
         for report in reports:
             self._process_report(report)
 
-            created_date = report.created_date
+            created_date = report["created_date"]
             if created_date is None:
                 self._error(
                     "Missing created date for report {0} ({1})",
-                    report.name,
-                    report.id,
+                    report["name"],
+                    report["id"],
                 )
                 continue
 
@@ -172,28 +168,31 @@ class ReportImporter(BaseImporter):
 
         return latest_created_datetime
 
-    def _process_report(self, report: Report) -> None:
-        self._info("Processing report {0} ({1})...", report.name, report.id)
+    def _process_report(self, report) -> None:
+        self._info("Processing report {0} ({1})...", report["name"], report["id"])
 
-        report_file = self._get_report_pdf(report.id)
+        report_file = self._get_report_pdf(report["id"], report["name"])
         report_bundle = self._create_report_bundle(report, report_file)
 
         # with open(f"report_bundle_{report.id}.json", "w") as f:
         #     f.write(report_bundle.serialize(pretty=True))
         self._send_bundle(report_bundle)
 
-    def _get_report_pdf(self, report_id: int) -> Optional[Mapping[str, str]]:
+    def _get_report_pdf(
+        self, report_id: int, report_name: str
+    ) -> Optional[Mapping[str, str]]:
         self._info("Fetching report PDF for {0}...", report_id)
 
-        download = self.reports_api.get_pdf(str(report_id))
-        if download is None:
-            self._info("No report PDF for {0}q", report_id)
-            return None
+        download = self.reports_api_cs.get_report_pdf(str(report_id))
 
-        return create_file_from_download(download)
+        if type(download) is dict:
+            self._info("No report PDF for id '%s'", report_id)
+            return None
+        else:
+            return create_file_from_download(download, report_name)
 
     def _create_report_bundle(
-        self, report: Report, report_file: Optional[Mapping[str, str]] = None
+        self, report, report_file: Optional[Mapping[str, str]] = None
     ) -> Bundle:
         author = self.author
         source_name = self._source_name()
@@ -203,7 +202,7 @@ class ReportImporter(BaseImporter):
         confidence_level = self._confidence_level()
         guessed_malwares: Mapping[str, str] = {}
 
-        tags = report.tags
+        tags = report["tags"]
         if tags is not None:
             guessed_malwares = self._guess_malwares_from_tags(tags)
 
@@ -220,13 +219,13 @@ class ReportImporter(BaseImporter):
         )
         return bundle_builder.build()
 
-    def _guess_malwares_from_tags(self, tags: List[Entity]) -> Mapping[str, str]:
+    def _guess_malwares_from_tags(self, tags: List) -> Mapping[str, str]:
         if not self.guess_malware:
             return {}
 
         malwares = {}
         for tag in tags:
-            name = tag.value
+            name = tag["value"]
             if name is None or not name:
                 continue
 
@@ -248,11 +247,11 @@ class ReportImporter(BaseImporter):
         return malwares
 
     def _fetch_malware_standard_id_by_name(self, name: str) -> Optional[str]:
-        filtersList = [
+        filters_list = [
             self._create_filter("name", name),
             self._create_filter("aliases", name),
         ]
-        for _filter in filtersList:
+        for _filter in filters_list:
             malwares = self.helper.api.malware.list(filters=_filter)
             if malwares:
                 if len(malwares) > 1:
@@ -262,7 +261,7 @@ class ReportImporter(BaseImporter):
         return None
 
     @staticmethod
-    def _create_filter(key: str, value: str) -> List[Mapping[str, Any]]:
+    def _create_filter(key: str, value: str):
         return {
             "mode": "and",
             "filters": [{"key": key, "values": [value]}],
