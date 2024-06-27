@@ -3,7 +3,7 @@
 import os
 import time
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 from urllib.parse import urljoin
 
 import yaml
@@ -11,12 +11,12 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 
 from .builder import CrowdSecBuilder
 from .client import CrowdSecClient, QuotaExceedException
-from .constants import CTI_URL, CTI_API_URL
+from .constants import CTI_API_URL, CTI_URL
 from .helper import (
     clean_config,
-    handle_observable_description,
-    handle_none_cti_value,
     get_ip_version,
+    handle_none_cti_value,
+    handle_observable_description,
 )
 
 

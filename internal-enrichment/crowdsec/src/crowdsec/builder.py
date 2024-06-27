@@ -1,29 +1,29 @@
 # -*- coding: utf-8 -*-
 """CrowdSec builder module."""
 
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 import pycountry
 from dateutil.parser import parse
 from pycti import (
+    Label,
     OpenCTIConnectorHelper,
-    get_config_variable,
     StixCoreRelationship,
     StixSightingRelationship,
-    Label,
+    get_config_variable,
 )
 from stix2 import (
-    Relationship,
-    Indicator,
-    Identity,
     AttackPattern,
-    Vulnerability,
+    Identity,
+    Indicator,
     Location,
     Note,
+    Relationship,
     Sighting,
+    Vulnerability,
 )
 
-from .constants import MITRE_URL, CVE_REGEX, FAKE_INDICATOR_ID
+from .constants import CVE_REGEX, FAKE_INDICATOR_ID, MITRE_URL
 from .helper import clean_config, handle_none_cti_value
 
 
@@ -320,7 +320,7 @@ class CrowdSecBuilder:
         markings: List[str],
     ) -> Note:
         if self.reputation == "unknown":
-            content = f"This is was not found in CrowdSec CTI. \n\n"
+            content = "This is was not found in CrowdSec CTI. \n\n"
         else:
             content = f"**Reputation**: {self.reputation} \n\n"
             content += f"**Confidence**: {self.confidence} \n\n"
@@ -331,7 +331,7 @@ class CrowdSecBuilder:
                     f"**Origin**: {self.origin_country} ({self.origin_city}) \n\n"
                 )
             if self.behaviors:
-                content += f"**Behaviors**: \n\n"
+                content += "**Behaviors**: \n\n"
                 for behavior in self.behaviors:
                     content += (
                         "- "
@@ -342,7 +342,7 @@ class CrowdSecBuilder:
                     )
 
             if self.target_countries:
-                content += f"**Most targeted countries**: \n\n"
+                content += "**Most targeted countries**: \n\n"
                 for country_alpha_2, val in self.target_countries.items():
                     country_info = pycountry.countries.get(alpha_2=country_alpha_2)
                     content += "- " + country_info.name + f" ({val}%)" + "\n\n"

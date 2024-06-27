@@ -2,8 +2,8 @@
 """CrowdSec internal enrichment connector main file."""
 
 from time import sleep
-from crowdsec import CrowdSecEnrichment
 
+from crowdsec import CrowdSecEnrichment
 
 if __name__ == "__main__":
     try:

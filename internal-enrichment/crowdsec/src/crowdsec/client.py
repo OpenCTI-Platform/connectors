@@ -2,10 +2,11 @@
 """CrowdSec client module."""
 
 import itertools
-from urllib.parse import urljoin
-import requests
-from time import sleep
 from dataclasses import dataclass
+from time import sleep
+from urllib.parse import urljoin
+
+import requests
 from pycti import OpenCTIConnectorHelper
 
 

@@ -1,4 +1,6 @@
 -r ../src/requirements.txt
 black
+isort
+flake8
 pytest
 pytest-mock

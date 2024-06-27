@@ -3,7 +3,7 @@
 import datetime
 import ipaddress
 import re
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from .constants import LAST_ENRICHMENT_PATTERN
 
