@@ -132,6 +132,13 @@ class Misp:
             False,
             "timestamp",
         )
+        self.misp_filter_date_attribute = get_config_variable(
+            "MISP_DATE_FILTER_FIELD",
+            ["misp", "date_filter_field"],
+            config,
+            False,
+            "date_from",
+        )
         self.misp_report_description_attribute_filter = parse_filter_config(
             get_config_variable(
                 "MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER",
@@ -359,7 +366,7 @@ class Misp:
 
             # Put the date
             next_event_timestamp = last_event_timestamp + 1
-            kwargs[self.misp_datetime_attribute] = next_event_timestamp
+            kwargs[self.misp_filter_date_attribute] = next_event_timestamp
 
             # Complex query date
             if complex_query_tag is not None:
