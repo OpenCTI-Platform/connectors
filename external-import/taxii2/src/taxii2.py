@@ -146,6 +146,17 @@ class Taxii2Connector:
             ["taxii2", "force_multiple_pattern_name"],
             config,
         )
+        self.stix_custom_property_to_label = get_config_variable(
+            "TAXII2_STIX_CUSTOM_PROPERTY_TO_LABEL",
+            ["taxii2", "stix_custom_property_to_label"],
+            config,
+            default=False,
+        )
+        self.stix_custom_property = get_config_variable(
+            "TAXII2_STIX_CUSTOM_PROPERTY",
+            ["taxii2", "stix_custom_property"],
+            config,
+        )
 
     @staticmethod
     def _init_collection_table(colls):
@@ -287,6 +298,12 @@ class Taxii2Connector:
                     new_labels = object["labels"]
                 if self.add_custom_label == True:
                     new_labels.append(self.custom_label)
+                    object["labels"] = new_labels
+                if (
+                    self.stix_custom_property_to_label == True
+                    and self.stix_custom_property in object
+                ):
+                    new_labels.append(object[self.stix_custom_property])
                     object["labels"] = new_labels
                 # Enumerate main observable type
                 if object["type"] == "indicator":
