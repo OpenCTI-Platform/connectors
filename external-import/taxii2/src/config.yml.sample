@@ -29,3 +29,5 @@ taxii2:
   custom_label: ChangeMe
   force_pattern_as_name: false
   force_multiple_pattern_name: 'Multiple Indicators'
+  stix_custom_property_to_label: false
+  stix_custom_property: 'x_foo'
