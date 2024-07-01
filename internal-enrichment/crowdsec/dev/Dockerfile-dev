@@ -1,0 +1,13 @@
+FROM python:3.11-alpine
+ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+
+# Install Python modules
+# hadolint ignore=DL3003
+RUN apk --no-cache add git build-base libmagic libffi-dev
+
+# Expose and entrypoint
+COPY entrypoint-dev.sh /
+RUN chmod +x /entrypoint-dev.sh
+# DO NOT RUN crowdsec.py process, it has to be done manually
+ENTRYPOINT ["/entrypoint-dev.sh"]
+
