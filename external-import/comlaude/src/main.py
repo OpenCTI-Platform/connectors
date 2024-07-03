@@ -10,7 +10,8 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import Bundle, DomainName, Indicator, Relationship
+from stix2 import Bundle, DomainName, Indicator, Relationship, Identity
+from stix2.v21 import TLP_AMBER
 
 import comlaude
 
@@ -87,6 +88,12 @@ def _generate_dynamic_custom_properties(helper, domain_object, score):
     return domain_name, custom_properties
 
 
+AUTHOR_NAME = "Comlaude"
+
+
+author_identity = Identity(name=AUTHOR_NAME, identity_class="organization")
+
+
 def _create_stix_create_bundle(helper, domain_object, labels, score):
     """
     Create a STIX bundle containing domain and indicator objects.
@@ -100,6 +107,8 @@ def _create_stix_create_bundle(helper, domain_object, labels, score):
         helper, domain_object, score
     )
     helper.log_debug(f"Create STIX Domain Name object: {domain_name}")
+    # Create MarkingDefinition object
+    object_marking_refs = [TLP_AMBER["id"]]
 
     # Create DomainName object
     sco_domain_name = DomainName(
@@ -108,6 +117,8 @@ def _create_stix_create_bundle(helper, domain_object, labels, score):
         allow_custom=True,
         custom_properties=custom_properties,
         labels=labels,
+        object_marking_refs=object_marking_refs,
+        created_by_ref=author_identity.id,
     )
     helper.log_debug(f"Create STIX Indicator object: {domain_name}")
     start_time = _convert_timestamp_to_zero_millisecond_format(
@@ -128,6 +139,8 @@ def _create_stix_create_bundle(helper, domain_object, labels, score):
         valid_from=start_time,
         labels=labels,
         custom_properties=custom_properties,
+        object_marking_refs=object_marking_refs,
+        created_by_ref=author_identity.id,
     )
 
     # Create relationships
@@ -136,11 +149,18 @@ def _create_stix_create_bundle(helper, domain_object, labels, score):
         source_ref=sdo_indicator.id,
         target_ref=sco_domain_name.id,
         start_time=start_time,
+        created_by_ref=author_identity.id,
     )
 
     helper.log_debug(f"Create relationships: {domain_name}")
     helper.log_debug(f"Bundle Objects: {domain_name}")
-    return domain_name, [sco_domain_name, sdo_indicator, sro_object]
+    return domain_name, [
+        author_identity,
+        TLP_AMBER,
+        sco_domain_name,
+        sdo_indicator,
+        sro_object,
+    ]
 
 
 class ComlaudeConnector:
@@ -270,7 +290,7 @@ class ComlaudeConnector:
         Main execution loop for the ComlaudeConnector.
         """
         self.helper.log_info(
-            "Start Comluade Connector ({}).".format(
+            "Start Comlaude Connector ({}).".format(
                 _format_time(datetime.datetime.now(datetime.UTC))
             )
         )
@@ -285,16 +305,13 @@ class ComlaudeConnector:
             self.comlaude_search.get_next_page()
             self._iterate_events()
 
-        if self.helper.connect_run_and_terminate:
-            self.helper.log_info(
-                "Connector stop: ({})".format(
-                    _format_time(datetime.datetime.now(datetime.UTC))
-                )
+        self.helper.log_info(
+            "Connector stop: ({})".format(
+                _format_time(datetime.datetime.now(datetime.UTC))
             )
-            self.helper.force_ping()
-            sys.exit(0)
-        # Sleep for interval specified in Hours.
-        time.sleep(self._get_interval())
+        )
+        self.helper.force_ping()
+        sys.exit(0)
 
 
 if __name__ == "__main__":
