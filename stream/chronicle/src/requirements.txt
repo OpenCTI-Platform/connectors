@@ -1,4 +1,4 @@
 pycti==6.2.0
 google-auth==2.31.0
-google-api-python-client==2.135.0
+google-api-python-client==2.136.0
 google==3.0.0
