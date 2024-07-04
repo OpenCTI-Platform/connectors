@@ -4,7 +4,6 @@ import random
 import re
 import sys
 import time
-import urllib.parse
 from datetime import datetime
 from typing import Any, Dict, Mapping, Optional
 
@@ -453,8 +452,8 @@ class MWDB:
                     created_by_ref=self.identity["standard_id"],
                     object_marking_refs=[stix2.TLP_GREEN["id"]],
                     external_references=[external_reference],
-                    created=parser.parse(malware.upload_time),
-                    modified=parser.parse(malware.upload_time),
+                    created=malware.upload_time,
+                    modified=malware.upload_time,
                     custom_properties={
                         "x_opencti_score": self.score,
                     },
