@@ -187,16 +187,26 @@ class HarfangLabConnector:
     def check_pattern_type_and_get_list_id(self, pattern_type, source, info):
         if pattern_type == "yara":
             self.yara_list_id = source["id"]
-            self.helper.log_info(f"Yara Source ID {info} = {self.yara_list_id}")
+            self.helper.connector_logger.info(
+                "[STREAM] Yara Source ID",
+                {"Source_status": info, "source_id": self.yara_list_id},
+            )
         elif pattern_type == "sigma":
             self.sigma_list_id = source["id"]
-            self.helper.log_info(f"Sigma Source ID {info} = {self.sigma_list_id}")
+            self.helper.connector_logger.info(
+                "[STREAM] Sigma Source ID",
+                {"Source_status": info, "source_id": self.sigma_list_id},
+            )
         elif pattern_type == "stix":
             self.stix_list_id = source["id"]
-            self.helper.log_info(f"Stix Source ID {info} = {self.stix_list_id}")
+            self.helper.connector_logger.info(
+                "[STREAM] Stix Source ID",
+                {"Source_status": info, "source_id": self.stix_list_id},
+            )
         else:
-            self.helper.log_error(f"Unsupported Pattern Type = {pattern_type}")
-        return
+            return self.helper.connector_logger.error(
+                "[ERROR] Unsupported Pattern Type", {"pattern_type": pattern_type}
+            )
 
     def _process_message(self, msg):
         try:
@@ -220,7 +230,10 @@ class HarfangLabConnector:
                 elif data["pattern_type"] == "stix":
                     self.create_indicator(data, "stix", "IOCRule", self.stix_list_id)
                 else:
-                    self.helper.log_error("[CREATE] Unsupported pattern type")
+                    self.helper.connector_logger.error(
+                        "[ERROR] Unsupported Pattern Type during event create",
+                        {"pattern_type": data["pattern_type"]},
+                    )
 
             elif data["type"] == "relationship":
                 if data["relationship_type"] == "based-on":
@@ -239,7 +252,10 @@ class HarfangLabConnector:
                 elif data["pattern_type"] == "stix":
                     self.update_indicator(msg, "stix", "IOCRule", self.stix_list_id)
                 else:
-                    self.helper.log_error("[UPDATE] Unsupported pattern type")
+                    self.helper.connector_logger.error(
+                        "[ERROR] Unsupported Pattern Type during event update",
+                        {"pattern_type": data["pattern_type"]},
+                    )
             return
 
         # Handle delete
@@ -254,7 +270,10 @@ class HarfangLabConnector:
                 elif data["pattern_type"] == "stix":
                     self.delete_indicator(data, "stix", "IOCRule", self.stix_list_id)
                 else:
-                    self.helper.log_error("[DELETE] Unsupported pattern type")
+                    self.helper.connector_logger.error(
+                        "[ERROR] Unsupported Pattern Type during event delete",
+                        {"pattern_type": data["pattern_type"]},
+                    )
 
             elif data["type"] == "relationship":
                 if data["relationship_type"] == "based-on":
@@ -263,23 +282,30 @@ class HarfangLabConnector:
                     return
             return
 
-    def log_info_process(self, data, pattern_type, method, element):
-        return self.helper.log_info(
-            f"{method} Processing {pattern_type} {element}"
-            + " {"
-            + OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-            + "}"
+    def log_info_process(self, data, method):
+        data_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+        pattern_type = data["pattern_type"] if "pattern_type" in data else None
+        return self.helper.connector_logger.info(
+            "[PROCESS] The process is started",
+            {
+                "method": method,
+                "pattern_type": pattern_type,
+                "entity_type": data["type"],
+                "id": data_id,
+            },
         )
 
     def create_indicator(self, data, pattern_type, uri, source_list_id):
         entity = self.helper.api.indicator.read(
             id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         )
-        self.log_info_process(data, pattern_type, "[CREATE]", "indicator")
+        self.log_info_process(data, "[CREATE]")
 
         if pattern_type == "stix":
             indicators = self.stix_translation_parser(data, entity)
+            indicator_values = []
             for indicator in indicators:
+                indicator_values.append(indicator["value"])
                 indicator_matched = self.get_and_match_element(
                     data, uri, indicator["value"], source_list_id
                 )
@@ -290,6 +316,11 @@ class HarfangLabConnector:
 
             observables = entity["observables"]
             for observable in observables:
+                if (
+                    "observable_value" in observable
+                    and observable["observable_value"] in indicator_values
+                ):
+                    continue
                 observable_matched = self.get_and_match_element(
                     data, uri, observable["observable_value"], source_list_id
                 )
@@ -306,12 +337,20 @@ class HarfangLabConnector:
                     )
 
                     if response is None:
-                        self.helper.log_error(
-                            f"[UPDATE] Failure reactivated of existing {pattern_type} observable = {observable_id}"
+                        self.helper.connector_logger.error(
+                            "[ERROR] Failure reactivated of existing observable",
+                            {
+                                "pattern_type": pattern_type,
+                                "observable_id": observable_id,
+                            },
                         )
                     else:
-                        self.helper.log_info(
-                            f"[UPDATE] Successful reactivated of existing {pattern_type} observable = {observable_id}"
+                        self.helper.connector_logger.info(
+                            "[UPDATE] Successful reactivated of existing observable",
+                            {
+                                "pattern_type": pattern_type,
+                                "observable_id": observable_id,
+                            },
                         )
                 else:
                     new_observable = self.build_stix_observable_object(
@@ -327,12 +366,17 @@ class HarfangLabConnector:
                         response = self._query("post", f"/{uri}/", new_observable)
 
                         if response is None:
-                            self.helper.log_error(
-                                f"[CREATE] Failure {pattern_type} observable created"
+                            self.helper.connector_logger.error(
+                                "[ERROR] Failure observable created",
+                                {"pattern_type": pattern_type},
                             )
                         elif response["status_code"] == 201:
-                            self.helper.log_info(
-                                f"[CREATE] Successful {pattern_type} observable created = {response['response']['id']}"
+                            self.helper.connector_logger.info(
+                                "[CREATE] Successful observable created",
+                                {
+                                    "pattern_type": pattern_type,
+                                    "observable_id": response["response"]["id"],
+                                },
                             )
 
         else:
@@ -363,12 +407,14 @@ class HarfangLabConnector:
 
                 response = self._query("put", f"/{uri}/{indicator_id}/", indicator)
                 if response is None:
-                    return self.helper.log_error(
-                        f"[ENABLE] Failed reactivated existing {pattern_type} indicator = {indicator_id}"
+                    return self.helper.connector_logger.error(
+                        "[ERROR] Failed reactivated existing indicator",
+                        {"pattern_type": pattern_type, "indicator_id": indicator_id},
                     )
                 else:
-                    return self.helper.log_info(
-                        f"[ENABLE] Successful reactivated of existing {pattern_type} indicator = {indicator_id}"
+                    return self.helper.connector_logger.info(
+                        "[ENABLE] Successful reactivated of existing indicator",
+                        {"pattern_type": pattern_type, "indicator_id": indicator_id},
                     )
         else:
             if pattern_type == "stix":
@@ -378,32 +424,48 @@ class HarfangLabConnector:
                     response = self._query("post", f"/{uri}/", indicator)
 
                     if response is None:
-                        self.helper.log_error(
-                            f"[CREATE] Failed to create {pattern_type} indicator"
+                        self.helper.connector_logger.error(
+                            "[ERROR] Failed to create indicator",
+                            {"pattern_type": pattern_type},
                         )
                     elif response["status_code"] == 201:
-                        self.helper.log_info(
-                            f"[CREATE] Successful {pattern_type} indicator created = {response['response']['id']}"
+                        self.helper.connector_logger.info(
+                            "[CREATE] Successful indicator created",
+                            {
+                                "pattern_type": pattern_type,
+                                "response_id": response["response"]["id"],
+                            },
                         )
             else:
                 indicator = self.build_yara_sigma_indicator_object(data, entity, True)
                 response = self._query("post", f"/{uri}/", indicator)
 
                 if response is None:
-                    return self.helper.log_error(
-                        f"[CREATE] Failed to create {pattern_type} indicator"
+                    return self.helper.connector_logger.error(
+                        "[ERROR] Failed to create indicator",
+                        {"pattern_type": pattern_type},
                     )
                 # Be careful sometimes there is a return response HarfangLab {'status':[]}
                 elif not response["status"]:
-                    return self.helper.log_error("[ERROR] missing value")
+                    return self.helper.connector_logger.error(
+                        "[ERROR] Missing value", {"pattern_type": pattern_type}
+                    )
                 elif response["status"][0]["status"] is False:
-                    return self.helper.log_error(
-                        f"[ERROR] {response['status'][0]['code']} = {response['status'][0]['content']}"
+                    return self.helper.connector_logger.error(
+                        "[ERROR] An error has occurred",
+                        {
+                            "status_code": response["status"][0]["code"],
+                            "message": response["status"][0]["content"],
+                        },
                     )
                 else:
-                    response_status = response["status"][0]
-                    return self.helper.log_info(
-                        f"[CREATE] Successful {pattern_type} indicator created = {response_status['id']}"
+                    response_status_id = response["status"][0]["id"]
+                    return self.helper.connector_logger.info(
+                        "[CREATE] Successful indicator created",
+                        {
+                            "pattern_type": pattern_type,
+                            "indicator_id": response_status_id,
+                        },
                     )
 
     def update_indicator(self, msg, pattern_type, uri, source_list_id):
@@ -411,24 +473,12 @@ class HarfangLabConnector:
         entity = self.helper.api.indicator.read(
             id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         )
-        self.log_info_process(data, pattern_type, "[UPDATE]", "indicator")
+        self.log_info_process(data, "[UPDATE]")
         data_context = json.loads(msg.data)["context"]
         check_patch_path = data_context["patch"][0]["path"]
         data_reverse_patch = data_context["reverse_patch"]
 
         if pattern_type == "stix":
-            observables = entity["observables"]
-            for observable in observables:
-                observable_matched = self.get_and_match_element(
-                    data,
-                    uri,
-                    observable["observable_value"],
-                    source_list_id,
-                    data_reverse_patch,
-                )
-                self.process_update_observable(
-                    data, entity, uri, pattern_type, observable_matched
-                )
 
             if check_patch_path == "/pattern":
                 indicator_previous_value = data_context["reverse_patch"][0]["value"]
@@ -454,12 +504,32 @@ class HarfangLabConnector:
                         )
 
             indicators = self.stix_translation_parser(data, entity)
+            indicator_values = []
             for indicator in indicators:
+                indicator_values.append(indicator["value"])
                 indicator_matched = self.get_and_match_element(
                     data, uri, indicator["value"], source_list_id, data_reverse_patch
                 )
                 self.process_update_indicator(
                     data, entity, uri, pattern_type, indicator_matched
+                )
+
+            observables = entity["observables"]
+            for observable in observables:
+                if (
+                    "observable_value" in observable
+                    and observable["observable_value"] in indicator_values
+                ):
+                    continue
+                observable_matched = self.get_and_match_element(
+                    data,
+                    uri,
+                    observable["observable_value"],
+                    source_list_id,
+                    data_reverse_patch,
+                )
+                self.process_update_observable(
+                    data, entity, uri, pattern_type, observable_matched
                 )
 
         else:
@@ -500,7 +570,9 @@ class HarfangLabConnector:
             elif data["pattern_type"] == "stix":
                 self.create_indicator(data, "stix", "IOCRule", self.stix_list_id)
             else:
-                return self.helper.log_error("Unsupported Pattern")
+                return self.helper.connector_logger.error(
+                    "[ERROR] Unsupported Pattern", {"pattern_type": pattern_type}
+                )
             return
         else:
             indicator_id = indicator_matched["id"]
@@ -516,20 +588,24 @@ class HarfangLabConnector:
 
             response = self._query("put", f"/{uri}/{indicator_id}/", indicator)
             if response is None:
-                return self.helper.log_error(
-                    f"[UPDATE] Failure {pattern_type} indicator updated = {indicator_id}"
+                return self.helper.connector_logger.error(
+                    "[ERROR] Failure indicator updated",
+                    {"pattern_type": pattern_type, "indicator_id": indicator_id},
                 )
             else:
-                return self.helper.log_info(
-                    f"[UPDATE] Successful {pattern_type} indicator updated = {indicator_id}"
+                return self.helper.connector_logger.info(
+                    "[UPDATE] Successful indicator updated",
+                    {"pattern_type": pattern_type},
                 )
 
     def process_update_observable(
         self, data, entity, uri, pattern_type, observable_matched
     ):
         if observable_matched is None:
-            msg_log = f"[UPDATE] The searched for {pattern_type} observable does not exist in HarfangLab"
-            return self.helper.log_error(msg_log)
+            return self.helper.connector_logger.error(
+                "[ERROR] The searched for observable does not exist in HarfangLab",
+                {"pattern_type": pattern_type},
+            )
         else:
             observable_id = observable_matched["id"]
             observable_matched["description"] = data.get(
@@ -541,12 +617,14 @@ class HarfangLabConnector:
 
             response = self._query("put", f"/{uri}/{observable_id}/", observable)
             if response is None:
-                return self.helper.log_error(
-                    f"[UPDATE] Failure {pattern_type} observable updated = {observable_id}"
+                return self.helper.connector_logger.error(
+                    "[ERROR] Failure observable updated",
+                    {"pattern_type": pattern_type, "observable_id": observable_id},
                 )
             else:
-                return self.helper.log_info(
-                    f"[UPDATE] Successful {pattern_type} observable updated = {observable_id}"
+                return self.helper.connector_logger.info(
+                    "[UPDATE] Successful observable updated",
+                    {"pattern_type": pattern_type, "observable_id": observable_id},
                 )
 
     def delete_indicator(self, data, pattern_type, uri, source_list_id):
@@ -556,28 +634,15 @@ class HarfangLabConnector:
         config_remove_indicator = (
             "[DELETE]" if self.harfanglab_remove_indicator else "[DISABLE]"
         )
-        self.log_info_process(
-            data, pattern_type, f"{config_remove_indicator}", "indicator"
-        )
+        self.log_info_process(data, config_remove_indicator)
 
         if pattern_type == "stix":
             if entity is not None:
-                observables = entity["observables"]
-                for observable in observables:
-                    observable_matched = self.get_and_match_element(
-                        data, uri, observable["observable_value"], source_list_id
-                    )
-                    self.process_delete_observable(
-                        data,
-                        entity,
-                        uri,
-                        pattern_type,
-                        config_remove_indicator,
-                        observable_matched,
-                    )
 
                 indicators = self.stix_translation_parser(data, entity)
+                indicator_values = []
                 for indicator in indicators:
+                    indicator_values.append(indicator["value"])
                     if indicator["type"] is not None:
                         indicator_matched = self.get_and_match_element(
                             data, uri, indicator["value"], source_list_id
@@ -590,6 +655,25 @@ class HarfangLabConnector:
                             config_remove_indicator,
                             indicator_matched,
                         )
+
+                observables = entity["observables"]
+                for observable in observables:
+                    if (
+                        "observable_value" in observable
+                        and observable["observable_value"] in indicator_values
+                    ):
+                        continue
+                    observable_matched = self.get_and_match_element(
+                        data, uri, observable["observable_value"], source_list_id
+                    )
+                    self.process_delete_observable(
+                        data,
+                        entity,
+                        uri,
+                        pattern_type,
+                        config_remove_indicator,
+                        observable_matched,
+                    )
             else:
                 ioc_list = self._query(
                     "get", f"/{uri}/?search={data['id']}&source_id={source_list_id}"
@@ -630,20 +714,32 @@ class HarfangLabConnector:
         indicator_matched,
     ):
         if indicator_matched is None:
-            msg_log = f"{config_remove_indicator} The searched for {pattern_type} indicator does not exist in HarfangLab"
-            return self.helper.log_error(msg_log)
+            return self.helper.connector_logger.info(
+                "[INFO] The searched for indicator does not exist in HarfangLab",
+                {"process": config_remove_indicator, "pattern_type": pattern_type},
+            )
         else:
             indicator_id = indicator_matched["id"]
             if self.harfanglab_remove_indicator is True:
                 response = self._query("delete", f"/{uri}/{indicator_id}/")
 
                 if response is None:
-                    return self.helper.log_info(
-                        f"{config_remove_indicator} Successful {pattern_type} indicator deleted = {indicator_id}"
+                    return self.helper.connector_logger.info(
+                        "[INFO] Successful indicator deleted",
+                        {
+                            "process": config_remove_indicator,
+                            "pattern_type": pattern_type,
+                            "indicator_id": indicator_id,
+                        },
                     )
                 else:
-                    return self.helper.log_error(
-                        f"{config_remove_indicator} Failure {pattern_type} indicator deleted = {indicator_id}"
+                    return self.helper.connector_logger.error(
+                        "[ERROR] Failure indicator deleted",
+                        {
+                            "process": config_remove_indicator,
+                            "pattern_type": pattern_type,
+                            "indicator_id": indicator_id,
+                        },
                     )
 
             elif self.harfanglab_remove_indicator is False:
@@ -658,19 +754,29 @@ class HarfangLabConnector:
                 response = self._query("put", f"/{uri}/{indicator_id}/", indicator)
 
                 if response is None:
-                    return self.helper.log_error(
-                        f"{config_remove_indicator} Failure {pattern_type} indicator deactivation = {indicator_id}"
+                    return self.helper.connector_logger.error(
+                        "[ERROR] Failure indicator deactivation",
+                        {
+                            "process": config_remove_indicator,
+                            "pattern_type": pattern_type,
+                            "indicator_id": indicator_id,
+                        },
                     )
                 else:
-                    return self.helper.log_info(
-                        f"{config_remove_indicator} Successful {pattern_type} indicator deactivation = {indicator_id}"
+                    return self.helper.connector_logger.info(
+                        "[INFO] Successful indicator deactivation",
+                        {
+                            "process": config_remove_indicator,
+                            "pattern_type": pattern_type,
+                            "indicator_id": indicator_id,
+                        },
                     )
 
     def create_observable(self, data, pattern_type, uri, source_list_id):
         entity = self.helper.api.indicator.read(
             id=OpenCTIConnectorHelper.get_attribute_in_extension("source_ref", data)
         )
-        self.log_info_process(data, pattern_type, "[CREATE]", "observable")
+        self.log_info_process(data, "[CREATE]")
 
         observable = self.build_stix_observable_object(data, entity, True)
         if observable is not None:
@@ -699,26 +805,44 @@ class HarfangLabConnector:
                     response = self._query("put", f"/{uri}/{observable_id}/", data)
 
                     if response is None:
-                        return self.helper.log_error(
-                            f"[ENABLE] Failed reactivated existing {pattern_type} observable = {observable_id}"
+                        return self.helper.connector_logger.error(
+                            "[ERROR] Failed reactivated existing observable",
+                            {
+                                "pattern_type": pattern_type,
+                                "observable_id": observable_id,
+                            },
                         )
                     else:
-                        return self.helper.log_info(
-                            f"[ENABLE] Successful reactivated of existing {pattern_type} observable = {observable_id}"
+                        return self.helper.connector_logger.info(
+                            "[ENABLE] Successful reactivated of existing observable",
+                            {
+                                "pattern_type": pattern_type,
+                                "observable_id": observable_id,
+                            },
                         )
             else:
-                msg_log = "[CREATE] The request failed because the indicator id in the comment of the observable is different"
-                self.helper.log_error(msg_log)
+                self.helper.connector_logger.error(
+                    "[ERROR] The request failed because the indicator id in the comment of the observable is different",
+                    {
+                        "pattern_type": pattern_type,
+                        "indicator_id": observable_matched_comment_id,
+                        "observable_id": observable_comment_id,
+                    },
+                )
         else:
             response = self._query("post", f"/{uri}/", data)
 
             if response is None:
-                self.helper.log_error(
-                    f"[CREATE] Failure {pattern_type} observable created"
+                return self.helper.connector_logger.error(
+                    "[ERROR] Failure observable created", {"pattern_type": pattern_type}
                 )
             elif response["status_code"] == 201:
-                self.helper.log_info(
-                    f"[CREATE] Successful {pattern_type} observable created = {response['response']['id']}"
+                return self.helper.connector_logger.info(
+                    "[CREATE] Successful observable created",
+                    {
+                        "pattern_type": pattern_type,
+                        "response_id": response["response"]["id"],
+                    },
                 )
 
     def delete_observable(self, data, pattern_type, uri, source_list_id):
@@ -728,9 +852,7 @@ class HarfangLabConnector:
         config_remove_indicator = (
             "[DELETE]" if self.harfanglab_remove_indicator else "[DISABLE]"
         )
-        self.log_info_process(
-            data, pattern_type, f"{config_remove_indicator}", "observable"
-        )
+        self.log_info_process(data, config_remove_indicator)
 
         observable = self.build_stix_observable_object(data, entity, True)
         if observable is not None:
@@ -757,8 +879,10 @@ class HarfangLabConnector:
         observable_matched,
     ):
         if observable_matched is None:
-            msg_log = f"{config_remove_indicator} The searched for {pattern_type} observable does not exist in HarfangLab"
-            return self.helper.log_error(msg_log)
+            return self.helper.connector_logger.info(
+                "[INFO] The searched for observable does not exist in HarfangLab",
+                {"process": config_remove_indicator, "pattern_type": pattern_type},
+            )
         else:
             observable_id = observable_matched["id"]
 
@@ -777,12 +901,22 @@ class HarfangLabConnector:
                     response = self._query("delete", f"/{uri}/{observable_id}/")
 
                     if response is None:
-                        return self.helper.log_info(
-                            f"{config_remove_indicator} Successful {pattern_type} observable deleted = {observable_id}"
+                        return self.helper.connector_logger.info(
+                            "[INFO] Successful observable deleted",
+                            {
+                                "process": config_remove_indicator,
+                                "pattern_type": pattern_type,
+                                "observable_id": observable_id,
+                            },
                         )
                     else:
-                        return self.helper.log_error(
-                            f"{config_remove_indicator} Failure {pattern_type} observable deleted = {observable_id}"
+                        return self.helper.connector_logger.error(
+                            "[ERROR] Failure observable deleted",
+                            {
+                                "process": config_remove_indicator,
+                                "pattern_type": pattern_type,
+                                "observable_id": observable_id,
+                            },
                         )
 
                 elif self.harfanglab_remove_indicator is False:
@@ -794,16 +928,32 @@ class HarfangLabConnector:
                     )
 
                     if response is None:
-                        return self.helper.log_error(
-                            f"{config_remove_indicator} Failure {pattern_type} observable deactivation = {observable_id}"
+                        return self.helper.connector_logger.error(
+                            "[ERROR] Failure observable deactivation",
+                            {
+                                "process": config_remove_indicator,
+                                "pattern_type": pattern_type,
+                                "observable_id": observable_id,
+                            },
                         )
                     else:
-                        return self.helper.log_info(
-                            f"{config_remove_indicator} Successful {pattern_type} observable deactivation = {observable_id}"
+                        return self.helper.connector_logger.info(
+                            "[INFO] Successful observable deactivation",
+                            {
+                                "process": config_remove_indicator,
+                                "pattern_type": pattern_type,
+                                "observable_id": observable_id,
+                            },
                         )
             else:
-                msg_log = "[DELETE] The request failed because the indicator id in the comment of the observable is different"
-                self.helper.log_error(msg_log)
+                self.helper.connector_logger.error(
+                    "[ERROR] The request failed because the indicator id in the comment of the observable is different",
+                    {
+                        "pattern_type": pattern_type,
+                        "indicator_id": observable_matched_comment_id,
+                        "observable_id": observable_comment_id,
+                    },
+                )
 
     @staticmethod
     def truncate_indicator_name(data):
@@ -837,8 +987,10 @@ class HarfangLabConnector:
 
         if entity is None:
             new_indicator["pattern_type"] = "stix"
-            new_indicator["comment"] = json.loads(data["comment"])
-            new_indicator["description"] = data["description"]
+            new_indicator["comment"] = (
+                json.loads(data["comment"]) if "comment" in data else {}
+            )
+            new_indicator["description"] = data.get("description", "No description")
         else:
             new_indicator["description"] = entity.get("description", "No description")
             if entity["description"] == "":
@@ -917,14 +1069,15 @@ class HarfangLabConnector:
         elif data["entity_type"] == "Url" or data["entity_type"] == "url":
             new_observable["entity_type"] = "url"
         else:
-            return self.helper.log_error(
-                f"[ERROR] The observable type {data['entity_type']} is not processed"
+            return self.helper.connector_logger.error(
+                "[ERROR] The observable type is not processed",
+                {"entity_type": data["entity_type"]},
             )
         new_observable["id"] = entity["standard_id"]
         new_observable["score"] = entity["x_opencti_score"]
         new_observable["platforms"] = entity["x_mitre_platforms"]
 
-        new_observable["description"] = data.get("description", "No description")
+        new_observable["description"] = entity.get("description", "No description")
         new_observable["comment"] = {
             "indicator_id": new_observable["id"],
             "indicator_score": new_observable["score"],
@@ -981,8 +1134,10 @@ class HarfangLabConnector:
                     )
                 else:
                     new_stix_attribute = None
-                    self.helper.log_error(
-                        f"[ERROR] Stix attribute type {stix_attribute} is not supported"
+
+                    self.helper.connector_logger.error(
+                        "[ERROR] Stix attribute type is not supported",
+                        {"stix_attribute": stix_attribute},
                     )
 
                 data["stix_attribute"] = new_stix_attribute
@@ -1112,24 +1267,37 @@ class HarfangLabConnector:
             except:
                 return response.text
         elif response.status_code == 201:
-            msg_log = "Status code 201 : Resource created successfully"
-            self.helper.log_info(msg_log)
+            self.helper.connector_logger.info(
+                "[API] Resource created successfully",
+                {"status_code": response.status_code},
+            )
             return {"response": response.json(), "status_code": response.status_code}
         elif response.status_code == 204:
-            msg_log = "Status code 204 : Resource deleted successfully"
-            return self.helper.log_info(msg_log)
+            return self.helper.connector_logger.info(
+                "[API] Resource deleted successfully",
+                {"status_code": response.status_code},
+            )
         elif response.status_code == 400:
-            msg_log = f"Status code 400 : Bad Request = {json.loads(response.content)}"
-            return self.helper.log_error(msg_log)
+            return self.helper.connector_logger.error(
+                "[API] Bad Request",
+                {
+                    "status_code": response.status_code,
+                    "message": json.loads(response.content),
+                },
+            )
         elif response.status_code == 401:
-            msg_log = "Status code 401 : Query failed, permission denied"
-            self.helper.log_error(msg_log)
-            raise ValueError(msg_log)
+            return self.helper.connector_logger.error(
+                "[API] Query failed, permission denied",
+                {"status_code": response.status_code},
+            )
         elif response.status_code == 500:
-            msg_log = "Status code 500 : Internal Server Error"
-            self.helper.log_error(msg_log)
+            return self.helper.connector_logger.error(
+                "[API] Internal Server Error", {"status_code": response.status_code}
+            )
         else:
-            self.helper.log_info(f"{response.text}")
+            return self.helper.connector_logger.info(
+                "[API]", {"status_code": response.status_code, "message": response.text}
+            )
 
     def start(self):
         self.sightings = Sightings(

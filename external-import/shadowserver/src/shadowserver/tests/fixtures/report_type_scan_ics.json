@@ -1,0 +1,25 @@
+[
+    {
+        "asn": 12345,
+        "city": "Sample City",
+        "device_id": "ABC123",
+        "device_model": "Sample Model",
+        "device_type": "Sample Type",
+        "device_vendor": "Sample Vendor",
+        "device_version": "1.0",
+        "geo": "US",
+        "hostname": "sample.hostname.com",
+        "hostname_source": "dns",
+        "ip": "192.168.0.1",
+        "naics": 123456,
+        "port": 8080,
+        "protocol": "http",
+        "raw_response": "eyJpZCI6IjEiLCJ2ZXJzaW9uIjoiU2FtcGxlIFJlc3BvbnNlIn0=",
+        "region": "Sample Region",
+        "response_size": "1024",
+        "sector": "Sample Sector",
+        "severity": "medium",
+        "tag": "sample",
+        "timestamp": "2022-01-01 12:00:00Z"
+    }
+]

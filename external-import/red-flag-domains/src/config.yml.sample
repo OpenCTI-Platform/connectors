@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://opencti.local:8080'
+  token: 'OPENCTI_TOKEN'
+
+connector:
+  id: 'CONNECTOR_ID'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Red Flag Domains'
+  scope: 'red-flag-domains'
+  confidence_level: 70
+  update_existing_data: False
+  log_level: 'info'
+
+redflagdomains:
+  url: 'https://dl.red.flag.domains/daily/'

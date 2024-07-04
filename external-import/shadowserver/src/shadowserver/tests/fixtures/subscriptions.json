@@ -1,0 +1,15 @@
+[
+    "blocklist",
+    "device_id",
+    "event4_sinkhole",
+    "scan_cwmp",
+    "scan_http",
+    "scan_ics",
+    "scan_ntp",
+    "scan_snmp",
+    "scan_ssh",
+    "scan_ssl",
+    "scan_ssl_freak",
+    "scan_ssl_poodle",
+    "scan_vnc"
+]
