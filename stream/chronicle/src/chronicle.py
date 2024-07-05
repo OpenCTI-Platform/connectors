@@ -6,7 +6,6 @@ import json
 import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from pprint import pprint
 from queue import Queue
 
 import yaml
@@ -69,20 +68,19 @@ class ChronicleReference:
         lines = self.get_list()
         helper.log_info(f"UPDATE payload test if payload is in list {payload}")
         if payload not in lines:
-            helper.log_info(f"UPDATE, payload not already in list")
+            helper.log_info("UPDATE, payload not already in list")
             lines.append(str(payload))
             self.update_list(lines)
         else:
-            helper.log_info(f"UPDATE, payload already")
+            helper.log_info("UPDATE, payload already")
 
     def delete_in_list(self, payload):
         lines = self.get_list()
-        test = payload in lines
         if payload in lines:
             lines.remove(str(payload))
             self.update_list(lines)
         else:
-            helper.log_info(f"DELETE payload not in list")
+            helper.log_info("DELETE payload not in list")
 
     def update_list(self, payload):
         url = f"{self.url}/v2/lists?update_mask=list.lines"
@@ -277,7 +275,9 @@ if __name__ == "__main__":
     chronicle_client_cert_url = get_config_variable(
         "CHRONICLE_CLIENT_CERT_URL", ["chronicle", "client_cert_url"], config
     )
-    helper.log_info(f"after chronicle env vars")
+
+    helper.log_info("after chronicle env vars")
+
     # additional connector conf
     consumer_count: int = get_config_variable(
         "CONNECTOR_CONSUMER_COUNT",
@@ -330,7 +330,7 @@ if __name__ == "__main__":
         metrics = None
 
     # create connector and start
-    helper.log_info(f"Start Chronicle")
+    helper.log_info("Start Chronicle")
     ChronicleConnector(
         helper,
         reference_set,
