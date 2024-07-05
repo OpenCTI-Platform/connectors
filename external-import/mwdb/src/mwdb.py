@@ -505,9 +505,7 @@ class MWDB:
             if str(self.import_config).capitalize() == "True":
                 ## PROCESSING CONFIG
                 if malware.config and self.import_config:
-                    bundle_objects.extend(
-                        self.process_config(malware.config, virus)
-                    )
+                    bundle_objects.extend(self.process_config(malware.config, virus))
 
             if (
                 len(virus["mal_tag"]["extra"]) > 0
@@ -565,7 +563,9 @@ class MWDB:
                         date=datetime.fromtimestamp(current_date).strftime("%Y-%m-%d")
                     )
                     try:
-                        malware_files = self.mwdb.search_files(querysearch, chunk_size=100)
+                        malware_files = self.mwdb.search_files(
+                            querysearch, chunk_size=100
+                        )
                         for malware_file in malware_files:
                             self.process_virus(malware_file)
                         date = datetime.utcnow()
