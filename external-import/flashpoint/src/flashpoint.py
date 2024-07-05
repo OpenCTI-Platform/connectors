@@ -64,7 +64,7 @@ class Flashpoint:
             name="Flashpoint",
             description="Flashpoint intelligence combines data, insights, and automation to identify risks and stop threats for cyber, fraud, and physical security teams.",
         )
-        self.flashpoint_api_url = "https://fp.tools/api/v4"
+        self.flashpoint_api_url = "https://api.flashpoint.io/sources/v1"
 
     def get_interval(self):
         return int(self.flashpoint_interval) * 60
