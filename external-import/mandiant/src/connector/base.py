@@ -148,7 +148,7 @@ class Mandiant:
             "MANDIANT_IMPORT_INDICATORS",
             ["mandiant", "import_indicators"],
             config,
-            default=False,
+            default=True,
         ):
             self.mandiant_collections.append("indicators")
 
