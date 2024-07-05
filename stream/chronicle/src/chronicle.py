@@ -8,26 +8,18 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Queue
 
-from pprint import pprint
-
 import yaml
-
-from prometheus_client import Counter, Gauge, start_http_server
-from pycti import OpenCTIConnectorHelper, get_config_variable
 from google.oauth2 import service_account
 from googleapiclient import _auth
+from prometheus_client import Counter, Gauge, start_http_server
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
-SCOPES = ['https://www.googleapis.com/auth/chronicle-backstory']
-BASE_URL = 'https://backstory.googleapis.com'
+SCOPES = ["https://www.googleapis.com/auth/chronicle-backstory"]
+BASE_URL = "https://backstory.googleapis.com"
 
 
 class ChronicleReference:
-    def __init__(
-            self,
-            list_name: str,
-            credentials: dict,
-            url: str
-    ) -> None:
+    def __init__(self, list_name: str, credentials: dict, url: str) -> None:
         self.url = url
         self.credentials = credentials
         self.list_name = list_name
@@ -49,7 +41,7 @@ class ChronicleReference:
         }
         response = self.http_client.request("POST", url, json=body)[0]
         if response.status >= 400:
-            helper.log_debug(f'Reponse status code : {json.dumps(response.status)}')        
+            helper.log_debug(f"Reponse status code : {json.dumps(response.status)}")
         return response.data["createTime"]
 
     def create_in_list(self, payload):
@@ -64,32 +56,31 @@ class ChronicleReference:
     def get_list(self):
         url = f"{self.url}/v2/lists/{self.list_name}"
         http_client = _auth.authorized_http(self.credentials)
-        header, body = http_client.request(method='GET', uri=url)
+        header, body = http_client.request(method="GET", uri=url)
         if header.status >= 400:
-            helper.log_error(f'GET Reponse status code : {header.status}')
+            helper.log_error(f"GET Reponse status code : {header.status}")
         else:
-            helper.log_info(f'GET Reponse status code : {header.status}')
+            helper.log_info(f"GET Reponse status code : {header.status}")
 
         return json.loads(body)["lines"]
 
     def update_in_list(self, payload):
         lines = self.get_list()
-        helper.log_info(f'UPDATE payload test if payload is in list {payload}')    
+        helper.log_info(f"UPDATE payload test if payload is in list {payload}")
         if payload not in lines:
-            helper.log_info(f'UPDATE, payload not already in list')
+            helper.log_info("UPDATE, payload not already in list")
             lines.append(str(payload))
             self.update_list(lines)
         else:
-            helper.log_info(f'UPDATE, payload already')
+            helper.log_info("UPDATE, payload already")
 
     def delete_in_list(self, payload):
         lines = self.get_list()
-        test = payload in lines
         if payload in lines:
             lines.remove(str(payload))
             self.update_list(lines)
         else:
-            helper.log_info(f'DELETE payload not in list')
+            helper.log_info("DELETE payload not in list")
 
     def update_list(self, payload):
         url = f"{self.url}/v2/lists?update_mask=list.lines"
@@ -98,12 +89,14 @@ class ChronicleReference:
             "lines": payload,
             "content_type": "CONTENT_TYPE_DEFAULT_STRING",
         }
-        header, body = self.http_client.request(uri=url, method="PATCH", body=json.dumps(body).encode('utf-8'))
+        header, body = self.http_client.request(
+            uri=url, method="PATCH", body=json.dumps(body).encode("utf-8")
+        )
         if header.status >= 400:
-            helper.log_error(f'PATCH Reponse status code : {header.status}')
+            helper.log_error(f"PATCH Reponse status code : {header.status}")
         else:
-            helper.log_info(f'PATCH Reponse status code : {header.status}')
-        
+            helper.log_info(f"PATCH Reponse status code : {header.status}")
+
 
 class Metrics:
     def __init__(self, name: str, addr: str, port: int) -> None:
@@ -131,13 +124,13 @@ class Metrics:
 
 class ChronicleConnector:
     def __init__(
-            self,
-            helper: OpenCTIConnectorHelper,
-            chronicle_reference: ChronicleReference,
-            queue: Queue,
-            ignore_types: list[str],
-            consumer_count: int,
-            metrics: Metrics | None = None,
+        self,
+        helper: OpenCTIConnectorHelper,
+        chronicle_reference: ChronicleReference,
+        queue: Queue,
+        ignore_types: list[str],
+        consumer_count: int,
+        metrics: Metrics | None = None,
     ) -> None:
         self.chronicle_reference = chronicle_reference
         self.queue = queue
@@ -225,8 +218,8 @@ def load_config_file() -> dict:
 
 def check_helper(helper: OpenCTIConnectorHelper) -> None:
     if (
-            helper.connect_live_stream_id is None
-            or helper.connect_live_stream_id == "ChangeMe"
+        helper.connect_live_stream_id is None
+        or helper.connect_live_stream_id == "ChangeMe"
     ):
         helper.log_error("missing Live Stream ID")
         exit(1)
@@ -249,9 +242,7 @@ if __name__ == "__main__":
 
     helper.log_info(f"Ignored type {ignore_types}")
 
-    chronicle_url = get_config_variable(
-        "CHRONICLE_URL", ["chronicle", "url"], config
-    )
+    chronicle_url = get_config_variable("CHRONICLE_URL", ["chronicle", "url"], config)
     list_name = get_config_variable(
         "CHRONICLE_LIST_NAME", ["chronicle", "list_name"], config
     )
@@ -284,7 +275,9 @@ if __name__ == "__main__":
     chronicle_client_cert_url = get_config_variable(
         "CHRONICLE_CLIENT_CERT_URL", ["chronicle", "client_cert_url"], config
     )
-    helper.log_info(f'after chronicle env vars')
+
+    helper.log_info("after chronicle env vars")
+
     # additional connector conf
     consumer_count: int = get_config_variable(
         "CONNECTOR_CONSUMER_COUNT",
@@ -305,7 +298,7 @@ if __name__ == "__main__":
     )
 
     info = {
-        "type": 'service_account',
+        "type": "service_account",
         "project_id": chronicle_project_id,
         "private_key": chronicle_private_key,
         "private_key_id": chronicle_private_key_id,
@@ -314,15 +307,15 @@ if __name__ == "__main__":
         "auth_uri": chronicle_auth_uri,
         "token_uri": chronicle_token_uri,
         "auth_provider_x509_cert_url": chronicle_auth_provider_cert,
-        "client_x509_cert_url": chronicle_client_cert_url
+        "client_x509_cert_url": chronicle_client_cert_url,
     }
 
-    credentials = service_account.Credentials.from_service_account_info(info=info, scopes=SCOPES)
+    credentials = service_account.Credentials.from_service_account_info(
+        info=info, scopes=SCOPES
+    )
 
     reference_set = ChronicleReference(
-        url=chronicle_url,
-        list_name=list_name,
-        credentials=credentials
+        url=chronicle_url, list_name=list_name, credentials=credentials
     )
 
     # create queue
@@ -337,7 +330,7 @@ if __name__ == "__main__":
         metrics = None
 
     # create connector and start
-    helper.log_info(f'Start Chronicle')
+    helper.log_info("Start Chronicle")
     ChronicleConnector(
         helper,
         reference_set,
