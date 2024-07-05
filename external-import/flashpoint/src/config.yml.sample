@@ -14,8 +14,12 @@ connector:
 
 flashpoint:
   api_key: 'ChangeMe'
-  import_apt: true
-  import_malware: true
-  import_start_date: '2022-01-01'
+  import_start_date: '2024-01-01'
+  import_reports: true
   import_indicators: true
+  import_vulnerabilities: true
+  import_communities: true
+  import_fraud: true
+  import_media: true
   interval: 5 # In minutes
+
