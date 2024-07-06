@@ -22,7 +22,6 @@ Follow this guide to deploy the connector: https://github.com/OpenCTI-Platform/c
 | `connector_type`                  | `CONNECTOR_TYPE`                  | Yes       | Must be `EXTERNAL_IMPORT` (this is the connector type).                                       |
 | `connector_name`                  | `CONNECTOR_NAME`                  | Yes       | Option `Citalid`                                                                              |
 | `connector_scope`                 | `CONNECTOR_SCOPE`                 | Yes       | Supported scope                                                                               |
-| `connector_confidence_level`      | `CONNECTOR_CONFIDENCE_LEVEL`      | Yes       | The default confidence level (a number between 0 and 100).                                    |
 | `connector_run_and_terminate`     | `CONNECTOR_RUN_AND_TERMINATE`     | Yes       | Option `false` ensures continuous rerun of the connector                                      |
 | `connector_log_level`             | `CONNECTOR_LOG_LEVEL`             | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose). |
 | `citalid_customer_sub_domain_url` | `CITALID_CUSTOMER_SUB_DOMAIN_URL` | Yes       | URL of your Citalid instance.                                                                 |

@@ -965,7 +965,6 @@ class Misp:
                     external_references=event_external_references,
                     confidence=self.helper.connect_confidence_level,
                     custom_properties={
-                        "x_opencti_report_status": 2,
                         "x_opencti_files": added_files,
                     },
                     allow_custom=True,
@@ -1885,7 +1884,9 @@ class Misp:
                         types=["Intrusion-Set", "Malware", "Tool", "Attack-Pattern"],
                         filters={
                             "mode": "and",
-                            "filters": [{"key": "name", "values": [tag_value]}],
+                            "filters": [
+                                {"key": ["name", "x_mitre_id"], "values": [tag_value]}
+                            ],
                             "filterGroups": [],
                         },
                     )

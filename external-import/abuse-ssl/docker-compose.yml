@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=CHANGEME_UUID4
       - "CONNECTOR_NAME=Abuse.ch SSL Blacklist"
       - CONNECTOR_SCOPE=abusessl
-      - CONNECTOR_CONFIDENCE_LEVEL=70
       - CONNECTOR_LOG_LEVEL=error
       - ABUSESSL_URL=https://sslbl.abuse.ch/blacklist/sslipblacklist.csv
       - ABUSESSL_INTERVAL=360 # Time to wait in minutes between subsequent requests

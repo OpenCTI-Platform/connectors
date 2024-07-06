@@ -45,7 +45,6 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Type       | type                 | `CONNECTOR_TYPE`                 | EXTERNAL_IMPORT                      | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                                                                               |
 | Connector Name       | name                 | `CONNECTOR_NAME`                 | Common Platform Enumeration          | Yes       | Name of the connector.                                                                                                                      |
 | Connector Scope      | scope                | `CONNECTOR_SCOPE`                | software                             | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                    |
-| Confidence Level     | confidence_level     | `CONNECTOR_CONFIDENCE_LEVEL`     | 75                                   | Yes       | The default confidence level for created sightings. It's a number between 0 and 100, with 100 being the most confident.                     |
 | Log Level            | log_level            | `CONNECTOR_LOG_LEVEL`            | info                                 | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                      |
 
 Below are the parameters you'll need to set for CPE connector:

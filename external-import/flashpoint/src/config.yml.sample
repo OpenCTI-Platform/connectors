@@ -7,19 +7,19 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Flashpoint'
   scope: 'flashpoint'
-  confidence_level: 40 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: false
   run_and_terminate: false
   log_level: 'info'
 
 flashpoint:
   api_key: 'ChangeMe'
   import_start_date: '2024-01-01'
+  import_apt: false
+  import_malware: false
   import_reports: true
   import_indicators: true
   import_vulnerabilities: true
-  import_communities: true
-  import_fraud: true
-  import_media: true
+  import_communities: false
+  communities_queries: 'cybersecurity,cyberattack'
+  import_alerts: true
   interval: 5 # In minutes
 

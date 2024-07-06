@@ -21,21 +21,20 @@ Configuration parameters are provided using environment variables. Some of them 
 
 #### User Configuration Variables (Set in `.env` file)
 
-| Docker envvar                       | Mandatory | Description                                                             |
-| ----------------------------------- | --------- | ----------------------------------------------------------------------- |
-| `OPENCTI_URL`                       | Yes       | The URL of the OpenCTI platform. Example: `http://opencti:8080`         |
-| `OPENCTI_TOKEN`                     | Yes       | Connector API token for OpenCTI.                                        |
-| `CONNECTOR_NAME`                    | Yes       | A connector name to be shown in OpenCTI.                                |
-| `CONNECTOR_SCOPE`                   | Yes       | Supported scope. E.g., `stix2`.                                         |
-| `CONNECTOR_ID`                      | Yes       | A unique `UUIDv4` for this connector.                                   |
-| `CONNECTOR_CONFIDENCE_LEVEL`        | Yes       | Default confidence level for created sightings (0 to 100).              |
-| `CONNECTOR_LOG_LEVEL`               | Yes       | Log level (`debug`, `info`, `warning`, `error`).                           |
-| `CONNECTOR_RUN_EVERY`               | Yes       | Frequency of connector execution. The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., `30s` is 30 seconds. `1d` is 1 day.         |
-| `CONNECTOR_UPDATE_EXISTING_DATA`    | Yes       | Whether to update existing data (e.g., `true` or `false`).              |
-| `INTELFINDER_TOKEN`                 | Yes       | Token for Intelfinder access.                                           |
-| `INTELFINDER_LABELS`                | Yes       | Labels for Intelfinder data. (e.g., `intelfinder,osint`)                |
-| `INTELFINDER_MARKING_REFS`          | Yes       | TLP Marking Refs e.g., `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:RED` |
-| `INTELFINDER_SEED_ALERT_ID`         | No        | Intelfinder Seed Alert ID, Provide initial Alert ID to start import from (e.g., `64d02b1e8592e8209a077bf2`)            |
+| Docker envvar                       | Mandatory | Description                                                                                                                                                                                                         |
+| ----------------------------------- | --------- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `OPENCTI_URL`                       | Yes       | The URL of the OpenCTI platform. Example: `http://opencti:8080`                                                                                                                                                     |
+| `OPENCTI_TOKEN`                     | Yes       | Connector API token for OpenCTI.                                                                                                                                                                                    |
+| `CONNECTOR_NAME`                    | Yes       | A connector name to be shown in OpenCTI.                                                                                                                                                                            |
+| `CONNECTOR_SCOPE`                   | Yes       | Supported scope. E.g., `stix2`.                                                                                                                                                                                     |
+| `CONNECTOR_ID`                      | Yes       | A unique `UUIDv4` for this connector.                                                                                                                                                                               |
+| `CONNECTOR_LOG_LEVEL`               | Yes       | Log level (`debug`, `info`, `warning`, `error`).                                                                                                                                                                    |
+| `CONNECTOR_RUN_EVERY`               | Yes       | Frequency of connector execution. The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., `30s` is 30 seconds. `1d` is 1 day. |
+| `CONNECTOR_UPDATE_EXISTING_DATA`    | Yes       | Whether to update existing data (e.g., `true` or `false`).                                                                                                                                                          |
+| `INTELFINDER_TOKEN`                 | Yes       | Token for Intelfinder access.                                                                                                                                                                                       |
+| `INTELFINDER_LABELS`                | Yes       | Labels for Intelfinder data. (e.g., `intelfinder,osint`)                                                                                                                                                            |
+| `INTELFINDER_MARKING_REFS`          | Yes       | TLP Marking Refs e.g., `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:RED`                                                                                                                                             |
+| `INTELFINDER_SEED_ALERT_ID`         | No        | Intelfinder Seed Alert ID, Provide initial Alert ID to start import from (e.g., `64d02b1e8592e8209a077bf2`)                                                                                                         |
 
 ### Supported Stix2 Objects
 

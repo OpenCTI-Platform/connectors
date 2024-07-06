@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - "CONNECTOR_NAME=ESET Cyber Threat Intelligence"
       - CONNECTOR_SCOPE=eset
-      - CONNECTOR_CONFIDENCE_LEVEL=30 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - ESET_API_URL=eti.eset.com
       - ESET_USERNAME=ChangeMe

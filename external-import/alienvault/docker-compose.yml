@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=AlienVault
       - CONNECTOR_SCOPE=alienvault
-      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - ALIENVAULT_BASE_URL=https://otx.alienvault.com
       - ALIENVAULT_API_KEY=ChangeMe

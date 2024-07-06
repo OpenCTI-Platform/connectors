@@ -9,7 +9,6 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=GreyNoiseFeed
       - CONNECTOR_SCOPE=greynoisefeed
-      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - GREYNOISE_API_KEY=ChangeMe
       - GREYNOISE_SOURCE="feed"

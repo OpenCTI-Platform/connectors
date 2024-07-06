@@ -14,27 +14,26 @@ Configuration parameters are set using environment variables. Some are set in th
 
 #### Connector Configuration in `docker-compose.yml`
 
-| Docker envvar            | Mandatory | Description                                   |
-|--------------------------|-----------|-----------------------------------------------|
-| `OPENCTI_URL`                 | Yes       | URL of the OpenCTI platform. e.g., http://opencti:8080                    |
-| `OPENCTI_TOKEN`               | Yes       | Default admin token for OpenCTI.                 |
-| `CONNECTOR_NAME`         | Yes       | Name displayed in OpenCTI. e.g., crtsh                    |
-| `CONNECTOR_SCOPE`        | Yes       | Supported scope, e.g., `stix2`.           |
-| `CONNECTOR_ID`                | Yes       | Unique `UUIDv4` for this connector.              |
-| `CONNECTOR_CONFIDENCE_LEVEL`  | Yes       | From 0 (Unknown) to 100 (Fully trusted).   |
-| `CONNECTOR_LOG_LEVEL`         | Yes       | Log level (`debug`, `info`, `warn`, `error`).    |
-| `CONNECTOR_RUN_EVERY`         | Yes       | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., `30s` is 30 seconds. `1d` is 1 day.    |
-| `CONNECTOR_UPDATE_EXISTING_DATA` | Yes   | Whether to update existing data.                |
+| Docker envvar                    | Mandatory | Description                                                                                                                                                                       |
+|----------------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `OPENCTI_URL`                    | Yes       | URL of the OpenCTI platform. e.g., http://opencti:8080                                                                                                                            |
+| `OPENCTI_TOKEN`                  | Yes       | Default admin token for OpenCTI.                                                                                                                                                  |
+| `CONNECTOR_NAME`                 | Yes       | Name displayed in OpenCTI. e.g., crtsh                                                                                                                                            |
+| `CONNECTOR_SCOPE`                | Yes       | Supported scope, e.g., `stix2`.                                                                                                                                                   |
+| `CONNECTOR_ID`                   | Yes       | Unique `UUIDv4` for this connector.                                                                                                                                               |
+| `CONNECTOR_LOG_LEVEL`            | Yes       | Log level (`debug`, `info`, `warn`, `error`).                                                                                                                                     |
+| `CONNECTOR_RUN_EVERY`            | Yes       | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., `30s` is 30 seconds. `1d` is 1 day. |
+| `CONNECTOR_UPDATE_EXISTING_DATA` | Yes       | Whether to update existing data.                                                                                                                                                  |
 
 #### User-Configurable Settings in `.env` File
 
-| Docker envvar                 | Mandatory | Description                                      |
-|-------------------------------|-----------|--------------------------------------------------|
-| `CRTSH_DOMAIN`             | Yes       | Domain to search for e.g., google.com                            |
-| `CRTSH_LABELS`             | Yes       | Comma separated list of labels e.g., crtsh,osint                            |
-| `CRTSH_MARKING_REFS`             | Yes       | TLP Marking Refs e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED                            |
-| `CRTSH_IS_EXPIRED`             | Yes       | Filters epired certificates. One of the following: true, false                            |
-| `CRTSH_IS_WILDCARD`             | Yes       | Applies a wildcard expression for the Domain. One of the following: true, false                            |
+| Docker envvar                | Mandatory | Description                                                                          |
+|------------------------------|-----------|--------------------------------------------------------------------------------------|
+| `CRTSH_DOMAIN`               | Yes       | Domain to search for e.g., google.com                                                |
+| `CRTSH_LABELS`               | Yes       | Comma separated list of labels e.g., crtsh,osint                                     |
+| `CRTSH_MARKING_REFS`         | Yes       | TLP Marking Refs e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED                      |
+| `CRTSH_IS_EXPIRED`           | Yes       | Filters epired certificates. One of the following: true, false                       |
+| `CRTSH_IS_WILDCARD`          | Yes       | Applies a wildcard expression for the Domain. One of the following: true, false      |
 
 ### Additional Information
 

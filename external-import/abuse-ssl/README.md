@@ -19,7 +19,6 @@ An SSL certificate can be associated with one or more servers (IP address:port c
 | `connector_id`               | `CONNECTOR_ID`               | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                            |
 | `connector_name`             | `CONNECTOR_NAME`             | Yes       |                                                                                               |
 | `connector_scope`            | `CONNECTOR_SCOPE`            | Yes       |                                                                                               |
-| `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes       | The default confidence level for created sightings (a number between 1 and 4).                |
 | `connector_log_level`        | `CONNECTOR_LOG_LEVEL`        | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose). |
 | `abusessl_url`               | `ABUSESSL_URL`               | Yes       | the abuse-ssl csv URL                                                                         |
 | `abusessl_interval`          | `ABUSEIPDB_LIMIT`            | Yes       | interval in minutes between 2 collections ( don't go below 5 minutes)                         |

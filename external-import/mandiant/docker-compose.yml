@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=Mandiant
       - CONNECTOR_SCOPE=mandiant
-      - CONNECTOR_CONFIDENCE_LEVEL=80
       - CONNECTOR_LOG_LEVEL=error
       - MANDIANT_API_V4_KEY_ID=
       - MANDIANT_API_V4_KEY_SECRET=
