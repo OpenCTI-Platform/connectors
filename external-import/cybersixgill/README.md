@@ -33,7 +33,6 @@ global `docker-compose.yml` file of OpenCTI.
 | `opencti_token`                      | `OPENCTI_TOKEN`                     | Yes          |  `NA`   | The default admin token configured in the OpenCTI platform parameters file.                           |
 | `connector_id`                       | `CONNECTOR_ID`                      | Yes          |  `NA`   | A valid arbitrary `UUIDv4` that must be unique for this connector.                                    |
 | `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          |  `NA`   | Supported scope: Cybersixgill Scope (MIME Type or Stix Object)                                        |
-| `connector_confidence_level`         | `CONNECTOR_CONFIDENCE_LEVEL`        | Yes          |  `NA`   | The default confidence level for created sightings (a number between 1 and 4).                        |
 | `connector_log_level`                | `CONNECTOR_LOG_LEVEL`               | Yes          | `info`  | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).         |
 | `client_id`                          | `CYBERSIXGILL_CLIENT_ID`            | Yes          |  `NA`   | The Cybersixgill API Client ID.                                                                       |
 | `client_secret`                      | `CYBERSIXGILL_CLIENT_SECRET`        | Yes          |  `NA`   | The Cybersixgill Client Secret.                                                                       |

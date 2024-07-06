@@ -1,17 +1,14 @@
 import json
-import os
 import re
-import ssl
 import sys
+import threading
 import time
-import urllib.request
 from datetime import datetime
 from typing import Optional
 
-import boto3
 import pytz
+import requests
 import stix2
-import yaml
 from dateutil.parser import parse
 from pycti import (
     AttackPattern,
@@ -24,12 +21,10 @@ from pycti import (
     Malware,
     MarkingDefinition,
     Note,
-    OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
     StixSightingRelationship,
     Tool,
-    get_config_variable,
 )
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
@@ -68,179 +63,46 @@ OPENCTISTIX2 = {
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
 
-class MispFeed:
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
+class MispFeed(threading.Thread):
+    def __init__(self, helper, flashpoint_import_api_key, flashpoint_import_start_date):
+        threading.Thread.__init__(self)
+        self.helper = helper
+        self.misp_feed_url = (
+            "http://api.flashpoint.io/technical-intelligence/v1/misp-feed"
         )
-        self.helper = OpenCTIConnectorHelper(config)
-        # Extra config
-
-        self.source_type = get_config_variable(
-            "MISP_FEED_SOURCE_TYPE",
-            ["misp_feed", "source_type"],
-            config,
-            False,
-            default="url",
-        )
-        if self.source_type == "url":
-            self.misp_feed_url = get_config_variable(
-                "MISP_FEED_URL", ["misp_feed", "url"], config
-            )
-            self.misp_feed_ssl_verify = get_config_variable(
-                "MISP_FEED_SSL_VERIFY", ["misp_feed", "ssl_verify"], config, False, True
-            )
-        self.misp_feed_import_from_date = get_config_variable(
-            "MISP_FEED_IMPORT_FROM_DATE", ["misp_feed", "import_from_date"], config
-        )
-        self.misp_feed_create_reports = get_config_variable(
-            "MISP_FEED_CREATE_REPORTS",
-            ["misp_feed", "create_reports"],
-            config,
-            False,
-            True,
-        )
-        self.misp_feed_report_type = get_config_variable(
-            "MISP_FEED_REPORT_TYPE",
-            ["misp_feed", "report_type"],
-            config,
-            False,
-            "misp-event",
-        )
-        self.misp_feed_create_indicators = get_config_variable(
-            "MISP_FEED_CREATE_INDICATORS", ["misp_feed", "create_indicators"], config
-        )
-        self.misp_feed_create_observables = get_config_variable(
-            "MISP_FEED_CREATE_OBSERVABLES", ["misp_feed", "create_observables"], config
-        )
-        self.misp_feed_create_tags_as_labels = get_config_variable(
-            "MISP_CREATE_TAGS_AS_LABELS",
-            ["misp_feed", "create_tags_as_labels"],
-            config,
-            default=True,
-        )
-        self.misp_feed_guess_threats_from_tags = get_config_variable(
-            "MISP_FEED_GUESS_THREAT_FROM_TAGS",
-            ["misp_feed", "guess_threats_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_feed_author_from_tags = get_config_variable(
-            "MISP_FEED_AUTHOR_FROM_TAGS",
-            ["misp_feed", "author_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_feed_markings_from_tags = get_config_variable(
-            "MISP_FEED_MARKINGS_FROM_TAGS",
-            ["misp_feed", "markings_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_feed_create_object_observables = get_config_variable(
-            "MISP_FEED_CREATE_OBJECT_OBSERVABLES",
-            ["misp_feed", "create_object_observables"],
-            config,
-            False,
-            False,
-        )
-        self.misp_feed_import_to_ids_no_score = get_config_variable(
-            "MISP_FEED_IMPORT_TO_IDS_NO_SCORE",
-            ["misp_feed", "import_to_ids_no_score"],
-            config,
-            True,
-        )
-        self.misp_feed_import_with_attachments = bool(
-            get_config_variable(
-                "MISP_FEED_IMPORT_WITH_ATTACHMENTS",
-                ["misp_feed", "import_with_attachments"],
-                config,
-                isNumber=False,
-                default=False,
-            )
-        )
-        self.misp_feed_import_unsupported_observables_as_text = bool(
-            get_config_variable(
-                "MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT",
-                ["misp_feed", "import_unsupported_observables_as_text"],
-                config,
-                isNumber=False,
-                default=False,
-            )
-        )
-        self.misp_feed_import_unsupported_observables_as_text_transparent = bool(
-            get_config_variable(
-                "MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT",
-                ["misp_feed", "import_unsupported_observables_as_text_transparent"],
-                config,
-                isNumber=False,
-                default=True,
-            )
-        )
-        self.misp_feed_interval = get_config_variable(
-            "MISP_FEED_INTERVAL", ["misp_feed", "interval"], config, True
-        )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
-
-        # Initialize MISP
-        if self.source_type == "s3":
-            bucket_name = get_config_variable(
-                "MISP_BUCKET_NAME", ["misp", "bucket_name"], config, False
-            )
-
-            self.bucket_prefix = get_config_variable(
-                "MISP_BUCKET_PREFIX", ["misp", "bucket_prefix"], config, False
-            )
-
-            self.s3 = boto3.resource("s3").Bucket(bucket_name)
+        self.misp_feed_ssl_verify = True
+        self.misp_api_key = flashpoint_import_api_key
+        self.misp_feed_import_from_date = flashpoint_import_start_date
+        self.misp_feed_create_reports = True
+        self.misp_feed_report_type = "misp-event"
+        self.misp_feed_create_indicators = True
+        self.misp_feed_create_observables = True
+        self.misp_feed_create_tags_as_labels = True
+        self.misp_feed_guess_threats_from_tags = True
+        self.misp_feed_author_from_tags = False
+        self.misp_feed_markings_from_tags = False
+        self.misp_feed_create_object_observables = False
+        self.misp_feed_import_to_ids_no_score = 40
+        self.misp_feed_import_with_attachments = True
+        self.misp_feed_import_unsupported_observables_as_text = True
+        self.misp_feed_import_unsupported_observables_as_text_transparent = True
+        self.misp_feed_interval = 5
 
     def _get_interval(self):
         return int(self.misp_feed_interval) * 60
 
     def _retrieve_data(self, url: str) -> Optional[str]:
-        """
-        Retrieve data from the given url.
-
-        Parameters
-        ----------
-        url : str
-            Url to retrieve.
-
-        Returns
-        -------
-        str
-            A string with the content or None in case of failure.
-        """
-        try:
-            return (
-                urllib.request.urlopen(
-                    url,
-                    context=ssl.create_default_context(),
-                )
-                .read()
-                .decode("utf-8")
-            )
-        except (
-            urllib.error.URLError,
-            urllib.error.HTTPError,
-            urllib.error.ContentTooShortError,
-        ) as urllib_error:
-            self.helper.log_error(f"Error retrieving url {url}: {urllib_error}")
-        return None
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + self.misp_api_key,
+        }
+        response = requests.get(url, headers=headers)
+        return response.text
 
     def _send_bundle(self, work_id: str, serialized_bundle: str) -> None:
         try:
             self.helper.send_stix2_bundle(
                 serialized_bundle,
-                update=self.update_existing_data,
                 work_id=work_id,
             )
         except Exception as e:
@@ -288,8 +150,10 @@ class MispFeed:
                         definition_type="statement",
                         definition={"statement": "custom"},
                         allow_custom=True,
-                        x_opencti_definition_type=marking_type,
-                        x_opencti_definition=marking_name,
+                        custom_properties={
+                            "x_opencti_definition_type": marking_type,
+                            "x_opencti_definition": marking_name,
+                        },
                     )
                     markings.append(marking)
             if tag_name_lower == "tlp:clear":
@@ -306,8 +170,10 @@ class MispFeed:
                     definition_type="statement",
                     definition={"statement": "custom"},
                     allow_custom=True,
-                    x_opencti_definition_type="TLP",
-                    x_opencti_definition="TLP:AMBER+STRICT",
+                    custom_properties={
+                        "x_opencti_definition_type": "TLP",
+                        "x_opencti_definition": "TLP:AMBER+STRICT",
+                    },
                 )
                 markings.append(marking)
             if tag_name_lower == "tlp:red":
@@ -443,6 +309,8 @@ class MispFeed:
                         if "external_id" in galaxy_entity["meta"]:
                             if len(galaxy_entity["meta"]["external_id"]) > 0:
                                 x_mitre_id = galaxy_entity["meta"]["external_id"][0]
+                        if name.startswith("T"):
+                            x_mitre_id = name
                         elements["attack_patterns"].append(
                             stix2.AttackPattern(
                                 id=AttackPattern.generate_id(name, x_mitre_id),
@@ -496,6 +364,11 @@ class MispFeed:
             # Try to guess from tags
             if self.misp_feed_guess_threats_from_tags:
                 tag_value_split = tag["name"].split("=")
+                if len(tag_value_split) == 1:
+                    tag_value = tag_value_split[0]
+                else:
+                    tag_value = tag_value_split[1].replace('"', "")
+                tag_value_split = tag_value.split(":")
                 if len(tag_value_split) == 1:
                     tag_value = tag_value_split[0]
                 else:
@@ -577,10 +450,17 @@ class MispFeed:
                 or tag["name"].startswith(
                     "misp-galaxy:mitre-enterprise-attack-intrusion-set"
                 )
+                or tag["name"].startswith("intrusion-set")
             ):
-                tag_value_split = tag["name"].split('="')
+                if "=" in tag["name"]:
+                    tag_value_split = tag["name"].split('="')
+                else:
+                    tag_value_split = tag["name"].split(":")
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
-                    tag_value = tag_value_split[1][:-1].strip()
+                    if "=" in tag["name"]:
+                        tag_value = tag_value_split[1][:-1].strip()
+                    else:
+                        tag_value = tag_value_split[1].strip()
                     if " - G" in tag_value:
                         name = tag_value.split(" - G")[0]
                     elif "APT " in tag_value:
@@ -600,12 +480,20 @@ class MispFeed:
                         )
                         added_names.append(name)
             # Get the linked tools
-            if tag["name"].startswith("misp-galaxy:mitre-tool") or tag[
-                "name"
-            ].startswith("misp-galaxy:mitre-enterprise-attack-tool"):
-                tag_value_split = tag["name"].split('="')
+            if (
+                tag["name"].startswith("misp-galaxy:mitre-tool")
+                or tag["name"].startswith("misp-galaxy:mitre-enterprise-attack-tool")
+                or tag["name"].startswith("tool")
+            ):
+                if "=" in tag["name"]:
+                    tag_value_split = tag["name"].split('="')
+                else:
+                    tag_value_split = tag["name"].split(":")
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
-                    tag_value = tag_value_split[1][:-1].strip()
+                    if "=" in tag["name"]:
+                        tag_value = tag_value_split[1][:-1].strip()
+                    else:
+                        tag_value = tag_value_split[1].strip()
                     if " - S" in tag_value:
                         name = tag_value.split(" - S")[0]
                     else:
@@ -630,10 +518,17 @@ class MispFeed:
                 or tag["name"].startswith("misp-galaxy:misp-tool")
                 or tag["name"].startswith("misp-galaxy:misp-android")
                 or tag["name"].startswith("misp-galaxy:misp-malpedia")
+                or tag["name"].startswith("malware")
             ):
-                tag_value_split = tag["name"].split('="')
+                if "=" in tag["name"]:
+                    tag_value_split = tag["name"].split('="')
+                else:
+                    tag_value_split = tag["name"].split(":")
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
-                    tag_value = tag_value_split[1][:-1].strip()
+                    if "=" in tag["name"]:
+                        tag_value = tag_value_split[1][:-1].strip()
+                    else:
+                        tag_value = tag_value_split[1].strip()
                     if " - S" in tag_value:
                         name = tag_value.split(" - S")[0]
                     else:
@@ -656,15 +551,25 @@ class MispFeed:
                 tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
                 or tag["name"].startswith("misp-galaxy:attack-pattern")
                 or tag["name"].startswith("mitre-attack:attack-pattern")
+                or tag["name"].startswith("mitre:")
             ):
-                tag_value_split = tag["name"].split('="')
+                if "=" in tag["name"]:
+                    tag_value_split = tag["name"].split('="')
+                else:
+                    tag_value_split = tag["name"].split(":")
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
-                    tag_value = tag_value_split[1][:-1].strip()
+                    if "=" in tag["name"]:
+                        tag_value = tag_value_split[1][:-1].strip()
+                    else:
+                        tag_value = tag_value_split[1].strip()
                     if " - T" in tag_value:
                         name = tag_value.split(" - T")[0]
                     else:
                         name = tag_value
                     if name not in added_names:
+                        x_mitre_id = None
+                        if name.startswith("T"):
+                            x_mitre_id = name
                         elements["attack_patterns"].append(
                             stix2.AttackPattern(
                                 id=AttackPattern.generate_id(name),
@@ -672,6 +577,9 @@ class MispFeed:
                                 confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
+                                custom_properties={
+                                    "x_mitre_id": x_mitre_id,
+                                },
                                 allow_custom=True,
                             )
                         )
@@ -1003,7 +911,7 @@ class MispFeed:
                 )
                 pattern = genuine_pattern
 
-            to_ids = attribute["to_ids"]
+            to_ids = attribute["to_ids"] if "to_ids" in attribute else False
             score = self._threat_level_to_score(event_threat_level)
             if self.misp_feed_import_to_ids_no_score is not None and not to_ids:
                 score = self.misp_feed_import_to_ids_no_score
@@ -1641,8 +1549,15 @@ class MispFeed:
         if "Tag" in event["Event"]:
             event_tags = self._resolve_tags(event["Event"]["Tag"])
 
+        event_external_reference = stix2.ExternalReference(
+            source_name=self.helper.connect_name,
+            description=event["Event"]["info"],
+            external_id=event["Event"]["uuid"],
+            url="https://app.flashpoint.io/cti/malware/iocs/",
+        )
+
         ### Get indicators
-        event_external_references = []
+        event_external_references = [event_external_reference]
         indicators = []
         # Get attributes of event
         create_relationships = len(event["Event"].get("Attribute", [])) < 10000
@@ -1953,6 +1868,7 @@ class MispFeed:
                 external_references=event_external_references,
                 confidence=self.helper.connect_confidence_level,
                 custom_properties={
+                    "x_opencti_report_status": 2,
                     "x_opencti_files": added_files,
                 },
                 allow_custom=True,
@@ -1986,147 +1902,138 @@ class MispFeed:
     def process_data(self):
         try:
             now = datetime.now(pytz.UTC)
-            friendly_name = "MISP Feed run @ " + now.astimezone(pytz.UTC).isoformat()
+            friendly_name = (
+                "Flashpoint MISP Feed run @ " + now.astimezone(pytz.UTC).isoformat()
+            )
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
             current_state = self.helper.get_state()
-
-            if self.source_type == "s3":
-                if self.bucket_prefix is not None:
-                    objects = self.s3.objects.filter(Prefix=self.bucket_prefix)
-                else:
-                    objects = self.s3.objects.all()
-
-                for obj in objects:
-                    try:
-                        file_name = obj.key.split("/")[-1]
-                        self.s3.download_file(obj.key, file_name)
-                        events = json.load(open(file_name, "r"))
-                        bundle = self._process_event(events)
-                        self._send_bundle(work_id, bundle)
-                        self.s3.Object(obj.key).delete()
-                        os.remove(file_name)
-                        self.helper.set_state({"last_file": file_name})
-                        self.helper.log_info("Sending event STIX2 bundle...")
-
-                    except Exception as e:
-                        self.helper.log_error(str(e))
-
-            if self.source_type == "url":
-                if (
-                    current_state is not None
-                    and "last_run" in current_state
-                    and "last_event_timestamp" in current_state
-                    and "last_event" in current_state
-                ):
-                    last_run = parse(current_state["last_run"])
-                    last_event = parse(current_state["last_event"])
-                    last_event_timestamp = current_state["last_event_timestamp"]
-                    self.helper.log_info(
-                        "Connector last run: "
-                        + last_run.astimezone(pytz.UTC).isoformat()
-                    )
-                    self.helper.log_info(
-                        "Connector latest event: "
-                        + last_event.astimezone(pytz.UTC).isoformat()
-                    )
-                elif current_state is not None and "last_run" in current_state:
-                    last_run = parse(current_state["last_run"])
-                    last_event = last_run
+            if (
+                current_state is not None
+                and "misp_last_run" in current_state
+                and "misp_last_event_timestamp" in current_state
+                and "misp_last_event" in current_state
+            ):
+                last_run = parse(current_state["misp_last_run"])
+                last_event = parse(current_state["misp_last_event"])
+                last_event_timestamp = current_state["misp_last_event_timestamp"]
+                self.helper.log_info(
+                    "Connector last run: " + last_run.astimezone(pytz.UTC).isoformat()
+                )
+                self.helper.log_info(
+                    "Connector latest event: "
+                    + last_event.astimezone(pytz.UTC).isoformat()
+                )
+            elif current_state is not None and "misp_last_run" in current_state:
+                last_run = parse(current_state["misp_last_run"])
+                last_event = last_run
+                last_event_timestamp = int(last_event.timestamp())
+                self.helper.log_info(
+                    "Connector last run: " + last_run.astimezone(pytz.UTC).isoformat()
+                )
+                self.helper.log_info(
+                    "Connector latest event: "
+                    + last_event.astimezone(pytz.UTC).isoformat()
+                )
+            else:
+                if self.misp_feed_import_from_date is not None:
+                    last_event = parse(self.misp_feed_import_from_date)
                     last_event_timestamp = int(last_event.timestamp())
-                    self.helper.log_info(
-                        "Connector last run: "
-                        + last_run.astimezone(pytz.UTC).isoformat()
-                    )
-                    self.helper.log_info(
-                        "Connector latest event: "
-                        + last_event.astimezone(pytz.UTC).isoformat()
-                    )
                 else:
-                    if self.misp_feed_import_from_date is not None:
-                        last_event = parse(self.misp_feed_import_from_date)
-                        last_event_timestamp = int(last_event.timestamp())
-                    else:
-                        last_event_timestamp = int(now.timestamp())
-                    self.helper.log_info("Connector has never run")
+                    last_event_timestamp = int(now.timestamp())
+                self.helper.log_info("Connector has never run")
 
-                number_events = 0
-                try:
-                    manifest_data = json.loads(
-                        self._retrieve_data(self.misp_feed_url + "/manifest.json")
-                    )
-                    items = []
-                    for key, value in manifest_data.items():
-                        value["timestamp"] = int(value["timestamp"])
-                        items.append({**value, "event_key": key})
-                    items = sorted(items, key=lambda d: d["timestamp"])
-                    for item in items:
-                        if item["timestamp"] > last_event_timestamp:
-                            last_event_timestamp = item["timestamp"]
-                            self.helper.log_info(
-                                "Processing event "
-                                + item["info"]
-                                + " (date="
-                                + item["date"]
-                                + ", modified="
-                                + datetime.utcfromtimestamp(last_event_timestamp)
-                                .astimezone(pytz.UTC)
-                                .isoformat()
-                                + ")"
-                            )
+            number_events = 0
+            try:
+                manifest_data = json.loads(
+                    self._retrieve_data(self.misp_feed_url + "/manifest.json")
+                )
+                items = []
+                for key, value in manifest_data.items():
+                    value["timestamp"] = int(value["timestamp"])
+                    items.append({**value, "event_key": key})
+                items = sorted(items, key=lambda d: d["timestamp"])
+                for item in items:
+                    if item["timestamp"] > last_event_timestamp:
+                        last_event_timestamp = item["timestamp"]
+                        self.helper.log_info(
+                            "Processing event "
+                            + item["info"]
+                            + " (date="
+                            + item["date"]
+                            + ", modified="
+                            + datetime.utcfromtimestamp(last_event_timestamp)
+                            .astimezone(pytz.UTC)
+                            .isoformat()
+                            + ")"
+                        )
 
-                            event = json.loads(
-                                self._retrieve_data(
-                                    self.misp_feed_url
-                                    + "/"
-                                    + item["event_key"]
-                                    + ".json"
-                                )
+                        event = json.loads(
+                            self._retrieve_data(
+                                self.misp_feed_url + "/" + item["event_key"] + ".json"
                             )
-                            bundle = self._process_event(event)
-                            self.helper.log_info("Sending event STIX2 bundle...")
-                            self._send_bundle(work_id, bundle)
-                            number_events = number_events + 1
-                            message = (
-                                "Event processed, storing state (last_run="
-                                + now.astimezone(pytz.utc).isoformat()
-                                + ", last_event="
-                                + datetime.utcfromtimestamp(last_event_timestamp)
-                                .astimezone(pytz.UTC)
-                                .isoformat()
-                                + ", last_event_timestamp="
-                                + str(last_event_timestamp)
-                            )
+                        )
+                        bundle = self._process_event(event)
+                        self.helper.log_info("Sending event STIX2 bundle...")
+                        self._send_bundle(work_id, bundle)
+                        number_events = number_events + 1
+                        message = (
+                            "Event processed, storing state (misp_last_run="
+                            + now.astimezone(pytz.utc).isoformat()
+                            + ", misp_last_event="
+                            + datetime.utcfromtimestamp(last_event_timestamp)
+                            .astimezone(pytz.UTC)
+                            .isoformat()
+                            + ", misp_last_event_timestamp="
+                            + str(last_event_timestamp)
+                        )
+                        current_state = self.helper.get_state()
+                        if current_state is None:
                             self.helper.set_state(
                                 {
-                                    "last_run": now.astimezone(pytz.utc).isoformat(),
-                                    "last_event": datetime.utcfromtimestamp(
+                                    "misp_last_run": now.astimezone(
+                                        pytz.utc
+                                    ).isoformat(),
+                                    "misp_last_event": datetime.utcfromtimestamp(
                                         last_event_timestamp
                                     )
                                     .astimezone(pytz.UTC)
                                     .isoformat(),
-                                    "last_event_timestamp": last_event_timestamp,
+                                    "misp_last_event_timestamp": last_event_timestamp,
                                 }
                             )
-                            self.helper.log_info(message)
-                except Exception as e:
-                    self.helper.log_error(str(e))
+                        else:
+                            current_state["misp_last_run"] = now.astimezone(
+                                pytz.utc
+                            ).isoformat()
+                            current_state["misp_last_event"] = (
+                                datetime.utcfromtimestamp(last_event_timestamp)
+                                .astimezone(pytz.UTC)
+                                .isoformat()
+                            )
+                            current_state["misp_last_event_timestamp"] = (
+                                last_event_timestamp
+                            )
+                            self.helper.set_state(current_state)
+                        self.helper.log_info(message)
+            except Exception as e:
+                self.helper.log_error(str(e))
 
-                # Store the current timestamp as a last run
-                message = (
-                    "Connector successfully run ("
-                    + str(number_events)
-                    + " events have been processed), storing state (last_run="
-                    + now.astimezone(pytz.utc).isoformat()
-                    + ", last_event="
-                    + datetime.utcfromtimestamp(last_event_timestamp)
-                    .astimezone(pytz.UTC)
-                    .isoformat()
-                    + ", last_event_timestamp="
-                    + str(last_event_timestamp)
-                    + ")"
-                )
+            # Store the current timestamp as a last run
+            message = (
+                "Connector successfully run ("
+                + str(number_events)
+                + " events have been processed), storing state (misp_last_run="
+                + now.astimezone(pytz.utc).isoformat()
+                + ", misp_last_event="
+                + datetime.utcfromtimestamp(last_event_timestamp)
+                .astimezone(pytz.UTC)
+                .isoformat()
+                + ", misp_last_event_timestamp="
+                + str(last_event_timestamp)
+                + ")"
+            )
             self.helper.log_info(message)
             self.helper.api.work.to_processed(work_id, message)
 
@@ -2152,13 +2059,3 @@ class MispFeed:
         except Exception as e:
             self.helper.log_error(str(e))
             raise e
-
-
-if __name__ == "__main__":
-    try:
-        mispFeedConnector = MispFeed()
-        mispFeedConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
