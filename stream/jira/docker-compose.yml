@@ -1,0 +1,23 @@
+version: '3'
+services:
+  connector-jira:
+    image: opencti/connector-jira:6.2.1
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - "CONNECTOR_NAME=Atlassian JIRA"
+      - CONNECTOR_SCOPE=jira
+      - CONNECTOR_LOG_LEVEL=error
+      - JIRA_URL=https://jira.changeme.com # The URL of the JIRA Server
+      - JIRA_SSL_VERIFY=true
+      - JIRA_LOGIN_EMAIL= # Login email to use
+      - JIRA_API_TOKEN= # Token
+      - JIRA_PROJECT_KEY= # Project key
+      - JIRA_ISSUE_TYPE_NAME= # Issue type name
+      - JIRA_CUSTOM_FIELDS_KEYS= # Custom fields key separated by commas
+      - JIRA_CUSTOM_FIELDS_VALUES= # Custom fields values separated by commas (same order as keys)
+    restart: always

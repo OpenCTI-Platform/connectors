@@ -1,0 +1,23 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: false
+  live_stream_no_dependencies: true
+  name: 'Atlassian JIRA'
+  scope: 'jira' # Reserved
+  log_level: 'info'
+
+jira:
+  url: 'https://jira.changeme.com' # The URL of the JIRA Server
+  ssl_verify: true
+  login_email: ''
+  api_token: ''
+  project_key: ''
+  issue_type_name: 'Task'
+  custom_fields_keys: ''
+  custom_fields_values: ''

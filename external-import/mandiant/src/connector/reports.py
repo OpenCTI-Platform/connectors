@@ -10,56 +10,48 @@ from .common import create_stix_relationship
 
 def process(connector, report):
     report_id = report.get("report_id", report.get("reportId", None))
-
-    report_type = report.get("report_type", report.get("reportType", None))
-    report_title = report.get("title", report.get("reportTitle", None))
-
-    if report_type not in connector.mandiant_report_types:
-        connector.helper.connector_logger.debug(
-            "Ignoring report",
+    try:
+        report_type = report.get("report_type", report.get("reportType", None))
+        report_title = report.get("title", report.get("reportTitle", None))
+        if report_type not in connector.mandiant_report_types:
+            connector.helper.connector_logger.debug(
+                "Ignoring report",
+                {
+                    "report_id": report_id,
+                    "report_type": report_type,
+                    "report_title": report_title,
+                },
+            )
+            return
+        connector.helper.connector_logger.info(
+            "Processing report",
             {
                 "report_id": report_id,
                 "report_type": report_type,
                 "report_title": report_title,
             },
         )
-        return
-
-    connector.helper.connector_logger.info(
-        "Processing report",
-        {
-            "report_id": report_id,
-            "report_type": report_type,
-            "report_title": report_title,
-        },
-    )
-
-    report_details = connector.api.report(report_id, "json")
-    report_bundle = connector.api.report(report_id, mode="stix")
-    report_pdf = connector.api.report(report_id, mode="pdf")
-
-    bundle_objects = report_bundle["objects"]
-    report_bundle["objects"] = list(
-        filter(lambda item: not item["id"].startswith("x-"), bundle_objects)
-    )
-
-    report = Report(
-        bundle=report_bundle,
-        details=report_details,
-        pdf=report_pdf,
-        connector=connector,
-        report_type=report_type,
-        report_link=report["report_link"],
-    )
-
-    try:
+        report_details = connector.api.report(report_id, "json")
+        report_bundle = connector.api.report(report_id, mode="stix")
+        report_pdf = connector.api.report(report_id, mode="pdf")
+        bundle_objects = report_bundle["objects"]
+        report_bundle["objects"] = list(
+            filter(lambda item: not item["id"].startswith("x-"), bundle_objects)
+        )
+        report = Report(
+            bundle=report_bundle,
+            details=report_details,
+            pdf=report_pdf,
+            connector=connector,
+            report_type=report_type,
+            report_link=report["report_link"],
+        )
         bundle = report.generate()
     except Exception:
         connector.helper.connector_logger.error(
             "Could not process Report", {"report_id": report_id}
         )
         return None
-
     return bundle
 
 
