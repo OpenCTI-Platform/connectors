@@ -58,11 +58,20 @@ def process(connector, campaign):
 
 
 def create_stix_campaign(connector, campaign_details):
+    first_observed = [
+        detail.get("timestamp")
+        for detail in campaign_details["timeline"]
+        if detail["event_type"] == "first_observed"
+    ]
+
+    campaign_description = campaign_details["description"]
+
     return stix2.Campaign(
         id=campaign_details.get("id"),
         name=utils.sanitizer("name", campaign_details),
         aliases=[campaign_details["short_name"]],
-        description=utils.sanitizer("description", campaign_details),
+        description=campaign_description,
+        first_seen=first_observed[0] if len(first_observed) != 0 else None,
         last_seen=utils.sanitizer("last_activity_time", campaign_details),
         confidence=connector.helper.connect_confidence_level,
         created_by_ref=connector.identity.get("standard_id"),
