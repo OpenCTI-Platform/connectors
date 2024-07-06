@@ -524,6 +524,16 @@ class Flashpoint:
                         )
                         try:
                             for item in data["items"]:
+                                title = ""
+                                if "title" in item:
+                                    title = item["title"]
+                                elif "message" in item:
+                                    title = (
+                                        (item["message"][:50] + "..")
+                                        if len(item["message"]) > 50
+                                        else item["message"]
+                                    )
+
                                 start_time = (
                                     parse(item["first_observed_at"])
                                     if "first_observed_at" in item
@@ -550,7 +560,7 @@ class Flashpoint:
                                     external_references=[channel_external_reference],
                                 )
                                 media_content = CustomObservableMediaContent(
-                                    title=item["title"],
+                                    title=title,
                                     content=item["message"],
                                     url="https://app.flashpoint.io/search/context/communities/"
                                     + item["id"],
@@ -677,6 +687,18 @@ class Flashpoint:
                                             )
                                             try:
                                                 for item in data_source["items"]:
+                                                    title = ""
+                                                    if "title" in item:
+                                                        title = item["title"]
+                                                    elif "message" in item:
+                                                        title = (
+                                                            (
+                                                                item["message"][:50]
+                                                                + ".."
+                                                            )
+                                                            if len(item["message"]) > 50
+                                                            else item["message"]
+                                                        )
                                                     description = ""
                                                     if "description" in item:
                                                         description = item[
@@ -686,6 +708,16 @@ class Flashpoint:
                                                         description = item[
                                                             "item_description"
                                                         ]
+                                                    message = ""
+                                                    if "message" in item:
+                                                        message = item["message"]
+                                                    elif "media" in item:
+                                                        for media in item["media"]:
+                                                            message = (
+                                                                media["type"]
+                                                                + " "
+                                                                + media["mime_type"]
+                                                            )
                                                     start_time = (
                                                         parse(item["first_observed_at"])
                                                         if "first_observed_at" in item
@@ -710,10 +742,10 @@ class Flashpoint:
                                                     )
                                                     incident = stix2.Incident(
                                                         id=Incident.generate_id(
-                                                            item["title"],
+                                                            title,
                                                             parse(item["date"]),
                                                         ),
-                                                        name=item["title"],
+                                                        name=title,
                                                         incident_type="alert",
                                                         description=description,
                                                         created_by_ref=self.identity[
@@ -769,8 +801,8 @@ class Flashpoint:
                                                         allow_custom=True,
                                                     )
                                                     media_content = CustomObservableMediaContent(
-                                                        title=item["title"],
-                                                        content=item["message"],
+                                                        title=title,
+                                                        content=message,
                                                         url="https://app.flashpoint.io/search/context/"
                                                         + source
                                                         + "/"
@@ -837,6 +869,7 @@ class Flashpoint:
                                                         work_id=work_id,
                                                     )
                                             except Exception as e:
+                                                print(item)
                                                 self.helper.log_error(str(e))
                                             page = page + 1
                                             body_params_source = {
