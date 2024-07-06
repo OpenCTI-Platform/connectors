@@ -4,11 +4,10 @@ import random
 import re
 import sys
 import time
-import urllib.parse
 from datetime import datetime
 from typing import Any, Dict, Mapping, Optional
 
-import requests
+import mwdblib
 import stix2
 import yaml
 from dateutil import parser
@@ -85,6 +84,13 @@ class MWDB:
         )
 
         self.mwdb_token = get_config_variable("MWDB_TOKEN", ["mwdb", "token"], config)
+
+        self.mwdb = mwdblib.MWDB(
+            api_url=self.mwdb_url,
+            api_key=self.mwdb_token,
+            verify_ssl=self.verify_ssl,
+            config_path=None,  # Don't use ~/.mwdb configuration
+        )
 
         self.import_config = get_config_variable(
             "MWDB_IMPORT_CONFIG", ["mwdb", "import_config"], config, False, False
@@ -283,22 +289,21 @@ class MWDB:
     ## A function to process malware config data
     def process_config(self, config, virus):
         c2obj = []
-        if "cfg" in config.keys():
-            if "c2" in config["cfg"].keys():
-                for c2 in config["cfg"]["c2"]:
-                    if re.match("^https?://.*", c2):
-                        c2obj.extend(self.process_c2(c2, virus, "c2-url"))
-                    if re.match(
-                        r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d{1,5})?",
-                        c2,
-                    ):
-                        c2obj.extend(self.process_c2(c2, virus, "c2-ip"))
+        if "c2" in config.cfg:
+            for c2 in config.cfg["c2"]:
+                if re.match("^https?://.*", c2):
+                    c2obj.extend(self.process_c2(c2, virus, "c2-url"))
+                if re.match(
+                    r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d{1,5})?",
+                    c2,
+                ):
+                    c2obj.extend(self.process_c2(c2, virus, "c2-ip"))
 
-            if "attr" in config["cfg"].keys():
-                if "url4cnc" in config["cfg"]["attr"].keys():
-                    for url in config["cfg"]["attr"]["url4cnc"]:
-                        if re.match("^https?://.*", url):
-                            c2obj.extend(self.process_c2(url, virus, "c2-url-ref"))
+        if "attr" in config.cfg:
+            if "url4cnc" in config.cfg["attr"].keys():
+                for url in config.cfg["attr"]["url4cnc"]:
+                    if re.match("^https?://.*", url):
+                        c2obj.extend(self.process_c2(url, virus, "c2-url-ref"))
 
         return c2obj
 
@@ -306,18 +311,18 @@ class MWDB:
     def process_tags(self, tags) -> Mapping:
         attributes = {"yara": [], "family": [], "runnable": [], "extra": []}
         for tag in tags:
-            if "yara" in tag["tag"]:
+            if "yara" in tag:
                 color = "%06x" % random.randint(0, 0xFFFFFF)
                 self.helper.api.label.read_or_create_unchecked(
-                    value=tag["tag"].split(":")[1], color=color
+                    value=tag.split(":")[1], color=color
                 )
-                attributes["yara"].append(tag["tag"].split(":")[1])
-            elif "family" in tag["tag"]:
-                attributes["family"].append(tag["tag"].split(":")[1])
-            elif "runnable" in tag["tag"]:
-                attributes["runnable"].append(tag["tag"].split(":")[1])
+                attributes["yara"].append(tag.split(":")[1])
+            elif "family" in tag:
+                attributes["family"].append(tag.split(":")[1])
+            elif "runnable" in tag:
+                attributes["runnable"].append(tag.split(":")[1])
             else:
-                attributes["extra"].append(tag["tag"])
+                attributes["extra"].append(tag)
         return attributes
 
     def process_extratag(self, attributes_extra, sample):
@@ -402,15 +407,14 @@ class MWDB:
             "malware_entity": None,
             "indicator": None,
             "observable": None,
-            "malware": malware,
+            "malware": malware.data,
         }
         external_reference = self.helper.api.external_reference.create(
             source_name=self.org_name + " url ref",
-            url=self.mwdb_url + "file/" + malware["sha256"],
+            url=self.mwdb_url + "file/" + malware.sha256,
         )
 
-        if "tags" in malware.keys():
-            virus["mal_tag"] = self.process_tags(malware["tags"])
+        virus["mal_tag"] = self.process_tags(malware.tags)
 
         if virus["mal_tag"] and len(virus["mal_tag"]["family"]) > 0:
             malware_id = Malware.generate_id(
@@ -434,22 +438,22 @@ class MWDB:
             description = "A potential harming artifact"
 
         if str(self.create_indicators).capitalize() == "True":
-            pattern = "[file:hashes.sha256 = '" + malware["sha256"] + "']"
+            pattern = "[file:hashes.sha256 = '" + malware.sha256 + "']"
 
             if str(self.create_indicators).capitalize() == "True":
                 virus["indicator"] = stix2.Indicator(
-                    name=str(malware["file_name"]).replace("-" + malware["sha256"], ""),
+                    name=str(malware.file_name).replace("-" + malware.sha256, ""),
                     description=description,
                     confidence=self.helper.connect_confidence_level,
                     pattern_type="stix2",
                     pattern=pattern,
-                    valid_from=parser.parse(malware["upload_time"]),
+                    valid_from=malware.upload_time,
                     labels=[x for x in virus["mal_tag"]["yara"] if x],
                     created_by_ref=self.identity["standard_id"],
                     object_marking_refs=[stix2.TLP_GREEN["id"]],
                     external_references=[external_reference],
-                    created=parser.parse(malware["upload_time"]),
-                    modified=parser.parse(malware["upload_time"]),
+                    created=malware.upload_time,
+                    modified=malware.upload_time,
                     custom_properties={
                         "x_opencti_score": self.score,
                     },
@@ -464,10 +468,10 @@ class MWDB:
                     "labels": [x for x in virus["mal_tag"]["yara"] if x],
                     "created_by_ref": self.identity["standard_id"],
                     "external_references": [external_reference],
-                    "hashes": {HASHING_ALGORITHM_SHA_256: malware["sha256"]},
+                    "hashes": {HASHING_ALGORITHM_SHA_256: malware.sha256},
                 }
                 virus["observable"] = File(
-                    name=malware["sha256"],
+                    name=malware.sha256,
                     custom_properties=custom_properties,
                     object_marking_refs=[stix2.TLP_GREEN["id"]],
                 )
@@ -500,10 +504,8 @@ class MWDB:
 
             if str(self.import_config).capitalize() == "True":
                 ## PROCESSING CONFIG
-                if "latest_config" in malware.keys() and self.import_config:
-                    bundle_objects.extend(
-                        self.process_config(malware["latest_config"], virus)
-                    )
+                if malware.config and self.import_config:
+                    bundle_objects.extend(self.process_config(malware.config, virus))
 
             if (
                 len(virus["mal_tag"]["extra"]) > 0
@@ -557,39 +559,15 @@ class MWDB:
                     else:
                         current_date = last_run
 
-                    querysearch = "[{date} TO *]".format(
+                    querysearch = "upload_time:[{date} TO *]".format(
                         date=datetime.fromtimestamp(current_date).strftime("%Y-%m-%d")
                     )
-                    querysearch = "?query=upload_time:" + urllib.parse.quote(
-                        querysearch
-                    )
-
                     try:
-                        lasthash = ""
-                        files_to_import = True
-                        while files_to_import:
-                            search_path = "api/file" + querysearch
-                            if lasthash:
-                                search_path = (
-                                    "api/file" + querysearch + "&older_than=" + lasthash
-                                )
-
-                            auth = {"Authorization": "Bearer " + self.mwdb_token}
-                            resp = requests.get(
-                                self.mwdb_url + search_path,
-                                headers=auth,
-                                verify=bool(self.verify_ssl),
-                            )
-                            if resp.status_code == 200:
-                                malws = resp.json()
-
-                                for malware in malws["files"]:
-                                    self.process_virus(malware)
-                                    lasthash = malware["sha256"]
-
-                                if len(malws["files"]) == 0:
-                                    files_to_import = False
-
+                        malware_files = self.mwdb.search_files(
+                            querysearch, chunk_size=100
+                        )
+                        for malware_file in malware_files:
+                            self.process_virus(malware_file)
                         date = datetime.utcnow()
                         utc_time = calendar.timegm(date.utctimetuple())
                         state = {"last_run": utc_time}
