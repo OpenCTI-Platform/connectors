@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=MISP
       - CONNECTOR_SCOPE=misp
-      - CONNECTOR_CONFIDENCE_LEVEL=25 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_EXPOSE_METRICS=false
       - MISP_URL=http://localhost # Required

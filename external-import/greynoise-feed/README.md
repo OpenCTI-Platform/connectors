@@ -20,7 +20,6 @@ You must have a GreyNoise subscription to use this feature.
 | `connector_type`                | `CONNECTOR_TYPE`             | Yes       | Indicates this is an EXTERNAL_IMPORT connector                                                |
 | `connector_name`                | `CONNECTOR_NAME`             | Yes       | Indicates the name is `GreyNoise Feed`                                                        |
 | `connector_scope`               | `CONNECTOR_SCOPE`            | Yes       | Indicates the scope is `greynoisefeed`                                                        |
-| `connector_confidence_level`    | `CONNECTOR_CONFIDENCE_LEVEL` | Yes       | The default confidence level for created sightings (a number between 1 and 100).              |
 | `connector_log_level`           | `CONNECTOR_LOG_LEVEL`        | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose). |
 | `greynoisefeed_api_key`         | `GREYNOISE_API_KEY`          | Yes       | Your GreyNoise API KEY                                                                        |
 | `greynoisefeed_source`          | `GREYNOISE_SOURCE`           | Yes       | Indicates if IPs will be FEED or Tag Based                                                    |

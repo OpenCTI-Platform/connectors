@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=Intel471
       - CONNECTOR_SCOPE=malware,vulnerability,indicator
-      - CONNECTOR_CONFIDENCE_LEVEL=70
       - CONNECTOR_LOG_LEVEL=error
       - INTEL471_API_USERNAME=CHANGEME
       - INTEL471_API_KEY=CHANGEME
