@@ -48,7 +48,7 @@ class Infoblox:
             "INFOBLOX_IOC_LIMIT",
             ["infoblox", "ioc_limit"],
             config,
-            default='10000',
+            default="10000",
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
@@ -60,23 +60,23 @@ class Infoblox:
             "INFOBLOX_URL",
             ["infoblox", "url"],
             config,
-            default='https://csp.infoblox.com/tide/api/data/threats',
+            default="https://csp.infoblox.com/tide/api/data/threats",
         )
         self.infoblox_marking = get_config_variable(
             "INFOBLOX_MARKING",
             ["infoblox", "marking_definition"],
             config,
-            default='TLP:AMBER',
+            default="TLP:AMBER",
         )
 
     def set_marking(self):
-        if self.infoblox_marking == 'TLP:WHITE' or self.infoblox_marking == 'TLP:CLEAR':
+        if self.infoblox_marking == "TLP:WHITE" or self.infoblox_marking == "TLP:CLEAR":
             marking = stix2.TLP_WHITE
-        elif self.infoblox_marking == 'TLP:GREEN':
+        elif self.infoblox_marking == "TLP:GREEN":
             marking = stix2.TLP_GREEN
-        elif self.infoblox_marking == 'TLP:AMBER':
+        elif self.infoblox_marking == "TLP:AMBER":
             marking = stix2.TLP_AMBER
-        elif self.infoblox_marking == 'TLP:RED':
+        elif self.infoblox_marking == "TLP:RED":
             marking = stix2.TLP_RED
         else:
             marking = stix2.TLP_AMBER
@@ -85,61 +85,65 @@ class Infoblox:
 
     def infoblox_api_get(self):
         try:
-            headers = {'Authorization': 'Token {}'.format(self.infoblox_api_key)}
+            headers = {"Authorization": "Token {}".format(self.infoblox_api_key)}
             ioc_types = ["ip", "url", "host"]
             infoblox_result = []
             for ioc_type in ioc_types:
                 url = f"{self.infoblox_url}?type={ioc_type}&period={self.infoblox_interval}h&profile=IID&rlimit={self.infoblox_ioc_limit}"
-                response = requests.get(url, headers=headers, verify=True, timeout=(80000, 80000))
+                response = requests.get(
+                    url, headers=headers, verify=True, timeout=(80000, 80000)
+                )
                 r_json = response.json()
                 r_json1 = json.dumps(r_json, indent=4)
                 infoblox_result.append(r_json1)
             return infoblox_result
         except Exception as e:
-            self.helper.log_error(f"Error while getting intelligence from Infoblox: {e}")
+            self.helper.log_error(
+                f"Error while getting intelligence from Infoblox: {e}"
+            )
 
     def create_stix_object(self, threat, identity_id):
-        object_type = threat['type']
+        object_type = threat["type"]
         stix_objects = []
 
-        if object_type == 'URL':
+        if object_type == "URL":
             pattern = f"[url:value = '{threat['url']}']"
             observable_type = "Url"
-            name = threat['url']
+            name = threat["url"]
             observable = stix2.URL(
                 value=name,
                 object_marking_refs=[self.infoblox_marking],
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
-                    "x_opencti_description": threat['extended']['notes'],
+                    "x_opencti_description": threat["extended"]["notes"],
                 },
             )
             stix_objects.append(observable)
 
-        elif object_type == 'HOST':
+        elif object_type == "HOST":
             pattern = f"[domain-name:value = '{threat['domain']}']"
             observable_type = "Domain-Name"
-            name = threat['domain']
+            name = threat["domain"]
             observable = stix2.DomainName(
                 value=name,
                 object_marking_refs=[self.infoblox_marking],
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
-                    "x_opencti_description": threat['extended']['notes'],
+                    "x_opencti_description": threat["extended"]["notes"],
                 },
             )
             stix_objects.append(observable)
 
-        elif object_type == 'IP':
+        elif object_type == "IP":
             pattern = f"[ipv4-addr:value = '{threat['ip']}']"
             observable_type = "IPv4-Addr"
-            name = threat['ip']
+            name = threat["ip"]
             observable = stix2.IPv4Address(
                 value=name,
                 object_marking_refs=[self.infoblox_marking],
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
-                    "x_opencti_description": threat['extended']['notes'],
+                    "x_opencti_description": threat["extended"]["notes"],
                 },
             )
             stix_objects.append(observable)
@@ -154,12 +158,16 @@ class Infoblox:
                 name=name,
                 pattern=pattern,
                 pattern_type="stix",
-                description=threat['extended']['notes'],
+                description=threat["extended"]["notes"],
                 created_by_ref=identity_id,
-                created=datetime.datetime.strptime(threat['detected'], "%Y-%m-%dT%H:%M:%S.%fZ"),
-                modified=datetime.datetime.strptime(threat['imported'], "%Y-%m-%dT%H:%M:%S.%fZ"),
-                labels=[threat['class'], threat['property']],
-                confidence=threat['confidence'],
+                created=datetime.datetime.strptime(
+                    threat["detected"], "%Y-%m-%dT%H:%M:%S.%fZ"
+                ),
+                modified=datetime.datetime.strptime(
+                    threat["imported"], "%Y-%m-%dT%H:%M:%S.%fZ"
+                ),
+                labels=[threat["class"], threat["property"]],
+                confidence=threat["confidence"],
                 object_marking_refs=[self.infoblox_marking],
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
@@ -170,12 +178,14 @@ class Infoblox:
             stix_objects.append(indicator)
 
             relationship = stix2.Relationship(
-                id=StixCoreRelationship.generate_id("based-on", indicator["id"], observable["id"]),
+                id=StixCoreRelationship.generate_id(
+                    "based-on", indicator["id"], observable["id"]
+                ),
                 relationship_type="based-on",
                 source_ref=indicator["id"],
                 target_ref=observable["id"],
                 created_by_ref=identity_id,
-                object_marking_refs=[self.infoblox_marking]
+                object_marking_refs=[self.infoblox_marking],
             )
 
             stix_objects.append(relationship)
@@ -188,11 +198,11 @@ class Infoblox:
         ips = []
         domains = []
         if var_url != "":
-            urls = var_url['threat']
+            urls = var_url["threat"]
         if var_ip != "":
-            ips = var_ip['threat']
+            ips = var_ip["threat"]
         if var_domain != "":
-            domains = var_domain['threat']
+            domains = var_domain["threat"]
         identity_id = "identity--2998978f-8336-5dfc-93a2-2f3d2f79d0e3"
         identity = stix2.Identity(
             id=identity_id,
@@ -203,13 +213,12 @@ class Infoblox:
             modified="2024-06-20T11:37:44.351Z",
             identity_class="organization",
             type="identity",
-            object_marking_refs=stix2.TLP_WHITE
+            object_marking_refs=stix2.TLP_WHITE,
         )
 
         stix_objects = [identity]
         all_threats = urls + ips + domains
         for threat in all_threats:
-
             stix_object = self.create_stix_object(threat, identity_id)
             if stix_object:
                 stix_objects.extend(stix_object)
@@ -226,16 +235,16 @@ class Infoblox:
             var_ip = json.loads(info[0])
             var_url = json.loads(info[1])
             var_domain = json.loads(info[2])
-            stix_bundle, all_threats = self.create_stix_bundle(var_url, var_ip, var_domain)
+            stix_bundle, all_threats = self.create_stix_bundle(
+                var_url, var_ip, var_domain
+            )
 
             # Convert the bundle to a dictionary
             stix_bundle_dict = json.loads(stix_bundle.serialize())
 
             stix_bundle_dict = json.dumps(stix_bundle_dict, indent=4)
             self.helper.send_stix2_bundle(
-                stix_bundle_dict,
-                update=self.update_existing_data,
-                work_id=work_id
+                stix_bundle_dict, update=self.update_existing_data, work_id=work_id
             )
         except Exception as e:
             self.helper.log_error(str(e))
@@ -263,9 +272,7 @@ class Infoblox:
             current_state = self.helper.get_state()
             if current_state is None:
                 self.helper.set_state(
-                    {
-                        "last_run": str(now.strftime("%Y-%m-%d %H:%M:%S"))
-                    }
+                    {"last_run": str(now.strftime("%Y-%m-%d %H:%M:%S"))}
                 )
             current_state = self.helper.get_state()
             self.helper.log_info("Get IOC since " + current_state["last_run"])
