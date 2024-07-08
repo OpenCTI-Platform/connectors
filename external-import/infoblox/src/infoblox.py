@@ -1,9 +1,7 @@
-import datetime
 import json
 import os
 import sys
 import time
-import uuid
 from datetime import datetime
 
 import requests
@@ -14,16 +12,6 @@ from pycti import (
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     get_config_variable,
-)
-from stix2 import (
-    URL,
-    Bundle,
-    DomainName,
-    Identity,
-    Indicator,
-    IPv4Address,
-    MarkingDefinition,
-    Relationship,
 )
 
 
@@ -108,7 +96,7 @@ class Infoblox:
                 infoblox_result.append(r_json1)
             return infoblox_result
         except Exception as e:
-            self.helper.log_error(f"Error while getting intellignece from Infoblox: {e}")
+            self.helper.log_error(f"Error while getting intelligence from Infoblox: {e}")
 
     def create_stix_object(self, threat, identity_id):
         object_type = threat['type']
@@ -206,7 +194,7 @@ class Infoblox:
         if var_domain != "":
             domains = var_domain['threat']
         identity_id = "identity--2998978f-8336-5dfc-93a2-2f3d2f79d0e3"
-        identity = Identity(
+        identity = stix2.Identity(
             id=identity_id,
             spec_version="2.1",
             name="Infoblox",
