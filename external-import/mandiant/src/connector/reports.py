@@ -180,25 +180,31 @@ class Report:
             report["description"] = self._parse_description(self.details["fromMedia"])
 
         # Retrieve the story link and add it into external reference
-        if "storyLink" in self.details and self.details["storyLink"] is not None:
-            story_link = {
+        story_link_ref = None
+        if (
+            "storyLink" in self.details
+            and "outlet" in self.details
+            and self.details["storyLink"] is not None
+            and self.details["outlet"] is not None
+        ):
+            story_link_ref = {
                 "source_name": self.details["outlet"],
                 "url": self.details["storyLink"],
             }
-        else:
-            story_link = None
 
-        mandiant_ref = [
-            {"source_name": "Mandiant", "url": self.report_link},
-            story_link,
-        ]
+        mandiant_refs = [{"source_name": "Mandiant", "url": self.report_link}]
+        if story_link_ref is not None:
+            mandiant_refs.append(story_link_ref)
+
         if (
             "external_references" in report
             and report["external_references"] is not None
         ):
-            report["external_references"] = report["external_references"] + mandiant_ref
+            report["external_references"] = (
+                report["external_references"] + mandiant_refs
+            )
         else:
-            report["external_references"] = mandiant_ref
+            report["external_references"] = mandiant_refs
 
     def create_note(self):
         # Report Analysis Note
@@ -267,7 +273,10 @@ class Report:
             text += f"\n\n### {key}\n"
             text += "* " + "\n* ".join(set(values))
 
-        if self.details["isightComment"] is not None:
+        if (
+            "isightComment" in self.details
+            and self.details["isightComment"] is not None
+        ):
             content = utils.cleanhtml(self.details["isightComment"])
             text += f"\n**Analyst Comment** \n{content}"
 
