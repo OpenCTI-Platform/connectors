@@ -176,11 +176,11 @@ class Report:
             filter(lambda ref: not ref.startswith("x-"), report["object_refs"])
         )
 
-        if "fromMedia" in self.details and len(self.details["fromMedia"]) > 0:
+        if "fromMedia" in self.details and self.details["fromMedia"] is not None:
             report["description"] = self._parse_description(self.details["fromMedia"])
 
         # Retrieve the story link and add it into external reference
-        if self.details["storyLink"] is not None:
+        if "storyLink" in self.details and self.details["storyLink"] is not None:
             story_link = {
                 "source_name": self.details["outlet"],
                 "url": self.details["storyLink"],
