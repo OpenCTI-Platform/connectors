@@ -1,16 +1,30 @@
-import json
-import uuid
-from stix2 import Bundle, Indicator, Identity, MarkingDefinition, IPv4Address, DomainName, URL, Relationship
-import stix2
-from datetime import datetime
 import datetime
 import json
-import requests
-import yaml
 import os
-from pycti import (Indicator, OpenCTIConnectorHelper, get_config_variable, StixCoreRelationship)
-import time
 import sys
+import time
+import uuid
+from datetime import datetime
+
+import requests
+import stix2
+import yaml
+from pycti import (
+    Indicator,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
+from stix2 import (
+    URL,
+    Bundle,
+    DomainName,
+    Identity,
+    Indicator,
+    IPv4Address,
+    MarkingDefinition,
+    Relationship,
+)
 
 
 class Infoblox:
