@@ -1,5 +1,6 @@
 import base64
 import itertools
+import re
 
 import stix2
 from pycti import Note
@@ -161,6 +162,11 @@ class Report:
             if risk_rating:
                 vulnerability["x_opencti_base_severity"] = risk_rating
 
+    @staticmethod
+    def _parse_description(description):
+        media = description
+        return re.sub("<[^<]+?>", "", media)
+
     def update_report(self):
         report = utils.retrieve(self.bundle, "type", "report")
         report["confidence"] = self.confidence
@@ -169,7 +175,23 @@ class Report:
         report["object_refs"] = list(
             filter(lambda ref: not ref.startswith("x-"), report["object_refs"])
         )
-        mandiant_ref = [{"source_name": "Mandiant", "url": self.report_link}]
+
+        if self.details["fromMedia"]:
+            report["description"] = self._parse_description(self.details["fromMedia"])
+
+        # Retrieve the story link and add it into external reference
+        if self.details["storyLink"] is not None:
+            story_link = {
+                "source_name": self.details["outlet"],
+                "url": self.details["storyLink"],
+            }
+        else:
+            story_link = None
+
+        mandiant_ref = [
+            {"source_name": "Mandiant", "url": self.report_link},
+            story_link,
+        ]
         if (
             "external_references" in report
             and report["external_references"] is not None
@@ -244,6 +266,10 @@ class Report:
         for key, values in data.items():
             text += f"\n\n### {key}\n"
             text += "* " + "\n* ".join(set(values))
+
+        if self.details["isightComment"] is not None:
+            content = utils.cleanhtml(self.details["isightComment"])
+            text += f"\n**Analyst Comment** \n{content}"
 
         if text == "":
             return
@@ -473,48 +499,3 @@ class Report:
         report = utils.retrieve(self.bundle, "type", "report")
         report["object_refs"] += relationships_ids
         self.bundle["objects"] += relationships
-
-
-# class NewsAnalysisReport(Report):
-#     pass
-
-#     def _process(self, item):
-#         note = create_isight_note(report_details, identity, confidence)
-#         if note:
-#             item["object_refs"].append(note.id)
-
-#         if "description" not in item:
-#             item["description"] = parse_description(report_details)
-
-#         if "external_references" not in item:
-#             item["external_references"] = list()
-
-#         outlet = report_details.get("outlet")
-#         storyLink = report_details.get("storyLink")
-
-#         if outlet and storyLink:
-#             item["external_references"].append({
-#                 "source_name": outlet,
-#                 "url": storyLink,
-#             })
-
-#     def create_isight_note(report_details, identity, confidence):
-#         content = utils.cleanhtml(report_details.get("isightComment"))
-
-#         if not content:
-#             return None
-
-#         return stix2.Note(
-#             id=Note.generate_id(),
-#             abstract="Analysis",
-#             created_by_ref=identity,
-#             content=content,
-#             note_types=["analysis"],
-#             confidence=confidence,
-#             object_refs=[item.get("id")],
-#             object_marking_refs=item["object_marking_refs"],
-#         )
-
-#     def parse_description(report_details):
-#         media = report_details.get("fromMedia", "")
-#         return re.sub("<[^<]+?>", "", media)
