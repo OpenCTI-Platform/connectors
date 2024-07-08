@@ -154,6 +154,12 @@ class ConfigCrowdstrike:
             self.load,
         )
 
+        self.indicator_unwanted_labels: str = get_config_variable(
+            "CROWDSTRIKE_INDICATOR_UNWANTED_LABELS",
+            ["crowdstrike", "indicator_unwanted_labels"],
+            self.load,
+        )
+
         self.interval_sec: int = get_config_variable(
             "CROWDSTRIKE_INTERVAL_SEC",
             ["crowdstrike", "interval_sec"],
