@@ -283,7 +283,7 @@ class ThreatFox:
         if stix_indicator:
             yield stix_indicator
 
-        # Don't create malware if the source doesn't exists
+        # Don't create malware if the source doesn't exist
         if stix_observable is None:
             return
 
