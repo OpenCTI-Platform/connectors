@@ -176,7 +176,7 @@ class Report:
             filter(lambda ref: not ref.startswith("x-"), report["object_refs"])
         )
 
-        if self.details["fromMedia"]:
+        if "fromMedia" in self.details and len(self.details["fromMedia"]) > 0:
             report["description"] = self._parse_description(self.details["fromMedia"])
 
         # Retrieve the story link and add it into external reference
