@@ -30,18 +30,20 @@ class ShodanConnector:
         self.helper = OpenCTIConnectorHelper(config, True)
         self.token = get_config_variable("SHODAN_TOKEN", ["shodan", "token"], config)
         self.max_tlp = get_config_variable(
-            "SHODAN_MAX_TLP", ["shodan", "max_tlp"], config
+            "SHODAN_MAX_TLP", ["shodan", "max_tlp"], config, default="TLP:AMBER"
         )
         self.create_indicators = get_config_variable(
             "SHODAN_CREATE_INDICATORS",
             ["shodan", "create_indicators"],
             config,
-            False,
-            True,
+            default=False,
         )
         self.shodanAPI = shodan.Shodan(self.token)
         self.default_score = get_config_variable(
-            "SHODAN_DEFAULT_SCORE", ["shodan", "default_score"], isNumber=True
+            "SHODAN_DEFAULT_SCORE",
+            ["shodan", "default_score"],
+            isNumber=True,
+            default=50,
         )
 
         # Shodan Identity
@@ -376,11 +378,11 @@ class ShodanConnector:
             created_by_ref=self.shodan_identity["standard_id"],
             external_references=[external_reference],
             valid_from=now,
+            pattern_type="stix",
             custom_properties={
-                "pattern_type": "stix",
                 "x_opencti_score": self.default_score,
                 "x_opencti_main_observable_type": "IPv4-Addr",
-                "detection": True,
+                "x_opencti_detection": True,
             },
         )
         self.stix_objects.append(stix_indicator)
