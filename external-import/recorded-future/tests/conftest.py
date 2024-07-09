@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from src.rflib import RFClient
 
 RF_API_KEY = "module_token"
