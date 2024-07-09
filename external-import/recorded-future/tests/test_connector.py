@@ -4,7 +4,6 @@ import os
 import pathlib
 
 import pytest
-
 from src.rflib import StixNote
 
 CWD = pathlib.Path(__file__).parent.resolve()

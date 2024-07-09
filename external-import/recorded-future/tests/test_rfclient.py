@@ -2,7 +2,6 @@ import json
 
 import pytest
 import requests.exceptions
-
 from src.rflib import RFClient
 
 

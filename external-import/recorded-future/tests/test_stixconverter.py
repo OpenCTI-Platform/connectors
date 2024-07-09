@@ -5,7 +5,6 @@ import pathlib
 
 import pytest
 import stix2.v21
-
 from src.rflib import URL, Domain, FileHash, IPAddress, StixNote
 
 CWD = pathlib.Path(__file__).parent.resolve()
