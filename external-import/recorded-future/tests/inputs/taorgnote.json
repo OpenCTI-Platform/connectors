@@ -1,0 +1,361 @@
+{
+  "attributes": {
+    "validated_on": "2023-02-06T17:03:23.917Z",
+    "published": "2023-02-13T14:39:04.535Z",
+    "text": "The following ransomware threat actor groups published threats to leak stolen data on their respective extortion blogs. The threat to leak stolen data is a part of the double-extortion “name and shame” technique and is supposed to persuade the compromised organizations to pay the ransom.\n\nALPHV:\n• El Mohandes (el-mohandes[.]com) is a company operating in the manufacturing industry and is headquartered in Egypt\n• Finaport Holding Ltd. (finaport[.]com) is a company operating in the finance industry and is headquartered in Switzerland\n• Five Guys Enterprises, LLC (fiveguys[.]com) is a company operating in the bar and restaurant industry and is headquartered in the US\n\nLockBit 3.0:\n• Medellin (medellin[.]gov[.]co) is a company operating in the government - non-us industry and is headquartered in Colombia\n• HKR International Limited (hkri[.]com) is a company operating in the real estate industry and is headquartered in the US\n• Jordan Academy for Maritime Studies (JAMS) (jams[.]edu[.]jo) is a company operating in the education industry and is headquartered in Jordan\n• East Texas Brick (etbrick[.]com) is a company operating in the manufacturing industry and is headquartered in the US\n• Crispin Valve (crispinvalve[.]com) is a company operating in the software industry and is headquartered in the US\n• Woodward Communication LLC (wcinet[.]com) is a company operating in the media and entertainment industry and is headquartered in the US\n• Premier Research Labs (PRL) i (prlabs[.]com) is a company operating in the food and beverage industry and is headquartered in the US\n• Nicklaus Companies (nicklaus[.]com) is a company operating in the construction industry and is headquartered in the US\n• BP Lawyers (bplawyers[.]co[.]id) is a company operating in the law industry and is headquartered in Indonesia\n• Virtuos (virtuosgames[.]com) is a company operating in the software industry and is headquartered in Singapore\n• URM Group (urmgroup[.]com[.]au) is a company operating in the waste management industry and is headquartered in Australia\n\nPlay:\n• Point Dedicated Services (pointdedicated[.]com) is a company operating in the transportation industry and is headquartered in the US\n\nRoyal:\n• Innovation Collaboration Synergy (ics-nett[.]com) is a company operating in the business services industry and is headquartered in the US",
+    "topic": [
+      {
+        "id": "TXSFt3",
+        "name": "Threat Lead",
+        "type": "Topic",
+        "description": "New or notable threat actors, malware, or threat activity observed on the dark web, via proprietary means, or through technical campaign analysis"
+      }
+    ],
+    "context_entities": [
+      {
+        "id": "idn:ics-nett.com",
+        "name": "ics-nett.com",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "idn:fiveguys.com",
+        "name": "fiveguys.com",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "idn:finaport.com",
+        "name": "finaport.com",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "idn:el-mohandes.com",
+        "name": "el-mohandes.com",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "B_FDB",
+        "name": "Egypt",
+        "type": "Country"
+      },
+      {
+        "id": "B_FaO",
+        "name": "Switzerland",
+        "type": "Country"
+      },
+      {
+        "id": "I6fXb1",
+        "name": "Finance",
+        "type": "Industry"
+      },
+      {
+        "id": "JgEdrt",
+        "name": "Bar and Restaurant",
+        "type": "Industry"
+      },
+      {
+        "id": "idn:medellin.gov.co",
+        "name": "medellin.gov.co",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "idn:hkri.com",
+        "name": "hkri.com",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "idn:jams.edu.jo",
+        "name": "jams.edu.jo",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "idn:etbrick.com",
+        "name": "etbrick.com",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "idn:crispinvalve.com",
+        "name": "crispinvalve.com",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "idn:wcinet.com",
+        "name": "wcinet.com",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "idn:prlabs.com",
+        "name": "prlabs.com",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "idn:nicklaus.com",
+        "name": "nicklaus.com",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "idn:bplawyers.co.id",
+        "name": "bplawyers.co.id",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "idn:virtuosgames.com",
+        "name": "virtuosgames.com",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "idn:urmgroup.com.au",
+        "name": "urmgroup.com.au",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "B_Fum",
+        "name": "Colombia",
+        "type": "Country"
+      },
+      {
+        "id": "ZiGgcf",
+        "name": "Government - Non-US",
+        "type": "Industry"
+      },
+      {
+        "id": "I6fXbj",
+        "name": "Real Estate",
+        "type": "Industry"
+      },
+      {
+        "id": "B_FDm",
+        "name": "Jordan",
+        "type": "Country"
+      },
+      {
+        "id": "ChkYK",
+        "name": "Education",
+        "type": "Industry"
+      },
+      {
+        "id": "OR5V87",
+        "name": "Research",
+        "type": "Industry"
+      },
+      {
+        "id": "CGzDE",
+        "name": "Manufacturing",
+        "type": "Industry"
+      },
+      {
+        "id": "B_HQS",
+        "name": "Software",
+        "type": "Industry"
+      },
+      {
+        "id": "BEifq6",
+        "name": "Media and Entertainment",
+        "type": "Industry"
+      },
+      {
+        "id": "123v",
+        "name": "Food and Beverage",
+        "type": "Industry"
+      },
+      {
+        "id": "JxldLs",
+        "name": "Construction",
+        "type": "Industry"
+      },
+      {
+        "id": "B_FsU",
+        "name": "Indonesia",
+        "type": "Country"
+      },
+      {
+        "id": "DH5tS",
+        "name": "Law",
+        "type": "Industry"
+      },
+      {
+        "id": "B3Pync",
+        "name": "Singapore",
+        "type": "Country"
+      },
+      {
+        "id": "B_FAk",
+        "name": "Australia",
+        "type": "Country"
+      },
+      {
+        "id": "CIVKbj",
+        "name": "Waste Management",
+        "type": "Industry"
+      },
+      {
+        "id": "idn:pointdedicated.com",
+        "name": "pointdedicated.com",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "JxldLo",
+        "name": "Transportation",
+        "type": "Industry"
+      },
+      {
+        "id": "idn:cs-nett.com",
+        "name": "cs-nett.com",
+        "type": "InternetDomainName"
+      },
+      {
+        "id": "JxldLw",
+        "name": "Business Services",
+        "type": "Industry"
+      },
+      {
+        "id": "B_FAG",
+        "name": "United States",
+        "type": "Country"
+      },
+      {
+        "id": "jgzKlj",
+        "name": "Maritime",
+        "type": "Industry"
+      },
+      {
+        "id": "m_xfyj",
+        "name": "El Mohandes",
+        "type": "Company"
+      },
+      {
+        "id": "hVqaD",
+        "name": "Five Guys Enterprises",
+        "type": "Company"
+      },
+      {
+        "id": "Jzmpj_",
+        "name": "Municipio de Medellín",
+        "type": "Company"
+      },
+      {
+        "id": "I44cWC",
+        "name": "HKR International Limited",
+        "type": "Company"
+      },
+      {
+        "id": "WvhsKi",
+        "name": "East Texas Brick",
+        "type": "Company"
+      },
+      {
+        "id": "FSsoYZ",
+        "name": "Woodward Communications, Inc.",
+        "type": "Company"
+      },
+      {
+        "id": "boZ3ke",
+        "name": "Premier Research Labs",
+        "type": "Company"
+      },
+      {
+        "id": "aHTyIV",
+        "name": "Nicklaus Companies",
+        "type": "Company"
+      },
+      {
+        "id": "KZMc3Y",
+        "name": "BP Lawyers",
+        "type": "Company"
+      },
+      {
+        "id": "2hypH",
+        "name": "Virtuos",
+        "type": "Company"
+      },
+      {
+        "id": "EtFucA",
+        "name": "Point Dedicated Services LLC",
+        "type": "Company"
+      }
+    ],
+    "title": "Daily Ransomware and Extortion Roundup (2/6/2023): 16 New Victims",
+    "note_entities": [
+      {
+        "id": "luzJUr",
+        "name": "BlackCat Ransomware Group",
+        "type": "Organization"
+      },
+      {
+        "id": "k5UlUR",
+        "name": "ALPHV  Ransomware",
+        "type": "Malware"
+      },
+      {
+        "id": "k6QDrj",
+        "name": "ALPHV (ALPHV Ransomware)",
+        "type": "Source"
+      },
+      {
+        "id": "i9val6",
+        "name": "LockBit Gang",
+        "type": "Organization"
+      },
+      {
+        "id": "l-ZWx4",
+        "name": "Lockbit 3.0",
+        "type": "Malware"
+      },
+      {
+        "id": "nGn1Oj",
+        "name": "LockBit 3.0 Leaked Data (LockBit 3.0 Ransomware)",
+        "type": "Source"
+      },
+      {
+        "id": "pRCVdO",
+        "name": "Play Ransomware Group",
+        "type": "Organization"
+      },
+      {
+        "id": "noAnDT",
+        "name": "Play Ransomware",
+        "type": "Malware"
+      },
+      {
+        "id": "pBN8c4",
+        "name": "PLAY News (PLAY Ransomware)",
+        "type": "Source"
+      },
+      {
+        "id": "owS4kr",
+        "name": "Royal Ransomware Gang",
+        "type": "Organization"
+      },
+      {
+        "id": "RwwHTi",
+        "name": "Royal Ransomware",
+        "type": "Malware"
+      },
+      {
+        "id": "mitre:T1005",
+        "name": "T1005",
+        "type": "MitreAttackIdentifier"
+      },
+      {
+        "id": "mitre:T1486",
+        "name": "T1486",
+        "type": "MitreAttackIdentifier"
+      },
+      {
+        "id": "on3Ehg",
+        "name": "Royal Blog (Royal Zeon Ransomware)",
+        "type": "Source"
+      },
+      {
+        "id": "CvUqf",
+        "name": "Jordan Academy for Maritime Studies",
+        "type": "Organization"
+      }
+    ]
+  },
+  "source": {
+    "id": "VKz42X",
+    "name": "Insikt Group",
+    "type": "Source"
+  },
+  "id": "p5DhAl"
+}
