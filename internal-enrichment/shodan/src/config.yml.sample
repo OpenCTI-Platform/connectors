@@ -13,5 +13,5 @@ connector:
 shodan:
   token: 'ChangeMe'
   max_tlp: 'TLP:AMBER'
-  create_indicators: true
+  create_indicators: false
   default_score: 50 # Former confidence_level deprecated in OpenCTI version >= 6.0
