@@ -500,6 +500,11 @@ class MispFeed:
                     tag_value = tag_value_split[0]
                 else:
                     tag_value = tag_value_split[1].replace('"', "")
+                tag_value_split = tag_value.split(":")
+                if len(tag_value_split) == 1:
+                    tag_value = tag_value_split[0]
+                else:
+                    tag_value = tag_value_split[1].replace('"', "")
                 threats = self.helper.api.stix_domain_object.list(
                     types=["Intrusion-Set", "Malware", "Tool", "Attack-Pattern"],
                     filters={
@@ -577,10 +582,17 @@ class MispFeed:
                 or tag["name"].startswith(
                     "misp-galaxy:mitre-enterprise-attack-intrusion-set"
                 )
+                or tag["name"].startswith("intrusion-set")
             ):
-                tag_value_split = tag["name"].split('="')
+                if "=" in tag["name"]:
+                    tag_value_split = tag["name"].split('="')
+                else:
+                    tag_value_split = tag["name"].split(":")
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
-                    tag_value = tag_value_split[1][:-1].strip()
+                    if "=" in tag["name"]:
+                        tag_value = tag_value_split[1][:-1].strip()
+                    else:
+                        tag_value = tag_value_split[1].strip()
                     if " - G" in tag_value:
                         name = tag_value.split(" - G")[0]
                     elif "APT " in tag_value:
@@ -600,12 +612,20 @@ class MispFeed:
                         )
                         added_names.append(name)
             # Get the linked tools
-            if tag["name"].startswith("misp-galaxy:mitre-tool") or tag[
-                "name"
-            ].startswith("misp-galaxy:mitre-enterprise-attack-tool"):
-                tag_value_split = tag["name"].split('="')
+            if (
+                tag["name"].startswith("misp-galaxy:mitre-tool")
+                or tag["name"].startswith("misp-galaxy:mitre-enterprise-attack-tool")
+                or tag["name"].startswith("tool")
+            ):
+                if "=" in tag["name"]:
+                    tag_value_split = tag["name"].split('="')
+                else:
+                    tag_value_split = tag["name"].split(":")
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
-                    tag_value = tag_value_split[1][:-1].strip()
+                    if "=" in tag["name"]:
+                        tag_value = tag_value_split[1][:-1].strip()
+                    else:
+                        tag_value = tag_value_split[1].strip()
                     if " - S" in tag_value:
                         name = tag_value.split(" - S")[0]
                     else:
@@ -630,10 +650,17 @@ class MispFeed:
                 or tag["name"].startswith("misp-galaxy:misp-tool")
                 or tag["name"].startswith("misp-galaxy:misp-android")
                 or tag["name"].startswith("misp-galaxy:misp-malpedia")
+                or tag["name"].startswith("malware")
             ):
-                tag_value_split = tag["name"].split('="')
+                if "=" in tag["name"]:
+                    tag_value_split = tag["name"].split('="')
+                else:
+                    tag_value_split = tag["name"].split(":")
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
-                    tag_value = tag_value_split[1][:-1].strip()
+                    if "=" in tag["name"]:
+                        tag_value = tag_value_split[1][:-1].strip()
+                    else:
+                        tag_value = tag_value_split[1].strip()
                     if " - S" in tag_value:
                         name = tag_value.split(" - S")[0]
                     else:
@@ -656,10 +683,17 @@ class MispFeed:
                 tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
                 or tag["name"].startswith("misp-galaxy:attack-pattern")
                 or tag["name"].startswith("mitre-attack:attack-pattern")
+                or tag["name"].startswith("mitre:")
             ):
-                tag_value_split = tag["name"].split('="')
+                if "=" in tag["name"]:
+                    tag_value_split = tag["name"].split('="')
+                else:
+                    tag_value_split = tag["name"].split(":")
                 if len(tag_value_split) > 1 and len(tag_value_split[1]) > 0:
-                    tag_value = tag_value_split[1][:-1].strip()
+                    if "=" in tag["name"]:
+                        tag_value = tag_value_split[1][:-1].strip()
+                    else:
+                        tag_value = tag_value_split[1].strip()
                     if " - T" in tag_value:
                         name = tag_value.split(" - T")[0]
                     else:
@@ -738,6 +772,10 @@ class MispFeed:
                 and not tag["name"].startswith("misp-galaxy:country")
                 and not tag["name"].startswith("marking")
                 and not tag["name"].startswith("creator")
+                and not tag["name"].startswith("intrusion-set")
+                and not tag["name"].startswith("malware")
+                and not tag["name"].startswith("tool")
+                and not tag["name"].startswith("mitre")
             ):
                 tag_value = tag["name"]
                 if '="' in tag["name"]:

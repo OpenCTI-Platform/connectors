@@ -646,6 +646,9 @@ class MispFeed(threading.Thread):
                 and not tag["name"].startswith("misp-galaxy:country")
                 and not tag["name"].startswith("marking")
                 and not tag["name"].startswith("creator")
+                and not tag["name"].startswith("intrusion-set")
+                and not tag["name"].startswith("malware")
+                and not tag["name"].startswith("tool")
             ):
                 tag_value = tag["name"]
                 if '="' in tag["name"]:
