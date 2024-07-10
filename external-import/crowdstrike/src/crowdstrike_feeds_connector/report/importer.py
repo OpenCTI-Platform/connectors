@@ -166,7 +166,7 @@ class ReportImporter(BaseImporter):
             latest_created_datetime,
         )
 
-        return latest_created_datetime
+        return timestamp_to_datetime(latest_created_datetime)
 
     def _process_report(self, report) -> None:
         self._info("Processing report {0} ({1})...", report["name"], report["id"])
