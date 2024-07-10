@@ -127,6 +127,14 @@ class Mandiant:
         )
         self.mandiant_malwares_interval = timedelta(hours=mandiant_malwares_interval)
 
+        self.mandiant_import_malware_aliases = get_config_variable(
+            "MANDIANT_IMPORT_MALWARES_ALIASES",
+            ["mandiant", "import_malwares_aliases"],
+            config,
+            isNumber=False,
+            default=True,
+        )
+
         if get_config_variable(
             "MANDIANT_IMPORT_CAMPAIGNS",
             ["mandiant", "import_campaigns"],
