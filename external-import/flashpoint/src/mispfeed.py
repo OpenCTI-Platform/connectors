@@ -1556,7 +1556,8 @@ class MispFeed(threading.Thread):
             source_name=self.helper.connect_name,
             description=event["Event"]["info"],
             external_id=event["Event"]["uuid"],
-            url="https://app.flashpoint.io/cti/malware/iocs/",
+            url="https://app.flashpoint.io/cti/malware/iocs?query="
+            + event["Event"]["uuid"],
         )
 
         ### Get indicators
