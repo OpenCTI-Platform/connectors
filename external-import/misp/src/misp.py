@@ -274,11 +274,6 @@ class Misp:
         self.misp_interval = get_config_variable(
             "MISP_INTERVAL", ["misp", "interval"], config, isNumber=True
         )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
 
         # Initialize MISP
         self.misp = PyMISP(
@@ -993,9 +988,7 @@ class Misp:
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
             self.helper.log_info("Sending event STIX2 bundle")
 
-            self.helper.send_stix2_bundle(
-                bundle, work_id=work_id, update=self.update_existing_data
-            )
+            self.helper.send_stix2_bundle(bundle, work_id=work_id)
             self.helper.metric.inc("record_send", len(bundle_objects))
         return last_event_timestamp
 

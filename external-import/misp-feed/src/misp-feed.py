@@ -184,11 +184,6 @@ class MispFeed:
         self.misp_feed_interval = get_config_variable(
             "MISP_FEED_INTERVAL", ["misp_feed", "interval"], config, True
         )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
 
         # Initialize MISP
         if self.source_type == "s3":
@@ -240,7 +235,6 @@ class MispFeed:
         try:
             self.helper.send_stix2_bundle(
                 serialized_bundle,
-                update=self.update_existing_data,
                 work_id=work_id,
             )
         except Exception as e:
