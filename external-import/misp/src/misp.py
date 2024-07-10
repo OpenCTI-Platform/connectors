@@ -129,15 +129,13 @@ class Misp:
             "MISP_DATETIME_ATTRIBUTE",
             ["misp", "datetime_attribute"],
             config,
-            False,
-            "timestamp",
+            default="timestamp",
         )
         self.misp_filter_date_attribute = get_config_variable(
             "MISP_DATE_FILTER_FIELD",
             ["misp", "date_filter_field"],
             config,
-            False,
-            "date_from",
+            default="timestamp",
         )
         self.misp_report_description_attribute_filter = parse_filter_config(
             get_config_variable(
@@ -161,8 +159,7 @@ class Misp:
             "MISP_CREATE_OBJECT_OBSERVABLES",
             ["misp", "create_object_observables"],
             config,
-            False,
-            False,
+            default=False,
         )
         self.misp_create_tags_as_labels = get_config_variable(
             "MISP_CREATE_TAGS_AS_LABELS",
@@ -254,7 +251,7 @@ class Misp:
             "MISP_IMPORT_TO_IDS_NO_SCORE",
             ["misp", "import_to_ids_no_score"],
             config,
-            True,
+            isNumber=True,
         )
         self.import_unsupported_observables_as_text = bool(
             get_config_variable(
@@ -275,7 +272,7 @@ class Misp:
             )
         )
         self.misp_interval = get_config_variable(
-            "MISP_INTERVAL", ["misp", "interval"], config, True
+            "MISP_INTERVAL", ["misp", "interval"], config, isNumber=True
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
