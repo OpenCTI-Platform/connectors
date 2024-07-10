@@ -15,6 +15,7 @@ services:
       - MISP_KEY=ChangeMe # Required
       - MISP_SSL_VERIFY=false # Required
       - MISP_DATETIME_ATTRIBUTE=timestamp # Required, filter to be used in query for new MISP events
+      - MISP_DATE_FILTER_FIELD=timestamp # Required, field to filter on date
       - MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER= # Optional, filter to be used to find the attribute with report description (example: "type=comment,category=Internal reference")
       - MISP_CREATE_REPORTS=true # Required, create report for MISP event
       - MISP_CREATE_INDICATORS=true # Required, create indicators from attributes
@@ -42,5 +43,4 @@ services:
       - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT=false #  Optional, import unsupported observable as x_opencti_text
       - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT=true #  Optional, import unsupported observable as x_opencti_text just with the value
       - MISP_INTERVAL=5 # Required, in minutes
-      - MISP_DATE_FILTER_FIELD=date_from # Required, field to filter on date
     restart: always
