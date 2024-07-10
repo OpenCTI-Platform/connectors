@@ -326,6 +326,10 @@ jobs:
           name: Build Docker image opencti/connector-malcore
           command: docker build -t opencti/connector-malcore:latest . && docker tag opencti/connector-malcore:latest opencti/connector-malcore:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/infoblox
+          name: Build Docker image opencti/connector-infoblox
+          command: docker build -t opencti/connector-infoblox:latest . && docker tag opencti/connector-infoblox:latest opencti/connector-infoblox:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -458,7 +462,9 @@ jobs:
             docker push opencti/connector-mitre-atlas:latest
             docker push opencti/connector-mitre-atlas:${CIRCLE_TAG}
             docker push opencti/connector-malcore:latest
-            docker push opencti/connector-malcore:${CIRCLE_TAG}
+            docker push opencti/connector-malcore:${CIRCLE_TAG}            
+            docker push opencti/connector-infoblox:latest
+            docker push opencti/connector-infoblox:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -718,6 +724,10 @@ jobs:
           name: Build Docker image opencti/connector-shadowserver
           command: docker build -t opencti/connector-shadowserver:latest . && docker tag opencti/connector-shadowserver:latest opencti/connector-shadowserver:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/infoblox
+          name: Build Docker image opencti/connector-infoblox
+          command: docker build -t opencti/connector-infoblox:latest . && docker tag opencti/connector-infoblox:latest opencti/connector-infoblox:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/internal-enrichment/reversinglabs-malware-presence
           name: Build Docker image opencti/connector-reversinglabs-malware-presence
           command: docker build -t opencti/connector-reversinglabs-malware-presence:latest . && docker tag opencti/connector-reversinglabs-malware-presence:latest opencti/connector-reversinglabs-malware-presence:${CIRCLE_TAG}
@@ -854,7 +864,9 @@ jobs:
             docker push opencti/connector-reversinglabs-malware-presence:latest
             docker push opencti/connector-reversinglabs-malware-presence:${CIRCLE_TAG}
             docker push opencti/connector-jira:latest
-            docker push opencti/connector-jira:${CIRCLE_TAG}
+            docker push opencti/connector-jira:${CIRCLE_TAG}            
+            docker push opencti/connector-infoblox:latest
+            docker push opencti/connector-infoblox:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1174,6 +1186,10 @@ jobs:
           name: Build Docker image opencti/connector-malcore
           command: docker build -t opencti/connector-malcore:rolling .
       - run:
+          working_directory: ~/opencti/external-import/infoblox
+          name: Build Docker image opencti/connector-infoblox
+          command: docker build -t opencti/connector-infoblox:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1240,6 +1256,7 @@ jobs:
             docker push opencti/connector-urlscan-enrichment:rolling
             docker push opencti/connector-mitre-atlas:rolling
             docker push opencti/connector-malcore:rolling
+            docker push opencti/connector-infoblox:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1507,6 +1524,14 @@ jobs:
           name: Build Docker image opencti/connector-shadowserver
           command: docker build -t opencti/connector-shadowserver:rolling .
       - run:
+          working_directory: ~/opencti/external-import/malcore
+          name: Build Docker image opencti/connector-malcore
+          command: docker build -t opencti/connector-malcore:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/infoblox
+          name: Build Docker image opencti/connector-infoblox
+          command: docker build -t opencti/connector-infoblox:rolling .
+      - run:
           working_directory: ~/opencti/internal-enrichment/reversinglabs-malware-presence
           name: Build Docker image opencti/connector-reversinglabs-malware-presence
           command: docker build -t opencti/connector-reversinglabs-malware-presence:rolling .
@@ -1582,6 +1607,8 @@ jobs:
             docker push opencti/connector-shadowserver:rolling
             docker push opencti/connector-reversinglabs-malware-presence:rolling
             docker push opencti/connector-jira:rolling
+            docker push opencti/connector-malcore:rolling
+            docker push opencti/connector-infoblox:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
