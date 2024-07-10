@@ -67,7 +67,7 @@ def cleanhtml(raw_html):
     return ""
 
 
-def clean_intrusionset_aliases(object):
+def clean_aliases(object):
     aliases = []
     rule = r"[\(\[].*?[\)\]]"
 
