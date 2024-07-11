@@ -1,8 +1,8 @@
+import datetime
 import json
 import os
 import sys
 import time
-import datetime
 
 import requests
 import stix2
