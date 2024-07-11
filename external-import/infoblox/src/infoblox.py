@@ -106,6 +106,11 @@ class Infoblox:
         object_type = threat["type"]
         stix_objects = []
 
+        description = threat["extended"].get("notes")
+        if description is None:
+            self.helper.log_debug(f"Missing 'notes' key in threat: {threat}")
+            description = ""
+
         if object_type == "URL":
             pattern = f"[url:value = '{threat['url']}']"
             observable_type = "Url"
@@ -115,7 +120,7 @@ class Infoblox:
                 object_marking_refs=[self.infoblox_marking],
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
-                    "x_opencti_description": threat["extended"]["notes"],
+                    "x_opencti_description": description,
                 },
             )
             stix_objects.append(observable)
@@ -129,7 +134,7 @@ class Infoblox:
                 object_marking_refs=[self.infoblox_marking],
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
-                    "x_opencti_description": threat["extended"]["notes"],
+                    "x_opencti_description": description,
                 },
             )
             stix_objects.append(observable)
@@ -143,7 +148,7 @@ class Infoblox:
                 object_marking_refs=[self.infoblox_marking],
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
-                    "x_opencti_description": threat["extended"]["notes"],
+                    "x_opencti_description": description,
                 },
             )
             stix_objects.append(observable)
@@ -158,7 +163,7 @@ class Infoblox:
                 name=name,
                 pattern=pattern,
                 pattern_type="stix",
-                description=threat["extended"]["notes"],
+                description=description,
                 created_by_ref=identity_id,
                 created=datetime.datetime.strptime(
                     threat["detected"], "%Y-%m-%dT%H:%M:%S.%fZ"
