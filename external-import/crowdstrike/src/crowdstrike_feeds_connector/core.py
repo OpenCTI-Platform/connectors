@@ -130,6 +130,13 @@ class CrowdStrike:
                 indicator_low_score_labels_str
             )
 
+        indicator_unwanted_labels_str = self.config.indicator_unwanted_labels
+        indicator_unwanted_labels = []
+        if indicator_unwanted_labels_str is not None:
+            indicator_unwanted_labels = convert_comma_separated_str_to_list(
+                indicator_unwanted_labels_str
+            )
+
         update_existing_data = bool(self.config.update_existing_data)
 
         author = self._create_author()
@@ -183,6 +190,7 @@ class CrowdStrike:
                 report_type=report_type,
                 indicator_low_score=indicator_low_score,
                 indicator_low_score_labels=set(indicator_low_score_labels),
+                indicator_unwanted_labels=set(indicator_unwanted_labels),
             )
 
             indicator_importer = IndicatorImporter(indicator_importer_config)

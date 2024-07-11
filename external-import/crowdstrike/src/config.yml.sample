@@ -27,4 +27,5 @@ crowdstrike:
   indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1'
   indicator_low_score: 40
   indicator_low_score_labels: 'MaliciousConfidence/Low'
+  indicator_unwanted_labels: ''                                     # Can be used to filter low confidence indicators: "MaliciousConfidence/Low", "MaliciousConfidence/Medium"
   interval_sec: 1800                                                # Seconds

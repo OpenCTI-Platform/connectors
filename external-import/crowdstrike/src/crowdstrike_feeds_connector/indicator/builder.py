@@ -69,6 +69,7 @@ class IndicatorBundleBuilderConfig(NamedTuple):
     indicator_reports: List[FetchedReport]
     indicator_low_score: int
     indicator_low_score_labels: Set[str]
+    indicator_unwanted_labels: Set[str]
 
 
 class IndicatorBundleBuilder:
@@ -136,6 +137,7 @@ class IndicatorBundleBuilder:
         self.indicator_report_type = config.indicator_report_type
         self.indicator_low_score = config.indicator_low_score
         self.indicator_low_score_labels = config.indicator_low_score_labels
+        self.indicator_unwanted_labels = config.indicator_unwanted_labels
 
         self.observation_factory = self._get_observation_factory(self.indicator["type"])
 
@@ -266,6 +268,12 @@ class IndicatorBundleBuilder:
 
         # Get the labels.
         labels = self._get_labels()
+
+        # Skip indicators with labels entered in config
+        for label in labels:
+            label = label.lower()
+            if label in self.indicator_unwanted_labels:
+                return None
 
         # Determine the score based on the labels.
         score = self._determine_score_by_labels(labels)
@@ -489,7 +497,7 @@ class IndicatorBundleBuilder:
             observables.append(observation.observable)
         bundle_objects.extend(observables)
 
-        # Get indicators and to bundle.
+        # Get indicators and add to bundle.
         indicators = []
         if observation.indicator is not None:
             indicators.append(observation.indicator)

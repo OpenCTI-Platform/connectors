@@ -26,5 +26,6 @@ services:
       - CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES=hash_ion,hash_md5,hash_sha1
       - CROWDSTRIKE_INDICATOR_LOW_SCORE=40
       - CROWDSTRIKE_INDICATOR_LOW_SCORE_LABELS=MaliciousConfidence/Low
+      - CROWDSTRIKE_INDICATOR_UNWANTED_LABELS= # Can be used to filter low confidence indicators: "MaliciousConfidence/Low", "MaliciousConfidence/Medium"
       - CROWDSTRIKE_INTERVAL_SEC=1800
     restart: always
