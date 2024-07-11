@@ -159,6 +159,8 @@ class ConfigCrowdstrike:
             ["crowdstrike", "indicator_unwanted_labels"],
             self.load,
         )
+        if self.indicator_unwanted_labels is not None:
+            self.indicator_unwanted_labels = self.indicator_unwanted_labels.lower()
 
         self.interval_sec: int = get_config_variable(
             "CROWDSTRIKE_INTERVAL_SEC",

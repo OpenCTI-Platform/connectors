@@ -271,6 +271,7 @@ class IndicatorBundleBuilder:
 
         # Skip indicators with labels entered in config
         for label in labels:
+            label = label.lower()
             if label in self.indicator_unwanted_labels:
                 return None
 
