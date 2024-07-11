@@ -385,7 +385,7 @@ class Report:
 
         definitions = []
 
-        if len(intrusion_sets) == 1:
+        if len(intrusion_sets) > 0:
             definitions += [
                 {
                     "type": "originates-from",
@@ -429,7 +429,7 @@ class Report:
                 },
             ]
 
-        if len(malwares) == 1:
+        if len(malwares) > 0:
             definitions += [
                 {
                     "type": "originates-from",
@@ -466,7 +466,7 @@ class Report:
                 },
             ]
 
-        if len(vulnerabilities) == 1:
+        if len(vulnerabilities) > 0:
             definitions += [
                 {
                     "type": "has",
