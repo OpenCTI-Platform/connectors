@@ -33,6 +33,7 @@ class IndicatorImporterConfig(NamedTuple):
     report_type: str
     indicator_low_score: int
     indicator_low_score_labels: Set[str]
+    indicator_unwanted_labels: Set[str]
 
 
 class IndicatorImporter(BaseImporter):
@@ -58,6 +59,7 @@ class IndicatorImporter(BaseImporter):
         self.report_type = config.report_type
         self.indicator_low_score = config.indicator_low_score
         self.indicator_low_score_labels = config.indicator_low_score_labels
+        self.indicator_unwanted_labels = config.indicator_unwanted_labels
         self.next_page: Optional[str] = None
 
         if not (self.create_observables or self.create_indicators):
@@ -231,6 +233,7 @@ class IndicatorImporter(BaseImporter):
             indicator_reports=indicator_reports,
             indicator_low_score=self.indicator_low_score,
             indicator_low_score_labels=self.indicator_low_score_labels,
+            indicator_unwanted_labels=self.indicator_unwanted_labels,
         )
 
         try:
