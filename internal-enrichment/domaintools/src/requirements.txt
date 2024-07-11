@@ -1,3 +1,3 @@
 pycti==6.2.4
 domaintools-api==2.0.0
-validators~=0.31.0
+validators~=0.32.0
