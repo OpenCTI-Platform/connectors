@@ -14,6 +14,7 @@ from pycti import (
     AttackPattern,
     CustomObservableHostname,
     CustomObservableText,
+    Grouping,
     Identity,
     Indicator,
     IntrusionSet,
@@ -25,7 +26,6 @@ from pycti import (
     StixCoreRelationship,
     StixSightingRelationship,
     Tool,
-    Grouping,
 )
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
