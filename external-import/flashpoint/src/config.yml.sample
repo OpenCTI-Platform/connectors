@@ -21,5 +21,6 @@ flashpoint:
   import_communities: false
   communities_queries: 'cybersecurity,cyberattack'
   import_alerts: true
+  indicators_in_reports: false
   interval: 5 # In minutes
 
