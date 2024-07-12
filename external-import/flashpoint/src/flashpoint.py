@@ -103,9 +103,15 @@ class Flashpoint:
         ).split(",")
         self.flashpoint_import_alerts = get_config_variable(
             "FLASHPOINT_IMPORT_ALERTS",
-            ["flashpoint", "import_ALERTS"],
+            ["flashpoint", "import_alerts"],
             config,
             default=True,
+        )
+        self.flashpoint_indicators_in_reports = get_config_variable(
+            "FLASHPOINT_INDICATORS_IN_REPORTS",
+            ["flashpoint", "indicators_in_reports"],
+            config,
+            default=False,
         )
 
         # Init variables
@@ -960,7 +966,10 @@ class Flashpoint:
         self.helper.log_info("Fetching Flashpoint datasets...")
         if self.flashpoint_import_indicators:
             self.misp_feed = MispFeed(
-                self.helper, self.flashpoint_api_key, self.flashpoint_import_start_date
+                self.helper,
+                self.flashpoint_api_key,
+                self.flashpoint_import_start_date,
+                self.flashpoint_indicators_in_reports,
             )
             self.misp_feed.start()
         get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
