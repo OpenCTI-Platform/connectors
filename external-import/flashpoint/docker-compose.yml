@@ -20,5 +20,6 @@ services:
       - FLASHPOINT_IMPORT_COMMUNITIES=false
       - FLASHPOINT_IMPORT_ALERTS=true
       - FLASHPOINT_COMMUNITIES_QUERIES=cybersecurity,cyberattack
+      - FLASHPOINT_INDICATORS_IN_REPORTS=false
       - FLASHPOINT_INTERVAL=5 # In minutes
     restart: always
