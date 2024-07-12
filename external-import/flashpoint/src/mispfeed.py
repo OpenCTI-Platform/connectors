@@ -25,6 +25,7 @@ from pycti import (
     StixCoreRelationship,
     StixSightingRelationship,
     Tool,
+    Grouping,
 )
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
@@ -64,7 +65,13 @@ FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
 
 class MispFeed(threading.Thread):
-    def __init__(self, helper, flashpoint_import_api_key, flashpoint_import_start_date):
+    def __init__(
+        self,
+        helper,
+        flashpoint_import_api_key,
+        flashpoint_import_start_date,
+        flashpoint_indicators_in_reports,
+    ):
         threading.Thread.__init__(self)
         self.helper = helper
         self.misp_feed_url = (
@@ -86,6 +93,7 @@ class MispFeed(threading.Thread):
         self.misp_feed_import_with_attachments = True
         self.misp_feed_import_unsupported_observables_as_text = True
         self.misp_feed_import_unsupported_observables_as_text_transparent = True
+        self.misp_indicators_in_reports = flashpoint_indicators_in_reports
         self.misp_feed_interval = 5
 
     def _get_interval(self):
@@ -1834,49 +1842,85 @@ class MispFeed(threading.Thread):
                 object_refs.append(
                     "intrusion-set--fc5ee88d-7987-4c00-991e-a863e9aa8a0e"
                 )
-            report = stix2.Report(
-                id=Report.generate_id(
-                    event["Event"]["info"],
-                    datetime.utcfromtimestamp(
+            if self.misp_indicators_in_reports:
+                report = stix2.Report(
+                    id=Report.generate_id(
+                        event["Event"]["info"],
+                        datetime.utcfromtimestamp(
+                            int(
+                                datetime.strptime(
+                                    str(event["Event"]["date"]), "%Y-%m-%d"
+                                ).timestamp()
+                            )
+                        ),
+                    ),
+                    name=event["Event"]["info"],
+                    description=event["Event"]["info"],
+                    published=datetime.utcfromtimestamp(
                         int(
                             datetime.strptime(
                                 str(event["Event"]["date"]), "%Y-%m-%d"
                             ).timestamp()
                         )
                     ),
-                ),
-                name=event["Event"]["info"],
-                description=event["Event"]["info"],
-                published=datetime.utcfromtimestamp(
-                    int(
-                        datetime.strptime(
-                            str(event["Event"]["date"]), "%Y-%m-%d"
-                        ).timestamp()
-                    )
-                ),
-                created=datetime.utcfromtimestamp(
-                    int(
-                        datetime.strptime(
-                            str(event["Event"]["date"]), "%Y-%m-%d"
-                        ).timestamp()
-                    )
-                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                modified=datetime.utcfromtimestamp(
-                    int(event["Event"]["timestamp"])
-                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                report_types=[self.misp_feed_report_type],
-                created_by_ref=author["id"],
-                object_marking_refs=event_markings,
-                labels=event_tags,
-                object_refs=object_refs,
-                external_references=event_external_references,
-                confidence=self.helper.connect_confidence_level,
-                custom_properties={
-                    "x_opencti_report_status": 2,
-                    "x_opencti_files": added_files,
-                },
-                allow_custom=True,
-            )
+                    created=datetime.utcfromtimestamp(
+                        int(
+                            datetime.strptime(
+                                str(event["Event"]["date"]), "%Y-%m-%d"
+                            ).timestamp()
+                        )
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    modified=datetime.utcfromtimestamp(
+                        int(event["Event"]["timestamp"])
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    report_types=[self.misp_feed_report_type],
+                    created_by_ref=author["id"],
+                    object_marking_refs=event_markings,
+                    labels=event_tags,
+                    object_refs=object_refs,
+                    external_references=event_external_references,
+                    confidence=self.helper.connect_confidence_level,
+                    custom_properties={
+                        "x_opencti_files": added_files,
+                    },
+                    allow_custom=True,
+                )
+            else:
+                report = stix2.Grouping(
+                    id=Grouping.generate_id(
+                        event["Event"]["info"],
+                        "misp-event",
+                        datetime.utcfromtimestamp(
+                            int(
+                                datetime.strptime(
+                                    str(event["Event"]["date"]), "%Y-%m-%d"
+                                ).timestamp()
+                            )
+                        ),
+                    ),
+                    name=event["Event"]["info"],
+                    description=event["Event"]["info"],
+                    created=datetime.utcfromtimestamp(
+                        int(
+                            datetime.strptime(
+                                str(event["Event"]["date"]), "%Y-%m-%d"
+                            ).timestamp()
+                        )
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    modified=datetime.utcfromtimestamp(
+                        int(event["Event"]["timestamp"])
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    created_by_ref=author["id"],
+                    object_marking_refs=event_markings,
+                    labels=event_tags,
+                    object_refs=object_refs,
+                    external_references=event_external_references,
+                    confidence=self.helper.connect_confidence_level,
+                    custom_properties={
+                        "x_opencti_files": added_files,
+                    },
+                    allow_custom=True,
+                )
             bundle_objects.append(report)
             for note in event["Event"].get("EventReport", []):
                 note = stix2.Note(
