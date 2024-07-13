@@ -1788,19 +1788,19 @@ workflows:
       - build_1:
           filters:
             tags:
-              only: filigran-beta-denorm3
+              only: filigran-beta-denorm4
             branches:
               ignore: /.*/
       - build_2:
           filters:
             tags:
-              only: filigran-beta-denorm3
+              only: filigran-beta-denorm4
             branches:
               ignore: /.*/
       - build_fips_1:
           filters:
             tags:
-              only: filigran-beta-denorm3
+              only: filigran-beta-denorm4
             branches:
               ignore: /.*/
       - build_rolling_1:
@@ -1839,6 +1839,6 @@ workflows:
             - build_fips_1
           filters:
             tags:
-              only: filigran-beta-denorm3
+              only: filigran-beta-denorm4
             branches:
               ignore: /.*/
