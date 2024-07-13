@@ -66,11 +66,6 @@ class Mitre:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
         self.mitre_remove_statement_marking = get_config_variable(
             "MITRE_REMOVE_STATEMENT_MARKING",
             ["mitre", "remove_statement_marking"],
@@ -215,7 +210,6 @@ class Mitre:
             self.helper.send_stix2_bundle(
                 json.dumps(data),
                 entities_types=self.helper.connect_scope,
-                update=self.update_existing_data,
                 work_id=work_id,
             )
             self.helper.metric.inc("record_send", len(data["objects"]))
