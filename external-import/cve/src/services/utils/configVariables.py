@@ -37,12 +37,6 @@ class ConfigCVE:
         """
         Connector configuration variables
         """
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            self.load,
-        )
-
         self.base_url = get_config_variable(
             "CVE_BASE_URL",
             ["cve", "base_url"],

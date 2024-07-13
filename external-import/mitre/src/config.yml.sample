@@ -7,7 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'MITRE Datasets'
   scope: 'tool,report,malware,identity,campaign,intrusion-set,attack-pattern,course-of-action,x-mitre-data-source,x-mitre-data-component,x-mitre-matrix,x-mitre-tactic,x-mitre-collection'
-  update_existing_data: false
   run_and_terminate: false
   log_level: 'info'
   expose_metrics: False

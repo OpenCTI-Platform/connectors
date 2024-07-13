@@ -40,7 +40,6 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Scope                | scope                | `CONNECTOR_SCOPE`                | `malpedia` | Yes       | Must be `malpedia`, not used in this connector.                                        |
 | Connector Log Level            | log_level            | `CONNECTOR_LOG_LEVEL`            | /          | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
 | Connector Expose Metrics       | expose_metrics       | `CONNECTOR_EXPOSE_METRICS`       | `false`    | Yes       | If `True` use metrics.                                                                 |
-| Connector Update Existing Data | update_existing_data | `CONNECTOR_UPDATE_EXISTING_DATA` | `false`    | Yes       | This will allow the connector to overwrite existing entries                            |
 
 Below are the parameters you'll need to set for Malpedia connector:
 
