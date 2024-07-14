@@ -11,7 +11,6 @@ services:
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       - "CONNECTOR_NAME=Microsoft Sentinel"
       - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
-      - CONNECTOR_CONFIDENCE_LEVEL=60 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - TENANT_ID=ChangeMe # Azure Tentant ID
       - WORKSPACE_ID=ChangeMe # Sentinel Workspace ID (only for Azure Sentinel)
