@@ -119,14 +119,11 @@ class SentinelConnector:
 
     def _search_ti_indicator(self, external_id):
         param = f"$filter=externalId eq '{external_id}'"
-        uri = self.resource_url + self.request_url + "?" +param
-        response = requests.get(
-            uri,
-            headers=self.headers
-        )
+        uri = self.resource_url + self.request_url + "?" + param
+        response = requests.get(uri, headers=self.headers)
         if response.status_code == 206:
-            if len(response.json()['value']) == 1:
-                return response.json()['value'][0]['id']
+            if len(response.json()["value"]) == 1:
+                return response.json()["value"][0]["id"]
 
     def _create_indicator(self, data, method):
         internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
@@ -243,7 +240,9 @@ class SentinelConnector:
         else:
             passive_only = "false"
 
-        self.helper.log_info("["+method.upper()+"] Processing data {" + internal_id + "}")
+        self.helper.log_info(
+            "[" + method.upper() + "] Processing data {" + internal_id + "}"
+        )
         # Do any processing needed
         data["_key"] = internal_id
 
@@ -352,23 +351,26 @@ class SentinelConnector:
                 response = requests.post(
                     self.resource_url + self.request_url,
                     json=body,
-                    headers=self.headers
+                    headers=self.headers,
                 )
             elif method == "update":
-                ti_indicator_id = self._search_ti_indicator(body['externalId'])
+                ti_indicator_id = self._search_ti_indicator(body["externalId"])
                 if ti_indicator_id:
                     response = requests.patch(
-                        self.resource_url + self.request_url +"/" +ti_indicator_id,
+                        self.resource_url + self.request_url + "/" + ti_indicator_id,
                         json=body,
-                        headers=self.headers
+                        headers=self.headers,
                     )
                 else:
-                    self.helper.log_error("[UPDATE] ID "+ internal_id+ " failed. "
+                    self.helper.log_error(
+                        "[UPDATE] ID "
+                        + internal_id
+                        + " failed. "
                         + "Unable to find an existing tiIndicator "
-                        + "with external_id:" +body['externalId']
+                        + "with external_id:"
+                        + body["externalId"]
                     )
                     return
-
 
             # Log if the creation was successful or not
             if response is not None:
