@@ -759,9 +759,17 @@ class Flashpoint:
                                                             title,
                                                             parse(item["date"]),
                                                         ),
-                                                        name=title,
+                                                        name=title.replace(
+                                                            "<x-fp-highlight>", ""
+                                                        ).replace(
+                                                            "</x-fp-highlight>", ""
+                                                        ),
                                                         incident_type="alert",
-                                                        description=description,
+                                                        description=description.replace(
+                                                            "<x-fp-highlight>", ""
+                                                        ).replace(
+                                                            "</x-fp-highlight>", ""
+                                                        ),
                                                         created_by_ref=self.identity[
                                                             "standard_id"
                                                         ],
@@ -791,8 +799,20 @@ class Flashpoint:
                                                             item["container_name"]
                                                             if "container_name" in item
                                                             else item["site_title"]
+                                                        )
+                                                        .replace("<x-fp-highlight>", "")
+                                                        .replace(
+                                                            "</x-fp-highlight>", ""
                                                         ),
-                                                        channel_types=[item["site"]],
+                                                        channel_types=[
+                                                            item["site"]
+                                                            .replace(
+                                                                "<x-fp-highlight>", ""
+                                                            )
+                                                            .replace(
+                                                                "</x-fp-highlight>", ""
+                                                            )
+                                                        ],
                                                         external_references=[
                                                             channel_external_reference
                                                         ],
@@ -815,8 +835,16 @@ class Flashpoint:
                                                         allow_custom=True,
                                                     )
                                                     media_content = CustomObservableMediaContent(
-                                                        title=title,
-                                                        content=message,
+                                                        title=title.replace(
+                                                            "<x-fp-highlight>", ""
+                                                        ).replace(
+                                                            "</x-fp-highlight>", ""
+                                                        ),
+                                                        content=message.replace(
+                                                            "<x-fp-highlight>", ""
+                                                        ).replace(
+                                                            "</x-fp-highlight>", ""
+                                                        ),
                                                         url="https://app.flashpoint.io/search/context/"
                                                         + source
                                                         + "/"
