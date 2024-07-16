@@ -776,6 +776,9 @@ class Flashpoint:
                                                         ).replace(
                                                             "</x-fp-highlight>", ""
                                                         ),
+                                                        labels=[
+                                                            "rule:" + str(query["name"])
+                                                        ],
                                                         incident_type="alert",
                                                         description=description.replace(
                                                             "<x-fp-highlight>", ""
