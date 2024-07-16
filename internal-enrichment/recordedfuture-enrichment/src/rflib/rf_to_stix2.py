@@ -112,10 +112,10 @@ class Indicator(RFStixEntity):
             id=pycti.Indicator.generate_id(self._create_pattern()),
             name=self.name,
             pattern_type="stix",
-            confidence=self.risk_score,
             valid_from=datetime.now(),
             pattern=self._create_pattern(),
             created_by_ref=self.author.id,
+            custom_properties={"x_opencti_score": self.risk_score or None},
         )
 
     def _create_pattern(self):
@@ -170,9 +170,13 @@ class IPAddress(Indicator):
 
     def _create_obs(self):
         if self.ipaddress_type.startswith("IPv4"):
-            return stix2.IPv4Address(value=self.name)
+            return stix2.IPv4Address(
+                value=self.name,
+            )
         elif self.ipaddress_type.startswith("IPv6"):
-            return stix2.IPv6Address(value=self.name)
+            return stix2.IPv6Address(
+                value=self.name,
+            )
         else:
             return None
 
@@ -184,7 +188,9 @@ class Domain(Indicator):
         return f"[domain-name:value = '{self.name}']"
 
     def _create_obs(self):
-        return stix2.DomainName(value=self.name)
+        return stix2.DomainName(
+            value=self.name,
+        )
 
 
 class URL(Indicator):
@@ -196,7 +202,9 @@ class URL(Indicator):
         return f"[url:value = '{ioc}']"
 
     def _create_obs(self):
-        return stix2.URL(value=self.name)
+        return stix2.URL(
+            value=self.name,
+        )
 
 
 class FileHash(Indicator):
@@ -225,7 +233,9 @@ class FileHash(Indicator):
         return f"[file:hashes.'{self.algorithm}' = '{self.name}']"
 
     def _create_obs(self):
-        return stix2.File(hashes={self.algorithm: self.name})
+        return stix2.File(
+            hashes={self.algorithm: self.name},
+        )
 
 
 # # TODO: Delete? This code looks unused?
