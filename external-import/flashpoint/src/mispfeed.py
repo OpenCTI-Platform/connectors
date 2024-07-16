@@ -1546,7 +1546,7 @@ class MispFeed(threading.Thread):
         if "Tag" in event["Event"]:
             event_markings = self._resolve_markings(event["Event"]["Tag"])
         else:
-            event_markings = [stix2.TLP_WHITE]
+            event_markings = [stix2.TLP_GREEN]
 
         # Elements
         event_elements = self._prepare_elements(
