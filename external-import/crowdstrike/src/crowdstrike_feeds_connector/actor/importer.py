@@ -27,13 +27,12 @@ class ActorImporter(BaseImporter):
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        update_existing_data: bool,
         author: Identity,
         default_latest_timestamp: int,
         tlp_marking: MarkingDefinition,
     ) -> None:
         """Initialize CrowdStrike actor importer."""
-        super().__init__(helper, author, tlp_marking, update_existing_data)
+        super().__init__(helper, author, tlp_marking)
         self.actors_api_cs = ActorsAPI(helper)
         self.default_latest_timestamp = default_latest_timestamp
 
