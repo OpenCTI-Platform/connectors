@@ -649,303 +649,340 @@ class Flashpoint:
                     )
                     try:
                         for query in data["items"]:
-                            self.helper.log_info(
-                                "Get all alerts for query=" + str(query["name"])
-                            )
-                            for source in query["sources"]:
-                                if source == "communities":
-                                    url_source = (
-                                        self.flashpoint_api_url
-                                        + "/sources/v2/communities"
-                                    )
-                                elif source == "media":
-                                    url_source = (
-                                        self.flashpoint_api_url + "/sources/v2/media"
-                                    )
-                                else:
-                                    url_source = (
-                                        self.flashpoint_api_url + "/sources/v2/markets"
-                                    )
-                                headers = {
-                                    "Content-Type": "application/json",
-                                    "Accept": "application/json",
-                                    "Authorization": "Bearer "
-                                    + self.flashpoint_api_key,
-                                }
-                                include = (
-                                    query["params"]["include"]
-                                    if "include" in query["params"]
-                                    else ""
+                            # Get only when the query is subscribed as an alert
+                            if (
+                                "subscriptions" in query
+                                and len(query["subscriptions"]) > 0
+                            ):
+                                self.helper.log_info(
+                                    "Get all alerts for query=" + str(query["name"])
                                 )
-                                exclude = (
-                                    query["params"]["exclude"]
-                                    if "exclude" in query["params"]
-                                    else ""
-                                )
-                                include["date"] = {
-                                    "start": start_date.replace("+00:00", "Z"),
-                                    "end": "",
-                                }
-                                body_params_source = {
-                                    "query": query["value"],
-                                    "include": include,
-                                    "exclude": exclude,
-                                    "size": "1000",
-                                    "sort": {"date": "asc"},
-                                    "page": 0,
-                                }
-                                response_source = requests.post(
-                                    url_source, headers=headers, json=body_params_source
-                                )
-                                data_source = json.loads(response_source.content)
-                                try:
-                                    if "items" in data_source:
-                                        page = 0
-                                        while (
-                                            "items" in data_source
-                                            and len(data_source["items"]) > 0
-                                        ):
-                                            self.helper.log_info(
-                                                "Iterating over "
-                                                + source
-                                                + " with page="
-                                                + str(page)
-                                            )
-                                            try:
-                                                for item in data_source["items"]:
-                                                    title = ""
-                                                    if "title" in item:
-                                                        title = item["title"]
-                                                    elif "message" in item:
-                                                        title = (
-                                                            (
-                                                                item["message"][:50]
-                                                                + ".."
+                                for source in query["sources"]:
+                                    if source == "communities":
+                                        url_source = (
+                                            self.flashpoint_api_url
+                                            + "/sources/v2/communities"
+                                        )
+                                    elif source == "media":
+                                        url_source = (
+                                            self.flashpoint_api_url
+                                            + "/sources/v2/media"
+                                        )
+                                    else:
+                                        url_source = (
+                                            self.flashpoint_api_url
+                                            + "/sources/v2/markets"
+                                        )
+                                    headers = {
+                                        "Content-Type": "application/json",
+                                        "Accept": "application/json",
+                                        "Authorization": "Bearer "
+                                        + self.flashpoint_api_key,
+                                    }
+                                    include = (
+                                        query["params"]["include"]
+                                        if "include" in query["params"]
+                                        else ""
+                                    )
+                                    exclude = (
+                                        query["params"]["exclude"]
+                                        if "exclude" in query["params"]
+                                        else ""
+                                    )
+                                    include["date"] = {
+                                        "start": start_date.replace("+00:00", "Z"),
+                                        "end": "",
+                                    }
+                                    body_params_source = {
+                                        "query": query["value"],
+                                        "include": include,
+                                        "exclude": exclude,
+                                        "size": "1000",
+                                        "sort": {"date": "asc"},
+                                        "page": 0,
+                                    }
+                                    response_source = requests.post(
+                                        url_source,
+                                        headers=headers,
+                                        json=body_params_source,
+                                    )
+                                    data_source = json.loads(response_source.content)
+                                    try:
+                                        if "items" in data_source:
+                                            page = 0
+                                            while (
+                                                "items" in data_source
+                                                and len(data_source["items"]) > 0
+                                            ):
+                                                self.helper.log_info(
+                                                    "Iterating over "
+                                                    + source
+                                                    + " with page="
+                                                    + str(page)
+                                                )
+                                                try:
+                                                    for item in data_source["items"]:
+                                                        title = ""
+                                                        if "title" in item:
+                                                            title = item["title"]
+                                                        elif "message" in item:
+                                                            title = (
+                                                                (
+                                                                    item["message"][:50]
+                                                                    + ".."
+                                                                )
+                                                                if len(item["message"])
+                                                                > 50
+                                                                else item["message"]
                                                             )
-                                                            if len(item["message"]) > 50
-                                                            else item["message"]
-                                                        )
-                                                    description = ""
-                                                    if "description" in item:
-                                                        description = item[
-                                                            "description"
-                                                        ]
-                                                    elif "item_description" in item:
-                                                        description = item[
-                                                            "item_description"
-                                                        ]
-                                                    message = ""
-                                                    if "message" in item:
-                                                        message = item["message"]
-                                                    elif "media" in item:
-                                                        for media in item["media"]:
-                                                            message = (
-                                                                media["type"]
-                                                                + " "
-                                                                + media["mime_type"]
+                                                        description = ""
+                                                        if "description" in item:
+                                                            description = item[
+                                                                "description"
+                                                            ]
+                                                        elif "item_description" in item:
+                                                            description = item[
+                                                                "item_description"
+                                                            ]
+                                                        message = ""
+                                                        if "message" in item:
+                                                            message = item["message"]
+                                                        elif "media" in item:
+                                                            for media in item["media"]:
+                                                                message = (
+                                                                    media["type"]
+                                                                    + " "
+                                                                    + media["mime_type"]
+                                                                )
+                                                        start_time = (
+                                                            parse(
+                                                                item[
+                                                                    "first_observed_at"
+                                                                ]
                                                             )
-                                                    start_time = (
-                                                        parse(item["first_observed_at"])
-                                                        if "first_observed_at" in item
-                                                        else None
-                                                    )
-                                                    stop_time = (
-                                                        parse(item["last_observed_at"])
-                                                        if "last_observed_at" in item
-                                                        and parse(
-                                                            item["last_observed_at"]
+                                                            if "first_observed_at"
+                                                            in item
+                                                            else None
                                                         )
-                                                        > start_time
-                                                        else None
-                                                    )
-                                                    # Incident
-                                                    incident_external_reference = stix2.ExternalReference(
-                                                        source_name="Flashpoint",
-                                                        url="https://app.flashpoint.io/search/context/"
-                                                        + source
-                                                        + "/"
-                                                        + item["id"],
-                                                    )
-                                                    incident = stix2.Incident(
-                                                        id=Incident.generate_id(
-                                                            title,
-                                                            parse(item["date"]),
-                                                        ),
-                                                        name=title.replace(
-                                                            "<x-fp-highlight>", ""
-                                                        ).replace(
-                                                            "</x-fp-highlight>", ""
-                                                        ),
-                                                        labels=[
-                                                            "rule:" + str(query["name"])
-                                                        ],
-                                                        incident_type="alert",
-                                                        description=description.replace(
-                                                            "<x-fp-highlight>", ""
-                                                        ).replace(
-                                                            "</x-fp-highlight>", ""
-                                                        ),
-                                                        created_by_ref=self.identity[
-                                                            "standard_id"
-                                                        ],
-                                                        external_references=[
-                                                            incident_external_reference
-                                                        ],
-                                                        created=parse(item["date"]),
-                                                        modified=parse(item["date"]),
-                                                        first_seen=start_time,
-                                                        last_seen=stop_time,
-                                                        source="Flashpoint - " + source,
-                                                        severity="low",
-                                                        allow_custom=True,
-                                                        object_marking_refs=[
-                                                            stix2.TLP_AMBER.get("id")
-                                                        ],
-                                                    )
-                                                    # Channel
-                                                    channel_external_reference = (
-                                                        stix2.ExternalReference(
-                                                            source_name="URL",
-                                                            url=item["site_source_uri"],
+                                                        stop_time = (
+                                                            parse(
+                                                                item["last_observed_at"]
+                                                            )
+                                                            if "last_observed_at"
+                                                            in item
+                                                            and parse(
+                                                                item["last_observed_at"]
+                                                            )
+                                                            > start_time
+                                                            else None
                                                         )
-                                                    )
-                                                    channel = CustomObjectChannel(
-                                                        name=(
-                                                            item["container_name"]
-                                                            if "container_name" in item
-                                                            else item["site_title"]
+                                                        # Incident
+                                                        incident_external_reference = stix2.ExternalReference(
+                                                            source_name="Flashpoint",
+                                                            url="https://app.flashpoint.io/search/context/"
+                                                            + source
+                                                            + "/"
+                                                            + item["id"],
                                                         )
-                                                        .replace("<x-fp-highlight>", "")
-                                                        .replace(
-                                                            "</x-fp-highlight>", ""
-                                                        ),
-                                                        channel_types=[
-                                                            item["site"]
+                                                        incident = stix2.Incident(
+                                                            id=Incident.generate_id(
+                                                                title,
+                                                                parse(item["date"]),
+                                                            ),
+                                                            name=title.replace(
+                                                                "<x-fp-highlight>", ""
+                                                            ).replace(
+                                                                "</x-fp-highlight>", ""
+                                                            ),
+                                                            labels=[
+                                                                "rule:"
+                                                                + str(query["name"])
+                                                            ],
+                                                            incident_type="alert",
+                                                            description=description.replace(
+                                                                "<x-fp-highlight>", ""
+                                                            ).replace(
+                                                                "</x-fp-highlight>", ""
+                                                            ),
+                                                            created_by_ref=self.identity[
+                                                                "standard_id"
+                                                            ],
+                                                            external_references=[
+                                                                incident_external_reference
+                                                            ],
+                                                            created=parse(item["date"]),
+                                                            modified=parse(
+                                                                item["date"]
+                                                            ),
+                                                            first_seen=start_time,
+                                                            last_seen=stop_time,
+                                                            source="Flashpoint - "
+                                                            + source,
+                                                            severity="low",
+                                                            allow_custom=True,
+                                                            object_marking_refs=[
+                                                                stix2.TLP_AMBER.get(
+                                                                    "id"
+                                                                )
+                                                            ],
+                                                        )
+                                                        # Channel
+                                                        channel_external_reference = (
+                                                            stix2.ExternalReference(
+                                                                source_name="URL",
+                                                                url=item[
+                                                                    "site_source_uri"
+                                                                ],
+                                                            )
+                                                        )
+                                                        channel = CustomObjectChannel(
+                                                            name=(
+                                                                item["container_name"]
+                                                                if "container_name"
+                                                                in item
+                                                                else item["site_title"]
+                                                            )
                                                             .replace(
                                                                 "<x-fp-highlight>", ""
                                                             )
                                                             .replace(
                                                                 "</x-fp-highlight>", ""
-                                                            )
-                                                        ],
-                                                        external_references=[
-                                                            channel_external_reference
-                                                        ],
-                                                    )
-                                                    relationship_uses = stix2.Relationship(
-                                                        id=StixCoreRelationship.generate_id(
-                                                            "uses",
-                                                            incident.id,
-                                                            channel.id,
-                                                        ),
-                                                        relationship_type="uses",
-                                                        created_by_ref=self.identity[
-                                                            "standard_id"
-                                                        ],
-                                                        source_ref=incident.id,
-                                                        target_ref=channel.id,
-                                                        object_marking_refs=[
-                                                            stix2.TLP_AMBER.get("id")
-                                                        ],
-                                                        allow_custom=True,
-                                                    )
-                                                    media_content = CustomObservableMediaContent(
-                                                        title=title.replace(
-                                                            "<x-fp-highlight>", ""
-                                                        ).replace(
-                                                            "</x-fp-highlight>", ""
-                                                        ),
-                                                        content=message.replace(
-                                                            "<x-fp-highlight>", ""
-                                                        ).replace(
-                                                            "</x-fp-highlight>", ""
-                                                        ),
-                                                        url="https://app.flashpoint.io/search/context/"
-                                                        + source
-                                                        + "/"
-                                                        + item["id"],
-                                                        publication_date=item["date"],
-                                                    )
-                                                    # author = CustomObservablePersona(
-                                                    #    title=community["title"],
-                                                    #    content=community["message"],
-                                                    #    url="https://app.flashpoint.io/search/context/communities/" + community["id"],
-                                                    #    publication_date=community["date"]
-                                                    # )
-                                                    relationship_publishes = stix2.Relationship(
-                                                        id=StixCoreRelationship.generate_id(
-                                                            "publishes",
-                                                            channel.id,
-                                                            media_content.id,
-                                                        ),
-                                                        relationship_type="publishes",
-                                                        created_by_ref=self.identity[
-                                                            "standard_id"
-                                                        ],
-                                                        source_ref=channel.id,
-                                                        target_ref=media_content.id,
-                                                        start_time=start_time,
-                                                        stop_time=stop_time,
-                                                        object_marking_refs=[
-                                                            stix2.TLP_GREEN.get("id")
-                                                        ],
-                                                        allow_custom=True,
-                                                    )
-                                                    relationship_related_to = stix2.Relationship(
-                                                        id=StixCoreRelationship.generate_id(
-                                                            "related-to",
-                                                            media_content.id,
-                                                            incident.id,
-                                                        ),
-                                                        relationship_type="related-to",
-                                                        created_by_ref=self.identity[
-                                                            "standard_id"
-                                                        ],
-                                                        source_ref=media_content.id,
-                                                        target_ref=incident.id,
-                                                        object_marking_refs=[
-                                                            stix2.TLP_AMBER.get("id")
-                                                        ],
-                                                        allow_custom=True,
-                                                    )
-                                                    objects = [
-                                                        incident,
-                                                        relationship_uses,
-                                                        channel,
-                                                        media_content,
-                                                        relationship_publishes,
-                                                        relationship_related_to,
-                                                    ]
-                                                    bundle = (
-                                                        self.helper.stix2_create_bundle(
+                                                            ),
+                                                            channel_types=[
+                                                                item["site"]
+                                                                .replace(
+                                                                    "<x-fp-highlight>",
+                                                                    "",
+                                                                )
+                                                                .replace(
+                                                                    "</x-fp-highlight>",
+                                                                    "",
+                                                                )
+                                                            ],
+                                                            external_references=[
+                                                                channel_external_reference
+                                                            ],
+                                                        )
+                                                        relationship_uses = stix2.Relationship(
+                                                            id=StixCoreRelationship.generate_id(
+                                                                "uses",
+                                                                incident.id,
+                                                                channel.id,
+                                                            ),
+                                                            relationship_type="uses",
+                                                            created_by_ref=self.identity[
+                                                                "standard_id"
+                                                            ],
+                                                            source_ref=incident.id,
+                                                            target_ref=channel.id,
+                                                            object_marking_refs=[
+                                                                stix2.TLP_AMBER.get(
+                                                                    "id"
+                                                                )
+                                                            ],
+                                                            allow_custom=True,
+                                                        )
+                                                        media_content = CustomObservableMediaContent(
+                                                            title=title.replace(
+                                                                "<x-fp-highlight>", ""
+                                                            ).replace(
+                                                                "</x-fp-highlight>", ""
+                                                            ),
+                                                            content=message.replace(
+                                                                "<x-fp-highlight>", ""
+                                                            ).replace(
+                                                                "</x-fp-highlight>", ""
+                                                            ),
+                                                            url="https://app.flashpoint.io/search/context/"
+                                                            + source
+                                                            + "/"
+                                                            + item["id"],
+                                                            publication_date=item[
+                                                                "date"
+                                                            ],
+                                                        )
+                                                        # author = CustomObservablePersona(
+                                                        #    title=community["title"],
+                                                        #    content=community["message"],
+                                                        #    url="https://app.flashpoint.io/search/context/communities/" + community["id"],
+                                                        #    publication_date=community["date"]
+                                                        # )
+                                                        relationship_publishes = stix2.Relationship(
+                                                            id=StixCoreRelationship.generate_id(
+                                                                "publishes",
+                                                                channel.id,
+                                                                media_content.id,
+                                                            ),
+                                                            relationship_type="publishes",
+                                                            created_by_ref=self.identity[
+                                                                "standard_id"
+                                                            ],
+                                                            source_ref=channel.id,
+                                                            target_ref=media_content.id,
+                                                            start_time=start_time,
+                                                            stop_time=stop_time,
+                                                            object_marking_refs=[
+                                                                stix2.TLP_GREEN.get(
+                                                                    "id"
+                                                                )
+                                                            ],
+                                                            allow_custom=True,
+                                                        )
+                                                        relationship_related_to = stix2.Relationship(
+                                                            id=StixCoreRelationship.generate_id(
+                                                                "related-to",
+                                                                media_content.id,
+                                                                incident.id,
+                                                            ),
+                                                            relationship_type="related-to",
+                                                            created_by_ref=self.identity[
+                                                                "standard_id"
+                                                            ],
+                                                            source_ref=media_content.id,
+                                                            target_ref=incident.id,
+                                                            object_marking_refs=[
+                                                                stix2.TLP_AMBER.get(
+                                                                    "id"
+                                                                )
+                                                            ],
+                                                            allow_custom=True,
+                                                        )
+                                                        objects = [
+                                                            incident,
+                                                            relationship_uses,
+                                                            channel,
+                                                            media_content,
+                                                            relationship_publishes,
+                                                            relationship_related_to,
+                                                        ]
+                                                        bundle = self.helper.stix2_create_bundle(
                                                             objects
                                                         )
-                                                    )
-                                                    self.helper.send_stix2_bundle(
-                                                        bundle,
-                                                        work_id=work_id,
-                                                    )
-                                            except Exception as e:
-                                                self.helper.log_error(str(e))
-                                            page = page + 1
-                                            body_params_source = {
-                                                "query": query["value"],
-                                                "include": include,
-                                                "exclude": exclude,
-                                                "size": "1000",
-                                                "sort": {"date": "asc"},
-                                                "page": page,
-                                            }
-                                            response_source = requests.post(
-                                                url_source,
-                                                headers=headers,
-                                                json=body_params_source,
-                                            )
-                                            data_source = json.loads(
-                                                response_source.content
-                                            )
-                                except Exception as e:
-                                    self.helper.log_error(str(e))
+                                                        self.helper.send_stix2_bundle(
+                                                            bundle,
+                                                            work_id=work_id,
+                                                        )
+                                                except Exception as e:
+                                                    self.helper.log_error(str(e))
+                                                page = page + 1
+                                                body_params_source = {
+                                                    "query": query["value"],
+                                                    "include": include,
+                                                    "exclude": exclude,
+                                                    "size": "1000",
+                                                    "sort": {"date": "asc"},
+                                                    "page": page,
+                                                }
+                                                response_source = requests.post(
+                                                    url_source,
+                                                    headers=headers,
+                                                    json=body_params_source,
+                                                )
+                                                data_source = json.loads(
+                                                    response_source.content
+                                                )
+                                    except Exception as e:
+                                        self.helper.log_error(str(e))
                     except Exception as e:
                         self.helper.log_error(str(e))
                     from_iterator = from_iterator + 100
