@@ -660,8 +660,16 @@ class Flashpoint:
                                     "Authorization": "Bearer "
                                     + self.flashpoint_api_key,
                                 }
-                                include = query["params"]["include"]
-                                exclude = query["params"]["exclude"]
+                                include = (
+                                    query["params"]["include"]
+                                    if "include" in query["params"]
+                                    else ""
+                                )
+                                exclude = (
+                                    query["params"]["exclude"]
+                                    if "exclude" in query["params"]
+                                    else ""
+                                )
                                 include["date"] = {
                                     "start": start_date.replace("+00:00", "Z"),
                                     "end": "",
@@ -875,7 +883,6 @@ class Flashpoint:
                                                         work_id=work_id,
                                                     )
                                             except Exception as e:
-                                                print(item)
                                                 self.helper.log_error(str(e))
                                             page = page + 1
                                             body_params_source = {
