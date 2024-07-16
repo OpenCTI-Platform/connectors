@@ -35,7 +35,7 @@ connector:
   log_level: 'info'
 
 cape_sandbox:
-  api_url: 'ChangeMe' # https://Base_URL/apiv2
+  url: 'ChangeMe' # https://Base_URL/apiv2
   token: 'ChangeMe' # Change if using auth
   route: 'tor' # Network routing, other examples include: none, internet, vpn0
   timeout: 300 # Maximum amount of seconds to run the analysis for
