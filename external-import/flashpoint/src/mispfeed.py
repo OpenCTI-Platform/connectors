@@ -1900,6 +1900,7 @@ class MispFeed(threading.Thread):
                     ),
                     name=event["Event"]["info"],
                     description=event["Event"]["info"],
+                    context="misp-event-flashpoint",
                     created=datetime.utcfromtimestamp(
                         int(
                             datetime.strptime(
