@@ -15,6 +15,7 @@ from dateutil.parser import parse
 from mispfeed import MispFeed
 from pycti import (
     AttackPattern,
+    Channel,
     CustomObjectChannel,
     CustomObservableMediaContent,
     Identity,
@@ -557,11 +558,22 @@ class Flashpoint:
                                     source_name="URL", url=item["site_source_uri"]
                                 )
                                 channel = CustomObjectChannel(
+                                    id=Channel.generate_id(
+                                        (
+                                            item["container_name"]
+                                            if "container_name" in item
+                                            else item["site_title"]
+                                        )
+                                        .replace("<x-fp-highlight>", "")
+                                        .replace("</x-fp-highlight>", "")
+                                    ),
                                     name=(
                                         item["container_name"]
                                         if "container_name" in item
                                         else item["site_title"]
-                                    ),
+                                    )
+                                    .replace("<x-fp-highlight>", "")
+                                    .replace("</x-fp-highlight>", ""),
                                     channel_types=[item["site"]],
                                     external_references=[channel_external_reference],
                                 )
