@@ -137,8 +137,6 @@ class CrowdStrike:
                 indicator_unwanted_labels_str
             )
 
-        update_existing_data = bool(self.config.update_existing_data)
-
         author = self._create_author()
 
         # Create OpenCTI connector helper.
@@ -153,7 +151,6 @@ class CrowdStrike:
         if self._CONFIG_SCOPE_ACTOR in scopes:
             actor_importer = ActorImporter(
                 self.helper,
-                update_existing_data,
                 author,
                 actor_start_timestamp,
                 tlp_marking,
@@ -164,7 +161,6 @@ class CrowdStrike:
         if self._CONFIG_SCOPE_REPORT in scopes:
             report_importer = ReportImporter(
                 self.helper,
-                update_existing_data,
                 author,
                 report_start_timestamp,
                 tlp_marking,
@@ -179,7 +175,6 @@ class CrowdStrike:
         if self._CONFIG_SCOPE_INDICATOR in scopes:
             indicator_importer_config = IndicatorImporterConfig(
                 helper=self.helper,
-                update_existing_data=update_existing_data,
                 author=author,
                 default_latest_timestamp=indicator_start_timestamp,
                 tlp_marking=tlp_marking,
@@ -201,7 +196,6 @@ class CrowdStrike:
                 self.helper,
                 author,
                 tlp_marking,
-                update_existing_data,
                 report_status,
                 report_type,
             )
@@ -213,7 +207,6 @@ class CrowdStrike:
                 self.helper,
                 author,
                 tlp_marking,
-                update_existing_data,
                 report_status,
                 report_type,
             )
@@ -286,7 +279,7 @@ class CrowdStrike:
     def _current_unix_timestamp() -> int:
         return int(time.time())
 
-    def run(self):
+    def process_message(self):
         """Run CrowdStrike connector."""
         self._info("Starting CrowdStrike connector...")
 
@@ -294,68 +287,54 @@ class CrowdStrike:
             self._error("Scope(s) not configured.")
             return
 
-        while True:
-            self._info("Running CrowdStrike connector...")
-            run_interval = self._CONNECTOR_RUN_INTERVAL_SEC
+        self._info("Running CrowdStrike connector...")
 
-            try:
-                timestamp = self._current_unix_timestamp()
-                current_state = self._load_state()
+        try:
+            timestamp = self._current_unix_timestamp()
+            current_state = self._load_state()
 
-                self.helper.log_info(f"Loaded state: {current_state}")
+            self.helper.log_info(f"Loaded state: {current_state}")
 
-                last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
-                if self._is_scheduled(last_run, timestamp):
-                    work_id = self._initiate_work(timestamp)
+            last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
+            if self._is_scheduled(last_run, timestamp):
+                work_id = self._initiate_work(timestamp)
 
-                    new_state = current_state.copy()
+                new_state = current_state.copy()
 
-                    for importer in self.importers:
-                        importer_state = importer.start(work_id, new_state)
-                        new_state.update(importer_state)
+                for importer in self.importers:
+                    importer_state = importer.start(work_id, new_state)
+                    new_state.update(importer_state)
 
-                        self._info("Storing updated new state: {0}", new_state)
-                        self.helper.set_state(new_state)
-
-                    new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
-
-                    self._info("Storing new state: {0}", new_state)
+                    self._info("Storing updated new state: {0}", new_state)
                     self.helper.set_state(new_state)
 
-                    message = (
-                        f"State stored, next run in: {self._get_interval()} seconds"
-                    )
+                new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
 
-                    self._info(message)
+                self._info("Storing new state: {0}", new_state)
+                self.helper.set_state(new_state)
 
-                    self._complete_work(work_id, message)
-                else:
-                    next_run = self._get_interval() - (timestamp - last_run)
-                    run_interval = min(run_interval, next_run)
+                message = f"State stored, next run in: {self._get_interval()} seconds"
 
-                    self._info(
-                        "Connector will not run, next run in: {0} seconds", next_run
-                    )
+                self._info(message)
 
-                if self.helper.connect_run_and_terminate:
-                    self.helper.log_info("Connector stop")
-                    self.helper.force_ping()
-                    sys.exit(0)
+                self._complete_work(work_id, message)
+            else:
+                next_run = self._get_interval() - (timestamp - last_run)
 
-                self._sleep(delay_sec=run_interval)
+                self._info("Connector will not run, next run in: {0} seconds", next_run)
 
-            except (KeyboardInterrupt, SystemExit):
-                self._info("CrowdStrike connector stopping...")
-                sys.exit(0)
+        except (KeyboardInterrupt, SystemExit):
+            self._info("CrowdStrike connector stopping...")
+            sys.exit(0)
 
-            except Exception as e:  # noqa: B902
-                self._error("CrowdStrike connector internal error: {0}", str(e))
+        except Exception as e:  # noqa: B902
+            self._error("CrowdStrike connector internal error: {0}", str(e))
 
-                if self.helper.connect_run_and_terminate:
-                    self.helper.log_info("Connector stop")
-                    sys.exit(0)
-
-                self._sleep()
+    def run(self):
+        self.helper.schedule_iso(
+            message_callback=self.process_message,
+            duration_period=self.config.duration_period,
+        )
 
     def _initiate_work(self, timestamp: int) -> str:
         datetime_str = timestamp_to_datetime(timestamp)
