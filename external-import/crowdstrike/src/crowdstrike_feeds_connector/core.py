@@ -303,8 +303,8 @@ class CrowdStrike:
             self.helper.set_state(new_state)
 
             message = (
-                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                    + str(timestamp)
+                f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                + str(timestamp)
             )
 
             self.helper.api.work.to_processed(work_id, message)
