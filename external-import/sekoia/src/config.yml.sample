@@ -7,8 +7,9 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'SEKOIA.IO'
   scope: 'identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,location,vulnerability,indicator,campaign,infrastructure,relationship'
-  confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
+  duration_period: 'PT60S' # ISO8601 Format starting with "P" for Period ex: "PT5M" // Period time of 5 minutes
+  queue_threshold: 100 # Default 500Mo
 
 sekoia:
   base_url: 'https://api.sekoia.io'

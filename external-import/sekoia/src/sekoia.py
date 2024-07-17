@@ -37,6 +37,8 @@ class Sekoia(object):
 
         self._cache = {}
         # Extra config
+        self.duration_period = self.get_config("duration_period", config, "PT60S")
+
         self.base_url = self.get_config("base_url", config, "https://api.sekoia.io")
         self.start_date: str = self.get_config("start_date", config, None)
         self.collection = self.get_config(
@@ -69,42 +71,40 @@ class Sekoia(object):
     def requested_types(self) -> str:
         return self.helper.connect_scope
 
-    def run(self):
+    def process_message(self):
         self.helper.log_info("Starting SEKOIA.IO connector")
         state = self.helper.get_state() or {}
         cursor = state.get("last_cursor", self.generate_first_cursor())
         self.helper.log_info(f"Starting with {cursor}")
-        while True:
-            friendly_name = "SEKOIA run @ " + datetime.utcnow().strftime(
-                "%Y-%m-%d %H:%M:%S"
+
+        friendly_name = "SEKOIA run @ " + datetime.utcnow().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        try:
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
             )
-            try:
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
-                cursor = self._run(cursor, work_id)
-                message = f"Connector successfully run, cursor updated to {cursor}"
-                self.helper.log_info(message)
-                self.helper.api.work.to_processed(work_id, message)
-            except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("Connector stop")
-                self.helper.api.work.to_processed(work_id, "Connector is stopping")
-                sys.exit(0)
-            except Exception as ex:
-                # In case of error try to get the last updated cursor
-                # since `_run` updates it after every successful request
-                state = self.helper.get_state() or {}
-                cursor = state.get("last_cursor", cursor)
-                self.helper.log_error(str(ex))
-                message = f"Connector encountered an error, cursor updated to {cursor}"
-                self.helper.api.work.to_processed(work_id, message)
+            cursor = self._run(cursor, work_id)
+            message = f"Connector successfully run, cursor updated to {cursor}"
+            self.helper.log_info(message)
+            self.helper.api.work.to_processed(work_id, message)
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.log_info("Connector stop")
+            self.helper.api.work.to_processed(work_id, "Connector is stopping")
+            sys.exit(0)
+        except Exception as ex:
+            # In case of error try to get the last updated cursor
+            # since `_run` updates it after every successful request
+            state = self.helper.get_state() or {}
+            cursor = state.get("last_cursor", cursor)
+            self.helper.log_error(str(ex))
+            message = f"Connector encountered an error, cursor updated to {cursor}"
+            self.helper.api.work.to_processed(work_id, message)
 
-            if self.helper.connect_run_and_terminate:
-                self.helper.log_info("Connector stop")
-                self.helper.force_ping()
-                sys.exit(0)
-
-            time.sleep(60)
+    def run(self):
+        self.helper.schedule_iso(
+            message_callback=self.process_message, duration_period=self.duration_period
+        )
 
     @staticmethod
     def get_config(name: str, config, default: Any = None):
