@@ -31,11 +31,6 @@ class Mandiant:
         )
         self.helper = OpenCTIConnectorHelper(config)
 
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
         self.mandiant_api_v4_key_id = get_config_variable(
             "MANDIANT_API_V4_KEY_ID", ["mandiant", "api_v4_key_id"], config
         )
@@ -775,7 +770,6 @@ class Mandiant:
                 bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
                 self.helper.send_stix2_bundle(
                     bundle,
-                    update=self.update_existing_data,
                     work_id=work_id,
                 )
                 if collection in collection_with_offset:
