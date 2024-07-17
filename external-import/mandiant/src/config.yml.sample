@@ -8,6 +8,8 @@ connector:
   name: 'Mandiant Cyber Threat Intelligence'
   scope: 'mandiant'
   log_level: 'info'
+  duration_period: ChangeMe # ISO8601 Format starting with "P" for Period ex: "PT5M" // Period time of 5 minutes
+  queue_threshold: 500 # Default 500Mo
 
 mandiant:
   api_v4_key_id: 'ChangeMe'
