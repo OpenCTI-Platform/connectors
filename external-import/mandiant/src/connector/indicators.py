@@ -49,8 +49,7 @@ def create_indicator(connector, indicator):
     indicator_value = indicator["value"].replace("'", "%27")
     indicator_type = indicator["type"]
 
-    confidence = connector.helper.connect_confidence_level
-    confidence = indicator.get("mscore", confidence)
+    confidence = indicator.get("mscore", None)
 
     mapping = MAPPING.get(indicator_type, None)
 
