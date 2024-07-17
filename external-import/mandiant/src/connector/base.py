@@ -610,7 +610,7 @@ class Mandiant:
                     )
                 )
                 self.helper.connector_logger.info(
-                    f"Ignore the '{collection}' collection because the collection interval in the config is '{collection_interval}', the remaining time for the next run : {remaining_time} min"
+                    f"Ignore the '{collection}' collection because the collection interval in the config is '{collection_interval}', the remaining time until the next collection pull: {remaining_time} min"
                 )
                 continue
 
@@ -646,7 +646,9 @@ class Mandiant:
                 self.helper.api.work.to_processed(work_id, "Finished")
 
     def run(self):
-        self.helper.schedule_unit(message_callback=self.process_message, duration_period=5, time_unit=self.helper.TimeUnit.MINUTES)
+        self.helper.schedule_iso(
+            message_callback=self.process_message, duration_period=self.duration_period
+        )
 
     def remove_statement_marking(self, stix_objects):
         for obj in stix_objects:
