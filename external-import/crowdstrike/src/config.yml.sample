@@ -8,7 +8,7 @@ connector:
   name: 'CrowdStrike'
   scope: 'crowdstrike'
   log_level: 'info'
-  duration_period: 'PT5M' # In ISO8601 format, start with 'P' for period
+  duration_period: 'PT30M' # In ISO8601 format, start with 'P' for period
   queue_threshold: 500 # Default 500mo
 
 crowdstrike:
@@ -30,4 +30,3 @@ crowdstrike:
   indicator_low_score: 40
   indicator_low_score_labels: 'MaliciousConfidence/Low'
   indicator_unwanted_labels: ''                                     # Can be used to filter low confidence indicators: "MaliciousConfidence/Low", "MaliciousConfidence/Medium"
-  interval_sec: 1800                                                # Seconds

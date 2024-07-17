@@ -9,7 +9,7 @@ services:
       - CONNECTOR_NAME=CrowdStrike
       - CONNECTOR_SCOPE=crowdstrike
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=ChangeMe # In ISO 8601 format, starting with "P" for period
+      - CONNECTOR_DURATION_PERIOD=PT60S # In ISO 8601 format, starting with "P" for period
       - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo
       - CROWDSTRIKE_BASE_URL=https://api.crowdstrike.com
       - CROWDSTRIKE_CLIENT_ID=ChangeMe
