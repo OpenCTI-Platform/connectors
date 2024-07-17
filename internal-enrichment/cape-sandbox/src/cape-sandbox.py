@@ -104,15 +104,27 @@ class CapeSandboxConnector:
 
         final_observable = self.helper.api.stix_cyber_observable.update_field(
             id=final_observable["id"],
-            input={"key": "hashes", "object_path": "hashes/MD5", "value": target["md5"]},
+            input={
+                "key": "hashes",
+                "object_path": "hashes/MD5",
+                "value": target["md5"],
+            },
         )
         final_observable = self.helper.api.stix_cyber_observable.update_field(
             id=final_observable["id"],
-            input={"key": "hashes", "object_path": "hashes/SHA-1", "value": target["sha1"]},
+            input={
+                "key": "hashes",
+                "object_path": "hashes/SHA-1",
+                "value": target["sha1"],
+            },
         )
         final_observable = self.helper.api.stix_cyber_observable.update_field(
             id=final_observable["id"],
-            input={"key": "hashes", "object_path": "hashes/SHA-256", "value": target["sha256"]},
+            input={
+                "key": "hashes",
+                "object_path": "hashes/SHA-256",
+                "value": target["sha256"],
+            },
         )
 
         self.helper.api.stix_cyber_observable.update_field(
