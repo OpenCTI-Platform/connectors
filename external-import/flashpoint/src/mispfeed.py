@@ -187,7 +187,7 @@ class MispFeed(threading.Thread):
             if tag_name_lower == "tlp:red":
                 markings.append(stix2.TLP_RED)
         if len(markings) == 0 and with_default:
-            markings.append(stix2.TLP_WHITE)
+            markings.append(stix2.TLP_GREEN)
         return markings
 
     def _prepare_elements(self, galaxies, tags, author, markings):
