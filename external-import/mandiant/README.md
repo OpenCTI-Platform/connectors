@@ -19,6 +19,7 @@ The connector can be configured with the following variables:
 | `MANDIANT_REMOVE_STATEMENT_MARKING`                      | False                                 | Remove statement marking                                                    |
 | `MANDIANT_IMPORT_ACTORS`                                 | True                                  | Enable to collect actors                                                    |
 | `MANDIANT_IMPORT_ACTORS_INTERVAL`                        | 1                                     | Interval in hours to check and collect new actors                           |
+| `MANDIANT_IMPORT_ACTORS_ALIASES`                         | False                                 | Import actors aliases                                                       |
 | `MANDIANT_IMPORT_REPORTS`                                | True                                  | Enable to collect reports                                                   |
 | `MANDIANT_IMPORT_REPORTS_INTERVAL`                       | 1                                     | Interval in hours to check and collect new reports                          |
 | `MANDIANT_IMPORT_MALWARES`                               | True                                  | Enable to collect malwares                                                  |
