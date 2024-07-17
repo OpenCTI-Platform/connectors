@@ -93,6 +93,14 @@ class Mandiant:
         )
         self.mandiant_actors_interval = timedelta(hours=mandiant_actors_interval)
 
+        self.mandiant_import_actors_aliases = get_config_variable(
+            "MANDIANT_IMPORT_ACTORS_ALIASES",
+            ["mandiant", "import_actors_aliases"],
+            config,
+            isNumber=False,
+            default=False,
+        )
+
         if get_config_variable(
             "MANDIANT_IMPORT_REPORTS",
             ["mandiant", "import_reports"],
@@ -127,12 +135,12 @@ class Mandiant:
         )
         self.mandiant_malwares_interval = timedelta(hours=mandiant_malwares_interval)
 
-        self.mandiant_import_malware_aliases = get_config_variable(
+        self.mandiant_import_malwares_aliases = get_config_variable(
             "MANDIANT_IMPORT_MALWARES_ALIASES",
             ["mandiant", "import_malwares_aliases"],
             config,
             isNumber=False,
-            default=True,
+            default=False,
         )
 
         if get_config_variable(
