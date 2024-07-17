@@ -682,12 +682,12 @@ class Flashpoint:
                                     include = (
                                         query["params"]["include"]
                                         if "include" in query["params"]
-                                        else ""
+                                        else {}
                                     )
                                     exclude = (
                                         query["params"]["exclude"]
                                         if "exclude" in query["params"]
-                                        else ""
+                                        else {}
                                     )
                                     include["date"] = {
                                         "start": start_date.replace("+00:00", "Z"),
