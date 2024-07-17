@@ -48,8 +48,6 @@ class CrowdStrike:
     _DEFAULT_REPORT_TYPE = "threat-report"
     _DEFAULT_INDICATOR_LOW_SCORE = 40
 
-    _CONNECTOR_RUN_INTERVAL_SEC = 60
-
     _STATE_LAST_RUN = "last_run"
 
     def __init__(self) -> None:
@@ -260,13 +258,6 @@ class CrowdStrike:
             return state.get(key, default)
         return default
 
-    @classmethod
-    def _sleep(cls, delay_sec: Optional[int] = None) -> None:
-        sleep_delay = (
-            delay_sec if delay_sec is not None else cls._CONNECTOR_RUN_INTERVAL_SEC
-        )
-        time.sleep(sleep_delay)
-
     def _is_scheduled(self, last_run: Optional[int], current_time: int) -> bool:
         if last_run is None:
             self._info("CrowdStrike connector clean run")
@@ -295,33 +286,28 @@ class CrowdStrike:
 
             self.helper.log_info(f"Loaded state: {current_state}")
 
-            last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
-            if self._is_scheduled(last_run, timestamp):
-                work_id = self._initiate_work(timestamp)
+            work_id = self._initiate_work(timestamp)
 
-                new_state = current_state.copy()
+            new_state = current_state.copy()
 
-                for importer in self.importers:
-                    importer_state = importer.start(work_id, new_state)
-                    new_state.update(importer_state)
+            for importer in self.importers:
+                importer_state = importer.start(work_id, new_state)
+                new_state.update(importer_state)
 
-                    self._info("Storing updated new state: {0}", new_state)
-                    self.helper.set_state(new_state)
-
-                new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
-
-                self._info("Storing new state: {0}", new_state)
+                self._info("Storing updated new state: {0}", new_state)
                 self.helper.set_state(new_state)
 
-                message = f"State stored, next run in: {self._get_interval()} seconds"
+            new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
 
-                self._info(message)
+            self._info("Storing new state: {0}", new_state)
+            self.helper.set_state(new_state)
 
-                self._complete_work(work_id, message)
-            else:
-                next_run = self._get_interval() - (timestamp - last_run)
+            message = (
+                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                    + str(timestamp)
+            )
 
-                self._info("Connector will not run, next run in: {0} seconds", next_run)
+            self.helper.api.work.to_processed(work_id, message)
 
         except (KeyboardInterrupt, SystemExit):
             self._info("CrowdStrike connector stopping...")
@@ -346,9 +332,6 @@ class CrowdStrike:
         self._info("New work '{0}' initiated", work_id)
 
         return work_id
-
-    def _complete_work(self, work_id: str, message: str) -> None:
-        self.helper.api.work.to_processed(work_id, message)
 
     def _get_interval(self) -> int:
         return int(self.interval_sec)
