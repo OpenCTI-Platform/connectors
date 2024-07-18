@@ -8,6 +8,8 @@ connector:
   name: 'AlienVault'
   scope: 'alienvault'
   log_level: 'info'
+  duration_period: 'PT30M' # ISO8601 Format starting with "P" for Period ex: "PT30M" // Period time of 30 minutes
+  queue_threshold: 500 # Default 500Mo
 
 alienvault:
   base_url: 'https://otx.alienvault.com'
@@ -24,4 +26,3 @@ alienvault:
   enable_relationships: true                                    # Enable/Disable relationship creation between SDOs
   enable_attack_patterns_indicates: false                       # Enable/Disable "indicates" relationships between indicators and attack patterns
   filter_indicators: true                                       # Filter indicators by their created datetime
-  interval_sec: 1800                                            # Seconds

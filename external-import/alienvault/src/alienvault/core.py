@@ -25,8 +25,10 @@ from pycti.connector.opencti_connector_helper import (
 class AlienVault:
     """AlienVault connector."""
 
+    _CONFIG_CONNECTOR_NAMESPACE = "connector"
     _CONFIG_NAMESPACE = "alienvault"
 
+    _CONFIG_DURATION_PERIOD = f"{_CONFIG_CONNECTOR_NAMESPACE}.duration_period"
     _CONFIG_BASE_URL = f"{_CONFIG_NAMESPACE}.base_url"
     _CONFIG_API_KEY = f"{_CONFIG_NAMESPACE}.api_key"
     _CONFIG_TLP = f"{_CONFIG_NAMESPACE}.tlp"
@@ -45,9 +47,6 @@ class AlienVault:
         f"{_CONFIG_NAMESPACE}.enable_attack_patterns_indicates"
     )
     _CONFIG_FILTER_INDICATORS = f"{_CONFIG_NAMESPACE}.filter_indicators"
-    _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
-
-    _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
 
     _CONFIG_REPORT_STATUS_MAPPING = {
         "new": 0,
@@ -62,8 +61,6 @@ class AlienVault:
     _DEFAULT_REPORT_TYPE = "threat-report"
     _DEFAULT_ENABLE_RELATIONSHIPS = True
     _DEFAULT_ENABLE_ATTACK_PATTERNS_INDICATES = True
-
-    _CONNECTOR_RUN_INTERVAL_SEC = 60
 
     _STATE_LAST_RUN = "last_run"
 
@@ -149,16 +146,13 @@ class AlienVault:
         else:
             enable_attack_patterns_indicates = bool(enable_attack_patterns_indicates)
 
-        self.interval_sec = self._get_configuration(
-            config, self._CONFIG_INTERVAL_SEC, is_number=True
-        )
-
-        update_existing_data = bool(
-            self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
-        )
-
         # Create OpenCTI connector helper
         self.helper = OpenCTIConnectorHelper(config)
+
+        # Get OpenCTI connector duration period
+        self.duration_period = self._get_configuration(
+            config, self._CONFIG_DURATION_PERIOD
+        )
 
         # Create AlienVault author
         author = self._create_author()
@@ -174,7 +168,6 @@ class AlienVault:
             tlp_marking=tlp_marking,
             create_observables=create_observables,
             create_indicators=create_indicators,
-            update_existing_data=update_existing_data,
             default_latest_timestamp=default_latest_pulse_timestamp,
             report_status=report_status,
             report_type=report_type,
@@ -231,66 +224,46 @@ class AlienVault:
         return cls._CONFIG_REPORT_STATUS_MAPPING[report_status.lower()]
 
     def run(self):
+        self.helper.schedule_iso(
+            message_callback=self.process_message, duration_period=self.duration_period
+        )
+
+    def process_message(self):
         """Run AlienVault connector."""
         self._info("Starting AlienVault connector...")
-        while True:
-            self._info("Running AlienVault connector...")
-            run_interval = self._CONNECTOR_RUN_INTERVAL_SEC
 
-            try:
-                timestamp = self._current_unix_timestamp()
-                current_state = self._load_state()
+        try:
+            timestamp = self._current_unix_timestamp()
+            current_state = self._load_state()
 
-                self._info("Loaded state: {0}", current_state)
+            self._info("Loaded state: {0}", current_state)
 
-                last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
-                if self._is_scheduled(last_run, timestamp):
-                    now = datetime.datetime.utcfromtimestamp(timestamp)
-                    friendly_name = "AlienVault run @ " + now.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
-                    pulse_import_state = self.pulse_importer.run(current_state, work_id)
-                    new_state = current_state.copy()
-                    new_state.update(pulse_import_state)
-                    new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
+            now = datetime.datetime.utcfromtimestamp(timestamp)
+            friendly_name = "AlienVault run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
+            pulse_import_state = self.pulse_importer.run(current_state, work_id)
+            new_state = current_state.copy()
+            new_state.update(pulse_import_state)
+            new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
 
-                    self._info("Storing new state: {0}", new_state)
-                    self.helper.set_state(new_state)
-                    message = (
-                        "State stored, next run in: "
-                        + str(self._get_interval())
-                        + " seconds"
-                    )
-                    self.helper.api.work.to_processed(work_id, message)
-                    self._info(message)
-                else:
-                    next_run = self._get_interval() - (timestamp - last_run)
-                    run_interval = min(run_interval, next_run)
+            self._info("Storing new state: {0}", new_state)
+            self.helper.set_state(new_state)
 
-                    self._info(
-                        "Connector will not run, next run in: {0} seconds", next_run
-                    )
+            message = (
+                f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                + str(timestamp)
+            )
+            self.helper.api.work.to_processed(work_id, message)
+            self._info(message)
 
-            except (KeyboardInterrupt, SystemExit):
-                self._info("Connector stop")
-                sys.exit(0)
+        except (KeyboardInterrupt, SystemExit):
+            self._info("Connector stopping...")
+            sys.exit(0)
 
-            if self.helper.connect_run_and_terminate:
-                self.helper.log_info("Connector stop")
-                self.helper.force_ping()
-                sys.exit(0)
-
-            self._sleep(delay_sec=run_interval)
-
-    @classmethod
-    def _sleep(cls, delay_sec: Optional[int] = None) -> None:
-        sleep_delay = (
-            delay_sec if delay_sec is not None else cls._CONNECTOR_RUN_INTERVAL_SEC
-        )
-        time.sleep(sleep_delay)
+        except Exception as e:  # noqa: B902
+            self._error("CrowdStrike connector internal error: {0}", str(e))
 
     @staticmethod
     def _current_unix_timestamp() -> int:
@@ -309,16 +282,6 @@ class AlienVault:
         if state is not None:
             return state.get(key, default)
         return default
-
-    def _is_scheduled(self, last_run: Optional[int], current_time: int) -> bool:
-        if last_run is None:
-            self._info("Connector first run")
-            return True
-        time_diff = current_time - last_run
-        return time_diff >= self._get_interval()
-
-    def _get_interval(self) -> int:
-        return int(self.interval_sec)
 
     def _info(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
