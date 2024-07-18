@@ -35,7 +35,7 @@ class WebhookReference(BaseModel):
             self._headers[self.header] = self.token
 
     def send_event(self, payload):
-        requests.post(self.url, headers=self._headers, data=payload.encode('utf-8'))
+        requests.post(self.url, headers=self._headers, data=payload.encode("utf-8"))
 
     def init(self) -> bool:
         return True
