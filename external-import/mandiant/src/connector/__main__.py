@@ -1,5 +1,4 @@
-import sys
-import time
+import traceback
 
 from connector.base import Mandiant
 
@@ -7,7 +6,7 @@ try:
     mandiantConnector = Mandiant()
     while True:
         mandiantConnector.run()
-except Exception as err:
-    print(err)
-    time.sleep(10)
-    sys.exit(0)
+except Exception:
+    traceback.print_exc()
+    exit(1)
+
