@@ -10,6 +10,8 @@ services:
       - CONNECTOR_NAME=Recorded Future
       - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,StixFile
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT24H # In ISO8601 Format starting with "P" for Period ex: "PT24H" = Period time of 24H
+      - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo
       - RECORDED_FUTURE_TOKEN=CHANGEME #required
       - RECORDED_FUTURE_INITIAL_LOOKBACK=240 #required
       - RECORDED_FUTURE_INTERVAL=240 #required

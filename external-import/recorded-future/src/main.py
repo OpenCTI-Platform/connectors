@@ -308,8 +308,6 @@ if __name__ == "__main__":
     try:
         RF_connector = RFConnector()
         RF_connector.run_all_processes()
-
-    except Exception:
+    except Exception as err:
         traceback.print_exc()
-        time.sleep(10)
-        exit(0)
+        exit(1)
