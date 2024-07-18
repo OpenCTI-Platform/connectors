@@ -9,12 +9,14 @@ connector:
   scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
   update_existing_data: false
   log_level: 'info'
+  duration_period: 'PT24H' # ISO8601 Format starting with "P" for Period ex: "PT24H" // Period time of 5 minutes
+  queue_threshold: 100 # Default 500Mo
 
 rf:
   token: 'ChangeMe' # Required
   initial_lookback: 240 # Required, in hours
+  pull_analyst_notes: True
   TLP: white
-  interval: 24 # Required, in hours
   topic: 'VTrvnW,g1KBGl,ZjnoP0,aDKkpk,TXSFt5,UrMRnT,TXSFt3' # optional / Corresponds to Yara Rule, Sigma Rule, Snort Rule, TTP Instance, Validated Intelligence Event, Informational, Threat Lead
   insikt_only: True # optional
   pull_signatures: False # Pull Yara/Snort/Sigma rules into OpenCTI. optional
@@ -23,13 +25,11 @@ rf:
   risk_as_score: True # optional
   risk_threshold: 60 # optional
   pull_risk_list: False
-  risk_list_interval: 48 # Required, in hours
   risk_list_threshold: 70 # optional
   # if pull_risk_list is true, risklist_related_entities is required.
   # Available choices: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier
   risklist_related_entities: 'Malware,Threat Actor,MitreAttackIdentifier',
   pull_threat_maps: False # optional - Pull Threat Actors and Malware maps
-  threat_maps_interval: 24 # Required in hours
 
 alert:
   enable: False
