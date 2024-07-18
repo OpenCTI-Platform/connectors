@@ -7,34 +7,37 @@ import logging
 import os
 import re
 import urllib
-from pydantic import BaseModel, Field, HttpUrl
-from typing import Literal, Optional
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Queue
+from typing import Literal, Optional
 
 import requests
 import yaml
 from prometheus_client import Counter, Gauge, start_http_server
 from pycti import OpenCTIConnectorHelper, get_config_variable
-    
+from pydantic import BaseModel, Field, HttpUrl
+
+
 class WebhookReference(BaseModel):
     url: HttpUrl
     header: Optional[str]
-    auth_type: Literal['NONE', 'TOKEN']
+    auth_type: Literal["NONE", "TOKEN"]
     header: Optional[str]
     token: Optional[str]
-    dest_type: Literal['URL'] = 'URL'
-    
+    dest_type: Literal["URL"] = "URL"
+
     def model_post_init(self, ctx):
-        self._headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-        
-        if self.dest_type == 'URL' and self.auth_type == 'TOKEN':
+        self._headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        if self.dest_type == "URL" and self.auth_type == "TOKEN":
             self._headers[self.header] = self.token
-        
+
     def send_event(self, payload):
         requests.post(self.url, headers=self._headers, data=payload)
-        
 
     def init(self) -> bool:
         return True
@@ -43,6 +46,7 @@ class WebhookReference(BaseModel):
         return re.search(
             "main_observable_type': '(.*?)'", str(payload["extensions"])
         ).group(1)
+
 
 class Metrics:
     def __init__(self, name: str, addr: str, port: int) -> None:
@@ -115,16 +119,14 @@ class WebhookConnector:
 
     def _consume(self):
         while True:
-            
+
             msg = self.queue.get()
             payload = json.loads(msg.data)["data"]
             id = OpenCTIConnectorHelper.get_attribute_in_extension("id", payload)
-
             self.helper.log_debug(f"processing message with id {id}")
-            
             self.webhook_reference.send_event(msg.data)
             self.helper.log_info("messange sent")
-            
+
             if self.metrics is not None:
                 self.metrics.msg(msg.event)
                 self.metrics.state(msg.id)
@@ -133,7 +135,6 @@ class WebhookConnector:
         helper.log_info("register_producer")
         self.register_producer()
         self.start_consumers()
-
 
 
 def load_config_file() -> dict:
@@ -172,9 +173,13 @@ if __name__ == "__main__":
     webhook_type = get_config_variable("WEBHOOK_TYPE", ["webhook", "type"], config)
     webhook_url = get_config_variable("WEBHOOK_URL", ["webhook", "url"], config)
     webhook_token = get_config_variable("WEBHOOK_TOKEN", ["webhook", "token"], config)
-    webhook_header = get_config_variable("WEBHOOK_HEADER", ["webhook", "header"], config)
-    webhook_auth_type = get_config_variable("WEBHOOK_AUTH_TYPE", ["webhook", "auth_type"], config)
-    
+    webhook_header = get_config_variable(
+        "WEBHOOK_HEADER", ["webhook", "header"], config
+    )
+    webhook_auth_type = get_config_variable(
+        "WEBHOOK_AUTH_TYPE", ["webhook", "auth_type"], config
+    )
+
     # additional connector conf
     consumer_count: int = get_config_variable(
         "CONNECTOR_CONSUMER_COUNT",
@@ -183,7 +188,6 @@ if __name__ == "__main__":
         isNumber=True,
         default=10,
     )
-
 
     # metrics conf
     enable_prom_metrics: bool = get_config_variable(
@@ -205,7 +209,7 @@ if __name__ == "__main__":
         token=webhook_token,
         dest_type=webhook_type,
     )
-        
+
     # create queue
     queue = Queue(maxsize=2 * consumer_count)
 
@@ -218,7 +222,6 @@ if __name__ == "__main__":
         metrics = None
 
     # create connector and start
-        
     WebhookConnector(
         helper,
         webhook_reference=webhook_reference,
