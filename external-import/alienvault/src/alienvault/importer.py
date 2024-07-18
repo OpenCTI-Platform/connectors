@@ -22,7 +22,6 @@ class PulseImporterConfig(NamedTuple):
     tlp_marking: stix2.MarkingDefinition
     create_observables: bool
     create_indicators: bool
-    update_existing_data: bool
     default_latest_timestamp: str
     report_status: int
     report_type: str
@@ -57,7 +56,6 @@ class PulseImporter:
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
         self.filter_indicators = config.filter_indicators
-        self.update_existing_data = config.update_existing_data
         self.default_latest_timestamp = config.default_latest_timestamp
         self.report_status = config.report_status
         self.report_type = config.report_type
@@ -84,7 +82,6 @@ class PulseImporter:
             "patterns_indicates: {4}, "
             "filter_indicators: {5}"
             ")...",
-            self.update_existing_data,
             self.guess_malware,
             self.guess_cve,
             self.enable_relationships,
@@ -326,6 +323,4 @@ class PulseImporter:
 
     def _send_bundle(self, bundle: stix2.Bundle) -> None:
         serialized_bundle = bundle.serialize()
-        self.helper.send_stix2_bundle(
-            serialized_bundle, update=self.update_existing_data, work_id=self.work_id
-        )
+        self.helper.send_stix2_bundle(serialized_bundle, work_id=self.work_id)
