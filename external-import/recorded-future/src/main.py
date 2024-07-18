@@ -26,12 +26,8 @@ from rflib import (
 )
 
 
-class RFNotes:
-    """Connector object"""
-
+class BaseRFConnector:
     def __init__(self):
-        """Read in config variables"""
-
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config = (
             yaml.load(open(config_file_path), Loader=yaml.FullLoader)
@@ -39,6 +35,7 @@ class RFNotes:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
+
         # Extra config
         self.rf_token = get_config_variable(
             "RECORDED_FUTURE_TOKEN", ["rf", "token"], config
@@ -138,47 +135,59 @@ class RFNotes:
             "ALERT_ENABLE", ["alert", "enable"], config
         )
 
+        self.rf_pull_analyst_notes = get_config_variable(
+            "RECORDED_FUTURE_PULL_ANALYST_NOTES", ["rf", "pull_analyst_notes"], config
+        )
+
+        self.duration_period = get_config_variable(
+            "CONNECTOR_DURATION_PERIOD", ["connector", "duration_period"], config
+        )
+
+
+class RFNotes(BaseRFConnector):
+    """Connector object"""
+
+    def __init__(self):
+        """Read in config variables"""
+        super().__init__()
+
     def get_interval(self):
         """Converts interval hours to seconds"""
         return int(self.rf_interval) * 3600
 
     def run(self):
         """Run connector on a schedule"""
-        while True:
-            timestamp = int(time.time())
-            now = datetime.utcfromtimestamp(timestamp)
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id,
-                "Recorded Future Analyst Notes run @ "
-                + now.strftime("%Y-%m-%d %H:%M:%S"),
+        timestamp = int(time.time())
+        now = datetime.utcfromtimestamp(timestamp)
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id,
+            "Recorded Future Analyst Notes run @ " + now.strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        self.helper.log_info("[ANALYST NOTES] Pulling analyst notes")
+
+        current_state = self.helper.get_state()
+        tas = self.rfapi.get_threat_actors()
+        if current_state is not None and "last_run" in current_state:
+            last_run = datetime.utcfromtimestamp(current_state["last_run"]).strftime(
+                "%Y-%m-%d %H:%M:%S"
             )
-            self.helper.log_info("[ANALYST NOTES] Pulling analyst notes")
+            self.helper.log_info("Connector last run: " + last_run)
+            published = self.rf_interval
+        else:
+            msg = (
+                "Connector has never run. Doing initial pull of "
+                f"{self.rf_initial_lookback} hours"
+            )
+            self.helper.log_info(msg)
+            published = self.rf_initial_lookback
 
-            current_state = self.helper.get_state()
-            tas = self.rfapi.get_threat_actors()
-            if current_state is not None and "last_run" in current_state:
-                last_run = datetime.utcfromtimestamp(
-                    current_state["last_run"]
-                ).strftime("%Y-%m-%d %H:%M:%S")
-                self.helper.log_info("Connector last run: " + last_run)
-                published = self.rf_interval
-            else:
-                last_run = None
-                msg = (
-                    "Connector has never run. Doing initial pull of"
-                    f"{self.rf_initial_lookback} hours"
-                )
-                self.helper.log_info(msg)
-                published = self.rf_initial_lookback
+        try:
+            # Import, convert and send to OpenCTI platform Analyst Notes
+            self.convert_and_send(published, tas, work_id)
+        except Exception as e:
+            self.helper.log_error(str(e))
 
-            try:
-                # Import, convert and send to OpenCTI platform Analyst Notes
-                self.convert_and_send(published, tas, work_id)
-            except Exception as e:
-                self.helper.log_error(str(e))
-
-            self.helper.set_state({"last_run": timestamp})
-            time.sleep(self.get_interval())
+        self.helper.set_state({"last_run": timestamp})
 
     def convert_and_send(self, published, tas, work_id):
         """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""
@@ -239,44 +248,67 @@ class RFNotes:
                 continue
 
 
-if __name__ == "__main__":
-    try:
-        RF = RFNotes()
+class RFConnector:
+    def __init__(self):
+        self.RF = BaseRFConnector()
+        self.analyst_notes = None
+        self.risk_list = None
+        self.threat_maps = None
+        self.alerts = None
 
+    def all_processes(self):
         # Start RF Alert Connector
-        if RF.rf_alert_enable:
-            RfCon = RecordedFutureAlertConnector(RF.helper)
-            RfCon.run()
+        if self.RF.rf_alert_enable:
+            self.alerts = RecordedFutureAlertConnector(self.RF.helper)
+            self.alerts.run()
+
         # Pull RF risk lists
-        if RF.rf_pull_risk_list:
-            RiskList = RiskList(
-                RF.helper,
-                RF.update_existing_data,
-                RF.rf_risk_list_interval,
-                RF.rfapi,
-                RF.tlp,
-                RF.risk_list_threshold,
-                RF.risklist_related_entities,
+        if self.RF.rf_pull_risk_list:
+            self.risk_list = RiskList(
+                self.RF.helper,
+                self.RF.update_existing_data,
+                self.RF.rf_risk_list_interval,
+                self.RF.rfapi,
+                self.RF.tlp,
+                self.RF.risk_list_threshold,
+                self.RF.risklist_related_entities,
             )
-            RiskList.start()
+            self.risk_list.start()
         else:
-            RF.helper.log_info("[RISK LISTS] Risk list fetching disabled")
+            self.RF.helper.log_info("[RISK LISTS] Risk list fetching disabled")
 
         # Pull RF Threat actors and Malware from Threat map
-        if RF.rf_pull_threat_maps:
-            ThreatMap = ThreatMap(
-                RF.helper,
-                RF.update_existing_data,
-                RF.threat_maps_interval,
-                RF.rfapi,
-                RF.tlp,
-                RF.risk_list_threshold,
+        if self.RF.rf_pull_threat_maps:
+            self.threat_maps = ThreatMap(
+                self.RF.helper,
+                self.RF.update_existing_data,
+                self.RF.threat_maps_interval,
+                self.RF.rfapi,
+                self.RF.tlp,
+                self.RF.risk_list_threshold,
             )
-            ThreatMap.start()
+            self.threat_maps.start()
         else:
-            RF.helper.log_info("[THREAT MAPS] Threat maps fetching disabled")
+            self.RF.helper.log_info("[THREAT MAPS] Threat maps fetching disabled")
 
-        RF.run()
+        # Pull Analyst Notes if enabled
+        if self.RF.rf_pull_analyst_notes:
+            self.analyst_notes = RFNotes()
+            self.analyst_notes.run()
+        else:
+            self.RF.helper.log_info("[ANALYST NOTES] Analyst notes fetching disabled")
+
+    def run_all_processes(self):
+        self.RF.helper.schedule_iso(
+            message_callback=self.all_processes, duration_period=self.RF.duration_period
+        )
+
+
+if __name__ == "__main__":
+    try:
+        RF_connector = RFConnector()
+        RF_connector.run_all_processes()
+
     except Exception:
         traceback.print_exc()
         time.sleep(10)
