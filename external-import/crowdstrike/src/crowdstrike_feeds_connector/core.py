@@ -258,14 +258,6 @@ class CrowdStrike:
             return state.get(key, default)
         return default
 
-    def _is_scheduled(self, last_run: Optional[int], current_time: int) -> bool:
-        if last_run is None:
-            self._info("CrowdStrike connector clean run")
-            return True
-
-        time_diff = current_time - last_run
-        return time_diff >= self._get_interval()
-
     @staticmethod
     def _current_unix_timestamp() -> int:
         return int(time.time())
@@ -332,9 +324,6 @@ class CrowdStrike:
         self._info("New work '{0}' initiated", work_id)
 
         return work_id
-
-    def _get_interval(self) -> int:
-        return int(self.interval_sec)
 
     def _info(self, msg: str, *args: Any) -> None:
         fmt_msg = msg.format(*args)
