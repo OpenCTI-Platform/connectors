@@ -7,6 +7,7 @@ try:
     mandiantConnector = Mandiant()
     while True:
         mandiantConnector.run()
-except Exception:
+except Exception as err:
+    print(err)
     time.sleep(10)
     sys.exit(0)
