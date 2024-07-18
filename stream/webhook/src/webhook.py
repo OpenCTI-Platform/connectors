@@ -3,10 +3,8 @@
 #################################
 
 import json
-import logging
 import os
 import re
-import urllib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from queue import Queue
@@ -16,7 +14,7 @@ import requests
 import yaml
 from prometheus_client import Counter, Gauge, start_http_server
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, HttpUrl
 
 
 class WebhookReference(BaseModel):
