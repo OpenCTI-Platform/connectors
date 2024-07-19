@@ -1654,15 +1654,15 @@ class Misp:
                             allow_custom=True,
                         )
                     )
-            return {
-                "indicator": indicator,
-                "observable": observable,
-                "relationships": relationships,
-                "attribute_elements": attribute_elements,
-                "markings": attribute_markings,
-                "identities": identities,
-                "sightings": sightings,
-            }
+        return {
+            "indicator": indicator,
+            "observable": observable,
+            "relationships": relationships,
+            "attribute_elements": attribute_elements,
+            "markings": attribute_markings,
+            "identities": identities,
+            "sightings": sightings,
+        }
 
     def prepare_elements(self, galaxies, tags, author, markings):
         elements = {
