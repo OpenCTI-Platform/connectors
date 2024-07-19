@@ -112,12 +112,15 @@ class EntityConfig(BaseModel):
     stix_class: str
     filter: Optional[Dict]
     fields: List[str]
+    exact_match_fields: List[str] = []
     exclude_values: List[str] = []
     regex: List[Pattern] = []
     omit_match_in: List[str] = []
     custom_attributes: str
 
-    @validator("fields", "exclude_values", "omit_match_in", pre=True)
+    @validator(
+        "fields", "exact_match_fields", "exclude_values", "omit_match_in", pre=True
+    )
     def pre_validate_transform_str_to_list(cls, field: str) -> List[str]:
         return list(filter(None, (x.strip() for x in field.splitlines())))
 
@@ -135,14 +138,19 @@ class EntityConfig(BaseModel):
         for item in opencti_response:
             _id = item.get("standard_id")
             item_values = set()
+            exact_match_values = set()
 
             for relevant_field in self.fields:
                 elem = item.get(relevant_field, None)
                 if elem:
                     if type(elem) == list:
                         item_values.update(elem)
+                        if relevant_field in self.exact_match_fields:
+                            exact_match_values.update(elem)
                     elif type(elem) == str:
                         item_values.add(elem)
+                        if relevant_field in self.exact_match_fields:
+                            exact_match_values.add(elem)
 
             indicators = []
             for value in item_values:
@@ -153,10 +161,17 @@ class EntityConfig(BaseModel):
                     )
                     continue
 
+                ignore_case_value = True
+                if value in exact_match_values:
+                    ignore_case_value = False
+
                 value = re.escape(value)
                 value = f"\\b{value}\\b"
                 try:
-                    compiled_re = re.compile(value, re.IGNORECASE)
+                    if ignore_case_value:
+                        compiled_re = re.compile(value, re.IGNORECASE)
+                    else:
+                        compiled_re = re.compile(value)
                     indicators.append(compiled_re)
                 except re.error as e:
                     helper.log_error(
