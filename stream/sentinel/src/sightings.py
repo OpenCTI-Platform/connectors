@@ -74,7 +74,9 @@ class Sightings(threading.Thread):
             raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
 
     def run(self):
-        self.helper.log_info("[SIGHTINGS/INCIDENTS] Starting incident gatherer")
+        self.helper.connector_logger.info(
+            "[SIGHTINGS/INCIDENTS] Starting incident gatherer"
+        )
         while True:
             self._graph_api_authorization()
             response = requests.get(

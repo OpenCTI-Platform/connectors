@@ -150,7 +150,7 @@ class SentinelConnector:
                         data["hashes"] = {"SHA-256": stix_value}
                         self._create_observable(data, method)
         except:
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 "[CREATE] Cannot convert STIX indicator { " + internal_id + "}"
             )
 
@@ -240,7 +240,7 @@ class SentinelConnector:
         else:
             passive_only = "false"
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "[" + method.upper() + "] Processing data {" + internal_id + "}"
         )
         # Do any processing needed
@@ -362,7 +362,7 @@ class SentinelConnector:
                         headers=self.headers,
                     )
                 else:
-                    self.helper.log_error(
+                    self.helper.connector_logger.error(
                         "[UPDATE] ID "
                         + internal_id
                         + " failed. "
@@ -375,7 +375,9 @@ class SentinelConnector:
             # Log if the creation was successful or not
             if response is not None:
                 if "201" in str(response):
-                    self.helper.log_info("[CREATE] ID {" + internal_id + " Success }")
+                    self.helper.connector_logger.info(
+                        "[CREATE] ID {" + internal_id + " Success }"
+                    )
                     result = response.json()
                     external_reference = self.helper.api.external_reference.create(
                         source_name=self.target_product.replace("Azure", "Microsoft"),
@@ -393,9 +395,11 @@ class SentinelConnector:
                             external_reference_id=external_reference["id"],
                         )
                 elif "204" in str(response):
-                    self.helper.log_info("[UPDATE] ID {" + internal_id + " Success }")
+                    self.helper.connector_logger.info(
+                        "[UPDATE] ID {" + internal_id + " Success }"
+                    )
                 else:
-                    self.helper.log_error(
+                    self.helper.connector_logger.error(
                         "[CREATE/UPDATE] ID {"
                         + internal_id
                         + " Failed and got }"
@@ -406,7 +410,9 @@ class SentinelConnector:
     def _delete_object(self, data):
         self._graph_api_authorization()
         internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-        self.helper.log_info("[DELETE] Processing data {" + internal_id + "}")
+        self.helper.connector_logger.info(
+            "[DELETE] Processing data {" + internal_id + "}"
+        )
         # Gets a list of all IOC in Microsoft Platform and looks for externalID which is for OpenCTI reference
         response = requests.get(
             self.resource_url + self.request_url, headers=self.headers
@@ -421,7 +427,9 @@ class SentinelConnector:
                     self.resource_url + self.request_url + "/" + ioc_id,
                     headers=self.headers,
                 )
-                self.helper.log_info("[DELETE] ID {" + internal_id + "} Success")
+                self.helper.connector_logger.info(
+                    "[DELETE] ID {" + internal_id + "} Success"
+                )
                 if data["type"] == "indicator":
                     entity = self.helper.api.indicator.read(id=internal_id)
                 else:
@@ -441,7 +449,7 @@ class SentinelConnector:
                 did_delete = 1
         # Logs not found if no IOCs were deleted
         if did_delete == 0:
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 "[DELETE] ID {"
                 + internal_id
                 + "} Not found on "
@@ -469,8 +477,12 @@ class SentinelConnector:
             elif msg.event == "delete":
                 self._delete_object(data)
         except Exception as ex:
-            self.helper.log_error("[ERROR] Failed processing data {" + str(ex) + "}")
-            self.helper.log_error("[ERROR] Message data {" + str(msg) + "}")
+            self.helper.connector_logger.error(
+                "[ERROR] Failed processing data {" + str(ex) + "}"
+            )
+            self.helper.connector_logger.error(
+                "[ERROR] Message data {" + str(msg) + "}"
+            )
             return None
 
     # Listen to OpenCTI stream and calls the _process_message function
