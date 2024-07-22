@@ -664,6 +664,14 @@ jobs:
           name: Build Docker image opencti/connector-qradar
           command: docker build -t opencti/connector-qradar:latest . && docker tag opencti/connector-qradar:latest opencti/connector-qradar:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/stream/webhook
+          name: Build Docker image opencti/connector-webhook
+          command: docker build -t opencti/connector-webhook:latest . && docker tag opencti/connector-webhook:latest opencti/connector-webhook:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/webhook
+          name: Build Docker image opencti/connector-webhook
+          command: docker build -t opencti/connector-webhook:latest . && docker tag opencti/connector-webhook:latest opencti/connector-webhook:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/stream/chronicle
           name: Build Docker image opencti/connector-chronicle
           command: docker build -t opencti/connector-chronicle:latest . && docker tag opencti/connector-chronicle:latest opencti/connector-chronicle:${CIRCLE_TAG}
@@ -827,6 +835,8 @@ jobs:
             docker push opencti/connector-google-dns:${CIRCLE_TAG}
             docker push opencti/connector-qradar:latest
             docker push opencti/connector-qradar:${CIRCLE_TAG}
+            docker push opencti/connector-webhook:latest
+            docker push opencti/connector-webhook:${CIRCLE_TAG}
             docker push opencti/connector-chronicle:latest
             docker push opencti/connector-chronicle:${CIRCLE_TAG}
             docker push opencti/connector-zerofox:latest
@@ -1458,6 +1468,10 @@ jobs:
           name: Build Docker image opencti/connector-qradar
           command: docker build -t opencti/connector-qradar:rolling .
       - run:
+          working_directory: ~/opencti/stream/webhook
+          name: Build Docker image opencti/connector-webhook
+          command: docker build -t opencti/connector-webhook:rolling .
+      - run:
           working_directory: ~/opencti/stream/chronicle
           name: Build Docker image opencti/connector-chronicle
           command: docker build -t opencti/connector-chronicle:rolling .
@@ -1576,6 +1590,7 @@ jobs:
             docker push opencti/connector-ipqs:rolling
             docker push opencti/connector-google-dns:rolling
             docker push opencti/connector-qradar:rolling
+            docker push opencti/connector-webhook:rolling
             docker push opencti/connector-chronicle:rolling
             docker push opencti/connector-zerofox:rolling
             docker push opencti/connector-recordedfuture-enrichment:rolling
