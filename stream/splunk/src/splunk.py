@@ -339,78 +339,82 @@ def check_helper(helper: OpenCTIConnectorHelper) -> None:
 
 
 if __name__ == "__main__":
-    # fix loggers
-    fix_loggers()
+    try:
+        # fix loggers
+        fix_loggers()
 
-    # load and check config
-    config = load_config_file()
-    # create opencti helper
-    helper = OpenCTIConnectorHelper(config)
-    helper.log_info("connector helper initialized")
-    check_helper(helper)
+        # load and check config
+        config = load_config_file()
+        # create opencti helper
+        helper = OpenCTIConnectorHelper(config)
+        helper.log_info("connector helper initialized")
+        check_helper(helper)
 
-    # read config
-    ignore_types = get_config_variable(
-        "SPLUNK_IGNORE_TYPES", ["splunk", "ignore_types"], config
-    ).split(",")
-    splunk_url = get_config_variable("SPLUNK_URL", ["splunk", "url"], config)
-    splunk_token = get_config_variable("SPLUNK_TOKEN", ["splunk", "token"], config)
-    splunk_owner = get_config_variable("SPLUNK_OWNER", ["splunk", "owner"], config)
-    splunk_ssl_verify = get_config_variable(
-        "SPLUNK_SSL_VERIFY", ["splunk", "ssl_verify"], config, False, True
-    )
-    splunk_app = get_config_variable("SPLUNK_APP", ["splunk", "app"], config)
-    splunk_kv_store_name = get_config_variable(
-        "SPLUNK_KV_STORE_NAME", ["splunk", "kv_store_name"], config
-    )
+        # read config
+        ignore_types = get_config_variable(
+            "SPLUNK_IGNORE_TYPES", ["splunk", "ignore_types"], config
+        ).split(",")
+        splunk_url = get_config_variable("SPLUNK_URL", ["splunk", "url"], config)
+        splunk_token = get_config_variable("SPLUNK_TOKEN", ["splunk", "token"], config)
+        splunk_owner = get_config_variable("SPLUNK_OWNER", ["splunk", "owner"], config)
+        splunk_ssl_verify = get_config_variable(
+            "SPLUNK_SSL_VERIFY", ["splunk", "ssl_verify"], config, False, True
+        )
+        splunk_app = get_config_variable("SPLUNK_APP", ["splunk", "app"], config)
+        splunk_kv_store_name = get_config_variable(
+            "SPLUNK_KV_STORE_NAME", ["splunk", "kv_store_name"], config
+        )
 
-    # additional connector conf
-    consumer_count: int = get_config_variable(
-        "CONNECTOR_CONSUMER_COUNT",
-        ["connector", "consumer_count"],
-        config,
-        isNumber=True,
-        default=10,
-    )
+        # additional connector conf
+        consumer_count: int = get_config_variable(
+            "CONNECTOR_CONSUMER_COUNT",
+            ["connector", "consumer_count"],
+            config,
+            isNumber=True,
+            default=10,
+        )
 
-    # metrics conf
-    enable_prom_metrics: bool = get_config_variable(
-        "METRICS_ENABLE", ["metrics", "enable"], config, default=False
-    )
-    metrics_port: int = get_config_variable(
-        "METRICS_PORT", ["metrics", "port"], config, isNumber=True, default=9113
-    )
-    metrics_addr: str = get_config_variable(
-        "METRICS_ADDR", ["metrics", "addr"], config, default="0.0.0.0"
-    )
+        # metrics conf
+        enable_prom_metrics: bool = get_config_variable(
+            "METRICS_ENABLE", ["metrics", "enable"], config, default=False
+        )
+        metrics_port: int = get_config_variable(
+            "METRICS_PORT", ["metrics", "port"], config, isNumber=True, default=9113
+        )
+        metrics_addr: str = get_config_variable(
+            "METRICS_ADDR", ["metrics", "addr"], config, default="0.0.0.0"
+        )
 
-    # create kvstore instance
-    kvstore = KVStore(
-        splunk_url,
-        splunk_token,
-        splunk_app,
-        splunk_owner,
-        splunk_kv_store_name,
-        splunk_ssl_verify,
-    )
+        # create kvstore instance
+        kvstore = KVStore(
+            splunk_url,
+            splunk_token,
+            splunk_app,
+            splunk_owner,
+            splunk_kv_store_name,
+            splunk_ssl_verify,
+        )
 
-    # create queue
-    queue = Queue(maxsize=2 * consumer_count)
+        # create queue
+        queue = Queue(maxsize=2 * consumer_count)
 
-    # create prom metrics
-    if enable_prom_metrics:
-        metrics = Metrics(helper.connect_name, metrics_addr, metrics_port)
-        helper.log_info(f"starting metrics server on {metrics_addr}:{metrics_port}")
-        metrics.start_server()
-    else:
-        metrics = None
+        # create prom metrics
+        if enable_prom_metrics:
+            metrics = Metrics(helper.connect_name, metrics_addr, metrics_port)
+            helper.log_info(f"starting metrics server on {metrics_addr}:{metrics_port}")
+            metrics.start_server()
+        else:
+            metrics = None
 
-    # create connector and start
-    SplunkConnector(
-        helper,
-        kvstore,
-        queue,
-        ignore_types,
-        consumer_count,
-        metrics=metrics,
-    ).start()
+        # create connector and start
+        SplunkConnector(
+            helper,
+            kvstore,
+            queue,
+            ignore_types,
+            consumer_count,
+            metrics=metrics,
+        ).start()
+    except Exception:
+        traceback.print_exc()
+        exit(1)
