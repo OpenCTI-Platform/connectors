@@ -1,4 +1,4 @@
-FROM registry.glouton.int.nbyt.fr/commun/devops/ci/alpine:python3
+FROM python:3.11-alpine
 ENV CONNECTOR_TYPE=STREAM
 
 # Copy the worker
