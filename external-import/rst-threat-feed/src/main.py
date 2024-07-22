@@ -27,7 +27,7 @@ class RSTThreatFeed:
     def __init__(self):
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+            yaml.safe_load(open(config_file_path))
             if os.path.isfile(config_file_path)
             else {}
         )
@@ -206,7 +206,7 @@ class RSTThreatFeed:
                 labels=ioc["tags"] + ioc["threats"],
                 pattern_type="stix",
                 pattern=ioc["pattern"],
-                valid_from=ioc["fseen"],
+                valid_from=ioc["lseen"],
                 created=ioc["fseen"],
                 modified=ioc["collect"],
                 created_by_ref=organization.id,

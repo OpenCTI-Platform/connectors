@@ -7,14 +7,17 @@ connector:
   type: 'INTERNAL_ENRICHMENT'
   name: 'RST Noise Control'
   scope: 'IPv4-Addr,Domain-Name,Url,StixFile,indicator'
-  auto: true # Enable/disable auto-enrichment of observables
+  auto: false # Enable/disable auto-enrichment of observables
   confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 rst-noise-control:
   base_url: 'https://api.rstcloud.net/v1'
   api_key: 'ChangeMe'
+  timeout: 5
   max_tlp: 'TLP:AMBER+STRICT'
+  update_confidence: true
+  update_score: true
   change_action_score_change: 10
   drop_action_score_change: 50
   drop_action_detection_flag: true
