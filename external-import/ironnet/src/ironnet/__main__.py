@@ -1,5 +1,12 @@
 """IronNet connector"""
 
-from .connector import IronNetConnector
+import traceback
 
-IronNetConnector().start()
+from ironnet.connector import IronNetConnector
+
+if __name__ == "__main__":
+    try:
+        IronNetConnector().start()
+    except Exception:
+        traceback.print_exc()
+        exit(1)
