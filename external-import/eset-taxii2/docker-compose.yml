@@ -1,0 +1,29 @@
+version: '3'
+services:
+  connector-taxii2:
+    image: opencti/connector-eset-taxii2:6.2.4
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - "CONNECTOR_NAME=ESET Threat Intelligence (TAXII2)"
+      - CONNECTOR_SCOPE=eset
+      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=error
+      - TAXII2_DISCOVERY_URL=ChangeMe # Required
+      - TAXII2_CERT_PATH=ChangeMe # Optional (.pem)
+      - TAXII2_USERNAME=ChangeMe # Required
+      - TAXII2_PASSWORD=ChangeMe
+      - TAXII2_USE_TOKEN=false
+      - TAXII2_TOKEN=ChangeMe # change TAXII2_USE_TOKEN to true to use this
+      - TAXII2_COLLECTIONS=*.* # Required
+      - TAXII2_INITIAL_HISTORY=24 # Required, in hours
+      - TAXII2_INTERVAL=2 # Required, in hours
+      - TAXII2_VERIFY_SSL=true
+      - TAXII2_CREATE_INDICATORS=true # Generate indicators for ingested observables
+      - TAXII2_CREATE_OBSERVABLES=true # Generate observables for ingested indicators
+      - TAXII2_ADD_CUSTOM_LABEL=false # Enable custom label
+      - TAXII2_CUSTOM_LABEL= # Custom label added to all objects
+      - TAXII2_FORCE_PATTERN_AS_NAME=false
+      - "TAXII2_FORCE_MULTIPLE_PATTERN_NAME=Multiple Indicators"
+    restart: always
