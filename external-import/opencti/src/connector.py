@@ -113,10 +113,8 @@ class OpenCTI:
             else:
                 last_run = None
                 self.helper.log_info("Connector has never run")
-            # If the last_run is more than interval-1 day
-            if last_run is None or (
-                (timestamp - last_run) > ((int(self.interval) - 1) * 60 * 60 * 24)
-            ):
+            # If the last_run is more than interval seconds
+            if last_run is None or ((timestamp - last_run) > self.interval):
                 now = datetime.utcfromtimestamp(timestamp)
                 friendly_name = "OpenCTI datasets run @ " + now.strftime(
                     "%Y-%m-%d %H:%M:%S"
