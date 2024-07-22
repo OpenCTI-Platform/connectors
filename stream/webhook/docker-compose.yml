@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-webhook:
-    image: opencti/connector-webhook:6.0.5
+    image: opencti/connector-webhook:6.2.6
     environment:
       OPENCTI_URL: http://localhost
       OPENCTI_TOKEN: ChangeMe
@@ -14,7 +14,7 @@ services:
       CONNECTOR_CONFIDENCE_LEVEL: 80 # From 0 (Unknown) to 100 (Fully trusted)
       CONNECTOR_LOG_LEVEL: info
       WEBHOOK_TYPE: URL
-      WEBHOOK_HEADER: Auhtorization
+      WEBHOOK_HEADER: Authorization
       WEBHOOK_URL: https://webhook.changeme.com
       WEBHOOK_AUTH_TYPE: TOKEN
       WEBHOOK_TOKEN: superSecretToken
