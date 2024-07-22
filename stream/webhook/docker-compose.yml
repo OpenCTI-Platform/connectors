@@ -1,0 +1,21 @@
+version: "3"
+services:
+  connector-webhook:
+    image: opencti/connector-webhook:6.0.5
+    environment:
+      OPENCTI_URL: http://localhost
+      OPENCTI_TOKEN: ChangeMe
+      CONNECTOR_ID: ChangeMe
+      CONNECTOR_LIVE_STREAM_ID: live # ID of the live stream created in the OpenCTI UI
+      CONNECTOR_LIVE_STREAM_LISTEN_DELETE: true
+      CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES: true
+      CONNECTOR_NAME: OpenCTI Webhook Stream Connector
+      CONNECTOR_SCOPE: wevhook
+      CONNECTOR_CONFIDENCE_LEVEL: 80 # From 0 (Unknown) to 100 (Fully trusted)
+      CONNECTOR_LOG_LEVEL: info
+      WEBHOOK_TYPE: URL
+      WEBHOOK_HEADER: Auhtorization
+      WEBHOOK_URL: https://webhook.changeme.com
+      WEBHOOK_AUTH_TYPE: TOKEN
+      WEBHOOK_TOKEN: superSecretToken
+    restart: always
