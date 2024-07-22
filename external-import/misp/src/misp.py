@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import time
+import traceback
 import uuid
 from datetime import datetime
 
@@ -1654,15 +1655,15 @@ class Misp:
                             allow_custom=True,
                         )
                     )
-        return {
-            "indicator": indicator,
-            "observable": observable,
-            "relationships": relationships,
-            "attribute_elements": attribute_elements,
-            "markings": attribute_markings,
-            "identities": identities,
-            "sightings": sightings,
-        }
+            return {
+                "indicator": indicator,
+                "observable": observable,
+                "relationships": relationships,
+                "attribute_elements": attribute_elements,
+                "markings": attribute_markings,
+                "identities": identities,
+                "sightings": sightings,
+            }
 
     def prepare_elements(self, galaxies, tags, author, markings):
         elements = {
@@ -2418,5 +2419,9 @@ class Misp:
 
 
 if __name__ == "__main__":
-    mispConnector = Misp()
-    mispConnector.run()
+    try:
+        mispConnector = Misp()
+        mispConnector.run()
+    except Exception:
+        traceback.print_exc()
+        exit(1)
