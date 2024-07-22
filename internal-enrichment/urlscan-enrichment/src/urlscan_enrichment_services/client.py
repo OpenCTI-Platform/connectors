@@ -66,6 +66,8 @@ class UrlscanClient:
         try:
 
             response = self.session.get(self.constants.USER_QUOTA)
+            response.raise_for_status()
+
             json_response = response.json()
             rate_limits = json_response["limits"][visibility]
             self.helper.connector_logger.info(
@@ -90,6 +92,21 @@ class UrlscanClient:
                 )
             else:
                 pass
+
+        except requests.exceptions.HTTPError as http_err:
+
+            error_response = http_err.response
+            error_content = json.loads(error_response.content)
+            error_msg = "[API-ERROR] Error while fetching user quota: "
+            raise ValueError(
+                error_msg,
+                {
+                    "reason": str(error_response.reason),
+                    "status_code": int(error_response.status_code),
+                    "title": error_content["errors"][0]["title"],
+                    "description": error_content["errors"][0]["detail"],
+                },
+            )
 
         except requests.exceptions.RequestException as err:
             error_msg = "[API-RATE-LIMITS] Error while fetching user quota: "
