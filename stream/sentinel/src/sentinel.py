@@ -103,24 +103,29 @@ class SentinelConnector:
         # Action condition based on confidence score if action is not set
         if self.action:
             action = self.action
-        elif (
-            OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
-            >= self.confidence_level
-        ):
-            action = "block"
-        elif (
-            OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
-            < self.confidence_level
-            and OpenCTIConnectorHelper.get_attribute_in_extension("score", data) != 0
-        ):
-            action = "alert"
-        elif OpenCTIConnectorHelper.get_attribute_in_extension("score", data) == 0:
-            action = "allow"
         else:
-            action = "unknown"
+            score = OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
+            if score is None:
+                action = "unknown"
+            elif score >= self.confidence_level:
+                action = "block"
+            elif score < self.confidence_level and score != 0:
+                action = "alert"
+            elif score == 0:
+                action = "allow"
+            else:
+                action = "unknown"
         return action
 
-    def _create_indicator(self, data):
+    def _search_ti_indicator(self, external_id):
+        param = f"$filter=externalId eq '{external_id}'"
+        uri = self.resource_url + self.request_url + "?" + param
+        response = requests.get(uri, headers=self.headers)
+        if response.status_code == 206:
+            if len(response.json()["value"]) == 1:
+                return response.json()["value"][0]["id"]
+
+    def _create_indicator(self, data, method):
         internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         try:
             translation = stix_translation.StixTranslation()
@@ -139,17 +144,17 @@ class SentinelConnector:
                         stix_type = result["attribute"].replace(":value", "")
                         data["type"] = stix_type
                         data["value"] = stix_value
-                        self._create_observable(data)
+                        self._create_observable(data, method)
                     elif result["attribute"] == "file:hashes.'SHA-256'":
                         data["type"] = "file"
                         data["hashes"] = {"SHA-256": stix_value}
-                        self._create_observable(data)
+                        self._create_observable(data, method)
         except:
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 "[CREATE] Cannot convert STIX indicator { " + internal_id + "}"
             )
 
-    def _create_observable(self, data):
+    def _create_observable(self, data, method):
         self._graph_api_authorization()
         internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         ioc_type = None
@@ -235,13 +240,15 @@ class SentinelConnector:
         else:
             passive_only = "false"
 
-        self.helper.log_info("[CREATE] Processing data {" + internal_id + "}")
+        self.helper.connector_logger.info(
+            "[" + method.upper() + "] Processing data {" + internal_id + "}"
+        )
         # Do any processing needed
         data["_key"] = internal_id
 
         # Check for IOC type and send request
-        # This is for network based IOCS
-        response = None
+        # This is for network based IOCs
+        body = {}
         if (
             ioc_type == "networkIPv4"
             or ioc_type == "url"
@@ -262,11 +269,6 @@ class SentinelConnector:
                 "tags": tags,
                 "confidence": confidence,
             }
-            response = requests.post(
-                self.resource_url + self.request_url,
-                json=body,
-                headers=self.headers,
-            )
         # This is for email based IOCs
         elif ioc_type == "email":
             body = {
@@ -284,11 +286,6 @@ class SentinelConnector:
                 "tags": tags,
                 "confidence": confidence,
             }
-            response = requests.post(
-                self.resource_url + self.request_url,
-                json=body,
-                headers=self.headers,
-            )
         # This is for file types. Does a check for MD5, SHA1, and SHA256 being present. Must contain at least one hash value
         elif ioc_type == "file":
             created_date = self.helper.get_attribute_in_extension("created_at", data)
@@ -310,11 +307,6 @@ class SentinelConnector:
                     "passiveOnly": passive_only,
                     "tags": tags,
                 }
-                response = requests.post(
-                    self.resource_url + self.request_url,
-                    json=body,
-                    headers=self.headers,
-                )
             if "SHA-1" in data["hashes"]:
                 body = {
                     "fileCreatedDateTime": created_date,
@@ -334,11 +326,6 @@ class SentinelConnector:
                     "tags": tags,
                     "confidence": confidence,
                 }
-                response = requests.post(
-                    self.resource_url + self.request_url,
-                    json=body,
-                    headers=self.headers,
-                )
             if "SHA-256" in data["hashes"]:
                 body = {
                     "fileCreatedDateTime": created_date,
@@ -358,45 +345,74 @@ class SentinelConnector:
                     "tags": tags,
                     "confidence": confidence,
                 }
+        if body:
+            response = None
+            if method == "create":
                 response = requests.post(
                     self.resource_url + self.request_url,
                     json=body,
                     headers=self.headers,
                 )
-
-        # Log if the creation was successful or not
-        if response is not None:
-            if "201" in str(response):
-                self.helper.log_info("[CREATE] ID {" + internal_id + " Success }")
-                result = response.json()
-                external_reference = self.helper.api.external_reference.create(
-                    source_name=self.target_product.replace("Azure", "Microsoft"),
-                    external_id=result["id"],
-                    description="Intel within the Microsoft platform.",
-                )
-                if "pattern" in data:
-                    self.helper.api.stix_domain_object.add_external_reference(
-                        id=internal_id,
-                        external_reference_id=external_reference["id"],
+            elif method == "update":
+                ti_indicator_id = self._search_ti_indicator(body["externalId"])
+                if ti_indicator_id:
+                    response = requests.patch(
+                        self.resource_url + self.request_url + "/" + ti_indicator_id,
+                        json=body,
+                        headers=self.headers,
                     )
                 else:
-                    self.helper.api.stix_cyber_observable.add_external_reference(
-                        id=internal_id,
-                        external_reference_id=external_reference["id"],
+                    self.helper.connector_logger.error(
+                        "[UPDATE] ID "
+                        + internal_id
+                        + " failed. "
+                        + "Unable to find an existing tiIndicator "
+                        + "with external_id:"
+                        + body["externalId"]
                     )
-            else:
-                self.helper.log_info(
-                    "[CREATE] ID {"
-                    + internal_id
-                    + " Failed and got }"
-                    + str(response)
-                    + " status code."
-                )
+                    return
+
+            # Log if the creation was successful or not
+            if response is not None:
+                if "201" in str(response):
+                    self.helper.connector_logger.info(
+                        "[CREATE] ID {" + internal_id + " Success }"
+                    )
+                    result = response.json()
+                    external_reference = self.helper.api.external_reference.create(
+                        source_name=self.target_product.replace("Azure", "Microsoft"),
+                        external_id=result["id"],
+                        description="Intel within the Microsoft platform.",
+                    )
+                    if "pattern" in data:
+                        self.helper.api.stix_domain_object.add_external_reference(
+                            id=internal_id,
+                            external_reference_id=external_reference["id"],
+                        )
+                    else:
+                        self.helper.api.stix_cyber_observable.add_external_reference(
+                            id=internal_id,
+                            external_reference_id=external_reference["id"],
+                        )
+                elif "204" in str(response):
+                    self.helper.connector_logger.info(
+                        "[UPDATE] ID {" + internal_id + " Success }"
+                    )
+                else:
+                    self.helper.connector_logger.error(
+                        "[CREATE/UPDATE] ID {"
+                        + internal_id
+                        + " Failed and got }"
+                        + str(response)
+                        + " status code."
+                    )
 
     def _delete_object(self, data):
         self._graph_api_authorization()
         internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-        self.helper.log_info("[DELETE] Processing data {" + internal_id + "}")
+        self.helper.connector_logger.info(
+            "[DELETE] Processing data {" + internal_id + "}"
+        )
         # Gets a list of all IOC in Microsoft Platform and looks for externalID which is for OpenCTI reference
         response = requests.get(
             self.resource_url + self.request_url, headers=self.headers
@@ -411,7 +427,9 @@ class SentinelConnector:
                     self.resource_url + self.request_url + "/" + ioc_id,
                     headers=self.headers,
                 )
-                self.helper.log_info("[DELETE] ID {" + internal_id + "} Success")
+                self.helper.connector_logger.info(
+                    "[DELETE] ID {" + internal_id + "} Success"
+                )
                 if data["type"] == "indicator":
                     entity = self.helper.api.indicator.read(id=internal_id)
                 else:
@@ -431,7 +449,7 @@ class SentinelConnector:
                 did_delete = 1
         # Logs not found if no IOCs were deleted
         if did_delete == 0:
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 "[DELETE] ID {"
                 + internal_id
                 + "} Not found on "
@@ -441,11 +459,11 @@ class SentinelConnector:
     def _process_message(self, msg):
         try:
             data = json.loads(msg.data)["data"]
-            if msg.event == "create":
+            if msg.event == "create" or msg.event == "update":
                 if data["type"] == "indicator" and data["pattern_type"].startswith(
                     "stix"
                 ):
-                    self._create_indicator(data)
+                    self._create_indicator(data, msg.event)
                 elif data["type"] in [
                     "ipv4-addr",
                     "ipv6-addr",
@@ -455,12 +473,16 @@ class SentinelConnector:
                     "email-addr",
                     "file",
                 ]:
-                    self._create_observable(data)
+                    self._create_observable(data, msg.event)
             elif msg.event == "delete":
                 self._delete_object(data)
-        except Exception as e:
-            self.helper.log_error("[ERROR] Failed processing data {" + str(e) + "}")
-            self.helper.log_error("[ERROR] Message data {" + str(msg) + "}")
+        except Exception as ex:
+            self.helper.connector_logger.error(
+                "[ERROR] Failed processing data {" + str(ex) + "}"
+            )
+            self.helper.connector_logger.error(
+                "[ERROR] Message data {" + str(msg) + "}"
+            )
             return None
 
     # Listen to OpenCTI stream and calls the _process_message function
