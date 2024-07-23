@@ -106,7 +106,7 @@ class CapeSandboxConnector:
             id=final_observable["id"],
             input={
                 "key": "hashes",
-                "object_path": "hashes/MD5",
+                "object_path": "/hashes/MD5",
                 "value": target["md5"],
             },
         )
@@ -114,7 +114,7 @@ class CapeSandboxConnector:
             id=final_observable["id"],
             input={
                 "key": "hashes",
-                "object_path": "hashes/SHA-1",
+                "object_path": "/hashes/SHA-1",
                 "value": target["sha1"],
             },
         )
@@ -122,7 +122,7 @@ class CapeSandboxConnector:
             id=final_observable["id"],
             input={
                 "key": "hashes",
-                "object_path": "hashes/SHA-256",
+                "object_path": "/hashes/SHA-256",
                 "value": target["sha256"],
             },
         )
