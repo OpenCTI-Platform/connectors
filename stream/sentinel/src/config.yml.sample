@@ -7,7 +7,6 @@ connector:
   type: 'STREAM'
   name: 'Microsoft Sentinel'
   scope: 'sentinel' # MIME type or SCO
-  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
   live_stream_id: 'ChangeMe'
   live_stream_listen_delete: true
