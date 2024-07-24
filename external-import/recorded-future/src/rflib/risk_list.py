@@ -12,7 +12,6 @@ class RiskList(threading.Thread):
         self,
         helper,
         update_existing_data,
-        interval,
         rfapi,
         tlp,
         risk_list_threshold,
@@ -21,7 +20,6 @@ class RiskList(threading.Thread):
         threading.Thread.__init__(self)
         self.helper = helper
         self.update_existing_data = update_existing_data
-        self.interval = interval
         self.rfapi = rfapi
         self.tlp = tlp
         self.risk_list_threshold = risk_list_threshold

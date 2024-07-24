@@ -7,13 +7,10 @@ from .constants import THREAT_MAP_TYPE_MAPPER
 
 
 class ThreatMap(threading.Thread):
-    def __init__(
-        self, helper, update_existing_data, interval, rfapi, tlp, risk_list_threshold
-    ):
+    def __init__(self, helper, update_existing_data, rfapi, tlp, risk_list_threshold):
         threading.Thread.__init__(self)
         self.helper = helper
         self.update_existing_data = update_existing_data
-        self.interval = interval
         self.rfapi = rfapi
         self.tlp = tlp
         self.risk_list_threshold = risk_list_threshold

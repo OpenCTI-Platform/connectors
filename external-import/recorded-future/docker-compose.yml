@@ -14,7 +14,8 @@ services:
       - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo
       - RECORDED_FUTURE_TOKEN=CHANGEME #required
       - RECORDED_FUTURE_INITIAL_LOOKBACK=240 #required
-      - RECORDED_FUTURE_INTERVAL=240 #required
+      - RECORDED_FUTURE_PULL_ANALYST_NOTES=True
+      - RECORDED_FUTURE_LAST_PUBLISHED_NOTES=24 #required, in hours
       - RECORDED_FUTURE_TOPIC=ChangeMe #optional, can remove
       - RECORDED_FUTURE_TLP=White # required
       - RECORDED_FUTURE_INSIKT_ONLY=True #optional, can remove
@@ -24,9 +25,7 @@ services:
       - RECORDED_FUTURE_RISK_AS_SCORE=True #optional, can remove
       - RECORDED_FUTURE_RISK_THRESHOLD=60 #optional, can remove
       - RECORDED_FUTURE_PULL_RISK_LIST=False #optional, can remove
-      - RECORDED_FUTURE_RISK_LIST_INTERVAL=48 #required, in hours
       - RECORDED_FUTURE_RISK_LIST_THRESHOLD=70 #optional, can remove
       - RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES='Malware,Hash,URL,Threat Actor,MitreAttackIdentifier' #required if RECORDED_FUTURE_PULL_RISK_LIST is True, possible values: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier
       - RECORDED_FUTURE_PULL_THREAT_MAPS=False #optional, can remove
-      - RECORDED_FUTURE_THREAT_MAPS_INTERVAL=24 #required, in hours
     restart: always

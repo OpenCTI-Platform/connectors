@@ -16,6 +16,7 @@ rf:
   token: 'ChangeMe' # Required
   initial_lookback: 240 # Required, in hours
   pull_analyst_notes: True
+  last_published_notes: 24 # Required, in hours
   TLP: white
   topic: 'VTrvnW,g1KBGl,ZjnoP0,aDKkpk,TXSFt5,UrMRnT,TXSFt3' # optional / Corresponds to Yara Rule, Sigma Rule, Snort Rule, TTP Instance, Validated Intelligence Event, Informational, Threat Lead
   insikt_only: True # optional

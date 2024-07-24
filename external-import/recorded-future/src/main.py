@@ -46,15 +46,7 @@ class BaseRFConnector:
             config,
             isNumber=True,
         )
-        self.rf_interval = get_config_variable(
-            "RECORDED_FUTURE_INTERVAL", ["rf", "interval"], config, isNumber=True
-        )
-        self.rf_risk_list_interval = get_config_variable(
-            "RECORDED_FUTURE_RISK_LIST_INTERVAL",
-            ["rf", "risk_list_interval"],
-            config,
-            isNumber=True,
-        )
+
         self.tlp = get_config_variable(
             "RECORDED_FUTURE_TLP", ["rf", "TLP"], config
         ).lower()
@@ -112,12 +104,6 @@ class BaseRFConnector:
             "RECORDED_FUTURE_PULL_THREAT_MAPS", ["rf", "pull_threat_maps"], config
         )
 
-        self.threat_maps_interval = get_config_variable(
-            "RECORDED_FUTURE_THREAT_MAPS_INTERVAL",
-            ["rf", "threat_maps_interval"],
-            config,
-        )
-
         risklist_related_entities_list = get_config_variable(
             "RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES",
             ["rf", "risklist_related_entities"],
@@ -139,6 +125,12 @@ class BaseRFConnector:
             "RECORDED_FUTURE_PULL_ANALYST_NOTES", ["rf", "pull_analyst_notes"], config
         )
 
+        self.last_published_notes_interval = get_config_variable(
+            "RECORDED_FUTURE_LAST_PUBLISHED_NOTES",
+            ["rf", "last_published_notes"],
+            config,
+        )
+
         self.duration_period = get_config_variable(
             "CONNECTOR_DURATION_PERIOD", ["connector", "duration_period"], config
         )
@@ -150,10 +142,6 @@ class RFNotes(BaseRFConnector):
     def __init__(self):
         """Read in config variables"""
         super().__init__()
-
-    def get_interval(self):
-        """Converts interval hours to seconds"""
-        return int(self.rf_interval) * 3600
 
     def run(self):
         """Run connector on a schedule"""
@@ -172,7 +160,7 @@ class RFNotes(BaseRFConnector):
                 "%Y-%m-%d %H:%M:%S"
             )
             self.helper.log_info("Connector last run: " + last_run)
-            published = self.rf_interval
+            published = self.last_published_notes_interval
         else:
             msg = (
                 "Connector has never run. Doing initial pull of "
@@ -267,7 +255,6 @@ class RFConnector:
             self.risk_list = RiskList(
                 self.RF.helper,
                 self.RF.update_existing_data,
-                self.RF.rf_risk_list_interval,
                 self.RF.rfapi,
                 self.RF.tlp,
                 self.RF.risk_list_threshold,
@@ -282,7 +269,6 @@ class RFConnector:
             self.threat_maps = ThreatMap(
                 self.RF.helper,
                 self.RF.update_existing_data,
-                self.RF.threat_maps_interval,
                 self.RF.rfapi,
                 self.RF.tlp,
                 self.RF.risk_list_threshold,
