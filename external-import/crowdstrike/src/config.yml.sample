@@ -9,7 +9,6 @@ connector:
   scope: 'crowdstrike'
   log_level: 'info'
   duration_period: 'PT30M' # In ISO8601 format, start with 'P' for period
-  queue_threshold: 500 # Default 500mo
 
 crowdstrike:
   base_url: 'https://api.crowdstrike.com'

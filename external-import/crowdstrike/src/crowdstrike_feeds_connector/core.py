@@ -58,8 +58,6 @@ class CrowdStrike:
         # Load configuration file and connection helper
         self.config = ConfigCrowdstrike()
 
-        self.interval_sec = self.config.interval_sec
-
         scopes_str = self.config.scopes
         scopes = set()
         if scopes_str is not None:
