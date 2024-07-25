@@ -38,9 +38,13 @@ class ExternalImportConnector:
                     raise ValueError(f"Invalid unit: {unit}")
                 int(self.interval[:-1])
             except ValueError as ve:
-                self.helper.log_error(f"Invalid CONNECTOR_RUN_EVERY value. Expected format: <number><unit>, where unit is d, h, m, or s. Error: {ve}")
+                self.helper.log_error(
+                    f"Invalid CONNECTOR_RUN_EVERY value. Expected format: <number><unit>, where unit is d, h, m, or s. Error: {ve}"
+                )
             except TypeError as te:
-                self.helper.log_error(f"The CONNECTOR_RUN_EVERY environment variable is not an integer. Expected format: <number><unit>. Error: {te}")
+                self.helper.log_error(
+                    f"The CONNECTOR_RUN_EVERY environment variable is not an integer. Expected format: <number><unit>. Error: {te}"
+                )
 
         except KeyError as ex:
             msg = "The CONNECTOR_RUN_EVERY environment variable is not set."
@@ -56,8 +60,10 @@ class ExternalImportConnector:
             raise ValueError(msg) from ex
 
         # Validate the CONNECTOR_UPDATE_EXISTING_DATA environment variable.
-        update_existing_data = os.environ.get("CONNECTOR_UPDATE_EXISTING_DATA", "false").lower()
-        
+        update_existing_data = os.environ.get(
+            "CONNECTOR_UPDATE_EXISTING_DATA", "false"
+        ).lower()
+
         if update_existing_data == "true":
             self.update_existing_data = True
         elif update_existing_data == "false":
