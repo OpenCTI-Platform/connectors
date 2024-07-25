@@ -26,7 +26,7 @@ class ExternalImportConnector:
 
         # Specific connector attributes for external import connectors
         try:
-            self.interval = os.environ.get("CONNECTOR_RUN_EVERY", None).lower()
+            self.interval = os.environ["CONNECTOR_RUN_EVERY"].lower()
             self.helper.log_info(
                 f"Verifying integrity of the CONNECTOR_RUN_EVERY value: '{self.interval}'"
             )
@@ -34,6 +34,10 @@ class ExternalImportConnector:
             if unit not in ["d", "h", "m", "s"]:
                 raise TypeError
             int(self.interval[:-1])
+        except KeyError as ex:
+            msg = "The CONNECTOR_RUN_EVERY environment variable is not set."
+            self.helper.log_error(msg)
+            raise ValueError(msg) from ex
         except TypeError as ex:
             msg = (
                 f"Error ({ex}) when grabbing CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. "
