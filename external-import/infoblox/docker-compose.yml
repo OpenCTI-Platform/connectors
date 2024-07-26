@@ -8,9 +8,7 @@ services:
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=INFOBLOX
-      - CONNECTOR_CONFIDENCE_LEVEL=70 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - INFOBLOX_API_KEY=CHANGME
       - INFOBLOX_INTERVAL=12 # In hours
       - INFOBLOX_IOC_LIMIT=10000 # Limit of IOCs to import (for each IOC types)
