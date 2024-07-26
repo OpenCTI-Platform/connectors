@@ -1,16 +1,14 @@
 version: '1'
 services:
   connector-cisco_sma:
-    image: opencti/connector-cisco_sma:6.2.0
+    image: opencti/connector-cisco-sma:6.2.0
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_NAME=CISCO_SMA
-      - CONNECTOR_CONFIDENCE_LEVEL=50         # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_NAME=CISCO-SMA
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CISCO_SMA_API_KEY=CHANGME
       - CISCO_SMA_URL=https://panacea.threatgrid.eu/api/v3/feeds/
       - CISCO_SMA_IOC_SCORE=60                # The score to be set on Indicators and Observables

@@ -34,8 +34,6 @@ The connector creates the following OpenCTI entities:
 | `connector_id`         | `CONNECTOR_ID`                   | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                |
 | `connector_name`       | `CONNECTOR_NAME`                 | Yes       | Option `Infoblox`                                                                 |
 | `connector_scope`      | `CONNECTOR_SCOPE`                | Yes       | Supported scope: Template Scope (MIME Type or Stix Object)                        |
-| `confidence_level`     | `CONNECTOR_CONFIDENCE_LEVEL`     | Yes       | Set the confidence level for this data (deprecated)                               |
-| `update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | No        | Update data already in the platform based on the Infoblox data pull               |
 | `log_level`            | `CONNECTOR_LOG_LEVEL`            | No        | Log output for the connector. Defaults to `INFO`                                  |
 | `api_key`              | `INFOBLOX_API_KEY`               | No        | The user api key configured in Infoblox                                           |
 | `url`                  | `INFOBLOX_URL`                   | No        | Defaults to `https://csp.infoblox.com/tide/api/data/threats`                      |

@@ -8,9 +8,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Cisco sma'
   scope: 'Cisco sma'
-  confidence_level: 50        # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
-  update_existing_data: false
 
 
 cisco_sma:

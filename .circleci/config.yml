@@ -328,7 +328,11 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/infoblox
           name: Build Docker image opencti/connector-infoblox
-          command: docker build -t opencti/connector-infoblox:latest . && docker tag opencti/connector-infoblox:latest opencti/connector-infoblox:${CIRCLE_TAG}          
+          command: docker build -t opencti/connector-infoblox:latest . && docker tag opencti/connector-infoblox:latest opencti/connector-infoblox:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/cisco-sma
+          name: Build Docker image opencti/connector-cisco-sma
+          command: docker build -t opencti/connector-cisco-sma:latest . && docker tag opencti/connector-cisco-sma:latest opencti/connector-cisco-sma:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -465,6 +469,8 @@ jobs:
             docker push opencti/connector-malcore:${CIRCLE_TAG}
             docker push opencti/connector-infoblox:latest
             docker push opencti/connector-infoblox:${CIRCLE_TAG}
+            docker push opencti/connector-cisco-sma:latest
+            docker push opencti/connector-cisco-sma:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1188,7 +1194,11 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/infoblox
           name: Build Docker image opencti/connector-infoblox
-          command: docker build -t opencti/connector-infoblox:rolling .          
+          command: docker build -t opencti/connector-infoblox:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/cisco-sma
+          name: Build Docker image opencti/connector-cisco-sma
+          command: docker build -t opencti/connector-cisco-sma:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -1257,6 +1267,7 @@ jobs:
             docker push opencti/connector-mitre-atlas:rolling
             docker push opencti/connector-malcore:rolling
             docker push opencti/connector-infoblox:rolling
+            docker push opencti/connector-cisco-sma:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
