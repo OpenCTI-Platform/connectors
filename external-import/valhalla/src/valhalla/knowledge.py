@@ -2,12 +2,11 @@
 """OpenCTI Valhalla Knowledge importer module."""
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Mapping
 from urllib.parse import urlparse
 
 import requests
-from dateutil.relativedelta import relativedelta
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2 import Bundle, ExternalReference, Identity, Indicator, Relationship
 
@@ -58,7 +57,11 @@ class KnowledgeImporter:
             work_id=work_id,
         )
 
-        state_timestamp = int(datetime.utcnow().timestamp())
+        # Get the current time in UTC as a timezone-aware datetime object
+        current_time_utc = datetime.now(timezone.utc)
+        # Convert the timezone-aware datetime object to a timestamp
+        state_timestamp = int(current_time_utc.timestamp())
+
         self.helper.log_info("knowledge importer completed")
         return {self._KNOWLEDGE_IMPORTER_STATE: state_timestamp}
 
@@ -95,13 +98,11 @@ class KnowledgeImporter:
                 pattern=yr.content,
                 labels=yr.tags,
                 valid_from=yr.cti_date,
-                valid_until=datetime.utcnow() + relativedelta(years=2),
                 object_marking_refs=[self.default_marking],
                 created_by_ref=self.organization,
                 external_references=refs,
                 custom_properties={
                     "x_opencti_main_observable_type": "StixFile",
-                    "x_opencti_detection": True,
                     "x_opencti_score": yr.score,
                 },
             )

@@ -1,0 +1,35 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Cisco sma'
+  scope: 'Cisco sma'
+  log_level: 'info'
+
+
+cisco_sma:
+  api_key: 'ChangeMe'
+  url: 'https://panacea.threatgrid.eu/api/v3/feeds/'
+  ioc_score: 60               # The score to be set on Indicators and Observables
+  autorun-registry: false     # Contains registry entry data derived from querying registry changes known for persistence
+  banking-dns: true           # Banking Trojan Network Communications
+  dga-dns: true               # DGA Domains with pseudo-randomly generated names
+  dll-hijacking-dns: true     # Feed contains Domains communicated to by samples leveraging DLL Sideloading and/or hijacking techniques
+  doc-net-com-dns: true       # Document (PDF, Office) Network Communications
+  downloaded-pe-dns: true     # Samples Downloading Executables Network Communications
+  dynamic-dns: true           # Samples Leveraging Dynamic DNS Providers
+  irc-dns: true               # Internet Relay Chat (IRC) Network Communications
+  modified-hosts-dns: true    # Modified Windows Hosts File Network Communications
+  parked-dns: true            # Parked Domains resolving to RFC1918, Localhost and Broadcast Addresses
+  public-ip-check-dns: true   # Check For Public IP Address Network Communications
+  ransomware-dns: true        # Samples Communicating with Ransomware Servers
+  rat-dns: true               # Remote Access Trojan (RAT) Network Communications
+  scheduled-tasks: false      # Feed containing scheduled task data observed during sample execution
+  sinkholed-ip-dns: true      # DNS entries for samples communicating with a known dns sinkhole
+  stolen-cert-dns: true       # DNS Entries observed from samples signed with a stolen certificate
+  interval: 24                # In hours
+  marking_definition: 'TLP:AMBER'
