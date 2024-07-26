@@ -171,7 +171,10 @@ class Cisco_SMA:
         )
 
     def set_marking(self):
-        if self.cisco_sma_marking == "TLP:WHITE" or self.cisco_sma_marking == "TLP:CLEAR":
+        if (
+            self.cisco_sma_marking == "TLP:WHITE"
+            or self.cisco_sma_marking == "TLP:CLEAR"
+        ):
             marking = stix2.TLP_WHITE
         elif self.cisco_sma_marking == "TLP:GREEN":
             marking = stix2.TLP_GREEN
@@ -187,27 +190,47 @@ class Cisco_SMA:
     def cisco_sma_api_get(self):
         try:
             today_date = date.today()
-            current_date = (today_date - timedelta(days=1)).strftime('%Y-%m-%d')
+            current_date = (today_date - timedelta(days=1)).strftime("%Y-%m-%d")
             cisco_sma_result = []
             true_attributes = [
-                attr[1] for attr, value in [
-                    (["cisco_sma", "autorun-registry"], self.cisco_sma_autorun_registry),
+                attr[1]
+                for attr, value in [
+                    (
+                        ["cisco_sma", "autorun-registry"],
+                        self.cisco_sma_autorun_registry,
+                    ),
                     (["cisco_sma", "banking-dns"], self.cisco_sma_banking_dns),
                     (["cisco_sma", "dga-dns"], self.cisco_sma_dga_dns),
-                    (["cisco_sma", "dll-hijacking-dns"], self.cisco_sma_dll_hijacking_dns),
+                    (
+                        ["cisco_sma", "dll-hijacking-dns"],
+                        self.cisco_sma_dll_hijacking_dns,
+                    ),
                     (["cisco_sma", "doc-net-com-dns"], self.cisco_sma_doc_net_com_dns),
-                    (["cisco_sma", "downloaded-pe-dns"], self.cisco_sma_downloaded_pe_dns),
+                    (
+                        ["cisco_sma", "downloaded-pe-dns"],
+                        self.cisco_sma_downloaded_pe_dns,
+                    ),
                     (["cisco_sma", "dynamic-dns"], self.cisco_sma_dynamic_dns),
                     (["cisco_sma", "irc-dns"], self.cisco_sma_irc_dns),
-                    (["cisco_sma", "modified-hosts-dns"], self.cisco_sma_modified_hosts_dns),
+                    (
+                        ["cisco_sma", "modified-hosts-dns"],
+                        self.cisco_sma_modified_hosts_dns,
+                    ),
                     (["cisco_sma", "parked-dns"], self.cisco_sma_parked_dns),
-                    (["cisco_sma", "public-ip-check-dns"], self.cisco_sma_public_ip_check_dns),
+                    (
+                        ["cisco_sma", "public-ip-check-dns"],
+                        self.cisco_sma_public_ip_check_dns,
+                    ),
                     (["cisco_sma", "ransomware-dns"], self.cisco_sma_ransomware_dns),
                     (["cisco_sma", "rat-dns"], self.cisco_sma_rat_dns),
                     (["cisco_sma", "scheduled-tasks"], self.cisco_sma_scheduled_tasks),
-                    (["cisco_sma", "sinkholed-ip-dns"], self.cisco_sma_sinkholed_ip_dns),
-                    (["cisco_sma", "stolen-cert-dns"], self.cisco_sma_stolen_cert_dns)
-                ] if value
+                    (
+                        ["cisco_sma", "sinkholed-ip-dns"],
+                        self.cisco_sma_sinkholed_ip_dns,
+                    ),
+                    (["cisco_sma", "stolen-cert-dns"], self.cisco_sma_stolen_cert_dns),
+                ]
+                if value
             ]
             for category in true_attributes:
                 url = f"{self.cisco_sma_url}{category}_{current_date}.json?api_key={self.cisco_sma_api_key}"
@@ -222,7 +245,6 @@ class Cisco_SMA:
             )
 
     def create_stix_object(self, domain, description, label, identity_id):
-
         pattern = f"[domain-name:value = '{domain}']"
         observable_type = "Domain-Name"
         name = domain
@@ -267,7 +289,6 @@ class Cisco_SMA:
             self.stix_domain.append(relationship)
 
     def create_stix_bundle(self, data, true_attributes):
-
         identity_id = "identity--a798ea4a-e656-5a8b-989e-960419abb1fc"
         identity = stix2.Identity(
             id=identity_id,
