@@ -3,8 +3,8 @@ import json
 import os
 import sys
 import time
-from datetime import date
-from datetime import timedelta
+from datetime import date, timedelta
+
 import requests
 import stix2
 import yaml
