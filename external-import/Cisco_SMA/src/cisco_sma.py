@@ -266,7 +266,7 @@ class Cisco_SMA:
             )
             self.stix_domain.append(relationship)
 
-    def create_stix_bundle(self, info, true_attributes):
+    def create_stix_bundle(self, data, true_attributes):
 
         identity_id = "identity--a798ea4a-e656-5a8b-989e-960419abb1fc"
         identity = stix2.Identity(
@@ -281,7 +281,7 @@ class Cisco_SMA:
 
         k = 0
         self.stix_domain.append(identity)
-        for i in info:
+        for i in data:
             if len(i) > 2:
                 json_data = json.loads(i)
                 domain_list = [item["domain"] for item in json_data]

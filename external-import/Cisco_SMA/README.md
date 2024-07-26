@@ -9,6 +9,8 @@ General description of the connector
 * ...
 -->
 
+## Description
+
 This connector imports data from the [CISCO SMA database](https://www.cisco.com/c/en/us/products/collateral/security/content-security-management-appliance/datasheet_C78-721194.html). 
 
 The connector does not retrieve historical data. It retrieves the day's IOCs on a daily basis. For this reason, there is no reason to set the “interval” variable to a value other than “24”. Setting more would cause IOCs to be missed, setting less would simply reimport IOCs already retrieved.
@@ -18,6 +20,12 @@ The connector creates the following OpenCTI entities:
 - Indicator (Domain Name),
 - Observable Domain Name,
 - The CISCO SMA Organization.
+
+## Additional note
+
+Cisco SMA returns other data (mainly IPs and hashes). However, only domains are currently retrieved. This choice was made in response to the developer's need to retrieve only domains. IPs were deemed not always reliable, and hashes had no context (such as potential malware).
+
+![Cisco_SMA_data](assets/Cisco_SMA_data.png)
 
 ## Installation
 
