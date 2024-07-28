@@ -1,4 +1,4 @@
 pycti==6.2.7
 stix-shifter==7.0.2
 pydantic==2.6.4
-pydantic_core==2.16.3
+pydantic_core==2.20.1
