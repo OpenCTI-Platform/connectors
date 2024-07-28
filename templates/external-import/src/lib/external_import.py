@@ -26,14 +26,30 @@ class ExternalImportConnector:
 
         # Specific connector attributes for external import connectors
         try:
-            self.interval = os.environ.get("CONNECTOR_RUN_EVERY", None).lower()
+            self.interval = os.environ["CONNECTOR_RUN_EVERY"].lower()
             self.helper.log_info(
                 f"Verifying integrity of the CONNECTOR_RUN_EVERY value: '{self.interval}'"
             )
-            unit = self.interval[-1]
-            if unit not in ["d", "h", "m", "s"]:
-                raise TypeError
-            int(self.interval[:-1])
+
+            # Validate the CONNECTOR_RUN_EVERY environment variable.
+            try:
+                unit = self.interval[-1]
+                if unit not in ["d", "h", "m", "s"]:
+                    raise ValueError(f"Invalid unit: {unit}")
+                int(self.interval[:-1])
+            except ValueError as ve:
+                self.helper.log_error(
+                    f"Invalid CONNECTOR_RUN_EVERY value. Expected format: <number><unit>, where unit is d, h, m, or s. Error: {ve}"
+                )
+            except TypeError as te:
+                self.helper.log_error(
+                    f"The CONNECTOR_RUN_EVERY environment variable is not an integer. Expected format: <number><unit>. Error: {te}"
+                )
+
+        except KeyError as ex:
+            msg = "The CONNECTOR_RUN_EVERY environment variable is not set."
+            self.helper.log_error(msg)
+            raise ValueError(msg) from ex
         except TypeError as ex:
             msg = (
                 f"Error ({ex}) when grabbing CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. "
@@ -43,24 +59,22 @@ class ExternalImportConnector:
             self.helper.log_error(msg)
             raise ValueError(msg) from ex
 
-        update_existing_data = os.environ.get("CONNECTOR_UPDATE_EXISTING_DATA", "false")
-        if isinstance(update_existing_data, str) and update_existing_data.lower() in [
-            "true",
-            "false",
-        ]:
-            self.update_existing_data = update_existing_data.lower() == "true"
-        elif isinstance(update_existing_data, bool) and update_existing_data.lower in [
-            True,
-            False,
-        ]:
-            self.update_existing_data = update_existing_data
+        # Validate the CONNECTOR_UPDATE_EXISTING_DATA environment variable.
+        update_existing_data = os.environ.get(
+            "CONNECTOR_UPDATE_EXISTING_DATA", "false"
+        ).lower()
+
+        if update_existing_data == "true":
+            self.update_existing_data = True
+        elif update_existing_data == "false":
+            self.update_existing_data = False
         else:
             msg = (
                 f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. "
-                "It SHOULD be either `true` or `false`. `false` is assumed. "
+                "It SHOULD be either `true` or `false`. Without providing any value, `false` is assumed."
             )
             self.helper.log_warning(msg)
-            self.update_existing_data = "false"
+            self.update_existing_data = False
 
     def _collect_intelligence(self) -> list:
         """Collect intelligence from the source"""
