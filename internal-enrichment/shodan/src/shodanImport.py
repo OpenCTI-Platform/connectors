@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime
 from typing import Dict
@@ -9,13 +10,29 @@ from pycti import (
     STIX_EXT_OCTI_SCO,
     CustomObservableHostname,
     Identity,
-    Indicator,
     Location,
+    Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     Vulnerability,
     get_config_variable,
 )
+
+FACETS = [
+    ("org", 20),
+    ("domain", 20),
+    ("port", 20),
+    ("asn", 20),
+    ("country", 20),
+]
+
+FACET_TITLES = {
+    "org": "Top 20 Organizations",
+    "domain": "Top 20 Domains",
+    "port": "Top 20 Ports",
+    "asn": "Top 20 Autonomous Systems",
+    "country": "Top 20 Countries",
+}
 
 
 class ShodanConnector:
@@ -32,18 +49,19 @@ class ShodanConnector:
         self.max_tlp = get_config_variable(
             "SHODAN_MAX_TLP", ["shodan", "max_tlp"], config, default="TLP:AMBER"
         )
-        self.create_indicators = get_config_variable(
-            "SHODAN_CREATE_INDICATORS",
-            ["shodan", "create_indicators"],
-            config,
-            default=False,
-        )
         self.shodanAPI = shodan.Shodan(self.token)
         self.default_score = get_config_variable(
             "SHODAN_DEFAULT_SCORE",
             ["shodan", "default_score"],
+            config,
             isNumber=True,
             default=50,
+        )
+        self.import_search_results = get_config_variable(
+            "SHODAN_IMPORT_SEARCH_RESULTS",
+            ["shodan", "import_search_results"],
+            config,
+            default=True,
         )
 
         # Shodan Identity
@@ -130,81 +148,62 @@ class ShodanConnector:
     def _generate_stix_identity(self, data):
         stix_organization_with_relationship = []
         organization = data["org"]
+        if organization is not None and len(organization) > 0:
+            # Generate Identity
+            stix_organization = stix2.Identity(
+                id=Identity.generate_id(organization, "organization"),
+                name=organization,
+                identity_class="organization",
+                created_by_ref=self.shodan_identity["standard_id"],
+            )
+            self.stix_objects.append(stix_organization)
+            stix_organization_with_relationship.append(stix_organization)
 
-        # Generate Identity
-        stix_organization = stix2.Identity(
-            id=Identity.generate_id(organization, "organization"),
-            name=organization,
-            identity_class="organization",
-            created_by_ref=self.shodan_identity["standard_id"],
-        )
-        self.stix_objects.append(stix_organization)
-        stix_organization_with_relationship.append(stix_organization)
-
-        # Generate Relationship : Observable -> "related-to" -> Organization
-        observable_to_organization = self._generate_stix_relationship(
-            self.stix_entity["id"], "related-to", stix_organization.id
-        )
-        self.stix_objects.append(observable_to_organization)
-        stix_organization_with_relationship.append(observable_to_organization)
-
-        return stix_organization_with_relationship
+            # Generate Relationship : Observable -> "related-to" -> Organization
+            observable_to_organization = self._generate_stix_relationship(
+                self.stix_entity["id"], "related-to", stix_organization.id
+            )
+            self.stix_objects.append(observable_to_organization)
 
     def _generate_stix_domain(self, data):
-        stix_domains_with_relationship = []
         entity_domains = data["domains"]
-
         for entity_domain in entity_domains:
             # Generate Domain
             stix_domain = stix2.DomainName(
                 type="domain-name",
                 value=entity_domain,
                 custom_properties={
-                    "created_by_ref": self.shodan_identity["standard_id"],
-                    "x_opencti_score": self.default_score,
+                    "x_opencti_created_by_ref": self.shodan_identity["standard_id"],
+                    "x_opencti_score": self.score,
                 },
             )
             self.stix_objects.append(stix_domain)
-            stix_domains_with_relationship.append(stix_domain)
-
             # Generate Relationship : observable -> "related-to" -> domain
             observable_to_domain = self._generate_stix_relationship(
                 self.stix_entity["id"], "related-to", stix_domain.id
             )
             self.stix_objects.append(observable_to_domain)
-            stix_domains_with_relationship.append(observable_to_domain)
-
-        return stix_domains_with_relationship
 
     def _generate_stix_hostname(self, data):
-        stix_hostnames_with_relationship = []
         entity_hostnames = data["hostnames"]
-
         for entity_hostname in entity_hostnames:
             # Generate Hostname
             stix_hostname = CustomObservableHostname(
                 value=entity_hostname,
                 custom_properties={
-                    "created_by_ref": self.shodan_identity["standard_id"],
-                    "x_opencti_score": self.default_score,
+                    "x_opencti_created_by_ref": self.shodan_identity["standard_id"],
+                    "x_opencti_score": self.score,
                 },
             )
             self.stix_objects.append(stix_hostname)
-            stix_hostnames_with_relationship.append(stix_hostname)
-
             # Generate Relationship : observable -> "related-to -> hostname
             observable_to_hostname = self._generate_stix_relationship(
                 self.stix_entity["id"], "related-to", stix_hostname.id
             )
             self.stix_objects.append(observable_to_hostname)
-            stix_hostnames_with_relationship.append(observable_to_hostname)
-
-        return stix_hostnames_with_relationship
 
     def _generate_stix_asn(self, data):
-        stix_asn_with_relationship = []
-
-        if "asn" in data:
+        if "asn" in data and data["asn"] is not None and len(data["asn"]) > 0:
             # Generate Asn
             entity_asn = data["asn"]
             asn_number = int(data["asn"].replace("AS", ""))
@@ -213,29 +212,21 @@ class ShodanConnector:
                 number=asn_number,
                 name=entity_asn,
                 custom_properties={
-                    "created_by_ref": self.shodan_identity["standard_id"],
-                    "x_opencti_score": self.default_score,
+                    "x_opencti_created_by_ref": self.shodan_identity["standard_id"],
+                    "x_opencti_score": self.score,
                 },
             )
             self.stix_objects.append(stix_asn)
-            stix_asn_with_relationship.append(stix_asn)
-
             # Generate Relationship : observable -> "belongs-to" -> Asn
             observable_to_asn = self._generate_stix_relationship(
                 self.stix_entity["id"], "belongs-to", stix_asn.id
             )
             self.stix_objects.append(observable_to_asn)
-            stix_asn_with_relationship.append(observable_to_asn)
-
-        return stix_asn_with_relationship
 
     def _generate_stix_x509(self, data):
-        stix_x509s_with_relationship = []
-
         for item in data["data"]:
             if "ssl" in item:
                 ssl_object = item["ssl"]
-
                 issued: datetime = datetime.strptime(
                     ssl_object["cert"]["issued"], "%Y%m%d%H%M%SZ"
                 )
@@ -278,24 +269,17 @@ class ShodanConnector:
                     hashes=hashes,
                     version=version,
                     custom_properties={
-                        "created_by_ref": self.shodan_identity["standard_id"]
+                        "x_opencti_created_by_ref": self.shodan_identity["standard_id"]
                     },
                 )
                 self.stix_objects.append(stix_x509)
-                stix_x509s_with_relationship.append(stix_x509)
-
                 # Generate Relationship : observable -> "related-to" -> x509
                 observable_to_x509 = self._generate_stix_relationship(
                     self.stix_entity["id"], "related-to", stix_x509.id
                 )
                 self.stix_objects.append(observable_to_x509)
-                stix_x509s_with_relationship.append(observable_to_x509)
-
-        return stix_x509s_with_relationship
 
     def _generate_stix_location(self, data):
-        stix_locations_with_relationship = []
-
         # Generate City Location
         stix_city_location = stix2.Location(
             id=Location.generate_id(data["city"], "City"),
@@ -306,15 +290,11 @@ class ShodanConnector:
             custom_properties={"x_opencti_location_type": "City"},
         )
         self.stix_objects.append(stix_city_location)
-        stix_locations_with_relationship.append(stix_city_location)
-
         # Generate Relationship : observable -> "located-at" -> city
         observable_to_city = self._generate_stix_relationship(
             self.stix_entity["id"], "located-at", stix_city_location.id
         )
         self.stix_objects.append(observable_to_city)
-        stix_locations_with_relationship.append(observable_to_city)
-
         # Generate Country Location
         stix_country_location = stix2.Location(
             id=Location.generate_id(data["country_name"], "Country"),
@@ -326,20 +306,13 @@ class ShodanConnector:
             },
         )
         self.stix_objects.append(stix_country_location)
-        stix_locations_with_relationship.append(stix_country_location)
-
         # Generate Relationship : city -> "located-at" -> country
         city_to_country = self._generate_stix_relationship(
             stix_city_location.id, "located-at", stix_country_location.id
         )
         self.stix_objects.append(city_to_country)
-        stix_locations_with_relationship.append(city_to_country)
-
-        return stix_locations_with_relationship
 
     def _generate_stix_vulnerability(self, data):
-        stix_vulnerability_with_relationship = []
-
         if "vulns" in data:
             entity_vulns = data["vulns"]
             for vuln in entity_vulns:
@@ -351,53 +324,13 @@ class ShodanConnector:
                     allow_custom=True,
                 )
                 self.stix_objects.append(stix_vulnerability)
-                stix_vulnerability_with_relationship.append(stix_vulnerability)
-
                 # Generate Relationship : observable -> "related-to" -> vulnerability
                 observable_to_vulnerability = self._generate_stix_relationship(
                     self.stix_entity["id"], "related-to", stix_vulnerability.id
                 )
                 self.stix_objects.append(observable_to_vulnerability)
-                stix_vulnerability_with_relationship.append(observable_to_vulnerability)
 
-            return stix_vulnerability_with_relationship
-        else:
-            return []
-
-    def _generate_stix_indicator(self, data, description, tags, external_reference):
-        stix_indicator_with_relationship = []
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-
-        # Generate Indicator
-        stix_indicator = stix2.Indicator(
-            id=Indicator.generate_id(data["ip_str"]),
-            name=data["ip_str"],
-            description=description,
-            labels=tags,
-            pattern=f"[ipv4-addr:value = '{data['ip_str']}']",
-            created_by_ref=self.shodan_identity["standard_id"],
-            external_references=[external_reference],
-            valid_from=now,
-            pattern_type="stix",
-            custom_properties={
-                "x_opencti_score": self.default_score,
-                "x_opencti_main_observable_type": "IPv4-Addr",
-                "x_opencti_detection": True,
-            },
-        )
-        self.stix_objects.append(stix_indicator)
-        stix_indicator_with_relationship.append(stix_indicator)
-
-        # Generate Relationship : Indicator -> "based-on" -> Observable
-        indicator_to_observable = self._generate_stix_relationship(
-            stix_indicator.id, "based-on", self.stix_entity["id"]
-        )
-        self.stix_objects.append(indicator_to_observable)
-        stix_indicator_with_relationship.append(indicator_to_observable)
-
-        return stix_indicator_with_relationship
-
-    def _upsert_stix_observable(self, data, description, labels, external_reference):
+    def _upsert_stix_observable(self, description, labels, external_reference):
         # Upsert Observable
         stix_observable = stix2.IPv4Address(
             id=self.stix_entity["id"],
@@ -406,7 +339,7 @@ class ShodanConnector:
             custom_properties={
                 "x_opencti_external_references": [external_reference],
                 "x_opencti_description": description,
-                "x_opencti_score": self.default_score,
+                "x_opencti_score": self.score,
                 "x_opencti_labels": labels,
                 "x_opencti_created_by_ref": self.shodan_identity["standard_id"],
             },
@@ -422,11 +355,13 @@ class ShodanConnector:
         """
         return stix_observable
 
-    def _generate_stix_bundle(self, data, stix_objects, stix_entity):
-        self.helper.log_info(
-            f"IPv4 : '{stix_entity['value']}', has been identified by Shodan and generation of the Stix bundle is in progress."
-        )
-
+    def _generate_stix_bundle(
+        self, data, stix_objects, stix_entity, score=None, only_objects=False
+    ):
+        if score is not None:
+            self.score = score
+        else:
+            self.score = self.default_score
         self.stix_objects = stix_objects
         self.stix_entity = stix_entity
 
@@ -442,17 +377,13 @@ class ShodanConnector:
         self._generate_stix_x509(data)
         self._generate_stix_location(data)  # City + Country
         self._generate_stix_vulnerability(data)
-
-        self._generate_stix_indicator(data, description, labels, external_reference)
-        self._upsert_stix_observable(data, description, labels, external_reference)
+        self._upsert_stix_observable(description, labels, external_reference)
 
         uniq_bundles_objects = list(
             {obj["id"]: obj for obj in self.stix_objects}.values()
         )
-
-        self.helper.log_info(
-            f"IPv4 : '{stix_entity['value']}', {len(uniq_bundles_objects)} Stix bundle(s) will be enriched."
-        )
+        if only_objects:
+            return uniq_bundles_objects
         return self.helper.stix2_create_bundle(uniq_bundles_objects)
 
     def _process_message(self, data: Dict):
@@ -469,28 +400,130 @@ class ShodanConnector:
         self._extract_and_check_markings(opencti_entity)
 
         # Extract Value from opencti entity data
-        opencti_entity_value = stix_entity["value"]
+        if stix_entity["type"] == "ipv4-addr":
+            ip_value = stix_entity["value"]
+            try:
+                # Get Shodan API Response
+                response = self.shodanAPI.host(ip_value)
 
-        try:
-            # Get Shodan API Response
-            response = self.shodanAPI.host(opencti_entity_value)
+                # Generate a stix bundle
+                bundle = self._generate_stix_bundle(response, stix_objects, stix_entity)
 
-            # Generate a stix bundle
-            bundle = self._generate_stix_bundle(response, stix_objects, stix_entity)
-
-            # send stix2 bundle
-            bundles_sent = self.helper.send_stix2_bundle(bundle)
-            return (
-                "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
+                # send stix2 bundle
+                bundles_sent = self.helper.send_stix2_bundle(bundle)
+                return "Sent " + str(len(bundles_sent)) + " STIX bundle(s) for import"
+            except shodan.APIError as e:
+                # Handling specific errors for Shodan API
+                raise ValueError(f"Shodan API Error : {str(e)}")
+            except Exception as e:
+                return self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
+        elif (
+            stix_entity["type"] == "indicator"
+            and stix_entity["pattern_type"] == "shodan"
+        ):
+            if "x_opencti_score" in stix_entity:
+                score = stix_entity["x_opencti_score"]
+            else:
+                score = self.helper.get_attribute_in_extension("score", stix_entity)
+            pattern_value = stix_entity["pattern"]
+            threats = []
+            # Resolve indicates
+            relationships = self.helper.api.stix_core_relationship.list(
+                relationship_type="indicates", fromId=opencti_entity["id"]
             )
+            for relationship in relationships:
+                indicates_stix_entity = (
+                    self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                        entity_type=relationship["to"]["entity_type"],
+                        entity_id=relationship["to"]["id"],
+                        only_entity=True,
+                    )
+                )
+                threats.append(indicates_stix_entity)
+            try:
+                bundle_objects = []
+                number_processed = 1
+                # Facets
+                result = self.shodanAPI.count(pattern_value, facets=FACETS)
+                note_title = "Shodan Summary Information"
+                note_content = "### Global\n"
+                note_content += "| Value | Count |\n|------|-------|\n"
+                note_content += "| Total Results |" + str(result["total"]) + " |\n"
+                for facet in result["facets"]:
+                    note_content += "### " + FACET_TITLES[facet] + "\n\n"
+                    note_content += "| Value | Count |\n|------|-------|\n"
+                    for term in result["facets"][facet]:
+                        note_content += (
+                            "| "
+                            + str(term["value"])
+                            + " |"
+                            + str(term["count"])
+                            + " |\n"
+                        )
+                    note_content += "\n"
+                created = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+                note = stix2.Note(
+                    id=Note.generate_id(created, note_content),
+                    abstract=note_title,
+                    content=note_content,
+                    created_by_ref=self.shodan_identity["standard_id"],
+                    object_refs=[stix_entity["id"]],
+                )
+                bundle_objects.append(note)
 
-        except shodan.APIError as e:
-            # Handling specific errors for Shodan API
-            raise ValueError(f"Shodan API Error : {str(e)}")
+                # Get Shodan API Response
+                if self.import_search_results:
+                    results = self.shodanAPI.search_cursor(pattern_value)
+                    for result in results:
+                        stix_entity_ip = json.loads(
+                            stix2.IPv4Address(
+                                type="ipv4-addr", value=result["ip_str"]
+                            ).serialize()
+                        )
+                        stix_objects.append(stix_entity_ip)
+                        rel = self._generate_stix_relationship(
+                            stix_entity_ip["id"], "related-to", stix_entity["id"]
+                        )
+                        stix_objects.append(rel)
+                        for threat in threats:
+                            rel = self._generate_stix_relationship(
+                                stix_entity_ip["id"], "related-to", threat["id"]
+                            )
+                            stix_objects.append(rel)
 
-        except Exception as e:
-            # Handling other unexpected exceptions
-            return self.helper.log_error(f"Unexpected Error occured : {str(e)}")
+                        response = self.shodanAPI.host(result["ip_str"])
+
+                        # Generate a stix bundle
+                        bundle_objects = bundle_objects + self._generate_stix_bundle(
+                            response, stix_objects, stix_entity_ip, score, True
+                        )
+                        number_processed = number_processed + 1
+
+                # send stix2 bundle
+                uniq_bundles_objects = list(
+                    {obj["id"]: obj for obj in bundle_objects}.values()
+                )
+                bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
+                bundles_sent = self.helper.send_stix2_bundle(bundle)
+                self.helper.log_info(
+                    str(number_processed)
+                    + " processed items, "
+                    + str(len(bundles_sent))
+                    + " generated bundle(s)"
+                )
+                return "Sent " + str(len(bundles_sent)) + " STIX bundle(s) for import"
+            except shodan.APIError as e:
+                # Handling specific errors for Shodan API
+                raise ValueError(f"Shodan API Error : {str(e)}")
+            except Exception as e:
+                return self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
+        else:
+            if stix_entity["type"] == "indicator":
+                raise ValueError(
+                    "Unsupported pattern type: " + stix_entity["pattern_type"]
+                )
+            else:
+                raise ValueError("Unsupported type: " + stix_entity["type"])
 
     # Start the main loop
     def start(self):
