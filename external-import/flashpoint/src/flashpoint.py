@@ -584,6 +584,7 @@ class Flashpoint:
                                     + item["id"],
                                     publication_date=item["date"],
                                 )
+                                # Waiting for FBI PR Persona / Monikers
                                 # author = CustomObservablePersona(
                                 #    title=community["title"],
                                 #    content=community["message"],
