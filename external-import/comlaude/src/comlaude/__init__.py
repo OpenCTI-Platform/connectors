@@ -1,10 +1,10 @@
 import json
 import logging
 from datetime import datetime, timedelta
- 
+
 import jwt  # pip install pyjwt
 from requests import Session
- 
+
 API_BASE_URL = "https://api.comlaude.com"
  
 DEFAULT_PAGE_LIMIT = 500
