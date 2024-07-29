@@ -220,6 +220,7 @@ class ComlaudeConnector:
 
         # Initialize the identity attribute
         self.identity = Identity(
+            id=Identity.generate_id(self.connector_name, "organization"),
             name=self.connector_name,
             identity_class="organization",
         )
