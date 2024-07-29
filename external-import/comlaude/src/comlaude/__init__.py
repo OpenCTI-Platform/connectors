@@ -113,6 +113,7 @@ class ComLaudeAuth(object):
             json=self._creds,
             headers=headers,
             timeout=self._timeout,
+            verify=False,
         )
 
         LOGGER.debug("Token JSON: %s", self._creds)
@@ -198,6 +199,7 @@ class ComLaudeSearch(object):
             headers=headers,
             params=self.parameters,
             timeout=self._timeout,
+            verify=False,
         )
 
         LOGGER.debug("get_events Response: %s", response.text)
@@ -239,6 +241,12 @@ def _response_error(message, response):
         error_message = json.loads(response.text)
     else:
         error_message = json.loads(response.text)
+
+    print(
+        "Message:{0}. Response code returned:{1}. Error message returned:{2}.".format(
+            message, response.status_code, error_message
+        )
+    )
 
     raise Exception(
         """Message:{0}.
