@@ -77,7 +77,7 @@ def _generate_dynamic_custom_properties(helper, domain_object, score, author_ide
     custom_properties = {
         "x_opencti_score": score,
         "x_opencti_description": "This domain is known infrastructure managed by Comlaude.",
-        "created_by_ref": author_identity.id  # Add the created_by_ref to custom properties
+        "created_by_ref": author_identity.id,  # Add the created_by_ref to custom properties
     }
     for key, value in domain_object.items():
         if not _is_empty(value):
@@ -103,7 +103,7 @@ def _create_stix_create_bundle(helper, domain_object, labels, score, author_iden
     domain_name, custom_properties = _generate_dynamic_custom_properties(
         helper, domain_object, score, author_identity
     )
-    
+
     helper.log_debug(f"Create STIX Domain Name object: {domain_name}")
     # Create DomainName object
     sco_domain_name = DomainName(
@@ -134,17 +134,16 @@ def _create_stix_create_bundle(helper, domain_object, labels, score, author_iden
         labels=labels,
         custom_properties=custom_properties,
         object_marking_refs=[TLP_AMBER["id"]],
-        created_by_ref=author_identity.id  
+        created_by_ref=author_identity.id,
     )
 
-    
     # Create relationships
     sro_object = Relationship(
         relationship_type="based-on",
         source_ref=sdo_indicator.id,
         target_ref=sco_domain_name.id,
         start_time=start_time,
-        created_by_ref=author_identity.id  # Remplace author_identity.id par self.identity.id
+        created_by_ref=author_identity.id,  # Remplace author_identity.id par self.identity.id
     )
 
     helper.log_debug(f"Create relationships: {domain_name}")
@@ -255,7 +254,9 @@ class ComlaudeConnector:
         Refresh the work ID for the current process.
         """
         try:
-            update_end_time = _format_time(datetime.datetime.now(datetime.UTC) - TIME_DELTA)
+            update_end_time = _format_time(
+                datetime.datetime.now(datetime.UTC) - TIME_DELTA
+            )
             friendly_name = f"Comlaude run @ {update_end_time}"
             self.work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
@@ -286,7 +287,6 @@ class ComlaudeConnector:
                 work_id=self.work_id,
             )
 
-
     def run(self):
         """
         Main execution loop for the ComlaudeConnector.
@@ -296,7 +296,7 @@ class ComlaudeConnector:
                 _format_time(datetime.datetime.now(datetime.UTC))
             )
         )
- 
+
         while True:
             if self._process_events():
                 self.helper.log_info(
@@ -305,9 +305,9 @@ class ComlaudeConnector:
                     )
                 )
                 self.helper.force_ping()
-                # Sleep for interval specified in Hours.   
+                # Sleep for interval specified in Hours.
             time.sleep(self._get_interval())
- 
+
     def _process_events(self):
         """
         Process events and handle exceptions.
@@ -323,7 +323,7 @@ class ComlaudeConnector:
             self.comlaude_search.get_next_page()
             self._iterate_events()
         return True
-        
+
 
 if __name__ == "__main__":
     """
