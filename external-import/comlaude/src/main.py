@@ -10,7 +10,7 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import Bundle, DomainName, Indicator, Relationship
+from stix2 import Bundle, DomainName, Indicator, Relationship, TLP_AMBER, Identity
 
 import comlaude
 
@@ -64,18 +64,20 @@ def _is_empty(value):
     return False
 
 
-def _generate_dynamic_custom_properties(helper, domain_object, score):
+def _generate_dynamic_custom_properties(helper, domain_object, score, author_identity):
     """
     Generate custom properties for domain objects dynamically with a specific prefix.
 
-    :param helper: OpenCTIConnectorHelper object.
     :param domain_object: Dictionary containing domain properties.
+    :param score: Score to be assigned.
+    :param author_identity: Author identity to be added to custom properties.
     :return: Tuple containing domain name and a dictionary of custom properties.
     """
     helper.log_debug(f"Generate Dynamic Properties with prefix ({X_OPENCTI_PREFIX})")
     custom_properties = {
         "x_opencti_score": score,
         "x_opencti_description": "This domain is known infrastructure managed by Comlaude.",
+        "created_by_ref": author_identity.id,  # Add the created_by_ref to custom properties
     }
     for key, value in domain_object.items():
         if not _is_empty(value):
@@ -87,29 +89,32 @@ def _generate_dynamic_custom_properties(helper, domain_object, score):
     return domain_name, custom_properties
 
 
-def _create_stix_create_bundle(helper, domain_object, labels, score):
+def _create_stix_create_bundle(helper, domain_object, labels, score, author_identity):
     """
     Create a STIX bundle containing domain and indicator objects.
 
     :param helper: OpenCTIConnectorHelper object.
     :param domain_object: Dictionary containing domain properties.
     :param labels: List of labels to be associated with the STIX objects.
+    :param score: Score to be assigned.
+    :param author_identity: Identity object representing the author.
     :return: Tuple containing domain name and a list of STIX objects.
     """
     domain_name, custom_properties = _generate_dynamic_custom_properties(
-        helper, domain_object, score
+        helper, domain_object, score, author_identity
     )
-    helper.log_debug(f"Create STIX Domain Name object: {domain_name}")
 
+    helper.log_debug(f"Create STIX Domain Name object: {domain_name}")
     # Create DomainName object
     sco_domain_name = DomainName(
         value=domain_name,
-        type="domain-name",
         allow_custom=True,
         custom_properties=custom_properties,
         labels=labels,
+        object_marking_refs=[TLP_AMBER["id"]],
     )
     helper.log_debug(f"Create STIX Indicator object: {domain_name}")
+
     start_time = _convert_timestamp_to_zero_millisecond_format(
         domain_object["created_at"]
     )
@@ -128,6 +133,8 @@ def _create_stix_create_bundle(helper, domain_object, labels, score):
         valid_from=start_time,
         labels=labels,
         custom_properties=custom_properties,
+        object_marking_refs=[TLP_AMBER["id"]],
+        created_by_ref=author_identity.id,
     )
 
     # Create relationships
@@ -136,6 +143,7 @@ def _create_stix_create_bundle(helper, domain_object, labels, score):
         source_ref=sdo_indicator.id,
         target_ref=sco_domain_name.id,
         start_time=start_time,
+        created_by_ref=author_identity.id,  # Remplace author_identity.id par self.identity.id
     )
 
     helper.log_debug(f"Create relationships: {domain_name}")
@@ -152,10 +160,12 @@ class ComlaudeConnector:
         """
         Initialize the ComlaudeConnector with necessary configurations.
         """
-
         # Load configuration file and connection helper.
         self.config = self._load_config()
         self.helper = OpenCTIConnectorHelper(self.config)
+        self.connector_name = get_config_variable(
+            "CONNECTOR_NAME", ["connector", "name"], self.config
+        )
 
         # Get required configurations
         self.config_interval = get_config_variable(
@@ -190,6 +200,9 @@ class ComlaudeConnector:
             "COMLAUDE_LABELS", ["comlaude", "labels"], self.config, False
         )
 
+        # Initialize the labels attribute
+        self.labels = comlaude_labels if comlaude_labels else []
+
         # Authenticate with Comlaude.
         comlaude_auth_token = comlaude.ComLaudeAuth(
             comlaude_username, comlaude_password, comlaude_api_key
@@ -203,8 +216,14 @@ class ComlaudeConnector:
         )
 
         self.work_id = None
-        self.labels = comlaude_labels.split(",")
         self.score = comlaude_score if comlaude_score else 0
+
+        # Initialize the identity attribute
+        self.identity = Identity(
+            id=Identity.generate_id(self.connector_name, "organization"),
+            name=self.connector_name,
+            identity_class="organization",
+        )
 
     def _load_config(self) -> dict:
         """
@@ -212,12 +231,16 @@ class ComlaudeConnector:
 
         :return: Configuration dictionary.
         """
-        config = (
-            yaml.load(open(CONFIG_FILE_PATH), Loader=yaml.FullLoader)
-            if os.path.isfile(CONFIG_FILE_PATH)
-            else {}
-        )
-        return config
+        try:
+            config = (
+                yaml.load(open(CONFIG_FILE_PATH), Loader=yaml.FullLoader)
+                if os.path.isfile(CONFIG_FILE_PATH)
+                else {}
+            )
+            return config
+        except Exception as e:
+            print(f"Error loading configuration: {str(e)}")
+            raise
 
     def _get_interval(self):
         """
@@ -231,11 +254,17 @@ class ComlaudeConnector:
         """
         Refresh the work ID for the current process.
         """
-        update_end_time = _format_time(datetime.datetime.now(datetime.UTC) - TIME_DELTA)
-        friendly_name = f"Comlaude run @ {update_end_time}"
-        self.work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, friendly_name
-        )
+        try:
+            update_end_time = _format_time(
+                datetime.datetime.now(datetime.UTC) - TIME_DELTA
+            )
+            friendly_name = f"Comlaude run @ {update_end_time}"
+            self.work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
+        except Exception as e:
+            self.helper.log_error(f"Error refreshing work ID: {str(e)}")
+            raise
 
     def _iterate_events(self):
         """
@@ -246,19 +275,13 @@ class ComlaudeConnector:
         )
         if len(self.comlaude_search.results["data"]) > 0:
             self._refresh_work_id()
-            stix_objects = []
+            stix_objects = [self.identity]
             for event in self.comlaude_search.results["data"]:
                 domain_name, objects = _create_stix_create_bundle(
-                    self.helper, event, self.labels, self.score
+                    self.helper, event, self.labels, self.score, self.identity
                 )
-                self.helper.log_debug(f"Adding Stix Objects for ({domain_name}).")
                 stix_objects.extend(objects)
             bundle = Bundle(objects=stix_objects, allow_custom=True)
-            self.helper.log_info(
-                "Sending Bundle of ({}) events.".format(
-                    len(self.comlaude_search.results["data"])
-                )
-            )
             self.helper.send_stix2_bundle(
                 bundle.serialize(),
                 update=self.update_existing_data,
@@ -270,13 +293,29 @@ class ComlaudeConnector:
         Main execution loop for the ComlaudeConnector.
         """
         self.helper.log_info(
-            "Start Comluade Connector ({}).".format(
+            "Start Comlaude Connector ({}).".format(
                 _format_time(datetime.datetime.now(datetime.UTC))
             )
         )
+
+        while True:
+            if self._process_events():
+                self.helper.log_info(
+                    "Connector stop: ({})".format(
+                        _format_time(datetime.datetime.now(datetime.UTC))
+                    )
+                )
+                self.helper.force_ping()
+                # Sleep for interval specified in Hours.
+            time.sleep(self._get_interval())
+
+    def _process_events(self):
+        """
+        Process events and handle exceptions.
+        :return: Boolean indicating if processing was successful.
+        """
         self._iterate_events()
         while self.comlaude_search.has_next:
-            # Get next events and send data.
             self.helper.log_info(
                 "Starting to update Comlaude page: ({}).".format(
                     self.comlaude_search.parameters["page"]
@@ -284,17 +323,7 @@ class ComlaudeConnector:
             )
             self.comlaude_search.get_next_page()
             self._iterate_events()
-
-        if self.helper.connect_run_and_terminate:
-            self.helper.log_info(
-                "Connector stop: ({})".format(
-                    _format_time(datetime.datetime.now(datetime.UTC))
-                )
-            )
-            self.helper.force_ping()
-            sys.exit(0)
-        # Sleep for interval specified in Hours.
-        time.sleep(self._get_interval())
+        return True
 
 
 if __name__ == "__main__":
