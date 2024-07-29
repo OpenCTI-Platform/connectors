@@ -149,10 +149,82 @@ def feed_converter(
                         continue
 
                 ioc: Dict = dict()
-                ioc["tags"]: List = ioc_raw["tags"]["str"]
-                ioc["threats"]: List = ioc_raw["threat"]
-                ioc["src"]: List[dict] = list()
-                ioc["descr"] = ioc_raw["description"]
+                ioc["tags"] = ioc_raw["tags"]["str"]
+                ioc["threats"] = ioc_raw["threat"]
+                ioc["src"] = list()
+                description = ioc_raw["description"]
+                if ioc_raw.get("ports") and ioc_raw["ports"][0] != -1:
+                    description = f'{description}\n\nPorts: {ioc_raw.get("ports")}'
+                if (
+                    ioc_raw.get("resolved")
+                    and ioc_raw.get("resolved").get("whois")
+                    and ioc_raw.get("resolved").get("whois").get("havedata") == "true"
+                ):
+                    description = f'{description}\n\nWhois Registrar: {ioc_raw["resolved"]["whois"]["registrar"]}'
+                    description = f'{description}\n--- Registrant: {ioc_raw["resolved"]["whois"]["registrant"]}'
+                    if ioc_raw["resolved"]["whois"]["age"] > 0:
+                        description = f'{description}\n--- Age: {ioc_raw["resolved"]["whois"]["age"]}'
+                    if ioc_raw["resolved"]["whois"]["created"] != "1970-01-01 00:00:00":
+                        description = f'{description}\n--- Created: {ioc_raw["resolved"]["whois"]["created"]}'
+                    if ioc_raw["resolved"]["whois"]["updated"] != "1970-01-01 00:00:00":
+                        description = f'{description}\n--- Updated: {ioc_raw["resolved"]["whois"]["updated"]}'
+                    if ioc_raw["resolved"]["whois"]["expires"] != "1970-01-01 00:00:00":
+                        description = f'{description}\n--- Expires: {ioc_raw["resolved"]["whois"]["expires"]}'
+                if ioc_raw.get("resolved") and ioc_raw.get("resolved").get("ip"):
+                    if (
+                        len(ioc_raw["resolved"]["ip"]["a"])
+                        + len(ioc_raw["resolved"]["ip"]["alias"])
+                        + len(ioc_raw["resolved"]["ip"]["cname"])
+                        > 0
+                    ):
+                        description = f"{description}\n\nRelated IPs:"
+                        description = f'{description}\n--- A Records: {ioc_raw["resolved"]["ip"]["a"]}'
+                        description = f'{description}\n--- Alias Records: {ioc_raw["resolved"]["ip"]["alias"]}'
+                        description = f'{description}\n--- CNAME Records: {ioc_raw["resolved"]["ip"]["cname"]}'
+                if ioc_raw.get("geo"):
+                    description = f"{description}\n"
+                    if ioc_raw.get("geo").get("city"):
+                        description = (
+                            f'{description}\nCity: {ioc_raw.get("geo").get("city")}.'
+                        )
+                    if ioc_raw.get("geo").get("country"):
+                        description = f'{description}\nCountry: {ioc_raw.get("geo").get("country")}.'
+                    if ioc_raw.get("geo").get("region"):
+                        description = f'{description}\nRegion: {ioc_raw.get("geo").get("region")}.'
+                if ioc_raw.get("asn"):
+                    description = f'{description}\n\nASN: {ioc_raw.get("asn").get("num")}. Number of domains: {ioc_raw.get("asn").get("domains")}.'
+                    description = (
+                        f'{description}\nOrg: {ioc_raw.get("asn").get("org")}.'
+                    )
+                    description = (
+                        f'{description}\nISP: {ioc_raw.get("asn").get("isp")}.'
+                    )
+                    if ioc_raw.get("asn").get("cloud"):
+                        description = (
+                            f'{description} Cloud: {ioc_raw.get("asn").get("cloud")}.'
+                        )
+                if ioc_raw.get("filename"):
+                    description = (
+                        f'{description}\n\nFile names: {ioc_raw.get("filename")}'
+                    )
+                if ioc_raw.get("resolved") and ioc_raw.get("resolved").get("status"):
+                    description = f'{description}\n\nHTTP Status Code: {ioc_raw.get("resolved").get("status")}'
+                if ioc_raw.get("fp"):
+                    description = f'{description}\n\nIs a potential false positive? {ioc_raw.get("fp").get("alarm")}.'
+                    if ioc_raw.get("fp").get("descr"):
+                        description = (
+                            f'{description} Why? {ioc_raw.get("fp").get("descr")}.'
+                        )
+                if ioc_raw.get("industry"):
+                    description = (
+                        f'{description}\n\nRelated sectors: {ioc_raw.get("industry")}'
+                    )
+                if ioc_raw.get("cve"):
+                    description = f'{description}\n\nRelated CVEs: {ioc_raw.get("cve")}'
+                if ioc_raw.get("ttp"):
+                    description = f'{description}\n\nRelated TTPs: {ioc_raw.get("ttp")}'
+
+                ioc["descr"] = description
                 ioc["score"] = int(ioc_raw["score"]["total"])
                 if ioc["score"] < min_score:
                     continue
