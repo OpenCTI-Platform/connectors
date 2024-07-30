@@ -1881,8 +1881,18 @@ class Misp:
                         filters={
                             "mode": "or",
                             "filters": [
-                                {"key": ["name", "x_mitre_id"], "values": [tag_value], "operator": "eq", "mode": "or"},
-                                {"key": ["alias"], "values": [tag_value], "operator": "eq", "mode": "or"}
+                                {
+                                    "key": ["name", "x_mitre_id"],
+                                    "values": [tag_value],
+                                    "operator": "eq",
+                                    "mode": "or",
+                                },
+                                {
+                                    "key": ["alias"],
+                                    "values": [tag_value],
+                                    "operator": "eq",
+                                    "mode": "or",
+                                },
                             ],
                             "filterGroups": [],
                         },
