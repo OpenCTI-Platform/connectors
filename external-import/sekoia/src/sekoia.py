@@ -118,7 +118,9 @@ class Sekoia(object):
         )
 
     def get_relationship(self, indicator_id: str):
-        return urljoin(self.base_url, "v2/inthreat/objects", indicator_id, "relationships")
+        return urljoin(
+            self.base_url, "v2/inthreat/objects", indicator_id, "relationships"
+        )
 
     def get_object_url(self, ids: Iterable):
         return urljoin(self.base_url, "v2/inthreat/objects", ",".join(ids))
@@ -185,7 +187,9 @@ class Sekoia(object):
             items = self._clean_ic_fields(items)
             self._add_files_to_items(items)
 
-            [all_related_objects, all_relationships] = self._retrieve_related_objects_and_relationships(items)
+            [all_related_objects, all_relationships] = (
+                self._retrieve_related_objects_and_relationships(items)
+            )
             items += all_related_objects + all_relationships
 
             bundle = self.helper.stix2_create_bundle(items)
