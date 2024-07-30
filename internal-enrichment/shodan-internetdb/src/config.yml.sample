@@ -1,8 +1,6 @@
----
-
 opencti:
-  url: ""
-  token: ""
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
   json_logging: false
 
 connector:
@@ -12,8 +10,8 @@ connector:
   scope: "IPv4-Addr"
   auto: true
   log_level: "info"
-  confidence_level: 75
 
 shodan:
-  max_tlp: "white"
+  max_tlp: "TLP:CLEAR"
   ssl_verify: true
+
