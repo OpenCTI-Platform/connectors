@@ -1,8 +1,3 @@
-""" Comlaude main integration.
-
-   isort:skip_file
-"""
-
 import datetime
 import os
 import sys
@@ -30,7 +25,7 @@ def _format_time(utc_time):
 
 # Defines a time delta of 5 minutes.
 TIME_DELTA = datetime.timedelta(minutes=5)
-COMLAUDE_END_TIME = _format_time(datetime.datetime.now(datetime.UTC) - TIME_DELTA)
+COMLAUDE_END_TIME = _format_time(datetime.datetime.utcnow() - TIME_DELTA)
 
 
 def _convert_timestamp_to_zero_millisecond_format(timestamp: str) -> str:
