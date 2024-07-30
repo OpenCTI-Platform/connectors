@@ -17,7 +17,7 @@ class ReportHub:
     def __init__(self):
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+            yaml.safe_load(open(config_file_path))
             if os.path.isfile(config_file_path)
             else {}
         )
@@ -89,6 +89,10 @@ class ReportHub:
                     self._downloader_config["base_url"] + "/reports",
                     headers=headers,
                     params=params_stix,
+                    timeout=(
+                        self._downloader_config["connection_timeout"],
+                        self._downloader_config["read_timeout"],
+                    ),
                 )
                 response.raise_for_status()
                 stix_report = response.content
@@ -103,6 +107,10 @@ class ReportHub:
                         self._downloader_config["base_url"] + "/reports",
                         headers=headers,
                         params=params_pdf,
+                        timeout=(
+                            self._downloader_config["connection_timeout"],
+                            self._downloader_config["read_timeout"],
+                        ),
                     )
                     response.raise_for_status()
 
@@ -146,6 +154,10 @@ class ReportHub:
                     self._downloader_config["base_url"] + "/reports",
                     headers=headers,
                     params=params,
+                    timeout=(
+                        self._downloader_config["connection_timeout"],
+                        self._downloader_config["read_timeout"],
+                    ),
                 )
                 response.raise_for_status()
 

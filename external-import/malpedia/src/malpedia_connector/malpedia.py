@@ -563,7 +563,11 @@ class MalpediaConnector:
             if self.config.import_intrusion_sets:
 
                 try:
-                    if "description" in actor_json and actor_json["description"] == "":
+                    if (
+                        "description" in actor_json
+                        and actor_json["description"] is not None
+                        and actor_json["description"] != ""
+                    ):
                         description = actor_json["description"]
                     else:
                         description = (
