@@ -37,7 +37,12 @@ class Sekoia(object):
 
         self._cache = {}
         # Extra config
-        self.duration_period = self.get_config("duration_period", config, "PT60S")
+        self.duration_period = get_config_variable(
+            "CONNECTOR_DURATION_PERIOD",
+            ["connector", "duration_period"],
+            config,
+            default="PT60S",
+        )
 
         self.base_url = self.get_config("base_url", config, "https://api.sekoia.io")
         self.start_date: str = self.get_config("start_date", config, None)
@@ -163,50 +168,44 @@ class Sekoia(object):
     def _run(self, cursor, work_id):
         current_time = f"{datetime.utcnow().isoformat()}Z"
         current_cursor = base64.b64encode(current_time.encode("utf-8")).decode("utf-8")
-        while True:
-            params = {"limit": self.limit, "cursor": cursor}
-            if self.requested_types:
-                params["match[type]"] = self.requested_types
 
-            data = self._send_request(self.get_collection_url(), params)
-            if not data:
-                return cursor
+        params = {"limit": self.limit, "cursor": cursor}
+        if self.requested_types:
+            params["match[type]"] = self.requested_types
 
-            cursor = (
-                data["next_cursor"] or current_cursor
-            )  # In case next_cursor is None
-            items = data["items"]
-            if not items or len(items) == 0:
-                return cursor
+        data = self._send_request(self.get_collection_url(), params)
+        if not data:
+            return cursor
 
-            items = self._retrieve_references(items)
-            self._add_main_observable_type_to_indicators(items)
-            if self.create_observables:
-                self._add_create_observables_to_indicators(items)
-            self._clean_external_references_fields(items)
-            items = self._clean_ic_fields(items)
-            self._add_files_to_items(items)
+        cursor = data["next_cursor"] or current_cursor  # In case next_cursor is None
+        items = data["items"]
+        if not items or len(items) == 0:
+            return cursor
 
-            [all_related_objects, all_relationships] = (
+        items = self._retrieve_references(items)
+        self._add_main_observable_type_to_indicators(items)
+        if self.create_observables:
+            self._add_create_observables_to_indicators(items)
+        self._clean_external_references_fields(items)
+        items = self._clean_ic_fields(items)
+        self._add_files_to_items(items)
+        [all_related_objects, all_relationships] = (
                 self._retrieve_related_objects_and_relationships(items)
             )
-            items += all_related_objects + all_relationships
+        items += all_related_objects + all_relationships
+        bundle = self.helper.stix2_create_bundle(items)
+        try:
+            self.helper.send_stix2_bundle(bundle, work_id=work_id)
+        except RecursionError:
+            self.helper.log_error(
+                "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole bundle but please fix it"
+            )
+            self.helper.send_stix2_bundle(bundle, work_id=work_id, bypass_split=True)
 
-            bundle = self.helper.stix2_create_bundle(items)
-            try:
-                self.helper.send_stix2_bundle(bundle, work_id=work_id)
-            except RecursionError:
-                self.helper.log_error(
-                    "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole bundle but please fix it"
-                )
-                self.helper.send_stix2_bundle(
-                    bundle, work_id=work_id, bypass_split=True
-                )
-
-            self.helper.set_state({"last_cursor": cursor})
-            if len(items) < self.limit:
-                # We got the last results
-                return cursor
+        self.helper.set_state({"last_cursor": cursor})
+        if len(items) < self.limit:
+            # We got the last results
+            return cursor
 
     def _clean_external_references_fields(self, items: List[Dict]):
         """
