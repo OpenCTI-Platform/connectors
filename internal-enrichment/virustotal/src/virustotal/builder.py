@@ -291,9 +291,8 @@ class VirusTotalBuilder:
             )
             self.bundle += [location_stix, relationship]
         else:
-            self.helper.log_debug(
-                f'[VirusTotal] related location country not found'
-            )
+            self.helper.log_debug(f"[VirusTotal] related location country not found")
+
     def create_note(self, abstract: str, content: str):
         """
         Create a single Note with the given abstract and content.
