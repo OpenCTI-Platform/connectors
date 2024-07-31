@@ -1879,20 +1879,9 @@ class Misp:
                     threats = self.helper.api.stix_domain_object.list(
                         types=["Intrusion-Set", "Malware", "Tool", "Attack-Pattern"],
                         filters={
-                            "mode": "or",
+                            "mode": "and",
                             "filters": [
-                                {
-                                    "key": ["name", "x_mitre_id"],
-                                    "values": [tag_value],
-                                    "operator": "eq",
-                                    "mode": "or",
-                                },
-                                {
-                                    "key": ["alias"],
-                                    "values": [tag_value],
-                                    "operator": "eq",
-                                    "mode": "or",
-                                },
+                                {"key": ["name", "x_mitre_id", "aliases", "x_opencti_aliases"], "values": [tag_value]}
                             ],
                             "filterGroups": [],
                         },
