@@ -111,14 +111,12 @@ class ShodanInternetDBConnector:
         bundle = stix2.Bundle(objects=stix_objects, allow_custom=True).serialize()
         self._helper.log_info("Sending event STIX2 bundle")
         bundle_sent = self._helper.send_stix2_bundle(bundle)
-        return (
-                "Sent " + str(len(bundle_sent)) + " stix bundle(s) for worker import"
-        )
+        return "Sent " + str(len(bundle_sent)) + " stix bundle(s) for worker import"
 
     def _process_note(
-            self,
-            observable: Dict[str, Any],
-            result: ShodanResult,
+        self,
+        observable: Dict[str, Any],
+        result: ShodanResult,
     ) -> Note:
         """
         Add an enrichment note to the observable
@@ -153,14 +151,14 @@ Ports: {format_list(result.ports)}
             abstract=abstract,
             content=content,
             object_refs=[observable["id"]],
-            allow_custom=True
+            allow_custom=True,
         )
         return note
 
     def _process_domains(
-            self,
-            observable: Dict[str, Any],
-            result: ShodanResult,
+        self,
+        observable: Dict[str, Any],
+        result: ShodanResult,
     ) -> list:
         """
         Add additional domains to the observable
@@ -175,17 +173,15 @@ Ports: {format_list(result.ports)}
                 value=name,
                 object_marking_refs=[self._object_marking_id],
                 resolves_to_refs=[observable["id"]],
-                custom_properties={
-                    "created_by_ref": self._identity_id
-                }
+                custom_properties={"created_by_ref": self._identity_id},
             )
             stix_objects.append(stix_domain)
         return stix_objects
 
     def _process_tags(
-            self,
-            observable: Dict[str, Any],
-            result: ShodanResult,
+        self,
+        observable: Dict[str, Any],
+        result: ShodanResult,
     ) -> Dict:
         """
         Add additional tags to the observable
@@ -195,18 +191,14 @@ Ports: {format_list(result.ports)}
         """
         for name in result.tags:
             OpenCTIStix2.put_attribute_in_extension(
-                observable,
-                STIX_EXT_OCTI_SCO,
-                "labels",
-                name,
-                True
+                observable, STIX_EXT_OCTI_SCO, "labels", name, True
             )
         return observable
 
     def _process_vulns(
-            self,
-            observable: Dict[str, Any],
-            result: ShodanResult,
+        self,
+        observable: Dict[str, Any],
+        result: ShodanResult,
     ) -> list:
         """
         Add additional vulnerabilities to the observable
@@ -224,7 +216,7 @@ Ports: {format_list(result.ports)}
                 id=Vulnerability.generate_id(name),
                 name=f"{name}",
                 created_by_ref=self._identity_id,
-                object_marking_refs=[self._object_marking_id]
+                object_marking_refs=[self._object_marking_id],
             )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
