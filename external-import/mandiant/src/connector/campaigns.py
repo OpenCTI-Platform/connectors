@@ -104,7 +104,7 @@ def create_attack_pattern(
     first_observed_date_on_ttp = extract_first_observed_ttp(actors_used_ttp)
     last_observed_date_on_ttp = extract_last_observed_ttp(actors_used_ttp)
     description = create_mandiant_description(campaign_details, actors_used_ttp)
-    labels = extract_ttp_mandiant_name(attack_pattern_mitre_id, actors_used_ttp)
+    labels = extract_ttp_mandiant_name(actors_used_ttp)
 
     stix_attack_pattern = stix2.AttackPattern(
         id=attack_pattern_mitre_id,
