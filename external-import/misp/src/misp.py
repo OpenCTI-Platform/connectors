@@ -1881,7 +1881,15 @@ class Misp:
                         filters={
                             "mode": "and",
                             "filters": [
-                                {"key": ["name", "x_mitre_id", "aliases", "x_opencti_aliases"], "values": [tag_value]}
+                                {
+                                    "key": [
+                                        "name",
+                                        "x_mitre_id",
+                                        "aliases",
+                                        "x_opencti_aliases",
+                                    ],
+                                    "values": [tag_value],
+                                }
                             ],
                             "filterGroups": [],
                         },
