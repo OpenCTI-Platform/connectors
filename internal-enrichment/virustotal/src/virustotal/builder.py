@@ -106,9 +106,9 @@ class VirusTotalBuilder:
         if self.attributes.get("asn") is not None:
             self.helper.log_debug(f'[VirusTotal] creating asn {self.attributes["asn"]}')
             as_stix = stix2.AutonomousSystem(
-                number=self.attributes["asn"],
-                name=self.attributes["as_owner"],
-                rir=self.attributes["regional_internet_registry"],
+                number=self.attributes.get("asn"),
+                name=self.attributes.get("as_owner", None),
+                rir=self.attributes.get("regional_internet_registry", None),
             )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
@@ -267,29 +267,33 @@ class VirusTotalBuilder:
 
     def create_location_located_at(self):
         """Create a Location and link it to the observable."""
-        self.helper.log_debug(
-            f'[VirusTotal] creating location with country {self.attributes["country"]}'
-        )
-        location_stix = stix2.Location(
-            id=Location.generate_id(self.attributes["country"], "Country"),
-            created_by_ref=self.author,
-            country=self.attributes["country"],
-        )
-        relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                "located-at",
-                self.stix_entity["id"],
-                location_stix.id,
-            ),
-            relationship_type="located-at",
-            created_by_ref=self.author,
-            source_ref=self.stix_entity["id"],
-            target_ref=location_stix.id,
-            confidence=self.helper.connect_confidence_level,
-            allow_custom=True,
-        )
-        self.bundle += [location_stix, relationship]
-
+        if self.attributes.get("country", None):
+            self.helper.log_debug(
+                f'[VirusTotal] creating location with country {self.attributes["country"]}'
+            )
+            location_stix = stix2.Location(
+                id=Location.generate_id(self.attributes["country"], "Country"),
+                created_by_ref=self.author,
+                country=self.attributes["country"],
+            )
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "located-at",
+                    self.stix_entity["id"],
+                    location_stix.id,
+                ),
+                relationship_type="located-at",
+                created_by_ref=self.author,
+                source_ref=self.stix_entity["id"],
+                target_ref=location_stix.id,
+                confidence=self.helper.connect_confidence_level,
+                allow_custom=True,
+            )
+            self.bundle += [location_stix, relationship]
+        else:
+            self.helper.log_debug(
+                f'[VirusTotal] related location country not found'
+            )
     def create_note(self, abstract: str, content: str):
         """
         Create a single Note with the given abstract and content.
