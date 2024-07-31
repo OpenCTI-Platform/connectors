@@ -11,12 +11,12 @@ import stix2
 import validators
 import yaml
 from pycti import (
+    STIX_EXT_OCTI_SCO,
     Note,
     OpenCTIConnectorHelper,
+    OpenCTIStix2,
     StixCoreRelationship,
     Vulnerability,
-    OpenCTIStix2,
-    STIX_EXT_OCTI_SCO
 )
 from requests.exceptions import RequestException
 
