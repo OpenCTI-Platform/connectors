@@ -225,7 +225,7 @@ class ShodanConnector:
 
     def _generate_stix_x509(self, data):
         for item in data["data"]:
-            if "ssl" in item:
+            if "ssl" in item and "cert" in item["ssl"]:
                 ssl_object = item["ssl"]
                 issued: datetime = datetime.strptime(
                     ssl_object["cert"]["issued"], "%Y%m%d%H%M%SZ"
@@ -491,7 +491,10 @@ class ShodanConnector:
                             )
                             stix_objects.append(rel)
 
-                        response = self.shodanAPI.host(result["ip_str"])
+                        try:
+                            response = self.shodanAPI.host(result["ip_str"])
+                        except:
+                            continue
 
                         # Generate a stix bundle
                         bundle_objects = bundle_objects + self._generate_stix_bundle(
