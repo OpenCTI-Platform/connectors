@@ -28,6 +28,12 @@ def process(connector, campaign):
     items = [stix_campaign]
 
     for actor in utils.sanitizer("actors", campaign_details, []):
+
+        # Extract dates when it exists from Mandiant timeline of a Campaign
+        observed_actor_dates = extract_observed_actor_dates(campaign_details, actor)
+        actor["first_seen"] = observed_actor_dates["first_observed"]
+        actor["last_seen"] = observed_actor_dates["last_observed"]
+
         items += create_stix_intrusionset(connector, stix_campaign, actor)
 
     for industry in utils.sanitizer("industries", campaign_details, []):
@@ -97,9 +103,7 @@ def create_attack_pattern(
     )
     first_observed_date_on_ttp = extract_first_observed_ttp(actors_used_ttp)
     last_observed_date_on_ttp = extract_last_observed_ttp(actors_used_ttp)
-
     description = create_mandiant_description(campaign_details, actors_used_ttp)
-
     labels = extract_ttp_mandiant_name(attack_pattern_mitre_id, actors_used_ttp)
 
     stix_attack_pattern = stix2.AttackPattern(
@@ -126,10 +130,75 @@ def create_attack_pattern(
     }
 
     stix_relationship = create_stix_relationship(**relationship_details)
-    return [stix_attack_pattern, stix_relationship]
+    stix_relationships_actor_uses_ttp = create_stix_relationship_ttp_actor(
+        relationship_details, actors_used_ttp
+    )
+
+    return [stix_attack_pattern, stix_relationship] + stix_relationships_actor_uses_ttp
+
+
+def extract_observed_actor_dates(campaign_details, actor):
+    """
+    Extract first and last seen dates of an actor during a Campaign
+    """
+    first_seen_dates = []
+    last_seen_dates = []
+
+    if "timeline" in campaign_details:
+        for timeline_detail in campaign_details["timeline"]:
+            if (
+                "technique_observed" in timeline_detail["event_type"]
+                and "used_by" in timeline_detail
+            ):
+                for actor_details in timeline_detail["used_by"]:
+                    if actor_details["actor"]["id"] == actor["id"]:
+                        first_seen_dates.append(actor_details["first_observed"])
+                        last_seen_dates.append(actor_details["last_observed"])
+
+    first_seen_dates.sort()
+    first_observed_date = first_seen_dates[0] if first_seen_dates else None
+
+    last_seen_dates.sort()
+    last_seen_dates.reverse()
+    last_observed_date = last_seen_dates[0] if last_seen_dates else None
+
+    observed_dates = {
+        "first_observed": first_observed_date,
+        "last_observed": last_observed_date,
+    }
+
+    return observed_dates
+
+
+def create_stix_relationship_ttp_actor(relationship_details, actors_used_ttp):
+    """
+    Create relationship with the technique used and actor when the information is available
+    """
+    stix_relationships = []
+    if actors_used_ttp:
+        for actor in actors_used_ttp:
+            for mitre_ttp_id in actor["mitre_ids"]:
+                actor_to_intrusion_set = actor["actor"]["id"].replace(
+                    "threat-actor", "intrusion-set"
+                )
+
+                relationship_details["rel_type"] = "uses"
+                relationship_details["source"] = actor_to_intrusion_set
+                relationship_details["target"] = mitre_ttp_id
+                relationship_details["start_time"] = actor["actor"]["start_time"]
+                relationship_details["stop_time"] = actor["actor"]["stop_time"]
+                relationship_details["description"] = None
+
+                stix_relationship = create_stix_relationship(**relationship_details)
+                stix_relationships.append(stix_relationship)
+
+    return stix_relationships
 
 
 def extract_analyst_brief(campaign_details, actors_used_ttp):
+    """
+    Extract analyst brief from a Mandiant timeline from a Campaign
+    """
     analyst_brief = ""
 
     if "timeline" in campaign_details:
@@ -145,7 +214,8 @@ def extract_analyst_brief(campaign_details, actors_used_ttp):
                     contains_ttp = any(
                         actor_used_ttp
                         for actor_used_ttp in actors_used_ttp
-                        if mandiant_technique["id"] in actor_used_ttp["mandiant_ttp_id"]
+                        if mandiant_technique["id"]
+                        in actor_used_ttp["mandiant_ttp"]["id"]
                     )
                     if contains_ttp and "analyst_brief" in timeline_detail:
                         brief_title = (
@@ -179,7 +249,7 @@ def extract_analyst_brief(campaign_details, actors_used_ttp):
 
 def extract_actors_from_timeline(campaign_details, ttp_mitre_id):
     """
-    Extract actors that use this TTP from observed Mandiant analyst
+    Extract actors that use this TTP from observed Mandiant analyst during a Campaign
     """
     actors_used_ttp = []
     mitre_techniques_ids = []
@@ -198,16 +268,17 @@ def extract_actors_from_timeline(campaign_details, ttp_mitre_id):
 
                     for actor in timeline_detail["used_by"]:
                         actor_used_ttp = {
-                            "actor_name": actor["actor"]["name"],
-                            "mandiant_ttp_id": timeline_detail["mandiant_technique"][
-                                "id"
-                            ],
-                            "mandiant_ttp_name": timeline_detail["mandiant_technique"][
-                                "name"
-                            ],
+                            "actor": {
+                                "id": actor["actor"]["id"],
+                                "name": actor["actor"]["name"],
+                                "start_time": actor["first_observed"],
+                                "stop_time": actor["last_observed"],
+                            },
+                            "mandiant_ttp": {
+                                "id": timeline_detail["mandiant_technique"]["id"],
+                                "name": timeline_detail["mandiant_technique"]["name"],
+                            },
                             "mitre_ids": set(mitre_techniques_ids),
-                            "start_time": actor["first_observed"],
-                            "stop_time": actor["last_observed"],
                         }
                         actors_used_ttp.append(actor_used_ttp)
 
@@ -216,12 +287,12 @@ def extract_actors_from_timeline(campaign_details, ttp_mitre_id):
 
 def extract_first_observed_ttp(actors_used_ttp):
     """
-    Extract first observed date of a TTP used by an actor
+    Extract first observed date of a TTP used by an actor during a Campaign
     """
     first_observed_dates = []
 
     for actor_first_observed_date in actors_used_ttp:
-        first_observed_dates.append(actor_first_observed_date["start_time"])
+        first_observed_dates.append(actor_first_observed_date["actor"]["start_time"])
 
     first_observed_dates.sort()
     first_observed_date = first_observed_dates[0] if first_observed_dates else None
@@ -231,12 +302,12 @@ def extract_first_observed_ttp(actors_used_ttp):
 
 def extract_last_observed_ttp(actors_used_ttp):
     """
-    Extract last observed date of a TTP used by an actor
+    Extract last observed date of a TTP used by an actor during a Campaign
     """
     last_observed_dates = []
 
     for actor_last_observed_date in actors_used_ttp:
-        last_observed_dates.append(actor_last_observed_date["stop_time"])
+        last_observed_dates.append(actor_last_observed_date["actor"]["stop_time"])
 
     last_observed_dates.sort()
     last_observed_dates.reverse()
@@ -249,17 +320,19 @@ def create_mandiant_description(campaign_details, actors_used_ttp):
     description = "Mandiant observations:" + "\n\n"
 
     for actor in actors_used_ttp:
-        first_observed = str(datetime.fromisoformat(actor["start_time"]).date())
-        last_observed = str(datetime.fromisoformat(actor["stop_time"]).date())
+        first_observed = str(
+            datetime.fromisoformat(actor["actor"]["start_time"]).date()
+        )
+        last_observed = str(datetime.fromisoformat(actor["actor"]["stop_time"]).date())
 
         description += (
             "\n\n|Mandiant Technique Name|"
-            + actor["mandiant_ttp_name"]
+            + actor["mandiant_ttp"]["name"]
             + "|"
             + "\n|--|--|"
             + "\n"
             + "|Actor Attribution|"
-            + actor["actor_name"]
+            + actor["actor"]["name"]
             + "|"
             + "\n"
             + "|First observed|"
@@ -280,15 +353,14 @@ def create_mandiant_description(campaign_details, actors_used_ttp):
     return description
 
 
-def extract_ttp_mandiant_name(attack_pattern_mitre_id, actors_used_ttp):
+def extract_ttp_mandiant_name(actors_used_ttp):
     """
     Extract Mandiant name of a specific TTP
     """
     labels = []
 
     for actor in actors_used_ttp:
-        if attack_pattern_mitre_id in actor["mitre_ids"]:
-            labels.append(str(actor["mandiant_ttp_name"].lower()))
+        labels.append(str(actor["mandiant_ttp"]["name"].lower()))
 
     return labels if labels else None
 
