@@ -9,8 +9,8 @@ import sys
 import time
 
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import Bundle, DomainName, Indicator, Relationship, TLP_AMBER, Identity
+from pycti import OpenCTIConnectorHelper, get_config_variable, Identity
+from stix2 import Bundle, DomainName, Indicator, Relationship, TLP_AMBER
 
 import comlaude
 
@@ -30,7 +30,7 @@ def _format_time(utc_time):
 
 # Defines a time delta of 5 minutes.
 TIME_DELTA = datetime.timedelta(minutes=5)
-COMLAUDE_END_TIME = _format_time(datetime.datetime.now(datetime.UTC) - TIME_DELTA)
+COMLAUDE_END_TIME = _format_time(datetime.datetime.utcnow() - TIME_DELTA)
 
 
 def _convert_timestamp_to_zero_millisecond_format(timestamp: str) -> str:
