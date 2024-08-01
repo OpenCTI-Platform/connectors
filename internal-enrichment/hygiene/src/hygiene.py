@@ -96,6 +96,7 @@ LIST_MAPPING = {
     "Second level TLDs as known by Mozilla Foundation": "lists/second-level-tlds/list.json",
     "List of Azure Applicaiton IDs": "lists/microsoft-azure-appid/list.json",
     "Fingerprint of known intermediate of trusted certificates": "lists/mozilla-IntermediateCA/list.json",
+    "List of known hostname used for querying your source IP. This can be used as exclusion for your Passive DNS lookup.": "lists/findip-host/list.json"
 }
 
 
@@ -214,14 +215,18 @@ class HygieneConnector:
                 )
 
                 # External references
+                if hit.name in LIST_MAPPING:
+                    url = "https://github.com/MISP/misp-warninglists/tree/main/"+ LIST_MAPPING[hit.name]
+                else:
+                    # reference not found in the LIST_MAPPING, define a generic URL
+                    url = "https://github.com/MISP/misp-warninglists/tree/main"
                 OpenCTIStix2.put_attribute_in_extension(
                     stix_entity,
                     STIX_EXT_OCTI_SCO,
                     "external_references",
                     {
                         "source_name": "misp-warninglist",
-                        "url": "https://github.com/MISP/misp-warninglists/tree/main/"
-                        + LIST_MAPPING[hit.name],
+                        "url": url,
                         "external_id": hit.name,
                         "description": hit.description,
                     },
