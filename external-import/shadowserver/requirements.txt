@@ -1,4 +1,4 @@
-pycti==6.2.10
+pycti==6.2.11
 requests
 pandas
 tabulate # Required for Pandas to Markdown
