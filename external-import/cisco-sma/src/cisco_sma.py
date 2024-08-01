@@ -254,6 +254,7 @@ class Cisco_SMA:
             custom_properties={
                 "x_opencti_score": self.ioc_score,
                 "x_opencti_description": description,
+                "created_by_ref": identity_id
             },
         )
         self.stix_domain.append(observable)
@@ -294,7 +295,6 @@ class Cisco_SMA:
             id=identity_id,
             spec_version="2.1",
             name="Cisco SMA",
-            confidence=100,
             identity_class="organization",
             type="identity",
             object_marking_refs=stix2.TLP_WHITE,

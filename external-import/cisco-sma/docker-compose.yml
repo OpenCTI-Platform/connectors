@@ -11,7 +11,7 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - CISCO_SMA_API_KEY=CHANGME
       - CISCO_SMA_URL=https://panacea.threatgrid.eu/api/v3/feeds/
-      - CISCO_SMA_IOC_SCORE=60                # The score to be set on Indicators and Observables
+      - CISCO_SMA_IOC_SCORE=50                # The score to be set on Indicators and Observables
       - CISCO_SMA_AUTORUN_REGISTRY=false      # Contains registry entry data derived from querying registry changes known for persistence
       - CISCO_SMA_BANKING_DNS=true            # Banking Trojan Network Communications
       - CISCO_SMA_DGA_DNS=true                # DGA Domains with pseudo-randomly generated names
