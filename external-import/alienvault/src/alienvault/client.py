@@ -5,9 +5,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List
 
-from pydantic.v1 import parse_obj_as
 from alienvault.models import Pulse
 from OTXv2 import OTXv2
+from pydantic.v1 import parse_obj_as
 
 __all__ = [
     "AlienVaultClient",
