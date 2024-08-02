@@ -6,10 +6,9 @@ import logging
 from datetime import datetime
 from typing import Dict, Iterator, List
 
-import pydantic
 import requests
 import urllib3.exceptions
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel, parse_raw_as
 from requests import Response
 
 __all__ = [
@@ -60,7 +59,7 @@ class IronNetClient:
                 List[IronNetItem],
             ],
         ]
-        result = pydantic.parse_raw_as(result_type, resp.text)
+        result = parse_raw_as(result_type, resp.text)
         for indicator, ports in result.items():
             for port, entries in ports.items():
                 for entry in entries:

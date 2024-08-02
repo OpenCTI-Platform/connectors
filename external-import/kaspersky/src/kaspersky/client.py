@@ -9,7 +9,7 @@ import requests
 from kaspersky.models import Publication
 from kaspersky.utils import datetime_to_timestamp, decode_base64_gzip_to_string
 from pycti import OpenCTIConnectorHelper
-from pydantic.tools import parse_obj_as
+from pydantic.v1.tools import parse_obj_as
 from requests import RequestException, Response
 from requests.exceptions import ConnectTimeout, ReadTimeout
 

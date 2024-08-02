@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List
 
-import pydantic
+from pydantic.v1 import parse_obj_as
 from alienvault.models import Pulse
 from OTXv2 import OTXv2
 
@@ -39,6 +39,6 @@ class AlienVaultClient:
         :return: A list of pulses.
         """
         pulse_data = self.otx.getsince(timestamp=modified_since, limit=limit)
-        pulses = pydantic.parse_obj_as(List[Pulse], pulse_data)
+        pulses = parse_obj_as(List[Pulse], pulse_data)
 
         return pulses

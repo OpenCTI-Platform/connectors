@@ -14,7 +14,7 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 from reportimporter.constants import (
     ANALYSIS_TYPE,
     ENTITY_CLASS,
