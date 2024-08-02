@@ -256,13 +256,9 @@ class Fortinet:
 
         ioc_details = extract_ioc_types(stix_new)
 
-        i = 0
         for ioc_detail in ioc_details:
             objects = self.create_stix_object(ioc_detail)
             stix_objects.extend(objects)
-            i = i + 1
-            if i == 1000:
-                break
 
         bundle = stix2.Bundle(
             objects=stix_objects,
