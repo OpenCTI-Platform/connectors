@@ -117,6 +117,11 @@ class Sekoia(object):
             self.base_url, "v2/inthreat/collections", self.collection, "objects"
         )
 
+    def get_relationship(self, indicator_id: str):
+        return urljoin(
+            self.base_url, "v2/inthreat/objects", indicator_id, "relationships"
+        )
+
     def get_object_url(self, ids: Iterable):
         return urljoin(self.base_url, "v2/inthreat/objects", ",".join(ids))
 
@@ -181,6 +186,12 @@ class Sekoia(object):
             self._clean_external_references_fields(items)
             items = self._clean_ic_fields(items)
             self._add_files_to_items(items)
+
+            [all_related_objects, all_relationships] = (
+                self._retrieve_related_objects_and_relationships(items)
+            )
+            items += all_related_objects + all_relationships
+
             bundle = self.helper.stix2_create_bundle(items)
             try:
                 self.helper.send_stix2_bundle(bundle, work_id=work_id)
@@ -237,6 +248,24 @@ class Sekoia(object):
             (field.startswith("x_ic") or field.startswith("x_inthreat"))
             and (field.endswith("ref") or field.endswith("refs"))
         ) or field in to_ignore
+
+    def _retrieve_related_objects_and_relationships(self, indicators: List[Dict]):
+        all_related_objects = []
+        all_relationships = []
+        for indicator in indicators:
+            indicator_id = indicator["id"]
+            all_data = self._send_request(self.get_relationship(indicator_id))
+            for data in all_data["items"]:
+                if "related_object" in data:
+                    all_related_objects.append(data["related_object"])
+                if "relationship" in data:
+                    all_relationships.append(data["relationship"])
+
+        uniq_related_objects = list(
+            {obj["id"]: obj for obj in all_related_objects}.values()
+        )
+
+        return [uniq_related_objects, all_relationships]
 
     @staticmethod
     def _add_create_observables_to_indicators(items: List[Dict]):
