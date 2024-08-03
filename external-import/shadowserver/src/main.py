@@ -5,7 +5,7 @@ import time
 from datetime import UTC, datetime, timedelta
 
 from lib.external_import import ExternalImportConnector
-from shadowserver import ShadowserverAPI, get_tlp_keys
+from shadowserver import ShadowserverAPI, get_tlp_keys, remove_duplicates
 
 # Lookback in days
 LOOKBACK = 3
@@ -35,7 +35,7 @@ class CustomConnector(ExternalImportConnector):
         else:
             self.lookback = INITIAL_LOOKBACK
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"Connector initialized. Lookback: {self.lookback} days. First run: {self.first_run}"
         )
 
@@ -68,7 +68,7 @@ class CustomConnector(ExternalImportConnector):
             "severity": incident_severity,
             "priority": incident_priority,
         }
-        self.helper.log_info(f"Setting incident: {self.incident}")
+        self.helper.connector_logger.info(f"Setting incident: {self.incident}")
 
         # Error logic to check if the environment variables are set.
         if not self.api_key or not self.api_secret:
@@ -89,7 +89,7 @@ class CustomConnector(ExternalImportConnector):
 
         Returns:
             stix_objects: A list of STIX2 objects."""
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name} connector is starting the collection of objects..."
         )
         stix_objects = []
@@ -105,14 +105,23 @@ class CustomConnector(ExternalImportConnector):
 
         # Get support Report types
         subscription_list = shadowserver_api.get_subscriptions()
-        self.helper.log_info(f"Available report types: {subscription_list}.")
+        self.helper.connector_logger.info(
+            f"Available report types: {subscription_list}."
+        )
+        if not subscription_list:
+            self.helper.connector_logger.error(
+                "No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/"
+            )
+            raise ValueError(
+                "No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/"
+            )
 
         if subscription_list and isinstance(subscription_list, list):
             for subscription in subscription_list:
                 for days_lookback in range(self.lookback, -1, -1):
                     date = self.now - timedelta(days=days_lookback)
                     date_str = date.strftime("%Y-%m-%d")
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"Getting ({subscription}) reports from ({date_str})."
                     )
 
@@ -120,7 +129,9 @@ class CustomConnector(ExternalImportConnector):
                         date=date_str, type=subscription
                     )
 
-                    self.helper.log_debug(f"Found {len(report_list)} reports.")
+                    self.helper.connector_logger.debug(
+                        f"Found {len(report_list)} reports."
+                    )
                     for report in report_list:
                         report_stix_objects = shadowserver_api.get_stix_report(
                             report=report,
@@ -132,15 +143,15 @@ class CustomConnector(ExternalImportConnector):
                         for stix_object in report_stix_objects:
                             if stix_object not in stix_objects and stix_object:
                                 stix_objects.append(stix_object)
-
         # ===========================
         # === Add your code above ===
         # ===========================
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
         )
-        return stix_objects
+        unique_stix_objects = remove_duplicates(stix_objects)
+        return unique_stix_objects
 
 
 if __name__ == "__main__":
