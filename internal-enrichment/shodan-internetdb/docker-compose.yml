@@ -3,16 +3,15 @@
 version: '3'
 services:
   connector-shodan-internetdb:
-    image: opencti/connector-shodan-internetdb:6.2.7
+    image: opencti/connector-shodan-internetdb:6.2.11
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=Shodan InternetDB
       - CONNECTOR_SCOPE=IPv4-Addr
-      - CONNECTOR_CONFIDENCE_LEVEL=75
       - CONNECTOR_AUTO=true
       - CONNECTOR_LOG_LEVEL=error
-      - SHODAN_MAX_TLP=white
+      - SHODAN_MAX_TLP=TLP:CLEAR
       - SHODAN_SSL_VERIFY=true
     restart: always

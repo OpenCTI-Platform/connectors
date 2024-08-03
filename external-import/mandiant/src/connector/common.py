@@ -17,6 +17,7 @@ def create_stix_relationship(
     attribution_scope,
     start_time=None,
     stop_time=None,
+    description=None,
 ):
     start_time = parse(start_time) if start_time else None
     stop_time = parse(stop_time) if stop_time else None
@@ -37,6 +38,7 @@ def create_stix_relationship(
         target_ref=target,
         start_time=start_time,
         stop_time=stop_time,
+        description=description,
         allow_custom=True,
         confidence=utils.get_confidence(attribution_scope),
         created_by_ref=connector.identity["standard_id"],

@@ -15,10 +15,10 @@ This connector enriches IPv4 observables with domains, CPEs, Vulns, and Tags rep
 
 There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
-| Docker Env variable      | config variable   | Default | Description                                      |
-|--------------------------|-------------------|---------|--------------------------------------------------|
-| SHODAN_MAX_TLP           | max_tlp           | white   | The max TLP allowed to be sent to the Shodan API |
-| SHODAN_SSL_VERIFY        | ssl_verify        | true    | Verify SSL connections to the API endpoint       |
+| Docker Env variable      | config variable   | Default   | Description                                      |
+|--------------------------|-------------------|-----------|--------------------------------------------------|
+| SHODAN_MAX_TLP           | max_tlp           | TLP:CLEAR | The max TLP allowed to be sent to the Shodan API |
+| SHODAN_SSL_VERIFY        | ssl_verify        | true      | Verify SSL connections to the API endpoint       |
 
 ## Installation
 

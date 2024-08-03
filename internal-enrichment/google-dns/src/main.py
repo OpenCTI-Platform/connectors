@@ -17,7 +17,7 @@ class GoogleDNSConnector:
             if os.path.isfile(config_path)
             else {}
         )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
         self.dns_client = GoogleDNSClient()
 
     def _build_ip_addrs(self, domain, a_records) -> list:
