@@ -30,7 +30,6 @@ from stix2.canonicalization.Canonicalize import canonicalize
 from .utils import (
     calculate_hashes,
     check_ip_address,
-    check_keys,
     compare_severity,
     datetime_to_string,
     dicts_to_markdown,
@@ -109,13 +108,13 @@ class ShadowserverStixTransformation:
             if self.incident.get("create", False):
                 self.create_opencti_case(labels=label_list, severity=severity)
             else:
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     "Not creating incident because 'create' is set to False."
                 )
             self.create_stix_report(labels=label_list)
             self.create_stix_note_from_data(labels=label_list)
         else:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 "No object references found, not creating incident, report, or note."
             )
 
@@ -147,16 +146,20 @@ class ShadowserverStixTransformation:
         stix_object = None
 
         if value:
-            self.helper.log_debug(f"Creating {key} STIX object: {value}")
+            self.helper.connector_logger.debug(f"Creating {key} STIX object: {value}")
             stix_object = create_method(value=value, labels=labels)
 
         if stix_object:
-            self.helper.log_debug(f"Created {key} STIX object: {stix_object.get('id')}")
-            self.object_refs.append(stix_object.get("id"))
+            self.helper.connector_logger.debug(
+                f"Created {key} STIX object: {stix_object.id}"
+            )
+            self.object_refs.append(stix_object.id)
             self.stix_objects.append(stix_object)
             return stix_object.get("id")
         elif stix_object is None and value:
-            self.helper.log_error(f"Failed to create {key} STIX object: {value}")
+            self.helper.connector_logger.error(
+                f"Failed to create {key} STIX object: {value}"
+            )
 
     def validate_inputs(self, marking_refs, report_list, report):
         """
@@ -170,7 +173,7 @@ class ShadowserverStixTransformation:
         Raises:
             ValueError: If the marking references are invalid, the report list is empty, or the report is not a dictionary.
         """
-        self.helper.log_debug("Validating inputs.")
+        self.helper.connector_logger.debug("Validating inputs.")
         if not isinstance(marking_refs, MarkingDefinition):
             raise ValueError(f"Invalid marking references: {marking_refs}")
         if not isinstance(report_list, list) or not report_list:
@@ -188,7 +191,7 @@ class ShadowserverStixTransformation:
         Returns:
             A string representing the published date, converted to a specific format.
         """
-        self.helper.log_debug("Getting published date.")
+        self.helper.connector_logger.debug("Getting published date.")
         try:
             if (
                 report_list
@@ -199,7 +202,7 @@ class ShadowserverStixTransformation:
                     string_to_datetime(report_list[0].get("timestamp"))
                 )
         except Exception as e:
-            self.helper.log_error(f"Error parsing published date: {e}")
+            self.helper.connector_logger.error(f"Error parsing published date: {e}")
         return datetime_to_string(datetime.now())
 
     def get_stix_objects(self):
@@ -212,7 +215,7 @@ class ShadowserverStixTransformation:
         """
         Creates an external reference with source name 'source', description 'Shadowserver Report', and URL based on the provided self.url.
         """
-        self.helper.log_info(f"Creating external reference: ({self.url}).")
+        self.helper.connector_logger.info(f"Creating external reference: ({self.url}).")
         self.external_reference = {
             "source_name": "source",
             "description": "Shadowserver Report",
@@ -229,7 +232,9 @@ class ShadowserverStixTransformation:
         Returns:
             None
         """
-        self.helper.log_debug(f"Creating OpenCTI case: {self.report.get('id')}")
+        self.helper.connector_logger.debug(
+            f"Creating OpenCTI case: {self.report.get('id')}"
+        )
         description = self.create_description()
         kwargs = {
             "name": f"Shadowserver Report {self.type}: {self.report.get('id')}",
@@ -249,7 +254,7 @@ class ShadowserverStixTransformation:
         if self.case_id:
             self.stix_objects.append(opencti_obj)
         else:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Failed to create OpenCTI case: {self.report.get('id', None)}"
             )
 
@@ -272,7 +277,7 @@ class ShadowserverStixTransformation:
         Returns:
             None
         """
-        self.helper.log_debug("Uploading Shadowserver report as artifact.")
+        self.helper.connector_logger.debug("Uploading Shadowserver report as artifact.")
         csv_str_enc = from_list_to_csv(report_list).encode()
         mime_type = magic.from_buffer(csv_str_enc, mime=True)
         base64_encoded_str = base64.b64encode(csv_str_enc).decode("utf-8")
@@ -284,7 +289,7 @@ class ShadowserverStixTransformation:
             "hashes": calculate_hashes(csv_str_enc),
         }
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"Uploading Shadowserver report as artifact: {self.report}."
         )
 
@@ -299,7 +304,7 @@ class ShadowserverStixTransformation:
             self.artifact_id = artifact.get("id")
             self.stix_objects.append(artifact)
         else:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Failed to upload Shadowserver report as artifact: {self.report}."
             )
 
@@ -342,18 +347,20 @@ class ShadowserverStixTransformation:
         if self.report_id:
             self.stix_objects.append(stix_report)
         else:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Failed to create OpenCTI case: {self.report.get('id', None)}"
             )
 
     def add_default_labels(self, stix_obj: dict):
         """Adds default labels to the specified STIX object."""
-        self.helper.log_debug(f"Adding default labels: {self.default_labels_id}")
+        self.helper.connector_logger.debug(
+            f"Adding default labels: {self.default_labels_id}"
+        )
         for label_id in self.default_labels_id:
             if isinstance(label_id, str) and stix_obj.get("id"):
                 self.add_label_to_stix_object(stix_obj, label_id)
             else:
-                self.helper.log_error(f"Invalid label: {label_id}")
+                self.helper.connector_logger.error(f"Invalid label: {label_id}")
 
     def add_label_to_stix_object(self, stix_obj, label_id):
         """
@@ -372,13 +379,13 @@ class ShadowserverStixTransformation:
                 id=stix_obj.get("id"), label_id=label_id
             )
         else:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Invalid STIX object type: {stix_obj.get('parent_types')}"
             )
 
     def create_author(self):
         """Creates the author of the report."""
-        self.helper.log_debug("Creating author: Shadowserver Connector")
+        self.helper.connector_logger.debug("Creating author: Shadowserver Connector")
         kwargs = {
             "id": pycti_identity.generate_id("Shadowserver Connector", "Organization"),
             "name": "Shadowserver Connector",
@@ -386,6 +393,7 @@ class ShadowserverStixTransformation:
             "type": "identity",
             "description": "Shadowserver Connector",
             "sectors": "non-profit",
+            "labels": self.labels,
         }
 
         custom_properties = self.get_author_custom_properties()
@@ -404,9 +412,7 @@ class ShadowserverStixTransformation:
         A method to retrieve the custom properties of the author.
         """
         custom_properties = copy.deepcopy(self.custom_properties)
-        custom_properties["x_opencti_reliability"] = (
-            "A - Completely reliable"  # TODO: Make it configurable
-        )
+        custom_properties["x_opencti_reliability"] = "A - Completely reliable"
         custom_properties["x_opencti_organization_type"] = "non-profit"
         return custom_properties
 
@@ -430,7 +436,7 @@ class ShadowserverStixTransformation:
             "src_ip": self.create_ip,
             "dst_ip": self.create_ip,
         }
-        self.helper.log_debug("Mapping Shadowserver report to STIX.")
+        self.helper.connector_logger.debug("Mapping Shadowserver report to STIX.")
         observed_data_list = []
         labels_list = self.custom_properties.get("x_opencti_labels", []).copy()
 
@@ -443,40 +449,19 @@ class ShadowserverStixTransformation:
             if stix_object_str:
                 observed_data_list.append(stix_object_str)
 
-        # If src_port, dst_port, src_ip, dst_ip, and protocol are in the element, create network traffic
-        if check_keys(
-            element, ["src_port", "dst_port", "src_ip", "dst_ip", "protocol"]
-        ):
-            dst_ip_stix_object = self.create_ip(
-                element.get("dst_ip"), labels=labels_list
-            )
-            src_ip_stix_object = self.create_ip(
-                element.get("src_ip"), labels=labels_list
-            )
-
-            stix_object_str = self.create_network_traffic(
-                src_port=element.get("src_port"),
-                protocol=element.get("protocol"),
-                dst_port=element.get("dst_port"),
-                src_ref=src_ip_stix_object.get("id"),
-                dst_ref=dst_ip_stix_object.get("id"),
-                labels=labels_list,
-            )
-            if stix_object_str:
-                observed_data_list.append(stix_object_str)
-
-        if element.get("port") and element.get("protocol"):
-            dst_ref = get_stix_id_precedence(observed_data_list)
-            stix_object_str = self.create_network_traffic(
-                dst_port=element.get("port"),
-                protocol=element.get("protocol"),
-                dst_ref=dst_ref,
-                labels=labels_list,
-            )
-            if stix_object_str:
-                observed_data_list.append(stix_object_str)
+        # # Network Traffic
+        # # TODO: Commented out code due to error with merging entities (Cannot merge entities, same ID detected in source and destination).
+        # stix_obj_str = ''
+        # stix_obj_str = self.check_and_create_network_traffic(
+        #     element=element,
+        #     labels_list=labels_list,
+        #     observed_data_list=observed_data_list
+        # )
+        # if stix_obj_str:
+        #     observed_data_list.append(stix_obj_str)
 
         if element.get("cert_serial_number"):
+            stix_object_str = ""
             stix_object_str = self.create_x509_certificate(element, labels_list)
             if stix_object_str:
                 observed_data_list.append(stix_object_str)
@@ -489,7 +474,7 @@ class ShadowserverStixTransformation:
                 first_observed=first_observed,
             )
         else:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Unable to create observed data for element: {element}"
             )
 
@@ -511,10 +496,10 @@ class ShadowserverStixTransformation:
             custom_labels = element.get("tag").split(";")
             for label in custom_labels:
                 if label.upper().startswith("CVE"):
-                    self.helper.log_debug(f"Label is CVE: {label}")
+                    self.helper.connector_logger.debug(f"Label is CVE: {label}")
                     self.create_vulnerability(label)
             labels_list.extend(custom_labels)
-        self.helper.log_debug(f"Labels: {labels_list}")
+        self.helper.connector_logger.debug(f"Labels: {labels_list}")
         return labels_list
 
     def extend_stix_object(self, kwargs: dict, labels: list = []):
@@ -529,7 +514,9 @@ class ShadowserverStixTransformation:
 
     def create_vulnerability(self, name: str):
         """Creates a vulnerability STIX object."""
-        self.helper.log_debug(f"Creating vulnerability STIX object: {name}")
+        self.helper.connector_logger.debug(
+            f"Creating vulnerability STIX object: {name}"
+        )
         kwargs = {
             "type": "vulnerability",
             "name": name.upper(),
@@ -547,7 +534,7 @@ class ShadowserverStixTransformation:
 
     def create_asn(self, value: int, labels: list = []):
         """Creates an autonomous system STIX object."""
-        self.helper.log_debug(f"Creating ASN STIX object: {value}")
+        self.helper.connector_logger.debug(f"Creating ASN STIX object: {value}")
         kwargs = {
             "type": "autonomous-system",
             "number": value,
@@ -557,7 +544,7 @@ class ShadowserverStixTransformation:
 
     def create_ip(self, value: str, labels: list = []):
         """Creates an IP address STIX object."""
-        self.helper.log_debug(f"Creating IP STIX object: {value}")
+        self.helper.connector_logger.debug(f"Creating IP STIX object: {value}")
         kwargs = {"value": value}
         self.extend_stix_object(kwargs, labels)
 
@@ -568,16 +555,16 @@ class ShadowserverStixTransformation:
             kwargs["type"] = "ipv6-addr"
             return IPv6Address(**kwargs)
         else:
-            self.helper.log_error(f"Invalid IP address: {value}")
-            return None
+            self.helper.connector_logger.error(f"Invalid IP address: {value}")
+            return {}
 
     def create_hostname(self, value: str, labels: list = []):
         """Creates a hostname STIX object."""
         if not value:
-            self.helper.log_error("Hostname value is missing.")
+            self.helper.connector_logger.error("Hostname value is missing.")
             return None
 
-        self.helper.log_debug(f"Creating hostname STIX object: {value}")
+        self.helper.connector_logger.debug(f"Creating hostname STIX object: {value}")
         kwargs = {"type": "domain-name", "value": value}
         self.extend_stix_object(kwargs, labels)
         return DomainName(**kwargs)
@@ -585,90 +572,165 @@ class ShadowserverStixTransformation:
     def create_mac_address(self, value: str, labels: list = []):
         """Creates a MAC address STIX object."""
         if not value:
-            self.helper.log_error("MAC address value is missing.")
+            self.helper.connector_logger.error("MAC address value is missing.")
             return None
 
-        self.helper.log_debug(f"Creating MAC address STIX object: {value}")
+        self.helper.connector_logger.debug(f"Creating MAC address STIX object: {value}")
         kwargs = {"type": "mac-addr", "value": value}
         self.extend_stix_object(kwargs, labels)
         return MACAddress(**kwargs)
 
-    def create_network_traffic(
-        self,
-        src_port: int = None,
-        dst_port: int = None,
-        protocol: str = None,
-        src_ref: str = None,
-        dst_ref: str = None,
-        labels: list = [],
+    def check_and_create_network_traffic(
+        self, element: dict, labels_list: list, observed_data_list: list
     ):
-        """Creates a network traffic STIX object."""
-        description = []
+        """
+        Checks and creates a network traffic STIX object based on the provided element, labels, and observed data.
 
-        self.helper.log_debug("Creating network traffic STIX object.")
+        Parameters:
+            element (dict): The dictionary containing the element data to create the network traffic object.
+            labels_list (list): The list of labels associated with the STIX object.
+            observed_data_list (list): The list of observed data references.
+
+        Returns:
+            str: The ID of the created network traffic STIX object if successful, None otherwise.
+        """
+
+        stix_object_str = None
+        dst_ip_ref = ""
         kwargs = {
-            "type": "network-traffic",
-            "is_active": False,
-            "start": self.published,
-            "end": self.published,
+            "protocol": element.get("protocol", ""),
+            "labels": labels_list,
         }
 
+        # If dst_ip is in the element, add dst_ip to Network Traffic object.
+        if element.get("dst_ip", ""):
+            dst_ip_stix_object = self.create_ip(
+                element.get("dst_ip", ""), labels=labels_list
+            )
+            dst_ref = dst_ip_stix_object.id
+        else:
+            dst_ref = get_stix_id_precedence(observed_data_list)
+        if dst_ref:
+            kwargs["dst_ref"] = dst_ref
+        else:
+            return None
+
+        # If src_ip is in the element, add src_ip to Network Traffic object.
+        if element.get("src_ip", ""):
+            ip_stix_object = self.create_ip(
+                element.get("src_ip", ""), labels=labels_list
+            )
+            ip_ref = ip_stix_object.id
+            if ip_ref and (ip_ref != dst_ip_ref):
+                kwargs["src_ref"] = ip_ref
+
+        # If src_port or port is in the element, add src_port to Network Traffic object.
+        if element.get("src_port", "") and kwargs.get("src_ref", ""):
+            kwargs["src_port"] = element.get("src_port", "")
+
+        if element.get("dst_port", ""):
+            kwargs["dst_port"] = element.get("dst_port", "")
+        elif element.get("port", ""):
+            kwargs["dst_port"] = element.get("port", "")
+
+        # If kwargs contains protocol and dst_ref, create network traffic
+        if kwargs.get("protocol", "") and kwargs.get("dst_ref", ""):
+            stix_object_str = self.create_network_traffic(**kwargs)
+        return stix_object_str
+
+    def create_network_traffic(
+        self,
+        src_port=None,
+        dst_port=None,
+        protocol: str = "",
+        src_ref: str = "",
+        dst_ref: str = "",
+        labels: list = [],
+    ):
+        description = []
+        kwargs = {}
+        if not protocol:
+            return None
+
+        """Creates a network traffic STIX object."""
+        if labels is None:
+            labels = []
+
+        self.helper.connector_logger.debug("Creating network traffic STIX object.")
+        kwargs = {
+            "type": "network-traffic",
+            "start": self.published,
+            "protocols": [protocol.lower()],
+        }
+
+        # Add source to custom properties
         if src_ref:
-            src_str = str
             kwargs["src_ref"] = src_ref
-            src_value = find_stix_object_by_id(self.stix_objects, src_ref)
+            src_value = find_stix_object_by_id(
+                stix_objects=self.stix_objects, target_id=src_ref
+            )
             src_str = f"src: {src_value}"
             if src_port:
                 kwargs["src_port"] = src_port
                 src_str = f"{src_str}:{src_port}"
-            if src_str:
-                description.append(src_str)
+            description.append(src_str)
 
+        # Add destination to custom properties
         if dst_ref:
-            dst_str = str
             kwargs["dst_ref"] = dst_ref
-            dst_value = find_stix_object_by_id(self.stix_objects, dst_ref)
+            dst_value = find_stix_object_by_id(
+                stix_objects=self.stix_objects, target_id=dst_ref
+            )
             dst_str = f"dst: {dst_value}"
             if dst_port:
                 kwargs["dst_port"] = dst_port
                 dst_str = f"{dst_str}:{dst_port}"
-            if dst_str:
-                description.append(dst_str)
-
-        if protocol:
-            kwargs["protocols"] = [protocol.lower()]
-            protocol_str = f"proto: {protocol.lower()}"
-            description.append(protocol_str)
+            description.append(dst_str)
 
         # Generate custom ID for network traffic
-        data = canonicalize(kwargs, utf8=False)
-        id = str(
+        custom_id = str(
             uuid.uuid5(
-                uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"),
-                f"{self.report_id}-{data}",
+                uuid.UUID("8cd73e6c-ae14-4c43-bbeb-33b44084a18c"),
+                f"{canonicalize(f'{kwargs}-{description}', utf8=False)}",
             )
         )
-        kwargs["id"] = f"network-traffic--{id}"
+        self.helper.connector_logger.debug(f"{custom_id} - {kwargs} - {description}")
+        kwargs["id"] = f"network-traffic--{custom_id}"
 
+        # Check for existing STIX object with the same ID
+        if self.stix_object_exists(kwargs["id"]):
+            self.helper.connector_logger.error(
+                f"STIX object with ID {kwargs['id']} already exists. Aborting creation."
+            )
+            return None
+
+        # Add description to custom properties
         description_str = f"Shadowserver Network Traffic: {', '.join(description)}"
         self.extend_stix_object(kwargs, labels)
+        if "custom_properties" not in kwargs:
+            kwargs["custom_properties"] = {}
         kwargs["custom_properties"].update({"x_opencti_description": description_str})
-        # Name isn't supported for Network Traffic.
-        # kwargs["custom_properties"].update({"x_opencti_name": ', '.join(description)})
 
         stix_object = NetworkTraffic(**kwargs)
 
-        if stix_object and not self.stix_object_exists(kwargs.get("id")):
-            self.helper.log_debug(
-                f"Created network traffic STIX object: {stix_object.get('id')}"
+        if stix_object:
+            self.helper.connector_logger.debug(
+                f"Created network traffic STIX object: {stix_object.id}"
             )
-            self.object_refs.append(stix_object.get("id"))
+            self.object_refs.append(stix_object.id)
             self.stix_objects.append(stix_object)
-            return stix_object.get("id")
+            return stix_object.id
+        else:
+            self.helper.connector_logger.error(
+                f"Failed to create network traffic STIX object with ID {stix_object.id}"
+            )
+            return None
 
     def create_x509_certificate(self, data: dict, labels: list = []):
         """Creates an X509 certificate STIX object."""
-        self.helper.log_debug(f"Creating X509 certificate STIX object: {data}")
+        self.helper.connector_logger.debug(
+            f"Creating X509 certificate STIX object: {data}"
+        )
         kwargs = {"type": "x509-certificate"}
 
         hashes = {
@@ -699,7 +761,7 @@ class ShadowserverStixTransformation:
         stix_object = X509Certificate(**kwargs)
 
         if stix_object:
-            self.helper.log_debug(
+            self.helper.connector_logger.debug(
                 f"Created X509 certificate STIX object: {stix_object.get('id')}"
             )
             self.object_refs.append(stix_object.get("id"))
@@ -714,7 +776,9 @@ class ShadowserverStixTransformation:
         last_observed: datetime = None,
     ):
         """Creates an observed data STIX object."""
-        self.helper.log_debug(f"Creating observed data STIX object: {observables_list}")
+        self.helper.connector_logger.debug(
+            f"Creating observed data STIX object: {observables_list}"
+        )
         try:
             observables = [obs for obs in observables_list if obs]
             if not observables:
@@ -734,12 +798,12 @@ class ShadowserverStixTransformation:
             stix_object = ObservedData(**kwargs)
 
             if stix_object:
-                self.helper.log_debug(
+                self.helper.connector_logger.debug(
                     f"Created observed data STIX object: {stix_object.get('id')}"
                 )
                 self.stix_objects.append(stix_object)
         except Exception as e:
-            self.helper.log_error(f"Error creating observed data: {e}")
+            self.helper.connector_logger.error(f"Error creating observed data: {e}")
 
     def create_stix_note_from_data(self, labels: list = []):
         """
@@ -792,7 +856,7 @@ class ShadowserverStixTransformation:
                     self.stix_objects.append(stix_object)
                     self.object_refs.append(stix_object.get("id"))
             else:
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     f"Failed to create STIX note from data: {element}"
                 )
 
