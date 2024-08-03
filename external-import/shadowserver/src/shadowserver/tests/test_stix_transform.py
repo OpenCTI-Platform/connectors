@@ -19,9 +19,10 @@ from stix2 import (
 class TestShadowserverStixTransformation(unittest.TestCase):
     def setUp(self):
         self.api_helper = MagicMock(spec=OpenCTIConnectorHelper)
-        self.api_helper.log_debug = MagicMock()
-        self.api_helper.log_info = MagicMock()
-        self.api_helper.log_error = MagicMock()
+        self.api_helper.connector_logger = MagicMock()
+        self.api_helper.connector_logger.debug = MagicMock()
+        self.api_helper.connector_logger.info = MagicMock()
+        self.api_helper.connector_logger.error = MagicMock()
 
         self.marking_refs = MarkingDefinition(
             type="marking-definition",

@@ -216,14 +216,19 @@ def get_stix_id_precedence(stix_id_list: List[str]) -> Optional[str]:
     Returns:
         str or None: The STIX ID with the highest precedence, or None if the list is empty.
     """
+    ipv4 = None
+    ipv6 = None
+    domain = None
+
     for stix_id in stix_id_list:
-        if (
-            stix_id.startswith("ipv4-addr")
-            or stix_id.startswith("ipv6-addr")
-            or stix_id.startswith("domain-name")
-        ):
-            return stix_id
-    return None
+        if stix_id.startswith("ipv4-addr"):
+            ipv4 = stix_id
+        elif stix_id.startswith("ipv6-addr"):
+            ipv6 = stix_id
+        elif stix_id.startswith("domain-name"):
+            domain = stix_id
+
+    return ipv4 or ipv6 or domain or None
 
 
 def find_stix_object_by_id(
@@ -241,7 +246,7 @@ def find_stix_object_by_id(
     """
     for obj in stix_objects:
         if obj.id == target_id:
-            return obj.get("value", None)
+            return obj.value
     return None
 
 
@@ -272,15 +277,22 @@ def compare_severity(severity1, severity2):
         return severity2
 
 
-def check_keys(dictionary, required_keys):
+def remove_duplicates(data_list: List):
     """
-    Checks if all required keys are present in the dictionary.
+    Remove duplicate dictionaries from a list of dictionaries.
 
-    Parameters:
-        dictionary (dict): The dictionary to check.
-        required_keys (list): A list of keys that are required.
+    Args:
+        data_list (list of dict): The original list of dictionaries.
 
     Returns:
-        bool: True if all required keys are present, False otherwise.
+        list of dict: A list of dictionaries with duplicates removed.
     """
-    return all(key in dictionary for key in required_keys)
+    unique_ids = set()
+    unique_data_list = []
+
+    for data in data_list:
+        if data.id not in unique_ids:
+            unique_ids.add(data.id)
+            unique_data_list.append(data)
+
+    return unique_data_list
