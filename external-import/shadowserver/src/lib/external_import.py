@@ -91,7 +91,9 @@ class ExternalImportConnector:
 
     def run(self) -> None:
         # Main procedure
-        self.helper.connector_logger.info(f"Starting {self.helper.connect_name} connector...")
+        self.helper.connector_logger.info(
+            f"Starting {self.helper.connect_name} connector..."
+        )
         while True:
             try:
                 # Get the current timestamp and check
@@ -110,7 +112,9 @@ class ExternalImportConnector:
 
                 # If the last_run is more than interval-1 day
                 if last_run is None or ((timestamp - last_run) >= self._get_interval()):
-                    self.helper.connector_logger.info(f"{self.helper.connect_name} will run!")
+                    self.helper.connector_logger.info(
+                        f"{self.helper.connect_name} will run!"
+                    )
                     friendly_name = f"{self.helper.connect_name} run @ {datetime.fromtimestamp(timestamp, tz=UTC).isoformat()}"
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
@@ -133,7 +137,9 @@ class ExternalImportConnector:
                                 work_id=work_id,
                             )
                         else:
-                            self.helper.connector_logger.info("No data to send to OpenCTI.")
+                            self.helper.connector_logger.info(
+                                "No data to send to OpenCTI."
+                            )
                     except Exception as e:
                         self.helper.connector_logger.error(str(e))
 
@@ -169,13 +175,17 @@ class ExternalImportConnector:
                     )
 
             except (KeyboardInterrupt, SystemExit):
-                self.helper.connector_logger.info(f"{self.helper.connect_name} connector stopped")
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name} connector stopped"
+                )
                 sys.exit(0)
             except Exception as e:
                 self.helper.connector_logger.error(str(e))
 
             if self.helper.connect_run_and_terminate:
-                self.helper.connector_logger.info(f"{self.helper.connect_name} connector ended")
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name} connector ended"
+                )
                 sys.exit(0)
 
             time.sleep(60)

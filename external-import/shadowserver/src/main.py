@@ -105,10 +105,16 @@ class CustomConnector(ExternalImportConnector):
 
         # Get support Report types
         subscription_list = shadowserver_api.get_subscriptions()
-        self.helper.connector_logger.info(f"Available report types: {subscription_list}.")
+        self.helper.connector_logger.info(
+            f"Available report types: {subscription_list}."
+        )
         if not subscription_list:
-            self.helper.connector_logger.error("No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/")
-            raise ValueError("No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/")
+            self.helper.connector_logger.error(
+                "No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/"
+            )
+            raise ValueError(
+                "No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/"
+            )
 
         if subscription_list and isinstance(subscription_list, list):
             for subscription in subscription_list:
@@ -123,7 +129,9 @@ class CustomConnector(ExternalImportConnector):
                         date=date_str, type=subscription
                     )
 
-                    self.helper.connector_logger.debug(f"Found {len(report_list)} reports.")
+                    self.helper.connector_logger.debug(
+                        f"Found {len(report_list)} reports."
+                    )
                     for report in report_list:
                         report_stix_objects = shadowserver_api.get_stix_report(
                             report=report,

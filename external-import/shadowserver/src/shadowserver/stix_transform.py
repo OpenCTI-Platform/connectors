@@ -9,37 +9,17 @@ from pycti import Identity as pycti_identity
 from pycti import Note as pycti_note
 from pycti import OpenCTIConnectorHelper
 from pycti import Report as pycti_report
-from stix2 import (
-    Artifact,
-    AutonomousSystem,
-    DomainName,
-    Identity,
-    IPv4Address,
-    IPv6Address,
-    MACAddress,
-    MarkingDefinition,
-    NetworkTraffic,
-    Note,
-    ObservedData,
-    Report,
-    Vulnerability,
-    X509Certificate,
-)
+from stix2 import (Artifact, AutonomousSystem, DomainName, Identity,
+                   IPv4Address, IPv6Address, MACAddress, MarkingDefinition,
+                   NetworkTraffic, Note, ObservedData, Report, Vulnerability,
+                   X509Certificate)
 from stix2.canonicalization.Canonicalize import canonicalize
 
-from .utils import (
-    calculate_hashes,
-    check_ip_address,
-    check_keys,
-    compare_severity,
-    datetime_to_string,
-    dicts_to_markdown,
-    find_stix_object_by_id,
-    from_list_to_csv,
-    get_stix_id_precedence,
-    note_timestamp_to_datetime,
-    string_to_datetime,
-)
+from .utils import (calculate_hashes, check_ip_address, check_keys,
+                    compare_severity, datetime_to_string, dicts_to_markdown,
+                    find_stix_object_by_id, from_list_to_csv,
+                    get_stix_id_precedence, note_timestamp_to_datetime,
+                    string_to_datetime)
 
 
 class ShadowserverStixTransformation:
@@ -151,12 +131,16 @@ class ShadowserverStixTransformation:
             stix_object = create_method(value=value, labels=labels)
 
         if stix_object:
-            self.helper.connector_logger.debug(f"Created {key} STIX object: {stix_object.id}")
+            self.helper.connector_logger.debug(
+                f"Created {key} STIX object: {stix_object.id}"
+            )
             self.object_refs.append(stix_object.id)
             self.stix_objects.append(stix_object)
             return stix_object.get("id")
         elif stix_object is None and value:
-            self.helper.connector_logger.error(f"Failed to create {key} STIX object: {value}")
+            self.helper.connector_logger.error(
+                f"Failed to create {key} STIX object: {value}"
+            )
 
     def validate_inputs(self, marking_refs, report_list, report):
         """
@@ -229,7 +213,9 @@ class ShadowserverStixTransformation:
         Returns:
             None
         """
-        self.helper.connector_logger.debug(f"Creating OpenCTI case: {self.report.get('id')}")
+        self.helper.connector_logger.debug(
+            f"Creating OpenCTI case: {self.report.get('id')}"
+        )
         description = self.create_description()
         kwargs = {
             "name": f"Shadowserver Report {self.type}: {self.report.get('id')}",
@@ -348,7 +334,9 @@ class ShadowserverStixTransformation:
 
     def add_default_labels(self, stix_obj: dict):
         """Adds default labels to the specified STIX object."""
-        self.helper.connector_logger.debug(f"Adding default labels: {self.default_labels_id}")
+        self.helper.connector_logger.debug(
+            f"Adding default labels: {self.default_labels_id}"
+        )
         for label_id in self.default_labels_id:
             if isinstance(label_id, str) and stix_obj.get("id"):
                 self.add_label_to_stix_object(stix_obj, label_id)
@@ -405,9 +393,7 @@ class ShadowserverStixTransformation:
         A method to retrieve the custom properties of the author.
         """
         custom_properties = copy.deepcopy(self.custom_properties)
-        custom_properties["x_opencti_reliability"] = (
-            "A - Completely reliable"
-        )
+        custom_properties["x_opencti_reliability"] = "A - Completely reliable"
         custom_properties["x_opencti_organization_type"] = "non-profit"
         return custom_properties
 
@@ -456,7 +442,7 @@ class ShadowserverStixTransformation:
         #     observed_data_list.append(stix_obj_str)
 
         if element.get("cert_serial_number"):
-            stix_object_str = ''
+            stix_object_str = ""
             stix_object_str = self.create_x509_certificate(element, labels_list)
             if stix_object_str:
                 observed_data_list.append(stix_object_str)
@@ -509,7 +495,9 @@ class ShadowserverStixTransformation:
 
     def create_vulnerability(self, name: str):
         """Creates a vulnerability STIX object."""
-        self.helper.connector_logger.debug(f"Creating vulnerability STIX object: {name}")
+        self.helper.connector_logger.debug(
+            f"Creating vulnerability STIX object: {name}"
+        )
         kwargs = {
             "type": "vulnerability",
             "name": name.upper(),
@@ -573,7 +561,9 @@ class ShadowserverStixTransformation:
         self.extend_stix_object(kwargs, labels)
         return MACAddress(**kwargs)
 
-    def check_and_create_network_traffic(self, element:dict, labels_list:list, observed_data_list:list):
+    def check_and_create_network_traffic(
+        self, element: dict, labels_list: list, observed_data_list: list
+    ):
         """
         Checks and creates a network traffic STIX object based on the provided element, labels, and observed data.
 
@@ -589,12 +579,12 @@ class ShadowserverStixTransformation:
         stix_object_str = None
         dst_ip_ref = ""
         kwargs = {
-            "protocol": element.get("protocol", ''),
+            "protocol": element.get("protocol", ""),
             "labels": labels_list,
         }
 
         # If dst_ip is in the element, add dst_ip to Network Traffic object.
-        if element.get('dst_ip', ""):
+        if element.get("dst_ip", ""):
             dst_ip_stix_object = self.create_ip(
                 element.get("dst_ip", ""), labels=labels_list
             )
@@ -602,30 +592,30 @@ class ShadowserverStixTransformation:
         else:
             dst_ref = get_stix_id_precedence(observed_data_list)
         if dst_ref:
-            kwargs['dst_ref'] = dst_ref
+            kwargs["dst_ref"] = dst_ref
         else:
             return None
 
         # If src_ip is in the element, add src_ip to Network Traffic object.
-        if element.get('src_ip', ""):
+        if element.get("src_ip", ""):
             ip_stix_object = self.create_ip(
                 element.get("src_ip", ""), labels=labels_list
             )
             ip_ref = ip_stix_object.id
             if ip_ref and (ip_ref != dst_ip_ref):
-                kwargs['src_ref'] = ip_ref
+                kwargs["src_ref"] = ip_ref
 
         # If src_port or port is in the element, add src_port to Network Traffic object.
-        if element.get('src_port', "") and kwargs.get('src_ref', ''):
-            kwargs['src_port'] = element.get('src_port', '')
+        if element.get("src_port", "") and kwargs.get("src_ref", ""):
+            kwargs["src_port"] = element.get("src_port", "")
 
-        if element.get('dst_port', ""):
-            kwargs['dst_port'] = element.get('dst_port', '')
-        elif element.get('port', ""):
-            kwargs['dst_port'] = element.get('port', '')
+        if element.get("dst_port", ""):
+            kwargs["dst_port"] = element.get("dst_port", "")
+        elif element.get("port", ""):
+            kwargs["dst_port"] = element.get("port", "")
 
         # If kwargs contains protocol and dst_ref, create network traffic
-        if kwargs.get('protocol', '') and kwargs.get('dst_ref', ''):
+        if kwargs.get("protocol", "") and kwargs.get("dst_ref", ""):
             stix_object_str = self.create_network_traffic(**kwargs)
         return stix_object_str
 
@@ -633,9 +623,9 @@ class ShadowserverStixTransformation:
         self,
         src_port=None,
         dst_port=None,
-        protocol: str = '',
-        src_ref: str = '',
-        dst_ref: str = '',
+        protocol: str = "",
+        src_ref: str = "",
+        dst_ref: str = "",
         labels: list = [],
     ):
         description = []
@@ -651,13 +641,15 @@ class ShadowserverStixTransformation:
         kwargs = {
             "type": "network-traffic",
             "start": self.published,
-            "protocols":  [protocol.lower()]
+            "protocols": [protocol.lower()],
         }
 
         # Add source to custom properties
         if src_ref:
             kwargs["src_ref"] = src_ref
-            src_value = find_stix_object_by_id(stix_objects=self.stix_objects, target_id=src_ref)
+            src_value = find_stix_object_by_id(
+                stix_objects=self.stix_objects, target_id=src_ref
+            )
             src_str = f"src: {src_value}"
             if src_port:
                 kwargs["src_port"] = src_port
@@ -667,7 +659,9 @@ class ShadowserverStixTransformation:
         # Add destination to custom properties
         if dst_ref:
             kwargs["dst_ref"] = dst_ref
-            dst_value = find_stix_object_by_id(stix_objects=self.stix_objects, target_id=dst_ref)
+            dst_value = find_stix_object_by_id(
+                stix_objects=self.stix_objects, target_id=dst_ref
+            )
             dst_str = f"dst: {dst_value}"
             if dst_port:
                 kwargs["dst_port"] = dst_port
@@ -678,15 +672,17 @@ class ShadowserverStixTransformation:
         custom_id = str(
             uuid.uuid5(
                 uuid.UUID("8cd73e6c-ae14-4c43-bbeb-33b44084a18c"),
-                f"{canonicalize(f'{kwargs}-{description}', utf8=False)}"
+                f"{canonicalize(f'{kwargs}-{description}', utf8=False)}",
             )
         )
-        self.helper.connector_logger.debug(f'{custom_id} - {kwargs} - {description}')
+        self.helper.connector_logger.debug(f"{custom_id} - {kwargs} - {description}")
         kwargs["id"] = f"network-traffic--{custom_id}"
 
         # Check for existing STIX object with the same ID
         if self.stix_object_exists(kwargs["id"]):
-            self.helper.connector_logger.error(f"STIX object with ID {kwargs['id']} already exists. Aborting creation.")
+            self.helper.connector_logger.error(
+                f"STIX object with ID {kwargs['id']} already exists. Aborting creation."
+            )
             return None
 
         # Add description to custom properties
@@ -699,18 +695,23 @@ class ShadowserverStixTransformation:
         stix_object = NetworkTraffic(**kwargs)
 
         if stix_object:
-            self.helper.connector_logger.debug(f"Created network traffic STIX object: {stix_object.id}")
+            self.helper.connector_logger.debug(
+                f"Created network traffic STIX object: {stix_object.id}"
+            )
             self.object_refs.append(stix_object.id)
             self.stix_objects.append(stix_object)
             return stix_object.id
         else:
-            self.helper.connector_logger.error(f"Failed to create network traffic STIX object with ID {stix_object.id}")
+            self.helper.connector_logger.error(
+                f"Failed to create network traffic STIX object with ID {stix_object.id}"
+            )
             return None
-
 
     def create_x509_certificate(self, data: dict, labels: list = []):
         """Creates an X509 certificate STIX object."""
-        self.helper.connector_logger.debug(f"Creating X509 certificate STIX object: {data}")
+        self.helper.connector_logger.debug(
+            f"Creating X509 certificate STIX object: {data}"
+        )
         kwargs = {"type": "x509-certificate"}
 
         hashes = {
@@ -756,7 +757,9 @@ class ShadowserverStixTransformation:
         last_observed: datetime = None,
     ):
         """Creates an observed data STIX object."""
-        self.helper.connector_logger.debug(f"Creating observed data STIX object: {observables_list}")
+        self.helper.connector_logger.debug(
+            f"Creating observed data STIX object: {observables_list}"
+        )
         try:
             observables = [obs for obs in observables_list if obs]
             if not observables:

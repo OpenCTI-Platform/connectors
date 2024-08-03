@@ -290,6 +290,7 @@ def check_keys(dictionary, required_keys):
     """
     return all(key in dictionary for key in required_keys)
 
+
 def remove_duplicates(data_list: List):
     """
     Remove duplicate dictionaries from a list of dictionaries.
