@@ -1,12 +1,20 @@
 import unittest
 from datetime import datetime
 
-from shadowserver.utils import (check_ip_address, clean_dict,
-                                clean_list_of_dicts, datetime_to_string,
-                                dicts_to_markdown, find_stix_object_by_id,
-                                from_list_to_csv, get_stix_id_precedence,
-                                note_timestamp_to_datetime, string_to_datetime,
-                                validate_date_format, validate_marking_refs)
+from shadowserver.utils import (
+    check_ip_address,
+    clean_dict,
+    clean_list_of_dicts,
+    datetime_to_string,
+    dicts_to_markdown,
+    find_stix_object_by_id,
+    from_list_to_csv,
+    get_stix_id_precedence,
+    note_timestamp_to_datetime,
+    string_to_datetime,
+    validate_date_format,
+    validate_marking_refs,
+)
 from stix2 import DomainName, IPv4Address
 
 

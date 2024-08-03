@@ -9,17 +9,37 @@ from pycti import Identity as pycti_identity
 from pycti import Note as pycti_note
 from pycti import OpenCTIConnectorHelper
 from pycti import Report as pycti_report
-from stix2 import (Artifact, AutonomousSystem, DomainName, Identity,
-                   IPv4Address, IPv6Address, MACAddress, MarkingDefinition,
-                   NetworkTraffic, Note, ObservedData, Report, Vulnerability,
-                   X509Certificate)
+from stix2 import (
+    Artifact,
+    AutonomousSystem,
+    DomainName,
+    Identity,
+    IPv4Address,
+    IPv6Address,
+    MACAddress,
+    MarkingDefinition,
+    NetworkTraffic,
+    Note,
+    ObservedData,
+    Report,
+    Vulnerability,
+    X509Certificate,
+)
 from stix2.canonicalization.Canonicalize import canonicalize
 
-from .utils import (calculate_hashes, check_ip_address, check_keys,
-                    compare_severity, datetime_to_string, dicts_to_markdown,
-                    find_stix_object_by_id, from_list_to_csv,
-                    get_stix_id_precedence, note_timestamp_to_datetime,
-                    string_to_datetime)
+from .utils import (
+    calculate_hashes,
+    check_ip_address,
+    check_keys,
+    compare_severity,
+    datetime_to_string,
+    dicts_to_markdown,
+    find_stix_object_by_id,
+    from_list_to_csv,
+    get_stix_id_precedence,
+    note_timestamp_to_datetime,
+    string_to_datetime,
+)
 
 
 class ShadowserverStixTransformation:
