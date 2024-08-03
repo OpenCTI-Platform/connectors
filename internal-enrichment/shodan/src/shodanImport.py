@@ -44,7 +44,7 @@ class ShodanConnector:
             if os.path.isfile(config_file_path)
             else {}
         )
-        self.helper = OpenCTIConnectorHelper(config, True)
+        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
         self.token = get_config_variable("SHODAN_TOKEN", ["shodan", "token"], config)
         self.max_tlp = get_config_variable(
             "SHODAN_MAX_TLP", ["shodan", "max_tlp"], config, default="TLP:AMBER"

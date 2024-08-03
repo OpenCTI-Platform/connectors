@@ -27,7 +27,7 @@ class VirusTotalConnector:
             if config_file_path.is_file()
             else {}
         )
-        self.helper = OpenCTIConnectorHelper(config, True)
+        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
         token = get_config_variable("VIRUSTOTAL_TOKEN", ["virustotal", "token"], config)
         self.max_tlp = get_config_variable(
             "VIRUSTOTAL_MAX_TLP", ["virustotal", "max_tlp"], config
