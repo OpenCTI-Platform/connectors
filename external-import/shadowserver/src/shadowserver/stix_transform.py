@@ -30,7 +30,6 @@ from stix2.canonicalization.Canonicalize import canonicalize
 from .utils import (
     calculate_hashes,
     check_ip_address,
-    check_keys,
     compare_severity,
     datetime_to_string,
     dicts_to_markdown,

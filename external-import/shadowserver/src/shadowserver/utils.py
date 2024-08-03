@@ -277,20 +277,6 @@ def compare_severity(severity1, severity2):
         return severity2
 
 
-def check_keys(dictionary, required_keys):
-    """
-    Checks if all required keys are present in the dictionary.
-
-    Parameters:
-        dictionary (dict): The dictionary to check.
-        required_keys (list): A list of keys that are required.
-
-    Returns:
-        bool: True if all required keys are present, False otherwise.
-    """
-    return all(key in dictionary for key in required_keys)
-
-
 def remove_duplicates(data_list: List):
     """
     Remove duplicate dictionaries from a list of dictionaries.
