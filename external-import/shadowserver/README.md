@@ -23,13 +23,12 @@ API and report references from The Shadowserver Foundation
  - Vulnerability
  - X509Certificate
 
-On the initial run, the integration defaults to the last 30-days of reports. Every run after that, it provides an update for the last 3-days. 
+On the initial run, the integration defaults to the last 30-days of reports. Every run after that, it provides an update for the last 3-days.
 
 ## Installation
 
 ### Requirements
-
-- OpenCTI Platform >= 6.2.7
+- Subscribe to Shadowserver [https://www.shadowserver.org/what-we-do/network-reporting/get-reports/](Shadowserver Reports)
 
 ### Configuration
 
@@ -49,7 +48,7 @@ Most of the times, these values are NOT expected to be changed.
 
 However, there are other values which are expected to be configured by end users.
 The following values are expected to be defined in the `.env` file.
-This file is included in the `.gitignore` to avoid leaking sensitive date). 
+This file is included in the `.gitignore` to avoid leaking sensitive date).
 Note tha the `.env.sample` file can be used as a reference.
 
 The ones that follow are connector's generic execution parameters expected to be added for export connectors.
@@ -74,7 +73,7 @@ Finally, the ones that follow are connector's specific execution parameters expe
 | `shadowserver_marking`               | `SHADOWSERVER_MARKING`              | Yes          | The marking for the data, e.g., `TLP:CLEAR`, `TLP:GREEN`, `TLP:AMBER`, `TLP:RED`.                                                                                                               |
 | `shadowserver_create_incident`       | `SHADOWSERVER_CREATE_INCIDENT`      | Yes          | Whether to create an incident (`true` or `false`).                                                                                                         |
 | `shadowserver_incident_severity`     | `SHADOWSERVER_INCIDENT_SEVERITY`    | Yes          | The severity of the incident, e.g., `low` (Default: `low`).                                                                                                                 |
-| `shadowserver_incident_priority`     | `SHADOWSERVER_INCIDENT_PRIORITY`    | Yes          | The priority of the incident, e.g., `P4` (Default: `P4`).   
+| `shadowserver_incident_priority`     | `SHADOWSERVER_INCIDENT_PRIORITY`    | Yes          | The priority of the incident, e.g., `P4` (Default: `P4`).
 
 ### Debugging ###
 
