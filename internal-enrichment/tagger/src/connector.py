@@ -34,15 +34,17 @@ class TaggerConnector:
                 entity_type = scope.lower()
 
                 #  Check if enrichment entity is supported
-                if enrichment_entity["entity_type"] != entity_type:
+                if enrichment_entity["entity_type"].lower() != entity_type:
                     continue
 
                 for rule in definition["rules"]:
                     flags = load_re_flags(rule)
 
                     for attribute in rule["attributes"]:
-                        self.helper.log_debug(enrichment_entity)
-                        attr = enrichment_entity[attribute]
+                        attr = enrichment_entity.get(attribute)
+                        if attr is None:
+                            continue
+
                         if attribute.lower() == "objectlabel":
                             for el in attr:
                                 if not re.search(
