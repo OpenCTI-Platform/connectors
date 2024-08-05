@@ -1,7 +1,7 @@
 from typing import Optional
 
 from dateutil import parser
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 
 class C2Beacon(BaseModel):

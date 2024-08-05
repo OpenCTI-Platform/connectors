@@ -5,7 +5,7 @@ from json import JSONDecodeError
 from typing import Any, Dict, List, Optional, Pattern
 
 from pycti import OpenCTIConnectorHelper
-from pydantic import BaseModel, validator
+from pydantic.v1 import BaseModel, validator
 from reportimporter.constants import (
     COMMENT_INDICATOR,
     CONFIG_PATH,

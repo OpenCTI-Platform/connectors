@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-import pydantic
 import requests
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel, parse_raw_as
 
 __all__ = [
     "ShodanInternetDbClient",
@@ -43,7 +42,7 @@ class ShodanInternetDbClient:
 
         resp.raise_for_status()
 
-        return pydantic.parse_raw_as(ShodanResult, resp.text)
+        return parse_raw_as(ShodanResult, resp.text)
 
 
 class ShodanResult(BaseModel):

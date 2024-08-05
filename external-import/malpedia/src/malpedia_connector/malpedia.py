@@ -20,7 +20,7 @@ from malpedia_services.constants import (
     URLS_MAPPING,
 )
 from pycti import OpenCTIConnectorHelper
-from pydantic import ValidationError
+from pydantic.v1 import ValidationError
 
 
 class MalpediaConnector:

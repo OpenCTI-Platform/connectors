@@ -4,9 +4,9 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, List, Optional
 
-from pydantic import BaseModel, validator
-from pydantic.datetime_parse import parse_date, parse_datetime
-from pydantic.errors import DateError, DateTimeError
+from pydantic.v1 import BaseModel, validator
+from pydantic.v1.datetime_parse import parse_date, parse_datetime
+from pydantic.v1.errors import DateError, DateTimeError
 
 log = logging.getLogger(__name__)
 

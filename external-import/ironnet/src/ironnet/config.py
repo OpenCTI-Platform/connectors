@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from pydantic import BaseModel, BaseSettings, Field, validator
+from pydantic.v1 import BaseModel, BaseSettings, Field, validator
 
 __all__ = [
     "RootConfig",
