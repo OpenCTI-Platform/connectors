@@ -1307,21 +1307,21 @@ class HarfangLabConnector:
             )
 
     def start(self):
-        # self.sightings = Sightings(
-        #     self.helper,
-        #     self.harfanglab_ssl_verify,
-        #     self.harfanglab_url,
-        #     self.headers,
-        #     self.harfanglab_source_list_name,
-        #     self.harfanglab_import_security_events_as_incidents,
-        #     self.harfanglab_import_security_events_filters_by_status,
-        #     self.harfanglab_import_filters_by_alert_type,
-        #     self.harfanglab_import_threats_as_case_incidents,
-        #     self.harfanglab_default_markings,
-        #     self.harfanglab_rule_maturity,
-        #     self.default_score,
-        # )
-        # self.sightings.start()
+        self.sightings = Sightings(
+            self.helper,
+            self.harfanglab_ssl_verify,
+            self.harfanglab_url,
+            self.headers,
+            self.harfanglab_source_list_name,
+            self.harfanglab_import_security_events_as_incidents,
+            self.harfanglab_import_security_events_filters_by_status,
+            self.harfanglab_import_filters_by_alert_type,
+            self.harfanglab_import_threats_as_case_incidents,
+            self.harfanglab_default_markings,
+            self.harfanglab_rule_maturity,
+            self.default_score,
+        )
+        self.sightings.start()
         self.helper.listen_stream(self._process_message)
 
 
