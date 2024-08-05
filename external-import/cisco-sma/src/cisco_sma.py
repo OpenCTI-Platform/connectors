@@ -254,7 +254,7 @@ class Cisco_SMA:
             custom_properties={
                 "x_opencti_score": self.ioc_score,
                 "x_opencti_description": description,
-                "created_by_ref": identity_id
+                "created_by_ref": identity_id,
             },
         )
         self.stix_domain.append(observable)

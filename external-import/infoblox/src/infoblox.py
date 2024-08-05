@@ -122,7 +122,7 @@ class Infoblox:
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
                     "x_opencti_description": description,
-                    "created_by_ref": identity_id
+                    "created_by_ref": identity_id,
                 },
             )
             stix_objects.append(observable)
@@ -137,7 +137,7 @@ class Infoblox:
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
                     "x_opencti_description": description,
-                    "created_by_ref": identity_id
+                    "created_by_ref": identity_id,
                 },
             )
             stix_objects.append(observable)
@@ -152,7 +152,7 @@ class Infoblox:
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
                     "x_opencti_description": description,
-                    "created_by_ref": identity_id
+                    "created_by_ref": identity_id,
                 },
             )
             stix_objects.append(observable)
