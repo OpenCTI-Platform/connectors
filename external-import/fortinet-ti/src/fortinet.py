@@ -344,7 +344,7 @@ class Fortinet:
             self.helper.api.work.to_processed(work_id, message)
             self.helper.log_info(message)
         except (KeyboardInterrupt, SystemExit):
-            self.helper.log_info("Connector stop")
+            self.helper.connector_logger.info("Connector stop")
             sys.exit(0)
         except Exception as e:
             self.helper.log_error(str(e))
