@@ -18,7 +18,7 @@ from pycti import (
 
 
 def load_stix(file_path):
-    with open(file_path, 'r') as file:
+    with open(file_path, "r") as file:
         data = json.load(file)
 
     return data
@@ -26,18 +26,18 @@ def load_stix(file_path):
 
 def extract_patterns(stix_data):
     patterns = set()
-    for obj in stix_data.get('objects', []):
-        if 'pattern' in obj:
-            patterns.add(obj['pattern'])
+    for obj in stix_data.get("objects", []):
+        if "pattern" in obj:
+            patterns.add(obj["pattern"])
     return patterns
 
 
 def filter_stix_objects(stix_data, patterns_to_exclude):
     filtered_objects = []
-    for obj in stix_data.get('objects', []):
-        if obj.get('type') in ['infrastructure', 'identity']:
+    for obj in stix_data.get("objects", []):
+        if obj.get("type") in ["infrastructure", "identity"]:
             continue
-        if 'pattern' in obj and obj['pattern'] in patterns_to_exclude:
+        if "pattern" in obj and obj["pattern"] in patterns_to_exclude:
             continue
         filtered_objects.append(obj)
     return filtered_objects
@@ -45,10 +45,12 @@ def filter_stix_objects(stix_data, patterns_to_exclude):
 
 def extract_ioc_types(stix_data):
     ioc_details = []
-    pattern_regex = re.compile(r"url:value\s*=\s*'([^']+)'|ipv4-addr:value\s*=\s*'([^']+)'")
-    for obj in stix_data.get('objects', []):
-        if 'pattern' in obj:
-            match = pattern_regex.search(obj['pattern'])
+    pattern_regex = re.compile(
+        r"url:value\s*=\s*'([^']+)'|ipv4-addr:value\s*=\s*'([^']+)'"
+    )
+    for obj in stix_data.get("objects", []):
+        if "pattern" in obj:
+            match = pattern_regex.search(obj["pattern"])
             if match:
                 url_value = match.group(1) or match.group(2) or match.group(3)
                 if re.match(r"https?://", url_value):
@@ -57,8 +59,8 @@ def extract_ioc_types(stix_data):
                     ioc_type = "IPv4-Addr"
                 else:
                     ioc_type = "Domain"
-                name = obj.get('name', 'N/A')
-                watchlist_name = obj.get('indicator_types', [])
+                name = obj.get("name", "N/A")
+                watchlist_name = obj.get("indicator_types", [])
                 if watchlist_name:
                     watchlist_name = watchlist_name[0]
                 else:
@@ -137,15 +139,28 @@ class Fortinet:
         self.fortinet_marking = marking
 
     def get_fortinet_data_request(self):
-        headers = {'Token': '{}'.format(self.fortinet_api_key)}
-        filename = 'fortinet_ioc.json.backup'
-        response = requests.get(self.fortinet_url, headers=headers, cookies=None, verify=False, timeout=(600, 600),
-                                stream=True)  # this request aims to have the url containing IOCs
-        url = response.json()[0]['data']
-        response = requests.get(url, headers=headers, cookies=None, verify=True, timeout=(600, 600),
-                                stream=True)  # this request will retrieve the IOC in zip format
-        open(filename, 'wb').write(gzip.decompress(
-            response.content))  # this action will unzip the response and write the content in a json file
+        headers = {"Token": "{}".format(self.fortinet_api_key)}
+        filename = "fortinet_ioc.json.backup"
+        response = requests.get(
+            self.fortinet_url,
+            headers=headers,
+            cookies=None,
+            verify=False,
+            timeout=(600, 600),
+            stream=True,
+        )  # this request aims to have the url containing IOCs
+        url = response.json()[0]["data"]
+        response = requests.get(
+            url,
+            headers=headers,
+            cookies=None,
+            verify=True,
+            timeout=(600, 600),
+            stream=True,
+        )  # this request will retrieve the IOC in zip format
+        open(filename, "wb").write(
+            gzip.decompress(response.content)
+        )  # this action will unzip the response and write the content in a json file
 
     def create_stix_object(self, ioc_detail):
         stix_objects = []
@@ -162,8 +177,8 @@ class Fortinet:
                 custom_properties={
                     "x_opencti_score": self.ioc_score,
                     "x_opencti_description": description,
-                    "created_by_ref": self.identity_id
-                }
+                    "created_by_ref": self.identity_id,
+                },
             )
         elif object_type == "URL":
             pattern = f"[url:value = '{ioc_detail[0]}']"
@@ -174,8 +189,8 @@ class Fortinet:
                 custom_properties={
                     "x_opencti_score": self.ioc_score,
                     "x_opencti_description": description,
-                    "created_by_ref": self.identity_id
-                }
+                    "created_by_ref": self.identity_id,
+                },
             )
         elif object_type == "IPv4-Addr":
             pattern = f"[ipv4-addr:value = '{ioc_detail[0]}']"
@@ -186,8 +201,8 @@ class Fortinet:
                 custom_properties={
                     "x_opencti_score": self.ioc_score,
                     "x_opencti_description": description,
-                    "created_by_ref": self.identity_id
-                }
+                    "created_by_ref": self.identity_id,
+                },
             )
         else:
             return None
@@ -253,7 +268,7 @@ class Fortinet:
         stix_old = load_stix("fortinet_ioc_old.json")
         patterns_old = extract_patterns(stix_old)
         filtered_objects = filter_stix_objects(stix_new, patterns_old)
-        stix_new['objects'] = filtered_objects
+        stix_new["objects"] = filtered_objects
 
         ioc_details = extract_ioc_types(stix_new)
 
