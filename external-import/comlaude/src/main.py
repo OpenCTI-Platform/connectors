@@ -257,7 +257,7 @@ class ComlaudeConnector:
         """
         try:
             update_end_time = _format_time(
-                datetime.datetime.now(datetime.UTC) - TIME_DELTA
+                datetime.datetime.utcnow() - TIME_DELTA
             )
             friendly_name = f"Comlaude run @ {update_end_time}"
             self.work_id = self.helper.api.work.initiate_work(
@@ -295,7 +295,7 @@ class ComlaudeConnector:
         """
         self.helper.log_info(
             "Start Comlaude Connector ({}).".format(
-                _format_time(datetime.datetime.now(datetime.UTC))
+                _format_time(datetime.datetime.utcnow())
             )
         )
 
@@ -303,7 +303,7 @@ class ComlaudeConnector:
             if self._process_events():
                 self.helper.log_info(
                     "Connector stop: ({})".format(
-                        _format_time(datetime.datetime.now(datetime.UTC))
+                        _format_time(datetime.datetime.utcnow())
                     )
                 )
                 self.helper.force_ping()
