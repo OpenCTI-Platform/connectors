@@ -256,9 +256,7 @@ class ComlaudeConnector:
         Refresh the work ID for the current process.
         """
         try:
-            update_end_time = _format_time(
-                datetime.datetime.utcnow() - TIME_DELTA
-            )
+            update_end_time = _format_time(datetime.datetime.utcnow() - TIME_DELTA)
             friendly_name = f"Comlaude run @ {update_end_time}"
             self.work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
