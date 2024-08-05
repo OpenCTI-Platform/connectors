@@ -4,7 +4,7 @@ from typing import Iterator, List
 
 import pydantic
 import requests
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 
 __all__ = [
     "UrlscanClient",
