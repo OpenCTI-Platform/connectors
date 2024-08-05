@@ -8,6 +8,7 @@ import os
 import sys
 import time
 
+import stix2
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable, Identity
 from stix2 import Bundle, DomainName, Indicator, Relationship, TLP_AMBER
@@ -219,7 +220,7 @@ class ComlaudeConnector:
         self.score = comlaude_score if comlaude_score else 0
 
         # Initialize the identity attribute
-        self.identity = Identity(
+        self.identity = stix2.Identity(
             id=Identity.generate_id(self.connector_name, "organization"),
             name=self.connector_name,
             identity_class="organization",
