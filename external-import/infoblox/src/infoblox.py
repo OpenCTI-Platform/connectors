@@ -109,7 +109,9 @@ class Infoblox:
 
         description = threat["extended"].get("notes")
         if description is None:
-            self.helper.connector_logger.debug(f"Missing 'notes' key in threat: {threat}")
+            self.helper.connector_logger.debug(
+                f"Missing 'notes' key in threat: {threat}"
+            )
             description = ""
 
         if object_type == "URL":
@@ -158,7 +160,9 @@ class Infoblox:
             stix_objects.append(observable)
 
         else:
-            self.helper.connector_logger.error(object_type + " is not supported as an object type.")
+            self.helper.connector_logger.error(
+                object_type + " is not supported as an object type."
+            )
             return None
 
         if pattern:
@@ -284,7 +288,9 @@ class Infoblox:
                     {"last_run": str(now.strftime("%Y-%m-%d %H:%M:%S"))}
                 )
             current_state = self.helper.get_state()
-            self.helper.connector_logger.info("Get IOC since " + current_state["last_run"])
+            self.helper.connector_logger.info(
+                "Get IOC since " + current_state["last_run"]
+            )
             self.opencti_bundle(work_id)
             self.helper.set_state({"last_run": now.astimezone().isoformat()})
             message = "End of synchronization"

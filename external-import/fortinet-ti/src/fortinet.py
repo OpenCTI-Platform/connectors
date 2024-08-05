@@ -337,7 +337,9 @@ class Fortinet:
                     {"last_run": str(now.strftime("%Y-%m-%d %H:%M:%S"))}
                 )
             current_state = self.helper.get_state()
-            self.helper.connector_logger.info("Get IOC since " + current_state["last_run"])
+            self.helper.connector_logger.info(
+                "Get IOC since " + current_state["last_run"]
+            )
             self.opencti_bundle(work_id)
             self.helper.set_state({"last_run": now.astimezone().isoformat()})
             message = "End of synchronization"
