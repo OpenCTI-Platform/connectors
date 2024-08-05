@@ -1,11 +1,12 @@
 import datetime
+import gzip
 import json
 import os
-import gzip
+import re
 import sys
 import time
+
 import requests
-import re
 import stix2
 import yaml
 from pycti import (
