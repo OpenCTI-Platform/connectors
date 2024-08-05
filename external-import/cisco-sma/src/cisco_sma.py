@@ -338,11 +338,11 @@ class Cisco_SMA:
                 work_id=work_id,
             )
         except Exception as e:
-            self.helper.log_error(f"Error while sending bundle: {e}")
+            self.helper.connector_logger.error(f"Error while sending bundle: {e}")
 
     def process_data(self):
         try:
-            self.helper.log_info("Synchronizing with Cisco_SMA APIs...")
+            self.helper.connector_logger.info("Synchronizing with Cisco_SMA APIs...")
             timestamp = int(time.time())
             now = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
             friendly_name = "Cisco_SMA run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
@@ -355,20 +355,20 @@ class Cisco_SMA:
                     {"last_run": str(now.strftime("%Y-%m-%d %H:%M:%S"))}
                 )
             current_state = self.helper.get_state()
-            self.helper.log_info("Get IOC since " + current_state["last_run"])
+            self.helper.connector_logger.info("Get IOC since " + current_state["last_run"])
             self.opencti_bundle(work_id)
             self.helper.set_state({"last_run": now.astimezone().isoformat()})
             message = "End of synchronization"
             self.helper.api.work.to_processed(work_id, message)
-            self.helper.log_info(message)
+            self.helper.connector_logger.info(message)
         except (KeyboardInterrupt, SystemExit):
-            self.helper.log_info("Connector stop")
+            self.helper.connector_logger.info("Connector stop")
             sys.exit(0)
         except Exception as e:
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(str(e))
 
     def run(self):
-        self.helper.log_info("Fetching Cisco_SMA datasets...")
+        self.helper.connector_logger.info("Fetching Cisco_SMA datasets...")
         self.set_marking()
         get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
         if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
