@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Fortinet-TI'
+  scope: 'Fortinet'
+  log_level: 'info'
+
+fortinet:
+  api_key: 'ChangeMe'
+  url: 'https://premiumapi.fortinet.com/v1/cti/feed/stix2?cc=all'
+  ioc_score: 50                             # The score to be set on Indicators and Observables
+  interval: 24                              # In hours
+  marking_definition: 'TLP:AMBER'
