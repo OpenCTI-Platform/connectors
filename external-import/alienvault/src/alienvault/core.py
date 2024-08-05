@@ -263,7 +263,7 @@ class AlienVault:
             sys.exit(0)
 
         except Exception as e:  # noqa: B902
-            self._error("CrowdStrike connector internal error: {0}", str(e))
+            self._error("AlienVault connector internal error: {0}", str(e))
 
     @staticmethod
     def _current_unix_timestamp() -> int:
