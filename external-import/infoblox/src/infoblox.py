@@ -99,7 +99,7 @@ class Infoblox:
                 infoblox_result.append(r_json1)
             return infoblox_result
         except Exception as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Error while getting intelligence from Infoblox: {e}"
             )
 
@@ -109,7 +109,9 @@ class Infoblox:
 
         description = threat["extended"].get("notes")
         if description is None:
-            self.helper.log_debug(f"Missing 'notes' key in threat: {threat}")
+            self.helper.connector_logger.debug(
+                f"Missing 'notes' key in threat: {threat}"
+            )
             description = ""
 
         if object_type == "URL":
@@ -122,6 +124,7 @@ class Infoblox:
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
                     "x_opencti_description": description,
+                    "created_by_ref": identity_id,
                 },
             )
             stix_objects.append(observable)
@@ -136,6 +139,7 @@ class Infoblox:
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
                     "x_opencti_description": description,
+                    "created_by_ref": identity_id,
                 },
             )
             stix_objects.append(observable)
@@ -150,12 +154,15 @@ class Infoblox:
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
                     "x_opencti_description": description,
+                    "created_by_ref": identity_id,
                 },
             )
             stix_objects.append(observable)
 
         else:
-            self.helper.log_error(object_type + " is not supported as an object type.")
+            self.helper.connector_logger.error(
+                object_type + " is not supported as an object type."
+            )
             return None
 
         if pattern:
@@ -253,7 +260,7 @@ class Infoblox:
                 stix_bundle_dict, update=self.update_existing_data, work_id=work_id
             )
         except Exception as e:
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(str(e))
 
     def send_bundle(self, work_id, serialized_bundle: str):
         try:
@@ -264,11 +271,11 @@ class Infoblox:
                 work_id=work_id,
             )
         except Exception as e:
-            self.helper.log_error(f"Error while sending bundle: {e}")
+            self.helper.connector_logger.error(f"Error while sending bundle: {e}")
 
     def process_data(self):
         try:
-            self.helper.log_info("Synchronizing with Infoblox APIs...")
+            self.helper.connector_logger.info("Synchronizing with Infoblox APIs...")
             timestamp = int(time.time())
             now = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
             friendly_name = "Infoblox run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
@@ -281,21 +288,23 @@ class Infoblox:
                     {"last_run": str(now.strftime("%Y-%m-%d %H:%M:%S"))}
                 )
             current_state = self.helper.get_state()
-            self.helper.log_info("Get IOC since " + current_state["last_run"])
+            self.helper.connector_logger.info(
+                "Get IOC since " + current_state["last_run"]
+            )
             self.opencti_bundle(work_id)
             self.helper.set_state({"last_run": now.astimezone().isoformat()})
             message = "End of synchronization"
             self.helper.api.work.to_processed(work_id, message)
-            self.helper.log_info(message)
+            self.helper.connector_logger.info(message)
             time.sleep(self.infoblox_interval)
         except (KeyboardInterrupt, SystemExit):
-            self.helper.log_info("Connector stop")
+            self.helper.connector_logger.info("Connector stop")
             sys.exit(0)
         except Exception as e:
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(str(e))
 
     def run(self):
-        self.helper.log_info("Fetching Infoblox datasets...")
+        self.helper.connector_logger.info("Fetching Infoblox datasets...")
         self.set_marking()
         get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
         if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():

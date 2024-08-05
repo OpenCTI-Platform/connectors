@@ -14,7 +14,7 @@ connector:
 cisco_sma:
   api_key: 'ChangeMe'
   url: 'https://panacea.threatgrid.eu/api/v3/feeds/'
-  ioc_score: 60               # The score to be set on Indicators and Observables
+  ioc_score: 50               # The score to be set on Indicators and Observables
   autorun-registry: false     # Contains registry entry data derived from querying registry changes known for persistence
   banking-dns: true           # Banking Trojan Network Communications
   dga-dns: true               # DGA Domains with pseudo-randomly generated names
