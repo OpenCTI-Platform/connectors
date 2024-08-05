@@ -75,12 +75,11 @@ class PulseImporter:
 
         self._info(
             "Running pulse importer ("
-            "update data: {0}, "
-            "guess malware: {1}, "
-            "guess cve: {2}, "
-            "relationships: {3}, "
-            "patterns_indicates: {4}, "
-            "filter_indicators: {5}"
+            "guess malware: {0}, "
+            "guess cve: {1}, "
+            "relationships: {2}, "
+            "patterns_indicates: {3}, "
+            "filter_indicators: {4}"
             ")...",
             self.guess_malware,
             self.guess_cve,

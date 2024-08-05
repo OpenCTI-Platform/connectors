@@ -9,7 +9,6 @@ connector:
   scope: 'alienvault'
   log_level: 'info'
   duration_period: 'PT30M' # ISO8601 Format starting with "P" for Period ex: "PT30M" // Period time of 30 minutes
-  queue_threshold: 500 # Default 500Mo
 
 alienvault:
   base_url: 'https://otx.alienvault.com'

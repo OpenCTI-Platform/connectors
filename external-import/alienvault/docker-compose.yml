@@ -10,7 +10,6 @@ services:
       - CONNECTOR_SCOPE=alienvault
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=PT30M # In ISO8601 Format starting with "P" for Period ex: "PT30M" = Period time of 30 minutes
-      - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo
       - ALIENVAULT_BASE_URL=https://otx.alienvault.com
       - ALIENVAULT_API_KEY=ChangeMe
       - ALIENVAULT_TLP=White
@@ -24,5 +23,4 @@ services:
       - ALIENVAULT_EXCLUDED_PULSE_INDICATOR_TYPES=FileHash-MD5,FileHash-SHA1  # Excluded Pulse indicator types.
       - ALIENVAULT_ENABLE_RELATIONSHIPS=true                                  # Enable/Disable relationship creation between SDOs.
       - ALIENVAULT_ENABLE_ATTACK_PATTERNS_INDICATES=false                     # Enable/Disable "indicates" relationships between indicators and attack patterns
-      - ALIENVAULT_INTERVAL_SEC=1800
     restart: always
