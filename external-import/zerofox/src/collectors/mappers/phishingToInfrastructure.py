@@ -21,6 +21,14 @@ def phishing_to_infrastructure(now: str, entry: Phishing) -> List[
         AutonomousSystem,
     ]
 ]:
+    """
+    Creates a STIX Infrastructure/phishing object from a ZeroFOX Phishing object, along with :
+        - a URL object for the phishing URL
+        - an IPv4Address object for the phishing host
+        - an AutonomousSystem object for the phishing host ASN
+        - a X509Certificate object for the certificate authority and fingerprint, if present.
+
+    """
     phishing = Infrastructure(
         name=f"{entry.domain}",
         created=now,
