@@ -10,7 +10,6 @@ services:
       - CONNECTOR_SCOPE=mandiant
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=PT5M # In ISO8601 Format starting with "P" for Period ex: "PT5M" = Period time of 5 minutes
-      - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo
-      - MANDIANT_API_V4_KEY_ID=
-      - MANDIANT_API_V4_KEY_SECRET=
+      - MANDIANT_API_V4_KEY_ID=ChangeMe
+      - MANDIANT_API_V4_KEY_SECRET=ChangeMe
     restart: always
