@@ -23,11 +23,14 @@ The connector creates the following OpenCTI entities:
 
 ## Additional note
 
-Fortinet have hundreds of thousands of entities without any information on the validity period. It was therefore decided not to retrieve historical data (which could be largely depreciated
-). Only new entities are retrieved. This is done by comparing the entities retrieved at the time of the run with those retrieved the day before. Therefore:
+Fortinet has hundreds of thousands of entities without any information on the validity period. It was therefore decided not to retrieve historical data (which could be significantly depreciated). Only new entities are retrieved. 
 
-- There is no point in setting the `interval` variable other than 24 hours.
-- When the connector is first launched, no entity is imported because we don't have the list of entities from the day before. Entities are imported daily starting from the second run (the second day).
+This is done by comparing the entities retrieved at runtime with those retrieved the day before. Each day, we write a file with the day's entities inside. Then we compare the day's file with the previous day's. Finally, we delete the previous day's file. As a result :
+
+- There is no point in setting the `interval` variable to anything other than 24 hours.
+- When the connector is run for the first time, no entities are imported because we don't have the previous day's file. Entities are imported daily from the second run (on the second day).
+- If the connector is restarted, the previous day's file is deleted (unless stored on a dedicated volume). As a result, one day's data will not be imported, as it was when the connector was first launched.
+
 
 ## Installation
 
