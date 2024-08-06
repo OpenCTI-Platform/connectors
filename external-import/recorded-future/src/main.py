@@ -136,12 +136,39 @@ class BaseRFConnector:
         )
 
 
-class RFNotes(BaseRFConnector):
+class RFNotes:
     """Connector object"""
 
-    def __init__(self):
+    def __init__(
+        self,
+        helper,
+        rfapi,
+        last_published_notes_interval,
+        rf_initial_lookback,
+        rf_pull_signatures,
+        rf_insikt_only,
+        rf_topics,
+        tlp,
+        rf_person_to_TA,
+        rf_TA_to_intrusion_set,
+        risk_as_score,
+        risk_threshold,
+        update_existing_data,
+    ):
         """Read in config variables"""
-        super().__init__()
+        self.helper = helper
+        self.rfapi = rfapi
+        self.last_published_notes_interval = last_published_notes_interval
+        self.rf_initial_lookback = rf_initial_lookback
+        self.rf_pull_signatures = rf_pull_signatures
+        self.rf_insikt_only = rf_insikt_only
+        self.rf_topics = rf_topics
+        self.tlp = tlp
+        self.rf_person_to_TA = rf_person_to_TA
+        self.rf_TA_to_intrusion_set = rf_TA_to_intrusion_set
+        self.risk_as_score = risk_as_score
+        self.risk_threshold = risk_threshold
+        self.update_existing_data = update_existing_data
 
     def run(self):
         """Run connector on a schedule"""
@@ -279,7 +306,21 @@ class RFConnector:
 
         # Pull Analyst Notes if enabled
         if self.RF.rf_pull_analyst_notes:
-            self.analyst_notes = RFNotes()
+            self.analyst_notes = RFNotes(
+                self.RF.helper,
+                self.RF.rfapi,
+                self.RF.last_published_notes_interval,
+                self.RF.rf_initial_lookback,
+                self.RF.rf_pull_signatures,
+                self.RF.rf_insikt_only,
+                self.RF.rf_topics,
+                self.RF.tlp,
+                self.RF.rf_person_to_TA,
+                self.RF.rf_TA_to_intrusion_set,
+                self.RF.risk_as_score,
+                self.RF.risk_threshold,
+                self.RF.update_existing_data,
+            )
             self.analyst_notes.run()
         else:
             self.RF.helper.log_info("[ANALYST NOTES] Analyst notes fetching disabled")
