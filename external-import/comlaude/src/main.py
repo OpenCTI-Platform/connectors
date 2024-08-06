@@ -10,8 +10,14 @@ import time
 
 import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable, Identity
-from stix2 import Bundle, DomainName, Indicator, Relationship, TLP_AMBER
+from pycti import (
+    OpenCTIConnectorHelper,
+    get_config_variable,
+    Identity,
+    Indicator,
+    StixCoreRelationship,
+)
+from stix2 import Bundle, DomainName, TLP_AMBER
 
 import comlaude
 
@@ -124,7 +130,8 @@ def _create_stix_create_bundle(helper, domain_object, labels, score, author_iden
     )
 
     # Create Indicator object
-    sdo_indicator = Indicator(
+    sdo_indicator = stix2.Indicator(
+        id=Indicator.generate_id(f"[domain-name:value = '{domain_name}']"),
         created=start_time,
         modified=end_time,
         name=domain_name,
@@ -139,7 +146,12 @@ def _create_stix_create_bundle(helper, domain_object, labels, score, author_iden
     )
 
     # Create relationships
-    sro_object = Relationship(
+    sro_object = stix2.Relationship(
+        id=StixCoreRelationship.generate_id(
+            "based-on",
+            sdo_indicator.id,
+            sco_domain_name.id,
+        ),
         relationship_type="based-on",
         source_ref=sdo_indicator.id,
         target_ref=sco_domain_name.id,
