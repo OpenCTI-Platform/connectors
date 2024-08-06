@@ -8,9 +8,16 @@ import os
 import sys
 import time
 
+import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable, Identity
-from stix2 import Bundle, DomainName, Indicator, Relationship, TLP_AMBER
+from pycti import (
+    OpenCTIConnectorHelper,
+    get_config_variable,
+    Identity,
+    Indicator,
+    StixCoreRelationship,
+)
+from stix2 import Bundle, DomainName, TLP_AMBER
 
 import comlaude
 
@@ -123,7 +130,8 @@ def _create_stix_create_bundle(helper, domain_object, labels, score, author_iden
     )
 
     # Create Indicator object
-    sdo_indicator = Indicator(
+    sdo_indicator = stix2.Indicator(
+        id=Indicator.generate_id(f"[domain-name:value = '{domain_name}']"),
         created=start_time,
         modified=end_time,
         name=domain_name,
@@ -138,7 +146,12 @@ def _create_stix_create_bundle(helper, domain_object, labels, score, author_iden
     )
 
     # Create relationships
-    sro_object = Relationship(
+    sro_object = stix2.Relationship(
+        id=StixCoreRelationship.generate_id(
+            "based-on",
+            sdo_indicator.id,
+            sco_domain_name.id,
+        ),
         relationship_type="based-on",
         source_ref=sdo_indicator.id,
         target_ref=sco_domain_name.id,
@@ -219,7 +232,7 @@ class ComlaudeConnector:
         self.score = comlaude_score if comlaude_score else 0
 
         # Initialize the identity attribute
-        self.identity = Identity(
+        self.identity = stix2.Identity(
             id=Identity.generate_id(self.connector_name, "organization"),
             name=self.connector_name,
             identity_class="organization",
@@ -255,9 +268,7 @@ class ComlaudeConnector:
         Refresh the work ID for the current process.
         """
         try:
-            update_end_time = _format_time(
-                datetime.datetime.now(datetime.UTC) - TIME_DELTA
-            )
+            update_end_time = _format_time(datetime.datetime.utcnow() - TIME_DELTA)
             friendly_name = f"Comlaude run @ {update_end_time}"
             self.work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
@@ -294,7 +305,7 @@ class ComlaudeConnector:
         """
         self.helper.log_info(
             "Start Comlaude Connector ({}).".format(
-                _format_time(datetime.datetime.now(datetime.UTC))
+                _format_time(datetime.datetime.utcnow())
             )
         )
 
@@ -302,7 +313,7 @@ class ComlaudeConnector:
             if self._process_events():
                 self.helper.log_info(
                     "Connector stop: ({})".format(
-                        _format_time(datetime.datetime.now(datetime.UTC))
+                        _format_time(datetime.datetime.utcnow())
                     )
                 )
                 self.helper.force_ping()
