@@ -214,7 +214,10 @@ class ComlaudeConnector:
         )
 
         # Initialize the labels attribute
-        self.labels = comlaude_labels if comlaude_labels else []
+        if comlaude_labels:
+            self.labels = [item.strip() for item in comlaude_labels.split(",")]
+        else:
+            self.labels = []
 
         # Authenticate with Comlaude.
         comlaude_auth_token = comlaude.ComLaudeAuth(
