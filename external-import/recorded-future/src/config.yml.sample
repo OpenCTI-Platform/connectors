@@ -7,10 +7,8 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Recorded Future' # Required
   scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
-  update_existing_data: false
   log_level: 'info'
   duration_period: 'PT24H' # ISO8601 Format starting with "P" for Period ex: "PT24H" // Period time of 5 minutes
-  queue_threshold: 100 # Default 500Mo
 
 rf:
   token: 'ChangeMe' # Required
@@ -29,7 +27,7 @@ rf:
   risk_list_threshold: 70 # optional
   # if pull_risk_list is true, risklist_related_entities is required.
   # Available choices: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier
-  risklist_related_entities: 'Malware,Threat Actor,MitreAttackIdentifier',
+  risklist_related_entities: 'Malware,Threat Actor,MitreAttackIdentifier'
   pull_threat_maps: False # optional - Pull Threat Actors and Malware maps
 
 alert:
