@@ -263,10 +263,6 @@ class IPAddress(Indicator):
                 f"This observable value '{self.name}' is not a valid IPv4 or IPv6 address."
             )
 
-    def to_stix_bundle(self):
-        """Returns STIX objects as a Bundle"""
-        return stix2.Bundle(objects=self.objects, allow_custom=True)
-
 
 class Domain(Indicator):
     """Converts Domain to Domain indicator and observable"""
@@ -951,7 +947,8 @@ class StixNote:
         self.ta_to_intrusion_set = ta_to_intrusion_set
         self.risk_as_score = risk_as_score
         self.risk_threshold = risk_threshold
-        self.tlp = TLP_MAP.get(tlp.lower(), None)
+        self.tlp = tlp
+        self.tlp_marking = TLP_MAP.get(self.tlp.lower(), None)
         self.rfapi = rfapi
 
     def _create_author(self):
@@ -971,7 +968,7 @@ class StixNote:
             refs.append({"source_name": source_name, "url": external_url})
         return refs
 
-    def from_json(self, note, tlp):
+    def from_json(self, note):
         """Converts to STIX Bundle from JSON objects"""
         # TODO: catch errors in for loop here
         attr = note["attributes"]
@@ -987,15 +984,17 @@ class StixNote:
             type_ = entity["type"]
             name = entity["name"]
             if self.person_to_ta and type_ == "Person":
-                stix_objs = ThreatActor(name, type_, self.author, tlp).to_stix_objects()
+                stix_objs = ThreatActor(
+                    name, type_, self.author, self.tlp
+                ).to_stix_objects()
             elif entity["id"] in self.tas:
                 if self.ta_to_intrusion_set and type_ != "Person":
                     stix_objs = IntrusionSet(
-                        name, type_, self.author, tlp
+                        name, type_, self.author, self.tlp
                     ).to_stix_objects()
                 else:
                     stix_objs = ThreatActor(
-                        name, type_, self.author, tlp
+                        name, type_, self.author, self.tlp
                     ).to_stix_objects()
             elif type_ == "Source":
                 external_reference = {"source_name": name, "url": name}
@@ -1006,7 +1005,9 @@ class StixNote:
                 self.helper.log_warning(msg)
                 continue
             else:
-                rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, tlp)
+                rf_object = ENTITY_TYPE_MAPPER[type_](
+                    name, type_, self.author, self.tlp
+                )
                 if type_ in [
                     "IpAddress",
                     "InternetDomainName",
@@ -1052,7 +1053,7 @@ class StixNote:
             source_ref=from_id,
             target_ref=to_id,
             created_by_ref=self.author.id,
-            object_marking_refs=self.tlp,
+            object_marking_refs=self.tlp_marking,
         )
 
     def create_relations(self):
@@ -1112,9 +1113,9 @@ class StixNote:
             report_types=self.report_types,
             object_refs=[obj.id for obj in self.objects],
             external_references=self.external_references,
-            object_marking_refs=self.tlp,
+            object_marking_refs=self.tlp_marking,
         )
-        return self.objects + [report, self.author, self.tlp]
+        return self.objects + [report, self.author, self.tlp_marking]
 
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""

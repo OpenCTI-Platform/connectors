@@ -30,6 +30,8 @@ rf:
   risklist_related_entities: 'Malware,Threat Actor,MitreAttackIdentifier',
   pull_threat_maps: False # optional - Pull Threat Actors and Malware maps
   threat_maps_interval: 24 # Required in hours
+  custom_bundle_paths=/public/opencti/threat_actor_bundle.json #optional
+  custom_bundle_interval=24 #in hours
 
 alert:
   enable: False
