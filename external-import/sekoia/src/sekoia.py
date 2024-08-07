@@ -202,9 +202,7 @@ class Sekoia(object):
             self.helper.log_error(
                 "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole bundle but please fix it"
             )
-            self.helper.send_stix2_bundle(
-                bundle, work_id=work_id, bypass_split=True
-            )
+            self.helper.send_stix2_bundle(bundle, work_id=work_id, bypass_split=True)
 
         self.helper.set_state({"last_cursor": cursor})
         if len(items) < self.limit:
