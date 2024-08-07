@@ -87,11 +87,6 @@ class BaseRFConnector:
             config,
             True,
         )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
         self.rfapi = RFClient(
             self.rf_token,
             self.helper,
@@ -153,7 +148,6 @@ class RFNotes:
         rf_TA_to_intrusion_set,
         risk_as_score,
         risk_threshold,
-        update_existing_data,
     ):
         """Read in config variables"""
         self.helper = helper
@@ -168,7 +162,6 @@ class RFNotes:
         self.rf_TA_to_intrusion_set = rf_TA_to_intrusion_set
         self.risk_as_score = risk_as_score
         self.risk_threshold = risk_threshold
-        self.update_existing_data = update_existing_data
 
     def run(self):
         """Run connector on a schedule"""
@@ -252,7 +245,6 @@ class RFNotes:
                 )
                 self.helper.send_stix2_bundle(
                     bundle.serialize(),
-                    update=self.update_existing_data,
                     work_id=work_id,
                 )
             except Exception as exception:
@@ -281,7 +273,6 @@ class RFConnector:
         if self.RF.rf_pull_risk_list:
             self.risk_list = RiskList(
                 self.RF.helper,
-                self.RF.update_existing_data,
                 self.RF.rfapi,
                 self.RF.tlp,
                 self.RF.risk_list_threshold,
@@ -295,7 +286,6 @@ class RFConnector:
         if self.RF.rf_pull_threat_maps:
             self.threat_maps = ThreatMap(
                 self.RF.helper,
-                self.RF.update_existing_data,
                 self.RF.rfapi,
                 self.RF.tlp,
                 self.RF.risk_list_threshold,
@@ -319,7 +309,6 @@ class RFConnector:
                 self.RF.rf_TA_to_intrusion_set,
                 self.RF.risk_as_score,
                 self.RF.risk_threshold,
-                self.RF.update_existing_data,
             )
             self.analyst_notes.run()
         else:

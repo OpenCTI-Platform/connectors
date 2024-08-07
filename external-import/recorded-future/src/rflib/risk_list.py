@@ -11,7 +11,6 @@ class RiskList(threading.Thread):
     def __init__(
         self,
         helper,
-        update_existing_data,
         rfapi,
         tlp,
         risk_list_threshold,
@@ -19,7 +18,6 @@ class RiskList(threading.Thread):
     ):
         threading.Thread.__init__(self)
         self.helper = helper
-        self.update_existing_data = update_existing_data
         self.rfapi = rfapi
         self.tlp = tlp
         self.risk_list_threshold = risk_list_threshold
@@ -98,7 +96,6 @@ class RiskList(threading.Thread):
                 )
                 self.helper.send_stix2_bundle(
                     bundle.serialize(),
-                    update=self.update_existing_data,
                     work_id=work_id,
                 )
         self.helper.set_state({"last_risk_list_run": timestamp})
