@@ -103,7 +103,7 @@ class VirusTotalBuilder:
 
     def create_asn_belongs_to(self):
         """Create AutonomousSystem and Relationship between the observable."""
-        if self.attributes.get("asn") is not None:
+        if self.attributes.get("asn", None):
             self.helper.log_debug(f'[VirusTotal] creating asn {self.attributes["asn"]}')
             as_stix = stix2.AutonomousSystem(
                 number=self.attributes.get("asn"),
@@ -124,6 +124,14 @@ class VirusTotalBuilder:
                 allow_custom=True,
             )
             self.bundle += [as_stix, relationship]
+        else:
+            self.helper.connector_logger.debug(
+                "[VirusTotal] The creation of the ASN was not successful for this entity.",
+                {
+                    "entity_id": self.stix_entity.get("id", None),
+                    "entity_value": self.stix_entity.get("value", None),
+                },
+            )
 
     def _create_external_reference(
         self,
@@ -291,7 +299,13 @@ class VirusTotalBuilder:
             )
             self.bundle += [location_stix, relationship]
         else:
-            self.helper.log_debug(f"[VirusTotal] related location country not found")
+            self.helper.connector_logger.debug(
+                "[VirusTotal] The creation of the location country was not successful for this entity.",
+                {
+                    "entity_id": self.stix_entity.get("id", None),
+                    "entity_value": self.stix_entity.get("value", None),
+                },
+            )
 
     def create_note(self, abstract: str, content: str):
         """
