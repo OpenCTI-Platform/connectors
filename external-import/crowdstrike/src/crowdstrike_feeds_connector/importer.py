@@ -16,13 +16,11 @@ class BaseImporter(ABC):
         helper: OpenCTIConnectorHelper,
         author: stix2.Identity,
         tlp_marking: stix2.MarkingDefinition,
-        update_existing_data: bool,
     ) -> None:
         """Initialize CrowdStrike importer module."""
         self.helper = helper
         self.author = author
         self.tlp_marking = tlp_marking
-        self.update_existing_data = update_existing_data
 
         self.work_id: Optional[str] = None
 
@@ -75,6 +73,5 @@ class BaseImporter(ABC):
         self.helper.send_stix2_bundle(
             serialized_bundle,
             work_id=self.work_id,
-            update=self.update_existing_data,
             bypass_split=True,
         )
