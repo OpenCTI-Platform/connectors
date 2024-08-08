@@ -45,8 +45,8 @@ The connector can be configured with the following variables:
 | `MANDIANT_THREAT_ACTIVITY_REPORT`                        | True                                  | Enable to collect report type threat_activity_report                           |
 | `MANDIANT_TRENDS_AND_FORECASTING_REPORT`                 | True                                  | Enable to collect report type trends_and_forecasting                           |
 | `MANDIANT_VULNERABILITY_REPORT`                          | True                                  | Enable to collect report type vulnerability_report                             |
-| `MANDIANT_VULNERABILITY_IMPORT_SOFTWARE_CPE`                          | True                                  | Enable to import CPE and version or not                                        |
-| `MANDIANT_VULNERABILITY_MAX_CPE_RELATIONSHIP`                          | 200                                   | Enable to define a maximum number of relationships created for a vulnerability |
+| `MANDIANT_VULNERABILITY_IMPORT_SOFTWARE_CPE`             | True                                  | Enable to import CPE and version or not                                        |
+| `MANDIANT_VULNERABILITY_MAX_CPE_RELATIONSHIP`            | 200                                   | Enable to define a maximum number of relationships created for a vulnerability |
 | `MANDIANT_WEEKLY_VULNERABILITY_EXPLOITATION_REPORT`      | True                                  | Enable to collect report type weekly_vulnerability_exploitation_report         |
 | `MANDIANT_NEWS_ANALYSIS_REPORT`                          | True                                  | Enable to collect report type news_analysis                                    |
 | `MANDIANT_ACTOR_PROFILE_REPORT_TYPE`                     | actor-profile                         | Report type on vocabulary `report_types_ov`                                    |
