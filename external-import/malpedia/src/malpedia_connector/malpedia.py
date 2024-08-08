@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI Malpedia Knowledge importer module."""
 import sys
-import time
 from datetime import datetime
 from typing import Any
 
