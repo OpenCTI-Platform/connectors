@@ -478,8 +478,8 @@ class Report:
 
         if len(vulnerabilities) > 0:
 
-            if self.connector.mandiant_import_software_cpe and len(softwares) < int(
-                self.connector.mandiant_import_software_cpe
+            if self.connector.vulnerability_max_cpe_relationship and len(softwares) < int(
+                self.connector.vulnerability_max_cpe_relationship
             ):
                 definitions += [
                     {

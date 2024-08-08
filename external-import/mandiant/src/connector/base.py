@@ -421,7 +421,7 @@ class Mandiant:
                 default=True,
             )
 
-            self.mandiant_import_software_cpe = get_config_variable(
+            self.vulnerability_max_cpe_relationship = get_config_variable(
                 "MANDIANT_VULNERABILITY_MAX_CPE_RELATIONSHIP",
                 ["mandiant", "vulnerability_max_cpe_relationship"],
                 config,
