@@ -476,7 +476,7 @@ class Report:
                 },
             ]
 
-        if len(vulnerabilities) == 1:
+        if len(vulnerabilities) > 0:
 
             if self.connector.mandiant_import_software_cpe and len(softwares) < int(
                 self.connector.mandiant_import_software_cpe
