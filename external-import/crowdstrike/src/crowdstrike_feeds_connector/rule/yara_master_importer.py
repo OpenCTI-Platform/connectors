@@ -47,12 +47,11 @@ class YaraMasterImporter(BaseImporter):
         helper: OpenCTIConnectorHelper,
         author: Identity,
         tlp_marking: MarkingDefinition,
-        update_existing_data: bool,
         report_status: int,
         report_type: str,
     ) -> None:
         """Initialize CrowdStrike YARA master importer."""
-        super().__init__(helper, author, tlp_marking, update_existing_data)
+        super().__init__(helper, author, tlp_marking)
 
         self.rules_api_cs = RulesAPI(helper)
         self.report_status = report_status

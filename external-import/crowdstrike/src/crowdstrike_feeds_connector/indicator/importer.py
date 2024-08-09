@@ -22,7 +22,6 @@ class IndicatorImporterConfig(NamedTuple):
     """CrowdStrike indicator importer configuration."""
 
     helper: OpenCTIConnectorHelper
-    update_existing_data: bool
     author: Identity
     default_latest_timestamp: int
     tlp_marking: MarkingDefinition
@@ -47,7 +46,6 @@ class IndicatorImporter(BaseImporter):
             config.helper,
             config.author,
             config.tlp_marking,
-            config.update_existing_data,
         )
 
         self.indicators_api_cs = IndicatorsAPI(config.helper)
