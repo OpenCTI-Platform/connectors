@@ -414,6 +414,20 @@ class Mandiant:
                 vulnerability_report_type
             )
 
+            self.mandiant_import_software_cpe = get_config_variable(
+                "MANDIANT_VULNERABILITY_IMPORT_SOFTWARE_CPE",
+                ["mandiant", "vulnerability_import_software_cpe"],
+                config,
+                default=True,
+            )
+
+            self.vulnerability_max_cpe_relationship = get_config_variable(
+                "MANDIANT_VULNERABILITY_MAX_CPE_RELATIONSHIP",
+                ["mandiant", "vulnerability_max_cpe_relationship"],
+                config,
+                default=200,
+            )
+
         if get_config_variable(
             "MANDIANT_WEEKLY_VULNERABILITY_EXPLOITATION_REPORT",
             ["mandiant", "weekly_vulnerability_exploitation_report"],
