@@ -7,7 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Malpedia'
   scope: 'malpedia'
-  update_existing_data: false
   log_level: 'info'
   expose_metrics: false
 
@@ -18,3 +17,4 @@ malpedia:
   import_yara: true
   create_indicators: true # Required, create indicators for hashes
   create_observables: true # Required, create observables for hashes
+  default_marking: "TLP:CLEAR"
