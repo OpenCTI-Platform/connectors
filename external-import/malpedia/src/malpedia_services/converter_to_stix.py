@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Union
 
 import stix2
 from pycti import (
@@ -17,9 +16,7 @@ class MalpediaConverter:
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        default_marking: Union[
-            stix2.TLP_WHITE, stix2.TLP_GREEN, stix2.TLP_AMBER, stix2.TLP_RED
-        ],
+        default_marking: stix2.MarkingDefinition,
     ):
         self.helper = helper
         self.default_marking = default_marking
