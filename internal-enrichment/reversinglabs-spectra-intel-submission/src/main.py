@@ -15,6 +15,7 @@ from pycti import (
     StixCoreRelationship,
 )
 from ReversingLabs.SDK.ticloud import DynamicAnalysis, FileReputation, FileUpload
+
 from lib.internal_enrichment import InternalEnrichmentConnector
 
 ZIP_MIME_TYPES = (
