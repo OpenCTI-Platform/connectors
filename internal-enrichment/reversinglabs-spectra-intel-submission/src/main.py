@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Dict
 
 import stix2
+from lib.internal_enrichment import InternalEnrichmentConnector
 from pycti import (
     STIX_EXT_OCTI_SCO,
     Identity,
@@ -15,8 +16,6 @@ from pycti import (
     StixCoreRelationship,
 )
 from ReversingLabs.SDK.ticloud import DynamicAnalysis, FileReputation, FileUpload
-
-from lib.internal_enrichment import InternalEnrichmentConnector
 
 ZIP_MIME_TYPES = (
     "application/x-bzip",
