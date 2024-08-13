@@ -84,6 +84,8 @@ class Report:
         self.update_country()
         self.update_report()
         self.update_vulnerability()
+        if not self.connector.mandiant_import_software_cpe:
+            self.update_software()
         self.create_relationships()
         if self.create_notes:
             self.create_note()
@@ -345,6 +347,14 @@ class Report:
                 if tag == item.get("name"):
                     yield item
 
+    def update_software(self):
+        entries_to_remove = ("cpe", "version")
+
+        for bundle_obj in self.bundle["objects"]:
+            if "software" in bundle_obj["type"]:
+                for key in entries_to_remove:
+                    bundle_obj.pop(key)
+
     def create_relationships(self):
         # Get related objects
         identities = list(utils.retrieve_all(self.bundle, "type", "identity"))
@@ -467,12 +477,19 @@ class Report:
             ]
 
         if len(vulnerabilities) > 0:
+
+            if self.connector.vulnerability_max_cpe_relationship and len(
+                softwares
+            ) < int(self.connector.vulnerability_max_cpe_relationship):
+                definitions += [
+                    {
+                        "type": "has",
+                        "sources": softwares,
+                        "destinations": vulnerabilities,
+                    },
+                ]
+
             definitions += [
-                {
-                    "type": "has",
-                    "sources": softwares,
-                    "destinations": vulnerabilities,
-                },
                 {
                     "type": "mitigates",
                     "sources": course_actions,
@@ -505,6 +522,8 @@ class Report:
                 relationships.append(relationship)
                 relationships_ids.append(relationship.id)
 
+        # Remove duplicates relationships
+        relationships_ids = list(dict.fromkeys(relationships_ids))
         report = utils.retrieve(self.bundle, "type", "report")
         report["object_refs"] += relationships_ids
         self.bundle["objects"] += relationships
