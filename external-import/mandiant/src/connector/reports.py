@@ -84,7 +84,7 @@ class Report:
         self.update_country()
         self.update_report()
         self.update_vulnerability()
-        if self.connector.mandiant_import_software_cpe:
+        if not self.connector.mandiant_import_software_cpe:
             self.update_software()
         self.create_relationships()
         if self.create_notes:
