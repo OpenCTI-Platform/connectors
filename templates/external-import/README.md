@@ -33,7 +33,7 @@ Table of Contents
 
 ### Requirements
 
-- OpenCTI Platform >= 6.2.15
+- OpenCTI Platform >= 6...
 
 ## Configuration variables
 
