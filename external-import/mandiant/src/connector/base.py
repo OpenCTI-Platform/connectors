@@ -743,7 +743,9 @@ class Mandiant:
                 next_end = None
             state[collection][STATE_START] = next_start.iso_format
             state[collection][STATE_END] = (
-                next_end.iso_format if next_end is not None else None
+                next_end.iso_format
+                if next_end is not None
+                else next_start.delta(days=2).iso_format
             )
         state[collection][STATE_LAST_RUN] = before_process_now.iso_format
         self.helper.set_state(state)
