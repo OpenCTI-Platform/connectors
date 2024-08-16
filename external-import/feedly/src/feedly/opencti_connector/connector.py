@@ -28,6 +28,7 @@ class FeedlyConnector:
         ).download_all()
         _replace_description_with_note(bundle)
         _add_main_observable_type_to_indicators(bundle)
+        _transform_threat_actors_to_intrusion_sets(bundle)
         self.cti_helper.log_info(f"Found {_count_reports(bundle)} new reports")
         return bundle
 
@@ -58,4 +59,18 @@ def _add_main_observable_type_to_indicators(bundle: dict) -> None:
             stix_type = pattern.removeprefix("[").split(":")[0].strip()
             o["x_opencti_main_observable_type"] = (
                 OpenCTIStix2Utils.stix_observable_opencti_type(stix_type)
+            )
+
+
+def _transform_threat_actors_to_intrusion_sets(bundle: dict) -> None:
+    for o in bundle["objects"]:
+        if o["type"] == "threat-actor":
+            o["type"] = "intrusion-set"
+            o["id"] = o.get("id").replace("threat-actor", "intrusion-set")
+        if o["type"] == "relationship":
+            o["source_ref"] = o.get("source_ref").replace(
+                "threat-actor", "intrusion-set"
+            )
+            o["target_ref"] = o.get("target_ref").replace(
+                "threat-actor", "intrusion-set"
             )

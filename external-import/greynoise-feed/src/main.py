@@ -2,7 +2,6 @@ import os
 import time
 from datetime import datetime
 
-import requests
 import stix2
 import yaml
 from greynoise import GreyNoise
@@ -41,21 +40,16 @@ class GreyNoiseFeed:
             "GREYNOISE_INDICATOR_SCORE",
             ["greynoisefeed", "indicator_score"],
             config,
-            True,
+            isNumber=True,
         )
         self.limit = get_config_variable(
-            "GREYNOISE_LIMIT", ["greynoisefeed", "limit"], config, True
+            "GREYNOISE_LIMIT", ["greynoisefeed", "limit"], config, isNumber=True
         )
         self.interval = get_config_variable(
             "GREYNOISE_INTERVAL",
             ["greynoisefeed", "interval"],
             config,
-            True,
-        )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
+            isNumber=True,
         )
         self.identity = self.helper.api.identity.create(
             type="Organization",
@@ -87,8 +81,12 @@ class GreyNoiseFeed:
 
         return query
 
+    def get_tag_query(self, tag):
+        query = "last_seen:1d tags:" + tag
+        return query
+
     def run(self):
-        self.helper.log_info("greynoise feed dataset...")
+        self.helper.log_info("GreyNoise feed dataset...")
         while True:
             try:
                 # Get the current timestamp and check
@@ -135,11 +133,7 @@ class GreyNoiseFeed:
                             scroll = response.get("scroll", "")
 
                             for item in response["data"]:
-                                item_trimmed = {
-                                    "ip": item["ip"],
-                                    "classification": item["classification"],
-                                }
-                                ip_list.append(item_trimmed)
+                                ip_list.append(item)
                             self.helper.log_info(
                                 "GreyNoise Indicator Count: " + str(len(ip_list))
                             )
@@ -160,11 +154,7 @@ class GreyNoiseFeed:
                                 scroll = response.get("scroll", "")
 
                                 for item in response["data"]:
-                                    item_trimmed = {
-                                        "ip": item["ip"],
-                                        "classification": item["classification"],
-                                    }
-                                    ip_list.append(item_trimmed)
+                                    ip_list.append(item)
                                 self.helper.log_info(
                                     "GreyNoise Indicator Count: " + str(len(ip_list))
                                 )
@@ -185,35 +175,53 @@ class GreyNoiseFeed:
                                 )
                                 for meta in metadata["metadata"]:
                                     if meta["slug"] == tag:
-                                        tag_id = meta["id"]
                                         tag_name = meta["name"]
                                         cves = meta["cves"]
-                                url = (
-                                    "https://api.greynoise.io/v3/tags/"
-                                    + str(tag_id)
-                                    + "/ips/download?format=txt"
+
+                                query = self.get_tag_query(tag_name)
+                                self.helper.log_info(
+                                    "Query GreyNoise API - First Results Page"
                                 )
-                                headers = {
-                                    "key": self.api_key,
-                                    "User-Agent": "greynoise-opencti-feed-tags-v2.0",
-                                }
-                                response = requests.get(url, headers=headers)
-                                ips = response.text.split("\n")
-                                for item in ips:
-                                    item_object = {
-                                        "ip": item,
-                                        "tag_name": tag_name,
-                                        "cves": cves,
-                                    }
-                                    ip_list.append(item_object)
+                                response = session.query(query=query, exclude_raw=True)
+                                complete = response.get("complete", True)
+                                scroll = response.get("scroll", "")
+
+                                for item in response["data"]:
+                                    item["cves"] = cves
+                                    item["tag_name"] = tag_name
+                                    ip_list.append(item)
                                 self.helper.log_info(
                                     "GreyNoise Indicator Count: " + str(len(ip_list))
                                 )
                                 if len(ip_list) >= self.limit:
+                                    complete = True
                                     self.helper.log_info(
                                         "GreyNoise Indicator Limit Reached"
                                     )
-                                    break
+                                # get additional indicators
+                                while not complete:
+                                    self.helper.log_info(
+                                        "Query GreyNoise API - Next Results Page"
+                                    )
+                                    response = session.query(
+                                        query=query, scroll=scroll, exclude_raw=True
+                                    )
+                                    complete = response.get("complete", True)
+                                    scroll = response.get("scroll", "")
+
+                                    for item in response["data"]:
+                                        item["cves"] = cves
+                                        item["tag_name"] = tag_name
+                                        ip_list.append(item)
+                                    self.helper.log_info(
+                                        "GreyNoise Indicator Count: "
+                                        + str(len(ip_list))
+                                    )
+                                    if len(ip_list) >= self.limit:
+                                        self.helper.log_info(
+                                            "GreyNoise Indicator Limit Reached"
+                                        )
+                                        complete = True
                         else:
                             self.helper.log_error(
                                 "Value for source is not one of: feed, tags"
@@ -253,11 +261,11 @@ class GreyNoiseFeed:
                                 name=d["ip"],
                                 description=description,
                                 created_by_ref=self.identity["standard_id"],
-                                confidence=self.helper.connect_confidence_level,
                                 pattern_type="stix",
                                 pattern=pattern,
                                 external_references=[external_reference],
                                 object_marking_refs=[stix2.TLP_WHITE],
+                                labels=d["tags"],
                                 custom_properties={
                                     "x_opencti_score": self.indicator_score,
                                     "x_opencti_main_observable_type": "IPv4-Addr",
@@ -272,10 +280,10 @@ class GreyNoiseFeed:
                                     "x_opencti_description": description,
                                     "x_opencti_score": self.indicator_score,
                                     "created_by_ref": self.identity["standard_id"],
+                                    "labels": d["tags"],
                                     "external_references": [external_reference],
                                 },
                             )
-
                             # Adding the IP to the list
                             stix_relationship = stix2.Relationship(
                                 id=StixCoreRelationship.generate_id(
@@ -287,12 +295,11 @@ class GreyNoiseFeed:
                                 object_marking_refs=[stix2.TLP_WHITE],
                             )
                             if "cves" in d and d["cves"]:
-                                for cve in cves:
+                                for cve in d["cves"]:
                                     # Generate Vulnerability
                                     stix_vulnerability = stix2.Vulnerability(
                                         id=Vulnerability.generate_id(cve),
                                         name=cve,
-                                        confidence=self.helper.connect_confidence_level,
                                         created_by_ref=self.identity["standard_id"],
                                         allow_custom=True,
                                     )
@@ -302,12 +309,35 @@ class GreyNoiseFeed:
                                     observable_to_vulnerability = stix2.Relationship(
                                         id=StixCoreRelationship.generate_id(
                                             "related-to",
-                                            stix_vulnerability.id,
                                             stix_observable.id,
+                                            stix_vulnerability.id,
                                         ),
                                         relationship_type="related-to",
-                                        source_ref=stix_vulnerability.id,
-                                        target_ref=stix_observable.id,
+                                        source_ref=stix_observable.id,
+                                        target_ref=stix_vulnerability.id,
+                                        object_marking_refs=[stix2.TLP_WHITE],
+                                    )
+                                    bundle_objects.append(observable_to_vulnerability)
+                            if "cve" in d and d["cve"]:
+                                for cve in d["cve"]:
+                                    # Generate Vulnerability
+                                    stix_vulnerability = stix2.Vulnerability(
+                                        id=Vulnerability.generate_id(cve),
+                                        name=cve,
+                                        created_by_ref=self.identity["standard_id"],
+                                        allow_custom=True,
+                                    )
+                                    bundle_objects.append(stix_vulnerability)
+                                    # Generate Relationship : observable -> "related-to" -> vulnerability
+                                    observable_to_vulnerability = stix2.Relationship(
+                                        id=StixCoreRelationship.generate_id(
+                                            "related-to",
+                                            stix_observable.id,
+                                            stix_vulnerability.id,
+                                        ),
+                                        relationship_type="related-to",
+                                        source_ref=stix_observable.id,
+                                        target_ref=stix_vulnerability.id,
                                         object_marking_refs=[stix2.TLP_WHITE],
                                     )
                                     bundle_objects.append(observable_to_vulnerability)
@@ -315,12 +345,10 @@ class GreyNoiseFeed:
                             bundle_objects.append(stix_observable)
                             bundle_objects.append(stix_relationship)
                         # Creating the bundle from the list
-                        bundle = stix2.Bundle(bundle_objects, allow_custom=True)
-                        bundle_json = bundle.serialize()
+                        bundle = self.helper.stix2_create_bundle(bundle_objects)
                         # Sending the bundle
                         self.helper.send_stix2_bundle(
-                            bundle_json,
-                            update=self.update_existing_data,
+                            bundle,
                             work_id=work_id,
                         )
 
