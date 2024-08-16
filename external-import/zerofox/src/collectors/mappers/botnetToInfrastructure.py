@@ -8,6 +8,14 @@ from zerofox.domain.botnet import Botnet
 def botnet_to_infrastructure(
     now: str, entry: Botnet
 ) -> List[Union[Infrastructure, Location, Relationship]]:
+    """
+    Creates a STIX Infrastructure/botnet object from a ZeroFOX Botnet object,
+      along with :
+      - a Infrastructure/botnet object for the controlled IP address
+      - a pair of Infrastructure/command-and-control objects for the C2 domain and IP addres, if present
+      - a Location object for the country code and zip code of the IP address, if present
+
+    """
     objects = []
 
     botnet = Infrastructure(
@@ -57,7 +65,7 @@ def get_location_objects(entry, ip_address):
     return [country, rel]
 
 
-def get_c2_objects(entry, botnet):
+def get_c2_objects(entry: Botnet, botnet):
     c2_domain = Infrastructure(
         name=f"{entry.c2_domain}",
         infrastructure_types=INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL,
