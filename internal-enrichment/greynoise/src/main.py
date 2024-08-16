@@ -32,7 +32,7 @@ class GreyNoiseConnector:
             if os.path.isfile(config_file_path)
             else {}
         )
-        self.helper = OpenCTIConnectorHelper(config, True)
+        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
         self.greynoise_key = get_config_variable(
             "GREYNOISE_KEY", ["greynoise", "key"], config
         )

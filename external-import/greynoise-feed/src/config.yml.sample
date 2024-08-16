@@ -7,9 +7,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'GreyNoise Feed'
   scope: 'greynoisefeed' # MIME type or SCO
-  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
-  playbook_compatible: false
 
 greynoisefeed:
   api_key: 'ChangeMe'  # set if using the "feed" option
