@@ -59,7 +59,7 @@ class Mandiant:
             ["mandiant", "import_period"],
             config,
             isNumber=True,
-            default=3,
+            default=2,
         )
         self.mandiant_create_notes = get_config_variable(
             "MANDIANT_CREATE_NOTES",
@@ -743,7 +743,9 @@ class Mandiant:
                 next_end = None
             state[collection][STATE_START] = next_start.iso_format
             state[collection][STATE_END] = (
-                next_end.iso_format if next_end is not None else None
+                next_end.iso_format
+                if next_end is not None
+                else next_start.delta(days=self.mandiant_import_period).iso_format
             )
         state[collection][STATE_LAST_RUN] = before_process_now.iso_format
         self.helper.set_state(state)
