@@ -348,12 +348,33 @@ class Report:
                     yield item
 
     def update_software(self):
-        entries_to_remove = ("cpe", "version")
+        tmp_software_list = []
 
         for bundle_obj in self.bundle["objects"]:
             if "software" in bundle_obj["type"]:
-                for key in entries_to_remove:
-                    bundle_obj.pop(key)
+
+                # recreate Software STIX object with new generated ID
+                software = stix2.Software(
+                    name=bundle_obj["name"],
+                    vendor=bundle_obj["vendor"],
+                    object_marking_refs=bundle_obj["object_marking_refs"],
+                )
+
+                tmp_software_list.append(software)
+
+        # Remove all software from current bundle object
+        self.bundle["objects"] = [
+            obj for obj in self.bundle["objects"] if obj.get("type") != "software"
+        ]
+
+        # Remove all duplicates
+        final_software = [
+            software
+            for n, software in enumerate(tmp_software_list)
+            if software not in tmp_software_list[:n]
+        ]
+
+        self.bundle["objects"].extend(final_software)
 
     def create_relationships(self):
         # Get related objects
