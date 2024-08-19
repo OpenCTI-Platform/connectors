@@ -338,20 +338,46 @@ class VirusTotalBuilder:
         Notes are directly append in the bundle.
         """
         if self.attributes["last_analysis_stats"]["malicious"] != 0:
+            content = "| Total Analyses | Malicious | Harmless |\n"
+            content += "|----------------|-----------|----------|\n"
+            content += (
+                "| "
+                + str(len(self.attributes["last_analysis_results"].keys()))
+                + " |"
+                + str(self.attributes["last_analysis_stats"]["malicious"])
+                + " | "
+                + str(self.attributes["last_analysis_stats"]["harmless"])
+                + " |\n\n"
+            )
+            content += "## Last Analysis Results\n\n"
+            content += "| Engine name | Method | Category | Result |\n"
+            content += "|-------------|---------|---------|--------|\n"
+            for key in self.attributes["last_analysis_results"]:
+                result = self.attributes["last_analysis_results"][key]
+                content += (
+                    "| "
+                    + result["engine_name"]
+                    + " | "
+                    + result["method"]
+                    + " | "
+                    + result["category"]
+                    + " | "
+                    + (result["result"] if result["result"] is not None else "N/A")
+                    + " | \n"
+                )
             self.create_note(
-                "VirusTotal Positives",
-                f"""```\n{
-                json.dumps(
-                    [v for v in self.attributes["last_analysis_results"].values()
-                     if v["category"] == "malicious"], indent=2
-                )}\n```""",
+                "VirusTotal Results",
+                content,
             )
 
         if "categories" in self.attributes and len(self.attributes["categories"]) > 0:
-            self.create_note(
-                "VirusTotal Categories",
-                f'```\n{json.dumps(self.attributes["categories"], indent=2)}\n```',
-            )
+            content = "| Vendor | Category |\n"
+            content += "|--------|----------|\n"
+            for key in self.attributes["categories"]:
+                content += (
+                    "| " + key + " | " + self.attributes["categories"][key] + " | \n"
+                )
+            self.create_note("VirusTotal Categories", content)
 
     def create_yara(
         self, yara: dict, ruleset: dict, valid_from: Optional[float] = None
