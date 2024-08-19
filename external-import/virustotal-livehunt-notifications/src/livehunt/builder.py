@@ -2,7 +2,6 @@
 """Livehunt builder module."""
 import datetime
 import io
-import json
 import logging
 import re
 from typing import List, Optional
