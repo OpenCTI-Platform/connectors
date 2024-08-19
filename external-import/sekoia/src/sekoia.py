@@ -254,12 +254,27 @@ class Sekoia(object):
         all_relationships = []
         for indicator in indicators:
             indicator_id = indicator["id"]
-            all_data = self._send_request(self.get_relationship(indicator_id))
-            for data in all_data["items"]:
-                if "related_object" in data:
-                    all_related_objects.append(data["related_object"])
-                if "relationship" in data:
-                    all_relationships.append(data["relationship"])
+            if not indicator_id.startswith("indicator--"):
+                continue
+            try:
+                all_data = self._send_request(self.get_relationship(indicator_id))
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    "[ERROR] An error occurred while retrieving related entities for indicator",
+                    {"indicator_id": indicator_id, "error": str(e)},
+                )
+                continue
+            if "items" in all_data:
+                for data in all_data["items"]:
+                    if "related_object" in data:
+                        all_related_objects.append(data["related_object"])
+                    if "relationship" in data:
+                        all_relationships.append(data["relationship"])
+            else:
+                self.helper.connector_logger.debug(
+                    "[DEBUG] No object associated with the indicator",
+                    {"indicator_id": indicator_id},
+                )
 
         uniq_related_objects = list(
             {obj["id"]: obj for obj in all_related_objects}.values()
@@ -475,6 +490,14 @@ class Sekoia(object):
             item["x_opencti_files"] = []
             for file in item.get("x_inthreat_uploaded_files", []):
                 url = self.get_file_url(item["id"], file["sha256"])
+
+                if "mime_type" in file and file["mime_type"] != "application/pdf":
+                    continue
+                if "file_name" in file:
+                    # Check that the extension exists in the file_name. If not, it will be added.
+                    if not os.path.splitext(file["file_name"])[1]:
+                        file["file_name"] += ".pdf"
+
                 data = self._send_request(url, binary=True)
                 if data:
                     item["x_opencti_files"].append(
