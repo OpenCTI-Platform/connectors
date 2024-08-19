@@ -45,7 +45,7 @@ class MalpediaConnector:
             "TLP:AMBER": stix2.TLP_AMBER,
             "TLP:RED": stix2.TLP_RED,
         }
-        self.default_marking = self.config.load["malpedia"].get("default_marking", None)
+        self.default_marking = getattr(self.config, "default_marking", None)
 
         if self.default_marking is not None:
             default_marking_normalized = self.default_marking.strip().upper()
