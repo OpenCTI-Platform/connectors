@@ -748,6 +748,10 @@ jobs:
           name: Build Docker image opencti/connector-webhook
           command: docker build -t opencti/connector-webhook:latest . && docker tag opencti/connector-webhook:latest opencti/connector-webhook:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/reversinglabs-spectra-intel-submission
+          name: Build Docker image opencti/connector-reversinglabs-spectra-intel-submission
+          command: docker build -t opencti/connector-reversinglabs-spectra-intel-submission:latest . && docker tag opencti/connector-reversinglabs-spectra-intel-submission:latest opencti/connector-reversinglabs-spectra-intel-submission:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -879,6 +883,8 @@ jobs:
             docker push opencti/connector-jira:${CIRCLE_TAG}
             docker push opencti/connector-webhook:latest
             docker push opencti/connector-webhook:${CIRCLE_TAG}
+            docker push opencti/connector-reversinglabs-spectra-intel-submission:latest
+            docker push opencti/connector-reversinglabs-spectra-intel-submission:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1558,6 +1564,10 @@ jobs:
           name: Build Docker image opencti/connector-webhook
           command: docker build -t opencti/connector-webhook:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/reversinglabs-spectra-intel-submission
+          name: Build Docker image opencti/connector-reversinglabs-spectra-intel-submission
+          command: docker build -t opencti/connector-reversinglabs-spectra-intel-submission:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1626,6 +1636,7 @@ jobs:
             docker push opencti/connector-reversinglabs-malware-presence:rolling
             docker push opencti/connector-jira:rolling
             docker push opencti/connector-webhook:rolling
+            docker push opencti/connector-reversinglabs-spectra-intel-submission:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1

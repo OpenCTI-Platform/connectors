@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """VirusTotal enrichment module."""
-import json
 from pathlib import Path
 from typing import Dict
 
