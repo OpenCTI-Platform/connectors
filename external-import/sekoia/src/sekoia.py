@@ -190,8 +190,8 @@ class Sekoia(object):
         items = self._clean_ic_fields(items)
         self._add_files_to_items(items)
         [all_related_objects, all_relationships] = (
-                self._retrieve_related_objects_and_relationships(items)
-            )
+            self._retrieve_related_objects_and_relationships(items)
+        )
         items += all_related_objects + all_relationships
         bundle = self.helper.stix2_create_bundle(items)
         try:
