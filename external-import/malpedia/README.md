@@ -73,5 +73,8 @@ If you are authenticated, then all entities created by the connector will be in 
 
 If you are not authenticated, by leaving this variable (auth_key) undefined or only public in the form of an empty string (""), all entities created by the connector will be in TLP:WHITE. This connector can therefore be used without an account.
 
+However, it is possible to use "default_marking" as an environment variable to customize your default marking.
+Markings availables : "TLP:CLEAR", ""TLP:GREEN", "TLP:AMBER", "TLP:RED".
+
 If you choose to set environment variables such as import_intrusion_sets, import_yara, create_indicators, create_observables to false, the connector will simply skip the bundle creation steps for the selected category.
 
