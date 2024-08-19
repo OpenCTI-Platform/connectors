@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-reversinglabs-spectra-intel-submission:
+    image: opencti/connector-reversinglabs-spectra-intel-submission
+    environment:
+      - CONNECTOR_NAME=ReversingLabs Spectra Intelligence Submission
+      - CONNECTOR_SCOPE=Artifact,Url,StixFile,File
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=Changeme
+      - CONNECTOR_ID=Changeme
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted).
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_AUTO=false
+      - REVERSINGLABS_SPECTRA_INTELLIGENCE_URL=data.reversinglabs.com
+      - REVERSINGLABS_SPECTRA_INTELLIGENCE_USERNAME=Changeme
+      - REVERSINGLABS_SPECTRA_INTELLIGENCE_PASSWORD=Changeme
+      - REVERSINGLABS_MAX_TLP=TLP:AMBER
+      - REVERSINGLABS_SANDBOX_OS=windows10
+      - REVERSINGLABS_SANDBOX_INTERNET_SIM=false
+      - REVERSINGLABS_CREATE_INDICATORS=true
+      - REVERSINGLABS_POLL_INTERVAL=250
+    restart: always
