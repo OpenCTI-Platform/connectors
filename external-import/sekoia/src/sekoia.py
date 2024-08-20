@@ -491,12 +491,11 @@ class Sekoia(object):
             for file in item.get("x_inthreat_uploaded_files", []):
                 url = self.get_file_url(item["id"], file["sha256"])
 
-                if "mime_type" in file and file["mime_type"] != "application/pdf":
-                    continue
-                if "file_name" in file:
-                    # Check that the extension exists in the file_name. If not, it will be added.
-                    if not os.path.splitext(file["file_name"])[1]:
-                        file["file_name"] += ".pdf"
+                if "mime_type" in file and file["mime_type"] == "application/pdf":
+                    if "file_name" in file:
+                        # Check that the extension exists in the file_name. If not, it will be added.
+                        if not os.path.splitext(file["file_name"])[1]:
+                            file["file_name"] += ".pdf"
 
                 data = self._send_request(url, binary=True)
                 if data:
