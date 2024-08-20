@@ -3,13 +3,12 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'internal-enrichment-template'
+  id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name: 'Internal Enrichment Connector Template'
   scope: 'ChangeMe'
   log_level: 'info'
   auto: true # Enable/disable auto-enrichment of observables
-
 
 connector_template:
   api_base_url: 'ChangeMe'

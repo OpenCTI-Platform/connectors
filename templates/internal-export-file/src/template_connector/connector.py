@@ -7,7 +7,7 @@ class ConnectorTemplate:
     """
     Specifications of the internal export connector
 
-    This class encapsulates the main actions, expected to be run by any internal export connector.
+    This class encapsulates the main actions, expected to be run by any internal export file connector.
     Note that the attributes defined below will be complemented per each connector type.
     This type of connector aim to support exporting features.
     Based on its configuration, it listens for execution commands through its RabbitMQ queue.
@@ -123,7 +123,7 @@ class ConnectorTemplate:
         """
         Run the main process in self.helper.listen() method
         The method continuously monitors a message queue associated with a specific connector
-        The connector have to listen a specific queue to get and then enrich the information.
+        The connector have to listen a specific queue to get and then export the file.
         The helper provide an easy way to listen to the events.
         """
         self.helper.listen(message_callback=self.process_message)
