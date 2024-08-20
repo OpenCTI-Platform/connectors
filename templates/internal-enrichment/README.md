@@ -1,4 +1,4 @@
-# OpenCTI Internal enrichment Connector Template
+# OpenCTI Internal Enrichment Connector Template
 
 <!--
 General description of the connector
@@ -7,11 +7,13 @@ General description of the connector
 * Special requirements
 * Use case description
 * ...
+* Please find an example of expected documentation below
+* REQUIRED CHANGES => Check https://docs.opencti.io/latest/development/connectors/
 -->
 
 Table of Contents
 
-- [OpenCTI Internal enrichment Connector Template](#opencti-internal-enrichment-connector-template)
+- [OpenCTI Internal Enrichment Connector Template](#opencti-internal-enrichment-connector-template)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)

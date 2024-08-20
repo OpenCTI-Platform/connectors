@@ -124,9 +124,8 @@ class ConnectorTemplate:
 
     def process_message(self, data: dict) -> str:
         """
-                Get the observable created/modified in OpenCTI and check which type
-                to send for process
-        e       :return: None
+        Get the observable created/modified in OpenCTI and check which type to send for process
+        :return: string
         """
         try:
             opencti_entity = data["enrichment_entity"]
