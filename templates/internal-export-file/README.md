@@ -11,7 +11,7 @@ General description of the connector
 
 Table of Contents
 
-- [OpenCTI Internal Export Connector Template](#opencti-internal-enrichment-connector-template)
+- [OpenCTI Internal Export Connector Template](#opencti-internal-export-connector-template)
     - [Introduction](#introduction)
     - [Installation](#installation)
         - [Requirements](#requirements)
