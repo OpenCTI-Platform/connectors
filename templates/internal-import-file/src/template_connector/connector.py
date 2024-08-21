@@ -1,3 +1,5 @@
+import json
+
 from pycti import OpenCTIConnectorHelper
 
 from .config_variables import ConfigConnector
@@ -43,8 +45,9 @@ class ConnectorTemplate:
 
     def process_message(self, data: dict) -> str:
         """
-        Processing the export request
-        The data passed in the data parameter is a dictionary with the following structure as shown in https://docs.opencti.io/latest/development/connectors/#additional-implementations
+        Processing the import request
+        The data passed in the data parameter is a dictionary with the following structure as shown in
+        https://docs.opencti.io/latest/development/connectors/#additional-implementations
         :param data: dict of data to process
         :return: string
         """
@@ -59,24 +62,24 @@ class ConnectorTemplate:
                 "Importing the file: ", {"file_uri": file_uri}
             )
 
-            # Performing the exportation of intelligence
+            # Performing the import or file
             # ===========================
             # === Add your code below ===
             # ===========================
 
             # EXAMPLE
 
-            # file_content = self.helper.api.fetch_opencti_file(file_uri)
-            #
-            # if data["file_mime"] == "text/xml":
-            #     bundle = json.loads(file_content)["objects"]
-            #     file_content = json.dumps(bundle)
-            #     bundle_sent = self.helper.send_stix2_bundle(
-            #         file_content,
-            #         bypass_validation=bypass_validation,
-            #         file_name=data["file_id"],
-            #         entity_id=entity_id,
-            #     )
+            file_content = self.helper.api.fetch_opencti_file(file_uri)
+
+            if data["file_mime"] == "text/xml":
+                bundle = json.loads(file_content)["objects"]
+                file_content = json.dumps(bundle)
+                bundle_sent = self.helper.send_stix2_bundle(
+                    file_content,
+                    bypass_validation=bypass_validation,
+                    file_name=data["file_id"],
+                    entity_id=entity_id,
+                )
 
             # ===========================
             # === Add your code above ===

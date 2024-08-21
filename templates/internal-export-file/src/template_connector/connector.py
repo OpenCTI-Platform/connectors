@@ -46,7 +46,8 @@ class ConnectorTemplate:
     def process_message(self, data: dict) -> str:
         """
         Processing the export request
-        The data passed in the data parameter is a dictionary with the following structure as shown in https://docs.opencti.io/latest/development/connectors/#additional-implementations
+        The data passed in the data parameter is a dictionary with the following structure as shown in
+        https://docs.opencti.io/latest/development/connectors/#additional-implementations
         :param data: dict of data to process
         :return: string
         """
@@ -61,53 +62,53 @@ class ConnectorTemplate:
             access_filter = data.get("access_filter")
             export_scope = data["export_scope"]  # query or selection or single
 
-            # Performing the exportation of intelligence
+            # Performing the exportation of file
             # ===========================
             # === Add your code below ===
             # ===========================
 
             # EXAMPLE
 
-            # self.helper.connector_logger.info(
-            #     "Uploading",
-            #     {
-            #         "entity_type": entity_type,
-            #         "export_type": export_type,
-            #         "file_name": file_name,
-            #     },
-            # )
-            #
-            # json_bundle = None
-            # list_filters = None
-            #
-            # if export_scope == "selection":
-            #     list_filters = "selected_ids"
-            #     entities_list = []
-            #
-            #     json_bundle = self.helper.api_impersonate.stix2.export_selected(
-            #         entities_list, export_type, access_filter
-            #     )
-            #
-            # if entity_type == "Stix-Cyber-Observable":
-            #     self.helper.api.stix_cyber_observable.push_list_export(
-            #         entity_id,
-            #         entity_type,
-            #         file_name,
-            #         file_markings,
-            #         json_bundle,
-            #         list_filters,
-            #     )
-            #
-            # self.helper.connector_logger.info(
-            #     "Export done",
-            #     {
-            #         "entity_type": entity_type,
-            #         "export_type": export_type,
-            #         "file_name": file_name,
-            #     },
-            # )
+            self.helper.connector_logger.info(
+                "Uploading",
+                {
+                    "entity_type": entity_type,
+                    "export_type": export_type,
+                    "file_name": file_name,
+                },
+            )
 
-            # return "Export done"
+            json_bundle = None
+            list_filters = None
+
+            if export_scope == "selection":
+                list_filters = "selected_ids"
+                entities_list = []
+
+                json_bundle = self.helper.api_impersonate.stix2.export_selected(
+                    entities_list, export_type, access_filter
+                )
+
+            if entity_type == "Stix-Cyber-Observable":
+                self.helper.api.stix_cyber_observable.push_list_export(
+                    entity_id,
+                    entity_type,
+                    file_name,
+                    file_markings,
+                    json_bundle,
+                    list_filters,
+                )
+
+            self.helper.connector_logger.info(
+                "Export done",
+                {
+                    "entity_type": entity_type,
+                    "export_type": export_type,
+                    "file_name": file_name,
+                },
+            )
+
+            return "Export done"
 
             # ===========================
             # === Add your code above ===

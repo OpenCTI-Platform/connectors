@@ -101,7 +101,7 @@ class ConnectorTemplate:
         else:
             return False
 
-    def extract_and_check_markings(self, opencti_entity: dict) -> bool:
+    def extract_and_check_markings(self, opencti_entity: dict) -> None:
         """
         Extract TLP, and we check if the variable "max_tlp" is less than
         or equal to the markings access of the entity from OpenCTI

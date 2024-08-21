@@ -8,7 +8,7 @@ The examples included are intended to simplify the original connector deployment
 These templates assume that OpenCTI is deployed using Docker.
 Since the deployment of OpenCTI connectors uses `docker-compose.yml` files, it is considered that this approach is the best option to be consistent with the deployment.
 
-Note that the usage of `config.yml` files for development as suggested in previous verions is mainly omitted. 
+Note that the usage of `config.yml` files for development as suggested in previous versions is mainly omitted. 
 Using `docker-compose.yml` files makes the code clearer even when the learning curve needs some Docker knowledge.
 However, this effort is always needed since connectors are expected to be run in production using  `docker compose up`.
 
