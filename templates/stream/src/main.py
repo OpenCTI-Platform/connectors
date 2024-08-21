@@ -1,6 +1,6 @@
 import traceback
 
-from template_connector import ConnectorTemplate
+from stream_connector import ConnectorTemplate
 
 if __name__ == "__main__":
     """

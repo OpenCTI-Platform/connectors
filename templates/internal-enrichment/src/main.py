@@ -1,6 +1,6 @@
 import traceback
 
-from template_connector import ConnectorTemplate
+from internal_enrichment_connector import ConnectorTemplate
 
 if __name__ == "__main__":
     """
