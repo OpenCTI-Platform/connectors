@@ -63,7 +63,7 @@ class ConnectorTemplate:
         try:
             self.check_stream_id()
 
-            data = json.loads(msg.data)["data"]
+            # data = json.loads(msg.data)["data"]
         except Exception:
             raise ValueError("Cannot process the message")
 
