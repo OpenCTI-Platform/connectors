@@ -1,4 +1,4 @@
-import json
+# import json
 
 from pycti import OpenCTIConnectorHelper
 
@@ -63,7 +63,7 @@ class ConnectorTemplate:
         try:
             self.check_stream_id()
 
-            # data = json.loads(msg.data)["data"]
+            data = json.loads(msg.data)["data"]
         except Exception:
             raise ValueError("Cannot process the message")
 
@@ -75,16 +75,19 @@ class ConnectorTemplate:
         # EXAMPLE
         # Handle creation
         if msg.event == "create":
+            self.helper.connector_logger.info("[CREATE]")
             # Do something
             raise NotImplementedError
 
         # Handle update
         if msg.event == "update":
+            self.helper.connector_logger.info("[UPDATE]")
             # Do something
             raise NotImplementedError
 
         # Handle delete
         if msg.event == "delete":
+            self.helper.connector_logger.info("[DELETE]")
             # Do something
             raise NotImplementedError
 
