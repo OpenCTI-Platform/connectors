@@ -81,6 +81,11 @@ class ConnectorTemplate:
                     entity_id=entity_id,
                 )
 
+                self.helper.connector_logger.info(
+                    "Sending STIX objects to OpenCTI...",
+                    {"bundles_sent": {str(len(bundle_sent))}},
+                )
+
             # ===========================
             # === Add your code above ===
             # ===========================

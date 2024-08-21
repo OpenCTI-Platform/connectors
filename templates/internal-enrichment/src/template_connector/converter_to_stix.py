@@ -1,9 +1,8 @@
 import ipaddress
-from datetime import datetime
 
 import stix2
 import validators
-from pycti import ExternalReference, Identity, Indicator, StixCoreRelationship
+from pycti import Identity, StixCoreRelationship
 
 
 class ConverterToStix:

@@ -67,19 +67,18 @@ class ConnectorTemplate:
         # ===========================
 
         # Get entities from external sources
-        # entities = self.client.get_entities()
+        entities = self.client.get_entities()
 
         # Convert into STIX2 object and add it on a list
-        # for entity in entities:
-        #     entity_to_stix = self.converter_to_stix.create_obs(entity["value"])
-        #     stix_objects.append(entity_to_stix)
+        for entity in entities:
+            entity_to_stix = self.converter_to_stix.create_obs(entity["value"])
+            stix_objects.append(entity_to_stix)
 
-        # return stix_objects
+        return stix_objects
 
         # ===========================
         # === Add your code above ===
         # ===========================
-        raise NotImplementedError
 
     def process_message(self) -> None:
         """

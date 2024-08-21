@@ -58,7 +58,7 @@ class ConnectorTemplate:
             file_name = data["file_name"]
             export_type = data["export_type"]
             file_markings = data["file_markings"]
-            main_filter = data.get("main_filter")
+            # main_filter = data.get("main_filter")
             access_filter = data.get("access_filter")
             export_scope = data["export_scope"]  # query or selection or single
 
