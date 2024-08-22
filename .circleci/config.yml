@@ -338,6 +338,10 @@ jobs:
           name: Build Docker image opencti/connector-fortinet-ti
           command: docker build -t opencti/connector-fortinet-ti:latest . && docker tag opencti/connector-fortinet-ti:latest opencti/connector-fortinet-ti:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/safebrowsing
+          name: Build Docker image opencti/connector-google-safebrowsing
+          command: docker build -t opencti/connector-google-safebrowsing:latest . && docker tag opencti/connector-google-safebrowsing:latest opencti/connector-google-safebrowsing:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -477,6 +481,8 @@ jobs:
             docker push opencti/connector-cisco-sma:${CIRCLE_TAG}
             docker push opencti/connector-fortinet-ti:latest
             docker push opencti/connector-fortinet-ti:${CIRCLE_TAG}
+            docker push opencti/connector-google-safebrowsing:latest
+            docker push opencti/connector-google-safebrowsing:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1216,6 +1222,10 @@ jobs:
           name: Build Docker image opencti/connector-fortinet-ti
           command: docker build -t opencti/connector-fortinet-ti:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/safebrowsing
+          name: Build Docker image opencti/connector-google-safebrowsing
+          command: docker build -t opencti/connector-google-safebrowsing:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1285,6 +1295,7 @@ jobs:
             docker push opencti/connector-infoblox:rolling
             docker push opencti/connector-cisco-sma:rolling
             docker push opencti/connector-fortinet-ti:rolling
+            docker push opencti/connector-google-safebrowsing:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
