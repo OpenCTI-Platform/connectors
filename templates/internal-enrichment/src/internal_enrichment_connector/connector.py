@@ -55,7 +55,7 @@ class ConnectorTemplate:
         # Define variables
         self.author = None
         self.tlp = None
-        self.stix_object_list = []
+        self.stix_objects_list = []
 
     def _collect_intelligence(self, value, obs_id) -> list:
         """
@@ -79,7 +79,7 @@ class ConnectorTemplate:
         # entity_to_stix = self.converter_to_stix.create_obs(value,obs_id)
         # self.stix_object_list.append(entity_to_stix)
 
-        # return self.stix_object_list
+        # return self.stix_objects_list
 
         # ===========================
         # === Add your code above ===
@@ -125,6 +125,9 @@ class ConnectorTemplate:
     def process_message(self, data: dict) -> str:
         """
         Get the observable created/modified in OpenCTI and check which type to send for process
+        The data passed in the data parameter is a dictionary with the following structure as shown in
+        https://docs.opencti.io/latest/development/connectors/#additional-implementations
+        :param data: dict of data to process
         :return: string
         """
         try:
@@ -132,7 +135,7 @@ class ConnectorTemplate:
             self.extract_and_check_markings(opencti_entity)
 
             # To enrich the data, you can add more STIX object in stix_objects
-            self.stix_object_list = data["stix_objects"]
+            self.stix_objects_list = data["stix_objects"]
             observable = data["stix_entity"]
 
             # Extract information from entity data
