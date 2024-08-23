@@ -852,9 +852,9 @@ def create_stix2_report_from_report(
     if report_last_modified_date is None:
         report_last_modified_date = report_created_date
 
-    report_description = report["description"]
-    report_rich_text_description = report["rich_text_description"]
-    report_short_description = report["short_description"]
+    report_description = report.get("description", None)
+    report_rich_text_description = report.get("rich_text_description", None)
+    report_short_description = report.get("short_description", None)
 
     description = None
     if report_rich_text_description is not None and report_rich_text_description:
