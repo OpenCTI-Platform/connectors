@@ -186,7 +186,7 @@ class ReportImporter(BaseImporter):
         download = self.reports_api_cs.get_report_pdf(str(report_id))
 
         if type(download) is dict:
-            self._info("No report PDF for id '%s'", report_id)
+            self._info("No report PDF for id {0}", report_id)
             return None
         else:
             return create_file_from_download(download, report_name)
