@@ -62,16 +62,16 @@ class ReportFetcher:
 
     def get_by_code(self, code: str) -> Optional[FetchedReport]:
         """Get report by the code."""
-        self._info("Get report by code: '%s'...", code)
+        self._info("Get report by code: {0}...", code)
 
         fetched_report = self._get_cache(code)
 
         if fetched_report is self._NOT_FOUND:
-            self._info("Returning cached 'not found' for code: '%s'", code)
+            self._info("Returning cached 'not found' for code: {0}", code)
             return None
 
         if fetched_report is not None and isinstance(fetched_report, FetchedReport):
-            self._info("Returning cached report for code: '%s'", code)
+            self._info("Returning cached report for code: {0}", code)
             return fetched_report
 
         report = self._fetch_report(code)
@@ -91,7 +91,7 @@ class ReportFetcher:
         return fetched_report
 
     def _fetch_report(self, code: str) -> Optional:
-        self._info("Fetching report by code '%s'...", code)
+        self._info("Fetching report by code {0}...", code)
 
         ids = [code]
         fields = ["__full__"]
@@ -105,28 +105,28 @@ class ReportFetcher:
             resources_count = 0
 
         if resources_count == 0:
-            self._info("Report code '%s' returned nothing", code)
+            self._info("Report code {0} returned nothing", code)
             return None
 
         if resources_count > 1:
-            self._error("Report code '%s' returned more than one result", code)
+            self._error("Report code {0} returned more than one result", code)
             return None
 
         report = resources[0]
 
-        self._info("Fetched report (id: '%s') by code '%s'", report["id"], code)
+        self._info("Fetched report (id: {0}) by code {1}", report["id"], code)
 
         return report
 
     def _get_report_pdf(
         self, report_id: int, report_name: str
     ) -> Optional[Mapping[str, str]]:
-        self._info("Fetching report PDF by id '%s'...", report_id)
+        self._info("Fetching report PDF by id {0}...", report_id)
 
         download = self.reports_api_cs.get_report_pdf(str(report_id))
 
         if type(download) is dict:
-            self._info("No report PDF for id '%s'", report_id)
+            self._info("No report PDF for id {0}", report_id)
             return None
         else:
             return create_file_from_download(download, report_name)
