@@ -1,0 +1,2 @@
+pycti==6.2.14
+cofense-intelligence==5.1.13
