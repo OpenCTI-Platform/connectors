@@ -251,7 +251,7 @@ def get_position() -> tuple:
             if position:
                 return position, None
     except Exception as e:
-        helper.log_warning("No position found, defaulting to 30 days ago")
+        helper.log_warning("No position found, defaulting to 30 days ago", e)
 
     init_date = int((datetime.utcnow() - timedelta(days=30)).timestamp())
     return None, init_date
