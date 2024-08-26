@@ -11,7 +11,7 @@ from typing import Dict
 import jbxapi
 import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
+from pycti import get_config_variable, ExternalReference, Identity, OpenCTIConnectorHelper, StixCoreRelationship
 
 
 class JoeSandboxConnector:
@@ -25,9 +25,12 @@ class JoeSandboxConnector:
         )
         self.helper = OpenCTIConnectorHelper(config)
 
-        self.identity = self.helper.api.identity.create(
-            type="Organization", name="Joe Security", description="Joe Security"
-        )["standard_id"]
+        self.identity = stix2.Identity(
+            id=Identity.generate_id("Joe Security", "organization"),
+            name="Joe Security",
+            identity_class="organization",
+            description="Joe Security",
+        )
 
         self.octi_api_url = get_config_variable(
             "OPENCTI_URL", ["opencti", "url"], config
