@@ -385,9 +385,7 @@ class JoeSandboxConnector:
 
         # Set score of the observable
         score = submission_dict.get("most_relevant_analysis").get("score")
-        self.helper.api.stix_cyber_observable.update_field(
-            id=observable["id"], input={"key": "x_opencti_score", "value": str(score)}
-        )
+        labels = observable["labels"] if "labels" in observable else []
 
         # Serialize and send bundles
         if bundle_objects:
@@ -854,24 +852,17 @@ class JoeSandboxConnector:
         # apply as labels to the observable
         yara = json_report.get("yara")
         if yara:
+            observable["labels"] = []
+
             memorydumps = yara.get("memorydumps")
             if memorydumps:
                 for hit in memorydumps["hit"]:
-                    label = self.helper.api.label.create(
-                        value=hit["rule"], color=self._yara_color
-                    )
-                    self.helper.api.stix_cyber_observable.add_label(
-                        id=observable["id"], label_id=label["id"]
-                    )
+                    observable["labels"].append(hit["rule"])
+
             unpackedpes = yara.get("unpackedpes")
             if unpackedpes:
                 for hit in unpackedpes["hit"]:
-                    label = self.helper.api.label.create(
-                        value=hit["rule"], color=self._yara_color
-                    )
-                    self.helper.api.stix_cyber_observable.add_label(
-                        id=observable["id"], label_id=label["id"]
-                    )
+                    observable["labels"].append(hit["rule"])
 
         # Extract Domains and create relationship with observable
         domaininfo = json_report.get("domaininfo")
