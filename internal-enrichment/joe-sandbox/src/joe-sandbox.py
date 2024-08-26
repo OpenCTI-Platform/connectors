@@ -367,18 +367,19 @@ class JoeSandboxConnector:
         artifact.name = file_name
         return artifact
 
-    def _process_submission(self, observable, submission_id):
+    def _process_submission(self, observable: dict, submission_id: str) -> str:
         """
-        observable: The dict containing the observable to enrich
-        submission_id: Int representing the submission id
-        returns: a str representing a message to return to OpenCTI
+        :param observable: Dict representing the observable to enrich as a STIX entity
+        :param submission_id: String representing the submission id
+        :return a string representing a message to return to OpenCTI
         """
 
         # Wait for all analyses to finish
         submission_dict = self._wait_for_analyses(submission_id)
+
         self.helper.log_info(json.dumps(submission_dict, indent=2))
 
-        # Process all of the analyses
+        # Process all the analyses
         bundle_objects = self._process_analyses(
             observable, submission_dict.get("analyses")
         )
@@ -389,8 +390,22 @@ class JoeSandboxConnector:
 
         # Serialize and send bundles
         if bundle_objects:
-            bundle = self.helper.stix2_create_bundle(bundle_objects)
+            url = stix2.URL(
+                value=observable["value"],
+                custom_properties={
+                    "x_opencti_created_by_ref": self.identity["id"],
+                    "x_opencti_score": score,
+                    "x_opencti_labels": labels,
+                    "x_opencti_external_references": bundle_objects
+                },
+            )
+
+            all_bundle_objects = [url, self.identity]
+            all_bundle_objects.extend(bundle_objects)
+
+            bundle = self.helper.stix2_create_bundle(all_bundle_objects)
             bundles_sent = self.helper.send_stix2_bundle(bundle)
+
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:
             return "Nothing to attach"
