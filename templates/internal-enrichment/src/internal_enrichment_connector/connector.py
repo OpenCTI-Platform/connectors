@@ -48,7 +48,10 @@ class ConnectorTemplate:
 
         # Load configuration file and connection helper
         self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        # playbook_compatible=True only if a bundle is sent !
+        self.helper = OpenCTIConnectorHelper(
+            config=self.config.load, playbook_compatible=True
+        )
         self.client = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper)
 
