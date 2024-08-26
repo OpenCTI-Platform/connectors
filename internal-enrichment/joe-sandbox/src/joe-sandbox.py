@@ -416,7 +416,7 @@ class JoeSandboxConnector:
 
             return submission_info
 
-    def _process_analyses(self, observable, analyses):
+    def _process_analyses(self, observable: dict, analyses: list[dict]):
         """
         Process all analyses and create observables/relationships
         See https://jbxcloud.joesecurity.org/userguide?sphinxurl=usage%2Fwebapi.html#id8
@@ -431,46 +431,39 @@ class JoeSandboxConnector:
             threatname = analysis_dict["threatname"]
             detection = analysis_dict["detection"]
 
-            # Attach external reference
-            analysis_url = f"{self._analysis_url}/{webid}"
-            external_reference = self.helper.api.external_reference.create(
-                source_name=f"Joe Sandbox Analysis [{detection}-{threatname}-{webid}]",
-                url=analysis_url,
-                description=f"Joe Sandbox Analysis, Web ID: {webid}",
-            )
-            self.helper.api.stix_cyber_observable.add_external_reference(
-                id=observable["id"], external_reference_id=external_reference["id"]
-            )
+            uploaded_files = []
 
-            # Upload the html management report to the external reference files
+            # # Upload the html management report to the external reference files
             if "executive" in self._report_types:
                 try:
                     name, executive_report = self.joe_sandbox_client.analysis_download(
                         webid, "executive", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=executive_report,
-                        mime_type="text/html",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "text/html",
+                        "data": executive_report,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve html report, exception: {e}"
                     )
 
-            # Upload the html report to the external reference files
+            # # Upload the html report to the external reference files
             if "html" in self._report_types:
                 try:
                     name, html_report = self.joe_sandbox_client.analysis_download(
                         webid, "html", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=html_report,
-                        mime_type="text/html",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "text/html",
+                        "data": html_report,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve html report, exception: {e}"
@@ -482,12 +475,13 @@ class JoeSandboxConnector:
                     name, iochtml_report = self.joe_sandbox_client.analysis_download(
                         webid, "iochtml", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=iochtml_report,
-                        mime_type="text/html",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "text/html",
+                        "data": iochtml_report,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve iochtml report, exception: {e}"
@@ -499,12 +493,13 @@ class JoeSandboxConnector:
                     name, iocxml = self.joe_sandbox_client.analysis_download(
                         webid, "iocxml", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=iocxml,
-                        mime_type="application/xml",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/xml",
+                        "data": iocxml,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve iocxml report, exception: {e}"
@@ -517,12 +512,13 @@ class JoeSandboxConnector:
                         webid, "iocjson", password=self._encrypt_with_password
                     )
                     iocjson = json.loads(iocjson)
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=json.dumps(iocjson, indent=2),
-                        mime_type="application/json",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "text/html",
+                        "data": json.dumps(iocjson, indet=2),
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve iocjson report, exception: {e}"
@@ -535,19 +531,18 @@ class JoeSandboxConnector:
                         webid, "json", password=self._encrypt_with_password
                     )
 
-                    # Handle the JSON report
-                    bundle_objects = self._process_json_report(
-                        self, observable, json_report
-                    )
-
                     # Upload the full JSON report to the external reference files
                     json_report = json.loads(json_report)
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=json.dumps(json_report, indent=2),
-                        mime_type="application/json",
-                    )
+
+                    # Handle the JSON report
+                    bundle_objects = self._process_json(observable, json_report)
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/json",
+                        "data": json.dumps(json_report, indent=2),
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve json report, exception: {e}"
@@ -560,19 +555,18 @@ class JoeSandboxConnector:
                         webid, "lightjsonfixed", password=self._encrypt_with_password
                     )
 
-                    # Handle the JSON report
-                    bundle_objects = self._process_json_report(
-                        self, observable, json_report
-                    )
-
                     # Upload the full JSON report to the external reference files
                     json_report = json.loads(json_report)
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=json.dumps(json_report, indent=2),
-                        mime_type="application/json",
-                    )
+
+                    # Handle the JSON report
+                    bundle_objects = self._process_json(observable, json_report)
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/json",
+                        "data": json.dumps(json_report, indent=2),
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve lightjsonfixed report, exception: {e}"
@@ -585,12 +579,13 @@ class JoeSandboxConnector:
                     name, xml = self.joe_sandbox_client.analysis_download(
                         webid, "xml", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=xml,
-                        mime_type="application/xml",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/xml",
+                        "data": xml,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve xml report, exception: {e}"
@@ -603,12 +598,13 @@ class JoeSandboxConnector:
                     name, lightxml = self.joe_sandbox_client.analysis_download(
                         webid, "lightxml", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=lightxml,
-                        mime_type="application/xml",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/xml",
+                        "data": lightxml,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve lightxml report, exception: {e}"
@@ -620,12 +616,13 @@ class JoeSandboxConnector:
                     name, unpackpe = self.joe_sandbox_client.analysis_download(
                         webid, "unpackpe", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=unpackpe,
-                        mime_type="application/zip",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/zip",
+                        "data": unpackpe,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve unpackpe zip, exception: {e}"
@@ -638,12 +635,13 @@ class JoeSandboxConnector:
                         webid, "stix", password=self._encrypt_with_password
                     )
                     stix_report = json.loads(stix_report)
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=json.dumps(stix_report, indent=2),
-                        mime_type="application/json",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/json",
+                        "data": json.dumps(stix_report, indent=2),
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve stix report, exception: {e}"
@@ -655,12 +653,13 @@ class JoeSandboxConnector:
                     name, ida = self.joe_sandbox_client.analysis_download(
                         webid, "ida", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=ida,
-                        mime_type="application/zip",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/zip",
+                        "data": ida,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(f"Failed to retrieve ida zip, exception: {e}")
 
@@ -670,12 +669,13 @@ class JoeSandboxConnector:
                     name, misp = self.joe_sandbox_client.analysis_download(
                         webid, "misp", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=misp,
-                        mime_type="application/xml",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/xml",
+                        "data": misp,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve misp report, exception: {e}"
@@ -687,12 +687,13 @@ class JoeSandboxConnector:
                     name, pdf = self.joe_sandbox_client.analysis_download(
                         webid, "pdf", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=pdf,
-                        mime_type="application/pdf",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/pdf",
+                        "data": pdf,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve pdf report, exception: {e}"
@@ -704,12 +705,13 @@ class JoeSandboxConnector:
                     name, pdfexecutive = self.joe_sandbox_client.analysis_download(
                         webid, "pdfexecutive", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=pdfexecutive,
-                        mime_type="application/pdf",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/pdf",
+                        "data": pdfexecutive,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve pdf management (pdfexecutive) report, exception: {e}"
@@ -721,12 +723,13 @@ class JoeSandboxConnector:
                     name, pcap = self.joe_sandbox_client.analysis_download(
                         webid, "pcap", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=pcap,
-                        mime_type="application/vnd.tcpdump.pcap",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/vnd.tcpdump.pcap",
+                        "data": pcap,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(f"Failed to retrieve pcap, exception: {e}")
 
@@ -736,12 +739,13 @@ class JoeSandboxConnector:
                     name, pcapsslinspection = self.joe_sandbox_client.analysis_download(
                         webid, "pcapsslinspection", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=pcapsslinspection,
-                        mime_type="application/vnd.tcpdump.pcap",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/vnd.tcpdump.pcap",
+                        "data": pcapsslinspection,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve pcapsslinspection, exception: {e}"
@@ -753,12 +757,13 @@ class JoeSandboxConnector:
                     name, pcapunified = self.joe_sandbox_client.analysis_download(
                         webid, "pcapunified", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=pcapunified,
-                        mime_type="application/vnd.tcpdump.pcap",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/vnd.tcpdump.pcap",
+                        "data": pcapunified,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve pcapunified, exception: {e}"
@@ -770,12 +775,13 @@ class JoeSandboxConnector:
                     name, maec = self.joe_sandbox_client.analysis_download(
                         webid, "maec", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=maec,
-                        mime_type="application/xml",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/xml",
+                        "data": maec,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve maec report, exception: {e}"
@@ -787,16 +793,37 @@ class JoeSandboxConnector:
                     name, memdumps = self.joe_sandbox_client.analysis_download(
                         webid, "memdumps", password=self._encrypt_with_password
                     )
-                    self.helper.api.external_reference.add_file(
-                        id=external_reference["id"],
-                        file_name=name,
-                        data=memdumps,
-                        mime_type="application/zip",
-                    )
+
+                    uploaded_files.append({
+                        "name": name,
+                        "mime_type": "application/zip",
+                        "data": memdumps,
+                        "no_trigger_import": True
+                    })
                 except Exception as e:
                     self.helper.log_info(
                         f"Failed to retrieve memdumps zip, exception: {e}"
                     )
+
+            # Create external reference
+            analysis_url = f"{self._analysis_url}/{webid}"
+            analysis_source_name = f"Joe Sandbox Analysis [{detection}-{threatname}-{webid}]"
+            analysis_description= f"Joe Sandbox Analysis, Web ID: {webid}"
+
+            external_reference_id = ExternalReference.generate_id(url=analysis_url, source_name=analysis_source_name)
+
+            external_reference = stix2.ExternalReference(
+                url=analysis_url,
+                source_name=analysis_source_name,
+                description=analysis_description,
+                custom_properties={
+                    "type": "external-reference",
+                    "id": external_reference_id,
+                    "x_opencti_files": uploaded_files
+                }
+            )
+
+            bundle_objects.append(external_reference)
 
         return bundle_objects
 
