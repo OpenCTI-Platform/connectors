@@ -830,7 +830,8 @@ class JoeSandboxConnector:
         Handle the json report
         """
 
-        bundle_objects = []
+        bundle_objects = [self.identity]
+
         json_report = json_report.get("analysis")
 
         # Extract any identified Malware Configurations
@@ -842,7 +843,7 @@ class JoeSandboxConnector:
                 note = stix2.Note(
                     abstract=f"Malware Configuration ({config_dict['@threatname']})",
                     content=f"```\n{json.dumps(config_dict, indent=2)}\n```",
-                    created_by_ref=self.identity,
+                    created_by_ref=self.identity["id"],
                     object_marking_refs=[self._default_tlp],
                     object_refs=[observable["standard_id"]],
                 )
@@ -873,7 +874,7 @@ class JoeSandboxConnector:
                     object_marking_refs=[self._default_tlp],
                     custom_properties={
                         "labels": ["dynamic"],
-                        "created_by_ref": self.identity,
+                        "created_by_ref": self.identity["id"],
                     },
                 )
                 relationship = stix2.Relationship(
@@ -881,7 +882,7 @@ class JoeSandboxConnector:
                         "communicates-with", observable["standard_id"], domain_stix.id
                     ),
                     relationship_type="communicates-with",
-                    created_by_ref=self.identity,
+                    created_by_ref=self.identity["id"],
                     source_ref=observable["standard_id"],
                     target_ref=domain_stix.id,
                     allow_custom=True,
@@ -898,7 +899,7 @@ class JoeSandboxConnector:
                     object_marking_refs=[self._default_tlp],
                     custom_properties={
                         "labels": ["dynamic"],
-                        "created_by_ref": self.identity,
+                        "created_by_ref": self.identity["id"],
                     },
                 )
                 relationship = stix2.Relationship(
@@ -906,7 +907,7 @@ class JoeSandboxConnector:
                         "related-to", observable["standard_id"], url_stix.id
                     ),
                     relationship_type="related-to",
-                    created_by_ref=self.identity,
+                    created_by_ref=self.identity["id"],
                     source_ref=observable["standard_id"],
                     target_ref=url_stix.id,
                     allow_custom=True,
