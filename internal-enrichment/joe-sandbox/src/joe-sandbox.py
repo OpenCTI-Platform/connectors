@@ -845,7 +845,7 @@ class JoeSandboxConnector:
                     content=f"```\n{json.dumps(config_dict, indent=2)}\n```",
                     created_by_ref=self.identity["id"],
                     object_marking_refs=[self._default_tlp],
-                    object_refs=[observable["standard_id"]],
+                    object_refs=[observable["id"]],
                 )
                 bundle_objects.append(note)
 
@@ -878,12 +878,10 @@ class JoeSandboxConnector:
                     },
                 )
                 relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "communicates-with", observable["standard_id"], domain_stix.id
-                    ),
+                    id=StixCoreRelationship.generate_id("communicates-with", observable["id"], domain_stix.id),
                     relationship_type="communicates-with",
                     created_by_ref=self.identity["id"],
-                    source_ref=observable["standard_id"],
+                    source_ref=observable["id"],
                     target_ref=domain_stix.id,
                     allow_custom=True,
                 )
@@ -903,12 +901,10 @@ class JoeSandboxConnector:
                     },
                 )
                 relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", observable["standard_id"], url_stix.id
-                    ),
+                    id=StixCoreRelationship.generate_id("related-to", observable["id"], url_stix.id),
                     relationship_type="related-to",
                     created_by_ref=self.identity["id"],
-                    source_ref=observable["standard_id"],
+                    source_ref=observable["id"],
                     target_ref=url_stix.id,
                     allow_custom=True,
                 )
@@ -928,16 +924,16 @@ class JoeSandboxConnector:
                     object_marking_refs=[self._default_tlp],
                     custom_properties={
                         "labels": ["dynamic"],
-                        "created_by_ref": self.identity,
+                        "created_by_ref": self.identity["id"],
                     },
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "communicates-with", observable["standard_id"], ip_stix.id
+                        "communicates-with", observable["id"], ip_stix.id
                     ),
                     relationship_type="communicates-with",
-                    created_by_ref=self.identity,
-                    source_ref=observable["standard_id"],
+                    created_by_ref=self.identity["id"],
+                    source_ref=observable["id"],
                     target_ref=ip_stix.id,
                     allow_custom=True,
                 )
