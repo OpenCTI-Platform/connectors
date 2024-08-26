@@ -251,9 +251,19 @@ class JoeSandboxConnector:
             "JOE_SANDBOX_PRIORITY", ["joe_sandbox", "priority"], config, isNumber=True
         )
 
-        self._default_tlp = get_config_variable(
+        TLP_MAPPING = {
+            "TLP:CLEAR": stix2.TLP_WHITE,
+            "TLP:WHITE": stix2.TLP_WHITE,
+            "TLP:GREEN": stix2.TLP_GREEN,
+            "TLP:AMBER": stix2.TLP_AMBER,
+            "TLP:RED": stix2.TLP_RED,
+        }
+
+        default_tlp = get_config_variable(
             "JOE_SANDBOX_DEFAULT_TLP", ["joe_sandbox", "default_tlp"], config
-        ).lower()
+        ).upper()
+
+        self._default_tlp = TLP_MAPPING.get(default_tlp, stix2.TLP_WHITE)
 
         self._yara_color = get_config_variable(
             "JOE_SANDBOX_YARA_COLOR", ["joe_sandbox", "yara_color"], config
