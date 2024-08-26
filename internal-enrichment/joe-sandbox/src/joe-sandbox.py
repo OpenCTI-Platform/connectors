@@ -266,7 +266,7 @@ class JoeSandboxConnector:
         # Create default labels
         self.helper.api.label.create(value="dynamic", color=default_color)
 
-    def _process_observable(self, observable):
+    def _process_observable(self, data: dict):
         params = {
             # JOE SANDBOX DEFAULT PARAMETERS, see https://github.com/joesecurity/jbxapi/blob/master/jbxapi.py
             # See https://jbxcloud.joesecurity.org/#windows for all the available systems
@@ -315,34 +315,36 @@ class JoeSandboxConnector:
             "priority": self._priority,  # Integer value between 1 and 10, higher value means higher priority.
         }
 
+        observable = data["stix_entity"]
+
         submission_dict = {}
-        if observable["entity_type"] == "Url":
+        if observable["type"] == "url":
             self.helper.log_info(
-                f"Submitting {observable['observable_value']} to JoeSandbox for analysis..."
+                f"Submitting {observable['value']} to JoeSandbox for analysis..."
             )
             # True = use the browser for analysis, False = download/execute
             # Submit the url to Joe Sandbox
             if self._browser:
                 submission_dict = self.joe_sandbox_client.submit_url(
-                    url=observable["observable_value"], params=params
+                    url=observable["value"], params=params
                 )
             else:
                 submission_dict = self.joe_sandbox_client.submit_sample_url(
-                    url=observable["observable_value"], params=params
+                    url=observable["value"], params=params
                 )
-        elif observable["entity_type"] == "Artifact":
-            # Download the Artifact from OpenCTI
-            sample = self._download_artifact(observable)
-            self.helper.log_info(
-                f"Submitting {observable['importFiles'][0]['name']} to JoeSandbox for analysis..."
-            )
-            # Submit the sample to Joe Sandbox
-            submission_dict = self.joe_sandbox_client.submit_sample(
-                sample, cookbook=self._cookbook, params=params
-            )
+        # elif observable["type"] == "artifact":
+        #     # Download the Artifact from OpenCTI
+        #     sample = self._download_artifact(observable)
+        #     self.helper.log_info(
+        #         f"Submitting {observable['importFiles'][0]['name']} to JoeSandbox for analysis..."
+        #     )
+        #     # Submit the sample to Joe Sandbox
+        #     submission_dict = self.joe_sandbox_client.submit_sample(
+        #         sample, cookbook=self._cookbook, params=params
+        #     )
         else:
             raise ValueError(
-                f"Failed to process observable, {observable['entity_type']} is not a supported entity type."
+                f"Failed to process observable, {observable['type']} is not a supported entity type."
             )
 
         self.helper.log_info(json.dumps(submission_dict, indent=2))
@@ -926,8 +928,7 @@ class JoeSandboxConnector:
         return bundle_objects
 
     def _process_message(self, data: Dict):
-        observable = data["enrichment_entity"]
-        return self._process_observable(observable)
+        return self._process_observable(data)
 
     # Start the main loop
     def start(self):
