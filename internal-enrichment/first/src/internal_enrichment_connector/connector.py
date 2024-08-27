@@ -52,7 +52,7 @@ class ConnectorFirst:
         self.helper = OpenCTIConnectorHelper(
             config=self.config.load, playbook_compatible=True
         )
-        self.client = ConnectorClient(self.helper, self.config)
+        self.api = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper)
 
         # Define variables
@@ -133,40 +133,40 @@ class ConnectorFirst:
         :param data: dict of data to process
         :return: string
         """
+
         try:
             opencti_entity = data["enrichment_entity"]
             self.extract_and_check_markings(opencti_entity)
 
             # To enrich the data, you can add more STIX object in stix_objects
             self.stix_objects_list = data["stix_objects"]
-            observable = data["stix_entity"]
 
             # Extract information from entity data
-            obs_standard_id = observable["id"]
-            obs_value = observable["value"]
-            obs_type = observable["type"]
+            vulnerability = data["stix_entity"]
+            vulnerability_type = vulnerability["type"]
+            vulnerability_id = vulnerability["id"]
+            vulnerability_name = vulnerability["name"]
 
             info_msg = (
                 "[CONNECTOR] Processing observable for the following entity type: "
             )
             self.helper.connector_logger.info(info_msg, {"type": {obs_type}})
 
-            if self.entity_in_scope:
-                # Performing the collection of intelligence and enrich the entity
+            if self.entity_in_scope(vulnerability):
+                stix_objects = self._collect_intelligence(vulnerability_name, vulnerability_id)
                 # ===========================
                 # === Add your code below ===
                 # ===========================
 
                 # EXAMPLE Collect intelligence and enrich current STIX object
-                stix_objects = self._collect_intelligence(obs_value, obs_standard_id)
 
-                if stix_objects is not None and len(stix_objects) is not None:
+                if stix_objects:
                     stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                     bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
 
                     info_msg = (
                         "[API] Observable value found and knowledge added for type: "
-                        + obs_type
+                        + vulnerability_type
                         + ", sending "
                         + str(len(bundles_sent))
                         + " stix bundle(s) for worker import"
@@ -183,8 +183,9 @@ class ConnectorFirst:
                 return self.helper.connector_logger.info(
                     "[CONNECTOR] Skip the following entity as it does not concern "
                     "the initial scope found in the config connector: ",
-                    {"entity_id": opencti_entity["entity_id"]},
+                    { "entity_id": opencti_entity["standard_id"] },
                 )
+
         except Exception as err:
             # Handling other unexpected exceptions
             return self.helper.connector_logger.error(
