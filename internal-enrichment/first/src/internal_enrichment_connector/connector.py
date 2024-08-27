@@ -60,34 +60,39 @@ class ConnectorFirst:
         self.tlp = None
         self.stix_objects_list = []
 
-    def _collect_intelligence(self, value, obs_id) -> list:
+    def _collect_intelligence(self, value, vulnerability_id) -> list:
         """
         Collect intelligence from the source and convert into STIX object
         :return: List of STIX objects
         """
+
         self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
 
-        # ===========================
-        # === Add your code below ===
-        # ===========================
+        self.author = self.converter_to_stix.create_author()
 
-        # EXAMPLE
-        # === Get entities from external sources based on entity value
-        # entities = self.client.get_entity(value)
+        enrichment_response = self.api.get_entity({ "cve": value })
+        enrichment_infos = enrichment_response["data"]
 
-        # === Create the author
-        # self.author = self.converter.create_author()
+        for info in enrichment_infos:
+            cve_name = info["cve"]
+            epss_score = float(info["epss"])
+            epss_percentile = float(info["percentile"])
 
-        # === Convert into STIX2 object and add it to the stix_object_list
-        # entity_to_stix = self.converter_to_stix.create_obs(value,obs_id)
-        # self.stix_object_list.append(entity_to_stix)
+            vulnerability_stix_object = self.converter_to_stix.create_vulnerability(
+                {
+                    "name": cve_name,
+                    "x_opencti_epss_score": epss_score,
+                    "x_opencti_epss_percentile": epss_percentile,
+                },
+                vulnerability_id
+            )
 
-        # return self.stix_objects_list
+            self.stix_objects_list.append(vulnerability_stix_object)
 
-        # ===========================
-        # === Add your code above ===
-        # ===========================
-        raise NotImplementedError
+        if self.stix_objects_list:
+            self.stix_objects_list.append(self.author)
+
+        return self.stix_objects_list
 
     def entity_in_scope(self, data) -> bool:
         """
