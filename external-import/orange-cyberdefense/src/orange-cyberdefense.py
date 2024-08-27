@@ -8,8 +8,8 @@ import time
 import zipfile
 from html.parser import HTMLParser
 from io import StringIO
-from urllib import request
 from typing import Iterable, TypeVar
+from urllib import request
 
 import html2text
 import requests
@@ -539,20 +539,6 @@ class OrangeCyberDefense:
         except Exception as e:
             self.helper.log_error(str(e))
 
-    def get_ww_advisory(self, advisory_id: int) -> dict:
-        try:
-            url = "https://api-ww.cert.orangecyberdefense.com/api/advisory/" + str(
-                advisory_id
-            )
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": self.ocd_import_worldwatch_api_key,
-            }
-            response = requests.get(url, headers=headers)
-            return response.json()
-        except Exception as e:
-            self.helper.log_error(str(e))
-
     def _create_report_relationships(self, objects, date, markings):
         """
         Generates stix relationship objects for the given objects.
@@ -668,10 +654,7 @@ class OrangeCyberDefense:
 
         # Getting the report entities
         self.helper.log_info("Getting report entities...")
-        advisory = self.get_ww_advisory(report["advisory"])
-        if advisory is None:
-            raise ValueError(f"Advisory {report['advisory']} not found")
-        tags = set(report["tags"]) | set(advisory["tags"])
+        tags = set(report["tags"]) | set(report["advisory_tags"])
         if tags:
             report_entities = self._get_report_entities(tags)
         else:
@@ -1098,7 +1081,7 @@ class OrangeCyberDefense:
             output=Output.STIX_ZIP, timeout=60 * 60, output_path=zip_file_path
         )
 
-        self.helper.log_info(f"Processing Bulk Search results...")
+        self.helper.log_info("Processing Bulk Search results...")
         objects = []
         for object in iter_stix_bs_results(zip_file_path):
             processed_object = self._process_object(object)
