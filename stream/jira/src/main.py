@@ -8,7 +8,7 @@ from jira import JIRA
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
-class TaxiiPostConnector:
+class JiraConnector:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -102,7 +102,7 @@ class TaxiiPostConnector:
 
 if __name__ == "__main__":
     try:
-        connector = TaxiiPostConnector()
+        connector = JiraConnector()
         connector.start()
     except Exception as e:
         print(e)
