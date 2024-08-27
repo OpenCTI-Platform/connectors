@@ -571,12 +571,14 @@ class ArticleImporter:
             filter_value = tag
             # match attack patterns tag, e.g. 'T1204.002 - Malicious File'
             if re.match(
-                    r"^T\d{4}(.\d{3})? - .*$",
-                    tag,
+                r"^T\d{4}(.\d{3})? - .*$",
+                tag,
             ):
-                parts = tag.split(' - ')
+                parts = tag.split(" - ")
                 filter_value = parts[0].strip()
-                self.helper.log_debug(f"Tag is an Attack-Pattern. Filtering with Mitre ID: {filter_value}")
+                self.helper.log_debug(
+                    f"Tag is an Attack-Pattern. Filtering with Mitre ID: {filter_value}"
+                )
 
             entities = self.helper.api.stix_domain_object.list(
                 types=[
@@ -593,7 +595,9 @@ class ArticleImporter:
                 ],
                 filters={
                     "mode": "and",
-                    "filters": [{"key": ["name", "x_mitre_id"], "values": [filter_value]}],
+                    "filters": [
+                        {"key": ["name", "x_mitre_id"], "values": [filter_value]}
+                    ],
                     "filterGroups": [],
                 },
             )
@@ -659,7 +663,9 @@ class ArticleImporter:
                 if entity["entity_type"] == "Attack-Pattern":
                     elements["attack_patterns"].append(
                         stix2.AttackPattern(
-                            id=AttackPattern.generate_id(name=entity["name"], x_mitre_id=entity["x_mitre_id"]),
+                            id=AttackPattern.generate_id(
+                                name=entity["name"], x_mitre_id=entity["x_mitre_id"]
+                            ),
                             name=entity["name"],
                             confidence=self.helper.connect_confidence_level,
                             created_by_ref=self.author,
