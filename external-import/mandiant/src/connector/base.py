@@ -697,41 +697,70 @@ class Mandiant:
 
         data = collection_api(**parameters)
         bundles_objects = []
-        for item in data:
-            bundle = module.process(self, item)
-            if bundle:
-                bundles_objects = bundles_objects + bundle["objects"]
-            offset += 1
 
-        if len(bundles_objects) > 0:
-            uniq_bundles_objects = list(
-                {obj["id"]: obj for obj in bundles_objects}.values()
-            )
-            # Transform objects to dicts
-            uniq_bundles_objects = [
-                json.loads(obj.serialize()) for obj in uniq_bundles_objects
-            ]
-            if self.mandiant_remove_statement_marking:
-                uniq_bundles_objects = list(
-                    filter(
-                        lambda stix: stix["id"] not in STATEMENT_MARKINGS,
-                        uniq_bundles_objects,
+        if "reports" in collection:
+            for item in data:
+                report_bundle = module.process(self, item)
+                bundles_objects = report_bundle["objects"]
+
+                if len(bundles_objects) > 0:
+                    uniq_bundles_objects = list(
+                        {obj["id"]: obj for obj in bundles_objects}.values()
                     )
-                )
-                self.remove_statement_marking(uniq_bundles_objects)
+                    # Transform objects to dicts
+                    uniq_bundles_objects = [
+                        json.loads(obj.serialize()) for obj in uniq_bundles_objects
+                    ]
+                    if self.mandiant_remove_statement_marking:
+                        uniq_bundles_objects = list(
+                            filter(
+                                lambda stix: stix["id"] not in STATEMENT_MARKINGS,
+                                uniq_bundles_objects,
+                            )
+                        )
+                        self.remove_statement_marking(uniq_bundles_objects)
 
-            bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
-            self.helper.send_stix2_bundle(
-                bundle,
-                update=self.update_existing_data,
-                work_id=work_id,
-            )
-            if collection in collection_with_offset:
-                state[collection][STATE_OFFSET] = offset
+                    bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
+                    self.helper.send_stix2_bundle(
+                        bundle,
+                        work_id=work_id,
+                    )
         else:
-            self.helper.connector_logger.info(
-                f"No data has been imported for the '{collection}' collection since the last run"
-            )
+            for item in data:
+                bundle = module.process(self, item)
+                if bundle:
+                    bundles_objects = bundles_objects + bundle["objects"]
+                offset += 1
+
+            if len(bundles_objects) > 0:
+                uniq_bundles_objects = list(
+                    {obj["id"]: obj for obj in bundles_objects}.values()
+                )
+                # Transform objects to dicts
+                uniq_bundles_objects = [
+                    json.loads(obj.serialize()) for obj in uniq_bundles_objects
+                ]
+                if self.mandiant_remove_statement_marking:
+                    uniq_bundles_objects = list(
+                        filter(
+                            lambda stix: stix["id"] not in STATEMENT_MARKINGS,
+                            uniq_bundles_objects,
+                        )
+                    )
+                    self.remove_statement_marking(uniq_bundles_objects)
+
+                bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
+                self.helper.send_stix2_bundle(
+                    bundle,
+                    update=self.update_existing_data,
+                    work_id=work_id,
+                )
+                if collection in collection_with_offset:
+                    state[collection][STATE_OFFSET] = offset
+            else:
+                self.helper.connector_logger.info(
+                    f"No data has been imported for the '{collection}' collection since the last run"
+                )
 
         if collection in collection_with_start_epoch:
             after_process_now = Timestamp.now()
