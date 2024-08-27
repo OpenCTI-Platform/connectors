@@ -21,6 +21,7 @@ class ConfigConnector:
         Load the configuration from the YAML file
         :return: Configuration dictionary
         """
+
         config_file_path = Path(__file__).parents[1].joinpath("config.yml")
         config = (
             yaml.load(open(config_file_path), Loader=yaml.FullLoader)
@@ -35,23 +36,24 @@ class ConfigConnector:
         Connector configuration variables
         :return: None
         """
+
         # OpenCTI configurations
 
         # Connector extra parameters
         self.api_base_url = get_config_variable(
             "CONNECTOR_FIRST_API_BASE_URL",
-            ["connector_template", "api_base_url"],
+            ["connector_first", "api_base_url"],
             self.load,
-        )
-
-        self.api_key = get_config_variable(
-            "CONNECTOR_FIRST_API_KEY",
-            ["connector_template", "api_key"],
-            self.load,
+            False,
+            None,
+            True
         )
 
         self.max_tlp = get_config_variable(
             "CONNECTOR_FIRST_MAX_TLP",
-            ["connector_template", "max_tlp"],
+            ["connect_first", "max_tlp"],
             self.load,
+            False,
+            'TLP:CLEAR',
+            False
         )
