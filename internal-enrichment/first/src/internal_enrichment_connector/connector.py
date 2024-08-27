@@ -100,14 +100,11 @@ class ConnectorFirst:
         :param data: Dictionary of data
         :return: boolean
         """
-        scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
-        entity_split = data["entity_id"].split("--")
-        entity_type = entity_split[0].lower()
 
-        if entity_type in scopes:
-            return True
-        else:
-            return False
+        scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
+        entity_type = data["type"].lower()
+
+        return entity_type in scopes
 
     def extract_and_check_markings(self, opencti_entity: dict) -> None:
         """
@@ -117,6 +114,7 @@ class ConnectorFirst:
         :param opencti_entity: Dict of observable from OpenCTI
         :return: Boolean
         """
+
         if len(opencti_entity["objectMarking"]) != 0:
             for marking_definition in opencti_entity["objectMarking"]:
                 if marking_definition["definition_type"] == "TLP":
@@ -153,37 +151,29 @@ class ConnectorFirst:
             vulnerability_name = vulnerability["name"]
 
             info_msg = (
-                "[CONNECTOR] Processing observable for the following entity type: "
+                "[CONNECTOR] Processing vulnerability for the following CVE identifier: "
             )
-            self.helper.connector_logger.info(info_msg, {"type": {obs_type}})
+            self.helper.connector_logger.info(info_msg, { "cve": vulnerability_name })
 
             if self.entity_in_scope(vulnerability):
                 stix_objects = self._collect_intelligence(vulnerability_name, vulnerability_id)
-                # ===========================
-                # === Add your code below ===
-                # ===========================
-
-                # EXAMPLE Collect intelligence and enrich current STIX object
 
                 if stix_objects:
                     stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                     bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
 
                     info_msg = (
-                        "[API] Observable value found and knowledge added for type: "
+                        "[API] Vulnerability CVE found and knowledge added for type: "
                         + vulnerability_type
                         + ", sending "
                         + str(len(bundles_sent))
                         + " stix bundle(s) for worker import"
                     )
-                    return info_msg
                 else:
                     info_msg = "[CONNECTOR] No information found"
-                    return info_msg
 
-                # ===========================
-                # === Add your code above ===
-                # ===========================
+                return info_msg
+
             else:
                 return self.helper.connector_logger.info(
                     "[CONNECTOR] Skip the following entity as it does not concern "
@@ -192,9 +182,8 @@ class ConnectorFirst:
                 )
 
         except Exception as err:
-            # Handling other unexpected exceptions
             return self.helper.connector_logger.error(
-                "[CONNECTOR] Unexpected Error occurred", {"error_message": str(err)}
+                "[CONNECTOR] Unexpected Error occurred", { "error_message": str(err) }
             )
 
     def run(self) -> None:
