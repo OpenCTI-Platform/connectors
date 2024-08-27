@@ -5,7 +5,7 @@ from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
 
 
-class ConnectorFirst:
+class FirstEPSSConnector:
     """
     Specifications of the internal enrichment connector
 

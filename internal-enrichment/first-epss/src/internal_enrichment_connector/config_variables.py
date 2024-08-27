@@ -41,8 +41,8 @@ class ConfigConnector:
 
         # Connector extra parameters
         self.api_base_url = get_config_variable(
-            "CONNECTOR_FIRST_API_BASE_URL",
-            ["connector_first", "api_base_url"],
+            "FIRST_EPSS_API_BASE_URL",
+            ["first_epss", "api_base_url"],
             self.load,
             False,
             None,
@@ -50,8 +50,8 @@ class ConfigConnector:
         )
 
         self.max_tlp = get_config_variable(
-            "CONNECTOR_FIRST_MAX_TLP",
-            ["connect_first", "max_tlp"],
+            "FIRST_EPSS_MAX_TLP",
+            ["first_epss", "max_tlp"],
             self.load,
             False,
             'TLP:CLEAR',

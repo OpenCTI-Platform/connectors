@@ -1,8 +1,5 @@
-import ipaddress
-
 import stix2
-import validators
-from pycti import Identity, StixCoreRelationship
+from pycti import Identity
 
 
 class ConverterToStix:
@@ -24,8 +21,8 @@ class ConverterToStix:
         :return: Author in Stix2 object
         """
         author = stix2.Identity(
-            id=Identity.generate_id(name="FIRST", identity_class="organization"),
-            name="FIRST",
+            id=Identity.generate_id(name="FIRST EPSS", identity_class="organization"),
+            name="FIRST EPSS",
             identity_class="organization",
         )
 

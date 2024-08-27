@@ -1,22 +1,22 @@
 version: '3'
 services:
-  connector-first:
-    image: opencti/connector-first:6.2.12
+  connector-first-epss:
+    image: opencti/connector-first-epss:6.2.12
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=CHANGEME
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=FIRST
+      - CONNECTOR_NAME='FIRST EPSS'
       - CONNECTOR_SCOPE=Vulnerability
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_AUTO=true
 
       # Connector's custom execution parameters
-      - CONNECTOR_FIRST_API_BASE_URL=https://api.first.org/data/v1/epss
-      - CONNECTOR_FIRST_API_KEY=
-      - CONNECTOR_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+      - FIRST_EPSS_API_BASE_URL=https://api.first.org/data/v1/epss
+      - FIRST_EPSS_API_KEY=
+      - FIRST_EPSS_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME

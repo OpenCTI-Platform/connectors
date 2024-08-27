@@ -1,6 +1,6 @@
 import traceback
 
-from internal_enrichment_connector import ConnectorFirst
+from internal_enrichment_connector import FirstEPSSConnector
 
 if __name__ == "__main__":
     """
@@ -13,7 +13,7 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        connector = ConnectorFirst()
+        connector = FirstEPSSConnector()
         connector.run()
     except Exception:
         traceback.print_exc()

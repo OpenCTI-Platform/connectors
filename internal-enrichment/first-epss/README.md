@@ -1,4 +1,4 @@
-# OpenCTI Internal Enrichment Connector FIRST
+# OpenCTI Internal Enrichment Connector FIRST EPSS
 
 <!--
 General description of the connector
@@ -13,7 +13,7 @@ General description of the connector
 
 Table of Contents
 
-- [OpenCTI Internal Enrichment Connector FIRST](#opencti-internal-enrichment-connector-first)
+- [OpenCTI Internal Enrichment Connector FIRST EPSS](#opencti-internal-enrichment-connector-first)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -70,8 +70,9 @@ Below are the parameters you'll need to set for the connector:
 
 | Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
 |--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
+| API base URL | api_base_url | FIRST_EPSS_API_BASE_URL     |         | Yes       |             |
+| API key      | api_key      | FIRST_EPSS_API_KEY          |         | No        |             |
+| Max TLP      | max_tlp      | FIRST_EPSS_MAX_TLP          |         | No        |             |
 
 ## Deployment
 
