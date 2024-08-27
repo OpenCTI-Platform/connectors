@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Any, List, Tuple, Union
 
 from stix2.patterns import HashConstant
 
@@ -210,7 +209,7 @@ class DataToSTIXAdapter:
         if not obj:
             return list()
 
-        _description = obj.get("__")
+        # _description = obj.get("__")
         _type = "malware"
         _label = "malware"
         _events = obj.get("malware_report_list", [])
@@ -641,8 +640,8 @@ class DataToSTIXAdapter:
             return list(), list(), list()
 
         _description = obj.get("__")
-        _type = "ipv4"
-        _label = "ipv4"
+        # _type = "ipv4"
+        # _label = "ipv4"
         _events = obj.get("network_list", None)
 
         _domain_stix_objects = list()
