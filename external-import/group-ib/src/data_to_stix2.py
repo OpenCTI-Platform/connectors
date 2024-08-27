@@ -11,7 +11,6 @@ Author: Pavel Reshetnikov, Integration developer, 2024
 """
 
 import ipaddress
-import json
 import re
 from datetime import datetime
 from typing import Any, List, Optional, Tuple, Union
@@ -19,13 +18,10 @@ from urllib.parse import urlparse
 
 import pycti  # type: ignore
 import stix2
-from stix2.v21 import vocab
 
 from config import Config
 
 # import urllib3
-
-
 
 
 class ConversionError(Exception):

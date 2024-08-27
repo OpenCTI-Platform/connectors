@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Any, List, Tuple, Union
 
-import stix2.v21.vocab
 from stix2.patterns import HashConstant
 
 import data_to_stix2 as ds
@@ -222,7 +221,7 @@ class DataToSTIXAdapter:
                 _date_updated = datetime.strptime(
                     json_date_obj.get("date-updated"), "%Y-%m-%dT%H:%M:%S%z"
                 )
-            except Exception as e:
+            except (Exception,):
                 self.helper.log_warning(
                     "Failed to format first_seen: {}. Using default.".format(
                         json_date_obj.get("date-updated"),
@@ -250,7 +249,7 @@ class DataToSTIXAdapter:
                                 _type=_type,
                                 malware_types=_malware_types or [],
                                 tlp_color="red",
-                                labels=[self.collection, _type],
+                                labels=[self.collection, _label],
                             )
                             malware.generate_external_references(_portal_links)
                             malware.generate_stix_objects()
@@ -320,7 +319,7 @@ class DataToSTIXAdapter:
                 _date_published = datetime.strptime(
                     json_date_obj.get("date-published"), "%Y-%m-%dT%H:%M:%S%z"
                 )
-            except Exception as e:
+            except (Exception,):
                 self.helper.log_warning(
                     "Failed to format first_seen: {}. Using default.".format(
                         json_date_obj.get("date-updated"),
@@ -446,11 +445,11 @@ class DataToSTIXAdapter:
         if not obj:
             return None, None
 
-        _description = obj.get("__")
+        # _description = obj.get("__")
         _type = "threat_actor"
         _label = "threat_actor"
         _global_label = self.ta_global_label
-        _country_type = "country"
+        # _country_type = "country"
 
         _threat_actor_name = obj.get("name")
         _threat_actor_country = obj.get("country")
@@ -470,7 +469,7 @@ class DataToSTIXAdapter:
                 _date_last_seen = datetime.strptime(
                     json_date_obj.get("last-seen"), "%Y-%m-%d"
                 )
-            except Exception as e:
+            except (Exception,):
                 self.helper.log_warning(
                     "Failed to format first_seen: {}, last_seen: {}. Using default.".format(
                         json_date_obj.get("first-seen"), json_date_obj.get("last-seen")
@@ -855,7 +854,7 @@ class DataToSTIXAdapter:
             return None
 
         _yara = obj.get("yara")
-        _yara_rule_name = obj.get("yara-rule-name")
+        # _yara_rule_name = obj.get("yara-rule-name")
         _context = obj.get("context")
         _type = "yara"
         _label = "yara"
@@ -866,7 +865,7 @@ class DataToSTIXAdapter:
                 _date_created = datetime.strptime(
                     json_date_obj.get("date-created"), "%Y-%m-%dT%H:%M:%S%z"
                 )
-            except Exception as e:
+            except (Exception,):
                 self.helper.log_warning(
                     "Failed to format first_seen: {}. Using default.".format(
                         json_date_obj.get("date-updated"),
@@ -899,7 +898,7 @@ class DataToSTIXAdapter:
             return None
 
         _suricata = obj.get("signature")
-        _suricata_sid = obj.get("sid")
+        # _suricata_sid = obj.get("sid")
         _context = obj.get("context")
         _type = "suricata"
         _label = "suricata"
@@ -910,7 +909,7 @@ class DataToSTIXAdapter:
                 _date_created = datetime.strptime(
                     json_date_obj.get("date-created"), "%Y-%m-%dT%H:%M:%S%z"
                 )
-            except Exception as e:
+            except (Exception,):
                 self.helper.log_warning(
                     "Failed to format first_seen: {}. Using default.".format(
                         json_date_obj.get("date-updated"),
