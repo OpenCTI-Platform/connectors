@@ -111,7 +111,9 @@ class TestMalpediaClient:
     def test_api_response(
         self, malpedia_client, authenticated, status_code, expected_result
     ):
-        with patch("malpedia_services.client.requests.get") as mock_get, patch("time.sleep") as mock_sleep:
+        with patch("malpedia_services.client.requests.get") as mock_get, patch(
+            "time.sleep"
+        ) as mock_sleep:
             mock_get.return_value.status_code = status_code
 
             if status_code == 403:
