@@ -3,6 +3,7 @@ from pycti import OpenCTIConnectorHelper
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
+from .utils import is_cve_format
 
 
 class FirstEPSSConnector:
@@ -155,7 +156,7 @@ class FirstEPSSConnector:
             )
             self.helper.connector_logger.info(info_msg, { "cve": vulnerability_name })
 
-            if self.entity_in_scope(vulnerability):
+            if self.entity_in_scope(vulnerability) and is_cve_format(vulnerability["name"]):
                 stix_objects = self._collect_intelligence(vulnerability_name, vulnerability_id)
 
                 if stix_objects:
