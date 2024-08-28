@@ -8,7 +8,7 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=CofenseIntel
-      - CONNECTOR_SCOPE= cofenseintel
+      - CONNECTOR_SCOPE=cofenseintel
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=info
       - COFENSEINTEL_INTERVAL=600
