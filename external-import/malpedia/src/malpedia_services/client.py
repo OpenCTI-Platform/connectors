@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI Malpedia client module."""
+import json
 import time
 from typing import Any
 from urllib.parse import urljoin
@@ -53,27 +54,39 @@ class MalpediaClient:
             return response.json()
 
         elif response.status_code == 404 and response.reason == "Not Found":
+            detail = json.loads(response.text).get("detail", None)
             self.helper.connector_logger.info(
                 "[API] The API request failed because the URL name does not exist for the identified actor :",
                 {
                     "status_code": response.status_code,
                     "reason": response.reason,
                     "url": url,
+                    "detail": detail,
                 },
             )
             self.helper.metric.inc("client_error_count")
-            return None
+            return response.json()
         elif response.status_code == 429:
+            available_in = json.loads(response.text).get("available_in", "0 seconds")
+            delay, unit = available_in.split()
+
             self.helper.connector_logger.info(
                 "[API] You have exceeded the speed or frequency limit allowed by the server, "
-                "your request will automatically retry in seconds.",
+                "your request will automatically retry in seconds. "
+                "If the value of available_in is greater than the value of retry_delay, "
+                "we use the latter as the delay time.",
                 {
                     "status_code": response.status_code,
                     "reason": response.reason,
-                    "retry_delay": retry_delay,
+                    "retry_delay_in_seconds": retry_delay,
+                    "available_in": available_in,
                 },
             )
-            time.sleep(retry_delay)
+            if retry_delay < int(delay):
+                time.sleep(int(delay))
+            else:
+                time.sleep(retry_delay)
+            return None
         elif response.status_code == 200:
             return response.json()
         else:
@@ -86,14 +99,18 @@ class MalpediaClient:
         try:
 
             max_retries = 3
-            retry_delay = 20  # in second
+            retry_delay = 65  # in second
 
             for _ in range(max_retries):
                 if self.unauthenticated:
                     data = self.api_response(url, retry_delay, False)
+                    if data is None:
+                        continue
                     return data
                 else:
                     data = self.api_response(url, retry_delay, True)
+                    if data is None:
+                        continue
                     return data
 
         except requests.exceptions.RequestException as e:
@@ -101,6 +118,12 @@ class MalpediaClient:
                 "[ERROR-API] Error in Malpedia query:", {"error": str(e)}
             )
             self.helper.metric.inc("client_error_count")
+            return None
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "[ERROR-API] Some error occurred during a query with API",
+                {"error": str(err)},
+            )
             return None
 
     def token_check(self) -> bool:
