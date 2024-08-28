@@ -73,7 +73,7 @@ class FirstEPSSConnector:
 
         self.author = self.converter_to_stix.create_author()
 
-        enrichment_response = self.api.get_entity({ "cve": cve_id })
+        enrichment_response = self.api.get_entity({"cve": cve_id})
         enrichment_infos = enrichment_response["data"]
 
         for info in enrichment_infos:
@@ -87,7 +87,7 @@ class FirstEPSSConnector:
                     "x_opencti_epss_score": epss_score,
                     "x_opencti_epss_percentile": epss_percentile,
                 },
-                vulnerability_id
+                vulnerability_id,
             )
 
             self.stix_objects_list.append(vulnerability_stix_object)
@@ -104,7 +104,9 @@ class FirstEPSSConnector:
         :return: List of sent bundles
         """
 
-        stix_objects = self._collect_intelligence(vulnerability["name"], vulnerability["id"])
+        stix_objects = self._collect_intelligence(
+            vulnerability["name"], vulnerability["id"]
+        )
 
         if stix_objects:
             stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
@@ -161,12 +163,12 @@ class FirstEPSSConnector:
 
             self.extract_and_check_markings(opencti_entity)
 
-            info_msg = (
-                "[CONNECTOR] Processing vulnerability for the following CVE identifier: "
-            )
-            self.helper.connector_logger.info(info_msg, { "cve": vulnerability["name"] })
+            info_msg = "[CONNECTOR] Processing vulnerability for the following CVE identifier: "
+            self.helper.connector_logger.info(info_msg, {"cve": vulnerability["name"]})
 
-            if self.is_entity_in_scope(vulnerability) and is_cve_format(vulnerability["name"]):
+            if self.is_entity_in_scope(vulnerability) and is_cve_format(
+                vulnerability["name"]
+            ):
                 bundles_sent = self._process_submission(vulnerability)
                 if bundles_sent:
                     info_msg = (
@@ -183,7 +185,7 @@ class FirstEPSSConnector:
                 info_msg = (
                     "[CONNECTOR] Skip the following entity as it does not concern "
                     + "the initial scope found in the connector config: "
-                    + str({ "entity_id": vulnerability["id"] })
+                    + str({"entity_id": vulnerability["id"]})
                 )
 
             self.helper.connector_logger.info(info_msg)
@@ -192,7 +194,7 @@ class FirstEPSSConnector:
 
         except Exception as err:
             return self.helper.connector_logger.error(
-                "[CONNECTOR] Unexpected Error occurred", { "error_message": str(err) }
+                "[CONNECTOR] Unexpected Error occurred", {"error_message": str(err)}
             )
 
     def run(self) -> None:

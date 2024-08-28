@@ -43,7 +43,7 @@ class ConverterToStix:
             custom_properties={
                 "x_opencti_epss_score": data["x_opencti_epss_score"],
                 "x_opencti_epss_percentile": data["x_opencti_epss_percentile"],
-            }
+            },
         )
 
         return stix_vulnerability

@@ -46,7 +46,7 @@ class ConfigConnector:
             self.load,
             False,
             None,
-            True
+            True,
         )
 
         self.max_tlp = get_config_variable(
@@ -54,6 +54,6 @@ class ConfigConnector:
             ["first_epss", "max_tlp"],
             self.load,
             False,
-            'TLP:CLEAR',
-            False
+            "TLP:CLEAR",
+            False,
         )
