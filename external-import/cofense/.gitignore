@@ -1,0 +1,6 @@
+.DS_Store
+.idea/
+src/config.yml
+**/__pycache__/*
+
+
