@@ -61,9 +61,11 @@ class FirstEPSSConnector:
         self.tlp = None
         self.stix_objects_list = []
 
-    def _collect_intelligence(self, value, vulnerability_id) -> list:
+    def _collect_intelligence(self, cve_id, vulnerability_id) -> list:
         """
         Collect intelligence from the source and convert into STIX object
+        :param cve_id: ID of the CVE to collect intelligence from
+        :param vulnerability_id: ID of the ulnerability to collect intelligence from
         :return: List of STIX objects
         """
 
@@ -71,7 +73,7 @@ class FirstEPSSConnector:
 
         self.author = self.converter_to_stix.create_author()
 
-        enrichment_response = self.api.get_entity({ "cve": value })
+        enrichment_response = self.api.get_entity({ "cve": cve_id })
         enrichment_infos = enrichment_response["data"]
 
         for info in enrichment_infos:
@@ -95,9 +97,24 @@ class FirstEPSSConnector:
 
         return self.stix_objects_list
 
-    def entity_in_scope(self, data) -> bool:
+    def _process_submission(self, vulnerability: dict) -> list:
         """
-        Security to limit playbook triggers to something other than the initial scope
+        Get enrichment data and submit STIX bundle
+        :param vulnerability: dict of vulnerability to enrich
+        :return: List of sent bundles
+        """
+
+        stix_objects = self._collect_intelligence(vulnerability["name"], vulnerability["id"])
+
+        if stix_objects:
+            stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
+            bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
+
+            return bundles_sent
+
+    def is_entity_in_scope(self, data) -> bool:
+        """
+        Security to limit playbook triggers to something other than the initial entity scope
         :param data: Dictionary of data
         :return: boolean
         """
@@ -112,7 +129,7 @@ class FirstEPSSConnector:
         Extract TLP, and we check if the variable "max_tlp" is less than
         or equal to the markings access of the entity from OpenCTI
         If this is true, we can send the data to connector for enrichment.
-        :param opencti_entity: Dict of observable from OpenCTI
+        :param opencti_entity: Dict of vulnerability from OpenCTI
         :return: Boolean
         """
 
@@ -139,33 +156,22 @@ class FirstEPSSConnector:
         """
 
         try:
-            opencti_entity = data["enrichment_entity"]
-            self.extract_and_check_markings(opencti_entity)
-
-            # To enrich the data, you can add more STIX object in stix_objects
-            self.stix_objects_list = data["stix_objects"]
-
-            # Extract information from entity data
             vulnerability = data["stix_entity"]
-            vulnerability_type = vulnerability["type"]
-            vulnerability_id = vulnerability["id"]
-            vulnerability_name = vulnerability["name"]
+            opencti_entity = data["enrichment_entity"]
+
+            self.extract_and_check_markings(opencti_entity)
 
             info_msg = (
                 "[CONNECTOR] Processing vulnerability for the following CVE identifier: "
             )
-            self.helper.connector_logger.info(info_msg, { "cve": vulnerability_name })
+            self.helper.connector_logger.info(info_msg, { "cve": vulnerability["name"] })
 
-            if self.entity_in_scope(vulnerability) and is_cve_format(vulnerability["name"]):
-                stix_objects = self._collect_intelligence(vulnerability_name, vulnerability_id)
-
-                if stix_objects:
-                    stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
-                    bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
-
+            if self.is_entity_in_scope(vulnerability) and is_cve_format(vulnerability["name"]):
+                bundles_sent = self._process_submission(vulnerability)
+                if bundles_sent:
                     info_msg = (
-                        "[API] Vulnerability CVE found and knowledge added for type: "
-                        + vulnerability_type
+                        "[API] CVE found and knowledge added for type: "
+                        + vulnerability["type"]
                         + ", sending "
                         + str(len(bundles_sent))
                         + " stix bundle(s) for worker import"
@@ -173,14 +179,16 @@ class FirstEPSSConnector:
                 else:
                     info_msg = "[CONNECTOR] No information found"
 
-                return info_msg
-
             else:
-                return self.helper.connector_logger.info(
+                info_msg = (
                     "[CONNECTOR] Skip the following entity as it does not concern "
-                    "the initial scope found in the config connector: ",
-                    { "entity_id": opencti_entity["standard_id"] },
+                    + "the initial scope found in the connector config: "
+                    + str({ "entity_id": vulnerability["id"] })
                 )
+
+            self.helper.connector_logger.info(info_msg)
+
+            return info_msg
 
         except Exception as err:
             return self.helper.connector_logger.error(
