@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Correct working directory
-cd /opt/opencti-cofense
+cd /opt/opencti-connector-cofense
 
 # Start the connector
 python3 main.py
