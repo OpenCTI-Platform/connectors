@@ -295,7 +295,7 @@ if __name__ == "__main__":
                     new_interval = interval_sec - (timestamp - last_run)
                     helper.log_info(
                         "Connector will not run, next run in: "
-                        + str(round(interval_sec / 60, 2))
+                        + str(round(new_interval / 60, 2))
                         + " minutes"
                     )
 
