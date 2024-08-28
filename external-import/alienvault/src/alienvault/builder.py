@@ -70,6 +70,15 @@ class PulseBundleBuilderConfig(NamedTuple):
     excluded_pulse_indicator_types: Set[str]
     enable_relationships: bool
     enable_attack_patterns_indicates: bool
+    x_opencti_score: int
+    x_opencti_score_ip: int
+    x_opencti_score_domain: int
+    x_opencti_score_hostname: int
+    x_opencti_score_email: int
+    x_opencti_score_file: int
+    x_opencti_score_url: int
+    x_opencti_score_mutex: int
+    x_opencti_score_cryptocurrency_wallet: int
 
 
 class PulseBundleBuilder:
@@ -136,6 +145,18 @@ class PulseBundleBuilder:
         self.excluded_pulse_indicator_types = config.excluded_pulse_indicator_types
         self.enable_relationships = config.enable_relationships
         self.enable_attack_patterns_indicates = config.enable_attack_patterns_indicates
+        self.x_opencti_score = {
+            "default": config.x_opencti_score,
+            "IPv4-Addr": config.x_opencti_score_ip,
+            "IPv6-Addr": config.x_opencti_score_ip,
+            "Domain-Name": config.x_opencti_score_domain,
+            "Hostname": config.x_opencti_score_hostname,
+            "Email-addr": config.x_opencti_score_email,
+            "StixFile": config.x_opencti_score_file,
+            "Url": config.x_opencti_score_url,
+            "Mutex": config.x_opencti_score_mutex,
+            "Cryptocurrency-Wallet": config.x_opencti_score_cryptocurrency_wallet
+        }
 
     def _no_relationships(self) -> bool:
         return not self.enable_relationships
@@ -390,7 +411,7 @@ class PulseBundleBuilder:
                     pattern_type,
                     pulse_indicator.created,
                     labels,
-                    main_observable_type=indicator_pattern.main_observable_type,
+                    main_observable_type=indicator_pattern.main_observable_type
                 )
 
                 if observable is not None:
@@ -456,6 +477,11 @@ class PulseBundleBuilder:
             labels=labels,
             confidence=self.confidence_level,
             object_markings=self.object_markings,
+            x_opencti_score=(
+                self.x_opencti_score.get(main_observable_type)
+                or
+                self.x_opencti_score.get("default")
+            ),
             x_opencti_main_observable_type=main_observable_type,
         )
 

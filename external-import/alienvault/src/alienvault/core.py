@@ -46,6 +46,15 @@ class AlienVault:
     )
     _CONFIG_FILTER_INDICATORS = f"{_CONFIG_NAMESPACE}.filter_indicators"
     _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
+    _CONFIG_DEFAULT_X_OPENCTI_SCORE = f"{_CONFIG_NAMESPACE}.default_x_opencti_score"
+    _CONFIG_X_OPENCTI_SCORE_IP = f"{_CONFIG_NAMESPACE}.x_opencti_score_ip"
+    _CONFIG_X_OPENCTI_SCORE_DOMAIN = f"{_CONFIG_NAMESPACE}.x_opencti_score_domain"
+    _CONFIG_X_OPENCTI_SCORE_HOSTNAME = f"{_CONFIG_NAMESPACE}.x_opencti_score_hostname"
+    _CONFIG_X_OPENCTI_SCORE_EMAIL = f"{_CONFIG_NAMESPACE}.x_opencti_score_email"
+    _CONFIG_X_OPENCTI_SCORE_FILE = f"{_CONFIG_NAMESPACE}.x_opencti_score_file"
+    _CONFIG_X_OPENCTI_SCORE_URL = f"{_CONFIG_NAMESPACE}.x_opencti_score_url"
+    _CONFIG_X_OPENCTI_SCORE_MUTEX = f"{_CONFIG_NAMESPACE}.x_opencti_score_mutex"
+    _CONFIG_X_OPENCTI_SCORE_CRYPTOCURRENCY_WALLET = f"{_CONFIG_NAMESPACE}.x_opencti_score_cryptocurrency_wallet"
 
     _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
 
@@ -62,6 +71,7 @@ class AlienVault:
     _DEFAULT_REPORT_TYPE = "threat-report"
     _DEFAULT_ENABLE_RELATIONSHIPS = True
     _DEFAULT_ENABLE_ATTACK_PATTERNS_INDICATES = True
+    _DEFAULT_DEFAULT_X_OPENCTI_SCORE = 50
 
     _CONNECTOR_RUN_INTERVAL_SEC = 60
 
@@ -153,6 +163,35 @@ class AlienVault:
             config, self._CONFIG_INTERVAL_SEC, is_number=True
         )
 
+        # Set x_opencti_score(s)
+        default_x_opencti_score = self._get_configuration(
+            config, self._CONFIG_DEFAULT_X_OPENCTI_SCORE, is_number=True
+        ) or self._DEFAULT_DEFAULT_X_OPENCTI_SCORE
+        x_opencti_score_ip = self._get_configuration(
+            config, self._CONFIG_X_OPENCTI_SCORE_IP, is_number=True
+        ) or default_x_opencti_score
+        x_opencti_score_domain = self._get_configuration(
+            config, self._CONFIG_X_OPENCTI_SCORE_DOMAIN, is_number=True
+        ) or default_x_opencti_score
+        x_opencti_score_hostname = self._get_configuration(
+            config, self._CONFIG_X_OPENCTI_SCORE_HOSTNAME, is_number=True
+        ) or default_x_opencti_score
+        x_opencti_score_email = self._get_configuration(
+            config, self._CONFIG_X_OPENCTI_SCORE_EMAIL, is_number=True
+        ) or default_x_opencti_score
+        x_opencti_score_file = self._get_configuration(
+            config, self._CONFIG_X_OPENCTI_SCORE_FILE, is_number=True
+        ) or default_x_opencti_score
+        x_opencti_score_url = self._get_configuration(
+            config, self._CONFIG_X_OPENCTI_SCORE_URL, is_number=True
+        ) or default_x_opencti_score
+        x_opencti_score_mutex = self._get_configuration(
+            config, self._CONFIG_X_OPENCTI_SCORE_MUTEX, is_number=True
+        ) or default_x_opencti_score
+        x_opencti_score_cryptocurrency_wallet = self._get_configuration(
+            config, self._CONFIG_X_OPENCTI_SCORE_CRYPTOCURRENCY_WALLET, is_number=True
+        ) or default_x_opencti_score
+
         update_existing_data = bool(
             self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
         )
@@ -184,6 +223,15 @@ class AlienVault:
             filter_indicators=filter_indicators,
             enable_relationships=enable_relationships,
             enable_attack_patterns_indicates=enable_attack_patterns_indicates,
+            default_x_opencti_score=default_x_opencti_score,
+            x_opencti_score_ip=x_opencti_score_ip,
+            x_opencti_score_domain=x_opencti_score_domain,
+            x_opencti_score_hostname=x_opencti_score_hostname,
+            x_opencti_score_email=x_opencti_score_email,
+            x_opencti_score_file=x_opencti_score_file,
+            x_opencti_score_url=x_opencti_score_url,
+            x_opencti_score_mutex=x_opencti_score_mutex,
+            x_opencti_score_cryptocurrency_wallet=x_opencti_score_cryptocurrency_wallet
         )
 
         self.pulse_importer = PulseImporter(pulse_importer_config)

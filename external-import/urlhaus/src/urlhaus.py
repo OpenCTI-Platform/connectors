@@ -45,6 +45,14 @@ class URLhaus:
             False,
             True,
         )
+        self.default_x_opencti_score = get_config_variable(
+            "URLHAUS_DEFAULT_X_OPENCTI_SCORE",
+            ["urlhaus", "default_x_opencti_score"],
+            config=config,
+            isNumber=True,
+            default=80,
+            required=False
+        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -175,7 +183,7 @@ class URLhaus:
                             external_references=[external_reference],
                             object_marking_refs=[stix2.TLP_WHITE],
                             custom_properties={
-                                "x_opencti_score": 80,
+                                "x_opencti_score": self.default_x_opencti_score,
                                 "x_opencti_main_observable_type": "Url",
                             },
                         )
@@ -189,7 +197,7 @@ class URLhaus:
                                 + row[8]
                                 + " - Status: "
                                 + row[3],
-                                "x_opencti_score": 80,
+                                "x_opencti_score": self.default_x_opencti_score,
                                 "labels": [x for x in row[6].split(",") if x],
                                 "created_by_ref": self.identity["standard_id"],
                                 "external_references": [external_reference],

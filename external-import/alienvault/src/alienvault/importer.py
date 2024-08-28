@@ -32,6 +32,15 @@ class PulseImporterConfig(NamedTuple):
     filter_indicators: bool
     enable_relationships: bool
     enable_attack_patterns_indicates: bool
+    default_x_opencti_score: int
+    x_opencti_score_ip: int
+    x_opencti_score_domain: int
+    x_opencti_score_hostname: int
+    x_opencti_score_email: int
+    x_opencti_score_file: int
+    x_opencti_score_url: int
+    x_opencti_score_mutex: int
+    x_opencti_score_cryptocurrency_wallet: int
 
 
 class PulseImporter:
@@ -66,7 +75,15 @@ class PulseImporter:
         self.excluded_pulse_indicator_types = config.excluded_pulse_indicator_types
         self.enable_relationships = config.enable_relationships
         self.enable_attack_patterns_indicates = config.enable_attack_patterns_indicates
-
+        self.default_x_opencti_score = config.default_x_opencti_score
+        self.x_opencti_score_ip = config.x_opencti_score_ip
+        self.x_opencti_score_domain = config.x_opencti_score_domain
+        self.x_opencti_score_hostname = config.x_opencti_score_hostname
+        self.x_opencti_score_email = config.x_opencti_score_email
+        self.x_opencti_score_file = config.x_opencti_score_file
+        self.x_opencti_score_url = config.x_opencti_score_url
+        self.x_opencti_score_mutex = config.x_opencti_score_mutex
+        self.x_opencti_score_cryptocurrency_wallet = config.x_opencti_score_cryptocurrency_wallet
         self.malware_guess_cache: Dict[str, str] = {}
         self.guess_cve_pattern = re.compile(self._GUESS_CVE_PATTERN, re.IGNORECASE)
         self.work_id: Optional[str] = None
@@ -230,6 +247,15 @@ class PulseImporter:
             excluded_pulse_indicator_types=self.excluded_pulse_indicator_types,
             enable_relationships=self.enable_relationships,
             enable_attack_patterns_indicates=self.enable_attack_patterns_indicates,
+            x_opencti_score=self.default_x_opencti_score,
+            x_opencti_score_ip=self.x_opencti_score_ip,
+            x_opencti_score_domain=self.x_opencti_score_domain,
+            x_opencti_score_hostname=self.x_opencti_score_hostname,
+            x_opencti_score_email=self.x_opencti_score_email,
+            x_opencti_score_file=self.x_opencti_score_file,
+            x_opencti_score_url=self.x_opencti_score_url,
+            x_opencti_score_mutex=self.x_opencti_score_mutex,
+            x_opencti_score_cryptocurrency_wallet=self.x_opencti_score_cryptocurrency_wallet,
         )
 
         bundle_builder = PulseBundleBuilder(config)
