@@ -4,12 +4,11 @@ import time
 from datetime import datetime
 
 import stix2
+from config import Config
 from cyberintegrations import TIAdapter
 from cyberintegrations.decorators import cache_data
 from cyberintegrations.utils import FileHandler, ProxyConfigurator
 from pycti import OpenCTIConnectorHelper
-
-from config import Config
 
 
 @cache_data(
