@@ -12,5 +12,4 @@ connector:
 
 first_epss:
   api_base_url: 'ChangeMe'
-  api_key: 'ChangeMe'
   max_tlp: "TLP:AMBER" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED

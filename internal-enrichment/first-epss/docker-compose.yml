@@ -15,7 +15,6 @@ services:
 
       # Connector's custom execution parameters
       - FIRST_EPSS_API_BASE_URL=https://api.first.org/data/v1/epss
-      - FIRST_EPSS_API_KEY=
       - FIRST_EPSS_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
 
       # Add proxy parameters below if needed

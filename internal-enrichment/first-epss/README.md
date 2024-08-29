@@ -71,7 +71,6 @@ Below are the parameters you'll need to set for the connector:
 | Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
 |--------------|--------------|-----------------------------|---------|-----------|-------------|
 | API base URL | api_base_url | FIRST_EPSS_API_BASE_URL     |         | Yes       |             |
-| API key      | api_key      | FIRST_EPSS_API_KEY          |         | No        |             |
 | Max TLP      | max_tlp      | FIRST_EPSS_MAX_TLP          |         | No        |             |
 
 ## Deployment
