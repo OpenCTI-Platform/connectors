@@ -510,10 +510,10 @@ class MWDB:
             try:
                 # Check if "mal_tag" and "extra" exist and process extra tags
                 if (
-                        "mal_tag" in virus and
-                        "extra" in virus["mal_tag"] and
-                        len(virus["mal_tag"]["extra"]) > 0 and
-                        str(self.create_observables).capitalize() == "True"
+                    "mal_tag" in virus
+                    and "extra" in virus["mal_tag"]
+                    and len(virus["mal_tag"]["extra"]) > 0
+                    and str(self.create_observables).capitalize() == "True"
                 ):
                     extra_tag = self.process_extratag(virus["mal_tag"]["extra"], virus)
                     if extra_tag:
@@ -533,10 +533,14 @@ class MWDB:
                 )
             except KeyError as e:
                 print(f"KeyError encountered: {e}. Skipping this virus entry.")
-                self.helper.log_error(f"KeyError encountered: {e}. Skipping this virus entry.")
+                self.helper.log_error(
+                    f"KeyError encountered: {e}. Skipping this virus entry."
+                )
             except Exception as e:
                 print(f"An unexpected error occurred: {e}. Skipping this virus entry.")
-                self.helper.log_error(f"KeyError encountered: {e}. Skipping this virus entry.")
+                self.helper.log_error(
+                    f"KeyError encountered: {e}. Skipping this virus entry."
+                )
 
     def start_up(self):
         while True:
