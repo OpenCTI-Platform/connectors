@@ -11,10 +11,10 @@ services:
       - CONNECTOR_SCOPE=greynoisefeed
       - CONNECTOR_LOG_LEVEL=info
       - GREYNOISE_API_KEY=ChangeMe
-      - GREYNOISE_SOURCE="feed"
       - GREYNOISE_FEED_TYPE="benign"
-      - GREYNOISE_TAG_SLUGS="tag-slug-1,tag-slug-2"
       - GREYNOISE_INDICATOR_SCORE=50
       - GREYNOISE_LIMIT=10000
       - GREYNOISE_INTERVAL=2 #Day
+      - GREYNOISE_NAME="GreyNoise"
+      - GREYNOISE_DESCRIPTION="GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet."
     restart: always
