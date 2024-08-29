@@ -507,23 +507,36 @@ class MWDB:
                 if malware.config and self.import_config:
                     bundle_objects.extend(self.process_config(malware.config, virus))
 
-            if (
-                len(virus["mal_tag"]["extra"]) > 0
-                and str(self.create_observables).capitalize() == "True"
-            ):
-                extra_tag = self.process_extratag(virus["mal_tag"]["extra"], virus)
-                if extra_tag:
-                    for relationextra in extra_tag:
-                        if relationextra:
-                            bundle_objects.append(relationextra)
+            try:
+                # Check if "mal_tag" and "extra" exist and process extra tags
+                if (
+                        "mal_tag" in virus and
+                        "extra" in virus["mal_tag"] and
+                        len(virus["mal_tag"]["extra"]) > 0 and
+                        str(self.create_observables).capitalize() == "True"
+                ):
+                    extra_tag = self.process_extratag(virus["mal_tag"]["extra"], virus)
+                    if extra_tag:
+                        for relationextra in extra_tag:
+                            if relationextra:
+                                bundle_objects.append(relationextra)
 
-            updateopencti = str(self.update_existing_data).capitalize() == "True"
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
-            self.helper.send_stix2_bundle(
-                bundle,
-                update=updateopencti,
-                work_id=self.workid,
-            )
+                # Determine whether to update existing data
+                updateopencti = str(self.update_existing_data).capitalize() == "True"
+
+                # Create and send the STIX2 bundle
+                bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+                self.helper.send_stix2_bundle(
+                    bundle,
+                    update=updateopencti,
+                    work_id=self.workid,
+                )
+            except KeyError as e:
+                print(f"KeyError encountered: {e}. Skipping this virus entry.")
+                self.helper.log_error(f"KeyError encountered: {e}. Skipping this virus entry.")
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}. Skipping this virus entry.")
+                self.helper.log_error(f"KeyError encountered: {e}. Skipping this virus entry.")
 
     def start_up(self):
         while True:
