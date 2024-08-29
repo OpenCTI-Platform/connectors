@@ -3,7 +3,7 @@ services:
   connector:
     build: .
     container_name: ${CONTAINER_NAME}
-    image: opencti/g-ti-connector:6.2.0
+    image: opencti/connector-group-ib:6.2.0
     environment:
       # Connector's definition parameters:
       - CONNECTOR_NAME=${CONNECTOR_NAME}
