@@ -17,6 +17,4 @@ WORKDIR /opt/connector/src
 RUN pip3 install /opt/connector/src/lib/cyberintegrations-0.6.6-py3-none-any.whl
 
 # Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["python3", "main.py"]
