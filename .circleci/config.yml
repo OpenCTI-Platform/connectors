@@ -346,6 +346,10 @@ jobs:
           name: Build Docker image opencti/connector-cofense
           command: docker build -t opencti/connector-cofense:latest . && docker tag opencti/connector-cofense:latest opencti/connector-cofense:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/group-ib
+          name: Build Docker image opencti/connector-group-ib
+          command: docker build -t opencti/connector-group-ib:latest . && docker tag opencti/connector-group-ib:latest opencti/connector-group-ib:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -489,6 +493,8 @@ jobs:
             docker push opencti/connector-google-safebrowsing:${CIRCLE_TAG}
             docker push opencti/connector-cofense:latest
             docker push opencti/connector-cofense:${CIRCLE_TAG}
+            docker push opencti/connector-group-ib:latest
+            docker push opencti/connector-group-ib:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1236,6 +1242,10 @@ jobs:
           name: Build Docker image opencti/connector-cofense
           command: docker build -t opencti/connector-cofense:rolling .
       - run:
+          working_directory: ~/opencti/external-import/group-ib
+          name: Build Docker image opencti/connector-group-ib
+          command: docker build -t opencti/connector-group-ib:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1307,6 +1317,7 @@ jobs:
             docker push opencti/connector-fortinet-ti:rolling
             docker push opencti/connector-google-safebrowsing:rolling
             docker push opencti/connector-cofense:rolling
+            docker push opencti/connector-group-ib:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
