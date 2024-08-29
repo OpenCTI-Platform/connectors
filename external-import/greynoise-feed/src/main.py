@@ -390,9 +390,11 @@ class GreyNoiseFeed:
                                     name=malware["name"],
                                     description=malware["description"],
                                     is_family=False,
-                                    malware_types=malware["type"]
-                                    if malware["type"] == "worm"
-                                    else None,
+                                    malware_types=(
+                                        malware["type"]
+                                        if malware["type"] == "worm"
+                                        else None
+                                    ),
                                     created=first_seen,
                                 )
                                 bundle_objects.append(stix_malware)
