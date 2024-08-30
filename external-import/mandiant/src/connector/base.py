@@ -541,13 +541,6 @@ class Mandiant:
             start_date = Timestamp.from_iso(state[collection][STATE_START])
             start_short_format = start_date.short_format
 
-            # Fix problem when end state is in the future
-            if (
-                Timestamp.from_iso(state[collection][STATE_END]).value
-                > Timestamp.now().value
-            ):
-                state[collection][STATE_END] = None
-
             # If no end date, put the proper period using delta
             if state[collection][STATE_END] is None:
                 next_end = start_date.delta(days=self.mandiant_import_period)
@@ -556,6 +549,12 @@ class Mandiant:
                     next_end = Timestamp.now()
                 end_short_format = next_end.short_format
             else:
+                # Fix problem when end state is in the future
+                if (
+                        Timestamp.from_iso(state[collection][STATE_END]).value
+                        > Timestamp.now().value
+                ):
+                    state[collection][STATE_END] = None
                 end_short_format = Timestamp.from_iso(
                     state[collection][STATE_END]
                 ).short_format
@@ -686,13 +685,6 @@ class Mandiant:
 
         start = Timestamp.from_iso(state[collection][STATE_START])
 
-        # Fix problem when end state is in the future
-        if (
-            Timestamp.from_iso(state[collection][STATE_END]).value
-            > Timestamp.now().value
-        ):
-            state[collection][STATE_END] = None
-
         # If no end date, put the proper period using delta
         if state[collection][STATE_END] is None:
             end = start.delta(days=self.mandiant_import_period)
@@ -700,6 +692,12 @@ class Mandiant:
             if end.value > Timestamp.now().value:
                 end = Timestamp.now()
         else:
+            # Fix problem when end state is in the future
+            if (
+                    Timestamp.from_iso(state[collection][STATE_END]).value
+                    > Timestamp.now().value
+            ):
+                state[collection][STATE_END] = None
             end = Timestamp.from_iso(state[collection][STATE_END])
 
         offset = state[collection][STATE_OFFSET]
