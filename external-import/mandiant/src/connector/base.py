@@ -538,14 +538,24 @@ class Mandiant:
             # API types related to start_epoch
             collection_with_start_epoch = ["reports", "vulnerabilities", "indicators"]
             # Start and End, Timestamp short format
-            start_short_format = Timestamp.from_iso(
-                state[collection][STATE_START]
-            ).short_format
-            end_short_format = (
-                Timestamp.from_iso(state[collection][STATE_END]).short_format
-                if state[collection][STATE_END] is not None
-                else Timestamp.now().short_format
-            )
+            start_date = Timestamp.from_iso(state[collection][STATE_START])
+            start_short_format = start_date.short_format
+
+            # Fix problem when end state is in the future
+            if Timestamp.from_iso(state[collection][STATE_END]) > Timestamp.now().value:
+                state[collection][STATE_END] = None
+
+            # If no end date, put the proper period using delta
+            if state[collection][STATE_END] is None:
+                next_end = start_date.delta(days=self.mandiant_import_period)
+                # If delta is in the future, limit to today
+                if next_end.value > Timestamp.now().value:
+                    next_end = Timestamp.now()
+                end_short_format = next_end.short_format
+            else:
+                end_short_format = Timestamp.from_iso(
+                    state[collection][STATE_END]
+                ).short_format
 
             # Additional information for the "work" depending on the collection (offset, epoch)
             start_work = (
@@ -772,9 +782,7 @@ class Mandiant:
                 next_end = None
             state[collection][STATE_START] = next_start.iso_format
             state[collection][STATE_END] = (
-                next_end.iso_format
-                if next_end is not None
-                else next_start.delta(days=self.mandiant_import_period).iso_format
+                next_end.iso_format if next_end is not None else None
             )
         state[collection][STATE_LAST_RUN] = before_process_now.iso_format
         self.helper.set_state(state)
