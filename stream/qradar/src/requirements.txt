@@ -1,2 +1,2 @@
-pycti==6.2.17
+pycti==6.2.18
 stix-shifter==7.0.12
