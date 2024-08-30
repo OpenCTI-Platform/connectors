@@ -23,7 +23,7 @@ def process(connector, report):
                     "report_title": report_title,
                 },
             )
-            return
+            return None
         connector.helper.connector_logger.info(
             "Processing report",
             {

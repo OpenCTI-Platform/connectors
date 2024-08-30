@@ -727,30 +727,29 @@ class Mandiant:
         if "reports" in collection:
             for item in data:
                 report_bundle = module.process(self, item)
-                bundles_objects = report_bundle["objects"]
-
-                if len(bundles_objects) > 0:
-                    uniq_bundles_objects = list(
-                        {obj["id"]: obj for obj in bundles_objects}.values()
-                    )
-                    # Transform objects to dicts
-                    uniq_bundles_objects = [
-                        json.loads(obj.serialize()) for obj in uniq_bundles_objects
-                    ]
-                    if self.mandiant_remove_statement_marking:
+                if report_bundle:
+                    bundles_objects = report_bundle["objects"]
+                    if len(bundles_objects) > 0:
                         uniq_bundles_objects = list(
-                            filter(
-                                lambda stix: stix["id"] not in STATEMENT_MARKINGS,
-                                uniq_bundles_objects,
-                            )
+                            {obj["id"]: obj for obj in bundles_objects}.values()
                         )
-                        self.remove_statement_marking(uniq_bundles_objects)
-
-                    bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
-                    self.helper.send_stix2_bundle(
-                        bundle,
-                        work_id=work_id,
-                    )
+                        # Transform objects to dicts
+                        uniq_bundles_objects = [
+                            json.loads(obj.serialize()) for obj in uniq_bundles_objects
+                        ]
+                        if self.mandiant_remove_statement_marking:
+                            uniq_bundles_objects = list(
+                                filter(
+                                    lambda stix: stix["id"] not in STATEMENT_MARKINGS,
+                                    uniq_bundles_objects,
+                                )
+                            )
+                            self.remove_statement_marking(uniq_bundles_objects)
+                        bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
+                        self.helper.send_stix2_bundle(
+                            bundle,
+                            work_id=work_id,
+                        )
         else:
             for item in data:
                 bundle = module.process(self, item)
