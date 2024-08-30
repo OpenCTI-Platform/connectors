@@ -551,8 +551,8 @@ class Mandiant:
             else:
                 # Fix problem when end state is in the future
                 if (
-                        Timestamp.from_iso(state[collection][STATE_END]).value
-                        > Timestamp.now().value
+                    Timestamp.from_iso(state[collection][STATE_END]).value
+                    > Timestamp.now().value
                 ):
                     state[collection][STATE_END] = None
                 end_short_format = Timestamp.from_iso(
@@ -694,8 +694,8 @@ class Mandiant:
         else:
             # Fix problem when end state is in the future
             if (
-                    Timestamp.from_iso(state[collection][STATE_END]).value
-                    > Timestamp.now().value
+                Timestamp.from_iso(state[collection][STATE_END]).value
+                > Timestamp.now().value
             ):
                 state[collection][STATE_END] = None
             end = Timestamp.from_iso(state[collection][STATE_END])
