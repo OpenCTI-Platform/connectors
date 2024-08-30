@@ -542,7 +542,10 @@ class Mandiant:
             start_short_format = start_date.short_format
 
             # Fix problem when end state is in the future
-            if Timestamp.from_iso(state[collection][STATE_END]).value > Timestamp.now().value:
+            if (
+                Timestamp.from_iso(state[collection][STATE_END]).value
+                > Timestamp.now().value
+            ):
                 state[collection][STATE_END] = None
 
             # If no end date, put the proper period using delta
@@ -680,12 +683,25 @@ class Mandiant:
         will also be updated to before_process_now to be used as a marker.
         """
         before_process_now = Timestamp.now()
+
         start = Timestamp.from_iso(state[collection][STATE_START])
-        end = (
-            Timestamp.from_iso(state[collection][STATE_END])
-            if state[collection][STATE_END] is not None
-            else None
-        )
+
+        # Fix problem when end state is in the future
+        if (
+            Timestamp.from_iso(state[collection][STATE_END]).value
+            > Timestamp.now().value
+        ):
+            state[collection][STATE_END] = None
+
+        # If no end date, put the proper period using delta
+        if state[collection][STATE_END] is None:
+            end = start.delta(days=self.mandiant_import_period)
+            # If delta is in the future, limit to today
+            if end.value > Timestamp.now().value:
+                end = Timestamp.now()
+        else:
+            end = Timestamp.from_iso(state[collection][STATE_END])
+
         offset = state[collection][STATE_OFFSET]
 
         parameters = {}
