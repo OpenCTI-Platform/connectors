@@ -542,7 +542,7 @@ class Mandiant:
             start_short_format = start_date.short_format
 
             # Fix problem when end state is in the future
-            if Timestamp.from_iso(state[collection][STATE_END]) > Timestamp.now().value:
+            if Timestamp.from_iso(state[collection][STATE_END]).value > Timestamp.now().value:
                 state[collection][STATE_END] = None
 
             # If no end date, put the proper period using delta
