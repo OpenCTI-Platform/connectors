@@ -1,5 +1,5 @@
 import stix2
-from pycti import Identity
+from pycti import Identity, Vulnerability
 
 
 class ConverterToStix:
@@ -28,16 +28,15 @@ class ConverterToStix:
 
         return author
 
-    def create_vulnerability(self, data: dict, vulnerability_id: str = None) -> dict:
+    def create_vulnerability(self, data: dict) -> dict:
         """
         Create observable according to value given
         :param data: Dictionary of vulnerability properties
-        :param vulnerability_id: Value of observable ID in string
         :return: Vulnerability STIX2 object
         """
 
         stix_vulnerability = stix2.Vulnerability(
-            id=vulnerability_id,
+            id=Vulnerability.generate_id(data["name"]),
             name=data["name"],
             created_by_ref=self.author["id"],
             custom_properties={
