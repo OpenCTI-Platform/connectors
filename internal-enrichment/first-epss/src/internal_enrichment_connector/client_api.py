@@ -51,4 +51,5 @@ class ConnectorClient:
             return response.json()
 
         except Exception as err:
-            self.helper.connector_logger.error(err)
+            error_msg = "[API] Error while parsing data: "
+            self.helper.connector_logger.error(error_msg, {"error": {str(err)}})
