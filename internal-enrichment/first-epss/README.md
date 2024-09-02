@@ -55,23 +55,23 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter       | config.yml      | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|-----------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id              | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
-| Connector Name  | name            | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope           | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Connector Auto  | connector_auto	 | `CONNECTOR_AUTO`            | True            | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
+| Parameter           | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
+|---------------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
+| Connector ID        | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
+| Connector Type      | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
+| Connector Name      | name       | `CONNECTOR_NAME`            | /               | Yes       | Name of the connector.                                                                   |
+| Connector Scope     | scope      | `CONNECTOR_SCOPE`           | `vulnerability` | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Connector Log Level | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Connector Auto      | auto 	     | `CONNECTOR_AUTO`            | False           | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
 
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url | FIRST_EPSS_API_BASE_URL     |         | Yes       |             |
-| Max TLP      | max_tlp      | FIRST_EPSS_MAX_TLP          |         | No        |             |
+| Parameter    | config.yml   | Docker environment variable | Default                              | Mandatory | Description |
+|--------------|--------------|-----------------------------|--------------------------------------|-----------|-------------|
+| API base URL | api_base_url | FIRST_EPSS_API_BASE_URL     | `https://api.first.org/data/v1/epss` | No        |             |
+| Max TLP      | max_tlp      | FIRST_EPSS_MAX_TLP          | /                                    | No        |             |
 
 ## Deployment
 
