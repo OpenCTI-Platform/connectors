@@ -11,5 +11,5 @@ connector:
   auto: false # Enable/disable auto-enrichment of observables
 
 first_epss:
-  api_base_url: 'ChangeMe'
+  api_base_url: 'https://api.first.org/data/v1/epss'
   max_tlp: "TLP:AMBER" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED

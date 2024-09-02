@@ -9,9 +9,9 @@ services:
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME='FIRST EPSS'
-      - CONNECTOR_SCOPE=Vulnerability
+      - CONNECTOR_SCOPE=vulnerability
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_AUTO=true
+      - CONNECTOR_AUTO=false
 
       # Connector's custom execution parameters
       - FIRST_EPSS_API_BASE_URL=https://api.first.org/data/v1/epss
