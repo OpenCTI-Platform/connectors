@@ -45,7 +45,7 @@ class ConfigConnector:
             ["first_epss", "api_base_url"],
             self.load,
             False,
-            'https://api.first.org/data/v1/epss',
+            "https://api.first.org/data/v1/epss",
             True,
         )
 

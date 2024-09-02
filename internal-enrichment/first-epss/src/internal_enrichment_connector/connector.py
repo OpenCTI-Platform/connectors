@@ -109,7 +109,9 @@ class FirstEPSSConnector:
         if stix_objects:
             self.stix_objects_list.extend(stix_objects)
 
-            stix_objects_bundle = self.helper.stix2_create_bundle(self.stix_objects_list)
+            stix_objects_bundle = self.helper.stix2_create_bundle(
+                self.stix_objects_list
+            )
             bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
 
             return bundles_sent
