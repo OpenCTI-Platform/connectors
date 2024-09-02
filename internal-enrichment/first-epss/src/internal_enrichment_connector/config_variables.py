@@ -45,7 +45,7 @@ class ConfigConnector:
             ["first_epss", "api_base_url"],
             self.load,
             False,
-            None,
+            'https://api.first.org/data/v1/epss',
             True,
         )
 
@@ -54,6 +54,6 @@ class ConfigConnector:
             ["first_epss", "max_tlp"],
             self.load,
             False,
-            "TLP:CLEAR",
+            None,
             False,
         )
