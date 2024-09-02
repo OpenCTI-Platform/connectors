@@ -61,11 +61,10 @@ class FirstEPSSConnector:
         self.tlp = None
         self.stix_objects_list = []
 
-    def _collect_intelligence(self, cve_id, vulnerability_id) -> list:
+    def _collect_intelligence(self, cve_name) -> list:
         """
         Collect intelligence from the source and convert into STIX object
-        :param cve_id: ID of the CVE to collect intelligence from
-        :param vulnerability_id: ID of the ulnerability to collect intelligence from
+        :param cve_name: CVE to collect intelligence from
         :return: List of STIX objects
         """
 
@@ -73,8 +72,10 @@ class FirstEPSSConnector:
 
         self.author = self.converter_to_stix.create_author()
 
-        enrichment_response = self.api.get_entity({"cve": cve_id})
+        enrichment_response = self.api.get_entity({"cve": cve_name})
         enrichment_infos = enrichment_response["data"]
+
+        stix_objects = []
 
         for info in enrichment_infos:
             cve_name = info["cve"]
@@ -87,15 +88,14 @@ class FirstEPSSConnector:
                     "x_opencti_epss_score": epss_score,
                     "x_opencti_epss_percentile": epss_percentile,
                 },
-                vulnerability_id,
             )
 
-            self.stix_objects_list.append(vulnerability_stix_object)
+            stix_objects.append(vulnerability_stix_object)
 
-        if self.stix_objects_list:
-            self.stix_objects_list.append(self.author)
+        if stix_objects:
+            stix_objects.append(self.author)
 
-        return self.stix_objects_list
+        return stix_objects
 
     def _process_submission(self, vulnerability: dict) -> list:
         """
@@ -104,12 +104,12 @@ class FirstEPSSConnector:
         :return: List of sent bundles
         """
 
-        stix_objects = self._collect_intelligence(
-            vulnerability["name"], vulnerability["id"]
-        )
+        stix_objects = self._collect_intelligence(vulnerability["name"])
 
         if stix_objects:
-            stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
+            self.stix_objects_list.extend(stix_objects)
+
+            stix_objects_bundle = self.helper.stix2_create_bundle(self.stix_objects_list)
             bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
 
             return bundles_sent
@@ -158,22 +158,24 @@ class FirstEPSSConnector:
         """
 
         try:
-            vulnerability = data["stix_entity"]
+            self.stix_objects_list = data["stix_objects"]
+
+            stix_entity = data["stix_entity"]
             opencti_entity = data["enrichment_entity"]
 
             self.extract_and_check_markings(opencti_entity)
 
             info_msg = "[CONNECTOR] Processing vulnerability for the following CVE identifier: "
-            self.helper.connector_logger.info(info_msg, {"cve": vulnerability["name"]})
+            self.helper.connector_logger.info(info_msg, {"cve": stix_entity["name"]})
 
-            if self.is_entity_in_scope(vulnerability) and is_cve_format(
-                vulnerability["name"]
+            if self.is_entity_in_scope(stix_entity) and is_cve_format(
+                stix_entity["name"]
             ):
-                bundles_sent = self._process_submission(vulnerability)
+                bundles_sent = self._process_submission(stix_entity)
                 if bundles_sent:
                     info_msg = (
                         "[API] CVE found and knowledge added for type: "
-                        + vulnerability["type"]
+                        + stix_entity["type"]
                         + ", sending "
                         + str(len(bundles_sent))
                         + " stix bundle(s) for worker import"
@@ -185,7 +187,7 @@ class FirstEPSSConnector:
                 info_msg = (
                     "[CONNECTOR] Skip the following entity as it does not concern "
                     + "the initial scope found in the connector config: "
-                    + str({"entity_id": vulnerability["id"]})
+                    + str({"entity_id": stix_entity["id"]})
                 )
 
             self.helper.connector_logger.info(info_msg)
