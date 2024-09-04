@@ -354,7 +354,7 @@ class ShadowTrackrConnector:
 
     def _valid_ip(self, ip):
         try:
-            _ip = ipaddress.ip_address(ip)
+            ipaddress.ip_address(ip)
             return True
         except:
             return False
