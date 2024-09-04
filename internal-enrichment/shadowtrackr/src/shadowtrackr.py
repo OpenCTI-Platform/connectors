@@ -5,11 +5,6 @@ from datetime import datetime, timedelta
 from typing import Dict
 import requests
 import yaml
-
-#krak: remove this for prod
-import urllib3
-urllib3.disable_warnings()
-
 from pycti import (
     STIX_EXT_OCTI_SCO,
     OpenCTIConnectorHelper,
