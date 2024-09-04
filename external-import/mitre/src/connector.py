@@ -22,6 +22,8 @@ STATEMENT_MARKINGS = [
     "marking-definition--17d82bb2-eeeb-4898-bda5-3ddbcd2b799d",
 ]
 
+EXCLUDE_ENTITIES = ["x-mitre-asset"]
+
 
 def time_from_unixtime(timestamp):
     if not timestamp:
@@ -104,6 +106,77 @@ class Mitre:
         self.mitre_urls = list(filter(lambda url: url is not False, urls))
         self.interval = days_to_seconds(self.mitre_interval)
 
+    @staticmethod
+    def stix_objects_filtered(stix_objects: list) -> list:
+        """
+        Filters out excluded entities from the stix_objects list and refines the x_mitre_contents
+        within x-mitre-collection objects.
+
+        - First, it excludes any object whose type is in EXCLUDE_ENTITIES or any relationship object
+          where the source_ref or target_ref matches an entity in EXCLUDE_ENTITIES.
+        - It then collects the IDs of these excluded objects.
+        - For each x-mitre-collection object, it filters the x_mitre_contents list by removing any
+          content whose object_ref either starts with an entity in EXCLUDE_ENTITIES or matches an
+          ID from the excluded objects list.
+
+        :param stix_objects: The list of STIX objects to filter.
+        :return: The filtered list of STIX objects.
+        """
+
+        # First filtering: Exclude entities and specific relationships
+        stix_objects_filtered = [
+            stix_object
+            for stix_object in stix_objects
+            if stix_object.get("type", "") not in EXCLUDE_ENTITIES
+            and not (
+                stix_object.get("type", "") == "relationship"
+                and any(
+                    reference in stix_object.get("source_ref", "")
+                    or reference in stix_object.get("target_ref", "")
+                    for reference in EXCLUDE_ENTITIES
+                )
+            )
+        ]
+
+        # Identifying objects to be excluded by collecting their IDs
+        stix_objects_exclude = [
+            stix_object
+            for stix_object in stix_objects
+            if stix_object.get("type", "") in EXCLUDE_ENTITIES
+            or (
+                stix_object.get("type", "") == "relationship"
+                and any(
+                    reference in stix_object.get("source_ref", "")
+                    or reference in stix_object.get("target_ref", "")
+                    for reference in EXCLUDE_ENTITIES
+                )
+            )
+        ]
+
+        stix_objects_exclude_ids = []
+        for obj in stix_objects_exclude:
+            stix_objects_exclude_ids.append(obj.get("id", ""))
+
+        # Filtering x_mitre_contents within x-mitre-collection objects
+        for obj in stix_objects_filtered:
+            if obj.get("type", "") == "x-mitre-collection":
+                mitre_contents = obj.get("x_mitre_contents", [])
+                mitre_contents_filtered = [
+                    mitre_content
+                    for mitre_content in mitre_contents
+                    if not any(
+                        mitre_content.get("object_ref", "").startswith(entity)
+                        for entity in EXCLUDE_ENTITIES
+                    )
+                    and not any(
+                        mitre_content.get("object_ref", "") == stix_object_exclude_id
+                        for stix_object_exclude_id in stix_objects_exclude_ids
+                    )
+                ]
+                obj["x_mitre_contents"] = mitre_contents_filtered
+
+        return stix_objects_filtered
+
     def retrieve_data(self, url: str) -> Optional[dict]:
         """
         Retrieve data from the given url.
@@ -119,6 +192,7 @@ class Mitre:
             A string with the content or None in case of failure.
         """
         try:
+
             # Fetch json bundle from MITRE
             serialized_bundle = (
                 urllib.request.urlopen(
@@ -131,22 +205,29 @@ class Mitre:
             # Convert the data to python dictionary
             stix_bundle = json.loads(serialized_bundle)
             stix_objects = stix_bundle["objects"]
+
+            # Filtering entities to exclude from stix_objects
+            stix_objects_filtered = self.stix_objects_filtered(stix_objects)
+
             # First find all revoked ids
             revoked_objects = list(
                 filter(
                     lambda stix: stix.get("revoked", False) is True
                     or stix.get("x_capec_status", "") == "Deprecated",
-                    stix_objects,
+                    stix_objects_filtered,
                 )
             )
             revoked_ids = list(map(lambda stix: stix["id"], revoked_objects))
+
             # Filter every revoked MITRE elements
             not_revoked_objects = list(
                 filter(
-                    lambda stix: filter_stix_revoked(revoked_ids, stix), stix_objects
+                    lambda stix: filter_stix_revoked(revoked_ids, stix),
+                    stix_objects_filtered,
                 )
             )
             stix_bundle["objects"] = not_revoked_objects
+
             # Remove statement marking
             if self.mitre_remove_statement_marking:
                 stix_objects = stix_bundle["objects"]
