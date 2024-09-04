@@ -4,18 +4,14 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
-  name: 'MISP Feed'
-  scope: 'misp-feed'
-  run_and_terminate: false
+  type: 'INTERNAL_IMPORT_FILE'
+  name: 'ImportFileMISP'
+  scope: 'application/json'
   log_level: 'info'
 
-misp_feed:
-  url: 'https://changeme.com/misp-feed'
-  ssl_verify: true
+misp_import_file:
   create_reports: true # Required, create report for MISP event
   report_type: 'misp-event' # Report typpe to use for event
-  import_from_date: '2010-01-01' # Required, import all event from this date
   create_indicators: true # Required, create indicators from attributes
   create_observables: true # Required, create observables from attributes
   create_object_observables: true # Required, create text observables for MISP objects
@@ -26,7 +22,3 @@ misp_feed:
   import_unsupported_observables_as_text: false # Optional, import unsupported observable as x_opencti_text
   import_unsupported_observables_as_text_transparent: true # Optional, import unsupported observable as x_opencti_text just with the value
   import_with_attachments: false # Optional, try to import a PDF file from the attachment attribute
-  interval: 5 # Required, in minutes
-  source_type: 'url' # Optional, url or s3
-  bucket_name: '' # Required, if source_type = s3
-  bucket_prefix: '' # Optional, filter objects on bucket

@@ -2192,7 +2192,11 @@ class Misp:
                 else:
                     return None
             else:
-                if resolved_types[0]["resolver"] == "ipv4-addr":
+                if (
+                    "resolver" in resolved_types[0]
+                    and resolved_types[0]["resolver"] == "ipv4-addr"
+                    or resolved_types[0] == "ipv4-addr"
+                ):
                     resolver_0 = self.detect_ip_version(value)
                     type_0 = self.detect_ip_version(value, True)
                 else:
