@@ -1,18 +1,12 @@
 import json
 import os
 import re
-import ssl
 import sys
 import time
-import urllib.request
 from datetime import datetime
-from typing import Optional
 
-import boto3
-import pytz
 import stix2
 import yaml
-from dateutil.parser import parse
 from pycti import (
     AttackPattern,
     CustomObservableHostname,
@@ -68,7 +62,7 @@ OPENCTISTIX2 = {
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
 
-class MispFeed:
+class MispImportFile:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -79,173 +73,109 @@ class MispFeed:
         )
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
-
-        self.source_type = get_config_variable(
-            "MISP_FEED_SOURCE_TYPE",
-            ["misp_feed", "source_type"],
+        self.misp_import_file_import_from_date = get_config_variable(
+            "MISP_IMPORT_FILE_IMPORT_FROM_DATE",
+            ["misp_import_file", "import_from_date"],
             config,
-            False,
-            default="url",
         )
-        if self.source_type == "url":
-            self.misp_feed_url = get_config_variable(
-                "MISP_FEED_URL", ["misp_feed", "url"], config
-            )
-            self.misp_feed_ssl_verify = get_config_variable(
-                "MISP_FEED_SSL_VERIFY", ["misp_feed", "ssl_verify"], config, False, True
-            )
-        self.misp_feed_import_from_date = get_config_variable(
-            "MISP_FEED_IMPORT_FROM_DATE", ["misp_feed", "import_from_date"], config
-        )
-        self.misp_feed_create_reports = get_config_variable(
-            "MISP_FEED_CREATE_REPORTS",
-            ["misp_feed", "create_reports"],
+        self.misp_import_file_create_reports = get_config_variable(
+            "MISP_IMPORT_FILE_CREATE_REPORTS",
+            ["misp_import_file", "create_reports"],
             config,
             False,
             True,
         )
-        self.misp_feed_report_type = get_config_variable(
-            "MISP_FEED_REPORT_TYPE",
-            ["misp_feed", "report_type"],
+        self.misp_import_file_report_type = get_config_variable(
+            "MISP_IMPORT_FILE_REPORT_TYPE",
+            ["misp_import_file", "report_type"],
             config,
             False,
             "misp-event",
         )
-        self.misp_feed_create_indicators = get_config_variable(
-            "MISP_FEED_CREATE_INDICATORS", ["misp_feed", "create_indicators"], config
+        self.misp_import_file_create_indicators = get_config_variable(
+            "MISP_IMPORT_FILE_CREATE_INDICATORS",
+            ["misp_import_file", "create_indicators"],
+            config,
         )
-        self.misp_feed_create_observables = get_config_variable(
-            "MISP_FEED_CREATE_OBSERVABLES", ["misp_feed", "create_observables"], config
+        self.misp_import_file_create_observables = get_config_variable(
+            "MISP_IMPORT_FILE_CREATE_OBSERVABLES",
+            ["misp_import_file", "create_observables"],
+            config,
         )
-        self.misp_feed_create_tags_as_labels = get_config_variable(
+        self.misp_import_file_create_tags_as_labels = get_config_variable(
             "MISP_CREATE_TAGS_AS_LABELS",
-            ["misp_feed", "create_tags_as_labels"],
+            ["misp_import_file", "create_tags_as_labels"],
             config,
             default=True,
         )
-        self.misp_feed_guess_threats_from_tags = get_config_variable(
-            "MISP_FEED_GUESS_THREAT_FROM_TAGS",
-            ["misp_feed", "guess_threats_from_tags"],
+        self.misp_import_file_guess_threats_from_tags = get_config_variable(
+            "MISP_IMPORT_FILE_GUESS_THREAT_FROM_TAGS",
+            ["misp_import_file", "guess_threats_from_tags"],
             config,
             default=False,
         )
-        self.misp_feed_author_from_tags = get_config_variable(
-            "MISP_FEED_AUTHOR_FROM_TAGS",
-            ["misp_feed", "author_from_tags"],
+        self.misp_import_file_author_from_tags = get_config_variable(
+            "MISP_IMPORT_FILE_AUTHOR_FROM_TAGS",
+            ["misp_import_file", "author_from_tags"],
             config,
             default=False,
         )
-        self.misp_feed_markings_from_tags = get_config_variable(
-            "MISP_FEED_MARKINGS_FROM_TAGS",
-            ["misp_feed", "markings_from_tags"],
+        self.misp_import_file_markings_from_tags = get_config_variable(
+            "MISP_IMPORT_FILE_MARKINGS_FROM_TAGS",
+            ["misp_import_file", "markings_from_tags"],
             config,
             default=False,
         )
-        self.misp_feed_create_object_observables = get_config_variable(
-            "MISP_FEED_CREATE_OBJECT_OBSERVABLES",
-            ["misp_feed", "create_object_observables"],
+        self.misp_import_file_create_object_observables = get_config_variable(
+            "MISP_IMPORT_FILE_CREATE_OBJECT_OBSERVABLES",
+            ["misp_import_file", "create_object_observables"],
             config,
             False,
             False,
         )
-        self.misp_feed_import_to_ids_no_score = get_config_variable(
-            "MISP_FEED_IMPORT_TO_IDS_NO_SCORE",
-            ["misp_feed", "import_to_ids_no_score"],
+        self.misp_import_file_import_to_ids_no_score = get_config_variable(
+            "MISP_IMPORT_FILE_IMPORT_TO_IDS_NO_SCORE",
+            ["misp_import_file", "import_to_ids_no_score"],
             config,
             True,
         )
-        self.misp_feed_import_with_attachments = bool(
+        self.misp_import_file_import_with_attachments = bool(
             get_config_variable(
-                "MISP_FEED_IMPORT_WITH_ATTACHMENTS",
-                ["misp_feed", "import_with_attachments"],
+                "MISP_IMPORT_FILE_IMPORT_WITH_ATTACHMENTS",
+                ["misp_import_file", "import_with_attachments"],
                 config,
                 isNumber=False,
                 default=False,
             )
         )
-        self.misp_feed_import_unsupported_observables_as_text = bool(
+        self.misp_import_file_import_unsupported_observables_as_text = bool(
             get_config_variable(
-                "MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT",
-                ["misp_feed", "import_unsupported_observables_as_text"],
+                "MISP_IMPORT_FILE_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT",
+                ["misp_import_file", "import_unsupported_observables_as_text"],
                 config,
                 isNumber=False,
                 default=False,
             )
         )
-        self.misp_feed_import_unsupported_observables_as_text_transparent = bool(
+        self.misp_import_file_import_unsupported_observables_as_text_transparent = bool(
             get_config_variable(
-                "MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT",
-                ["misp_feed", "import_unsupported_observables_as_text_transparent"],
+                "MISP_IMPORT_FILE_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT",
+                [
+                    "misp_import_file",
+                    "import_unsupported_observables_as_text_transparent",
+                ],
                 config,
                 isNumber=False,
                 default=True,
             )
         )
-        self.misp_feed_interval = get_config_variable(
-            "MISP_FEED_INTERVAL", ["misp_feed", "interval"], config, True
-        )
-
-        # Initialize MISP
-        if self.source_type == "s3":
-            bucket_name = get_config_variable(
-                "MISP_BUCKET_NAME", ["misp", "bucket_name"], config, False
-            )
-
-            self.bucket_prefix = get_config_variable(
-                "MISP_BUCKET_PREFIX", ["misp", "bucket_prefix"], config, False
-            )
-
-            self.s3 = boto3.resource("s3").Bucket(bucket_name)
-
-    def _get_interval(self):
-        return int(self.misp_feed_interval) * 60
-
-    def _retrieve_data(self, url: str) -> Optional[str]:
-        """
-        Retrieve data from the given url.
-
-        Parameters
-        ----------
-        url : str
-            Url to retrieve.
-
-        Returns
-        -------
-        str
-            A string with the content or None in case of failure.
-        """
-        try:
-            return (
-                urllib.request.urlopen(
-                    url,
-                    context=ssl.create_default_context(),
-                )
-                .read()
-                .decode("utf-8")
-            )
-        except (
-            urllib.error.URLError,
-            urllib.error.HTTPError,
-            urllib.error.ContentTooShortError,
-        ) as urllib_error:
-            self.helper.log_error(f"Error retrieving url {url}: {urllib_error}")
-        return None
-
-    def _send_bundle(self, work_id: str, serialized_bundle: str) -> None:
-        try:
-            self.helper.send_stix2_bundle(
-                serialized_bundle,
-                work_id=work_id,
-            )
-        except Exception as e:
-            self.helper.log_error(f"Error while sending bundle: {e}")
 
     def _resolve_markings(self, tags, with_default=True):
         markings = []
         for tag in tags:
             tag_name = tag["name"]
             tag_name_lower = tag["name"].lower()
-            if self.misp_feed_markings_from_tags:
+            if self.misp_import_file_markings_from_tags:
                 if (
                     ":" in tag_name
                     and "=" in tag_name
@@ -488,7 +418,7 @@ class MispFeed:
                         added_names.append(name)
         for tag in tags:
             # Try to guess from tags
-            if self.misp_feed_guess_threats_from_tags:
+            if self.misp_import_file_guess_threats_from_tags:
                 tag_value_split = tag["name"].split("=")
                 if len(tag_value_split) == 1:
                     tag_value = tag_value_split[0]
@@ -735,7 +665,7 @@ class MispFeed:
     def _resolve_tags(self, tags):
         opencti_tags = []
 
-        if not self.misp_feed_create_tags_as_labels:
+        if not self.misp_import_file_create_tags_as_labels:
             return opencti_tags
 
         for tag in tags:
@@ -890,7 +820,7 @@ class MispFeed:
                     )
                 return [{"resolver": resolver_0, "type": type_0, "value": value}]
         # If not found, return text observable as a fallback
-        if self.misp_feed_import_unsupported_observables_as_text:
+        if self.misp_import_file_import_unsupported_observables_as_text:
             return [
                 {
                     "resolver": "text",
@@ -915,7 +845,7 @@ class MispFeed:
             return "ipv6-addr"
 
     def _get_pdf_file(self, attribute):
-        if not self.misp_feed_import_with_attachments:
+        if not self.misp_import_file_import_with_attachments:
             return None
 
         attr_type = attribute["type"]
@@ -1049,11 +979,11 @@ class MispFeed:
 
             to_ids = attribute["to_ids"]
             score = self._threat_level_to_score(event_threat_level)
-            if self.misp_feed_import_to_ids_no_score is not None and not to_ids:
-                score = self.misp_feed_import_to_ids_no_score
+            if self.misp_import_file_import_to_ids_no_score is not None and not to_ids:
+                score = self.misp_import_file_import_to_ids_no_score
 
             indicator = None
-            if self.misp_feed_create_indicators:
+            if self.misp_import_file_create_indicators:
                 try:
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
@@ -1084,7 +1014,7 @@ class MispFeed:
                 except Exception as e:
                     self.helper.log_error(f"Error processing indicator {name}: {e}")
             observable = None
-            if self.misp_feed_create_observables and observable_type is not None:
+            if self.misp_import_file_create_observables and observable_type is not None:
                 try:
                     custom_properties = {
                         "x_opencti_description": attribute["comment"],
@@ -1649,7 +1579,7 @@ class MispFeed:
         ### Pre-process
         # Author
         author = None
-        if self.misp_feed_author_from_tags:
+        if self.misp_import_file_author_from_tags:
             if "Tag" in event["Event"]:
                 event_tags = event["Event"]["Tag"]
                 for tag in event_tags:
@@ -1745,8 +1675,10 @@ class MispFeed:
                     added_files.append(pdf_file)
 
             object_observable = None
-            if self.misp_feed_create_object_observables:
-                if self.misp_feed_import_unsupported_observables_as_text_transparent:
+            if self.misp_import_file_create_object_observables:
+                if (
+                    self.misp_import_file_import_unsupported_observables_as_text_transparent
+                ):
                     if len(object["Attribute"]) > 0:
                         value = object["Attribute"][0]["value"]
                         object_observable = CustomObservableText(
@@ -1952,7 +1884,7 @@ class MispFeed:
 
         # Create the report if needed
         # Report in STIX must have at least one object_refs
-        if self.misp_feed_create_reports:
+        if self.misp_import_file_create_reports:
             # Report in STIX lib must have at least one object_refs
             if len(object_refs) == 0:
                 # Put a fake ID in the report
@@ -1989,7 +1921,7 @@ class MispFeed:
                 modified=datetime.utcfromtimestamp(
                     int(event["Event"]["timestamp"])
                 ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                report_types=[self.misp_feed_report_type],
+                report_types=[self.misp_import_file_report_type],
                 created_by_ref=author["id"],
                 object_marking_refs=event_markings,
                 labels=event_tags,
@@ -2027,181 +1959,85 @@ class MispFeed:
                 bundle_objects.append(note)
         return stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
 
-    def process_data(self):
-        try:
-            now = datetime.now(pytz.UTC)
-            friendly_name = "MISP Feed run @ " + now.astimezone(pytz.UTC).isoformat()
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
-            current_state = self.helper.get_state()
-
-            if self.source_type == "s3":
-                if self.bucket_prefix is not None:
-                    objects = self.s3.objects.filter(Prefix=self.bucket_prefix)
-                else:
-                    objects = self.s3.objects.all()
-
-                for obj in objects:
-                    try:
-                        file_name = obj.key.split("/")[-1]
-                        self.s3.download_file(obj.key, file_name)
-                        events = json.load(open(file_name, "r"))
-                        bundle = self._process_event(events)
-                        self._send_bundle(work_id, bundle)
-                        self.s3.Object(obj.key).delete()
-                        os.remove(file_name)
-                        self.helper.set_state({"last_file": file_name})
-                        self.helper.log_info("Sending event STIX2 bundle...")
-
-                    except Exception as e:
-                        self.helper.log_error(str(e))
-
-            if self.source_type == "url":
-                if (
-                    current_state is not None
-                    and "last_run" in current_state
-                    and "last_event_timestamp" in current_state
-                    and "last_event" in current_state
-                ):
-                    last_run = parse(current_state["last_run"])
-                    last_event = parse(current_state["last_event"])
-                    last_event_timestamp = current_state["last_event_timestamp"]
-                    self.helper.log_info(
-                        "Connector last run: "
-                        + last_run.astimezone(pytz.UTC).isoformat()
-                    )
-                    self.helper.log_info(
-                        "Connector latest event: "
-                        + last_event.astimezone(pytz.UTC).isoformat()
-                    )
-                elif current_state is not None and "last_run" in current_state:
-                    last_run = parse(current_state["last_run"])
-                    last_event = last_run
-                    last_event_timestamp = int(last_event.timestamp())
-                    self.helper.log_info(
-                        "Connector last run: "
-                        + last_run.astimezone(pytz.UTC).isoformat()
-                    )
-                    self.helper.log_info(
-                        "Connector latest event: "
-                        + last_event.astimezone(pytz.UTC).isoformat()
-                    )
-                else:
-                    if self.misp_feed_import_from_date is not None:
-                        last_event = parse(self.misp_feed_import_from_date)
-                        last_event_timestamp = int(last_event.timestamp())
-                    else:
-                        last_event_timestamp = int(now.timestamp())
-                    self.helper.log_info("Connector has never run")
-
-                number_events = 0
-                try:
-                    manifest_data = json.loads(
-                        self._retrieve_data(self.misp_feed_url + "/manifest.json")
-                    )
-                    items = []
-                    for key, value in manifest_data.items():
-                        value["timestamp"] = int(value["timestamp"])
-                        items.append({**value, "event_key": key})
-                    items = sorted(items, key=lambda d: d["timestamp"])
-                    for item in items:
-                        if item["timestamp"] > last_event_timestamp:
-                            last_event_timestamp = item["timestamp"]
-                            self.helper.log_info(
-                                "Processing event "
-                                + item["info"]
-                                + " (date="
-                                + item["date"]
-                                + ", modified="
-                                + datetime.utcfromtimestamp(last_event_timestamp)
-                                .astimezone(pytz.UTC)
-                                .isoformat()
-                                + ")"
-                            )
-
-                            event = json.loads(
-                                self._retrieve_data(
-                                    self.misp_feed_url
-                                    + "/"
-                                    + item["event_key"]
-                                    + ".json"
-                                )
-                            )
-                            bundle = self._process_event(event)
-                            self.helper.log_info("Sending event STIX2 bundle...")
-                            self._send_bundle(work_id, bundle)
-                            number_events = number_events + 1
-                            message = (
-                                "Event processed, storing state (last_run="
-                                + now.astimezone(pytz.utc).isoformat()
-                                + ", last_event="
-                                + datetime.utcfromtimestamp(last_event_timestamp)
-                                .astimezone(pytz.UTC)
-                                .isoformat()
-                                + ", last_event_timestamp="
-                                + str(last_event_timestamp)
-                            )
-                            self.helper.set_state(
-                                {
-                                    "last_run": now.astimezone(pytz.utc).isoformat(),
-                                    "last_event": datetime.utcfromtimestamp(
-                                        last_event_timestamp
-                                    )
-                                    .astimezone(pytz.UTC)
-                                    .isoformat(),
-                                    "last_event_timestamp": last_event_timestamp,
-                                }
-                            )
-                            self.helper.log_info(message)
-                except Exception as e:
-                    self.helper.log_error(str(e))
-
-                # Store the current timestamp as a last run
-                message = (
-                    "Connector successfully run ("
-                    + str(number_events)
-                    + " events have been processed), storing state (last_run="
-                    + now.astimezone(pytz.utc).isoformat()
-                    + ", last_event="
-                    + datetime.utcfromtimestamp(last_event_timestamp)
-                    .astimezone(pytz.UTC)
-                    .isoformat()
-                    + ", last_event_timestamp="
-                    + str(last_event_timestamp)
-                    + ")"
-                )
-            self.helper.log_info(message)
-            self.helper.api.work.to_processed(work_id, message)
-
-            # Sleep
-            time.sleep(self._get_interval())
-        except (KeyboardInterrupt, SystemExit):
-            self.helper.log_info("Connector stop")
-            sys.exit(0)
-        except Exception as e:
-            self.helper.log_error(str(e))
-
-    def run(self):
-        try:
-            self.helper.log_info("Fetching MISP Feed...")
-            get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
-            if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
-                self.process_data()
-                self.helper.force_ping()
+    def _process_message(self, data):
+        file_fetch = data["file_fetch"]
+        bypass_validation = data["bypass_validation"]
+        file_uri = self.helper.opencti_url + file_fetch
+        self.helper.log_info(f"Importing the file {file_uri}")
+        file_content = self.helper.api.fetch_opencti_file(file_uri)
+        events = json.loads(file_content)
+        if not isinstance(events, list):
+            if "response" in events:
+                events = events["response"]
             else:
-                while True:
-                    self.process_data()
-                    time.sleep(60)
-        except Exception as e:
-            self.helper.log_error(str(e))
-            raise e
+                events = [events]
+        for event in events:
+            bundle_json = self._process_event(event)
+            entity_id = data.get("entity_id", None)
+            if entity_id:
+                self.helper.log_info("Contextual import.")
+                bundle = json.loads(bundle_json)["objects"]
+                if self._contains_container(bundle):
+                    self.helper.log_info("Bundle contains container.")
+                else:
+                    self.helper.log_info(
+                        "No container in Stix file. Updating current container"
+                    )
+                    bundle = self._update_container(bundle, entity_id)
+                bundle_json = self.helper.stix2_create_bundle(bundle)
+            bundles_sent = self.helper.send_stix2_bundle(
+                bundle_json,
+                bypass_validation=bypass_validation,
+                file_name=data["file_id"],
+                entity_id=entity_id,
+            )
+            if self.helper.get_validate_before_import() and not bypass_validation:
+                return "Generated bundle sent for validation"
+            else:
+                return str(len(bundles_sent)) + " generated bundle(s) for worker import"
+
+    def start(self):
+        self.helper.listen(self._process_message)
+
+    @staticmethod
+    def _contains_container(bundle):
+        for elem in bundle:
+            if (
+                elem.get("type") == "report"
+                or elem.get("type") == "grouping"
+                or elem.get("type") == "observed-data"
+                or elem.get("type") == "x-opencti-case-incident"
+                or elem.get("type") == "x-opencti-case-rfi"
+                or elem.get("type") == "x-opencti-case-rft"
+                or elem.get("type") == "x-opencti-task"
+                or elem.get("type") == "x-opencti-feedback"
+            ):
+                return True
+        return False
+
+    def _update_container(self, bundle, entity_id):
+        container = self.helper.api.stix_domain_object.read(id=entity_id)
+        container_stix_bundle = (
+            self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type=container["entity_type"], entity_id=container["id"]
+            )
+        )
+        if len(container_stix_bundle["objects"]) > 0:
+            container_stix = [
+                object
+                for object in container_stix_bundle["objects"]
+                if "x_opencti_id" in object
+                and object["x_opencti_id"] == container["id"]
+            ][0]
+            container_stix["object_refs"] = [object["id"] for object in bundle]
+            bundle.append(container_stix)
+        return bundle
 
 
 if __name__ == "__main__":
     try:
-        mispFeedConnector = MispFeed()
-        mispFeedConnector.run()
+        mispImportFileConnector = MispImportFile()
+        mispImportFileConnector.start()
     except Exception as e:
         print(e)
         time.sleep(10)

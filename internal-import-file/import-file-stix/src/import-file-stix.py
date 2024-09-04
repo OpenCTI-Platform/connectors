@@ -2,7 +2,6 @@ import json
 import os
 import sys
 import time
-import uuid
 from typing import Dict, List
 
 import yaml
@@ -44,12 +43,7 @@ class ImportFileStix:
                     "No container in Stix file. Updating current container"
                 )
                 bundle = self._update_container(bundle, entity_id)
-            bundle = {
-                "type": "bundle",
-                "id": "bundle--" + str(uuid.uuid4()),
-                "objects": bundle,
-            }
-            file_content = json.dumps(bundle)
+            file_content = self.helper.stix2_create_bundle(bundle)
         bundles_sent = self.helper.send_stix2_bundle(
             file_content,
             bypass_validation=bypass_validation,
