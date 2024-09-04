@@ -3,13 +3,9 @@ import json
 import os
 from datetime import datetime, timedelta
 from typing import Dict
+
 import requests
 import yaml
-
-#krak: remove this for prod
-import urllib3
-urllib3.disable_warnings()
-
 from pycti import (
     STIX_EXT_OCTI_SCO,
     OpenCTIConnectorHelper,
@@ -354,7 +350,7 @@ class ShadowTrackrConnector:
 
     def _valid_ip(self, ip):
         try:
-            _ip = ipaddress.ip_address(ip)
+            ipaddress.ip_address(ip)
             return True
         except:
             return False
