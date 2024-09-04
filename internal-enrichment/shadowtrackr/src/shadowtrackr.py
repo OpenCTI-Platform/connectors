@@ -3,14 +3,11 @@ import json
 import os
 from datetime import datetime, timedelta
 from typing import Dict
+
 import requests
 import yaml
-from pycti import (
-    STIX_EXT_OCTI_SCO,
-    OpenCTIConnectorHelper,
-    OpenCTIStix2,
-    get_config_variable,
-)
+
+from pycti import (STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2, get_config_variable)
 
 
 class ShadowTrackrConnector:
