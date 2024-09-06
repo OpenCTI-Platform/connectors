@@ -22,7 +22,6 @@ connector-sekoia:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=SEKOIA.IO
       - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,location,vulnerability,indicator,campaign,infrastructure,relationship
-      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=ChangeMe # by default PT60S
       - SEKOIA_BASE_URL=ChangeMe # by default 'https://api.sekoia.io'

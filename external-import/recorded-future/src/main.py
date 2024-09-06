@@ -130,6 +130,14 @@ class BaseRFConnector:
             "CONNECTOR_DURATION_PERIOD", ["connector", "duration_period"], config
         )
 
+        self.rf_interval = get_config_variable(
+            "RECORDED_FUTURE_INTERVAL",
+            ["rf", "interval"],
+            config,
+            isNumber=True,
+            default=24,
+        )
+
 
 class RFNotes:
     """Connector object"""
@@ -315,9 +323,17 @@ class RFConnector:
             self.RF.helper.log_info("[ANALYST NOTES] Analyst notes fetching disabled")
 
     def run_all_processes(self):
-        self.RF.helper.schedule_iso(
-            message_callback=self.all_processes, duration_period=self.RF.duration_period
-        )
+        if self.RF.duration_period:
+            self.RF.helper.schedule_iso(
+                message_callback=self.all_processes,
+                duration_period=self.RF.duration_period,
+            )
+        else:
+            self.RF.helper.schedule_unit(
+                message_callback=self.all_processes,
+                duration_period=self.RF.rf_interval,
+                time_unit=self.RF.helper.TimeUnit.HOURS,
+            )
 
 
 if __name__ == "__main__":

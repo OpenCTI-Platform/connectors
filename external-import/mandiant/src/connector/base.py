@@ -35,6 +35,7 @@ class Mandiant:
             "CONNECTOR_DURATION_PERIOD",
             ["connector", "duration_period"],
             config,
+            default="PT5M",
         )
 
         self.mandiant_api_v4_key_id = get_config_variable(

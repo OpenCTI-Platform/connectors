@@ -307,10 +307,17 @@ class CrowdStrike:
             self._error("CrowdStrike connector internal error: {0}", str(e))
 
     def run(self):
-        self.helper.schedule_iso(
-            message_callback=self.process_message,
-            duration_period=self.config.duration_period,
-        )
+        if self.config.duration_period:
+            self.helper.schedule_iso(
+                message_callback=self.process_message,
+                duration_period=self.config.duration_period,
+            )
+        else:
+            self.helper.schedule_unit(
+                message_callback=self.process_message,
+                duration_period=self.config.interval_sec,
+                time_unit=self.helper.TimeUnit.SECONDS,
+            )
 
     def _initiate_work(self, timestamp: int) -> str:
         datetime_str = timestamp_to_datetime(timestamp)

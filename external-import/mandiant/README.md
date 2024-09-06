@@ -21,7 +21,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Name                  | `name`              | `CONNECTOR_NAME`              | `Mandiant` | Yes       | Full name of the connector : `Mandiant Cyber Threat Intelligence`.                               |
 | Scope                 | `scope`             | `CONNECTOR_SCOPE`             | `mandiant` | Yes       | Must be `mandiant`, not used in this connector.                                                  |
 | Run and Terminate     | `run_and_terminate` | `CONNECTOR_RUN_AND_TERMINATE` | `False`    | No        | Launch the connector once if set to True. Takes 2 available values: `True` or `False`.           |
-| Duration Period       | `duration_period`   | `CONNECTOR_DURATION_PERIOD`   | /          | Yes       | Determines the time interval between each launch of the connector in ISO 8601, ex: `PT5M`.       |
+| Duration Period       | `duration_period`   | `CONNECTOR_DURATION_PERIOD`   | `PT5M`     | No        | Determines the time interval between each launch of the connector in ISO 8601, ex: `PT5M`.       |
 | Queue Threshold       | `queue_threshold`   | `CONNECTOR_QUEUE_THRESHOLD`   | `500`      | No        | Used to determine the limit (RabbitMQ) in MB at which the connector must go into buffering mode. |
 | Log Level             | `log_level`         | `CONNECTOR_LOG_LEVEL`         | /          | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.           |
 

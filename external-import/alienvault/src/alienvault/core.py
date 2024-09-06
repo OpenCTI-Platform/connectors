@@ -29,6 +29,7 @@ class AlienVault:
     _CONFIG_NAMESPACE = "alienvault"
 
     _CONFIG_DURATION_PERIOD = f"{_CONFIG_CONNECTOR_NAMESPACE}.duration_period"
+    _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
     _CONFIG_BASE_URL = f"{_CONFIG_NAMESPACE}.base_url"
     _CONFIG_API_KEY = f"{_CONFIG_NAMESPACE}.api_key"
     _CONFIG_TLP = f"{_CONFIG_NAMESPACE}.tlp"
@@ -61,6 +62,7 @@ class AlienVault:
     _DEFAULT_REPORT_TYPE = "threat-report"
     _DEFAULT_ENABLE_RELATIONSHIPS = True
     _DEFAULT_ENABLE_ATTACK_PATTERNS_INDICATES = True
+    _DEFAULT_INTERVAL_SEC = 1800
 
     _STATE_LAST_RUN = "last_run"
 
@@ -153,6 +155,13 @@ class AlienVault:
         self.duration_period = self._get_configuration(
             config, self._CONFIG_DURATION_PERIOD
         )
+        self.interval_sec = self._get_configuration(
+            config,
+            self._CONFIG_INTERVAL_SEC,
+            is_number=True,
+        )
+        if not self.interval_sec:
+            self.interval_sec = self._DEFAULT_INTERVAL_SEC
 
         # Create AlienVault author
         author = self._create_author()
@@ -224,9 +233,18 @@ class AlienVault:
         return cls._CONFIG_REPORT_STATUS_MAPPING[report_status.lower()]
 
     def run(self):
-        self.helper.schedule_iso(
-            message_callback=self.process_message, duration_period=self.duration_period
-        )
+
+        if self.duration_period:
+            self.helper.schedule_iso(
+                message_callback=self.process_message,
+                duration_period=self.duration_period,
+            )
+        else:
+            self.helper.schedule_unit(
+                message_callback=self.process_message,
+                duration_period=self.interval_sec,
+                time_unit=self.helper.TimeUnit.SECONDS,
+            )
 
     def process_message(self):
         """Run AlienVault connector."""
