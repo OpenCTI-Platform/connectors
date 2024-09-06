@@ -1,4 +1,4 @@
-# OpenCTI Internal Enrichment Connector FIRST EPSS
+# OpenCTI FIRST EPSS enrichment connector
 
 <!--
 General description of the connector
@@ -12,30 +12,30 @@ General description of the connector
 -->
 
 Table of Contents
-
-- [OpenCTI Internal Enrichment Connector FIRST EPSS](#opencti-internal-enrichment-connector-first)
-  - [Introduction](#introduction)
-  - [Installation](#installation)
-    - [Requirements](#requirements)
-  - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-  - [Deployment](#deployment)
-    - [Docker Deployment](#docker-deployment)
-    - [Manual Deployment](#manual-deployment)
-  - [Usage](#usage)
-  - [Behavior](#behavior)
-  - [Debugging](#debugging)
-  - [Additional information](#additional-information)
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration variables](#configuration-variables)
+  - [OpenCTI environment variables](#opencti-environment-variables)
+  - [Base connector environment variables](#base-connector-environment-variables)
+  - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+- [Debugging](#debugging)
+- [Additional information](#additional-information)
 
 ## Introduction
+
+The OpenCTI FIRST EPSS enrichment connector can be used to enrich CVE vulnerabilities with EPSS information provided by the [FIRST EPSS API](https://www.first.org/epss/api). 
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 
+- OpenCTI Platform >= 6.3.0
 
 ## Configuration variables
 
