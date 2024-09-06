@@ -1971,6 +1971,7 @@ class MispImportFile:
                 events = events["response"]
             else:
                 events = [events]
+        bundles_sent = 0
         for event in events:
             bundle_json = self._process_event(event)
             entity_id = data.get("entity_id", None)
@@ -1985,16 +1986,17 @@ class MispImportFile:
                     )
                     bundle = self._update_container(bundle, entity_id)
                 bundle_json = self.helper.stix2_create_bundle(bundle)
-            bundles_sent = self.helper.send_stix2_bundle(
+            bundles_sent_event = self.helper.send_stix2_bundle(
                 bundle_json,
                 bypass_validation=bypass_validation,
                 file_name=data["file_id"],
                 entity_id=entity_id,
             )
-            if self.helper.get_validate_before_import() and not bypass_validation:
-                return "Generated bundle sent for validation"
-            else:
-                return str(len(bundles_sent)) + " generated bundle(s) for worker import"
+            bundles_sent = bundles_sent + len(bundles_sent_event)
+        if self.helper.get_validate_before_import() and not bypass_validation:
+            return "Generated bundle sent for validation"
+        else:
+            return str(bundles_sent) + " generated bundle(s) for worker import"
 
     def start(self):
         self.helper.listen(self._process_message)
