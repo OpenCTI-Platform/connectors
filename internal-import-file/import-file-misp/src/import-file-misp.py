@@ -1615,8 +1615,15 @@ class MispImportFile:
         if "Tag" in event["Event"]:
             event_tags = self._resolve_tags(event["Event"]["Tag"])
 
+        # ExternalReference
+        event_external_reference = stix2.ExternalReference(
+            source_name="MISP",
+            description=event["Event"]["info"],
+            external_id=event["Event"]["uuid"],
+        )
+
         ### Get indicators
-        event_external_references = []
+        event_external_references = [event_external_reference]
         indicators = []
         # Get attributes of event
         create_relationships = len(event["Event"].get("Attribute", [])) < 10000
