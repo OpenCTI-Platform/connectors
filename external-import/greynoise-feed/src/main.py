@@ -527,6 +527,7 @@ class GreyNoiseFeed:
                     + last_run_timestamp.astimezone(pytz.UTC).isoformat()
                 )
                 try:
+                    ips_list = []
                     session = GreyNoise(
                         api_key=self.api_key, integration_name="opencti-feed-v2.3"
                     )
@@ -541,29 +542,15 @@ class GreyNoiseFeed:
                     complete = response.get("complete", True)
                     scroll = response.get("scroll", "")
 
-                    number_of_ips_processed = 0
-
                     # Process
                     if "data" in response and len(response["data"]) > 0:
-                        friendly_name = (
-                            "GreyNoise Feed connector run @ "
-                            + now.strftime("%Y-%m-%d %H:%M:%S")
-                        )
-                        work_id = self.helper.api.work.initiate_work(
-                            self.helper.connect_id, friendly_name
-                        )
-                        self._process_data(work_id, session, response["data"])
-                        self.helper.api.work.to_processed(work_id, "Done")
-
-                        number_of_ips_processed = number_of_ips_processed + len(
-                            response["data"]
-                        )
-                        self.helper.log_info(
-                            "GreyNoise Indicator Count: " + str(len(response["data"]))
-                        )
+                        for ip in response["data"]:
+                            ips_list.append(ip)
 
                     while not complete:
-                        self.helper.log_info("Query GreyNoise API - Next Results Page")
+                        self.helper.log_info(
+                            "Query GreyNoise API - Next Results Page (" + query + ")"
+                        )
                         response = session.query(
                             query=query, scroll=scroll, exclude_raw=True
                         )
@@ -572,31 +559,30 @@ class GreyNoiseFeed:
 
                         # Process
                         if "data" in response and len(response["data"]) > 0:
-                            friendly_name = (
-                                "GreyNoise Feed connector run @ "
-                                + now.strftime("%Y-%m-%d %H:%M:%S")
-                            )
-                            work_id = self.helper.api.work.initiate_work(
-                                self.helper.connect_id, friendly_name
-                            )
-                            self._process_data(work_id, session, response["data"])
-                            self.helper.api.work.to_processed(work_id, "Done")
+                            for ip in response["data"]:
+                                ips_list.append(ip)
 
-                            number_of_ips_processed = number_of_ips_processed + len(
-                                response["data"]
-                            )
-                            self.helper.log_info(
-                                "GreyNoise Indicator Count: "
-                                + str(len(response["data"]))
-                            )
-                            if number_of_ips_processed > self.greynoise_limit:
+                            if len(ips_list) > self.greynoise_limit:
                                 complete = True
 
                     self.helper.log_info("Query GreyNoise API - Completed")
+                    self.helper.log_info(
+                        "GreyNoise Indicator Count: " + str(len(ips_list))
+                    )
+
+                    # Process
+                    friendly_name = "GreyNoise Feed connector run @ " + now.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                    work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name
+                    )
+                    self._process_data(work_id, session, ips_list)
                     message = (
                         "Connector successfully run, storing last_run_timestamp as "
                         + now.astimezone(pytz.UTC).isoformat()
                     )
+                    self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(message)
                     self.helper.set_state(
                         {"last_run_timestamp": now.astimezone(pytz.UTC).isoformat()}
