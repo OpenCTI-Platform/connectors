@@ -354,6 +354,10 @@ jobs:
           name: Build Docker image opencti/connector-first-epss
           command: docker build -t opencti/connector-first-epss:latest . && docker tag opencti/connector-first-epss:latest opencti/connector-first-epss:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/reversinglabs-spectra-analyze
+          name: Build Docker image opencti/connector-reversinglabs-spectra-analyze
+          command: docker build -t opencti/connector-reversinglabs-spectra-analyze:latest . && docker tag opencti/connector-reversinglabs-spectra-analyze:latest opencti/connector-reversinglabs-spectra-analyze:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -501,6 +505,8 @@ jobs:
             docker push opencti/connector-group-ib:${CIRCLE_TAG}
             docker push opencti/connector-first-epss:latest
             docker push opencti/connector-first-epss:${CIRCLE_TAG}
+            docker push opencti/connector-reversinglabs-spectra-analyze:latest
+            docker push opencti/connector-reversinglabs-spectra-analyze:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1262,6 +1268,10 @@ jobs:
           name: Build Docker image opencti/connector-first-epss
           command: docker build -t opencti/connector-first-epss:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/reversinglabs-spectra-analyze
+          name: Build Docker image opencti/connector-reversinglabs-spectra-analyze
+          command: docker build -t opencti/connector-reversinglabs-spectra-analyze:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1335,6 +1345,7 @@ jobs:
             docker push opencti/connector-cofense:rolling
             docker push opencti/connector-group-ib:rolling
             docker push opencti/connector-first-epss:rolling
+            docker push opencti/connector-reversinglabs-spectra-analyze:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
