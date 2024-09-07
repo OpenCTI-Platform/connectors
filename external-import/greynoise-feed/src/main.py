@@ -9,6 +9,7 @@ import yaml
 from dateutil.parser import parse
 from greynoise import GreyNoise
 from pycti import (
+    Identity,
     Indicator,
     Location,
     Malware,
@@ -371,29 +372,66 @@ class GreyNoiseFeed:
             # Metadata
             if "metadata" in ip:
                 metadata = ip["metadata"]
+                stix_as = None
                 if "asn" in metadata:
-                    stix_as = stix2.AutonomousSystem(
-                        name=metadata["asn"],
-                        number=metadata["asn"].replace("AS", ""),
-                        object_marking_refs=[stix2.TLP_WHITE],
-                        custom_properties={
-                            "created_by_ref": self.identity["standard_id"],
-                        },
-                    )
-                    bundle_objects.append(stix_as)
+                    try:
+                        stix_as = stix2.AutonomousSystem(
+                            name=metadata["asn"],
+                            number=int(metadata["asn"].replace("AS", "")),
+                            object_marking_refs=[stix2.TLP_WHITE],
+                            custom_properties={
+                                "created_by_ref": self.identity["standard_id"],
+                            },
+                        )
+                        bundle_objects.append(stix_as)
 
-                    stix_relationship_observable_as = stix2.Relationship(
+                        stix_relationship_observable_as = stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "belongs-to", stix_observable.id, stix_as.id
+                            ),
+                            relationship_type="belongs-to",
+                            source_ref=stix_observable.id,
+                            target_ref=stix_as.id,
+                            created_by_ref=self.identity["standard_id"],
+                            object_marking_refs=[stix2.TLP_WHITE],
+                        )
+                        bundle_objects.append(stix_relationship_observable_as)
+                    except:
+                        pass
+                if "organization" in metadata:
+                    stix_organization = stix2.Identity(
+                        id=Identity.generate_id(
+                            metadata["organization"], "organization"
+                        ),
+                        name=metadata["organization"],
+                        identity_class="organization",
+                    )
+                    bundle_objects.append(stix_organization)
+
+                    stix_relationship_observable_organization = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
-                            "belongs-to", stix_observable.id, stix_as.id
+                            "belongs-to", stix_observable.id, stix_organization.id
                         ),
                         relationship_type="belongs-to",
                         source_ref=stix_observable.id,
-                        target_ref=stix_as.id,
+                        target_ref=stix_organization.id,
                         created_by_ref=self.identity["standard_id"],
                         object_marking_refs=[stix2.TLP_WHITE],
                     )
-                    bundle_objects.append(stix_relationship_observable_as)
+                    bundle_objects.append(stix_relationship_observable_organization)
 
+                    if stix_as is not None:
+                        stix_relationship_as_organization = stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", stix_as.id, stix_organization.id
+                            ),
+                            relationship_type="related-to",
+                            source_ref=stix_as.id,
+                            target_ref=stix_organization.id,
+                            created_by_ref=self.identity["standard_id"],
+                            object_marking_refs=[stix2.TLP_WHITE],
+                        )
+                        bundle_objects.append(stix_relationship_as_organization)
                 stix_city = None
                 if "city" in metadata:
                     stix_city = stix2.Location(
@@ -513,6 +551,7 @@ class GreyNoiseFeed:
     def run(self):
         self.helper.log_info("GreyNoise feed - Initialization...")
         while True:
+            self.labels_cache = {}
             try:
                 # Get the current timestamp and check
                 now = datetime.now(pytz.UTC)
