@@ -629,8 +629,8 @@ class GreyNoiseFeed:
                 except Exception as e:
                     self.helper.log_error(str(e))
 
-                # Wait 6 hours
-                time.sleep(3600 * 6)
+                # Wait 18 hours
+                time.sleep(3600 * 18)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 exit(0)
