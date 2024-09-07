@@ -57,7 +57,10 @@ class GreyNoiseFeed:
             default="GreyNoise Feed",
         )
         self.greynoise_ent_desc = get_config_variable(
-            "GREYNOISE_DESCRIPTION", ["greynoisefeed", "description"], config
+            "GREYNOISE_DESCRIPTION",
+            ["greynoisefeed", "description"],
+            config,
+            default="GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.",
         )
         self.greynoise_limit = get_config_variable(
             "GREYNOISE_LIMIT",
