@@ -35,6 +35,6 @@ Ensure that the GreyNoise API is reachable from the OpenCTI system.  Check logs 
 
 ### Additional information
 
-This feed will ingest a list of IPv4 indicators observed by GreyNoise and create an appropriate Indicator and Observable record.  Additional vulnerability records will also be created when an associated tag is directly tied to that vulnerability.
+This feed will ingest a list of IPv4 indicators observed by GreyNoise and create an appropriate Indicator and Observable record. Additional vulnerability records will also be created when an associated tag is directly tied to that vulnerability.
 
 Additional enrichment information can be retrieved using the GreyNoise enrichment integration in conjunction with this integration.
