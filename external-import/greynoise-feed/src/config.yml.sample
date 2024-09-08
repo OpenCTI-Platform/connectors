@@ -16,4 +16,4 @@ greynoisefeed:
   indicator_score_benign: 20
   name: 'GreyNoise'
   description: 'GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.'
-  limit: 50000
+  limit: 10000

@@ -68,7 +68,7 @@ class GreyNoiseFeed:
             ["greynoisefeed", "limit"],
             config,
             isNumber=True,
-            default=50000,
+            default=10000,
         )
         self.identity = self.helper.api.identity.create(
             type="Organization",
