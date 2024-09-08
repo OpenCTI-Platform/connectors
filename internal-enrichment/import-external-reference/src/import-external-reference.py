@@ -88,20 +88,17 @@ class ImportExternalReferenceConnector:
                         page.wait_for_timeout(2000)
                         found = False
                         try:
-                            page.locator('a:has-text("accept all")').click(
+                            page.locator('a:has-text("accept all")').first.click(
                                 timeout=1000, force=True
                             )
                             found = True
                         except:
                             pass
                         if not found:
-                            try:
-                                page.locator('button:has-text("accept all")').click(
-                                    timeout=1000, force=True
-                                )
-                                found = True
-                            except:
-                                pass
+                            page.locator('button:has-text("accept all")').first.click(
+                                timeout=1000, force=True
+                            )
+                            found = True
                         if found:
                             page.wait_for_timeout(2000)
                         page.pdf(format="A4", path="data.pdf")
@@ -186,7 +183,7 @@ class ImportExternalReferenceConnector:
                         page.wait_for_timeout(2000)
                         found = False
                         try:
-                            page.locator('a:has-text("accept all")').click(
+                            page.locator('a:has-text("accept all")').first.click(
                                 timeout=1000, force=True
                             )
                             found = True
@@ -194,9 +191,9 @@ class ImportExternalReferenceConnector:
                             pass
                         if not found:
                             try:
-                                page.locator('button:has-text("accept all")').click(
-                                    timeout=1000, force=True
-                                )
+                                page.locator(
+                                    'button:has-text("accept all")'
+                                ).first.click(timeout=1000, force=True)
                                 found = True
                             except:
                                 pass
