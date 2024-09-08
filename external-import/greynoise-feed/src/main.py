@@ -225,7 +225,7 @@ class GreyNoiseFeed:
             description = (
                 "Internet Scanning IP detected by GreyNoise with classification `"
                 + ip["classification"]
-                + "."
+                + "`."
             )
             pattern = "[ipv4-addr:value = '" + ip["ip"] + "']"
 
