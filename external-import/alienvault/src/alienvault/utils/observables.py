@@ -4,7 +4,6 @@
 from typing import Any, List, Mapping, NamedTuple, Optional
 
 from alienvault.utils.constants import (
-    DEFAULT_X_OPENCTI_SCORE,
     X_OPENCTI_CREATED_BY_REF,
     X_OPENCTI_LABELS,
     X_OPENCTI_SCORE,
@@ -24,6 +23,7 @@ from stix2 import (
 
 
 def _get_default_custom_properties(
+    x_opencti_score: int,
     created_by: Optional[Identity] = None,
     labels: Optional[List[str]] = None,
 ) -> Mapping[str, Any]:
@@ -31,7 +31,7 @@ def _get_default_custom_properties(
     # when creating a Bundle without allow_custom=True flag.
     custom_properties = {
         X_OPENCTI_LABELS: labels,
-        X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE,
+        X_OPENCTI_SCORE: x_opencti_score
     }
 
     if created_by is not None:
@@ -47,11 +47,14 @@ class ObservableProperties(NamedTuple):
     created_by: Identity
     labels: List[str]
     object_markings: List[MarkingDefinition]
+    x_opencti_score: int
 
 
 def _get_custom_properties(properties: ObservableProperties) -> Mapping[str, Any]:
     return _get_default_custom_properties(
-        created_by=properties.created_by, labels=properties.labels
+        created_by=properties.created_by,
+        labels=properties.labels,
+        x_opencti_score=properties.x_opencti_score
     )
 
 
@@ -112,19 +115,15 @@ def create_observable_url(properties: ObservableProperties) -> URL:
 
 
 def _create_observable_file(
+    properties: ObservableProperties,
     hashes: Optional[Mapping[str, str]] = None,
-    name: Optional[str] = None,
-    created_by: Optional[Identity] = None,
-    labels: Optional[List[str]] = None,
-    object_markings: Optional[List[MarkingDefinition]] = None,
+    name: Optional[str] = None
 ) -> File:
     return File(
         hashes=hashes,
         name=name,
-        object_marking_refs=object_markings,
-        custom_properties=_get_default_custom_properties(
-            created_by=created_by, labels=labels
-        ),
+        object_marking_refs=properties.object_markings,
+        custom_properties=_get_custom_properties(properties),
     )
 
 
@@ -132,9 +131,7 @@ def create_observable_file_md5(properties: ObservableProperties) -> File:
     """Create an observable representing a MD5 hash of a file."""
     return _create_observable_file(
         hashes={"MD5": properties.value},
-        created_by=properties.created_by,
-        labels=properties.labels,
-        object_markings=properties.object_markings,
+        properties=properties
     )
 
 
@@ -142,9 +139,7 @@ def create_observable_file_sha1(properties: ObservableProperties) -> File:
     """Create an observable representing a SHA-1 hash of a file."""
     return _create_observable_file(
         hashes={"SHA-1": properties.value},
-        created_by=properties.created_by,
-        labels=properties.labels,
-        object_markings=properties.object_markings,
+        properties=properties
     )
 
 
@@ -152,9 +147,7 @@ def create_observable_file_sha256(properties: ObservableProperties) -> File:
     """Create an observable representing a SHA-256 hash of a file."""
     return _create_observable_file(
         hashes={"SHA-256": properties.value},
-        created_by=properties.created_by,
-        labels=properties.labels,
-        object_markings=properties.object_markings,
+        properties=properties
     )
 
 
@@ -162,9 +155,7 @@ def create_observable_file_name(properties: ObservableProperties) -> File:
     """Create an observable representing a file name."""
     return _create_observable_file(
         name=properties.value,
-        created_by=properties.created_by,
-        labels=properties.labels,
-        object_markings=properties.object_markings,
+        properties=properties
     )
 
 

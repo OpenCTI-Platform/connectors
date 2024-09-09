@@ -147,14 +147,27 @@ class PulseBundleBuilder:
         self.enable_attack_patterns_indicates = config.enable_attack_patterns_indicates
         self.x_opencti_score = {
             "default": config.x_opencti_score,
+            "IPv4": config.x_opencti_score_ip,
             "IPv4-Addr": config.x_opencti_score_ip,
+            "IPv6": config.x_opencti_score_ip,
             "IPv6-Addr": config.x_opencti_score_ip,
+            "CIDR": config.x_opencti_score_ip,
+            "domain": config.x_opencti_score_domain,
             "Domain-Name": config.x_opencti_score_domain,
+            "hostname": config.x_opencti_score_hostname,
             "Hostname": config.x_opencti_score_hostname,
+            "email": config.x_opencti_score_email,
             "Email-addr": config.x_opencti_score_email,
+            "FilePath": config.x_opencti_score_file,
+            "FileHash-MD5": config.x_opencti_score_file,
+            "FileHash-SHA1": config.x_opencti_score_file,
+            "FileHash-SHA256": config.x_opencti_score_file,
             "StixFile": config.x_opencti_score_file,
+            "URL": config.x_opencti_score_url,
+            "URI": config.x_opencti_score_url,
             "Url": config.x_opencti_score_url,
             "Mutex": config.x_opencti_score_mutex,
+            "BitcoinAddress": config.x_opencti_score_cryptocurrency_wallet,
             "Cryptocurrency-Wallet": config.x_opencti_score_cryptocurrency_wallet
         }
 
@@ -390,7 +403,9 @@ class PulseBundleBuilder:
 
             if self.create_observables:
                 observable_properties = self._create_observable_properties(
-                    pulse_indicator_value, labels
+                    value=pulse_indicator_value,
+                    labels=labels,
+                    x_opencti_score=self.x_opencti_score.get(pulse_indicator_type) 
                 )
                 observable = factory.create_observable(observable_properties)
 
@@ -451,10 +466,17 @@ class PulseBundleBuilder:
         )
 
     def _create_observable_properties(
-        self, value: str, labels: List[str]
+        self,
+        value: str,
+        labels: List[str],
+        x_opencti_score: int
     ) -> ObservableProperties:
         return ObservableProperties(
-            value, self.pulse_author, labels, self.object_markings
+            value,
+            self.pulse_author,
+            labels,
+            self.object_markings,
+            x_opencti_score
         )
 
     def _create_indicator(
