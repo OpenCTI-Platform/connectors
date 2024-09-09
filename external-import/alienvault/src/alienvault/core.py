@@ -54,7 +54,9 @@ class AlienVault:
     _CONFIG_X_OPENCTI_SCORE_FILE = f"{_CONFIG_NAMESPACE}.x_opencti_score_file"
     _CONFIG_X_OPENCTI_SCORE_URL = f"{_CONFIG_NAMESPACE}.x_opencti_score_url"
     _CONFIG_X_OPENCTI_SCORE_MUTEX = f"{_CONFIG_NAMESPACE}.x_opencti_score_mutex"
-    _CONFIG_X_OPENCTI_SCORE_CRYPTOCURRENCY_WALLET = f"{_CONFIG_NAMESPACE}.x_opencti_score_cryptocurrency_wallet"
+    _CONFIG_X_OPENCTI_SCORE_CRYPTOCURRENCY_WALLET = (
+        f"{_CONFIG_NAMESPACE}.x_opencti_score_cryptocurrency_wallet"
+    )
 
     _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
 
@@ -164,33 +166,62 @@ class AlienVault:
         )
 
         # Set x_opencti_score(s)
-        default_x_opencti_score = self._get_configuration(
-            config, self._CONFIG_DEFAULT_X_OPENCTI_SCORE, is_number=True
-        ) or self._DEFAULT_DEFAULT_X_OPENCTI_SCORE
-        x_opencti_score_ip = self._get_configuration(
-            config, self._CONFIG_X_OPENCTI_SCORE_IP, is_number=True
-        ) or default_x_opencti_score
-        x_opencti_score_domain = self._get_configuration(
-            config, self._CONFIG_X_OPENCTI_SCORE_DOMAIN, is_number=True
-        ) or default_x_opencti_score
-        x_opencti_score_hostname = self._get_configuration(
-            config, self._CONFIG_X_OPENCTI_SCORE_HOSTNAME, is_number=True
-        ) or default_x_opencti_score
-        x_opencti_score_email = self._get_configuration(
-            config, self._CONFIG_X_OPENCTI_SCORE_EMAIL, is_number=True
-        ) or default_x_opencti_score
-        x_opencti_score_file = self._get_configuration(
-            config, self._CONFIG_X_OPENCTI_SCORE_FILE, is_number=True
-        ) or default_x_opencti_score
-        x_opencti_score_url = self._get_configuration(
-            config, self._CONFIG_X_OPENCTI_SCORE_URL, is_number=True
-        ) or default_x_opencti_score
-        x_opencti_score_mutex = self._get_configuration(
-            config, self._CONFIG_X_OPENCTI_SCORE_MUTEX, is_number=True
-        ) or default_x_opencti_score
-        x_opencti_score_cryptocurrency_wallet = self._get_configuration(
-            config, self._CONFIG_X_OPENCTI_SCORE_CRYPTOCURRENCY_WALLET, is_number=True
-        ) or default_x_opencti_score
+        default_x_opencti_score = (
+            self._get_configuration(
+                config, self._CONFIG_DEFAULT_X_OPENCTI_SCORE, is_number=True
+            )
+            or self._DEFAULT_DEFAULT_X_OPENCTI_SCORE
+        )
+        x_opencti_score_ip = (
+            self._get_configuration(
+                config, self._CONFIG_X_OPENCTI_SCORE_IP, is_number=True
+            )
+            or default_x_opencti_score
+        )
+        x_opencti_score_domain = (
+            self._get_configuration(
+                config, self._CONFIG_X_OPENCTI_SCORE_DOMAIN, is_number=True
+            )
+            or default_x_opencti_score
+        )
+        x_opencti_score_hostname = (
+            self._get_configuration(
+                config, self._CONFIG_X_OPENCTI_SCORE_HOSTNAME, is_number=True
+            )
+            or default_x_opencti_score
+        )
+        x_opencti_score_email = (
+            self._get_configuration(
+                config, self._CONFIG_X_OPENCTI_SCORE_EMAIL, is_number=True
+            )
+            or default_x_opencti_score
+        )
+        x_opencti_score_file = (
+            self._get_configuration(
+                config, self._CONFIG_X_OPENCTI_SCORE_FILE, is_number=True
+            )
+            or default_x_opencti_score
+        )
+        x_opencti_score_url = (
+            self._get_configuration(
+                config, self._CONFIG_X_OPENCTI_SCORE_URL, is_number=True
+            )
+            or default_x_opencti_score
+        )
+        x_opencti_score_mutex = (
+            self._get_configuration(
+                config, self._CONFIG_X_OPENCTI_SCORE_MUTEX, is_number=True
+            )
+            or default_x_opencti_score
+        )
+        x_opencti_score_cryptocurrency_wallet = (
+            self._get_configuration(
+                config,
+                self._CONFIG_X_OPENCTI_SCORE_CRYPTOCURRENCY_WALLET,
+                is_number=True,
+            )
+            or default_x_opencti_score
+        )
 
         update_existing_data = bool(
             self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
@@ -231,7 +262,7 @@ class AlienVault:
             x_opencti_score_file=x_opencti_score_file,
             x_opencti_score_url=x_opencti_score_url,
             x_opencti_score_mutex=x_opencti_score_mutex,
-            x_opencti_score_cryptocurrency_wallet=x_opencti_score_cryptocurrency_wallet
+            x_opencti_score_cryptocurrency_wallet=x_opencti_score_cryptocurrency_wallet,
         )
 
         self.pulse_importer = PulseImporter(pulse_importer_config)

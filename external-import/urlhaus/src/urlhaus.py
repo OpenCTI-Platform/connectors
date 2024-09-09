@@ -51,7 +51,7 @@ class URLhaus:
             config=config,
             isNumber=True,
             default=80,
-            required=False
+            required=False,
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",

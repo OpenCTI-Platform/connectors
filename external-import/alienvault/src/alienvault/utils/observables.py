@@ -29,10 +29,7 @@ def _get_default_custom_properties(
 ) -> Mapping[str, Any]:
     # XXX: Causes an unexpected property (x_opencti_score) error
     # when creating a Bundle without allow_custom=True flag.
-    custom_properties = {
-        X_OPENCTI_LABELS: labels,
-        X_OPENCTI_SCORE: x_opencti_score
-    }
+    custom_properties = {X_OPENCTI_LABELS: labels, X_OPENCTI_SCORE: x_opencti_score}
 
     if created_by is not None:
         custom_properties[X_OPENCTI_CREATED_BY_REF] = created_by["id"]
@@ -54,7 +51,7 @@ def _get_custom_properties(properties: ObservableProperties) -> Mapping[str, Any
     return _get_default_custom_properties(
         created_by=properties.created_by,
         labels=properties.labels,
-        x_opencti_score=properties.x_opencti_score
+        x_opencti_score=properties.x_opencti_score,
     )
 
 
@@ -117,7 +114,7 @@ def create_observable_url(properties: ObservableProperties) -> URL:
 def _create_observable_file(
     properties: ObservableProperties,
     hashes: Optional[Mapping[str, str]] = None,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ) -> File:
     return File(
         hashes=hashes,
@@ -130,33 +127,27 @@ def _create_observable_file(
 def create_observable_file_md5(properties: ObservableProperties) -> File:
     """Create an observable representing a MD5 hash of a file."""
     return _create_observable_file(
-        hashes={"MD5": properties.value},
-        properties=properties
+        hashes={"MD5": properties.value}, properties=properties
     )
 
 
 def create_observable_file_sha1(properties: ObservableProperties) -> File:
     """Create an observable representing a SHA-1 hash of a file."""
     return _create_observable_file(
-        hashes={"SHA-1": properties.value},
-        properties=properties
+        hashes={"SHA-1": properties.value}, properties=properties
     )
 
 
 def create_observable_file_sha256(properties: ObservableProperties) -> File:
     """Create an observable representing a SHA-256 hash of a file."""
     return _create_observable_file(
-        hashes={"SHA-256": properties.value},
-        properties=properties
+        hashes={"SHA-256": properties.value}, properties=properties
     )
 
 
 def create_observable_file_name(properties: ObservableProperties) -> File:
     """Create an observable representing a file name."""
-    return _create_observable_file(
-        name=properties.value,
-        properties=properties
-    )
+    return _create_observable_file(name=properties.value, properties=properties)
 
 
 def create_observable_mutex(properties: ObservableProperties) -> Mutex:

@@ -83,7 +83,9 @@ class PulseImporter:
         self.x_opencti_score_file = config.x_opencti_score_file
         self.x_opencti_score_url = config.x_opencti_score_url
         self.x_opencti_score_mutex = config.x_opencti_score_mutex
-        self.x_opencti_score_cryptocurrency_wallet = config.x_opencti_score_cryptocurrency_wallet
+        self.x_opencti_score_cryptocurrency_wallet = (
+            config.x_opencti_score_cryptocurrency_wallet
+        )
         self.malware_guess_cache: Dict[str, str] = {}
         self.guess_cve_pattern = re.compile(self._GUESS_CVE_PATTERN, re.IGNORECASE)
         self.work_id: Optional[str] = None

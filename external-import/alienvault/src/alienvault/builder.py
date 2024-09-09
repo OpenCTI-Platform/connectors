@@ -168,7 +168,7 @@ class PulseBundleBuilder:
             "Url": config.x_opencti_score_url,
             "Mutex": config.x_opencti_score_mutex,
             "BitcoinAddress": config.x_opencti_score_cryptocurrency_wallet,
-            "Cryptocurrency-Wallet": config.x_opencti_score_cryptocurrency_wallet
+            "Cryptocurrency-Wallet": config.x_opencti_score_cryptocurrency_wallet,
         }
 
     def _no_relationships(self) -> bool:
@@ -405,7 +405,7 @@ class PulseBundleBuilder:
                 observable_properties = self._create_observable_properties(
                     value=pulse_indicator_value,
                     labels=labels,
-                    x_opencti_score=self.x_opencti_score.get(pulse_indicator_type) 
+                    x_opencti_score=self.x_opencti_score.get(pulse_indicator_type),
                 )
                 observable = factory.create_observable(observable_properties)
 
@@ -426,7 +426,7 @@ class PulseBundleBuilder:
                     pattern_type,
                     pulse_indicator.created,
                     labels,
-                    main_observable_type=indicator_pattern.main_observable_type
+                    main_observable_type=indicator_pattern.main_observable_type,
                 )
 
                 if observable is not None:
@@ -466,17 +466,10 @@ class PulseBundleBuilder:
         )
 
     def _create_observable_properties(
-        self,
-        value: str,
-        labels: List[str],
-        x_opencti_score: int
+        self, value: str, labels: List[str], x_opencti_score: int
     ) -> ObservableProperties:
         return ObservableProperties(
-            value,
-            self.pulse_author,
-            labels,
-            self.object_markings,
-            x_opencti_score
+            value, self.pulse_author, labels, self.object_markings, x_opencti_score
         )
 
     def _create_indicator(
@@ -501,8 +494,7 @@ class PulseBundleBuilder:
             object_markings=self.object_markings,
             x_opencti_score=(
                 self.x_opencti_score.get(main_observable_type)
-                or
-                self.x_opencti_score.get("default")
+                or self.x_opencti_score.get("default")
             ),
             x_opencti_main_observable_type=main_observable_type,
         )

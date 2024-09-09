@@ -52,7 +52,7 @@ class Phishunt:
             config,
             isNumber=True,
             default=40,
-            required=False
+            required=False,
         )
         self.x_opencti_score_domain = get_config_variable(
             "PHISHUNT_X_OPENCTI_SCORE_DOMAIN",
@@ -60,7 +60,7 @@ class Phishunt:
             config,
             isNumber=True,
             default=None,
-            required=False
+            required=False,
         )
         self.x_opencti_score_ip = get_config_variable(
             "PHISHUNT_X_OPENCTI_SCORE_IP",
@@ -68,7 +68,7 @@ class Phishunt:
             config,
             isNumber=True,
             default=None,
-            required=False
+            required=False,
         )
         self.x_opencti_score_url = get_config_variable(
             "PHISHUNT_X_OPENCTI_SCORE_URL",
@@ -76,7 +76,7 @@ class Phishunt:
             config,
             isNumber=True,
             default=None,
-            required=False
+            required=False,
         )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
@@ -126,7 +126,8 @@ class Phishunt:
                         object_marking_refs=[stix2.TLP_WHITE],
                         custom_properties={
                             "x_opencti_description": "Phishunt malicious URL",
-                            "x_opencti_score": self.x_opencti_score_url or self.default_x_opencti_score,
+                            "x_opencti_score": self.x_opencti_score_url
+                            or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
                             "x_opencti_created_by_ref": self.identity["standard_id"],
                         },
@@ -185,7 +186,8 @@ class Phishunt:
                     object_marking_refs=[stix2.TLP_WHITE],
                     custom_properties={
                         "x_opencti_description": "Phishunt malicious URL",
-                        "x_opencti_score": self.x_opencti_score_url or self.default_x_opencti_score,
+                        "x_opencti_score": self.x_opencti_score_url
+                        or self.default_x_opencti_score,
                         "x_opencti_labels": ["osint", "phishing"],
                         "x_opencti_created_by_ref": self.identity["standard_id"],
                     },
@@ -223,7 +225,8 @@ class Phishunt:
                         object_marking_refs=[stix2.TLP_WHITE],
                         custom_properties={
                             "x_opencti_description": "Phishunt domain based on malicious URL",
-                            "x_opencti_score": self.x_opencti_score_domain or self.default_x_opencti_score,
+                            "x_opencti_score": self.x_opencti_score_domain
+                            or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
                             "x_opencti_created_by_ref": self.identity["standard_id"],
                         },
@@ -265,7 +268,8 @@ class Phishunt:
                         object_marking_refs=[stix2.TLP_WHITE],
                         custom_properties={
                             "x_opencti_description": "Phishunt domain based on malicious URL",
-                            "x_opencti_score": self.x_opencti_score_ip or self.default_x_opencti_score,
+                            "x_opencti_score": self.x_opencti_score_ip
+                            or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
                             "x_opencti_created_by_ref": self.identity["standard_id"],
                         },

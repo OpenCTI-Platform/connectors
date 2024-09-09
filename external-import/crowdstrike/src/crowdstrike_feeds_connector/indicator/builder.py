@@ -388,7 +388,7 @@ class IndicatorBundleBuilder:
             confidence=self.confidence_level,
             object_markings=self.object_markings,
             x_opencti_main_observable_type=indicator_pattern.main_observable_type,
-            x_opencti_score=score
+            x_opencti_score=score,
         )
 
     def _create_based_on_relationships(

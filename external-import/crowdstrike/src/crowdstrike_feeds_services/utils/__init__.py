@@ -985,9 +985,7 @@ def create_indicator(
     custom_properties: Dict[str, Any] = {}
 
     custom_properties[X_OPENCTI_SCORE] = (
-        x_opencti_score
-        if x_opencti_score is not None
-        else DEFAULT_X_OPENCTI_SCORE
+        x_opencti_score if x_opencti_score is not None else DEFAULT_X_OPENCTI_SCORE
     )
 
     if x_opencti_main_observable_type is not None:
