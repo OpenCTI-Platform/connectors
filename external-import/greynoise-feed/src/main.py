@@ -520,25 +520,25 @@ class GreyNoiseFeed:
                         )
                         bundle_objects.append(stix_sighting_indicator)
 
-                        stix_sighting_observable = stix2.Sighting(
-                            id=StixSightingRelationship.generate_id(
-                                stix_observable.id,
-                                stix_country_destination.id,
-                                first_seen,
-                                last_seen,
-                            ),
-                            sighting_of_ref="indicator--7eac24ff-8131-4400-9e56-cc8fe2c65078",  # Fake ID
-                            where_sighted_refs=[stix_country_destination.id],
-                            count=1,
-                            first_seen=first_seen,
-                            last_seen=last_seen,
-                            created_by_ref=self.identity["standard_id"],
-                            object_marking_refs=[stix2.TLP_GREEN],
-                            custom_properties={
-                                "x_opencti_sighting_of_ref": stix_observable.id,
-                            },
-                        )
-                        bundle_objects.append(stix_sighting_observable)
+                        # stix_sighting_observable = stix2.Sighting(
+                        #    id=StixSightingRelationship.generate_id(
+                        #        stix_observable.id,
+                        #        stix_country_destination.id,
+                        #        first_seen,
+                        #        last_seen,
+                        #    ),
+                        #    sighting_of_ref="indicator--7eac24ff-8131-4400-9e56-cc8fe2c65078",  # Fake ID
+                        #    where_sighted_refs=[stix_country_destination.id],
+                        #    count=1,
+                        #    first_seen=first_seen,
+                        #    last_seen=last_seen,
+                        #    created_by_ref=self.identity["standard_id"],
+                        #    object_marking_refs=[stix2.TLP_GREEN],
+                        #    custom_properties={
+                        #        "x_opencti_sighting_of_ref": stix_observable.id,
+                        #    },
+                        # )
+                        # bundle_objects.append(stix_sighting_observable)
 
         # Creating the bundle from the list
         if len(bundle_objects) > 0:
