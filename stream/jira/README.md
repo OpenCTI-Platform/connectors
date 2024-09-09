@@ -44,7 +44,6 @@ This connector allows to consume an OpenCTI Stream and open JIRA issues.
 | `jira_custom_fields_values`             | `JIRA_CUSTOM_FIELDS_VALUES`             | Yes*      | Static values to go into the custom fields (same order)                                       |
 
 
-
 ### Configuration notes
 - The JIRA connector receives events from an OCTI stream, which you must generate in the OCTI UI (currently under Data > Sharing)
 - After creating a stream, the stream ID (connector_live_stream_id) is shown in the UI
@@ -56,11 +55,6 @@ This connector allows to consume an OpenCTI Stream and open JIRA issues.
 -  You can identify the custom fields defined in JIRA and retrieve the ID for a given name using the command:
       `curl -u <email>:<api_token> -X GET -H "Content-Type: application/json" https://<your_jira_instance>.atlassian.net/rest/api/2/field`
 
-[*] Currently, there is a bug where the connector expects at least one custom field to run. Removing the parameters entirely leaves it attempting to insert into a custom field with no name.
-A workaround for this at present is to either define and use a custom field, or alternatively, to define a standard field such as `assignee`. ie.
-    - JIRA_CUSTOM_FIELDS_KEYS=assignee
-    - JIRA_CUSTOM_FIELDS_VALUES=OCTI User
-
 
 ### Usage
 - Create a Stream in OpenCTI
@@ -70,5 +64,5 @@ A workaround for this at present is to either define and use a custom field, or 
 
 
 ### Further notes
-- Currently, updating the entity in OCTI does trigger an update event in the stream, but JIRA does not accept the update and does not update the existing issue or create a new issue
+- Currently, although updating or deleting an entity in OCTI triggers an update or delete event in the stream, the connector only supports creation events.
 - This connector is currently one-way
