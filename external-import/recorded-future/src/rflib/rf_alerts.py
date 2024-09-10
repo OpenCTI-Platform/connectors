@@ -355,10 +355,12 @@ class RecordedFutureAlertConnector(threading.Thread):
                     )
                 for entity in hit["entities"]:
                     if entity["type"] == "Image":
-                        image_presence, image_path, image_name = (
-                            self.api_recorded_future.get_image_and_save_temp_file(
-                                entity["name"]
-                            )
+                        (
+                            image_presence,
+                            image_path,
+                            image_name,
+                        ) = self.api_recorded_future.get_image_and_save_temp_file(
+                            entity["name"]
                         )
                         if image_presence:
                             stix_images.append(

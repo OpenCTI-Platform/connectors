@@ -16,9 +16,8 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import APP_VERSION, RecordedFutureAlertConnector, RFClient, RiskList, StixNote, ThreatMap, CustomBundles
-
-from rflib import APP_VERSION, CustomBundles, RFClient, RiskList, StixNote, ThreatMap
+from rflib import (APP_VERSION, CustomBundles, RecordedFutureAlertConnector,
+                   RFClient, RiskList, StixNote, ThreatMap)
 
 
 class BaseRFConnector:
@@ -330,7 +329,7 @@ class RFConnector:
             self.RF.helper.log_info("[ANALYST NOTES] Analyst notes fetching disabled")
 
         if self.RF.custom_bundle_paths:
-            self.RF.helper.log_info('[CUSTOM BUNDLES] Starting bundles thread...')
+            self.RF.helper.log_info("[CUSTOM BUNDLES] Starting bundles thread...")
             self.CustomBundles = CustomBundles(
                 self.RF.helper,
                 self.RF.custom_bundle_interval,
