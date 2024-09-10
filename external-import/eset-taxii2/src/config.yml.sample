@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'CHANGEME'
+
+connector:
+  id: 'CHANGEME'
+  type: 'EXTERNAL_IMPORT'
+  name: 'TAXII2_Import' # Required
+  scope:'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
+  update_existing_data: false
+  log_level: 'info'
+
+taxii2:
+  discovery_url: 'ChangeMe' # Required
+  cert_path: 'ChangeMe' # Optional (.pem)
+  username: "generate-username-in-eti-portal-profile-access-tokens-and-credentials" # Required
+  password: "generated-password-in-eti-portal-profile-access-tokens-and-credentials"
+  collections: '*.*'
+  initial_history: 24 # Required, in hours
+  interval: 1000 # Required, in hours
+  create_indicators: true # Generate indicators for ingested observables
+  create_observables: true # Generate observables for ingested indicators
+  add_custom_label: false
+  custom_label: ChangeMe
+  force_pattern_as_name: false
+  force_multiple_pattern_name: 'Multiple Indicators'
