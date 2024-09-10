@@ -45,13 +45,13 @@ class JiraConnector:
             ["jira", "custom_fields_keys"],
             config,
             default="",
-        ).split(",")
+        )
         self.jira_custom_fields_values = get_config_variable(
             "JIRA_CUSTOM_FIELDS_VALUES",
             ["jira", "custom_fields_values"],
             config,
             default="",
-        ).split(",")
+        )
         self.jira_client = JIRA(
             server=self.jira_url,
             basic_auth=(self.jira_login_email, self.jira_api_token),
