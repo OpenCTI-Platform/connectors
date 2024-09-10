@@ -16,8 +16,15 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import (APP_VERSION, CustomBundles, RecordedFutureAlertConnector,
-                   RFClient, RiskList, StixNote, ThreatMap)
+from rflib import (
+    APP_VERSION,
+    CustomBundles,
+    RecordedFutureAlertConnector,
+    RFClient,
+    RiskList,
+    StixNote,
+    ThreatMap,
+)
 
 
 class BaseRFConnector:

@@ -15,7 +15,15 @@ from .constants import RISK_LIST_TYPE_MAPPER
 from .custom_bundle import CustomBundles
 from .rf_alerts import RecordedFutureAlertConnector
 from .rf_client import RFClient
-from .rf_to_stix2 import (TTP, URL, Domain, FileHash, Identity, IPAddress,
-                          Malware, StixNote)
+from .rf_to_stix2 import (
+    TTP,
+    URL,
+    Domain,
+    FileHash,
+    Identity,
+    IPAddress,
+    Malware,
+    StixNote,
+)
 from .risk_list import RiskList
 from .threat_map import ThreatMap
