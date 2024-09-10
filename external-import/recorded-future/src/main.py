@@ -286,7 +286,6 @@ class RFNotes:
                 continue
 
 
-
 class RFConnector:
     def __init__(self):
         self.RF = BaseRFConnector()
