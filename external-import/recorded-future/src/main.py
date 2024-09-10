@@ -206,14 +206,13 @@ class RFNotes:
 
         try:
             # Import, convert and send to OpenCTI platform Analyst Notes
-            self.fetch_custom_bundles()
             self.convert_and_send(published, tas, work_id)
         except Exception as e:
             self.helper.log_error(str(e))
 
         self.helper.set_state({"last_run": timestamp})
 
-    def convert_and_send_notes(self, published, tas, work_id):
+    def convert_and_send(self, published, tas, work_id):
         """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""
         self.helper.log_info(
             f"[ANALYST NOTES] Pull Signatures is {str(self.rf_pull_signatures)} of type "
@@ -240,7 +239,6 @@ class RFNotes:
             f"[ANALYST NOTES] Fetched {len(notes)} Analyst notes from API"
         )
         for note in notes:
-<<<<<<< HEAD
             try:
                 stixnote = StixNote(
                     self.helper,
@@ -270,29 +268,6 @@ class RFNotes:
                     f"{str(exception)}"
                 )
                 continue
-=======
-            stixnote = StixNote(
-                self.helper,
-                tas,
-                self.rfapi,
-                self.tlp,
-                self.rf_person_to_TA,
-                self.rf_TA_to_intrusion_set,
-                self.risk_as_score,
-                self.risk_threshold,
-            )
-            stixnote.from_json(note)
-            stixnote.create_relations()
-            bundle = stixnote.to_stix_bundle()
-            self.helper.log_info(
-                "[ANALYST NOTES] Sending Bundle to server with "
-                + str(len(bundle.objects))
-                + " objects"
-            )
-            self.helper.send_stix2_bundle(
-                bundle.serialize(), update=self.update_existing_data, work_id=work_id
-            )
->>>>>>> ready for prod
 
 
 class RFConnector:
