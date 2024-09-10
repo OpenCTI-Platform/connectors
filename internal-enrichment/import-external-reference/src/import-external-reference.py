@@ -95,10 +95,13 @@ class ImportExternalReferenceConnector:
                         except:
                             pass
                         if not found:
-                            page.locator('button:has-text("accept all")').first.click(
-                                timeout=1000, force=True
-                            )
-                            found = True
+                            try:
+                                page.locator(
+                                    'button:has-text("accept all")'
+                                ).first.click(timeout=1000, force=True)
+                                found = True
+                            except:
+                                pass
                         if found:
                             page.wait_for_timeout(2000)
                         page.pdf(format="A4", path="data.pdf")
@@ -112,7 +115,6 @@ class ImportExternalReferenceConnector:
                         mime_type="application/pdf",
                     )
                     self.delete_files()
-
             except Exception as e:
                 raise ValueError(e)
         if self.import_as_md:
