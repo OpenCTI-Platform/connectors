@@ -117,6 +117,16 @@ class IpInfoConnector:
             confidence=self.helper.connect_confidence_level,
         )
         stix_objects.append(observable_to_city)
+        observable_to_country = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                "located-at", stix_entity["id"], country_location.id
+            ),
+            relationship_type="located-at",
+            source_ref=stix_entity["id"],
+            target_ref=country_location.id,
+            confidence=self.helper.connect_confidence_level,
+        )
+        stix_objects.append(observable_to_country)
         return self.helper.stix2_create_bundle(stix_objects)
 
     def _process_message(self, data: Dict):
