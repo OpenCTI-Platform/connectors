@@ -86,7 +86,7 @@ class UrlscanConnector:
             ["urlscan", "default_x_opencti_score"],
             config,
             default=50,
-            isNumber=True
+            isNumber=True,
         )
         # Optional x_opencti_score for domain-name type
         self._x_opencti_score_domain = get_config_variable(
@@ -94,7 +94,7 @@ class UrlscanConnector:
             ["urlscan", "x_opencti_score_domain"],
             config,
             default=None,
-            isNumber=True
+            isNumber=True,
         )
         # Optional x_opencti_score for url type
         self._x_opencti_score_url = get_config_variable(
@@ -102,7 +102,7 @@ class UrlscanConnector:
             ["urlscan", "x_opencti_score_url"],
             config,
             default=None,
-            isNumber=True
+            isNumber=True,
         )
 
         self._default_tlp = getattr(stix2, f"TLP_{default_tlp}".upper(), None)
