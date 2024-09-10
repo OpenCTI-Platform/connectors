@@ -2,6 +2,7 @@ import math
 import os
 import time
 from datetime import datetime, timedelta
+from random import shuffle
 
 import pytz
 import stix2
@@ -215,7 +216,8 @@ class GreyNoiseFeed:
         return next((x for x in data if x[key] == value), None)
 
     def _process_data(self, work_id, session, ips_list):
-        bundle_objects = []
+        bundle_entities = []
+        bundle_relationships = []
         json_data_tags = session.metadata()
         self.helper.log_info("Building Indicator Bundles")
         for ip in ips_list:
@@ -268,7 +270,7 @@ class GreyNoiseFeed:
                     "x_opencti_main_observable_type": "IPv4-Addr",
                 },
             )
-            bundle_objects.append(stix_indicator)
+            bundle_entities.append(stix_indicator)
 
             # Generate Observable
             stix_observable = stix2.IPv4Address(
@@ -287,7 +289,7 @@ class GreyNoiseFeed:
                     "external_references": [external_reference],
                 },
             )
-            bundle_objects.append(stix_observable)
+            bundle_entities.append(stix_observable)
 
             # Generate relationship Indicator => Observable
             stix_relationship = stix2.Relationship(
@@ -300,7 +302,7 @@ class GreyNoiseFeed:
                 created_by_ref=self.identity["standard_id"],
                 object_marking_refs=[stix2.TLP_GREEN],
             )
-            bundle_objects.append(stix_relationship)
+            bundle_relationships.append(stix_relationship)
 
             # Malwares
             stix_malwares = []
@@ -318,7 +320,7 @@ class GreyNoiseFeed:
                     object_marking_refs=[stix2.TLP_WHITE],
                 )
                 stix_malwares.append(stix_malware)
-                bundle_objects.append(stix_malware)
+                bundle_entities.append(stix_malware)
 
                 stix_relationship_observable_malware = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
@@ -330,7 +332,7 @@ class GreyNoiseFeed:
                     created_by_ref=self.identity["standard_id"],
                     object_marking_refs=[stix2.TLP_WHITE],
                 )
-                bundle_objects.append(stix_relationship_observable_malware)
+                bundle_relationships.append(stix_relationship_observable_malware)
 
                 stix_relationship_indicator_malware = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
@@ -342,7 +344,7 @@ class GreyNoiseFeed:
                     created_by_ref=self.identity["standard_id"],
                     object_marking_refs=[stix2.TLP_WHITE],
                 )
-                bundle_objects.append(stix_relationship_indicator_malware)
+                bundle_relationships.append(stix_relationship_indicator_malware)
 
             # CVE
             if "cve" in ip and ip["cve"]:
@@ -353,7 +355,7 @@ class GreyNoiseFeed:
                         created_by_ref=self.identity["standard_id"],
                         object_marking_refs=[stix2.TLP_WHITE],
                     )
-                    bundle_objects.append(stix_vulnerability)
+                    bundle_entities.append(stix_vulnerability)
 
                     stix_relationship_observable_vulnerability = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
@@ -367,7 +369,9 @@ class GreyNoiseFeed:
                         created_by_ref=self.identity["standard_id"],
                         object_marking_refs=[stix2.TLP_WHITE],
                     )
-                    bundle_objects.append(stix_relationship_observable_vulnerability)
+                    bundle_relationships.append(
+                        stix_relationship_observable_vulnerability
+                    )
 
             # Metadata
             if "metadata" in ip:
@@ -383,7 +387,7 @@ class GreyNoiseFeed:
                                 "created_by_ref": self.identity["standard_id"],
                             },
                         )
-                        bundle_objects.append(stix_as)
+                        bundle_entities.append(stix_as)
 
                         stix_relationship_observable_as = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
@@ -395,7 +399,7 @@ class GreyNoiseFeed:
                             created_by_ref=self.identity["standard_id"],
                             object_marking_refs=[stix2.TLP_WHITE],
                         )
-                        bundle_objects.append(stix_relationship_observable_as)
+                        bundle_relationships.append(stix_relationship_observable_as)
                     except:
                         pass
                 if "organization" in metadata:
@@ -406,7 +410,7 @@ class GreyNoiseFeed:
                         name=metadata["organization"],
                         identity_class="organization",
                     )
-                    bundle_objects.append(stix_organization)
+                    bundle_entities.append(stix_organization)
 
                     stix_relationship_observable_organization = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
@@ -418,7 +422,9 @@ class GreyNoiseFeed:
                         created_by_ref=self.identity["standard_id"],
                         object_marking_refs=[stix2.TLP_WHITE],
                     )
-                    bundle_objects.append(stix_relationship_observable_organization)
+                    bundle_relationships.append(
+                        stix_relationship_observable_organization
+                    )
 
                     if stix_as is not None:
                         stix_relationship_as_organization = stix2.Relationship(
@@ -431,7 +437,7 @@ class GreyNoiseFeed:
                             created_by_ref=self.identity["standard_id"],
                             object_marking_refs=[stix2.TLP_WHITE],
                         )
-                        bundle_objects.append(stix_relationship_as_organization)
+                        bundle_relationships.append(stix_relationship_as_organization)
                 stix_city = None
                 if "city" in metadata:
                     stix_city = stix2.Location(
@@ -442,7 +448,7 @@ class GreyNoiseFeed:
                         object_marking_refs=[stix2.TLP_WHITE],
                         custom_properties={"x_opencti_location_type": "City"},
                     )
-                    bundle_objects.append(stix_city)
+                    bundle_entities.append(stix_city)
 
                     stix_relationship_observable_city = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
@@ -454,7 +460,7 @@ class GreyNoiseFeed:
                         created_by_ref=self.identity["standard_id"],
                         object_marking_refs=[stix2.TLP_WHITE],
                     )
-                    bundle_objects.append(stix_relationship_observable_city)
+                    bundle_relationships.append(stix_relationship_observable_city)
 
                 if "country" in metadata:
                     stix_country = stix2.Location(
@@ -465,7 +471,7 @@ class GreyNoiseFeed:
                         object_marking_refs=[stix2.TLP_WHITE],
                         custom_properties={"x_opencti_location_type": "Country"},
                     )
-                    bundle_objects.append(stix_country)
+                    bundle_entities.append(stix_country)
 
                     if stix_city is None:
                         stix_relationship_observable_city = stix2.Relationship(
@@ -478,7 +484,7 @@ class GreyNoiseFeed:
                             created_by_ref=self.identity["standard_id"],
                             object_marking_refs=[stix2.TLP_WHITE],
                         )
-                        bundle_objects.append(stix_relationship_observable_city)
+                        bundle_relationships.append(stix_relationship_observable_city)
                     else:
                         stix_relationship_city_country = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
@@ -490,7 +496,7 @@ class GreyNoiseFeed:
                             created_by_ref=self.identity["standard_id"],
                             object_marking_refs=[stix2.TLP_WHITE],
                         )
-                        bundle_objects.append(stix_relationship_city_country)
+                        bundle_relationships.append(stix_relationship_city_country)
                 if "destination_countries" in metadata:
                     for country in metadata["destination_countries"]:
                         stix_country_destination = stix2.Location(
@@ -501,7 +507,7 @@ class GreyNoiseFeed:
                             object_marking_refs=[stix2.TLP_WHITE],
                             custom_properties={"x_opencti_location_type": "Country"},
                         )
-                        bundle_objects.append(stix_country_destination)
+                        bundle_entities.append(stix_country_destination)
 
                         stix_sighting_indicator = stix2.Sighting(
                             id=StixSightingRelationship.generate_id(
@@ -518,7 +524,7 @@ class GreyNoiseFeed:
                             created_by_ref=self.identity["standard_id"],
                             object_marking_refs=[stix2.TLP_GREEN],
                         )
-                        bundle_objects.append(stix_sighting_indicator)
+                        bundle_relationships.append(stix_sighting_indicator)
 
                         # stix_sighting_observable = stix2.Sighting(
                         #    id=StixSightingRelationship.generate_id(
@@ -541,7 +547,9 @@ class GreyNoiseFeed:
                         # bundle_objects.append(stix_sighting_observable)
 
         # Creating the bundle from the list
-        if len(bundle_objects) > 0:
+        if len(bundle_entities) > 0:
+            shuffle(bundle_relationships)
+            bundle_objects = bundle_entities + bundle_relationships
             bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.send_stix2_bundle(
                 bundle,
