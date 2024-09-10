@@ -31,11 +31,13 @@ class Mandiant:
         )
         self.helper = OpenCTIConnectorHelper(config)
 
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
+        self.duration_period = get_config_variable(
+            "CONNECTOR_DURATION_PERIOD",
+            ["connector", "duration_period"],
             config,
+            default="PT5M",
         )
+
         self.mandiant_api_v4_key_id = get_config_variable(
             "MANDIANT_API_V4_KEY_ID", ["mandiant", "api_v4_key_id"], config
         )
@@ -475,8 +477,6 @@ class Mandiant:
             default=80,
         )
 
-        self.mandiant_interval = int(timedelta(minutes=5).total_seconds())
-
         self.identity = self.helper.api.identity.create(
             name="Mandiant",
             type="Organization",
@@ -521,7 +521,7 @@ class Mandiant:
             STATE_OFFSET: 0,
         }
 
-    def run(self):
+    def process_message(self):
         state = self.helper.get_state()
         for collection in self.mandiant_collections:
             # Handle interval config
@@ -611,7 +611,7 @@ class Mandiant:
                     )
                 )
                 self.helper.connector_logger.info(
-                    f"Ignore the '{collection}' collection because the collection interval in the config is '{collection_interval}', the remaining time for the next run : {remaining_time} min"
+                    f"Ignore the '{collection}' collection because the collection interval in the config is '{collection_interval}', the remaining time until the next collection pull: {remaining_time} min"
                 )
                 continue
 
@@ -646,12 +646,10 @@ class Mandiant:
             finally:
                 self.helper.api.work.to_processed(work_id, "Finished")
 
-        if self.helper.connect_run_and_terminate:
-            self.helper.connector_logger.info("Connector stop")
-            self.helper.force_ping()
-            sys.exit(0)
-
-        time.sleep(self.mandiant_interval)
+    def run(self):
+        self.helper.schedule_iso(
+            message_callback=self.process_message, duration_period=self.duration_period
+        )
 
     def remove_statement_marking(self, stix_objects):
         for obj in stix_objects:
@@ -775,7 +773,6 @@ class Mandiant:
                 bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
                 self.helper.send_stix2_bundle(
                     bundle,
-                    update=self.update_existing_data,
                     work_id=work_id,
                 )
                 if collection in collection_with_offset:

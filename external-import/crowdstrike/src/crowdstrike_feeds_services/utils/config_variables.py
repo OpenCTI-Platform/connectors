@@ -36,9 +36,10 @@ class ConfigCrowdstrike:
         :return: None
         """
         # OpenCTI configurations
-        self.update_existing_data: bool = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
+
+        self.duration_period: str = get_config_variable(
+            "CONNECTOR_DURATION_PERIOD",
+            ["connector", "duration_period"],
             self.load,
         )
 
@@ -167,4 +168,5 @@ class ConfigCrowdstrike:
             ["crowdstrike", "interval_sec"],
             self.load,
             isNumber=True,
+            default=1800,
         )
