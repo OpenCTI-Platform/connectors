@@ -11,14 +11,13 @@ from typing import Dict, List, Optional
 
 import taxii2client.v21 as tx21
 import yaml
+from client import HTTPConnectionWithTAXIIHeaders
 from pycti import OpenCTIConnectorHelper, StixCyberObservableTypes, get_config_variable
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
 from stix2.confidence.scales import value_to_none_low_medium_high
 from taxii2client.common import _ensure_datetime_to_string
 from taxii2client.exceptions import TAXIIServiceException
-
-from client import HTTPConnectionWithTAXIIHeaders
 
 
 class Taxii2Connector:
