@@ -1,12 +1,22 @@
 import ipaddress
 from typing import List, Tuple, Union
 
-from stix2 import Infrastructure, IPv4Address, IPv6Address, Relationship, Software
+from open_cti import build_observable
+from stix2 import (
+    Identity,
+    Infrastructure,
+    IPv4Address,
+    IPv6Address,
+    Relationship,
+    Software,
+)
 from zerofox.domain.c2Domains import C2Domain
 
 
 def c2_domains_to_infrastructure(
-    now: str, entry: C2Domain
+    created_by: Identity,
+    now: str,
+    entry: C2Domain,
 ) -> List[Union[Infrastructure, Relationship, IPv4Address, IPv6Address]]:
     """
     Creates a STIX Infrastructure/command-and-conrtol object from a ZeroFOX C2Domain object, along with
@@ -17,6 +27,7 @@ def c2_domains_to_infrastructure(
 
     infrastructure = Infrastructure(
         name=f"{entry.domain}",
+        created_by_ref=created_by,
         labels=tags,
         created=now,
         first_seen=entry.created_at,
@@ -28,7 +39,7 @@ def c2_domains_to_infrastructure(
         entry, infrastructure, tags_obtained_observables
     )
     ip_addresses = (
-        [build_ip_stix_object(ip) for ip in entry.ip_addresses]
+        [build_ip_stix_object(created_by, ip) for ip in entry.ip_addresses]
         if entry.ip_addresses
         else []
     )
@@ -80,11 +91,11 @@ def _get_observables_relationships(
     ]
 
 
-def build_ip_stix_object(ip):
+def build_ip_stix_object(created_by, ip):
     version = ipaddress.ip_address(ip).version
     if version == 4:
-        return IPv4Address(value=ip)
+        return build_observable(created_by=created_by, cls=IPv4Address, value=ip)
     elif version == 6:
-        return IPv6Address(value=ip)
+        return build_observable(created_by=created_by, cls=IPv6Address, value=ip)
     else:
         raise ValueError(f"Invalid IP address: {ip}")

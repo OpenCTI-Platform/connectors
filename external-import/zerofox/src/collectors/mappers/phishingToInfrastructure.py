@@ -1,5 +1,6 @@
 from typing import List, Union
 
+from open_cti import build_observable
 from stix2 import (
     URL,
     AutonomousSystem,
@@ -11,7 +12,7 @@ from stix2 import (
 from zerofox.domain.phishing import Phishing
 
 
-def phishing_to_infrastructure(now: str, entry: Phishing) -> List[
+def phishing_to_infrastructure(created_by, now: str, entry: Phishing) -> List[
     Union[
         Infrastructure,
         Relationship,
@@ -30,15 +31,18 @@ def phishing_to_infrastructure(now: str, entry: Phishing) -> List[
 
     """
     phishing = Infrastructure(
+        created_by_ref=created_by,
         name=f"{entry.domain}",
         created=now,
         infrastructure_types=["phishing"],
         first_seen=entry.scanned,
         external_references=[],
     )
-    certificate_objects = build_certificate_objects(entry, phishing)
+    certificate_objects = build_certificate_objects(created_by, entry, phishing)
 
-    url = URL(
+    url = build_observable(
+        created_by=created_by,
+        cls=URL,
         value=entry.url,
     )
 
@@ -49,7 +53,9 @@ def phishing_to_infrastructure(now: str, entry: Phishing) -> List[
         start_time=entry.scanned,
     )
 
-    ip = IPv4Address(
+    ip = build_observable(
+        created_by=created_by,
+        cls=IPv4Address,
         value=entry.host.ip,
     )
 
@@ -60,7 +66,9 @@ def phishing_to_infrastructure(now: str, entry: Phishing) -> List[
         start_time=entry.scanned,
     )
 
-    asn = AutonomousSystem(
+    asn = build_observable(
+        created_by=created_by,
+        cls=AutonomousSystem,
         number=entry.host.asn,
     )
 
@@ -82,10 +90,12 @@ def phishing_to_infrastructure(now: str, entry: Phishing) -> List[
     ] + certificate_objects
 
 
-def build_certificate_objects(entry: Phishing, stix_phishing):
+def build_certificate_objects(created_by, entry: Phishing, stix_phishing):
     if not entry.cert or not entry.cert.authority:
         return []
-    certificate = X509Certificate(
+    certificate = build_observable(
+        created_by=created_by,
+        cls=X509Certificate,
         issuer=entry.cert.authority,
         hashes={"SHA-1": entry.cert.fingerprint} if entry.cert.fingerprint else None,
     )

@@ -6,7 +6,7 @@ from zerofox.domain.botnet import Botnet
 
 
 def botnet_to_infrastructure(
-    now: str, entry: Botnet
+    _, now: str, entry: Botnet
 ) -> List[Union[Infrastructure, Location, Relationship]]:
     """
     Creates a STIX Infrastructure/botnet object from a ZeroFOX Botnet object,

@@ -43,6 +43,10 @@ class ZeroFoxConnector:
             feeds=os.environ.get("ZEROFOX_COLLECTORS", None),
             logger=self.helper.connector_logger,
         )
+        self.author = stix2.Identity(
+            name="ZeroFox Connector",
+            identity_class="organization",
+        )
 
     def _validate_interval(self, env_var, interval):
         self.helper.log_info(
@@ -142,9 +146,13 @@ class ZeroFoxConnector:
             self.helper.log_debug(
                 f"{self.helper.connect_name} connector is starting the collection of objects..."
             )
+            self.send_bundle(work_id=work_id, bundle_objects=[self.author])
             self.helper.log_info(f"Running collector: {collector_name}")
             missed_entries, bundle_objects = collector.collect_intelligence(
-                now, datetime.fromtimestamp(last_run, UTC), self.helper.connector_logger
+                created_by=self.author,
+                now=now,
+                last_run_date=datetime.fromtimestamp(last_run, UTC),
+                logger=self.helper.connector_logger,
             )
             if missed_entries > 0:
                 self.helper.log_warning(
@@ -201,7 +209,10 @@ class ZeroFoxConnector:
                         )
 
                     self.collect_intelligence_for_endpoint(
-                        current_time, last_run, collector_name, collector
+                        current_time=current_time,
+                        last_run=last_run,
+                        collector_name=collector_name,
+                        collector=collector,
                     )
 
             except (KeyboardInterrupt, SystemExit):
