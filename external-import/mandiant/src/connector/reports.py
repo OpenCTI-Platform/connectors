@@ -70,7 +70,6 @@ class Report:
         self.connector = connector
         self.details = details
         self.pdf = pdf
-        self.confidence = connector.helper.connect_confidence_level
         self.identity = connector.identity
         self.report_id = details.get("report_id", details.get("reportId", None))
         self.report_type = connector.mandiant_report_types[report_type]
@@ -171,7 +170,6 @@ class Report:
 
     def update_report(self):
         report = utils.retrieve(self.bundle, "type", "report")
-        report["confidence"] = self.confidence
         report["created_by_ref"] = self.identity["standard_id"]
         report["report_types"] = [self.report_type]
         report["object_refs"] = list(
@@ -290,7 +288,6 @@ class Report:
                 "id": Note.generate_id(report["created"], text),
                 "abstract": "Analysis",
                 "content": text,
-                "confidence": self.confidence,
                 "created_by_ref": self.identity["standard_id"],
                 "object_refs": [report.get("id")],
                 "object_marking_refs": report["object_marking_refs"],
