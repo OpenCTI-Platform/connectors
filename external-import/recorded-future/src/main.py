@@ -134,8 +134,7 @@ class BaseRFConnector:
             "RECORDED_FUTURE_INTERVAL",
             ["rf", "interval"],
             config,
-            isNumber=True,
-            default=24,
+            default=24,  # in Hours
         )
 
 
