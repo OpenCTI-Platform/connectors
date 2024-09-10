@@ -16,4 +16,5 @@ services:
       - CONNECTOR_INTERVAL=86400 # seconds, 1d
       - URLSCAN_URL=https://urlscan.io/api/v1/pro/phishfeed?format=json&q=date:>now-1d
       - URLSCAN_API_KEY=
+      - URLSCAN_DEFAULT_X_OPENCTI_SCORE=50
     restart: always
