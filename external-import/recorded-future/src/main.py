@@ -105,6 +105,16 @@ class BaseRFConnector:
             ["rf", "custom_bundle_interval"],
             config,
         )
+        self.custom_bundle_paths = get_config_variable(
+            "RECORDED_FUTURE_CUSTOM_BUNDLE_PATHS",
+            ["rf", "custom_bundle_paths"],
+            config,
+        )
+        self.custom_bundle_interval = get_config_variable(
+            "RECORDED_FUTURE_CUSTOM_BUNDLE_INTERVAL",
+            ["rf", "custom_bundle_interval"],
+            config,
+        )
 
         risklist_related_entities_list = get_config_variable(
             "RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES",
@@ -267,6 +277,7 @@ class RFNotes:
                     f"{str(exception)}"
                 )
                 continue
+
 
 
 class RFConnector:
