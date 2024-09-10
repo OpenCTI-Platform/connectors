@@ -10,14 +10,12 @@ class CustomBundles(threading.Thread):
     def __init__(
         self,
         helper,
-        update_existing_data,
         interval,
         rfapi,
         paths,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
-        self.update_existing_data = update_existing_data
         self.interval = interval
         self.rfapi = rfapi
         self.paths = paths
@@ -37,7 +35,6 @@ class CustomBundles(threading.Thread):
                     bundle = self.rfapi.get_fusion_file(path)
                     self.helper.send_stix2_bundle(
                         bundle,
-                        update=self.update_existing_data,
                         work_id=work_id,
                     )
                 except (HTTPError, ValueError) as err:
