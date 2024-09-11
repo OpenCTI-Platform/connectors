@@ -63,9 +63,9 @@ class ShodanConnector:
             config,
             default=True,
         )
-        self.import_create_note = get_config_variable(
+        self.create_note = get_config_variable(
             "SHODAN_CREATE_NOTE",
-            ["shodan", "import_create_note"],
+            ["shodan", "create_note"],
             config,
             default=False,
         )
@@ -338,7 +338,7 @@ class ShodanConnector:
 
     def _upsert_stix_observable(self, description, labels, external_reference):
         # Upsert Observable
-        if not self.import_create_note:
+        if not self.create_note:
             stix_observable = stix2.IPv4Address(
                 id=self.stix_entity["id"],
                 type="ipv4-addr",
