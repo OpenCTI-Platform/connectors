@@ -168,7 +168,7 @@ class IpInfoConnector:
         asn = {}
         privacy = {}
         if "asn" in json_data:
-            asn["name"] = json_data["asn"]["name"]
+            asn["name"] = json_data["asn"]["asn"]
             if match := re.search(r"\d+", json_data["asn"]["asn"]):
                 asn["asn"] = int(match.group())
         if "privacy" in json_data:
