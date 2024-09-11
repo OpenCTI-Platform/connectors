@@ -46,9 +46,11 @@ class JiraConnector:
             config,
             default="",
         )
-        self.jira_custom_fields_keys = [
-            key.strip() for key in jira_custom_fields_keys_var.split(",")
-        ] if jira_custom_fields_keys_var else []
+        self.jira_custom_fields_keys = (
+            [key.strip() for key in jira_custom_fields_keys_var.split(",")]
+            if jira_custom_fields_keys_var
+            else []
+        )
 
         jira_custom_fields_values_var = get_config_variable(
             "JIRA_CUSTOM_FIELDS_VALUES",
@@ -56,9 +58,11 @@ class JiraConnector:
             config,
             default="",
         )
-        self.jira_custom_fields_values = [
-            key.strip() for key in jira_custom_fields_values_var.split(",")
-        ] if jira_custom_fields_values_var else []
+        self.jira_custom_fields_values = (
+            [key.strip() for key in jira_custom_fields_values_var.split(",")]
+            if jira_custom_fields_values_var
+            else []
+        )
 
         if not self.jira_custom_fields_keys or not self.jira_custom_fields_values:
             self.helper.connector_logger.info(
@@ -68,9 +72,7 @@ class JiraConnector:
             self.is_custom_fields_ignored = True
         else:
             # List length validation
-            if len(self.jira_custom_fields_keys) != len(
-                    self.jira_custom_fields_values
-            ):
+            if len(self.jira_custom_fields_keys) != len(self.jira_custom_fields_values):
                 self.helper.connector_logger.error(
                     "The lengths between the `jira_custom_fields_keys` and `jira_custom_fields_values` lists "
                     "do not match. Make sure that each key has a corresponding value. "
