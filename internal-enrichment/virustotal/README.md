@@ -33,14 +33,14 @@ Configuration parameters are provided using environment variables as described b
 
 #### Base connector environment variables
 
-| Parameter `connector` | config.yml  | Docker environment variable | Default           | Mandatory | Description                                                                              |
-|-----------------------|-------------|-----------------------------|-------------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID          | `id`        | `CONNECTOR_ID`              | /                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type        | `type`      | `CONNECTOR_TYPE`            | `EXTERNAL_IMPORT` | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
-| Connector Name        | `name`      | `CONNECTOR_NAME`            | `VirusTotal`      | Yes       | Name of the connector.                                                                   |
-| Connector Scope       | `scope`     | `CONNECTOR_SCOPE`           | /                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Connector Log Level   | `log_level` | `CONNECTOR_LOG_LEVEL`       | `info`            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Connector Auto        | `auto`      | `CONNECTOR_AUTO`            | `True`            | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
+| Parameter `connector` | config.yml  | Docker environment variable | Default               | Mandatory | Description                                                                              |
+|-----------------------|-------------|-----------------------------|-----------------------|-----------|------------------------------------------------------------------------------------------|
+| Connector ID          | `id`        | `CONNECTOR_ID`              | /                     | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
+| Connector Type        | `type`      | `CONNECTOR_TYPE`            | `INTERNAL_ENRICHMENT` | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
+| Connector Name        | `name`      | `CONNECTOR_NAME`            | `VirusTotal`          | Yes       | Name of the connector.                                                                   |
+| Connector Scope       | `scope`     | `CONNECTOR_SCOPE`           | /                     | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Connector Log Level   | `log_level` | `CONNECTOR_LOG_LEVEL`       | `info`                | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Connector Auto        | `auto`      | `CONNECTOR_AUTO`            | `True`                | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
 
 ---
 
@@ -53,7 +53,7 @@ Configuration parameters are provided using environment variables as described b
 | File indicator create positives | `file_indicator_create_positives` | `VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES` | `10`    | No        | Create an indicator for File/Artifact based observables once this positive threshold is reached |
 | File indicator valid minutes    | `file_indicator_valid_minutes`    | `VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES`    | `2880`  | No        | How long the indicator is valid for in minutes                                                  |
 | File indicator detect           | `file_indicator_detect`           | `VIRUSTOTAL_FILE_INDICATOR_DETECT`           | `True`  | No        | Whether or not to set detection for the indicator to true                                       |
-| File import yara                | `file_import_yara`                | `VIRUSTOTAL_FILE_IMPORT_YARA`                | `False` | No        | Whether or not to import Crowdsourced YARA rules                                                |
+| File import yara                | `file_import_yara`                | `VIRUSTOTAL_FILE_IMPORT_YARA`                | `True`  | No        | Whether or not to import Crowdsourced YARA rules                                                |
 
 ---
 
@@ -64,7 +64,7 @@ Configuration parameters are provided using environment variables as described b
 | IP indicator create positives | `ip_indicator_create_positives` | `VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES` | `10`    | No        | Create an indicator for IPv4 based observables once this positive threshold is reached |
 | IP indicator valid minutes    | `ip_indicator_valid_minutes`    | `VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES`    | `2880`  | No        | How long the indicator is valid for in minutes                                         |
 | IP indicator detect           | `ip_indicator_detect`           | `VIRUSTOTAL_IP_INDICATOR_DETECT`           | `True`  | No        | Whether or not to set detection for the indicator to true                              |
-| IP add relationships          | `ip_add_relationships`          | `VIRUSTOTAL_IP_ADD_RELATIONSHIPS`          | `True`  | No        | Whether or not to add ASN and location resolution relationships                        |
+| IP add relationships          | `ip_add_relationships`          | `VIRUSTOTAL_IP_ADD_RELATIONSHIPS`          | /       | No        | Whether or not to add ASN and location resolution relationships                        |
 
 ---
 
@@ -75,7 +75,7 @@ Configuration parameters are provided using environment variables as described b
 | Domain indicator create positives | `domain_indicator_create_positives` | `VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES` | `10`    | No        | Create an indicator for Domain based observables once this positive threshold is reached |
 | Domain indicator valid minutes    | `domain_indicator_valid_minutes`    | `VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES`    | `2880`  | No        | How long the indicator is valid for in minutes                                           |
 | Domain indicator detect           | `domain_indicator_detect`           | `VIRUSTOTAL_DOMAIN_INDICATOR_DETECT`           | `True`  | No        | Whether or not to set detection for the indicator to true                                |
-| Domain add relationships          | `domain_add_relationships`          | `VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS`          | `True`  | No        | Whether or not to add IP resolution relationships                                        |
+| Domain add relationships          | `domain_add_relationships`          | `VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS`          | /       | No        | Whether or not to add IP resolution relationships                                        |
 
 ---
 
