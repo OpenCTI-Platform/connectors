@@ -17,3 +17,4 @@ greynoisefeed:
   name: 'GreyNoise'
   description: 'GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.'
   limit: 10000
+  import_metadata: false
