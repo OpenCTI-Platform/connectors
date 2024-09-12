@@ -2,9 +2,8 @@
 
 from typing import Iterator, List
 
-import pydantic
 import requests
-from pydantic.v1 import BaseModel
+from pydantic.v1 import BaseModel, parse_raw_as
 
 __all__ = [
     "UrlscanClient",
@@ -38,7 +37,7 @@ class UrlscanClient:
         )
         resp.raise_for_status()
 
-        parsed = pydantic.parse_raw_as(UrlscanResponse, resp.text)
+        parsed = parse_raw_as(UrlscanResponse, resp.text)
         for result in parsed.results:
             yield result.page_url
 

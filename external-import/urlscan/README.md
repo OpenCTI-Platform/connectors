@@ -28,3 +28,6 @@ If you are using it independently, remember that the connector will try to conne
 | `connector_interval`             | `CONNECTOR_INTERVAL`             | No        | An interval (in minutes) for data gathering from Urlscan.                                          |
 | `urlscan_url`                    | `URLSCAN_URL`                    | Yes       | The Urlscan URL.                                                                                   |
 | `urlscan_api_key`                | `URLSCAN_API_KEY`                | Yes       | The Urlscan client secret.                                                                         |
+| `urlscan_default_x_opencti_score`| `URLSCAN_DEFAULT_X_OPENCTI_SCORE`| No        | The default x_opencti_score to use across observable/indicator types. Default is 50.
+| `urlscan_x_opencti_score_domain` | `URLSCAN_X_OPENCTI_SCORE_DOMAIN` | No        | The x_opencti_score to use across Domain-Name observable and indicators. Defaults to default score.
+| `urlscan_x_opencti_score_url`    | `URLSCAN_X_OPENCTI_URL`          | No        | The x_opencti_score to use across Url observable and indicators. Defaults to default score.
