@@ -7,7 +7,7 @@ from typing import Dict
 import stix2
 from collectors.builder import build_collectors
 from collectors.collector import Collector
-from pycti import OpenCTIConnectorHelper
+from pycti import Identity, OpenCTIConnectorHelper
 from time_.interval import delta_from_interval, seconds_from_interval
 from zerofox.app.zerofox import ZeroFox
 
@@ -16,6 +16,7 @@ ZEROFOX_REFERENCE = stix2.ExternalReference(
     url="https://www.zerofox.com/threat-intelligence/",
     description="ZeroFox provides comprehensive, accurate, and timely intelligence bundles through its API.",
 )
+ZEROFOX = "ZeroFox"
 
 
 class ZeroFoxConnector:
@@ -44,8 +45,10 @@ class ZeroFoxConnector:
             logger=self.helper.connector_logger,
         )
         self.author = stix2.Identity(
-            name="ZeroFox Connector",
+            id=Identity.generate_id(ZEROFOX, "organization"),
+            name=ZEROFOX,
             identity_class="organization",
+            object_marking_refs=[stix2.TLP_WHITE.id],
         )
 
     def _validate_interval(self, env_var, interval):
@@ -149,7 +152,7 @@ class ZeroFoxConnector:
             self.send_bundle(work_id=work_id, bundle_objects=[self.author])
             self.helper.log_info(f"Running collector: {collector_name}")
             missed_entries, bundle_objects = collector.collect_intelligence(
-                created_by=self.author,
+                created_by=self.author.id,
                 now=now,
                 last_run_date=datetime.fromtimestamp(last_run, UTC),
                 logger=self.helper.connector_logger,

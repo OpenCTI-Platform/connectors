@@ -2,19 +2,12 @@ import ipaddress
 from typing import List, Tuple, Union
 
 from open_cti import build_observable
-from stix2 import (
-    Identity,
-    Infrastructure,
-    IPv4Address,
-    IPv6Address,
-    Relationship,
-    Software,
-)
+from stix2 import Infrastructure, IPv4Address, IPv6Address, Relationship, Software
 from zerofox.domain.c2Domains import C2Domain
 
 
 def c2_domains_to_infrastructure(
-    created_by: Identity,
+    created_by: str,
     now: str,
     entry: C2Domain,
 ) -> List[Union[Infrastructure, Relationship, IPv4Address, IPv6Address]]:

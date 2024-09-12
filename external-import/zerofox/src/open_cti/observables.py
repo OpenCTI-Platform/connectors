@@ -1,6 +1,6 @@
 from typing import Type
 
-from stix2 import Identity
+from stix2 import TLP_AMBER
 from stix2.base import _Observable
 
 main_observable_type = "x_opencti_main_observable_type"
@@ -21,11 +21,12 @@ def _get_observable_type(cls: Type[_Observable]) -> str:
     return _type
 
 
-def build_observable(created_by: Identity, cls: Type[_Observable], **kwargs):
+def build_observable(created_by: str, cls: Type[_Observable], **kwargs):
     return cls(
         **kwargs,
         custom_properties={
             main_observable_type: _get_observable_type(cls),
             created_by_ref: created_by,
         },
+        object_marking_refs=[TLP_AMBER.id],
     )
