@@ -71,6 +71,12 @@ class GreyNoiseFeed:
             isNumber=True,
             default=10000,
         )
+        self.greynoise_import_meta_data = get_config_variable(
+            "GREYNOISE_IMPORT_METADATA",
+            ["greynoisefeed", "import_metadata"],
+            config,
+            default=False,
+        )
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name=self.greynoise_ent_name,
@@ -374,177 +380,184 @@ class GreyNoiseFeed:
                     )
 
             # Metadata
-            if "metadata" in ip:
-                metadata = ip["metadata"]
-                stix_as = None
-                if "asn" in metadata:
-                    try:
-                        stix_as = stix2.AutonomousSystem(
-                            name=metadata["asn"],
-                            number=int(metadata["asn"].replace("AS", "")),
-                            object_marking_refs=[stix2.TLP_WHITE],
-                            custom_properties={
-                                "created_by_ref": self.identity["standard_id"],
-                            },
-                        )
-                        bundle_entities.append(stix_as)
+            if self.greynoise_import_meta_data:
+                if "metadata" in ip:
+                    metadata = ip["metadata"]
+                    stix_as = None
+                    if "asn" in metadata:
+                        try:
+                            stix_as = stix2.AutonomousSystem(
+                                name=metadata["asn"],
+                                number=int(metadata["asn"].replace("AS", "")),
+                                object_marking_refs=[stix2.TLP_WHITE],
+                                custom_properties={
+                                    "created_by_ref": self.identity["standard_id"],
+                                },
+                            )
+                            bundle_entities.append(stix_as)
 
-                        stix_relationship_observable_as = stix2.Relationship(
+                            stix_relationship_observable_as = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "belongs-to", stix_observable.id, stix_as.id
+                                ),
+                                relationship_type="belongs-to",
+                                source_ref=stix_observable.id,
+                                target_ref=stix_as.id,
+                                created_by_ref=self.identity["standard_id"],
+                                object_marking_refs=[stix2.TLP_WHITE],
+                            )
+                            bundle_relationships.append(stix_relationship_observable_as)
+                        except:
+                            pass
+                    if "organization" in metadata:
+                        stix_organization = stix2.Identity(
+                            id=Identity.generate_id(
+                                metadata["organization"], "organization"
+                            ),
+                            name=metadata["organization"],
+                            identity_class="organization",
+                        )
+                        bundle_entities.append(stix_organization)
+
+                        stix_relationship_observable_organization = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
-                                "belongs-to", stix_observable.id, stix_as.id
+                                "belongs-to", stix_observable.id, stix_organization.id
                             ),
                             relationship_type="belongs-to",
                             source_ref=stix_observable.id,
-                            target_ref=stix_as.id,
-                            created_by_ref=self.identity["standard_id"],
-                            object_marking_refs=[stix2.TLP_WHITE],
-                        )
-                        bundle_relationships.append(stix_relationship_observable_as)
-                    except:
-                        pass
-                if "organization" in metadata:
-                    stix_organization = stix2.Identity(
-                        id=Identity.generate_id(
-                            metadata["organization"], "organization"
-                        ),
-                        name=metadata["organization"],
-                        identity_class="organization",
-                    )
-                    bundle_entities.append(stix_organization)
-
-                    stix_relationship_observable_organization = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "belongs-to", stix_observable.id, stix_organization.id
-                        ),
-                        relationship_type="belongs-to",
-                        source_ref=stix_observable.id,
-                        target_ref=stix_organization.id,
-                        created_by_ref=self.identity["standard_id"],
-                        object_marking_refs=[stix2.TLP_WHITE],
-                    )
-                    bundle_relationships.append(
-                        stix_relationship_observable_organization
-                    )
-
-                    if stix_as is not None:
-                        stix_relationship_as_organization = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to", stix_as.id, stix_organization.id
-                            ),
-                            relationship_type="related-to",
-                            source_ref=stix_as.id,
                             target_ref=stix_organization.id,
                             created_by_ref=self.identity["standard_id"],
                             object_marking_refs=[stix2.TLP_WHITE],
                         )
-                        bundle_relationships.append(stix_relationship_as_organization)
-                stix_city = None
-                if "city" in metadata:
-                    stix_city = stix2.Location(
-                        id=Location.generate_id(metadata["city"], "City"),
-                        name=metadata["city"],
-                        country="N/A",
-                        created_by_ref=self.identity["standard_id"],
-                        object_marking_refs=[stix2.TLP_WHITE],
-                        custom_properties={"x_opencti_location_type": "City"},
-                    )
-                    bundle_entities.append(stix_city)
+                        bundle_relationships.append(
+                            stix_relationship_observable_organization
+                        )
 
-                    stix_relationship_observable_city = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "located-at", stix_observable.id, stix_city.id
-                        ),
-                        relationship_type="located-at",
-                        source_ref=stix_observable.id,
-                        target_ref=stix_city.id,
-                        created_by_ref=self.identity["standard_id"],
-                        object_marking_refs=[stix2.TLP_WHITE],
-                    )
-                    bundle_relationships.append(stix_relationship_observable_city)
+                        if stix_as is not None:
+                            stix_relationship_as_organization = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "related-to", stix_as.id, stix_organization.id
+                                ),
+                                relationship_type="related-to",
+                                source_ref=stix_as.id,
+                                target_ref=stix_organization.id,
+                                created_by_ref=self.identity["standard_id"],
+                                object_marking_refs=[stix2.TLP_WHITE],
+                            )
+                            bundle_relationships.append(
+                                stix_relationship_as_organization
+                            )
+                    stix_city = None
+                    if "city" in metadata:
+                        stix_city = stix2.Location(
+                            id=Location.generate_id(metadata["city"], "City"),
+                            name=metadata["city"],
+                            country="N/A",
+                            created_by_ref=self.identity["standard_id"],
+                            object_marking_refs=[stix2.TLP_WHITE],
+                            custom_properties={"x_opencti_location_type": "City"},
+                        )
+                        bundle_entities.append(stix_city)
 
-                if "country" in metadata:
-                    stix_country = stix2.Location(
-                        id=Location.generate_id(metadata["country"], "Country"),
-                        name=metadata["country"],
-                        country=metadata["country"],
-                        created_by_ref=self.identity["standard_id"],
-                        object_marking_refs=[stix2.TLP_WHITE],
-                        custom_properties={"x_opencti_location_type": "Country"},
-                    )
-                    bundle_entities.append(stix_country)
-
-                    if stix_city is None:
                         stix_relationship_observable_city = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
-                                "located-at", stix_observable.id, stix_country.id
+                                "located-at", stix_observable.id, stix_city.id
                             ),
                             relationship_type="located-at",
                             source_ref=stix_observable.id,
-                            target_ref=stix_country.id,
+                            target_ref=stix_city.id,
                             created_by_ref=self.identity["standard_id"],
                             object_marking_refs=[stix2.TLP_WHITE],
                         )
                         bundle_relationships.append(stix_relationship_observable_city)
-                    else:
-                        stix_relationship_city_country = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "located-at", stix_city.id, stix_country.id
-                            ),
-                            relationship_type="located-at",
-                            source_ref=stix_city.id,
-                            target_ref=stix_country.id,
-                            created_by_ref=self.identity["standard_id"],
-                            object_marking_refs=[stix2.TLP_WHITE],
-                        )
-                        bundle_relationships.append(stix_relationship_city_country)
-                if "destination_countries" in metadata:
-                    for country in metadata["destination_countries"]:
-                        stix_country_destination = stix2.Location(
-                            id=Location.generate_id(country, "Country"),
-                            name=country,
-                            country=country,
+
+                    if "country" in metadata:
+                        stix_country = stix2.Location(
+                            id=Location.generate_id(metadata["country"], "Country"),
+                            name=metadata["country"],
+                            country=metadata["country"],
                             created_by_ref=self.identity["standard_id"],
                             object_marking_refs=[stix2.TLP_WHITE],
                             custom_properties={"x_opencti_location_type": "Country"},
                         )
-                        bundle_entities.append(stix_country_destination)
+                        bundle_entities.append(stix_country)
 
-                        stix_sighting_indicator = stix2.Sighting(
-                            id=StixSightingRelationship.generate_id(
-                                stix_indicator.id,
-                                stix_country_destination.id,
-                                first_seen,
-                                last_seen,
-                            ),
-                            sighting_of_ref=stix_indicator.id,
-                            where_sighted_refs=[stix_country_destination.id],
-                            count=1,
-                            first_seen=first_seen,
-                            last_seen=last_seen,
-                            created_by_ref=self.identity["standard_id"],
-                            object_marking_refs=[stix2.TLP_GREEN],
-                        )
-                        bundle_relationships.append(stix_sighting_indicator)
+                        if stix_city is None:
+                            stix_relationship_observable_city = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "located-at", stix_observable.id, stix_country.id
+                                ),
+                                relationship_type="located-at",
+                                source_ref=stix_observable.id,
+                                target_ref=stix_country.id,
+                                created_by_ref=self.identity["standard_id"],
+                                object_marking_refs=[stix2.TLP_WHITE],
+                            )
+                            bundle_relationships.append(
+                                stix_relationship_observable_city
+                            )
+                        else:
+                            stix_relationship_city_country = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "located-at", stix_city.id, stix_country.id
+                                ),
+                                relationship_type="located-at",
+                                source_ref=stix_city.id,
+                                target_ref=stix_country.id,
+                                created_by_ref=self.identity["standard_id"],
+                                object_marking_refs=[stix2.TLP_WHITE],
+                            )
+                            bundle_relationships.append(stix_relationship_city_country)
+                    if "destination_countries" in metadata:
+                        for country in metadata["destination_countries"]:
+                            stix_country_destination = stix2.Location(
+                                id=Location.generate_id(country, "Country"),
+                                name=country,
+                                country=country,
+                                created_by_ref=self.identity["standard_id"],
+                                object_marking_refs=[stix2.TLP_WHITE],
+                                custom_properties={
+                                    "x_opencti_location_type": "Country"
+                                },
+                            )
+                            bundle_entities.append(stix_country_destination)
 
-                        # stix_sighting_observable = stix2.Sighting(
-                        #    id=StixSightingRelationship.generate_id(
-                        #        stix_observable.id,
-                        #        stix_country_destination.id,
-                        #        first_seen,
-                        #        last_seen,
-                        #    ),
-                        #    sighting_of_ref="indicator--7eac24ff-8131-4400-9e56-cc8fe2c65078",  # Fake ID
-                        #    where_sighted_refs=[stix_country_destination.id],
-                        #    count=1,
-                        #    first_seen=first_seen,
-                        #    last_seen=last_seen,
-                        #    created_by_ref=self.identity["standard_id"],
-                        #    object_marking_refs=[stix2.TLP_GREEN],
-                        #    custom_properties={
-                        #        "x_opencti_sighting_of_ref": stix_observable.id,
-                        #    },
-                        # )
-                        # bundle_objects.append(stix_sighting_observable)
+                            stix_sighting_indicator = stix2.Sighting(
+                                id=StixSightingRelationship.generate_id(
+                                    stix_indicator.id,
+                                    stix_country_destination.id,
+                                    first_seen,
+                                    last_seen,
+                                ),
+                                sighting_of_ref=stix_indicator.id,
+                                where_sighted_refs=[stix_country_destination.id],
+                                count=1,
+                                first_seen=first_seen,
+                                last_seen=last_seen,
+                                created_by_ref=self.identity["standard_id"],
+                                object_marking_refs=[stix2.TLP_GREEN],
+                            )
+                            bundle_relationships.append(stix_sighting_indicator)
+
+                            # stix_sighting_observable = stix2.Sighting(
+                            #    id=StixSightingRelationship.generate_id(
+                            #        stix_observable.id,
+                            #        stix_country_destination.id,
+                            #        first_seen,
+                            #        last_seen,
+                            #    ),
+                            #    sighting_of_ref="indicator--7eac24ff-8131-4400-9e56-cc8fe2c65078",  # Fake ID
+                            #    where_sighted_refs=[stix_country_destination.id],
+                            #    count=1,
+                            #    first_seen=first_seen,
+                            #    last_seen=last_seen,
+                            #    created_by_ref=self.identity["standard_id"],
+                            #    object_marking_refs=[stix2.TLP_GREEN],
+                            #    custom_properties={
+                            #        "x_opencti_sighting_of_ref": stix_observable.id,
+                            #    },
+                            # )
+                            # bundle_objects.append(stix_sighting_observable)
 
         # Creating the bundle from the list
         if len(bundle_entities) > 0:
