@@ -20,3 +20,4 @@ connector:
 urlscan:
   url: "https://urlscan.io/api/v1/pro/phishfeed?format=json&q=date:>now-1d"
   api_key: ""
+  default_x_opencti_score: 50
