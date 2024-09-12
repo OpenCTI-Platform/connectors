@@ -77,6 +77,13 @@ class GreyNoiseFeed:
             config,
             default=False,
         )
+        self.greynoise_interval = get_config_variable(
+            "GREYNOISE_INTERVAL",
+            ["greynoisefeed", "interval"],
+            config,
+            isNumber=True,
+            default=12,
+        )
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name=self.greynoise_ent_name,
@@ -650,8 +657,8 @@ class GreyNoiseFeed:
                 except Exception as e:
                     self.helper.log_error(str(e))
 
-                # Wait 18 hours
-                time.sleep(3600 * 18)
+                # Wait
+                time.sleep(3600 * self.greynoise_interval)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 exit(0)
