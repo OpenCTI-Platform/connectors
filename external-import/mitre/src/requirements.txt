@@ -1,2 +1,2 @@
 pycti==6.2.18
-urllib3==2.2.2
+urllib3==2.2.3

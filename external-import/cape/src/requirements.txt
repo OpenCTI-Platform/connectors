@@ -9,4 +9,4 @@ regex==2024.9.11
 simplejson==3.19.3
 six==1.16.0
 stix2-patterns==2.0.0
-urllib3==2.2.2
+urllib3==2.2.3
