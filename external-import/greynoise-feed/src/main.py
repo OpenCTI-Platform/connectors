@@ -570,6 +570,7 @@ class GreyNoiseFeed:
         if len(bundle_entities) > 0:
             shuffle(bundle_relationships)
             bundle_objects = bundle_entities + bundle_relationships
+            bundle_objects = self.helper.stix2_deduplicate_objects(bundle_objects)
             bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.send_stix2_bundle(
                 bundle,
