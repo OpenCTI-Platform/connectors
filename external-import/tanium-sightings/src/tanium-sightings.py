@@ -6,8 +6,6 @@ import json
 import os
 
 import yaml
-from import_manager import IntelManager
-from intel_cache import IntelCache
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from sightings import Sightings
 from tanium_api_handler import TaniumApiHandler
@@ -83,12 +81,6 @@ class TaniumConnector:
             self.tanium_ssl_verify,
             self.tanium_auto_ondemand_scan,
             self.tanium_computer_groups,
-        )
-
-        # Initialize managers
-        self.intel_cache = IntelCache(self.helper)
-        self.import_manager = IntelManager(
-            self.helper, self.tanium_api_handler, self.intel_cache
         )
 
     def _process_message(self, msg):
@@ -174,7 +166,6 @@ class TaniumConnector:
             self.tanium_url_console,
         )
         self.sightings.start()
-        self.helper.listen_stream(self._process_message)
 
 
 if __name__ == "__main__":

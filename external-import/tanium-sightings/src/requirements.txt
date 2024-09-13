@@ -1,4 +1,1 @@
 pycti==6.2.18
-ioc_writer==0.3.3
-stix2-slider==4.0.1
-maec==4.1.0.17
