@@ -28,6 +28,9 @@ class IpInfoConnector:
         self.max_tlp = get_config_variable(
             "IPINFO_MAX_TLP", ["ipinfo", "max_tlp"], config
         )
+        self.use_asn_name = get_config_variable(
+            "IPINFO_USE_ASN_NAME", ["ipinfo", "use_asn_name"], config
+        )
 
     def _generate_stix_bundle(
         self, stix_objects, stix_entity, country, city, loc, asn, privacy
@@ -48,8 +51,8 @@ class IpInfoConnector:
             if len(privacy["service"]) > 0:
                 labels.append(privacy["service"])
             for i, data in enumerate(stix_objects):
-                if "ipv4-addr" in data["type"]:
-                    stix_objects[i]["labels"] = labels  # Add to ipv4 object
+                if "ipv4-addr" in data["type"] or "ipv6-addr" in data["type"]:
+                    stix_objects[i]["labels"] = labels  # Add to ipv4 or ipv6 object
         if asn:
             asn_object = stix2.AutonomousSystem(number=asn["asn"], name=asn["name"])
             stix_objects.append(asn_object)
@@ -170,7 +173,10 @@ class IpInfoConnector:
         asn = {}
         privacy = {}
         if "asn" in json_data:
-            asn["name"] = json_data["asn"]["asn"]
+            if self.use_asn_name:
+                asn["name"] = json_data["asn"]["name"]
+            else:
+                asn["name"] = json_data["asn"]["asn"]
             if match := re.search(r"\d+", json_data["asn"]["asn"]):
                 asn["asn"] = int(match.group())
         if "privacy" in json_data:
