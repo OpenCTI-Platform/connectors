@@ -13,5 +13,5 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - IPINFO_TOKEN=ChangeMe
       - IPINFO_MAX_TLP=TLP:AMBER
-      - IPINFO_USE_ASN_NAME:true      # Set false if you want ASN name to be just the number e.g. AS8075
+      - IPINFO_USE_ASN_NAME=true      # Set false if you want ASN name to be just the number e.g. AS8075
     restart: always
