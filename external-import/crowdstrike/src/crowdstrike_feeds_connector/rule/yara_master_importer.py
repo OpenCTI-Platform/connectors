@@ -158,7 +158,10 @@ class YaraMasterImporter(BaseImporter):
             self._error(
                 "An error has occurred during the recovery of the yara master. "
                 "YARA master was not retrieved correctly and is ignored... ",
-                "e_tag: {0}, last_modified : {1}, download_dict: {2}", e_tag, last_modified, download
+                "e_tag: {0}, last_modified : {1}, download_dict: {2}",
+                e_tag,
+                last_modified,
+                download,
             )
             return None
 
