@@ -1,12 +1,13 @@
 from typing import List, Union
 
+from open_cti import domain_object
 from stix2 import Infrastructure, Location, Relationship
 from stix2.v21.vocab import INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL
 from zerofox.domain.botnet import Botnet
 
 
 def botnet_to_infrastructure(
-    _, now: str, entry: Botnet
+    created_by, now: str, entry: Botnet
 ) -> List[Union[Infrastructure, Location, Relationship]]:
     """
     Creates a STIX Infrastructure/botnet object from a ZeroFOX Botnet object,
@@ -18,7 +19,9 @@ def botnet_to_infrastructure(
     """
     objects = []
 
-    botnet = Infrastructure(
+    botnet = domain_object(
+        created_by=created_by,
+        cls=Infrastructure,
         name=f"{entry.bot_name}",
         labels=entry.tags,
         created=now,
@@ -27,7 +30,9 @@ def botnet_to_infrastructure(
     )
     objects.append(botnet)
 
-    ip_address = Infrastructure(
+    ip_address = domain_object(
+        created_by=created_by,
+        cls=Infrastructure,
         name=f"{entry.ip_address}",
         infrastructure_types="botnet",
     )
@@ -42,17 +47,19 @@ def botnet_to_infrastructure(
     )
 
     if entry.c2_domain:
-        objects += get_c2_objects(entry, botnet)
+        objects += get_c2_objects(created_by, entry, botnet)
 
     if entry.country_code:
-        objects += get_location_objects(entry, ip_address)
+        objects += get_location_objects(created_by, entry, ip_address)
 
     # Return all created objects
     return objects
 
 
-def get_location_objects(entry, ip_address):
-    country = Location(
+def get_location_objects(created_by, entry, ip_address):
+    country = domain_object(
+        created_by=created_by,
+        cls=Location,
         country=entry.country_code,
         postal_code=entry.zip_code if entry.zip_code else "",
     )
@@ -65,12 +72,16 @@ def get_location_objects(entry, ip_address):
     return [country, rel]
 
 
-def get_c2_objects(entry: Botnet, botnet):
-    c2_domain = Infrastructure(
+def get_c2_objects(created_by, entry: Botnet, botnet):
+    c2_domain = domain_object(
+        created_by=created_by,
+        cls=Infrastructure,
         name=f"{entry.c2_domain}",
         infrastructure_types=INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL,
     )
-    c2_ip = Infrastructure(
+    c2_ip = domain_object(
+        created_by=created_by,
+        cls=Infrastructure,
         name=f"{entry.c2_ip_address}",
         infrastructure_types=INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL,
     )

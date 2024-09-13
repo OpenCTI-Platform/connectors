@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from open_cti import build_observable
+from open_cti import domain_object, observable
 from stix2 import (
     URL,
     AutonomousSystem,
@@ -30,8 +30,9 @@ def phishing_to_infrastructure(created_by, now: str, entry: Phishing) -> List[
         - a X509Certificate object for the certificate authority and fingerprint, if present.
 
     """
-    phishing = Infrastructure(
-        created_by_ref=created_by,
+    phishing = domain_object(
+        created_by=created_by,
+        cls=Infrastructure,
         name=f"{entry.domain}",
         created=now,
         infrastructure_types=["phishing"],
@@ -40,7 +41,7 @@ def phishing_to_infrastructure(created_by, now: str, entry: Phishing) -> List[
     )
     certificate_objects = build_certificate_objects(created_by, entry, phishing)
 
-    url = build_observable(
+    url = observable(
         created_by=created_by,
         cls=URL,
         value=entry.url,
@@ -53,7 +54,7 @@ def phishing_to_infrastructure(created_by, now: str, entry: Phishing) -> List[
         start_time=entry.scanned,
     )
 
-    ip = build_observable(
+    ip = observable(
         created_by=created_by,
         cls=IPv4Address,
         value=entry.host.ip,
@@ -66,7 +67,7 @@ def phishing_to_infrastructure(created_by, now: str, entry: Phishing) -> List[
         start_time=entry.scanned,
     )
 
-    asn = build_observable(
+    asn = observable(
         created_by=created_by,
         cls=AutonomousSystem,
         number=entry.host.asn,
@@ -93,7 +94,7 @@ def phishing_to_infrastructure(created_by, now: str, entry: Phishing) -> List[
 def build_certificate_objects(created_by, entry: Phishing, stix_phishing):
     if not entry.cert or not entry.cert.authority:
         return []
-    certificate = build_observable(
+    certificate = observable(
         created_by=created_by,
         cls=X509Certificate,
         issuer=entry.cert.authority,

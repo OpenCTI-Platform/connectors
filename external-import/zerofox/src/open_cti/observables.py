@@ -21,7 +21,7 @@ def _get_observable_type(cls: Type[_Observable]) -> str:
     return _type
 
 
-def build_observable(created_by: str, cls: Type[_Observable], **kwargs):
+def observable(created_by: str, cls: Type[_Observable], **kwargs):
     return cls(
         **kwargs,
         custom_properties={
