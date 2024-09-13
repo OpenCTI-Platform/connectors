@@ -638,8 +638,10 @@ class GreyNoiseFeed:
                     )
 
                     # Process
-                    friendly_name = "GreyNoise Feed connector run @ " + now.strftime(
-                        "%Y-%m-%d %H:%M:%S"
+                    friendly_name = (
+                        "GreyNoise Feed connector run ("
+                        + str(self.greynoise_limit)
+                        + " IPs)"
                     )
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
