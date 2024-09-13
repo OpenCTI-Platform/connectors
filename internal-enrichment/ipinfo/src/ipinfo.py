@@ -48,7 +48,7 @@ class IpInfoConnector:
             if len(privacy["service"]) > 0:
                 labels.append(privacy["service"])
             for i, data in enumerate(stix_objects):
-                if "ipv4-addr" in data['type']:
+                if "ipv4-addr" in data["type"]:
                     stix_objects[i]["labels"] = labels  # Add to ipv4 object
         if asn:
             asn_object = stix2.AutonomousSystem(number=asn["asn"], name=asn["name"])
