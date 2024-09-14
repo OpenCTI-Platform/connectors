@@ -307,6 +307,7 @@ class UrlscanConnector:
         """
         return stix2.Indicator(
             id=Indicator.generate_id(pattern.pattern),
+            created_by_ref=self._identity["standard_id"],
             pattern_type="stix",
             pattern=pattern.pattern,
             name=value,
