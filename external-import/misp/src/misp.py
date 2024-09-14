@@ -65,6 +65,12 @@ OPENCTISTIX2 = {
     "text": {"type": "text", "path": ["value"]},
     "user-agent": {"type": "user-agent", "path": ["value"]},
     "phone-number": {"type": "phone-number", "path": ["value"]},
+    "user-account": {"type": "user-account", "path": ["account_login"]},
+    "user-account-github": {
+        "type": "user-account",
+        "path": ["account_login"],
+        "account_type": "github",
+    },
 }
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
@@ -1227,6 +1233,22 @@ class Misp:
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
+                    elif observable_type == "User-Account":
+                        if "account_type" in OPENCTISTIX2[observable_resolver]:
+                            observable = stix2.UserAccount(
+                                account_login=observable_value,
+                                account_type=OPENCTISTIX2[observable_resolver][
+                                    "account_type"
+                                ],
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                        else:
+                            observable = stix2.UserAccount(
+                                account_login=observable_value,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
                     elif observable_type == "File":
                         if OPENCTISTIX2[observable_resolver]["path"][0] == "name":
                             observable = stix2.File(
@@ -2155,6 +2177,7 @@ class Misp:
                 {"resolver": "ipv4-addr", "type": "IPv4-Addr"},
             ],
             "email-subject": [{"resolver": "email-subject", "type": "Email-Message"}],
+            "email": [{"resolver": "email-address", "type": "Email-Addr"}],
             "email-src": [{"resolver": "email-address", "type": "Email-Addr"}],
             "email-dst": [{"resolver": "email-address", "type": "Email-Addr"}],
             "url": [{"resolver": "url", "type": "Url"}],
@@ -2166,6 +2189,10 @@ class Misp:
             "phone-number": [{"resolver": "phone-number", "type": "Phone-Number"}],
             "whois-registrant-email": [
                 {"resolver": "email-address", "type": "Email-Addr"}
+            ],
+            "text": [{"resolver": "text", "type": "Text"}],
+            "github-username": [
+                {"resolver": "user-account-github", "type": "User-Account"}
             ],
         }
         if type in types:
