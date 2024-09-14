@@ -75,7 +75,7 @@ class MispFeed(threading.Thread):
         threading.Thread.__init__(self)
         self.helper = helper
         self.misp_feed_url = (
-            "http://api.flashpoint.io/technical-intelligence/v1/misp-feed"
+            "https://api.flashpoint.io/technical-intelligence/v1/misp-feed"
         )
         self.misp_feed_ssl_verify = True
         self.misp_api_key = flashpoint_import_api_key
