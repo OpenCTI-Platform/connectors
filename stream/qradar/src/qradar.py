@@ -90,8 +90,23 @@ class QRadarConnector:
                 "type": "ALNIC",
                 "qradar_id": None,
             },
-            "file": {
-                "name": self.qradar_reference_name + " - " + "File Hashes",
+            "file-md5": {
+                "name": self.qradar_reference_name + " - " + "MD5 File Hashes",
+                "type": "ALNIC",
+                "qradar_id": None,
+            },
+            "file-sha1": {
+                "name": self.qradar_reference_name + " - " + "SHA1 File Hashes",
+                "type": "ALNIC",
+                "qradar_id": None,
+            },
+            "file-sha256": {
+                "name": self.qradar_reference_name + " - " + "SHA256 File Hashes",
+                "type": "ALNIC",
+                "qradar_id": None,
+            },
+            "file-sha512": {
+                "name": self.qradar_reference_name + " - " + "SHA512 File Hashes",
                 "type": "ALNIC",
                 "qradar_id": None,
             },
@@ -135,7 +150,11 @@ class QRadarConnector:
             verify=self.qradar_ssl_verify,
         )
         r.raise_for_status()
-        return r.json()[0]
+        result = r.json()
+        if len(result) > 0:
+            return result[0]
+        else:
+            return None
 
     def _create_object(self, collection_set_id, data):
         internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
@@ -169,26 +188,27 @@ class QRadarConnector:
         internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         try:
             resolved_object = self._search_object(collection_set_id, internal_id)
-            external_references = OpenCTIConnectorHelper.get_attribute_in_extension(
-                "external_references", data
-            )
-            if external_references is not None and len(external_references) > 0:
-                source = "OpenCTI - " + external_references[0]["source_name"]
-            else:
-                source = "OpenCTI"
-            body = {
-                "collection_id": collection_set_id,
-                "notes": internal_id,
-                "source": source,
-                "value": data["value"],
-            }
-            r = requests.post(
-                url=self.base_url_set_entries + "/" + str(resolved_object["id"]),
-                json=body,
-                headers=self.headers,
-                verify=self.qradar_ssl_verify,
-            )
-            r.raise_for_status()
+            if resolved_object is not None:
+                external_references = OpenCTIConnectorHelper.get_attribute_in_extension(
+                    "external_references", data
+                )
+                if external_references is not None and len(external_references) > 0:
+                    source = "OpenCTI - " + external_references[0]["source_name"]
+                else:
+                    source = "OpenCTI"
+                body = {
+                    "collection_id": collection_set_id,
+                    "notes": internal_id,
+                    "source": source,
+                    "value": data["value"],
+                }
+                r = requests.post(
+                    url=self.base_url_set_entries + "/" + str(resolved_object["id"]),
+                    json=body,
+                    headers=self.headers,
+                    verify=self.qradar_ssl_verify,
+                )
+                r.raise_for_status()
         except Exception as ex:
             self.helper.connector_logger.error(
                 "[Updating] Failed processing data {" + str(ex) + "}"
@@ -198,18 +218,20 @@ class QRadarConnector:
         internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         try:
             resolved_object = self._search_object(collection_set_id, internal_id)
-            r = requests.delete(
-                url=self.base_url_set_entries + "/" + str(resolved_object["id"]),
-                headers=self.headers,
-                verify=self.qradar_ssl_verify,
-            )
-            r.raise_for_status()
+            if resolved_object is not None:
+                r = requests.delete(
+                    url=self.base_url_set_entries + "/" + str(resolved_object["id"]),
+                    headers=self.headers,
+                    verify=self.qradar_ssl_verify,
+                )
+                r.raise_for_status()
         except Exception as ex:
             self.helper.connector_logger.error(
                 "[Deleting] Failed processing data {" + str(ex) + "}"
             )
 
     def _process_indicator(self, data):
+        final_data = []
         internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         try:
             translation = stix_translation.StixTranslation()
@@ -217,6 +239,7 @@ class QRadarConnector:
             if "parsed_stix" in parsed:
                 results = parsed["parsed_stix"]
                 for result in results:
+                    result_data = data.copy()
                     stix_value = result["value"]
                     if result["attribute"] in [
                         "domain-name:value",
@@ -227,55 +250,97 @@ class QRadarConnector:
                         "email-addr:value",
                     ]:
                         stix_type = result["attribute"].replace(":value", "")
-                        data["type"] = stix_type
-                        data["value"] = stix_value
-                        return data
-                    elif "file:hashes" in result["attribute"]:
-                        data["type"] = "file"
-                        data["value"] = stix_value
-                        return data
+                        result_data["type"] = stix_type
+                        result_data["value"] = stix_value
+                        final_data.append(result_data)
+                    elif result["attribute"] == "file:hashes.MD5":
+                        result_data["type"] = "file-md5"
+                        result_data["value"] = stix_value
+                        final_data.append(result_data)
+                    elif result["attribute"] == "file:hashes.'SHA-1'":
+                        result_data["type"] = "file-sha1"
+                        result_data["value"] = stix_value
+                        final_data.append(result_data)
+                    elif result["attribute"] == "file:hashes.'SHA-256'":
+                        result_data["type"] = "file-sha256"
+                        result_data["value"] = stix_value
+                        final_data.append(result_data)
+                    elif result["attribute"] == "file:hashes.'SHA-512'":
+                        result_data["type"] = "file-sha512"
+                        result_data["value"] = stix_value
+                        final_data.append(result_data)
+                return final_data
         except:
             self.helper.connector_logger.warning(
                 "[Processing] Cannot convert STIX indicator { " + internal_id + "}"
             )
-            return None
+            return []
 
     def _process_message(self, msg):
         try:
             data = json.loads(msg.data)["data"]
-
             if data["type"] == "indicator" and data["pattern_type"].startswith("stix"):
-                data = self._process_indicator(data)
-            if data["type"] in [
-                "ipv4-addr",
-                "ipv6-addr",
-                "domain-name",
-                "hostname",
-                "url",
-                "email-addr",
-                "file",
-            ]:
-                # Resolve the collection set
-                collection_set_id = None
-                if (
-                    data["type"] in self.collection_sets
-                    and self.collection_sets[data["type"]]["qradar_id"] is not None
-                ):
-                    collection_set_id = self.collection_sets[data["type"]]["qradar_id"]
+                indicator_data = self._process_indicator(data)
+            elif data["type"] == "file":
+                indicator_data = []
+                if "hashes" in data and "MD5" in data["hashes"]:
+                    data_md5 = data.copy()
+                    data_md5["type"] = "file-md5"
+                    data_md5["value"] = data["hashes"]["MD5"]
+                    indicator_data.append(data_md5)
+                if "hashes" in data and "SHA-1" in data["hashes"]:
+                    data_sha1 = data.copy()
+                    data_sha1["type"] = "file-sha1"
+                    data_sha1["value"] = data["hashes"]["SHA-1"]
+                    indicator_data.append(data_sha1)
+                if "hashes" in data and "SHA-256" in data["hashes"]:
+                    data_sha256 = data.copy()
+                    data_sha256["type"] = "file-sha256"
+                    data_sha256["value"] = data["hashes"]["SHA-256"]
+                    indicator_data.append(data_sha256)
+                if "hashes" in data and "SHA-512" in data["hashes"]:
+                    data_sha512 = data.copy()
+                    data_sha512["type"] = "file-sha512"
+                    data_sha512["value"] = data["hashes"]["SHA-512"]
+                    indicator_data.append(data_sha512)
+            else:
+                indicator_data = [data]
 
-                if collection_set_id is None:
-                    self.helper.connector_logger.error(
-                        "[Processing] Cannot find the QRadar collection set for { "
-                        + data["type"]
-                        + "}"
-                    )
-                else:
-                    if msg.event == "create":
-                        self._create_object(collection_set_id, data)
-                    elif msg.event == "update":
-                        self._update_object(collection_set_id, data)
-                    elif msg.event == "delete":
-                        self._delete_object(collection_set_id, data)
+            for d in indicator_data:
+                if d["type"] in [
+                    "ipv4-addr",
+                    "ipv6-addr",
+                    "domain-name",
+                    "hostname",
+                    "url",
+                    "email-addr",
+                    "file",
+                    "file-md5",
+                    "file-sha1",
+                    "file-sha256",
+                    "file-sha512",
+                ]:
+                    # Resolve the collection set
+                    collection_set_id = None
+                    if (
+                        d["type"] in self.collection_sets
+                        and self.collection_sets[d["type"]]["qradar_id"] is not None
+                    ):
+                        collection_set_id = self.collection_sets[d["type"]]["qradar_id"]
+
+                    if collection_set_id is None:
+                        self.helper.connector_logger.error(
+                            "[Processing] Cannot find the QRadar collection set for { "
+                            + d["type"]
+                            + "}"
+                        )
+                    else:
+                        if msg.event == "create":
+                            self._create_object(collection_set_id, d)
+                        elif msg.event == "update":
+                            self._update_object(collection_set_id, d)
+                        elif msg.event == "delete":
+                            self._delete_object(collection_set_id, d)
         except Exception as ex:
             self.helper.connector_logger.error(
                 "[Processing] Failed processing data {" + str(ex) + "}"
