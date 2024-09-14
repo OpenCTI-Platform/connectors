@@ -1,3 +1,7 @@
+# v1.1.4  
+
+- Upgraded `Titan-Client` to version `1.20.0.2` to properly handle Indicators' names ([Issue 2595](https://github.com/OpenCTI-Platform/connectors/issues/2595#issuecomment-2345571447)).
+
 # v1.1.3
 
 - Upgraded `Titan-Client` to version `1.20.0.1`. It provides following changes to STIX mappers:
