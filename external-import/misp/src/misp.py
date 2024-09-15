@@ -14,6 +14,7 @@ from dateutil.parser import parse
 from pycti import (
     AttackPattern,
     CustomObservableHostname,
+    CustomObservablePhoneNumber,
     CustomObservableText,
     Identity,
     Indicator,
@@ -71,6 +72,7 @@ OPENCTISTIX2 = {
         "path": ["account_login"],
         "account_type": "github",
     },
+    "identity-individual": {"type": "identity", "identity_class": "individual"},
 }
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
@@ -1088,20 +1090,25 @@ class Misp:
             observable_value = resolved_attribute["value"]
             name = resolved_attribute["value"]
             pattern_type = "stix"
+            pattern = None
             # observable type is yara or sigma for instance
             if observable_resolver in PATTERNTYPES:
                 pattern_type = observable_resolver
                 pattern = observable_value
                 name = (
                     attribute["comment"]
-                    if len(attribute["comment"]) > 0
-                    else observable_type
+                    if len(attribute["comment"]) > 2
+                    else (
+                        observable_value
+                        if len(observable_value) > 2
+                        else observable_type
+                    )
                 )
             # observable type is not in stix 2
             elif observable_resolver not in OPENCTISTIX2:
                 return None
             # observable type is in stix
-            else:
+            elif "path" in OPENCTISTIX2[observable_resolver]:
                 if "transform" in OPENCTISTIX2[observable_resolver]:
                     if (
                         OPENCTISTIX2[observable_resolver]["transform"]["operation"]
@@ -1129,7 +1136,7 @@ class Misp:
                 score = self.import_to_ids_no_score
 
             indicator = None
-            if self.misp_create_indicators:
+            if self.misp_create_indicators and pattern is not None:
                 try:
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
@@ -1301,11 +1308,32 @@ class Misp:
                                 object_marking_refs=attribute_markings,
                                 custom_properties=custom_properties,
                             )
+                    elif observable_type == "Phone-Number":
+                        observable = CustomObservablePhoneNumber(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
                     elif observable_type == "Text":
                         observable = CustomObservableText(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
+                        )
+                    elif observable_type == "Identity":
+                        observable = stix2.Identity(
+                            id=Identity.generate_id(
+                                observable_value,
+                                OPENCTISTIX2[observable_resolver]["identity_class"],
+                            ),
+                            name=observable_value,
+                            identity_class=OPENCTISTIX2[observable_resolver][
+                                "identity_class"
+                            ],
+                            description=attribute["comment"],
+                            labels=attribute_tags,
+                            created_by_ref=author["id"],
+                            external_references=attribute_external_references,
                         )
                 except Exception as e:
                     self.helper.log_error(
@@ -2194,6 +2222,7 @@ class Misp:
             "github-username": [
                 {"resolver": "user-account-github", "type": "User-Account"}
             ],
+            "full-name": [{"resolver": "identity-individual", "type": "Identity"}],
         }
         if type in types:
             resolved_types = types[type]
