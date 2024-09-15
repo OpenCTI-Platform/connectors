@@ -26,17 +26,18 @@ class ReportFetcher:
 
     def __init__(self, helper) -> None:
         """Initialize CrowdStrike report fetcher."""
+        self.helper = helper
         self.reports_api_cs = ReportsAPI(helper)
 
         self.fetched_report_cache: Dict[str, Union[FetchedReport, object]] = {}
 
-    @staticmethod
-    def _info(msg: str, *args: Any) -> None:
-        logger.info(msg, *args)
+    def _info(self, msg: str, *args: Any) -> None:
+        fmt_msg = msg.format(*args)
+        self.helper.log_info(fmt_msg)
 
-    @staticmethod
-    def _error(msg: str, *args: Any) -> None:
-        logger.error(msg, *args)
+    def _error(self, msg: str, *args: Any) -> None:
+        fmt_msg = msg.format(*args)
+        self.helper.log_info(fmt_msg)
 
     def clear_cache(self) -> None:
         """Clear report fetcher cache."""
