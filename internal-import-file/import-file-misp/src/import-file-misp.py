@@ -963,7 +963,15 @@ class MispImportFile:
             observable_resolver = resolved_attribute["resolver"]
             observable_type = resolved_attribute["type"]
             observable_value = resolved_attribute["value"]
-            name = resolved_attribute["value"]
+            name = (
+                resolved_attribute["value"]
+                if len(resolved_attribute["value"]) > 2
+                else (
+                    attribute["comment"]
+                    if len(attribute["comment"]) > 2
+                    else observable_type
+                )
+            )
             pattern_type = "stix"
             pattern = None
             # observable type is yara or sigma for instance
@@ -973,11 +981,7 @@ class MispImportFile:
                 name = (
                     attribute["comment"]
                     if len(attribute["comment"]) > 2
-                    else (
-                        observable_value
-                        if len(observable_value) > 2
-                        else observable_type
-                    )
+                    else observable_type
                 )
             # observable type is not in stix 2
             elif observable_resolver not in OPENCTISTIX2:
