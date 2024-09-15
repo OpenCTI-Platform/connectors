@@ -9,12 +9,14 @@ class Collector:
         self.mapper = mapper
         self.client = client
 
-    def collect_intelligence(self, now: datetime, last_run_date: datetime, logger):
+    def collect_intelligence(
+        self, created_by, now: datetime, last_run_date: datetime, logger
+    ):
         stix_objects = []
         missed_entries = 0
         for entry in self.client.fetch_feed(self.endpoint, last_run_date):
             try:
-                stix_data = self.mapper(now, entry)
+                stix_data = self.mapper(now, entry, created_by)
                 stix_objects += stix_data
             except Exception as ex:
                 logger.debug(
