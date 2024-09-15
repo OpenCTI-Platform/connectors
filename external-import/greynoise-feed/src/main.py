@@ -273,7 +273,6 @@ class GreyNoiseFeed:
                 object_marking_refs=[stix2.TLP_GREEN],
                 labels=labels,
                 created=first_seen,
-                valid_from=last_seen,
                 custom_properties={
                     "x_opencti_score": (
                         self.indicator_score_malicious
