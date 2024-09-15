@@ -344,7 +344,11 @@ class ShodanConnector:
             value=self.stix_entity["value"],
             custom_properties={
                 "x_opencti_external_references": [external_reference],
-                **({"x_opencti_description": description} if not self.create_note else {}),
+                **(
+                    {"x_opencti_description": description}
+                    if not self.create_note
+                    else {}
+                ),
                 "x_opencti_score": self.score,
                 "x_opencti_labels": labels,
                 "x_opencti_created_by_ref": self.shodan_identity["standard_id"],
