@@ -74,6 +74,9 @@ class YaraMasterImporter(BaseImporter):
         # yara_master = self._fetch_yara_master(e_tag, last_modified)
         yara_master = self._fetch_yara_master()
 
+        if yara_master is None:
+            return state
+
         latest_e_tag = yara_master.e_tag
         latest_last_modified = yara_master.last_modified
 
@@ -146,10 +149,22 @@ class YaraMasterImporter(BaseImporter):
 
     def _fetch_yara_master(
         self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
-    ) -> YaraMaster:
+    ) -> YaraMaster | None:
         download = self._fetch_latest_yara_master(
             e_tag=e_tag, last_modified=last_modified
         )
+
+        if type(download) is dict:
+            self._error(
+                "An error has occurred during the recovery of the yara master. "
+                "YARA master was not retrieved correctly and is ignored... ",
+                "e_tag: {0}, last_modified : {1}, download_dict: {2}",
+                e_tag,
+                last_modified,
+                download,
+            )
+            return None
+
         download_converted = BytesIO(download)
         return YaraMaster(
             rules=self._parse_download(download_converted),
