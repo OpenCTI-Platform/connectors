@@ -338,44 +338,24 @@ class ShodanConnector:
 
     def _upsert_stix_observable(self, description, labels, external_reference):
         # Upsert Observable
-        if not self.create_note:
-            stix_observable = stix2.IPv4Address(
-                id=self.stix_entity["id"],
-                type="ipv4-addr",
-                value=self.stix_entity["value"],
-                custom_properties={
-                    "x_opencti_external_references": [external_reference],
-                    "x_opencti_description": description,
-                    "x_opencti_score": self.score,
-                    "x_opencti_labels": labels,
-                    "x_opencti_created_by_ref": self.shodan_identity["standard_id"],
-                },
-            )
-            self.stix_objects.append(stix_observable)
-            """
-            {
-                        "source_name": "Shodan",
-                        "url": f"www.shodan.io/host/{data['ip_str']}",
-                        "description": "ceci est une description",
-                        # "external_id": str(data['ip_str']),
-                    }
-            """
-        else:
-            # Create note instead of overwriting description
-            stix_observable = stix2.IPv4Address(
-                id=self.stix_entity["id"],
-                type="ipv4-addr",
-                value=self.stix_entity["value"],
-                custom_properties={
-                    "x_opencti_external_references": [external_reference],
-                    "x_opencti_score": self.score,
-                    "x_opencti_labels": labels,
-                    "x_opencti_created_by_ref": self.shodan_identity["standard_id"],
-                },
-            )
-            self.stix_objects.append(stix_observable)
+        stix_observable = stix2.IPv4Address(
+            id=self.stix_entity["id"],
+            type="ipv4-addr",
+            value=self.stix_entity["value"],
+            custom_properties={
+                "x_opencti_external_references": [external_reference],
+                **({"x_opencti_description": description} if not self.create_note else {}),
+                "x_opencti_score": self.score,
+                "x_opencti_labels": labels,
+                "x_opencti_created_by_ref": self.shodan_identity["standard_id"],
+            },
+        )
+        self.stix_objects.append(stix_observable)
+        if self.create_note:
+            now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
             stix_note = stix2.Note(
                 type="note",
+                id=Note.generate_id(now, description),
                 abstract="Shodan Results",
                 content=description,
                 created_by_ref=self.shodan_identity["standard_id"],
