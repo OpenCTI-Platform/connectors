@@ -48,7 +48,14 @@ class AlienVault:
         f"{_CONFIG_NAMESPACE}.enable_attack_patterns_indicates"
     )
     _CONFIG_FILTER_INDICATORS = f"{_CONFIG_NAMESPACE}.filter_indicators"
-    _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
+
+    _CONFIG_REPORT_STATUS_MAPPING = {
+        "new": 0,
+        "in progress": 1,
+        "analyzed": 2,
+        "closed": 3,
+    }
+
     _CONFIG_DEFAULT_X_OPENCTI_SCORE = f"{_CONFIG_NAMESPACE}.default_x_opencti_score"
     _CONFIG_X_OPENCTI_SCORE_IP = f"{_CONFIG_NAMESPACE}.x_opencti_score_ip"
     _CONFIG_X_OPENCTI_SCORE_DOMAIN = f"{_CONFIG_NAMESPACE}.x_opencti_score_domain"
@@ -61,25 +68,14 @@ class AlienVault:
         f"{_CONFIG_NAMESPACE}.x_opencti_score_cryptocurrency_wallet"
     )
 
-    _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
-
-    _CONFIG_REPORT_STATUS_MAPPING = {
-        "new": 0,
-        "in progress": 1,
-        "analyzed": 2,
-        "closed": 3,
-    }
-
     _DEFAULT_CREATE_OBSERVABLES = True
     _DEFAULT_CREATE_INDICATORS = True
     _DEFAULT_FILTER_INDICATORS = True
     _DEFAULT_REPORT_TYPE = "threat-report"
     _DEFAULT_ENABLE_RELATIONSHIPS = True
     _DEFAULT_ENABLE_ATTACK_PATTERNS_INDICATES = True
-    _DEFAULT_DEFAULT_X_OPENCTI_SCORE = 50
-
-    _CONNECTOR_RUN_INTERVAL_SEC = 60
     _DEFAULT_INTERVAL_SEC = 1800
+    _DEFAULT_DEFAULT_X_OPENCTI_SCORE = 50
 
     _STATE_LAST_RUN = "last_run"
 
@@ -165,10 +161,6 @@ class AlienVault:
         else:
             enable_attack_patterns_indicates = bool(enable_attack_patterns_indicates)
 
-        self.interval_sec = self._get_configuration(
-            config, self._CONFIG_INTERVAL_SEC, is_number=True
-        )
-
         # Set x_opencti_score(s)
         default_x_opencti_score = (
             self._get_configuration(
@@ -225,10 +217,6 @@ class AlienVault:
                 is_number=True,
             )
             or default_x_opencti_score
-        )
-
-        update_existing_data = bool(
-            self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
         )
 
         # Create OpenCTI connector helper
