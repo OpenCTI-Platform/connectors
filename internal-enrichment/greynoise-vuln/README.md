@@ -6,7 +6,7 @@ The purpose of this connector is to answer to this question : "Is this vulnerabi
 
 ## Installation
 
-The GreyNoise Vulnerability connector is a standalone Python process that must have access to the OpenCTI platform and the RabbitMQ. RabbitMQ credentials and connection parameters are provided by the API directly, as configured in the platform settings.
+The GreyNoise Vulnerability connector is a standalone Python process that must have access to the OpenCTI platform and the RabbitMQ. RabbitMQ's credentials and connection parameters are provided by the API directly, as configured in the platform settings.
 
 Enabling this connector could be done by launching the Python process directly after providing the correct configuration in the `config.yml` file or within a Docker with the image `opencti/connector-greynoise-vuln:latest`. We provide an example of [`docker-compose.yml`](docker-compose.yml) file that could be used independently or integrated to the global `docker-compose.yml` file of OpenCTI.
 
@@ -15,30 +15,27 @@ If you are using it independently, remember that the connector will try to conne
 ## Configuration
 
 
-| Parameter                              | Docker envvar                          | Mandatory  | Description                                                                                                               |
-|----------------------------------------|----------------------------------------|------------|---------------------------------------------------------------------------------------------------------------------------|
-| `opencti_url`                          | `OPENCTI_URL`                          | Yes        | The URL of the OpenCTI platform.                                                                                          |
-| `opencti_token`                        | `OPENCTI_TOKEN`                        | Yes        | The default admin token configured in the OpenCTI platform parameters file.                                               |
-| `connector_id`                         | `CONNECTOR_ID`                         | Yes        | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                        |
-| `connector_name`                       | `CONNECTOR_NAME`                       | Yes        | The name of the GreyNoise connector instance, to identify it if you have multiple GreyNoise connectors.                   |
-| `connector_scope`                      | `CONNECTOR_SCOPE`                      | Yes        | Must be `ipv4-addr`.                                                                                                      |
-| `connector_auto`	                      | `CONNECTOR_AUTO`                       | Yes        | Must be `true` or `false` to enable or disable auto-enrichment of observables                                             |
-| `connector_log_level`                  | `CONNECTOR_LOG_LEVEL`                  | Yes        | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                             |
-| `greynoise_key`                        | `GREYNOISE_KEY`                        | Yes        | The GreyNoise API key .                                                                                                   |
-| `greynoise_max_tlp`                    | `GREYNOISE_MAX_TLP`                    | Yes        | Do not send any data to GreyNoise if the TLP of the observable is greater than GREYNOISE_MAX_TLP                          |
-| `greynoise_name`	                      | `GREYNOISE_NAME`                       | Yes        | The GreyNoise organization name                                                                                           |
-| `greynoise_description`                | `GREYNOISE_DESCRIPTION`                | Yes        | The GreyNoise organization description                                                                                    |
-| `greynoise_sighting_not_seen`          | `GREYNOISE_SIGHTING_NOT_SEEN`          | Yes        | Must be `true` or `false` to enable or disable the creation of a sighting with `count=0` when an IP has not been seen.    |
-| `greynoise_default_score`              | `GREYNOISE_DEFAULT_SCORE`              | Yes        | Default_score allows you to add a default score for an indicator and its observable (a number between 1 and 100)          | 
+| Parameter                              | Docker envvar                          | Mandatory  | Description                                                                                                            |
+|----------------------------------------|----------------------------------------|------------|------------------------------------------------------------------------------------------------------------------------|
+| `opencti_url`                          | `OPENCTI_URL`                          | Yes        | The URL of the OpenCTI platform.                                                                                       |
+| `opencti_token`                        | `OPENCTI_TOKEN`                        | Yes        | The default admin token configured in the OpenCTI platform parameters file.                                            |
+| `connector_id`                         | `CONNECTOR_ID`                         | Yes        | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                     |
+| `connector_name`                       | `CONNECTOR_NAME`                       | Yes        | The name of the GreyNoise connector instance, to identify it if you have multiple GreyNoise connectors.                |
+| `connector_scope`                      | `CONNECTOR_SCOPE`                      | Yes        | Must be `vulnerability`.                                                                                               |
+| `connector_auto`	                      | `CONNECTOR_AUTO`                       | Yes        | Must be `true` or `false` to enable or disable auto-enrichment of observables                                          |
+| `connector_log_level`                  | `CONNECTOR_LOG_LEVEL`                  | Yes        | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                          |
+| `greynoise_key`                        | `GREYNOISE_KEY`                        | Yes        | The GreyNoise API key .                                                                                                |
+| `greynoise_max_tlp`                    | `GREYNOISE_MAX_TLP`                    | Yes        | Do not send any data to GreyNoise if the TLP of the observable is greater than GREYNOISE_MAX_TLP                       |
+| `greynoise_name`	                      | `GREYNOISE_NAME`                       | Yes        | The GreyNoise organization name                                                                                        |
+| `greynoise_description`                | `GREYNOISE_DESCRIPTION`                | Yes        | The GreyNoise organization description                                                                                 |
 
 
 ## Behavior
 
 - Create a GreyNoise `Organization` if it doesn't exist with `GREYNOISE_NAME`  and `GREYNOISE_DESCRIPTION`
-- If the IPv4 is a network: do noting (not implemented)
-- Call the GreyNoise API for the IPv4
-- If the IPv4 is knew by GreyNoise:
-  - Create a `sighting` from the IPv4 observable to the GreyNoise entity with `count=1`
-- If the IPv4 is not knew by GreyNoise:
-  - if `GREYNOISE_SIGHTING_NOT_SEEN=true`: create a `sighting` from the IPv4 observable to the GreyNoise entity with `count=0`
-  - if `GREYNOISE_SIGHTING_NOT_SEEN=false`: do nothing.
+- Call the GreyNoise API for the CVE ID
+
+
+## Subscription Information
+
+This connector requires an API key from GreyNoise, which can be access [here](https://viz.greynoise.io/account/api-key).  This connector will provide enrichment data based on your API key type automatically.  Those users with a Vulnerability Prioritization License will see the full data response available.  Please contact [sales@greynoise.io](mailto:sales@greynoise.io) for more information.
