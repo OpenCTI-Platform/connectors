@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-crowdstrike:
-    image: opencti/connector-crowdstrike:6.2.18
+    image: opencti/connector-crowdstrike:6.3.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
