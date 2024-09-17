@@ -46,6 +46,19 @@ class UrlscanConnector:
         )
 
         self._helper = OpenCTIConnectorHelper(config)
+        interval = get_config_variable(
+            "CONNECTOR_INTERVAL", ["connector", "interval"],
+            config,
+            default=86400,
+            isNumber=True,
+        )
+        lookback = get_config_variable(
+            "CONNECTOR_LOOKBACK",
+            ["connector", "lookback"],
+            config,
+            default=3,
+            isNumber=True,
+        )
 
         urlscan_url = get_config_variable(
             "URLSCAN_URL",
@@ -117,7 +130,14 @@ class UrlscanConnector:
 
         self._default_labels = ["Phishing", "phishfeed"]
         self._client = UrlscanClient(urlscan_url, urlscan_api_key)
-        self._loop = ConnectorLoop(self._helper, 86_400, 60, self._process_feed, False)
+        self._loop = ConnectorLoop(
+            helper=self._helper,
+            interval=interval,
+            lookback=lookback,
+            loop_interval=60,
+            callback=self._process_feed,
+            stop_on_error=False,
+        )
 
     def start(self) -> None:
         """Start the connector
@@ -126,14 +146,15 @@ class UrlscanConnector:
         self._loop.start()
         self._loop.join()
 
-    def _process_feed(self, work_id: str) -> None:
+    def _process_feed(self, work_id: str, date_math: str) -> None:
         """Process the external connector feed
         :param work_id: Work ID
+        :param date_math: Date math string
         :return: None
         """
         bundle_objects = []
 
-        results = self._client.query()
+        results = self._client.query(date_math=date_math)
         for url in results:
             obs1 = self._create_url_observable(url, "Urlscan.io URL")
             bundle_objects.extend(filter(None, [*obs1]))
