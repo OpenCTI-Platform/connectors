@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-crowdstrike:
-    image: opencti/connector-crowdstrike:6.2.15
+    image: opencti/connector-crowdstrike:6.3.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -9,6 +9,7 @@ services:
       - CONNECTOR_NAME=CrowdStrike
       - CONNECTOR_SCOPE=crowdstrike
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT30M # In ISO 8601 format, starting with "P" for period
       - CROWDSTRIKE_BASE_URL=https://api.crowdstrike.com
       - CROWDSTRIKE_CLIENT_ID=ChangeMe
       - CROWDSTRIKE_CLIENT_SECRET=ChangeMe
@@ -32,5 +33,4 @@ services:
       - CROWDSTRIKE_INDICATOR_HIGH_SCORE=80
       - CROWDSTRIKE_INDICATOR_HIGH_SCORE_LABELS=MaliciousConfidence/High
       - CROWDSTRIKE_INDICATOR_UNWANTED_LABELS= # Can be used to filter low confidence indicators: "MaliciousConfidence/Low", "MaliciousConfidence/Medium"
-      - CROWDSTRIKE_INTERVAL_SEC=1800
     restart: always

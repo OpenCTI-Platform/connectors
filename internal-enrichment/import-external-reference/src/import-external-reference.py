@@ -4,12 +4,12 @@ import urllib.request
 from typing import Dict
 
 import html2text
-import pdfkit
 import yaml
 from pdfminer.converter import HTMLConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
 from pdfminer.pdfpage import PDFPage
+from playwright.sync_api import sync_playwright
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -80,41 +80,41 @@ class ImportExternalReferenceConnector:
                         mime_type="application/pdf",
                     )
                 else:
-                    try:
-                        file_name = url_to_import.split("/")[-1] + ".pdf"
-                        options = {
-                            "javascript-delay": 10000,
-                            "load-error-handling": "skip",
-                            "custom-header": [
-                                (
-                                    "User-Agent",
-                                    "Mozilla/5.0 (Windows NT 6.1; Win64; x64)",
-                                ),
-                            ],
-                        }
-                        if self.wkhtmltopdf_path:
-                            config = pdfkit.configuration(
-                                wkhtmltopdf=self.wkhtmltopdf_path
+                    file_name = url_to_import.split("/")[-1] + ".pdf"
+                    with sync_playwright() as p:
+                        browser = p.chromium.launch()
+                        page = browser.new_page()
+                        page.goto(url_to_import)
+                        page.wait_for_timeout(2000)
+                        found = False
+                        try:
+                            page.locator('a:has-text("accept all")').first.click(
+                                timeout=1000, force=True
                             )
-                            data = pdfkit.from_url(
-                                url_to_import,
-                                False,
-                                options=options,
-                                configuration=config,
-                            )
-                        else:
-                            data = pdfkit.from_url(
-                                url_to_import, False, options=options
-                            )
-                        self.helper.api.external_reference.add_file(
-                            id=external_reference["id"],
-                            file_name=file_name,
-                            data=data,
-                            mime_type="application/pdf",
-                        )
-                    except OSError as e:
-                        if "Done" not in str(e):
-                            raise e
+                            found = True
+                        except:
+                            pass
+                        if not found:
+                            try:
+                                page.locator(
+                                    'button:has-text("accept all")'
+                                ).first.click(timeout=1000, force=True)
+                                found = True
+                            except:
+                                pass
+                        if found:
+                            page.wait_for_timeout(2000)
+                        page.pdf(format="A4", path="data.pdf")
+                        browser.close()
+                    with open("./data.pdf", "rb") as file:
+                        data = file.read()
+                    self.helper.api.external_reference.add_file(
+                        id=external_reference["id"],
+                        file_name=file_name,
+                        data=data,
+                        mime_type="application/pdf",
+                    )
+                    self.delete_files()
             except Exception as e:
                 raise ValueError(e)
         if self.import_as_md:
@@ -178,11 +178,31 @@ class ImportExternalReferenceConnector:
                     text_maker.inline_links = True
                     text_maker.protect_links = True
                     text_maker.mark_code = True
-                    req = urllib.request.Request(url_to_import, headers=self.headers)
-                    response = urllib.request.urlopen(
-                        req, context=ssl.create_default_context()
-                    )
-                    html = response.read().decode("utf-8")
+                    with sync_playwright() as p:
+                        browser = p.chromium.launch()
+                        page = browser.new_page()
+                        page.goto(url_to_import)
+                        page.wait_for_timeout(2000)
+                        found = False
+                        try:
+                            page.locator('a:has-text("accept all")').first.click(
+                                timeout=1000, force=True
+                            )
+                            found = True
+                        except:
+                            pass
+                        if not found:
+                            try:
+                                page.locator(
+                                    'button:has-text("accept all")'
+                                ).first.click(timeout=1000, force=True)
+                                found = True
+                            except:
+                                pass
+                        if found:
+                            page.wait_for_timeout(2000)
+                        html = page.content()
+                        browser.close()
                     data = text_maker.handle(html)
                     data = data.replace("](//", "](https://")
                     self.helper.api.external_reference.add_file(

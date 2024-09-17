@@ -1,4 +1,5 @@
 import os
+import re
 from typing import Dict
 
 import pycountry
@@ -16,7 +17,7 @@ from pycti import (
 class IpInfoConnector:
     def __init__(self):
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        config_file_path = f"{os.path.dirname(os.path.abspath(__file__))}/config.yml"
         config = (
             yaml.load(open(config_file_path), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
@@ -27,9 +28,44 @@ class IpInfoConnector:
         self.max_tlp = get_config_variable(
             "IPINFO_MAX_TLP", ["ipinfo", "max_tlp"], config
         )
+        self.use_asn_name = get_config_variable(
+            "IPINFO_USE_ASN_NAME", ["ipinfo", "use_asn_name"], config
+        )
 
-    def _generate_stix_bundle(self, stix_objects, stix_entity, country, city, loc):
+    def _generate_stix_bundle(
+        self, stix_objects, stix_entity, country, city, loc, asn, privacy
+    ):
         # Generate stix bundle
+        if privacy:
+            labels = []
+            if privacy["vpn"]:
+                labels.append("vpn")
+            if privacy["proxy"]:
+                labels.append("proxy")
+            if privacy["tor"]:
+                labels.append("tor")
+            if privacy["relay"]:
+                labels.append("relay")
+            if privacy["hosting"]:
+                labels.append("hosting")
+            if len(privacy["service"]) > 0:
+                labels.append(privacy["service"])
+            for i, data in enumerate(stix_objects):
+                if "ipv4-addr" in data["type"] or "ipv6-addr" in data["type"]:
+                    stix_objects[i]["labels"] = labels  # Add to ipv4 or ipv6 object
+        if asn:
+            asn_object = stix2.AutonomousSystem(number=asn["asn"], name=asn["name"])
+            stix_objects.append(asn_object)
+            observable_to_asn = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "belongs-to", stix_entity["id"], asn_object.id
+                ),
+                relationship_type="belongs-to",
+                source_ref=stix_entity["id"],
+                target_ref=asn_object.id,
+                confidence=self.helper.connect_confidence_level,
+            )
+            stix_objects.append(observable_to_asn)
         country_location = stix2.Location(
             id=Location.generate_id(country.name, "Country"),
             name=country.name,
@@ -86,6 +122,16 @@ class IpInfoConnector:
             confidence=self.helper.connect_confidence_level,
         )
         stix_objects.append(observable_to_city)
+        observable_to_country = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                "located-at", stix_entity["id"], country_location.id
+            ),
+            relationship_type="located-at",
+            source_ref=stix_entity["id"],
+            target_ref=country_location.id,
+            confidence=self.helper.connect_confidence_level,
+        )
+        stix_objects.append(observable_to_country)
         return self.helper.stix2_create_bundle(stix_objects)
 
     def _process_message(self, data: Dict):
@@ -124,11 +170,33 @@ class IpInfoConnector:
             raise ValueError(
                 "IpInfo was not able to find a country for this IP address"
             )
+        asn = {}
+        privacy = {}
+        if "asn" in json_data:
+            if self.use_asn_name:
+                asn["name"] = json_data["asn"]["name"]
+            else:
+                asn["name"] = json_data["asn"]["asn"]
+            if match := re.search(r"\d+", json_data["asn"]["asn"]):
+                asn["asn"] = int(match.group())
+        if "privacy" in json_data:
+            privacy["vpn"] = json_data["privacy"]["vpn"]
+            privacy["proxy"] = json_data["privacy"]["proxy"]
+            privacy["tor"] = json_data["privacy"]["tor"]
+            privacy["relay"] = json_data["privacy"]["relay"]
+            privacy["hosting"] = json_data["privacy"]["hosting"]
+            privacy["service"] = json_data["privacy"]["service"]
         bundle = self._generate_stix_bundle(
-            stix_objects, stix_entity, country, json_data["city"], json_data["loc"]
+            stix_objects,
+            stix_entity,
+            country,
+            json_data["city"],
+            json_data["loc"],
+            asn,
+            privacy,
         )
         bundles_sent = self.helper.send_stix2_bundle(bundle)
-        return "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
+        return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
 
     # Start the main loop
     def start(self):

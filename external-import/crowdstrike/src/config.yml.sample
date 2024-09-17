@@ -8,6 +8,7 @@ connector:
   name: 'CrowdStrike'
   scope: 'crowdstrike'
   log_level: 'info'
+  duration_period: 'PT30M' # In ISO8601 format, start with 'P' for period
 
 crowdstrike:
   base_url: 'https://api.crowdstrike.com'
@@ -33,4 +34,3 @@ crowdstrike:
   indicator_high_score: 80
   indicator_high_score_labels: 'MaliciousConfidence/High'
   indicator_unwanted_labels: ''                                     # Can be used to filter low confidence indicators: "MaliciousConfidence/Low", "MaliciousConfidence/Medium"
-  interval_sec: 1800                                                # Seconds

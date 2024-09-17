@@ -1,2 +1,2 @@
-pycti==6.2.14
-cofense-intelligence==5.1.13
+pycti==6.3.0
+cofense-intelligence==5.2.0

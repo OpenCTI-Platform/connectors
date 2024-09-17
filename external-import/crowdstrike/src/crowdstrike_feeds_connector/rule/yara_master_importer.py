@@ -47,12 +47,11 @@ class YaraMasterImporter(BaseImporter):
         helper: OpenCTIConnectorHelper,
         author: Identity,
         tlp_marking: MarkingDefinition,
-        update_existing_data: bool,
         report_status: int,
         report_type: str,
     ) -> None:
         """Initialize CrowdStrike YARA master importer."""
-        super().__init__(helper, author, tlp_marking, update_existing_data)
+        super().__init__(helper, author, tlp_marking)
 
         self.rules_api_cs = RulesAPI(helper)
         self.report_status = report_status
@@ -74,6 +73,9 @@ class YaraMasterImporter(BaseImporter):
         # XXX: Using Etag and Last-Modified results in HTTP 500.
         # yara_master = self._fetch_yara_master(e_tag, last_modified)
         yara_master = self._fetch_yara_master()
+
+        if yara_master is None:
+            return state
 
         latest_e_tag = yara_master.e_tag
         latest_last_modified = yara_master.last_modified
@@ -147,10 +149,22 @@ class YaraMasterImporter(BaseImporter):
 
     def _fetch_yara_master(
         self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
-    ) -> YaraMaster:
+    ) -> YaraMaster | None:
         download = self._fetch_latest_yara_master(
             e_tag=e_tag, last_modified=last_modified
         )
+
+        if type(download) is dict:
+            self._error(
+                "An error has occurred during the recovery of the yara master. "
+                "YARA master was not retrieved correctly and is ignored... ",
+                "e_tag: {0}, last_modified : {1}, download_dict: {2}",
+                e_tag,
+                last_modified,
+                download,
+            )
+            return None
+
         download_converted = BytesIO(download)
         return YaraMaster(
             rules=self._parse_download(download_converted),

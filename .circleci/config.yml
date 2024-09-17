@@ -346,6 +346,18 @@ jobs:
           name: Build Docker image opencti/connector-cofense
           command: docker build -t opencti/connector-cofense:latest . && docker tag opencti/connector-cofense:latest opencti/connector-cofense:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/group-ib
+          name: Build Docker image opencti/connector-group-ib
+          command: docker build -t opencti/connector-group-ib:latest . && docker tag opencti/connector-group-ib:latest opencti/connector-group-ib:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/first-epss
+          name: Build Docker image opencti/connector-first-epss
+          command: docker build -t opencti/connector-first-epss:latest . && docker tag opencti/connector-first-epss:latest opencti/connector-first-epss:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/reversinglabs-spectra-analyze
+          name: Build Docker image opencti/connector-reversinglabs-spectra-analyze
+          command: docker build -t opencti/connector-reversinglabs-spectra-analyze:latest . && docker tag opencti/connector-reversinglabs-spectra-analyze:latest opencti/connector-reversinglabs-spectra-analyze:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -489,6 +501,12 @@ jobs:
             docker push opencti/connector-google-safebrowsing:${CIRCLE_TAG}
             docker push opencti/connector-cofense:latest
             docker push opencti/connector-cofense:${CIRCLE_TAG}
+            docker push opencti/connector-group-ib:latest
+            docker push opencti/connector-group-ib:${CIRCLE_TAG}
+            docker push opencti/connector-first-epss:latest
+            docker push opencti/connector-first-epss:${CIRCLE_TAG}
+            docker push opencti/connector-reversinglabs-spectra-analyze:latest
+            docker push opencti/connector-reversinglabs-spectra-analyze:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -764,6 +782,10 @@ jobs:
           name: Build Docker image opencti/connector-reversinglabs-spectra-intel-submission
           command: docker build -t opencti/connector-reversinglabs-spectra-intel-submission:latest . && docker tag opencti/connector-reversinglabs-spectra-intel-submission:latest opencti/connector-reversinglabs-spectra-intel-submission:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-import-file/import-file-misp
+          name: Build Docker image opencti/connector-import-file-misp
+          command: docker build -t opencti/connector-import-file-misp:latest . && docker tag opencti/connector-import-file-misp:latest opencti/connector-import-file-misp:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -897,6 +919,8 @@ jobs:
             docker push opencti/connector-webhook:${CIRCLE_TAG}
             docker push opencti/connector-reversinglabs-spectra-intel-submission:latest
             docker push opencti/connector-reversinglabs-spectra-intel-submission:${CIRCLE_TAG}
+            docker push opencti/connector-import-file-misp:latest
+            docker push opencti/connector-import-file-misp:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1236,6 +1260,18 @@ jobs:
           name: Build Docker image opencti/connector-cofense
           command: docker build -t opencti/connector-cofense:rolling .
       - run:
+          working_directory: ~/opencti/external-import/group-ib
+          name: Build Docker image opencti/connector-group-ib
+          command: docker build -t opencti/connector-group-ib:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/first-epss
+          name: Build Docker image opencti/connector-first-epss
+          command: docker build -t opencti/connector-first-epss:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/reversinglabs-spectra-analyze
+          name: Build Docker image opencti/connector-reversinglabs-spectra-analyze
+          command: docker build -t opencti/connector-reversinglabs-spectra-analyze:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1307,6 +1343,9 @@ jobs:
             docker push opencti/connector-fortinet-ti:rolling
             docker push opencti/connector-google-safebrowsing:rolling
             docker push opencti/connector-cofense:rolling
+            docker push opencti/connector-group-ib:rolling
+            docker push opencti/connector-first-epss:rolling
+            docker push opencti/connector-reversinglabs-spectra-analyze:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1590,6 +1629,10 @@ jobs:
           name: Build Docker image opencti/connector-reversinglabs-spectra-intel-submission
           command: docker build -t opencti/connector-reversinglabs-spectra-intel-submission:rolling .
       - run:
+          working_directory: ~/opencti/internal-import-file/import-file-misp
+          name: Build Docker image opencti/connector-import-file-misp
+          command: docker build -t opencti/connector-import-file-misp:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1659,6 +1702,7 @@ jobs:
             docker push opencti/connector-jira:rolling
             docker push opencti/connector-webhook:rolling
             docker push opencti/connector-reversinglabs-spectra-intel-submission:rolling
+            docker push opencti/connector-import-file-misp:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1

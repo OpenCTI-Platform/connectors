@@ -80,6 +80,31 @@ class UrlscanConnector:
             default="white",
         )  # type: str
 
+        # Default x_opencti_score
+        self._x_opencti_score = get_config_variable(
+            "URLSCAN_DEFAULT_X_OPENCTI_SCORE",
+            ["urlscan", "default_x_opencti_score"],
+            config,
+            default=50,
+            isNumber=True,
+        )
+        # Optional x_opencti_score for domain-name type
+        self._x_opencti_score_domain = get_config_variable(
+            "URLSCAN_X_OPENCTI_SCORE_DOMAIN",
+            ["urlscan", "x_opencti_score_domain"],
+            config,
+            default=None,
+            isNumber=True,
+        )
+        # Optional x_opencti_score for url type
+        self._x_opencti_score_url = get_config_variable(
+            "URLSCAN_X_OPENCTI_SCORE_URL",
+            ["urlscan", "x_opencti_score_url"],
+            config,
+            default=None,
+            isNumber=True,
+        )
+
         self._default_tlp = getattr(stix2, f"TLP_{default_tlp}".upper(), None)
         if not isinstance(self._default_tlp, stix2.MarkingDefinition):
             raise ValueError(f"Invalid tlp: {default_tlp}")
@@ -176,7 +201,7 @@ class UrlscanConnector:
                 x_opencti_created_by_ref=self._identity["standard_id"],
                 x_opencti_description=description,
                 x_opencti_labels=self._default_labels,
-                x_opencti_score=self._helper.connect_confidence_level,
+                x_opencti_score=self._x_opencti_score_url or self._x_opencti_score,
             ),
         )
 
@@ -216,7 +241,7 @@ class UrlscanConnector:
                 x_opencti_created_by_ref=self._identity["standard_id"],
                 x_opencti_description=description,
                 x_opencti_labels=self._default_labels,
-                x_opencti_score=self._helper.connect_confidence_level,
+                x_opencti_score=self._x_opencti_score_domain or self._x_opencti_score,
             ),
         )
 
@@ -282,6 +307,7 @@ class UrlscanConnector:
         """
         return stix2.Indicator(
             id=Indicator.generate_id(pattern.pattern),
+            created_by_ref=self._identity["standard_id"],
             pattern_type="stix",
             pattern=pattern.pattern,
             name=value,
@@ -290,7 +316,11 @@ class UrlscanConnector:
             confidence=self._helper.connect_confidence_level,
             object_marking_refs=[self._default_tlp],
             custom_properties=dict(
-                x_opencti_score=self._helper.connect_confidence_level,
+                x_opencti_score=(
+                    self._x_opencti_score_domain or self._x_opencti_score
+                    if pattern.main_observable_type == "Domain-Name"
+                    else self._x_opencti_score_url or self._x_opencti_score
+                ),
                 x_opencti_main_observable_type=pattern.main_observable_type,
             ),
             allow_custom=True,

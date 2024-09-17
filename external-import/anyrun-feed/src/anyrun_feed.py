@@ -15,7 +15,7 @@ class AnyrunFeed(ExternalImportConnector):
 
     def get_feed(self):
         response = requests.get(
-            self.ti_url, headers={"Authorization": "Basic {}".format(self.token)}
+            self.ti_url, headers={"Authorization": "API-Key {}".format(self.token)}
         )
         if response.status_code != 200:
             raise ValueError(
