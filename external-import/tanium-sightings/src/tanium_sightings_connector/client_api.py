@@ -16,7 +16,7 @@ class ConnectorAPI:
         self.computer_groups = config.tanium_computer_groups
 
         # Define headers in session and update when needed
-        headers = {"Bearer": self.token}
+        headers = {"session": self.token, "content-type": "application/json"}
         self.session = requests.Session()
         self.session.headers.update(headers)
 
@@ -42,133 +42,25 @@ class ConnectorAPI:
             )
             return None
 
-    def query(
-            self,
-            method,
-            uri,
-            payload=None,
-            content_type="application/json",
-            type=None,
-    ):
-        self.helper.log_info("Query " + method + " on " + uri)
-        headers = {"session": self.token}
-        if method != "upload":
-            headers["content-type"] = content_type
-        if type is not None:
-            headers["type"] = type
-        if content_type == "application/octet-stream":
-            headers["content-disposition"] = (
-                    "attachment; filename=" + payload["filename"]
-            )
-            if "name" in payload:
-                headers["name"] = payload["name"].strip()
-            if "description" in payload:
-                headers["description"] = (
-                    payload["description"].replace("\n", " ").strip()
-                )
-        if method == "get":
-            r = requests.get(
-                self.url + uri,
-                headers=headers,
-                params=payload,
-                verify=self.ssl_verify,
-                )
-        elif method == "post":
-            if content_type == "application/octet-stream":
-                r = requests.post(
-                    self.url + uri,
-                    headers=headers,
-                    data=payload["document"],
-                    verify=self.ssl_verify,
-                    )
-            elif type is not None:
-                r = requests.post(
-                    self.url + uri,
-                    headers=headers,
-                    data=payload["intelDoc"],
-                    verify=self.ssl_verify,
-                    )
-            else:
-                r = requests.post(
-                    self.url + uri,
-                    headers=headers,
-                    json=payload,
-                    verify=self.ssl_verify,
-                    )
-        elif method == "upload":
-            f = open(payload["filename"], "w")
-            f.write(payload["content"])
-            f.close()
-            files = {"hash": open(payload["filename"], "rb")}
-            r = requests.post(
-                self.url + uri,
-                headers=headers,
-                files=files,
-                verify=self.ssl_verify,
-                )
-        elif method == "put":
-            if type is not None:
-                r = requests.put(
-                    self.url + uri,
-                    headers=headers,
-                    data=payload["intelDoc"],
-                    verify=self.ssl_verify,
-                    )
-            elif content_type == "application/xml":
-                r = requests.put(
-                    self.url + uri,
-                    headers=headers,
-                    data=payload,
-                    verify=self.ssl_verify,
-                    )
-            else:
-                r = requests.put(
-                    self.url + uri,
-                    headers=headers,
-                    json=payload,
-                    verify=self.ssl_verify,
-                    )
-        elif method == "patch":
-            r = requests.patch(
-                self.url + uri,
-                headers=headers,
-                json=payload,
-                verify=self.ssl_verify,
-                )
-        elif method == "delete":
-            r = requests.delete(self.url + uri, headers=headers, verify=self.ssl_verify)
-        else:
-            raise ValueError("Unsupported method")
-        if r.status_code == 200:
-            try:
-                return r.json()["data"]
-            except:
-                return r.text
-        elif r.status_code == 401:
-            raise ValueError("Query failed, permission denied")
-        else:
-            self.helper.log_info(r.text)
-        return []
-
-    def get_entities(self, params=None) -> dict:
+    def get_alerts(self):
         """
-        If params is None, retrieve all CVEs in National Vulnerability Database
-        :param params: Optional Params to filter what list to return
-        :return: A list of dicts of the complete collection of CVE from NVD
+        Get alerts from Tanium API.
+        :return: Alerts data
         """
-        try:
-            # ===========================
-            # === Add your code below ===
-            # ===========================
+        alerts_url = self.url + "/plugin/products/threat-response/api/v1/alerts"
+        response = self._request_data(alerts_url, params={"sort": "-createdAt"})
+        body = response.json()
+        return body["data"]
 
-            # response = self._request_data(self.config.api_base_url, params=params)
-
-            # return response.json()
-            # ===========================
-            # === Add your code above ===
-            # ===========================
-
-            raise NotImplementedError
-
-        except Exception as err:
-            self.helper.connector_logger.error(err)
+    def get_intel(self, intel_doc_id) -> dict:
+        """
+        Get alert related intelligence from Tanium API.
+        :param intel_doc_id: Alert's intel doc ID
+        :return: Intelligence data
+        """
+        intel_url = (
+            self.url + "/plugin/products/threat-response/api/v1/intels/" + intel_doc_id
+        )
+        response = self._request_data(intel_url)
+        body = response.json()
+        return body["data"]

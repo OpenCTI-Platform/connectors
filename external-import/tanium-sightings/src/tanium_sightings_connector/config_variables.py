@@ -32,32 +32,23 @@ class ConfigConnector:
 
     def _initialize_configurations(self) -> None:
         """
-        Connector configuration variables
+        Connector configuration variables.
+        Some common env vars are already managed by pycti such as opencti's url, connector's name, duration_period...
         :return: None
         """
-
-        # OpenCTI configurations
-
-
-        # Connector configuration
-        self.connector_name = get_config_variable(
-            "CONNECTOR_NAME",
-            ["connector", "name"],
-            self.load
-        )
-        self.duration_period = get_config_variable(
-            "CONNECTOR_DURATION_PERIOD",
-            ["connector", "duration_period"],
-            self.load,
-        )
-
         # Initialize the Tanium API Handler
-        self.tanium_url = get_config_variable("TANIUM_INSIGHTS_URL", ["tanium_insights", "url"], self.load)
+        self.tanium_url = get_config_variable(
+            "TANIUM_INSIGHTS_URL", ["tanium_insights", "url"], self.load
+        )
         self.tanium_url_console = get_config_variable(
             "TANIUM_INSIGHTS_URL_CONSOLE", ["tanium_insights", "url_console"], self.load
         )
         self.tanium_ssl_verify = get_config_variable(
-            "TANIUM_INSIGHTS_SSL_VERIFY", ["tanium_insights", "ssl_verify"], self.load, False, True
+            "TANIUM_INSIGHTS_SSL_VERIFY",
+            ["tanium_insights", "ssl_verify"],
+            self.load,
+            False,
+            True,
         )
         self.tanium_token = get_config_variable(
             "TANIUM_INSIGHTS_TOKEN", ["tanium_insights", "token"], self.load
@@ -85,7 +76,11 @@ class ConfigConnector:
         )
         # Target computer group of the automatic quickscan (if enable)
         self.tanium_computer_groups = get_config_variable(
-            "TANIUM_INSIGHTS_COMPUTER_GROUPS", ["tanium_insights", "computer_groups"], self.load, False, "1"
+            "TANIUM_INSIGHTS_COMPUTER_GROUPS",
+            ["tanium_insights", "computer_groups"],
+            self.load,
+            False,
+            "1",
         ).split(",")
         self.tanium_import_alerts = get_config_variable(
             "TANIUM_INSIGHTS_IMPORT_ALERTS",
