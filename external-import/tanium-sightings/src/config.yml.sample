@@ -9,14 +9,11 @@ connector:
   scope: 'tanium' # Reserved
   confidence_level: 60 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
+  duration_period: 'PT12H'
 
 tanium_insights:
   url: 'https://console.changeme.com'
   url_console: 'https://console.changeme.com'
   ssl_verify: true
   token: 'ChangeMe'
-  hashes_in_reputation: true
-  no_hashes_in_intels: true
-  auto_ondemand_scan: true # trigger a quick scan when an intel document is imported
-  computer_groups: '1' # computer groups targeted by the auto quick scan (separated by ,)
   import_alerts: true

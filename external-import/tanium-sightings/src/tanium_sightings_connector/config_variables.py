@@ -10,7 +10,6 @@ class ConfigConnector:
         """
         Initialize the connector with necessary configurations
         """
-
         # Load configuration file
         self.load = self._load_config()
         self._initialize_configurations()
@@ -53,35 +52,6 @@ class ConfigConnector:
         self.tanium_token = get_config_variable(
             "TANIUM_INSIGHTS_TOKEN", ["tanium_insights", "token"], self.load
         )
-        self.tanium_hashes_in_reputation = get_config_variable(
-            "TANIUM_INSIGHTS_HASHES_IN_REPUTATION",
-            ["tanium_insights", "hashes_in_reputation"],
-            self.load,
-            False,
-            True,
-        )
-        self.tanium_no_hashes_in_intels = get_config_variable(
-            "TANIUM_INSIGHTS_NO_HASHES_IN_INTELS",
-            ["tanium_insights", "no_hashes_in_intels"],
-            self.load,
-            False,
-            True,
-        )
-        self.tanium_auto_ondemand_scan = get_config_variable(
-            "TANIUM_INSIGHTS_AUTO_ONDEMAND_SCAN",
-            ["tanium_insights", "ondemand_scan"],
-            self.load,
-            False,
-            True,
-        )
-        # Target computer group of the automatic quickscan (if enable)
-        self.tanium_computer_groups = get_config_variable(
-            "TANIUM_INSIGHTS_COMPUTER_GROUPS",
-            ["tanium_insights", "computer_groups"],
-            self.load,
-            False,
-            "1",
-        ).split(",")
         self.tanium_import_alerts = get_config_variable(
             "TANIUM_INSIGHTS_IMPORT_ALERTS",
             ["tanium_insights", "import_alerts"],

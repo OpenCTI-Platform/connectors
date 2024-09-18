@@ -12,8 +12,6 @@ class ConnectorAPI:
         self.url = config.tanium_url
         self.token = config.tanium_token
         self.ssl_verify = config.tanium_ssl_verify
-        self.auto_ondemand_scan = config.tanium_auto_ondemand_scan
-        self.computer_groups = config.tanium_computer_groups
 
         # Define headers in session and update when needed
         headers = {"session": self.token, "content-type": "application/json"}
@@ -26,7 +24,7 @@ class ConnectorAPI:
         :return: Response in JSON format
         """
         try:
-            response = self.session.get(api_url, params=params)
+            response = self.session.get(api_url, params=params, verify=self.ssl_verify)
 
             self.helper.connector_logger.info(
                 "[API] HTTP Get Request to endpoint", {"url_path": api_url}
