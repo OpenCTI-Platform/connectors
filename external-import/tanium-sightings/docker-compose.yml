@@ -10,13 +10,10 @@ services:
       - CONNECTOR_SCOPE=tanium
       - CONNECTOR_CONFIDENCE_LEVEL=60 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT12H
       - TANIUM_SIGHTINGS_URL=https://console.changeme.com
       - TANIUM_SIGHTINGS_URL_CONSOLE=https://console.changeme.com
       - TANIUM_SIGHTINGS_SSL_VERIFY=true
       - TANIUM_SIGHTINGS_TOKEN=ChangeMe
-      - TANIUM_SIGHTINGS_HASHES_IN_REPUTATION=true
-      - TANIUM_SIGHTINGS_NO_HASHES_IN_INTELS=true
-      - TANIUM_SIGHTINGS_AUTO_ONDEMAND_SCAN=true # trigger a quick scan when an intel document is imported
-      - TANIUM_SIGHTINGS_COMPUTER_GROUPS=1 # computer groups targeted by the auto on-demand scan (separated by ,)
       - TANIUM_SIGHTINGS_IMPORT_ALERTS=true
     restart: always
