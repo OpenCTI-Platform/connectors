@@ -92,9 +92,7 @@ class ConnectorLoop(threading.Thread):
 
         now = datetime.now(timezone.utc).replace(microsecond=0)
         last_run = state.get("last_run", 0)
-        last_run = datetime.fromtimestamp(last_run, timezone.utc).replace(
-            microsecond=0
-        )
+        last_run = datetime.fromtimestamp(last_run, timezone.utc).replace(microsecond=0)
 
         if last_run.year == 1970:
             log.info("Connector has never run")

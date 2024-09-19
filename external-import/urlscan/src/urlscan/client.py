@@ -1,10 +1,11 @@
 """Urlscan client"""
 
 from typing import Iterator, List
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import requests
 from pydantic.v1 import BaseModel, parse_raw_as
+
 
 __all__ = [
     "UrlscanClient",

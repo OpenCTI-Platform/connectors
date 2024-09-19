@@ -47,7 +47,8 @@ class UrlscanConnector:
 
         self._helper = OpenCTIConnectorHelper(config)
         interval = get_config_variable(
-            "CONNECTOR_INTERVAL", ["connector", "interval"],
+            "CONNECTOR_INTERVAL",
+            ["connector", "interval"],
             config,
             default=86400,
             isNumber=True,
