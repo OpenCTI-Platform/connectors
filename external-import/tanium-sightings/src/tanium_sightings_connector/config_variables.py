@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
 
+import pytz
+from dateutil.parser import parse
+
 import yaml
 from pycti import get_config_variable
 
@@ -58,4 +61,16 @@ class ConfigConnector:
             self.load,
             False,
             True,
+        )
+        tanium_import_start_date_var = get_config_variable(
+            "TANIUM_INSIGHTS_IMPORT_START_DATE",
+            ["tanium_insights", "import_start_date"],
+            self.load,
+            False,
+            None,
+        )
+        self.tanium_import_start_date = (
+            parse(tanium_import_start_date_var).astimezone(pytz.UTC)
+            if tanium_import_start_date_var
+            else None
         )

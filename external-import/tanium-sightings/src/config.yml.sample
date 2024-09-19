@@ -17,3 +17,4 @@ tanium_insights:
   ssl_verify: true
   token: 'ChangeMe'
   import_alerts: true
+  import_start_date: '' # Date in format YYYY-DD-MM

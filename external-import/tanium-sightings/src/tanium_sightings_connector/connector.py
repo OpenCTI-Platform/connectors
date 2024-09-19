@@ -71,21 +71,23 @@ class TaniumSightingsConnector:
             description="Import Sightings according to alerts found in Tanium API",
         )
 
-    def _get_state_last_alert_date(self) -> datetime:
+    def _get_last_alert_date(self) -> datetime:
         """
-        Get last alert date from connector's state
+        Get last alert date from connector's state (or its config).
         :return: Connector's state last alert date
         """
         state = self.helper.get_state()
         if state and "last_alert_date" in state:
             last_alert_date = parse(state["last_alert_date"])
+        elif self.config.tanium_import_start_date:
+            last_alert_date = self.config.tanium_import_start_date
         else:
             last_alert_date = datetime.now().astimezone(pytz.UTC) - relativedelta(
                 years=1
             )
         return last_alert_date
 
-    def _set_state_last_alert_date(self, alert) -> None:
+    def _set_last_alert_date(self, alert) -> None:
         """
         Set last alert date of connector's state
         :param alert: Last alert to set connector's state from
@@ -106,7 +108,10 @@ class TaniumSightingsConnector:
             filters={
                 "mode": "and",
                 "filters": [
-                    {"key": "source_name", "values": [self.helper.connect_name]},
+                    {
+                        "key": "source_name",
+                        "values": ["Tanium", self.helper.connect_name],
+                    },
                     {
                         "key": "external_id",
                         "values": [alert["intelDocId"]],
@@ -269,7 +274,7 @@ class TaniumSightingsConnector:
             alerts = self.api.get_alerts()
             for alert in reversed(alerts):
                 alert = format_alert(alert)
-                last_alert_date = self._get_state_last_alert_date()
+                last_alert_date = self._get_last_alert_date()
                 if validate_alert(alert, last_alert_date):
                     stix_objects = self._collect_intelligence(alert)
                     if stix_objects:
@@ -293,7 +298,7 @@ class TaniumSightingsConnector:
                             {"bundles_sent": str(len(bundles_sent))},
                         )
 
-                        self._set_state_last_alert_date(alert)
+                        self._set_last_alert_date(alert)
                         message = (
                             f"{self.helper.connect_name} connector successfully run, storing last_alert_date as "
                             + str(last_alert_date)
