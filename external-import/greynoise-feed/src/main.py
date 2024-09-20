@@ -105,9 +105,7 @@ class GreyNoiseFeed:
         elif feed_type.lower() == "malicious":
             query = "last_seen:1d classification:malicious"
         elif feed_type.lower() == "benign+malicious":
-            query = (
-                "last_seen:1d (classification:malicious OR classification:benign)"
-            )
+            query = "last_seen:1d (classification:malicious OR classification:benign)"
         elif feed_type.lower() == "all":
             query = "last_seen:1d"
 
