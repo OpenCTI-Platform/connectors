@@ -212,16 +212,21 @@ class Sekoia(object):
         Remove empty values from external references and add link to original object in Sekoia.io platform
         """
         for item in items:
-            item["external_references"] = [
-                {k: v for k, v in ref.items() if v}
-                for ref in item.get("external_references", [])
-            ]
-            item["external_references"].append(
-                {
-                    "source_name": "Sekoia.io",
-                    "url": f"https://app.sekoia.io/intelligence/objects/{item['id']}",
-                }
-            )
+            has_sekoia_source = False
+            external_references = item.setdefault("external_references", [])
+            for ref in external_references:
+                if ref.get("source_name") == "Sekoia.io":
+                    has_sekoia_source = True
+                for key in list(ref.keys()):
+                    if not ref[key]:
+                        del ref[key]
+            if not has_sekoia_source:
+                external_references.append(
+                    {
+                        "source_name": "Sekoia.io",
+                        "url": f"https://app.sekoia.io/intelligence/objects/{item['id']}",
+                    }
+                )
 
     def _clean_ic_fields(self, items: List[Dict]) -> List[Dict]:
         """
