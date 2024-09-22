@@ -868,7 +868,7 @@ def create_stix2_report_from_report(
     report_tags = report["tags"]
     if report_tags is not None:
         for tag in report_tags:
-            value = tag["value"]
+            value = tag.get("value")
             if value is None or not value:
                 continue
 
