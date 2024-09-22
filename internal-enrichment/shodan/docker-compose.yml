@@ -14,5 +14,5 @@ services:
       - SHODAN_MAX_TLP=TLP:AMBER
       - SHODAN_DEFAULT_SCORE=50
       - SHODAN_IMPORT_SEARCH_RESULTS=true
-      - SHODAN_CREATE_NOTE=false # Add results to note rather than description
+      - SHODAN_CREATE_NOTE=true # Add results to note rather than description
     restart: always
