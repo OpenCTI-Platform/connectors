@@ -67,7 +67,7 @@ class ShodanConnector:
             "SHODAN_CREATE_NOTE",
             ["shodan", "create_note"],
             config,
-            default=False,
+            default=True,
         )
 
         # Shodan Identity
