@@ -2,11 +2,11 @@ import json
 
 from pycti import OpenCTIConnectorHelper
 
-from .config_variables import ConfigConnector
 from .api_handler import TaniumApiHandler
+from .config_variables import ConfigConnector
 from .intel_cache import IntelCache
 from .intel_manager import IntelManager
-from .utils import is_indicator, is_observable, is_file
+from .utils import is_file, is_indicator, is_observable
 
 
 class TaniumStreamConnector:

@@ -2,9 +2,8 @@ import os
 from pathlib import Path
 
 import pytz
-from dateutil.parser import parse
-
 import yaml
+from dateutil.parser import parse
 from pycti import get_config_variable
 
 
