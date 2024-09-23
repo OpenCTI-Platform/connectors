@@ -1,0 +1,25 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true
+  live_stream_no_dependencies: true
+  name: 'Tanium'
+  scope: 'tanium' # Reserved
+  confidence_level: 60 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+tanium:
+  url: 'https://console.changeme.com'
+  url_console: 'https://console.changeme.com'
+  ssl_verify: true
+  token: 'ChangeMe'
+  hashes_in_reputation: true
+  no_hashes_in_intels: true
+  auto_ondemand_scan: true # trigger a quick scan when an intel document is imported
+  computer_groups: '1' # computer groups targeted by the auto quick scan (separated by ,)
+  import_alerts: true
