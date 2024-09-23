@@ -5,7 +5,7 @@ services:
     container_name: ${CONTAINER_NAME}
     image: opencti/connector-group-ib:6.3.1
     volumes:
-      - ./container_docs/:/opt/connector/docs/
+      - ./docs/:/opt/connector/docs/
     environment:
       # Connector's definition parameters:
       - CONNECTOR_NAME=${CONNECTOR_NAME}
