@@ -3,7 +3,7 @@
 
 [![Python](https://img.shields.io/badge/python-v3.6.8+-blue?logo=python)](https://python.org/downloads/release/python-368/)
 [![cyberintegrations](https://img.shields.io/badge/cyberintegrations-v0.6.6+-orange?)](https://github.com/cyberintegrations/releases/tag/0.6.6/)
-[![OpenCTI](https://img.shields.io/badge/opencti-v6.2.0+-orange?)](https://github.com/OpenCTI-Platform/opencti/releases/tag/6.2.0)
+[![OpenCTI](https://img.shields.io/badge/opencti-v6.3.1+-orange?)](https://github.com/OpenCTI-Platform/opencti/releases/tag/6.3.1)
 
 
 <!--
@@ -64,7 +64,7 @@ access the interface.
 ### Requirements
 
 - Active Threat Intelligence license
-- OpenCTI Platform >= 6.2.0
+- OpenCTI Platform >= 6.3.1
 
 
 ### Common environment variables
