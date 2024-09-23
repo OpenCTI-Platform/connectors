@@ -9,7 +9,7 @@ from cyberintegrations.decorators import cache_data
 from cyberintegrations.utils import FileHandler, ProxyConfigurator
 from pycti import OpenCTIConnectorHelper
 
-from src.config import Config
+from config import Config
 
 
 @cache_data(

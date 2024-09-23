@@ -319,6 +319,6 @@ collections:
 extra_settings:
   ignore_non_indicator_threats: false
   ignore_non_malware_ddos: true
-  intrusion_set_instead_of_threat_actor: true
+  intrusion_set_instead_of_threat_actor: false
   schedule_time: 00:00
   time_output_format: '%Y-%m-%d %H:%M:%S'
