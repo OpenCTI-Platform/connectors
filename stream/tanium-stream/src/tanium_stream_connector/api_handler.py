@@ -1,5 +1,4 @@
 import requests
-
 from pycti import OpenCTIConnectorHelper
 from stix2slider import slide_string
 from stix2slider.options import initialize_options
