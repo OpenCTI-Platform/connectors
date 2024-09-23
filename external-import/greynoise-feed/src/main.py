@@ -1,4 +1,3 @@
-import math
 import os
 import time
 from datetime import datetime, timedelta
@@ -93,7 +92,7 @@ class GreyNoiseFeed:
         # Cache for label
         self.labels_cache = {}
 
-    def get_feed_query(self, feed_type, last_seen):
+    def get_feed_query(self, feed_type):
         query = ""
         if feed_type.lower() not in ["benign", "malicious", "benign+malicious", "all"]:
             self.helper.log_error(
@@ -101,17 +100,13 @@ class GreyNoiseFeed:
             )
             exit(1)
         elif feed_type.lower() == "benign":
-            query = "last_seen:" + last_seen + " classification:benign"
+            query = "last_seen:1d classification:benign"
         elif feed_type.lower() == "malicious":
-            query = "last_seen:" + last_seen + " classification:malicious"
+            query = "last_seen:1d classification:malicious"
         elif feed_type.lower() == "benign+malicious":
-            query = (
-                "last_seen:"
-                + last_seen
-                + " (classification:malicious OR classification:benign)"
-            )
+            query = "last_seen:1d (classification:malicious OR classification:benign)"
         elif feed_type.lower() == "all":
-            query = "last_seen:" + last_seen
+            query = "last_seen:1d"
 
         return query
 
@@ -598,10 +593,8 @@ class GreyNoiseFeed:
                     session = GreyNoise(
                         api_key=self.api_key, integration_name="opencti-feed-v2.3"
                     )
-                    delta = now - last_run_timestamp
-                    days = math.ceil(delta.total_seconds() / 3600 / 24)
 
-                    query = self.get_feed_query(self.feed_type, str(days) + "d")
+                    query = self.get_feed_query(self.feed_type)
                     self.helper.log_info(
                         "Querying GreyNoise API - First Results Page (" + query + ")"
                     )
