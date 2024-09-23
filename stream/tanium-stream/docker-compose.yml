@@ -21,5 +21,4 @@ services:
       - TANIUM_NO_HASHES_IN_INTELS=true
       - TANIUM_AUTO_ONDEMAND_SCAN=true # trigger a quick scan when an intel document is imported
       - TANIUM_COMPUTER_GROUPS=1 # computer groups targeted by the auto on-demand scan (separated by ,)
-      - TANIUM_IMPORT_ALERTS=true
     restart: always
