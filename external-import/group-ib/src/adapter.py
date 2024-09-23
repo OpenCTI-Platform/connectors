@@ -1,7 +1,21 @@
-from datetime import datetime
+"""
+############################## TERMS OF USE ####################################
+# The following code is provided for demonstration purposes only, and should   #
+# not be used without independent verification. Group-IB makes no              #
+# representations or warranties, express, implied, statutory, or otherwise,    #
+# regarding this code, and provides it strictly "as-is".                       #
+# Group-IB shall not be liable for, and you assume all risk of                 #
+# using the foregoing.                                                         #
+################################################################################
+Author: Pavel Reshetnikov, Integration developer, 2024
+"""
+
+from datetime import datetime, timedelta
+from typing import Any, List, Tuple, Union
+
+from stix2.patterns import HashConstant
 
 import data_to_stix2 as ds
-from stix2.patterns import HashConstant
 
 
 class DataToSTIXAdapter:
@@ -14,6 +28,7 @@ class DataToSTIXAdapter:
         self.tlp_color = tlp_color
         self.is_ioc = is_ioc
         self.helper = helper
+        self.author = ds.BaseEntity("", "", "white").author
 
     @staticmethod
     def _valid_hash(hash_value, hash_type):
@@ -52,73 +67,269 @@ class DataToSTIXAdapter:
                 result.append((link_id, link_url, link_description))
             return result
 
-    @staticmethod
-    def _generate_relations(main_obj, related_objects, relation_type=None):
-        # type: (Any, List[Any], Union[None, str]) -> Any
+    def _retrieve_date(self, obj, key, alter_key=None):
+        # type: (dict, str, str) -> datetime
 
-        # TODO: create common relationship map for all objects
+        date_raw = obj.get(key, "")
+        if not date_raw and alter_key:
+            date_raw = obj.get(alter_key, "")
+
+        if date_raw:
+            if date_raw.startswith("00"):
+                self.helper.log_warning("Wrong format of date: {}".format(date_raw))
+                return datetime.now()
+
+        try:
+            _datetime = datetime.fromisoformat(date_raw)
+        except (Exception,):
+            self.helper.log_warning(
+                "Failed to format date: {}. Using default.".format(date_raw)
+            )
+            _datetime = datetime.now()
+
+        return _datetime
+
+    def _retrieve_ttl_dates(self, obj):
+        # type: (dict) -> Tuple[datetime, datetime]
+        """
+        :returns: (valid_from, valid_until)
+        """
+        ttl = obj.get("ttl")
+        if not ttl:
+            ttl = 365
+
+        # try to extract date-modified
+        date_modified_raw = obj.get("date-modified", "")
+        date_created_raw = obj.get("date-created", "")
+
+        if date_modified_raw:
+            if date_modified_raw.startswith("00"):
+                self.helper.log_warning(
+                    "Wrong format of date_modified: {}".format(date_modified_raw)
+                )
+                date_modified_raw = None
+
+        if date_created_raw:
+            if date_created_raw.startswith("00"):
+                self.helper.log_warning(
+                    "Wrong format of date_created: {}".format(date_created_raw)
+                )
+                date_created_raw = None
+
+        if not date_modified_raw and not date_created_raw:
+            self.helper.log_warning("No correct date found. Using default")
+            base_ttl_datetime = datetime.now()
+        else:
+            if date_modified_raw:
+                base_ttl_raw_date = date_modified_raw
+            else:
+                base_ttl_raw_date = date_created_raw
+
+            try:
+                base_ttl_datetime = datetime.fromisoformat(base_ttl_raw_date)
+            except (Exception,):
+                self.helper.log_warning(
+                    "Failed to format base_ttl_raw_date: {}. Using default.".format(
+                        base_ttl_raw_date
+                    )
+                )
+                base_ttl_datetime = datetime.now()
+
+        valid_from = base_ttl_datetime
+        valid_until = base_ttl_datetime + timedelta(days=ttl)
+        return valid_from, valid_until
+
+    @staticmethod
+    def _generate_relations(
+        main_obj, related_objects, relation_type=None, is_ioc=False
+    ):
+        # type: (Any, List[Any], Union[None, str], bool) -> Any
+
         relation_type_map = {
-            "threat_actor": {
-                "attack_pattern": "uses",
+            "threat-actor": {
+                # SDO
+                "attack-pattern": "uses",
                 "malware": "uses",
                 "vulnerability": "targets",
-                "file": "related-to",
-                "base_location": "located-at",
-                "target_location": "targets",
+                # Common
+                "base-location": "located-at",
+                "target-location": "targets",
             },
-            "indicator": {"file": "based-on", "ipv4": "based-on", "ipv6": "based-on"},
-            "ipv4": {
-                "threat_actor": "related-to",
-                "domain": "related-to",
+            "intrusion-set": {
+                # SDO
+                "attack-pattern": "uses",
+                "malware": "uses",
+                "vulnerability": "targets",
+                # Threat
+                "threat-actor": "attributed-to",
+            },
+            "indicator": {
+                # Observable
+                "file": "based-on",
+                "domain-name": "based-on",
+                "url": "based-on",
+                "ipv4-addr": "based-on",
+                "ipv6-addr": "based-on",
+                "email-addr": "based-on",
+                # Threat
+                "threat-actor": "indicates",
+                "intrusion-set": "indicates",
+            },
+            "ipv4-addr": {
+                # SDO
+                "threat-actor": "related-to",
+                "intrusion-set": "related-to",
+                # Observable
+                "domain-name": "related-to",
                 "url": "related-to",
             },
-            "ipv6": {
-                "threat_actor": "related-to",
-                "domain": "related-to",
+            "ipv6-addr": {
+                # SDO
+                "threat-actor": "related-to",
+                "intrusion-set": "related-to",
+                # Observable
+                "domain-name": "related-to",
                 "url": "related-to",
             },
-            "domain": {"threat_actor": "related-to"},
-            "url": {"threat_actor": "related-to"},
+            "domain-name": {
+                # SDO
+                "threat-actor": "related-to",
+                "intrusion-set": "related-to",
+            },
+            "url": {
+                # SDO
+                "threat-actor": "related-to",
+                "intrusion-set": "related-to",
+            },
+            "file": {
+                # SDO
+                "threat-actor": "related-to",
+                "intrusion-set": "related-to",
+            },
             "vulnerability": {},
-            "malware": {"ipv4": "communicates-with", "ipv6": "communicates-with"},
+            "report": {},
+            "malware": {
+                # Observable
+                "ipv4-addr": "communicates-with",
+                "ipv6-addr": "communicates-with",
+            },
+            "yara": {
+                # SDO
+                "malware": "indicates"
+            },
+            "suricata": {
+                # SDO
+                "malware": "indicates"
+            },
+            "email-addr": {
+                # Observable
+                "file": "related-to"
+            },
         }
-        # relation_type_map = {
-        #     "attack_pattern": "uses",
-        #     "malware": "uses",
-        #     "vulnerability": "targets"
-        # }
-        relation_type_required = True
-        if relation_type:
-            relation_type_required = False
+
+        def _gen_rel(
+            mo, mo_type, ro, ro_type, gen_rel_processor=main_obj.generate_relationship
+        ):
+            r_type = relation_type_map.get(mo_type, {}).get(ro_type, None)
+            if not r_type:
+                raise AttributeError(
+                    f"No relation type defined. Main object type: [{mo_type}], "
+                    f"Related object type: {ro_type}, Relation type: {relation_type}"
+                )
+            gen_rel_processor(
+                mo,
+                ro,
+                relation_type=r_type,
+            )
+
+        _main_object = main_obj.stix_main_object
+        _main_object_c_type = main_obj.c_type
+
+        # generate relationship: Indicator --based-on--> Observable
+        if (
+            is_ioc
+            and main_obj.stix_indicator
+            and main_obj.c_type not in ["yara", "suricata"]
+        ):
+            _indicator = main_obj.stix_indicator
+
+            if isinstance(_indicator, list):
+                for _ind in _indicator:
+                    _gen_rel(_ind, _ind.type, _main_object, _main_object_c_type)
+            else:
+                _gen_rel(_indicator, _indicator.type, _main_object, _main_object_c_type)
+
+        if not related_objects:
+            return main_obj
 
         for _rel_obj in related_objects:
             if _rel_obj:
                 if isinstance(_rel_obj, list) and _rel_obj:
                     for _ro in _rel_obj:
-                        if relation_type_required:
-                            relation_type = relation_type_map.get(main_obj.type).get(
-                                _ro.type, None
+                        # generate relationship: Indicator --indicates--> Threat
+                        if (
+                            is_ioc
+                            and main_obj.stix_indicator
+                            and _ro.c_type in ["threat-actor", "intrusion-set"]
+                        ):
+                            _indicator = main_obj.stix_indicator
+                            if isinstance(_indicator, list):
+                                for _ind in _indicator:
+                                    _gen_rel(
+                                        _ind,
+                                        _ind.type,
+                                        _ro.stix_main_object,
+                                        _ro.c_type,
+                                    )
+                            else:
+                                _gen_rel(
+                                    _indicator,
+                                    _indicator.type,
+                                    _ro.stix_main_object,
+                                    _ro.c_type,
+                                )
+                        # generate relationship:
+                        # - Observable --related-to--> Threat
+                        # - Observable/SDO/Threat/Common --any--> Any
+                        else:
+                            _gen_rel(
+                                _main_object,
+                                _main_object_c_type,
+                                _ro.stix_main_object,
+                                _ro.c_type,
                             )
-                        if not relation_type:
-                            raise AttributeError
-                        main_obj.generate_relationship(
-                            main_obj.stix_main_object,
-                            _ro.stix_main_object,
-                            relation_type=relation_type,
-                        )
                 else:
 
-                    if relation_type_required:
-                        relation_type = relation_type_map.get(main_obj.type).get(
-                            _rel_obj.type, None
+                    if (
+                        is_ioc
+                        and main_obj.stix_indicator
+                        and _rel_obj.c_type in ["threat-actor", "intrusion-set"]
+                    ):
+                        _indicator = main_obj.stix_indicator
+                        if isinstance(_indicator, list):
+                            for _ind in _indicator:
+                                _gen_rel(
+                                    _ind,
+                                    _ind.type,
+                                    _rel_obj.stix_main_object,
+                                    _rel_obj.c_type,
+                                )
+                        else:
+                            _gen_rel(
+                                _indicator,
+                                _indicator.type,
+                                _rel_obj.stix_main_object,
+                                _rel_obj.c_type,
+                            )
+
+                    else:
+                        _gen_rel(
+                            _main_object,
+                            _main_object_c_type,
+                            _rel_obj.stix_main_object,
+                            _rel_obj.c_type,
                         )
-                    if not relation_type:
-                        raise AttributeError
-                    main_obj.generate_relationship(
-                        main_obj.stix_main_object,
-                        _rel_obj.stix_main_object,
-                        relation_type=relation_type,
-                    )
+
         return main_obj
 
     def _generate_mitre_matrix(self, obj_events):
@@ -147,7 +358,7 @@ class DataToSTIXAdapter:
         return [
             ds.KillChainPhase(
                 name=_name,
-                _type=_type,
+                c_type=_type,
                 # tlp_color=self.tlp_color,
                 labels=[self.collection, _label],
             )
@@ -157,48 +368,50 @@ class DataToSTIXAdapter:
         ]
 
     def generate_stix_domain(self, name):
-        _type = "domain"
-        _label = "domain"
+        _type = "domain-name"
+        # _label = "domain"
 
         return ds.Domain(
             name=name,
-            _type=_type,
+            c_type=_type,
             tlp_color=self.tlp_color,
-            labels=[self.collection, _label],
+            labels=[self.collection],
         )
 
     def generate_stix_url(self, name):
         _type = "url"
-        _label = "url"
+        # _label = "url"
 
         return ds.URL(
             name=name,
-            _type=_type,
+            c_type=_type,
             tlp_color=self.tlp_color,
-            labels=[self.collection, _label],
+            labels=[self.collection],
         )
 
     def generate_stix_ipv4(self, name):
-        _type = "ipv4"
-        _label = "ipv4"
+        _type = "ipv4-addr"
+        # _label = "ipv4"
 
         return ds.IPAddress(
             name=name,
-            _type=_type,
+            c_type=_type,
             tlp_color=self.tlp_color,
-            labels=[self.collection, _label],
+            labels=[self.collection],
         )
 
-    def generate_locations(self, obj_country_codes):
+    def generate_locations(self, obj_country_codes, change_type_to=None):
         _type = "location"
-        _label = "country"
+        if change_type_to:
+            _type = change_type_to
+        # _label = "country"
 
         return [
             ds.Location(
                 name=_cc,
-                _type=_type,
+                c_type=_type,
                 tlp_color=self.tlp_color,
-                labels=[self.collection, _label],
+                labels=[self.collection],
             ).generate_stix_objects()
             for _cc in obj_country_codes
             if _cc
@@ -208,24 +421,14 @@ class DataToSTIXAdapter:
         if not obj:
             return list()
 
-        # _description = obj.get("__")
+        _description = obj.get("__")
         _type = "malware"
-        _label = "malware"
+        # _label = "malware"
         _events = obj.get("malware_report_list", [])
-        _date_updated = None
 
-        if json_date_obj:
-            try:
-                _date_updated = datetime.strptime(
-                    json_date_obj.get("date-updated"), "%Y-%m-%dT%H:%M:%S%z"
-                )
-            except (Exception,):
-                self.helper.log_warning(
-                    "Failed to format first_seen: {}. Using default.".format(
-                        json_date_obj.get("date-updated"),
-                    )
-                )
-                _date_updated = None
+        _date_updated = self._retrieve_date(
+            json_date_obj, "date-updated", "date-modified"
+        )
 
         _stix_objects = list()
 
@@ -244,11 +447,12 @@ class DataToSTIXAdapter:
                                 name=n,
                                 aliases=_malware_aliases,
                                 last_seen=_date_updated,
-                                _type=_type,
+                                c_type=_type,
                                 malware_types=_malware_types or [],
                                 tlp_color="red",
-                                labels=[self.collection, _label],
+                                labels=[self.collection],
                             )
+                            malware.set_description(_description)
                             malware.generate_external_references(_portal_links)
                             malware.generate_stix_objects()
 
@@ -258,11 +462,12 @@ class DataToSTIXAdapter:
                             name=_name,
                             aliases=_malware_aliases,
                             last_seen=_date_updated,
-                            _type=_type,
+                            c_type=_type,
                             malware_types=_malware_types,
                             tlp_color="red",
-                            labels=[self.collection, _type],
+                            labels=[self.collection],
                         )
+                        malware.set_description(_description)
                         malware.generate_external_references(_portal_links)
                         malware.generate_stix_objects()
 
@@ -280,11 +485,12 @@ class DataToSTIXAdapter:
                     name=_name,
                     aliases=_malware_aliases,
                     last_seen=_date_updated,
-                    _type=_type,
+                    c_type=_type,
                     malware_types=_malware_types,
                     tlp_color="red",
-                    labels=[self.collection, _type],
+                    labels=[self.collection],
                 )
+                malware.set_description(_description)
                 malware.generate_external_references(_portal_links)
                 malware.generate_stix_objects()
 
@@ -298,11 +504,9 @@ class DataToSTIXAdapter:
         if not obj:
             return list()
 
-        # TODO: How to add cvssv2??? cpeTable?
-
         _description = obj.get("__")
         _type = "vulnerability"
-        _label = "vulnerability"
+        # _label = "vulnerability"
         if json_cvss_obj:
             _cvssv3_score = json_cvss_obj.get("score", None)
             _cvssv3_vector = json_cvss_obj.get("vector", None)
@@ -310,20 +514,8 @@ class DataToSTIXAdapter:
             _cvssv3_score = None
             _cvssv3_vector = None
         _events = obj.get("vulnerability_list", [])
-        _date_published = None
 
-        if json_date_obj:
-            try:
-                _date_published = datetime.strptime(
-                    json_date_obj.get("date-published"), "%Y-%m-%dT%H:%M:%S%z"
-                )
-            except (Exception,):
-                self.helper.log_warning(
-                    "Failed to format first_seen: {}. Using default.".format(
-                        json_date_obj.get("date-updated"),
-                    )
-                )
-                _date_published = datetime.now()
+        _date_published = self._retrieve_date(json_date_obj, "date-published")
 
         _stix_objects = list()
 
@@ -337,42 +529,36 @@ class DataToSTIXAdapter:
                         for n in _name:
                             vulnerability = ds.Vulnerability(
                                 name=n,
-                                _type=_type,
+                                c_type=_type,
                                 created=_date_published,
                                 cvss_score=_cvssv3_score,
                                 cvss_vector=_cvssv3_vector,
                                 tlp_color=self.tlp_color,
-                                labels=[self.collection, _label],
+                                labels=[self.collection],
                             )
+                            vulnerability.set_description(_description)
                             vulnerability.generate_stix_objects()
 
-                            if related_objects:
-                                self._generate_relations(
-                                    vulnerability, related_objects, "related-to"
-                                )
+                            self._generate_relations(vulnerability, related_objects)
 
-                            vulnerability.set_description(_description)
                             vulnerability.add_relationships_to_stix_objects()
 
                             _stix_objects.append(vulnerability)
                     else:
                         vulnerability = ds.Vulnerability(
                             name=_name,
-                            _type=_type,
+                            c_type=_type,
                             created=_date_published,
                             cvss_score=_cvssv3_score,
                             cvss_vector=_cvssv3_vector,
                             tlp_color=self.tlp_color,
-                            labels=[self.collection, _label],
+                            labels=[self.collection],
                         )
+                        vulnerability.set_description(_description)
                         vulnerability.generate_stix_objects()
 
-                        if related_objects:
-                            self._generate_relations(
-                                vulnerability, related_objects, "related-to"
-                            )
+                        self._generate_relations(vulnerability, related_objects)
 
-                        vulnerability.set_description(_description)
                         vulnerability.add_relationships_to_stix_objects()
 
                         _stix_objects.append(vulnerability)
@@ -384,21 +570,18 @@ class DataToSTIXAdapter:
             if _name:
                 vulnerability = ds.Vulnerability(
                     name=_name,
-                    _type=_type,
+                    c_type=_type,
                     created=_date_published,
                     cvss_score=_cvssv3_score,
                     cvss_vector=_cvssv3_vector,
                     tlp_color=self.tlp_color,
-                    labels=[self.collection, _label],
+                    labels=[self.collection],
                 )
+                vulnerability.set_description(_description)
                 vulnerability.generate_stix_objects()
 
-                if related_objects:
-                    self._generate_relations(
-                        vulnerability, related_objects, "related-to"
-                    )
+                self._generate_relations(vulnerability, related_objects)
 
-                vulnerability.set_description(_description)
                 vulnerability.add_relationships_to_stix_objects()
 
                 _stix_objects.append(vulnerability)
@@ -410,8 +593,8 @@ class DataToSTIXAdapter:
             return list()
 
         _description = obj.get("__")
-        _type = "attack_pattern"
-        _label = "attack_pattern"
+        _type = "attack-pattern"
+        # _label = "attack_pattern"
         _events = obj.get("mitre_matrix_list")
 
         _stix_objects = list()
@@ -425,11 +608,11 @@ class DataToSTIXAdapter:
             if k:
                 attack_pattern = ds.AttackPattern(
                     name=self.mitre_mapper.get(k),
-                    _type=_type,
+                    c_type=_type,
                     mitre_id=k,
                     kill_chain_phases=kill_chain_phases,
                     # tlp_color=self.tlp_color,
-                    labels=[self.collection, _label],
+                    labels=[self.collection],
                 )
                 attack_pattern.set_description(_description)
                 attack_pattern.generate_external_references(v["portal_links"])
@@ -443,9 +626,8 @@ class DataToSTIXAdapter:
         if not obj:
             return None, None
 
-        # _description = obj.get("__")
-        _type = "threat_actor"
-        _label = "threat_actor"
+        _type = "threat-actor"
+        # _label = "threat_actor"
         _global_label = self.ta_global_label
         # _country_type = "country"
 
@@ -456,25 +638,9 @@ class DataToSTIXAdapter:
         _threat_actor_description = obj.get("description")
         _threat_actor_goals = obj.get("goals")
         _threat_actor_roles = obj.get("roles")
-        _date_first_seen = None
-        _date_last_seen = None
 
-        if json_date_obj:
-            try:
-                _date_first_seen = datetime.strptime(
-                    json_date_obj.get("first-seen"), "%Y-%m-%d"
-                )
-                _date_last_seen = datetime.strptime(
-                    json_date_obj.get("last-seen"), "%Y-%m-%d"
-                )
-            except (Exception,):
-                self.helper.log_warning(
-                    "Failed to format first_seen: {}, last_seen: {}. Using default.".format(
-                        json_date_obj.get("first-seen"), json_date_obj.get("last-seen")
-                    )
-                )
-                _date_first_seen = None
-                _date_last_seen = None
+        _date_first_seen = self._retrieve_date(json_date_obj, "first-seen")
+        _date_last_seen = self._retrieve_date(json_date_obj, "last-seen")
 
         _portal_link = self._retrieve_link(obj)
 
@@ -484,10 +650,10 @@ class DataToSTIXAdapter:
         if _threat_actor_name:
             threat_actor = ds.ThreatActor(
                 name=_threat_actor_name,
-                _type=_type,
+                c_type=_type,
                 global_label=_global_label,
                 tlp_color="red",
-                labels=[self.collection, _label],
+                labels=[self.collection],
                 aliases=_threat_actor_aliases,
                 first_seen=_date_first_seen,
                 last_seen=_date_last_seen,
@@ -500,36 +666,108 @@ class DataToSTIXAdapter:
 
             base_locations = []
             if _threat_actor_country:
-                base_locations = self.generate_locations([_threat_actor_country])
+                base_locations = self.generate_locations(
+                    [_threat_actor_country], change_type_to="base-location"
+                )
             target_locations = []
             if _threat_actor_targeted_countries:
                 target_locations = self.generate_locations(
-                    _threat_actor_targeted_countries
+                    _threat_actor_targeted_countries, change_type_to="target-location"
                 )
 
             locations = base_locations + target_locations
 
             if _threat_actor_name and base_locations:
-                self._generate_relations(threat_actor, base_locations, "located-at")
+                self._generate_relations(threat_actor, base_locations)
 
             if _threat_actor_name and target_locations:
-                self._generate_relations(threat_actor, target_locations, "targets")
+                self._generate_relations(threat_actor, target_locations)
 
-            if related_objects:
-                self._generate_relations(threat_actor, related_objects)
+            self._generate_relations(threat_actor, related_objects)
 
             threat_actor.add_relationships_to_stix_objects()
 
         return threat_actor, locations
 
-    def generate_stix_file(self, obj, related_objects=None, is_ioc=True):
+    def generate_stix_intrusion_set(self, obj, related_objects, json_date_obj=None):
+        if not obj:
+            return None
+
+        _type = "intrusion-set"
+        # _label = "threat_actor"
+        _global_label = self.ta_global_label
+        # _country_type = "country"
+
+        _threat_actor_name = obj.get("name")
+        # _threat_actor_country = obj.get("country")
+        # _threat_actor_targeted_countries = obj.get("targeted_countries")
+        _threat_actor_aliases = obj.get("aliases")
+        _threat_actor_description = obj.get("description")
+        _threat_actor_goals = obj.get("goals")
+        _threat_actor_roles = obj.get("roles")
+
+        _date_first_seen = self._retrieve_date(json_date_obj, "first-seen")
+        _date_last_seen = self._retrieve_date(json_date_obj, "last-seen")
+
+        _portal_link = self._retrieve_link(obj)
+
+        intrusion_set = None
+        # locations = None
+
+        if _threat_actor_name:
+            intrusion_set = ds.IntrusionSet(
+                name=_threat_actor_name,
+                c_type=_type,
+                global_label=_global_label,
+                tlp_color="red",
+                labels=[self.collection],
+                aliases=_threat_actor_aliases,
+                first_seen=_date_first_seen,
+                last_seen=_date_last_seen,
+                goals=_threat_actor_goals,
+                roles=_threat_actor_roles,
+            )
+            intrusion_set.set_description(_threat_actor_description)
+            intrusion_set.generate_external_references(_portal_link)
+            intrusion_set.generate_stix_objects()
+
+            # base_locations = []
+            # if _threat_actor_country:
+            #     base_locations = self.generate_locations(
+            #         [_threat_actor_country], change_type_to="base-location"
+            #     )
+            # target_locations = []
+            # if _threat_actor_targeted_countries:
+            #     target_locations = self.generate_locations(
+            #         _threat_actor_targeted_countries, change_type_to="target-location"
+            #     )
+
+            # locations = base_locations + target_locations
+            #
+            # if _threat_actor_name and base_locations:
+            #     self._generate_relations(intrusion_set, base_locations)
+            #
+            # if _threat_actor_name and target_locations:
+            #     self._generate_relations(intrusion_set, target_locations)
+
+            self._generate_relations(intrusion_set, related_objects)
+
+            intrusion_set.add_relationships_to_stix_objects()
+
+        return intrusion_set  # , locations
+
+    def generate_stix_file(
+        self, obj, json_date_obj=None, related_objects=None, file_is_ioc=True
+    ):
         if not obj:
             return list()
 
         _description = obj.get("__")
         _type = "file"
-        _label = "file"
+        # _label = "file"
         _events = obj.get("file_list")
+
+        valid_from, valid_until = self._retrieve_ttl_dates(json_date_obj)
 
         _stix_objects = list()
 
@@ -561,22 +799,17 @@ class DataToSTIXAdapter:
                 if any(hashes):
                     file = ds.FileHash(
                         name=hashes,
-                        _type=_type,
+                        c_type=_type,
                         tlp_color=self.tlp_color,
-                        labels=[self.collection, _label],
+                        labels=[self.collection],
                     )
                     file.set_description(_description)
-                    file.is_ioc = is_ioc
+                    file.is_ioc = file_is_ioc
+                    file.set_valid_from(valid_from)
+                    file.set_valid_until(valid_until)
                     file.generate_stix_objects()
 
-                    if self.is_ioc:
-                        for ind in file.stix_indicator:
-                            file.generate_relationship(
-                                ind, file.stix_main_object, relation_type="based-on"
-                            )
-
-                    if related_objects:
-                        self._generate_relations(file, related_objects, "related-to")
+                    self._generate_relations(file, related_objects, is_ioc=file_is_ioc)
 
                     file.add_relationships_to_stix_objects()
 
@@ -604,22 +837,17 @@ class DataToSTIXAdapter:
             if any(hashes):
                 file = ds.FileHash(
                     name=hashes,
-                    _type=_type,
+                    c_type=_type,
                     tlp_color=self.tlp_color,
-                    labels=[self.collection, _label],
+                    labels=[self.collection],
                 )
                 file.set_description(_description)
-                file.is_ioc = is_ioc
+                file.is_ioc = file_is_ioc
+                file.set_valid_from(valid_from)
+                file.set_valid_until(valid_until)
                 file.generate_stix_objects()
 
-                if self.is_ioc:
-                    for ind in file.stix_indicator:
-                        file.generate_relationship(
-                            ind, file.stix_main_object, relation_type="based-on"
-                        )
-
-                if related_objects:
-                    self._generate_relations(file, related_objects, "related-to")
+                self._generate_relations(file, related_objects, is_ioc=file_is_ioc)
 
                 file.add_relationships_to_stix_objects()
 
@@ -630,6 +858,7 @@ class DataToSTIXAdapter:
     def generate_stix_network(
         self,
         obj,
+        json_date_obj=None,
         related_objects=None,
         url_is_ioc=False,
         domain_is_ioc=False,
@@ -639,9 +868,9 @@ class DataToSTIXAdapter:
             return list(), list(), list()
 
         _description = obj.get("__")
-        # _type = "ipv4"
-        # _label = "ipv4"
         _events = obj.get("network_list", None)
+
+        valid_from, valid_until = self._retrieve_ttl_dates(json_date_obj)
 
         _domain_stix_objects = list()
         _url_stix_objects = list()
@@ -657,17 +886,13 @@ class DataToSTIXAdapter:
                 if _domain:
                     domain = self.generate_stix_domain(_domain)
                     domain.is_ioc = domain_is_ioc
+                    domain.set_valid_from(valid_from)
+                    domain.set_valid_until(valid_until)
                     domain.generate_stix_objects()
 
-                    if domain_is_ioc:
-                        domain.generate_relationship(
-                            domain.stix_indicator,
-                            domain.stix_main_object,
-                            relation_type="based-on",
-                        )
-
-                    if related_objects:
-                        self._generate_relations(domain, related_objects, "related-to")
+                    self._generate_relations(
+                        domain, related_objects, is_ioc=domain_is_ioc
+                    )
 
                     domain.add_relationships_to_stix_objects()
 
@@ -677,23 +902,17 @@ class DataToSTIXAdapter:
                 if _url:
                     url = self.generate_stix_url(_url)
                     url.is_ioc = url_is_ioc
-                    link_id = ""
+                    url.set_valid_from(valid_from)
+                    url.set_valid_until(valid_until)
+                    link_id = "NoId"
                     link_url = _url
-                    link_description = "Source external reference"
+                    link_description = "Unknown: Source URL - external reference"
                     url.generate_external_references(
                         [(link_id, link_url, link_description)]
                     )
                     url.generate_stix_objects()
 
-                    if url_is_ioc:
-                        url.generate_relationship(
-                            url.stix_indicator,
-                            url.stix_main_object,
-                            relation_type="based-on",
-                        )
-
-                    if related_objects:
-                        self._generate_relations(url, related_objects, "related-to")
+                    self._generate_relations(url, related_objects, is_ioc=url_is_ioc)
 
                     url.add_relationships_to_stix_objects()
 
@@ -705,22 +924,16 @@ class DataToSTIXAdapter:
 
                         ip.set_description(_description)
                         ip.is_ioc = ip_is_ioc
+                        ip.set_valid_from(valid_from)
+                        ip.set_valid_until(valid_until)
                         ip.generate_stix_objects()
 
-                        if ip_is_ioc:
-                            ip.generate_relationship(
-                                ip.stix_indicator,
-                                ip.stix_main_object,
-                                relation_type="based-on",
-                            )
-
-                        if related_objects:
-                            self._generate_relations(ip, related_objects, "related-to")
+                        self._generate_relations(ip, related_objects, is_ioc=ip_is_ioc)
 
                         if domain:
-                            self._generate_relations(ip, [domain], "related-to")
+                            self._generate_relations(ip, [domain])
                         if url:
-                            self._generate_relations(ip, [url], "related-to")
+                            self._generate_relations(ip, [url])
 
                         ip.add_relationships_to_stix_objects()
 
@@ -735,17 +948,11 @@ class DataToSTIXAdapter:
             if _domain:
                 domain = self.generate_stix_domain(_domain)
                 domain.is_ioc = domain_is_ioc
+                domain.set_valid_from(valid_from)
+                domain.set_valid_until(valid_until)
                 domain.generate_stix_objects()
 
-                if domain_is_ioc:
-                    domain.generate_relationship(
-                        domain.stix_indicator,
-                        domain.stix_main_object,
-                        relation_type="based-on",
-                    )
-
-                if related_objects:
-                    self._generate_relations(domain, related_objects, "related-to")
+                self._generate_relations(domain, related_objects, is_ioc=domain_is_ioc)
 
                 domain.add_relationships_to_stix_objects()
 
@@ -755,23 +962,17 @@ class DataToSTIXAdapter:
             if _url:
                 url = self.generate_stix_url(_url)
                 url.is_ioc = url_is_ioc
-                link_id = ""
+                url.set_valid_from(valid_from)
+                url.set_valid_until(valid_until)
+                link_id = "NoId"
                 link_url = _url
-                link_description = "Source external reference"
+                link_description = "Unknown: Source URL - external reference"
                 url.generate_external_references(
                     [(link_id, link_url, link_description)]
                 )
                 url.generate_stix_objects()
 
-                if url_is_ioc:
-                    url.generate_relationship(
-                        url.stix_indicator,
-                        url.stix_main_object,
-                        relation_type="based-on",
-                    )
-
-                if related_objects:
-                    self._generate_relations(url, related_objects, "related-to")
+                self._generate_relations(url, related_objects, is_ioc=url_is_ioc)
 
                 url.add_relationships_to_stix_objects()
 
@@ -782,20 +983,16 @@ class DataToSTIXAdapter:
 
                 ip.set_description(_description)
                 ip.is_ioc = ip_is_ioc
+                ip.set_valid_from(valid_from)
+                ip.set_valid_until(valid_until)
                 ip.generate_stix_objects()
 
-                if ip_is_ioc:
-                    ip.generate_relationship(
-                        ip.stix_indicator, ip.stix_main_object, relation_type="based-on"
-                    )
-
-                if related_objects:
-                    self._generate_relations(ip, related_objects, "related-to")
+                self._generate_relations(ip, related_objects, is_ioc=ip_is_ioc)
 
                 if domain:
-                    self._generate_relations(ip, [domain], "related-to")
+                    self._generate_relations(ip, [domain])
                 if url:
-                    self._generate_relations(ip, [url], "related-to")
+                    self._generate_relations(ip, [url])
 
                 ip.add_relationships_to_stix_objects()
 
@@ -815,7 +1012,7 @@ class DataToSTIXAdapter:
             return None
 
         _description = obj.get("title")
-        _type = "threat_report"
+        _type = "report"
         _label = "threat_report"
         _id = obj.get("id")
         _date_published = json_date_obj.get("date-published")
@@ -832,8 +1029,8 @@ class DataToSTIXAdapter:
         ta_label = json_threat_actor_obj.get("name")
 
         report = ds.Report(
-            name=f"Report: {_description}",
-            _type=_type,
+            name=f"{_description}",
+            c_type=_type,
             published_time=datetime.strptime(_date_published, "%Y-%m-%d"),
             related_objects_ids=report_related_objects_ids,
             tlp_color=self.tlp_color,
@@ -846,7 +1043,7 @@ class DataToSTIXAdapter:
         return report
 
     def generate_stix_yara(
-        self, obj, json_date_obj=None, related_objects=None, is_ioc=True
+        self, obj, json_date_obj=None, related_objects=None, yara_is_ioc=True
     ):
         if not obj:
             return None
@@ -856,41 +1053,32 @@ class DataToSTIXAdapter:
         _context = obj.get("context")
         _type = "yara"
         _label = "yara"
-        _date_created = None
 
-        if json_date_obj:
-            try:
-                _date_created = datetime.strptime(
-                    json_date_obj.get("date-created"), "%Y-%m-%dT%H:%M:%S%z"
-                )
-            except (Exception,):
-                self.helper.log_warning(
-                    "Failed to format first_seen: {}. Using default.".format(
-                        json_date_obj.get("date-updated"),
-                    )
-                )
-                _date_created = datetime.now()
+        valid_from, valid_until = self._retrieve_ttl_dates(json_date_obj)
+
+        _date_created = self._retrieve_date(json_date_obj, "date-created")
 
         yara = ds.Indicator(
             name=_yara,
-            _type=_type,
+            c_type=_type,
             context=_context,
             created=_date_created,
             tlp_color=self.tlp_color,
             labels=[self.collection, _label],
         )
-        yara.is_ioc = is_ioc
+        yara.is_ioc = yara_is_ioc
+        yara.set_valid_from(valid_from)
+        yara.set_valid_until(valid_until)
         yara.generate_stix_objects()
 
-        if related_objects:
-            self._generate_relations(yara, related_objects, "indicates")
+        self._generate_relations(yara, related_objects, is_ioc=yara_is_ioc)
 
         yara.add_relationships_to_stix_objects()
 
         return yara
 
     def generate_stix_suricata(
-        self, obj, json_date_obj=None, related_objects=None, is_ioc=True
+        self, obj, json_date_obj=None, related_objects=None, suricata_is_ioc=True
     ):
         if not obj:
             return None
@@ -900,35 +1088,60 @@ class DataToSTIXAdapter:
         _context = obj.get("context")
         _type = "suricata"
         _label = "suricata"
-        _date_created = None
 
-        if json_date_obj:
-            try:
-                _date_created = datetime.strptime(
-                    json_date_obj.get("date-created"), "%Y-%m-%dT%H:%M:%S%z"
-                )
-            except (Exception,):
-                self.helper.log_warning(
-                    "Failed to format first_seen: {}. Using default.".format(
-                        json_date_obj.get("date-updated"),
-                    )
-                )
-                _date_created = datetime.now()
+        valid_from, valid_until = self._retrieve_ttl_dates(json_date_obj)
+
+        _date_created = self._retrieve_date(json_date_obj, "date-created")
 
         suricata = ds.Indicator(
             name=_suricata,
-            _type=_type,
+            c_type=_type,
             context=_context,
             created=_date_created,
             tlp_color=self.tlp_color,
             labels=[self.collection, _label],
         )
-        suricata.is_ioc = is_ioc
+        suricata.is_ioc = suricata_is_ioc
+        suricata.set_valid_from(valid_from)
+        suricata.set_valid_until(valid_until)
         suricata.generate_stix_objects()
 
-        if related_objects:
-            self._generate_relations(suricata, related_objects, "indicates")
+        self._generate_relations(suricata, related_objects, is_ioc=suricata_is_ioc)
 
         suricata.add_relationships_to_stix_objects()
 
         return suricata
+
+    def generate_stix_ungrouped(
+        self, obj, json_date_obj=None, related_objects=None, email_is_ioc=True
+    ):
+        if not obj:
+            return None
+
+        _emails = obj.get("emails")
+        _type = "email-addr"
+        # _label = "email"
+
+        valid_from, valid_until = self._retrieve_ttl_dates(json_date_obj)
+
+        _stix_objects = list()
+
+        for _email in _emails:
+            email = ds.Email(
+                name=_email,
+                c_type=_type,
+                tlp_color=self.tlp_color,
+                labels=[self.collection],
+            )
+            email.is_ioc = email_is_ioc
+            email.set_valid_from(valid_from)
+            email.set_valid_until(valid_until)
+            email.generate_stix_objects()
+
+            self._generate_relations(email, related_objects, is_ioc=email_is_ioc)
+
+            email.add_relationships_to_stix_objects()
+
+            _stix_objects.append(email)
+
+        return _stix_objects
