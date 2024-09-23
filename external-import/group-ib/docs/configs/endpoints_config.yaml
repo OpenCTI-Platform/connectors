@@ -61,7 +61,7 @@ collections:
     seqUpdate: null
     ttl: 30
   compromised/access:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: This collection displays the freshest information about compromised
       data from various darkweb marketplaces (which sell illegal or restricted data
       and services, according to the laws of a particular country). Most often it
@@ -73,7 +73,7 @@ collections:
     seqUpdate: null
     ttl: 90
   compromised/account_group:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: Hackers use phishing websites and malware for PC and Android to steal
       logins and passwords. These can be credentials for the internal corporate systems
       or external services for clients, such as Internet banking details. Malicious
@@ -86,7 +86,7 @@ collections:
     seqUpdate: null
     ttl: 90
   compromised/bank_card_group:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: Bank Cards Group collection contains information about compromised
       bank cards and masked cards. This includes data collected from card shops, specialized
       forums, and public sources. All data collected is grouped by card number.
@@ -95,7 +95,7 @@ collections:
     seqUpdate: null
     ttl: 90
   compromised/discord:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: The Discord collection contains data that was received by the TI
       system from Discord. The Threat Intelligence system analyzes every chat and
       channel (even private ones). Here detailed information about Discord servers,
@@ -106,7 +106,7 @@ collections:
     seqUpdate: null
     ttl: null
   compromised/imei:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: Android Trojans are designed to steal money from bank accounts, spy
       on account holders, and extort money. They can intercept SMS messages, recover
       passwords from cloud storage services, upload photo and video files, transmit
@@ -117,7 +117,7 @@ collections:
     seqUpdate: null
     ttl: 30
   compromised/masked_card:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: Masked Card collection contains information about compromised masked
       cards. This includes data collected from card shops, specialized forums, and
       public sources.
@@ -126,7 +126,7 @@ collections:
     seqUpdate: null
     ttl: 90
   compromised/messenger:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: In this collection information from the Telegram chats and channels
       can be found. The transferred or plan to transfer stolen money to. Man-in-the-Browser
       (MITB) attacks, mobile Trojans, and phishing kits allow fraudsters to make money
@@ -137,7 +137,7 @@ collections:
     seqUpdate: null
     ttl: null
   compromised/mule:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: This collection contains data about bank accounts threat actors have
       transferred or plan to transfer stolen money to. Man-in-the-Browser (MITB) attacks,
       mobile Trojans, and phishing kits allow fraudsters to make money transfers automatically.
@@ -148,7 +148,7 @@ collections:
     seqUpdate: null
     ttl: 30
   hi/open_threats:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: The Open Threats collection consolidates public reports from various
       cybersecurity vendors and researchers globally. All detected events are classified
       by criteria such as threat actor, malware or country and tagged with common
@@ -179,7 +179,7 @@ collections:
     seqUpdate: null
     ttl: 90
   ioc/common:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: The Common IoCs collection can help identify malicious activity or
       security threats. Indicators of Compromise are clues and evidence of a data
       breach, usually observed during a cybersecurity attack. Identified IoCs provide
@@ -190,7 +190,7 @@ collections:
     seqUpdate: null
     ttl: 90
   malware/cnc:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: Command and control. CNC collection contains information on the control
       center where malware related to targeted attacks use to store stolen data or
       download commands from.
@@ -199,7 +199,7 @@ collections:
     seqUpdate: null
     ttl: 90
   malware/config:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: Malicious files come from Malware control center. Contains HASH sums
       of malicious files that were generated by hackers, IP addresses, and domains.
     enable: false
@@ -236,7 +236,7 @@ collections:
     seqUpdate: null
     ttl: null
   osi/git_repository:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: Open-source repositories such as GitHub contain codes that anyone
       can search for. They are often used by threat actors planning to attack a specific
       company.
@@ -245,7 +245,7 @@ collections:
     seqUpdate: null
     ttl: 30
   osi/public_leak:
-    default_date: null
+    default_date: Warning! Collection is not implemented in the current version
     description: There are specialized websites for exchanging textual information
       (such as Pastebin and analogous resources). They can be used to upload texts
       and send anyone a link to them. Both legitimate IT specialists and hackers actively
@@ -319,5 +319,6 @@ collections:
 extra_settings:
   ignore_non_indicator_threats: false
   ignore_non_malware_ddos: true
+  intrusion_set_instead_of_threat_actor: true
   schedule_time: 00:00
   time_output_format: '%Y-%m-%d %H:%M:%S'

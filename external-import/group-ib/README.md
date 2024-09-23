@@ -42,7 +42,8 @@ access the interface.
   * [Date format](#date-format)
   * [Notes](#notes)
 * [Extra settings](#extra-settings)
-  * [Tags and options](#tags-and-options)
+  * [Tags](#tags-in-development)
+  * [Options](#options)
 * [Examples](#examples)
 * [Task scheduling automation](#task-scheduling-automation)
   * [Cron](#cron)
@@ -130,6 +131,23 @@ Below are the parameters you'll need to set if you have proxy server (if necessa
 | `proxy_protocol`         | `PROXY_PROTOCOL`   | No        | Proxy protocol. |
 | `proxy_username`         | `PROXY_USERNAME`   | No        | Proxy username. |
 | `proxy_password`         | `PROXY_PASSWORD`   | No        | Proxy password. |
+
+
+### Environment variables sample
+
+Environment variables explained above may be not that obvious. So we recommend you to start with the next steps:
+
+Copy `.env.sample` to `.env`
+
+```bash
+cp .env.sample .env
+```
+
+Open file in any editor. Add unfilled mandatory variables (OPENCTI_TOKEN, TI_API_USERNAME, TI_API_TOKEN) and save changes
+
+```bash
+nano .env
+```
 
 
 ### Docker Deployment
@@ -232,9 +250,62 @@ Learn more about each collection
 ## Extra settings
 
 
-### Tags and options
+### Tags (in development)
 
-In development
+To mark events with custom tags for each collection you can use `local_custom_tag` 
+parameter in `endpoints_config.yaml` file.
+
+```yaml
+
+collections:
+    attacks/ddos:
+        default_date: '2021-08-01'
+        enable: true
+        seqUpdate: null
+        local_custom_tag: 'my_ddos_tag'
+    attacks/phishing_group:
+        default_date: '2021-08-01'
+        enable: true
+        seqUpdate: null
+        local_custom_tag: 'my_phishing_tag'
+...
+```
+
+### Options
+
+An Intrusion Set can be created above a Threat Actor. 
+All related objects will be linked to this Intrusion Set along with Threat Actor. 
+If you need such reorganisation of all relations, set 
+`intrusion_set_instead_of_threat_actor` parameter to `true` in `endpoints_config.yaml` file for that purpose. 
+We recommend clearing the data before this and start the download process again for the clear view.
+
+```yaml
+
+extra_settings:
+  intrusion_set_instead_of_threat_actor: true
+...
+```
+
+To ignore DDoS events without malware payload set `ignore_non_malware_ddos` parameter to `true`
+in `endpoints_config.yaml` file.
+
+```yaml
+
+extra_settings:
+  ignore_non_malware_ddos: true
+...
+```
+
+To ignore Threat events without indicators set `ignore_non_indicator_threats` parameter to `true`
+in `endpoints_config.yaml` file.
+
+```yaml
+
+extra_settings:
+  ignore_non_indicator_threats: true
+...
+```
+
 
 
 
@@ -325,12 +396,28 @@ pause
 
 ## Troubleshooting
 
-1. If you encounter problems, please retrieve logs from the **log** folder and attach them to 
+1. If you encounter any problems, please retrieve logs from the **log** folder and attach them to 
 [Email](mailto:integration@group-ib.com) 
 or 
 [Service Desk](https://tap.group-ib.com/service_desk) 
 ticket. Also, please provide your TI portal email address and public IP address of integration app instance 
-(docker container IP / virtual machine IP)
+(docker container IP / virtual machine IP).
+If the **log** folder doesn't exist, please collect logs from console output or app container output.
+    
+    - Console output (run app with redirecting output to file `app_logs.log`)
+        ```bash
+        python3 main.py > app_logs.log
+        ```
+    - App container output (retrieve container id and use `docker logs` command with output redirect to `app_logs.log` file, for last hour)
+        ```bash
+        docker ps -a
+        docker logs --since=1h <container_id> > app_logs.log
+        # example
+        docker ps -a
+        # CONTAINER ID   IMAGE       COMMAND    CREATED   STATUS  PORTS                                                                  NAMES
+        # b78e4ebf809d   ...         ...        ...       ...     ...
+        docker logs --since=3h b78e4ebf809d > app_logs.log
+        ```
 	
 2. If you have problems with proxy configuration, attach the proxy environment by executing this command: 
 ```printenv | grep proxy```
