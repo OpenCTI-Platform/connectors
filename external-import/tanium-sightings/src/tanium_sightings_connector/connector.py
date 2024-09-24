@@ -160,7 +160,7 @@ class TaniumSightingsConnector:
         entity = self._get_sighted_entity(alert)
         if entity is not None:
             stix_sighting = self.converter_to_stix.create_sighting(
-                source_id=entity["id"],
+                source_id=entity["standard_id"],
                 target_id=self.author["id"],
                 first_seen=alert["createdAt"],
                 last_seen=alert["createdAt"],
@@ -176,10 +176,12 @@ class TaniumSightingsConnector:
 
             if entity is not None:
                 relationship_type = (
-                    "indicates" if entity["type"] == "indicator" else "related-to"
+                    "indicates"
+                    if entity["entity_type"] == "Indicator"
+                    else "related-to"
                 )
                 stix_entity_relationship = self.converter_to_stix.create_relationship(
-                    source_id=entity["id"],
+                    source_id=entity["standard_id"],
                     target_id=stix_incident["id"],
                     relationship_type=relationship_type,
                 )
