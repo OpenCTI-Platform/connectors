@@ -40,3 +40,7 @@ alert:
   initial_pull_off: 1
   download_path: 'images/'
   logo_abuse_rule_id: 'ChangeMe'
+  default_opencti_severity: "Low"
+
+playbook_alert:
+  enable: False

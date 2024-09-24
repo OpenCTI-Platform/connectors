@@ -19,6 +19,7 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 from rflib import (
     APP_VERSION,
     RecordedFutureAlertConnector,
+    RecordedFuturePlaybookAlertConnector,
     RFClient,
     RiskList,
     StixNote,
@@ -112,10 +113,6 @@ class BaseRFConnector:
         else:
             self.risklist_related_entities = risklist_related_entities_list.split(",")
 
-        self.rf_alert_enable = get_config_variable(
-            "ALERT_ENABLE", ["alert", "enable"], config
-        )
-
         self.rf_pull_analyst_notes = get_config_variable(
             "RECORDED_FUTURE_PULL_ANALYST_NOTES", ["rf", "pull_analyst_notes"], config
         )
@@ -135,6 +132,21 @@ class BaseRFConnector:
             ["rf", "interval"],
             config,
             default=24,  # in Hours
+        )
+
+        self.rf_alert_enable = get_config_variable(
+            "ALERT_ENABLE", ["alert", "enable"], config
+        )
+
+        self.opencti_default_severity = get_config_variable(
+            "ALERT_DEFAULT_OPENCTI_SEVERITY",
+            ["alert", "default_opencti_severity"],
+            config,
+            default="low",
+        )
+
+        self.rf_playbook_alert_enable = get_config_variable(
+            "PLAYBOOK_ALERT_ENABLE", ["playbook_alert", "enable"], config
         )
 
 
@@ -269,12 +281,29 @@ class RFConnector:
         self.risk_list = None
         self.threat_maps = None
         self.alerts = None
+        self.alerts_playbook = None
 
     def all_processes(self):
         # Start RF Alert Connector
         if self.RF.rf_alert_enable:
-            self.alerts = RecordedFutureAlertConnector(self.RF.helper)
+            self.alerts = RecordedFutureAlertConnector(
+                self.RF.helper,
+                self.RF.rf_token,
+                self.RF.opencti_default_severity,
+                self.RF.tlp,
+            )
             self.alerts.run()
+        else:
+            self.RF.helper.log_info("[ALERTS] Alerts fetching disabled")
+
+        # Start RF Alert playbook
+        if self.RF.rf_playbook_alert_enable:
+            self.alerts_playbook = RecordedFuturePlaybookAlertConnector(self.RF.helper)
+            self.alerts_playbook.run()
+        else:
+            self.RF.helper.log_info(
+                "[PLAYBOOK ALERTS] Playbook alerts fetching disabled"
+            )
 
         # Pull RF risk lists
         if self.RF.rf_pull_risk_list:
