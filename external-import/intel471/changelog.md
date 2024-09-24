@@ -1,3 +1,7 @@
+# v1.1.5  
+
+- Upgraded `Titan-Client` to version `1.20.0.3` to properly handle filenames in file attachments in STIX/Reports ([Issue 2675](https://github.com/OpenCTI-Platform/connectors/issues/2675)).
+
 # v1.1.4  
 
 - Upgraded `Titan-Client` to version `1.20.0.2` to properly handle Indicators' names ([Issue 2595](https://github.com/OpenCTI-Platform/connectors/issues/2595#issuecomment-2345571447)).
