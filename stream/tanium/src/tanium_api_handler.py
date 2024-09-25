@@ -163,7 +163,7 @@ class TaniumApiHandler:
             entity_type="Indicator",
             entity_id=entity["id"],
             mode="simple",
-            no_custom_attribute=True,
+            no_custom_attributes=True,
         )
         stix_entity = [e for e in stix2_bundle["objects"] if e["id"] == entity["id"]][0]
         if "indicator_types" not in stix_entity:
