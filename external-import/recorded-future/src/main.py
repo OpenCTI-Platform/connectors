@@ -19,6 +19,7 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 from rflib import (
     APP_VERSION,
     RecordedFutureAlertConnector,
+    RecordedFutureApiClient,
     RecordedFuturePlaybookAlertConnector,
     RFClient,
     RiskList,
@@ -134,6 +135,12 @@ class BaseRFConnector:
             default=24,  # in Hours
         )
 
+        self.rf_alerts_api = RecordedFutureApiClient(
+            x_rf_token=self.rf_token,
+            helper=self.helper,
+            base_url="https://api.recordedfuture.com/",
+        )
+
         self.rf_alert_enable = get_config_variable(
             "ALERT_ENABLE", ["alert", "enable"], config
         )
@@ -147,6 +154,37 @@ class BaseRFConnector:
 
         self.rf_playbook_alert_enable = get_config_variable(
             "PLAYBOOK_ALERT_ENABLE", ["playbook_alert", "enable"], config
+        )
+
+        self.severity_threshold_domain_abuse = get_config_variable(
+            "PLAYBOOK_ALERT_SEVERITY_THRESHOLD_DOMAIN_ABUSE",
+            ["playbook_alert", "severity_threshold_domain_abuse"],
+            config,
+            required=False,
+            default="Informational",
+        )
+        self.severity_threshold_identity_novel_exposures = get_config_variable(
+            "PLAYBOOK_ALERT_SEVERITY_THRESHOLD_IDENTITY_NOVEL_EXPOSURES",
+            ["playbook_alert", "severity_threshold_identity_novel_exposures"],
+            config,
+            required=False,
+            default="Informational",
+        )
+
+        self.severity_threshold_code_repo_leakage = get_config_variable(
+            "PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CODE_REPO_LEAKAGE",
+            ["playbook_alert", "severity_threshold_code_repo_leakage"],
+            config,
+            required=False,
+            default="Informational",
+        )
+
+        self.debug_var = get_config_variable(
+            "PLAYBOOK_ALERT_DEBUG",
+            ["playbook_alert", "debug"],
+            config,
+            required=False,
+            default=False,
         )
 
 
@@ -288,7 +326,7 @@ class RFConnector:
         if self.RF.rf_alert_enable:
             self.alerts = RecordedFutureAlertConnector(
                 self.RF.helper,
-                self.RF.rf_token,
+                self.RF.rf_alerts_api,
                 self.RF.opencti_default_severity,
                 self.RF.tlp,
             )
@@ -298,7 +336,14 @@ class RFConnector:
 
         # Start RF Alert playbook
         if self.RF.rf_playbook_alert_enable:
-            self.alerts_playbook = RecordedFuturePlaybookAlertConnector(self.RF.helper)
+            self.alerts_playbook = RecordedFuturePlaybookAlertConnector(
+                self.RF.helper,
+                self.RF.rf_alerts_api,
+                self.RF.severity_threshold_domain_abuse,
+                self.RF.severity_threshold_identity_novel_exposures,
+                self.RF.severity_threshold_code_repo_leakage,
+                self.RF.debug_var,
+            )
             self.alerts_playbook.run()
         else:
             self.RF.helper.log_info(

@@ -12,6 +12,7 @@
 
 from ._version import __version__ as APP_VERSION
 from .constants import RISK_LIST_TYPE_MAPPER
+from .pyrf import RecordedFutureApiClient
 from .rf_alerts import RecordedFutureAlertConnector
 from .rf_client import RFClient
 from .rf_playbook_alerts import RecordedFuturePlaybookAlertConnector

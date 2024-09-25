@@ -11,7 +11,6 @@ from pycti import Incident
 
 from .constants import TLP_MAP
 from .make_markdown_table import make_markdown_table
-from .pyrf import RecordedFutureApiClient
 
 
 @stix2.CustomObject(
@@ -50,7 +49,7 @@ class Vocabulary:
 
 
 class RecordedFutureAlertConnector(threading.Thread):
-    def __init__(self, helper, rf_token, opencti_default_severity, tlp):
+    def __init__(self, helper, rf_alerts_api, opencti_default_severity, tlp):
         threading.Thread.__init__(self)
         self.helper = helper
 
@@ -63,11 +62,7 @@ class RecordedFutureAlertConnector(threading.Thread):
         self.tlp = TLP_MAP.get(tlp, None)
         self.author = self._create_author()
 
-        self.api_recorded_future = RecordedFutureApiClient(
-            x_rf_token=rf_token,
-            helper=helper,
-            base_url="https://api.recordedfuture.com/",
-        )
+        self.api_recorded_future = rf_alerts_api
 
         self.stix_channels = self.helper.api.vocabulary.list(
             **{

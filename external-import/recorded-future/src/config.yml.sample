@@ -44,3 +44,7 @@ alert:
 
 playbook_alert:
   enable: False
+  severity_threshold_domain_abuse: 'Informational'
+  severity_threshold_identity_novel_exposures: 'Informational'
+  severity_threshold_code_repo_leakage: 'Informational'
+  debug: False
