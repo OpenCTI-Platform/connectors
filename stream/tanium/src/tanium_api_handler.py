@@ -16,15 +16,18 @@ class TaniumApiHandler:
         token,
         ssl_verify=True,
         auto_ondemand_scan=False,
-        auto_ondemand_scan_computer_groups=[],
+        auto_ondemand_scan_computer_groups=None,
     ):
+
         # Variables
         self.helper = helper
         self.url = url
         self.token = token
         self.ssl_verify = ssl_verify
         self.auto_ondemand_scan = auto_ondemand_scan
-        self.auto_ondemand_scan_computer_groups = auto_ondemand_scan_computer_groups
+        self.auto_ondemand_scan_computer_groups = (
+            auto_ondemand_scan_computer_groups or []
+        )
 
         # Intelligence documents source
         self.source_id = None
@@ -147,7 +150,7 @@ class TaniumApiHandler:
         if r.status_code == 200:
             try:
                 return r.json()["data"]
-            except:
+            except Exception:
                 return r.text
         elif r.status_code == 401:
             raise ValueError("Query failed, permission denied")
