@@ -43,11 +43,10 @@ class TaniumApiHandler:
         return str(source["id"])
 
     def _request_data(
-        self, method, url_path, data=None, json=None, headers=None
+        self, method, url_path, params=None, data=None, json=None, headers=None
     ) -> dict | str | None:
         try:
             url = self.config.tanium_url + url_path
-
             request_headers = {
                 "session": self.config.tanium_token,
                 "content-type": "application/json",
@@ -59,6 +58,7 @@ class TaniumApiHandler:
             if method == "GET":
                 response = requests.get(
                     url,
+                    params=params,
                     headers=request_headers,
                     verify=self.config.tanium_ssl_verify,
                 )
@@ -455,7 +455,9 @@ class TaniumApiHandler:
 
     def get_labels(self, labels):
         tanium_labels = self._request_data(
-            "GET", "/plugin/products/threat-response/api/v1/labels", json={"limit": 500}
+            "GET",
+            "/plugin/products/threat-response/api/v1/labels",
+            params={"limit": 500},
         )
 
         tanium_labels_dict = {}
