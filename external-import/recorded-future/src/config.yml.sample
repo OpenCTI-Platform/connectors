@@ -34,12 +34,8 @@ alert:
   enable: False
   incident_vocabulary_name: 'incident_type_ov'
   channels_vocabulary_name: 'channel_types_ov'
-  default_marking: 'TLP:AMBER'
   incident_default_description : 'Analyst's comment : \n\n'
-  logo_abuse_rule_id: 'ChangeMe'
-  initial_pull_off: 1
   download_path: 'images/'
-  logo_abuse_rule_id: 'ChangeMe'
   default_opencti_severity: "Low"
 
 playbook_alert:

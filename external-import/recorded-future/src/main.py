@@ -343,6 +343,7 @@ class RFConnector:
                 self.RF.severity_threshold_identity_novel_exposures,
                 self.RF.severity_threshold_code_repo_leakage,
                 self.RF.debug_var,
+                self.RF.tlp,
             )
             self.alerts_playbook.run()
         else:

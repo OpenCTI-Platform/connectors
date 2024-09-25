@@ -1,17 +1,13 @@
 import datetime
 import threading
-from os import path
-from re import compile
-from time import sleep
 
 import pycti
 import pytz
 import stix2
 import tldextract
-import yaml
 
+from .constants import TLP_MAP
 from .make_markdown_table import make_markdown_table
-from .pyrf import RecordedFutureApiClient
 
 
 class RecordedFuturePlaybookAlertConnector(threading.Thread):
@@ -23,6 +19,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         severity_threshold_identity_novel_exposures,
         severity_threshold_code_repo_leakage,
         debug,
+        tlp,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
@@ -34,6 +31,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         # Additional configuration
         self.work_id = None
         self.author = self._create_author()
+        self.tlp = self.tlp = TLP_MAP.get(tlp, None)
         self.threshold_domain_abuse = severity_threshold_domain_abuse
         self.threshold_identity_novel_exposure = (
             severity_threshold_identity_novel_exposures
@@ -179,7 +177,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             ),
             name=playbook_alert_name,
             description=playbook_alert_description,
-            object_marking_refs=stix2.TLP_GREEN,
+            object_marking_refs=self.tlp,
             labels=["BUGGED"],
             created_by_ref=self.author,
         )
@@ -218,7 +216,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 playbook_alert_name, playbook_alert["data"]["panel_status"]["updated"]
             ),
             name=playbook_alert_name,
-            object_marking_refs=stix2.TLP_GREEN,
+            object_marking_refs=self.tlp,
             description=playbook_alert_description,
             created=playbook_alert["data"]["panel_status"]["updated"],
             allow_custom=True,
@@ -309,7 +307,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                     "%Y-%m-%dT%H:%M:%S"
                 ),
             ),
-            object_marking_refs=stix2.TLP_GREEN,
+            object_marking_refs=self.tlp,
             abstract="# Evidence summary panel",
             content=summary_content,
             object_refs=[stix_incident.id],
@@ -355,7 +353,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 playbook_alert_name, playbook_alert["data"]["panel_status"]["updated"]
             ),
             name=playbook_alert_name,
-            object_marking_refs=stix2.TLP_GREEN,
+            object_marking_refs=self.tlp,
             description=playbook_alert_description,
             created=playbook_alert["data"]["panel_status"]["updated"],
             allow_custom=True,
@@ -479,7 +477,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                             value=playbook_alert["data"]["panel_evidence_summary"][
                                 "infrastructure"
                             ][subkey],
-                            object_marking_refs=stix2.TLP_GREEN,
+                            object_marking_refs=self.tlp,
                             custom_properties={"x_opencti_created_by_ref": self.author},
                         )
                         stix_relationship = stix2.Relationship(
@@ -528,7 +526,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                     "%Y-%m-%dT%H:%M:%S"
                 ),
             ),
-            object_marking_refs=stix2.TLP_GREEN,
+            object_marking_refs=self.tlp,
             abstract="# Evidence summary panel",
             content=summary_content,
             object_refs=[stix_incident.id],
@@ -566,7 +564,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 playbook_alert_name, playbook_alert["data"]["panel_status"]["updated"]
             ),
             name=playbook_alert_name,
-            object_marking_refs=stix2.TLP_GREEN,
+            object_marking_refs=self.tlp,
             description=playbook_alert_description,
             created=playbook_alert["data"]["panel_status"]["updated"],
             allow_custom=True,
@@ -580,7 +578,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         bundle_objects.append(stix_incident)
         stix_url = stix2.DomainName(
             value=playbook_alert["data"]["panel_status"]["entity_name"],
-            object_marking_refs=stix2.TLP_GREEN,
+            object_marking_refs=self.tlp,
         )
         stix_relationship = stix2.Relationship(
             relationship_type="related-to",
@@ -609,7 +607,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                         "%Y-%m-%dT%H:%M:%S"
                     ),
                 ),
-                object_marking_refs=stix2.TLP_GREEN,
+                object_marking_refs=self.tlp,
                 abstract="# Evidence WhoIs panel",
                 content=evidence_whois_content,
                 object_refs=[stix_incident.id],
@@ -633,7 +631,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 )
                 stix_ipv4address = stix2.IPv4Address(
                     value=(str(ip["entity"])).replace("ip:", ""),
-                    object_marking_refs=stix2.TLP_GREEN,
+                    object_marking_refs=self.tlp,
                 )
                 stix_relationship = stix2.Relationship(
                     relationship_type="related-to",
@@ -663,7 +661,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 )
                 stix_domain = stix2.DomainName(
                     value=(str(ns["entity"])).replace("idn:", ""),
-                    object_marking_refs=stix2.TLP_GREEN,
+                    object_marking_refs=self.tlp,
                 )
                 stix_relationship = stix2.Relationship(
                     relationship_type="related-to",
@@ -680,7 +678,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                         "%Y-%m-%dT%H:%M:%S"
                     ),
                 ),
-                object_marking_refs=stix2.TLP_GREEN,
+                object_marking_refs=self.tlp,
                 abstract="# Evidence DNS panel",
                 content=evidence_dns_content,
                 object_refs=[stix_incident.id],
