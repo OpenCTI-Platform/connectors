@@ -1,0 +1,3 @@
+# Main dependencies needs to be installed
+-r ./requirements.txt
+pytest
