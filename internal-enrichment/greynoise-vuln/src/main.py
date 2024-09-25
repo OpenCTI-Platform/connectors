@@ -288,9 +288,14 @@ class GreyNoiseVulnConnector:
         self.stix_objects.append(note)
 
     def _generate_stix_software(self, stix_entity, data: dict):
-        product = data["details"]["product"]
-        vendor_name = data["details"]["vendor"]
+        product = data["details"].get("product", "Unknown")
+        vendor_name = data["details"].get("vendor", "Unknown")
         created = datetime.today()
+
+        if product == "":
+            product = "Unknown"
+        if vendor_name == "":
+            vendor_name = "Unknown"
 
         stix_org = stix2.Identity(
             id=Identity.generate_id(vendor_name, "organization"),
