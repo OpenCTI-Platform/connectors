@@ -31,16 +31,12 @@ rf:
   pull_threat_maps: False # optional - Pull Threat Actors and Malware maps
 
 alert:
-  enable: False
-  incident_vocabulary_name: 'incident_type_ov'
-  channels_vocabulary_name: 'channel_types_ov'
-  incident_default_description : 'Analyst's comment : \n\n'
-  download_path: 'images/'
-  default_opencti_severity: "Low"
+  enable: False # required
+  default_opencti_severity: "low" # optional
 
 playbook_alert:
-  enable: False
-  severity_threshold_domain_abuse: 'Informational'
-  severity_threshold_identity_novel_exposures: 'Informational'
-  severity_threshold_code_repo_leakage: 'Informational'
-  debug: False
+  enable: False # required
+  severity_threshold_domain_abuse: 'Informational' # optional
+  severity_threshold_identity_novel_exposures: 'Informational' # optional
+  severity_threshold_code_repo_leakage: 'Informational' # optional
+  debug: False # optional
