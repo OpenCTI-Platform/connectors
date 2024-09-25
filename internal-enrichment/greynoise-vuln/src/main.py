@@ -90,14 +90,14 @@ class GreyNoiseVulnConnector:
                             "GreyNoise API key NOT valid! Update to use connector!"
                         )
                     elif (
-                            key_check.get("offering") != "community"
-                            and key_check.get("expiration") > today
+                        key_check.get("offering") != "community"
+                        and key_check.get("expiration") > today
                     ):
                         key_state["valid"] = True
                         self.helper.log_info("GreyNoise API key is valid!")
                     elif (
-                            key_check.get("offering") != "community"
-                            and key_check.get("expiration") < today
+                        key_check.get("offering") != "community"
+                        and key_check.get("expiration") < today
                     ):
                         key_state["valid"] = False
 
@@ -138,12 +138,12 @@ class GreyNoiseVulnConnector:
         return is_valid_max_tlp
 
     def _generate_stix_relationship(
-            self,
-            source_ref: str,
-            stix_core_relationship_type: str,
-            target_ref: str,
-            start_time: str | None = None,
-            stop_time: str | None = None,
+        self,
+        source_ref: str,
+        stix_core_relationship_type: str,
+        target_ref: str,
+        start_time: str | None = None,
+        stop_time: str | None = None,
     ) -> dict:
         """
         This method allows you to create a relationship in Stix2 format.
@@ -204,28 +204,28 @@ class GreyNoiseVulnConnector:
         self.all_labels = []
 
         if (
-                "exploitation_activity" in data
-                and "activity_seen" in data["exploitation_activity"]
-                and data["exploitation_activity"]["activity_seen"]
+            "exploitation_activity" in data
+            and "activity_seen" in data["exploitation_activity"]
+            and data["exploitation_activity"]["activity_seen"]
         ):
             # Create label GreyNoise for activity_seen:true
             self._create_custom_label("gn-activity-seen", "#a6a09f")
 
         if (
-                "exploitation_stats" in data
-                and "number_of_available_exploits" in data["exploitation_stats"]
-                and data["exploitation_stats"]["number_of_available_exploits"]
+            "exploitation_stats" in data
+            and "number_of_available_exploits" in data["exploitation_stats"]
+            and data["exploitation_stats"]["number_of_available_exploits"]
         ) >= 1:
             # Create label GreyNoise "malicious"
             self._create_custom_label("gn-exploits-available", "#ff8178")
 
         if (
-                "exploitation_stats" in data
-                and "number_of_threat_actors_exploiting_vulnerability"
-                in data["exploitation_stats"]
-                and data["exploitation_stats"][
-                    "number_of_threat_actors_exploiting_vulnerability"
-                ]
+            "exploitation_stats" in data
+            and "number_of_threat_actors_exploiting_vulnerability"
+            in data["exploitation_stats"]
+            and data["exploitation_stats"][
+                "number_of_threat_actors_exploiting_vulnerability"
+            ]
         ) >= 1:
             # Create label GreyNoise "malicious"
             self._create_custom_label("gn-threat-actors-exploiting", "#ff8178")
@@ -361,8 +361,8 @@ class GreyNoiseVulnConnector:
         """
         kev = False
         if (
-                "cisa_kev_date_added" in data["timeline"]
-                and data["timeline"]["cisa_kev_date_added"]
+            "cisa_kev_date_added" in data["timeline"]
+            and data["timeline"]["cisa_kev_date_added"]
         ):
             kev = True
 
@@ -475,9 +475,11 @@ class GreyNoiseVulnConnector:
                 if "CVE not found" == json_data:
                     stix_bundle = self.helper.stix2_create_bundle(self.stix_objects)
                     bundles_sent = self.helper.send_stix2_bundle(stix_bundle)
-                    return ("[CONNECTOR] No CVE found. Original Vulnerability sent:  "
-                            + str(len(bundles_sent))
-                            + " stix bundle(s) for worker import")
+                    return (
+                        "[CONNECTOR] No CVE found. Original Vulnerability sent:  "
+                        + str(len(bundles_sent))
+                        + " stix bundle(s) for worker import"
+                    )
                 else:
                     # Generate a stix bundle
                     stix_bundle = self._generate_stix_bundle(json_data, stix_entity)
@@ -486,9 +488,9 @@ class GreyNoiseVulnConnector:
                     bundles_sent = self.helper.send_stix2_bundle(stix_bundle)
 
                 return (
-                        "[CONNECTOR] Sent "
-                        + str(len(bundles_sent))
-                        + " stix bundle(s) for worker import"
+                    "[CONNECTOR] Sent "
+                    + str(len(bundles_sent))
+                    + " stix bundle(s) for worker import"
                 )
 
             except Exception as e:
