@@ -1,0 +1,39 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'External Import Connector Template'
+  scope: 'ChangeMe'
+  log_level: 'info'
+  duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
+  #============================================#
+  # Optional connector's definition parameters #
+  #============================================#
+  #queue_threshold: 500
+  #run_and_terminate: 'False'
+  #send_to_queue: 'True'
+  #send_to_directory: 'False'
+  #send_to_directory_path: 'ChangeMe'
+  #send_to_directory_retention: 7
+
+sentinel:
+  tenant_id: 'ChangeMe'
+  workspace_id: 'ChangeMe' # Only for Sentinel
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  login_url: 'https://login.microsoft.com'
+  resource_url: 'https://graph.microsoft.com'
+  request_url: '/beta/security/tiIndicators'
+  incident_url : '/v1.0/security/incidents'
+  sentinel_url: 'https://sentinelus.azure-api.net'
+  use_new_sentinel_api: false
+  confidence_level: 50
+  expire_time: 30
+  target_product: 'Azure Sentinel'
+  action: alert
+  tlp_level: amber
+  passive_only: true
+  import_incidents: true
