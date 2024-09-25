@@ -6,10 +6,9 @@ import json
 import os
 
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-
 from import_manager import IntelManager
 from intel_cache import IntelCache
+from pycti import OpenCTIConnectorHelper, get_config_variable
 from sightings import Sightings
 from tanium_api_handler import TaniumApiHandler
 
