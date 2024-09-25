@@ -2,7 +2,8 @@ import os
 import sys
 
 # Addition of the src directory to the Python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
+
 
 def test_imports():
     """
