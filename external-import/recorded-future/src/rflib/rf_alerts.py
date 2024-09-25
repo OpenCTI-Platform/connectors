@@ -314,20 +314,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     )
                     bundle_objects.append(stix_url)
                     bundle_objects.append(stix_relationship)
-                    value = search(
-                        "(https:\/\/t.me\/.+?(?=\/))|(https:\/\/twitter.com\/.+?(?=\/))",
-                        str(entity["name"]),
-                    )
-                    if value is None:
-                        root_domain = self.get_root_domain(entity["name"])
-                        stix_external_ref = stix2.ExternalReference(
-                            source_name="urlscan.io",
-                            url="https://urlscan.io/domain/" + str(root_domain),
-                        )
-                        stix_external_refs.append(stix_external_ref)
-                        bundle_objects[0] = bundle_objects[0].new_version(
-                            external_references=stix_external_refs
-                        )
+
                 elif entity["type"] == "IpAddress":
                     stix_ipv4address = stix2.IPv4Address(
                         value=entity["name"],
