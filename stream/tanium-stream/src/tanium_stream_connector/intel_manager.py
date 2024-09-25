@@ -25,7 +25,7 @@ class IntelManager:
             + str(intel_document_id)
         )
         external_reference = self.helper.api.external_reference.create(
-            source_name="Tanium",
+            source_name=self.helper.connect_name,
             url=intel_document_url,
             external_id=str(intel_document_id),
             description="Intel document within the Tanium platform.",
