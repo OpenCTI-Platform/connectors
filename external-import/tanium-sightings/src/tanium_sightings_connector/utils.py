@@ -45,7 +45,7 @@ def has_user_details(alert) -> bool:
         if not match:
             return False
         return bool(match["properties"]["user"])
-    except AttributeError:
+    except (AttributeError, KeyError):
         return False
 
 
@@ -63,7 +63,7 @@ def has_file_details(alert) -> bool:
         if not file:
             return False
         return ("md5" in file) or ("sha256" in file) or ("sha1" in file)
-    except AttributeError:
+    except (AttributeError, KeyError):
         return False
 
 
@@ -78,5 +78,5 @@ def has_mitre_attack_details(intel) -> bool:
         if not mitre_attack:
             return False
         return "techniques" in mitre_attack
-    except AttributeError:
+    except (AttributeError, KeyError):
         return False
