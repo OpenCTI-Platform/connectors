@@ -9,8 +9,10 @@ for file in $TEST_REQUIREMENT_FILES
 do
   echo $file
   pip install -r $file
-done
 
-python -m pytest --verbose
+  project=$(dirname $(dirname $file))
+
+  pytest $project
+done
 
 
