@@ -44,26 +44,42 @@ class ConfigConnector:
 
         # Connector extra parameters
         self.tenant_id = get_config_variable(
-            "SENTINEL_SIGHTINGS_TENANT_ID", ["sentinel_sightings", "tenant_id"], self.load
+            "SENTINEL_SIGHTINGS_TENANT_ID",
+            ["sentinel_sightings", "tenant_id"],
+            self.load,
         )
         self.client_id = get_config_variable(
-            "SENTINEL_SIGHTINGS_CLIENT_ID", ["sentinel_sightings", "client_id"], self.load
+            "SENTINEL_SIGHTINGS_CLIENT_ID",
+            ["sentinel_sightings", "client_id"],
+            self.load,
         )
         self.client_secret = get_config_variable(
-            "SENTINEL_SIGHTINGS_CLIENT_SECRET", ["sentinel_sightings", "client_secret"], self.load
+            "SENTINEL_SIGHTINGS_CLIENT_SECRET",
+            ["sentinel_sightings", "client_secret"],
+            self.load,
         )
         self.login_url = get_config_variable(
-            "SENTINEL_SIGHTINGS_LOGIN_URL", ["sentinel_sightings", "login_url"], self.load
+            "SENTINEL_SIGHTINGS_LOGIN_URL",
+            ["sentinel_sightings", "login_url"],
+            self.load,
         )
         self.api_base_url = get_config_variable(
-            "SENTINEL_SIGHTINGS_API_BASE_URL", ["sentinel_sightings", "api_base_url"], self.load
+            "SENTINEL_SIGHTINGS_API_BASE_URL",
+            ["sentinel_sightings", "api_base_url"],
+            self.load,
         )
         self.incident_path = get_config_variable(
-            "SENTINEL_SIGHTINGS_INCIDENT_PATH", ["sentinel_sightings", "incident_path"], self.load
+            "SENTINEL_SIGHTINGS_INCIDENT_PATH",
+            ["sentinel_sightings", "incident_path"],
+            self.load,
         )
         self.confidence_level = get_config_variable(
-            "SENTINEL_SIGHTINGS_CONFIDENCE_LEVEL", ["sentinel_sightings", "confidence_level"], self.load
+            "SENTINEL_SIGHTINGS_CONFIDENCE_LEVEL",
+            ["sentinel_sightings", "confidence_level"],
+            self.load,
         )
         self.target_product = get_config_variable(
-            "SENTINEL_SIGHTINGS_TARGET_PRODUCT", ["sentinel_sightings", "target_product"], self.load
+            "SENTINEL_SIGHTINGS_TARGET_PRODUCT",
+            ["sentinel_sightings", "target_product"],
+            self.load,
         )

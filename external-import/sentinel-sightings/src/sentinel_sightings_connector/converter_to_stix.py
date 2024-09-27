@@ -1,16 +1,15 @@
-from dateutil.parser import parse
-
 import stix2
-
+from dateutil.parser import parse
 from pycti import (
     AttackPattern,
     CaseIncident,
-    CustomObservableHostname,
     CustomObjectCaseIncident,
-    Incident,
+    CustomObservableHostname,
     Identity,
+    Incident,
     StixCoreRelationship,
 )
+
 from .utils import CASE_INCIDENT_PRIORITIES, is_ipv4
 
 

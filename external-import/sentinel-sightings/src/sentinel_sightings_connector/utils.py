@@ -1,5 +1,6 @@
-from dateutil.parser import parse
 import ipaddress
+
+from dateutil.parser import parse
 
 CASE_INCIDENT_PRIORITIES = {
     "unknown": "P3",

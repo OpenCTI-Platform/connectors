@@ -5,7 +5,7 @@ from pycti import OpenCTIConnectorHelper
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
-from .utils import validate_incident, format_incident
+from .utils import format_incident, validate_incident
 
 
 class SentinelSightingsConnector:
