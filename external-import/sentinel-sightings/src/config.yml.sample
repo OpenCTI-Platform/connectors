@@ -19,14 +19,13 @@ connector:
   #send_to_directory_path: 'ChangeMe'
   #send_to_directory_retention: 7
 
-sentinel:
+sentinel_sightings:
   tenant_id: 'ChangeMe'
   workspace_id: 'ChangeMe' # Only for Sentinel
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
   login_url: 'https://login.microsoft.com'
   api_base_url: 'https://graph.microsoft.com'
-  request_path: '/beta/security/tiIndicators'
   incident_path : '/v1.0/security/incidents'
   confidence_level: 50
   target_product: 'Azure Sentinel'
