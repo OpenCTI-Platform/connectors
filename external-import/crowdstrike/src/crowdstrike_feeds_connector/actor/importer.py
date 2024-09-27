@@ -22,6 +22,8 @@ from .builder import ActorBundleBuilder
 class ActorImporter(BaseImporter):
     """CrowdStrike actor importer."""
 
+    _NAME = "Actor"
+
     _LATEST_ACTOR_TIMESTAMP = "latest_actor_timestamp"
 
     def __init__(

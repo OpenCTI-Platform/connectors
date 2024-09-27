@@ -38,6 +38,8 @@ class IndicatorImporterConfig(NamedTuple):
 class IndicatorImporter(BaseImporter):
     """CrowdStrike indicator importer."""
 
+    _NAME = "Indicator"
+
     _LATEST_INDICATOR_TIMESTAMP = "latest_indicator_timestamp"
 
     def __init__(self, config: IndicatorImporterConfig) -> None:
