@@ -74,6 +74,46 @@ class ThreatFox:
             config,
             default=True,
         )
+        self.default_x_opencti_score: int = get_config_variable(
+            "THREATFOX_DEFAULT_X_OPENCTI_SCORE",
+            ["threatfox", "default_x_opencti_score"],
+            config,
+            isNumber=True,
+            default=50,
+            required=False,
+        )
+        self.x_opencti_score_ip: int = get_config_variable(
+            "THREATFOX_X_OPENCTI_SCORE_IP",
+            ["threatfox", "x_opencti_score_ip"],
+            config,
+            isNumber=True,
+            default=None,
+            required=False,
+        )
+        self.x_opencti_score_domain: int = get_config_variable(
+            "THREATFOX_X_OPENCTI_SCORE_DOMAIN",
+            ["threatfox", "x_opencti_score_domain"],
+            config,
+            isNumber=True,
+            default=None,
+            required=False,
+        )
+        self.x_opencti_score_url: int = get_config_variable(
+            "THREATFOX_X_OPENCTI_SCORE_URL",
+            ["threatfox", "x_opencti_score_url"],
+            config,
+            isNumber=True,
+            default=None,
+            required=False,
+        )
+        self.x_opencti_score_hash: int = get_config_variable(
+            "THREATFOX_X_OPENCTI_SCORE_HASH",
+            ["threatfox", "x_opencti_score_hash"],
+            config,
+            isNumber=True,
+            default=None,
+            required=False,
+        )
         self.ioc_to_import: list[str] = get_config_variable(
             "THREATFOX_IOC_TO_IMPORT",
             ["threatfox", "ioc_to_import"],
@@ -103,6 +143,19 @@ class ThreatFox:
         """Convert the threatfox_interval from days to millis"""
 
         return float(self.threatfox_interval) * 60 * 60 * 24
+
+    def get_x_opencti_score(self, observable_type: str) -> int:
+        """Get the x_opencti_score for the observable type"""
+
+        if observable_type == "IPv4-Addr":
+            return self.x_opencti_score_ip or self.default_x_opencti_score
+        if observable_type == "Domain-Name":
+            return self.x_opencti_score_domain or self.default_x_opencti_score
+        if observable_type == "Url":
+            return self.x_opencti_score_url or self.default_x_opencti_score
+        if observable_type == "StixFile":
+            return self.x_opencti_score_hash or self.default_x_opencti_score
+        return self.default_x_opencti_score
 
     def run(self):
         """Run the connector"""
@@ -316,6 +369,9 @@ class ThreatFox:
                     "created_by_ref": self.identity["standard_id"],
                     "x_opencti_description": description,
                     "x_opencti_labels": ioc.tags,
+                    "x_opencti_score": (
+                        self.x_opencti_score_ip or self.default_x_opencti_score
+                    ),
                 },
             )
         elif ioc.type == "domain":
@@ -329,6 +385,9 @@ class ThreatFox:
                     "created_by_ref": self.identity["standard_id"],
                     "x_opencti_description": description,
                     "x_opencti_labels": ioc.tags,
+                    "x_opencti_score": (
+                        self.x_opencti_score_domain or self.default_x_opencti_score
+                    ),
                 },
             )
         elif ioc.type == "url":
@@ -342,6 +401,9 @@ class ThreatFox:
                     "created_by_ref": self.identity["standard_id"],
                     "x_opencti_description": description,
                     "x_opencti_labels": ioc.tags,
+                    "x_opencti_score": (
+                        self.x_opencti_score_url or self.default_x_opencti_score
+                    ),
                 },
             )
         elif ioc.type == "md5_hash":
@@ -356,6 +418,9 @@ class ThreatFox:
                     "created_by_ref": self.identity["standard_id"],
                     "x_opencti_description": description,
                     "x_opencti_labels": ioc.tags,
+                    "x_opencti_score": (
+                        self.x_opencti_score_hash or self.default_x_opencti_score
+                    ),
                 },
             )
         elif ioc.type == "sha1_hash":
@@ -370,6 +435,9 @@ class ThreatFox:
                     "created_by_ref": self.identity["standard_id"],
                     "x_opencti_description": description,
                     "x_opencti_labels": ioc.tags,
+                    "x_opencti_score": (
+                        self.x_opencti_score_hash or self.default_x_opencti_score
+                    ),
                 },
             )
         elif ioc.type == "sha256_hash":
@@ -384,6 +452,9 @@ class ThreatFox:
                     "created_by_ref": self.identity["standard_id"],
                     "x_opencti_description": description,
                     "x_opencti_labels": ioc.tags,
+                    "x_opencti_score": (
+                        self.x_opencti_score_hash or self.default_x_opencti_score
+                    ),
                 },
             )
         else:
@@ -417,6 +488,7 @@ class ThreatFox:
                 external_references=ext_refs,
                 custom_properties={
                     "x_opencti_main_observable_type": observable_type,
+                    "x_opencti_score": self.get_x_opencti_score(observable_type),
                 },
             )
             self.helper.log_debug(f"Indicator created: {stix_indicator}")

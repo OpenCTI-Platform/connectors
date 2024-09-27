@@ -13,6 +13,7 @@ connector:
 
 urlhaus:
   csv_url: 'https://urlhaus.abuse.ch/downloads/csv_recent/'
+  default_x_opencti_score: 80  # Optional: Defaults to 80
   import_offline: true
   threats_from_labels: true
   interval: 3 # In days, must be strictly greater than 1
