@@ -16,15 +16,18 @@ class TaniumApiHandler:
         token,
         ssl_verify=True,
         auto_ondemand_scan=False,
-        auto_ondemand_scan_computer_groups=[],
+        auto_ondemand_scan_computer_groups=None,
     ):
+
         # Variables
         self.helper = helper
         self.url = url
         self.token = token
         self.ssl_verify = ssl_verify
         self.auto_ondemand_scan = auto_ondemand_scan
-        self.auto_ondemand_scan_computer_groups = auto_ondemand_scan_computer_groups
+        self.auto_ondemand_scan_computer_groups = (
+            auto_ondemand_scan_computer_groups or []
+        )
 
         # Intelligence documents source
         self.source_id = None
@@ -147,7 +150,7 @@ class TaniumApiHandler:
         if r.status_code == 200:
             try:
                 return r.json()["data"]
-            except:
+            except Exception:
                 return r.text
         elif r.status_code == 401:
             raise ValueError("Query failed, permission denied")
@@ -160,7 +163,7 @@ class TaniumApiHandler:
             entity_type="Indicator",
             entity_id=entity["id"],
             mode="simple",
-            no_custom_attribute=True,
+            no_custom_attributes=True,
         )
         stix_entity = [e for e in stix2_bundle["objects"] if e["id"] == entity["id"]][0]
         if "indicator_types" not in stix_entity:
