@@ -46,7 +46,10 @@ class CrowdStrike:
     _DEFAULT_CREATE_OBSERVABLES = True
     _DEFAULT_CREATE_INDICATORS = True
     _DEFAULT_REPORT_TYPE = "threat-report"
+    _DEFAULT_X_OPENCTI_SCORE = 50
     _DEFAULT_INDICATOR_LOW_SCORE = 40
+    _DEFAULT_INDICATOR_MEDIUM_SCORE = 60
+    _DEFAULT_INDICATOR_HIGH_SCORE = 80
 
     _STATE_LAST_RUN = "last_run"
 
@@ -115,6 +118,10 @@ class CrowdStrike:
                 indicator_exclude_types_str
             )
 
+        default_x_opencti_score = self.config.default_x_opencti_score
+        if default_x_opencti_score is None:
+            default_x_opencti_score = self._DEFAULT_X_OPENCTI_SCORE
+
         indicator_low_score = self.config.indicator_low_score
         if indicator_low_score is None:
             indicator_low_score = self._DEFAULT_INDICATOR_LOW_SCORE
@@ -124,6 +131,28 @@ class CrowdStrike:
         if indicator_low_score_labels_str is not None:
             indicator_low_score_labels = convert_comma_separated_str_to_list(
                 indicator_low_score_labels_str
+            )
+
+        indicator_medium_score = self.config.indicator_medium_score
+        if indicator_medium_score is None:
+            indicator_medium_score = self._DEFAULT_INDICATOR_MEDIUM_SCORE
+
+        indicator_medium_score_labels_str = self.config.indicator_medium_score_labels
+        indicator_medium_score_labels = []
+        if indicator_medium_score_labels_str is not None:
+            indicator_medium_score_labels = convert_comma_separated_str_to_list(
+                indicator_medium_score_labels_str
+            )
+
+        indicator_high_score = self.config.indicator_high_score
+        if indicator_high_score is None:
+            indicator_high_score = self._DEFAULT_INDICATOR_HIGH_SCORE
+
+        indicator_high_score_labels_str = self.config.indicator_high_score_labels
+        indicator_high_score_labels = []
+        if indicator_high_score_labels_str is not None:
+            indicator_high_score_labels = convert_comma_separated_str_to_list(
+                indicator_high_score_labels_str
             )
 
         indicator_unwanted_labels_str = self.config.indicator_unwanted_labels
@@ -179,8 +208,13 @@ class CrowdStrike:
                 exclude_types=indicator_exclude_types,
                 report_status=report_status,
                 report_type=report_type,
+                default_x_opencti_score=default_x_opencti_score,
                 indicator_low_score=indicator_low_score,
                 indicator_low_score_labels=set(indicator_low_score_labels),
+                indicator_medium_score=indicator_medium_score,
+                indicator_medium_score_labels=set(indicator_medium_score_labels),
+                indicator_high_score=indicator_high_score,
+                indicator_high_score_labels=set(indicator_high_score_labels),
                 indicator_unwanted_labels=set(indicator_unwanted_labels),
             )
 
