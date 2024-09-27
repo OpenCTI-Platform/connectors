@@ -30,8 +30,13 @@ class IndicatorImporterConfig(NamedTuple):
     exclude_types: List[str]
     report_status: int
     report_type: str
+    default_x_opencti_score: int
     indicator_low_score: int
     indicator_low_score_labels: Set[str]
+    indicator_medium_score: int
+    indicator_medium_score_labels: Set[str]
+    indicator_high_score: int
+    indicator_high_score_labels: Set[str]
     indicator_unwanted_labels: Set[str]
 
 
@@ -55,8 +60,13 @@ class IndicatorImporter(BaseImporter):
         self.exclude_types = config.exclude_types
         self.report_status = config.report_status
         self.report_type = config.report_type
+        self.default_x_opencti_score = config.default_x_opencti_score
         self.indicator_low_score = config.indicator_low_score
         self.indicator_low_score_labels = config.indicator_low_score_labels
+        self.indicator_medium_score = config.indicator_medium_score
+        self.indicator_medium_score_labels = config.indicator_medium_score_labels
+        self.indicator_high_score = config.indicator_high_score
+        self.indicator_high_score_labels = config.indicator_high_score_labels
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
         self.next_page: Optional[str] = None
 
@@ -229,8 +239,13 @@ class IndicatorImporter(BaseImporter):
             indicator_report_status=self.report_status,
             indicator_report_type=self.report_type,
             indicator_reports=indicator_reports,
+            default_x_opencti_score=self.default_x_opencti_score,
             indicator_low_score=self.indicator_low_score,
             indicator_low_score_labels=self.indicator_low_score_labels,
+            indicator_medium_score=self.indicator_medium_score,
+            indicator_medium_score_labels=self.indicator_medium_score_labels,
+            indicator_high_score=self.indicator_high_score,
+            indicator_high_score_labels=self.indicator_high_score_labels,
             indicator_unwanted_labels=self.indicator_unwanted_labels,
         )
 
