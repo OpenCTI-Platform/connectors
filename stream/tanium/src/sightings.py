@@ -1,6 +1,7 @@
 #################
 # SIGHTINGS     #
 #################
+
 import json
 import threading
 import time
