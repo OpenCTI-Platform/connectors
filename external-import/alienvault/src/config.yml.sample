@@ -25,3 +25,12 @@ alienvault:
   enable_relationships: true                                    # Enable/Disable relationship creation between SDOs
   enable_attack_patterns_indicates: false                       # Enable/Disable "indicates" relationships between indicators and attack patterns
   filter_indicators: true                                       # Filter indicators by their created datetime
+  default_x_opencti_score: 50                                   # The default x_opencti_score to use for indicators. If a per indicator type score is not set, this is used.
+  x_opencti_score_ip: 60                                        # (Optional): The x_opencti_score to use for IP indicators. 
+  x_opencti_score_domain: 70                                    # (Optional): The x_opencti_score to use for Domain indicators
+  x_opencti_score_hostname: 75                                  # (Optional): The x_opencti_score to use for Hostname indicators.
+  x_opencti_score_email: 70                                     # (Optional): The x_opencti_score to use for Email indicators. 
+  x_opencti_score_file: 80                                      # (Optional): The x_opencti_score to use for StixFile indicators
+  x_opencti_score_url: 80                                       # (Optional): The x_opencti_score to use for URL indicators.
+  x_opencti_score_mutex: 60                                     # (Optional): The x_opencti_score to use for Mutex indicators. 
+  x_opencti_score_cryptocurrency_wallet: 80                     # (Optional): The x_opencti_score to use for Cryptocurrency Wallet indicators
