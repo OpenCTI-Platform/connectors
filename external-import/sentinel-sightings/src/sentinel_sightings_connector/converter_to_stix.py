@@ -1,8 +1,6 @@
-import ipaddress
 from dateutil.parser import parse
 
 import stix2
-import validators
 
 from pycti import (
     AttackPattern,
@@ -13,16 +11,7 @@ from pycti import (
     Identity,
     StixCoreRelationship,
 )
-
-
-priorities = {
-    "unknown": "P3",
-    "informational": "P4",
-    "low": "P3",
-    "medium": "P2",
-    "high": "P1",
-    "unknownFutureValue": "P3",
-}
+from .utils import CASE_INCIDENT_PRIORITIES, is_ipv4
 
 
 class ConverterToStix:
@@ -41,28 +30,17 @@ class ConverterToStix:
             identity_class="organization",
             description="Import Sightings according to alerts found in Microsoft Sentinel",
         )
-        # self.external_reference = self.create_external_reference()
-
-    # @staticmethod
-    # def create_external_reference() -> list:
-    #     """
-    #     Create external reference
-    #     :return: External reference STIX2 list
-    #     """
-    #     external_reference = stix2.ExternalReference(
-    #         source_name="External Source",
-    #         url="CHANGEME",
-    #         description="DESCRIPTION",
-    #     )
-    #     return [external_reference]
 
     @staticmethod
     def create_author_identity(
         name=None, identity_class=None, description=None
     ) -> dict:
         """
-        Create Author
-        :return: Author in Stix2 object
+        Create STIX 2.1 Identity object representing the author of STIX objects
+        :param name: Author's name (i.e. connector's name)
+        :param identity_class: Type of entity described
+        :param description: Author's description
+        :return: Identity in STIX 2.1 format
         """
         author = stix2.Identity(
             id=Identity.generate_id(name=name, identity_class=identity_class),
@@ -92,7 +70,6 @@ class ConverterToStix:
                     "external_id": alert["id"],
                 }
             ],
-            allow_custom=True,
             custom_properties={
                 "source": self.config.target_product.replace("Azure", "Microsoft"),
                 "severity": alert["severity"],
@@ -101,15 +78,53 @@ class ConverterToStix:
         )
         return stix_incident
 
-    def create_alert_user_account(self, evidence: dict) -> stix2.UserAccount:
+    def create_custom_case_incident(
+        self, incident: dict, bundle_objects: list[object]
+    ) -> CustomObjectCaseIncident:
+        """
+        Create STIX 2.1 Custom Case Incident object
+        :param incident: Incident to create Case Incident from
+        :param bundle_objects: List of all the STIX 2.1 objects refering to the incident
+        :return: Case Incident in STIX 2.1 format
+        """
+        incident_date = parse(incident["createdDateTime"]).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+
+        stix_case = CustomObjectCaseIncident(
+            id=CaseIncident.generate_id(incident["displayName"], incident_date),
+            name=incident["displayName"],
+            description="Incident from "
+            + self.config.target_product.replace("Azure", "Microsoft")
+            + " | classification: "
+            + incident["classification"]
+            + " | determination: "
+            + incident["determination"],
+            severity=incident["severity"],
+            priority=CASE_INCIDENT_PRIORITIES[incident["severity"]],
+            created=incident_date,
+            external_references=[
+                {
+                    "source_name": self.config.target_product.replace(
+                        "Azure", "Microsoft"
+                    ),
+                    "external_id": incident["id"],
+                    "url": incident["incidentWebUrl"],
+                }
+            ],
+            confidence=self.helper.connect_confidence_level,
+            created_by_ref=self.author["id"],
+            object_marking_refs=[stix2.TLP_RED],
+            object_refs=bundle_objects,
+        )
+        return stix_case
+
+    def create_evidence_user_account(self, evidence: dict) -> stix2.UserAccount:
         """
         Create STIX 2.1 User Account object
-        :param alert: Alert to create User Account from
+        :param evidence: Evidence to create User Account from
         :return: User Account in STIX 2.1 format
         """
-        alert_user = evidence["details"]["match"]["properties"]["user"]
-        login = alert_user.split("\\")[-1]
-
         user_account = stix2.UserAccount(
             account_login=evidence["userAccount"]["accountName"],
             display_name=evidence["userAccount"]["displayName"],
@@ -120,14 +135,21 @@ class ConverterToStix:
         )
         return user_account
 
-    def create_alert_ipv4(self, evidence: dict) -> stix2.IPv4Address:
+    def create_evidence_ipv4(self, evidence: dict) -> stix2.IPv4Address:
         """
         Create STIX 2.1 IPv4 Address object
-        :param alert: Alert to create IPv4 from
+        :param evidence: Evidence to create IPv4 from
         :return: IPv4 Address in STIX 2.1 format
         """
+        ip_address = evidence["ipAddress"]
+        if not is_ipv4(ip_address):
+            self.helper.connector_logger.error(
+                "This observable value is not a valid IPv4 address: ",
+                {"value": ip_address},
+            )
+
         ipv4 = stix2.IPv4Address(
-            value=evidence["ipAddress"],
+            value=ip_address,
             object_marking_refs=[stix2.TLP_RED],
             custom_properties={
                 "created_by_ref": self.author["id"],
@@ -135,10 +157,10 @@ class ConverterToStix:
         )
         return ipv4
 
-    def create_alert_url(self, evidence: dict) -> stix2.URL:
+    def create_evidence_url(self, evidence: dict) -> stix2.URL:
         """
         Create STIX 2.1 User Account object
-        :param alert: Alert to create User Account from
+        :param evidence: Evidence to create User Account from
         :return: User Account in STIX 2.1 format
         """
         stix_url = stix2.URL(
@@ -150,10 +172,10 @@ class ConverterToStix:
         )
         return stix_url
 
-    def create_alert_file(self, evidence) -> stix2.File:
+    def create_evidence_file(self, evidence: dict) -> stix2.File:
         """
         Create STIX 2.1 File object
-        :param alert: Alert to create File from
+        :param evidence: Evidence to create File from
         :return: File in STIX 2.1 format
         """
         file = evidence["imageFile"]
@@ -176,10 +198,12 @@ class ConverterToStix:
         )
         return stix_file
 
-    def create_custom_observable_hostname(self, evidence) -> CustomObservableHostname:
+    def create_evidence_custom_observable_hostname(
+        self, evidence: dict
+    ) -> CustomObservableHostname:
         """
         Create STIX 2.1 Custom Observable Hostname object
-        :param alert: Alert to create Observable Hostname from
+        :param evidence: Evidence to create Observable Hostname from
         :return: Observable Hostname in STIX 2.1 format
         """
         stix_hostname = CustomObservableHostname(
@@ -191,42 +215,12 @@ class ConverterToStix:
         )
         return stix_hostname
 
-    def create_custom_case_incident(
-        self, incident, bundle_objects
-    ) -> CustomObjectCaseIncident:
-        incident_date = parse(incident["createdDateTime"]).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        )
-
-        stix_case = CustomObjectCaseIncident(
-            id=CaseIncident.generate_id(incident["displayName"], incident_date),
-            name=incident["displayName"],
-            description="Incident from "
-            + self.config.target_product.replace("Azure", "Microsoft")
-            + " | classification: "
-            + incident["classification"]
-            + " | determination: "
-            + incident["determination"],
-            severity=incident["severity"],
-            priority=priorities[incident["severity"]],
-            created=incident_date,
-            external_references=[
-                {
-                    "source_name": self.config.target_product.replace(
-                        "Azure", "Microsoft"
-                    ),
-                    "external_id": incident["id"],
-                    "url": incident["incidentWebUrl"],
-                }
-            ],
-            confidence=self.helper.connect_confidence_level,
-            created_by_ref=self.author["id"],
-            object_marking_refs=[stix2.TLP_RED],
-            object_refs=bundle_objects,
-        )
-        return stix_case
-
-    def create_mitre_attack_pattern(self, technique) -> stix2.AttackPattern:
+    def create_mitre_attack_pattern(self, technique: str) -> stix2.AttackPattern:
+        """
+        Create STIX 2.1 Attack Pattern object
+        :param technique: Mitre Attack Pattern name
+        :return: Attack Pattern in STIX 2.1 format
+        """
         stix_attack_pattern = stix2.AttackPattern(
             id=AttackPattern.generate_id(technique, technique),
             name=technique,
@@ -243,7 +237,7 @@ class ConverterToStix:
         :param source_id: ID of source in string
         :param relationship_type: Relationship type in string
         :param target_id: ID of target in string
-        :return: Relationship STIX2 object
+        :return: Relationship in STIX 2.1 format
         """
         relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
@@ -256,86 +250,3 @@ class ConverterToStix:
             created_by_ref=self.author["id"],
         )
         return relationship
-
-    # ===========================#
-    # Other Examples
-    # ===========================#
-
-    @staticmethod
-    def _is_ipv6(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv6
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv6Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
-    @staticmethod
-    def _is_ipv4(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv4
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv4Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
-    @staticmethod
-    def _is_domain(value: str) -> bool:
-        """
-        Valid domain name regex including internationalized domain name
-        :param value: Value in string
-        :return: A boolean
-        """
-        is_valid_domain = validators.domain(value)
-
-        if is_valid_domain:
-            return True
-        else:
-            return False
-
-    def create_obs(self, value: str) -> dict:
-        """
-        Create observable according to value given
-        :param value: Value in string
-        :return: Stix object for IPV4, IPV6 or Domain
-        """
-        if self._is_ipv6(value) is True:
-            stix_ipv6_address = stix2.IPv6Address(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.external_reference,
-                },
-            )
-            return stix_ipv6_address
-        elif self._is_ipv4(value) is True:
-            stix_ipv4_address = stix2.IPv4Address(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.external_reference,
-                },
-            )
-            return stix_ipv4_address
-        elif self._is_domain(value) is True:
-            stix_domain_name = stix2.DomainName(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.external_reference,
-                },
-            )
-            return stix_domain_name
-        else:
-            self.helper.connector_logger.error(
-                "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
-                {"value": value},
-            )

@@ -46,37 +46,22 @@ class ConnectorClient:
             }
             response = requests.post(url, data=oauth_data)
             response_json = json.loads(response.text)
+
             oauth_token = response_json["access_token"]
             self.headers = {"Authorization": oauth_token}
         except Exception as e:
             raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
 
-    def get_entities(self, params=None) -> dict:
+    def get_incidents(self) -> list[dict]:
         """
-        If params is None, retrieve all CVEs in National Vulnerability Database
-        :param params: Optional Params to filter what list to return
-        :return: A list of dicts of the complete collection of CVE from NVD
+        Get incidents with their alerts from Microsft Sentinel API.
+        :return: List of incidents
         """
         try:
-            # ===========================
-            # === Add your code below ===
-            # ===========================
-
-            # response = self._request_data(self.config.api_base_url, params=params)
-
-            # return response.json()
-            # ===========================
-            # === Add your code above ===
-            # ===========================
-
-            raise NotImplementedError
-
+            url = (
+                f"{self.config.api_base_url}{self.config.incident_path}?$expand=alerts"
+            )
+            response = requests.get(url, headers=self.headers)
+            return response.json()["value"] if "value" in response.json() else []
         except Exception as err:
             self.helper.connector_logger.error(err)
-
-    def get_incidents(self):
-        response = requests.get(
-            self.config.resource_url + self.config.incident_url + "?$expand=alerts",
-            headers=self.headers,
-        )
-        return response.json()["value"] if "value" in response.json() else []
