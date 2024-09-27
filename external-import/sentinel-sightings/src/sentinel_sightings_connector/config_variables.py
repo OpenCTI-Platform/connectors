@@ -55,34 +55,18 @@ class ConfigConnector:
         self.login_url = get_config_variable(
             "LOGIN_URL", ["sentinel", "login_url"], self.load
         )
-        self.resource_url = get_config_variable(
-            "RESOURCE_URL", ["sentinel", "resource_url"], self.load
+        self.api_base_url = get_config_variable(
+            "API_BASE_URL", ["sentinel", "api_base_url"], self.load
         )
-        self.request_url = get_config_variable(
-            "REQUEST_URL", ["sentinel", "request_url"], self.load
+        self.request_path = get_config_variable(
+            "REQUEST_PATH", ["sentinel", "request_path"], self.load
         )
-        self.incident_url = get_config_variable(
-            "INCIDENT_URL", ["sentinel", "incident_url"], self.load
-        )
-        self.sentinel_url = get_config_variable(
-            "SENTINEL_URL", ["sentinel", "sentinel_url"], self.load
+        self.incident_path = get_config_variable(
+            "INCIDENT_PATH", ["sentinel", "incident_path"], self.load
         )
         self.confidence_level = get_config_variable(
             "CONFIDENCE_LEVEL", ["sentinel", "confidence_level"], self.load
         )
-        self.expire_time = get_config_variable(
-            "EXPIRE_TIME", ["sentinel", "expire_time"], self.load
-        )
         self.target_product = get_config_variable(
             "TARGET_PRODUCT", ["sentinel", "target_product"], self.load
-        )
-        self.action = get_config_variable("ACTION", ["sentinel", "action"], self.load)
-        self.tlp_level = get_config_variable(
-            "TLP_LEVEL", ["sentinel", "tlp_level"], self.load
-        )
-        self.passive_only = get_config_variable(
-            "PASSIVE_ONLY", ["sentinel", "passive_only"], self.load
-        )
-        self.import_incidents = get_config_variable(
-            "IMPORT_INCIDENTS", ["sentinel", "import_incidents"], self.load
         )

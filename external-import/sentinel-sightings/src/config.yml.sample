@@ -25,15 +25,8 @@ sentinel:
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
   login_url: 'https://login.microsoft.com'
-  resource_url: 'https://graph.microsoft.com'
-  request_url: '/beta/security/tiIndicators'
-  incident_url : '/v1.0/security/incidents'
-  sentinel_url: 'https://sentinelus.azure-api.net'
-  use_new_sentinel_api: false
+  api_base_url: 'https://graph.microsoft.com'
+  request_path: '/beta/security/tiIndicators'
+  incident_path : '/v1.0/security/incidents'
   confidence_level: 50
-  expire_time: 30
   target_product: 'Azure Sentinel'
-  action: alert
-  tlp_level: amber
-  passive_only: true
-  import_incidents: true

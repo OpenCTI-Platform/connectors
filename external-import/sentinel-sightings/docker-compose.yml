@@ -6,15 +6,12 @@ services:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=CHANGEME
-      -
+
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=CHANGEME
       - "CONNECTOR_NAME=Microsoft Sentinel"
       - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
-      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
-      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       # Connector's definition parameters OPTIONAL
       # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
       # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
@@ -30,17 +27,10 @@ services:
       - CLIENT_SECRET=ChangeMe # Azure App Client Secret
       - "TARGET_PRODUCT=Azure Sentinel" # "Azure Sentinel" or "Microsoft Defender ATP"
       - LOGIN_URL=https://login.microsoft.com
-      - RESOURCE_URL=https://graph.microsoft.com
-      - REQUEST_URL=/beta/security/tiIndicators
-      - INCIDENT_URL=/v1.0/security/incidents
-      - SENTINEL_URL=https://sentinelus.azure-api.net
-      - USE_NEW_SENTINEL_API=false # Use the new API, only supporting indicators and not supporting action (not supported yet)
+      - API_BASE_URL=https://graph.microsoft.com
+      - REQUEST_PATH=/beta/security/tiIndicators
+      - INCIDENT_PATH=/v1.0/security/incidents
       - CONFIDENCE_LEVEL=50 # Alerts equal to or higher than this will be blocked, Lower will be alerted, and 0 will be allowed
-      - EXPIRE_TIME=30 # Number of days for IOC to expire in Sentinel
-      - ACTION=alert # Optional: Setting this will override all alerts to be this action (unknown, allow, block, alert)
-      - TLP_LEVEL=amber # Optional: This will override all TLP submitted to Sentinel. (unknown, white, green, amber, red)
-      - PASSIVE_ONLY=false # Optional: Defaults to false.
-      - IMPORT_INCIDENTS=true
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME
