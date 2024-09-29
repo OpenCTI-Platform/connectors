@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-recorded-future:
-    image: opencti/connector-recorded-future:6.2.18
+    image: opencti/connector-recorded-future:6.2.19
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME

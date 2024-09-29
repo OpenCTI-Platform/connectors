@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cluster25:
-    image: opencti/connector-cluster25:6.2.18
+    image: opencti/connector-cluster25:6.2.19
     build: .
     environment:
       - OPENCTI_URL=http://localhost
