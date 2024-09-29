@@ -1,5 +1,5 @@
 pycti==6.3.4
-pandas==2.2.2
+pandas==2.2.3
 elasticsearch==7.17.12
 scalpl==0.4.2
 docopt==0.6.2
