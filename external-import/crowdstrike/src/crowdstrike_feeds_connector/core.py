@@ -287,8 +287,8 @@ class CrowdStrike:
                 self.helper.set_state(new_state)
 
                 message = (
-                        f"{self.helper.connect_name} {importer.name} successfully run, storing last_run as "
-                        + str(timestamp)
+                    f"{self.helper.connect_name} {importer.name} successfully run, storing last_run as "
+                    + str(timestamp)
                 )
                 self.helper.api.work.to_processed(work_id, message)
 
@@ -319,7 +319,9 @@ class CrowdStrike:
 
     def _initiate_work(self, timestamp: int, importer_name: str) -> str:
         datetime_str = timestamp_to_datetime(timestamp)
-        friendly_name = f"{self.helper.connect_name}/{importer_name} run @ {datetime_str}"
+        friendly_name = (
+            f"{self.helper.connect_name}/{importer_name} run @ {datetime_str}"
+        )
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
