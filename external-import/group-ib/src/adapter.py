@@ -11,11 +11,9 @@ Author: Pavel Reshetnikov, Integration developer, 2024
 """
 
 from datetime import datetime, timedelta
-from typing import Any, List, Tuple, Union
-
-from stix2.patterns import HashConstant
 
 import data_to_stix2 as ds
+from stix2.patterns import HashConstant
 
 
 class DataToSTIXAdapter:
