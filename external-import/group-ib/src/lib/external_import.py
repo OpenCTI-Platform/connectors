@@ -248,11 +248,9 @@ class ExternalImportConnector:
                                     "intrusion_set_instead_of_threat_actor", False
                                 )
                             )
-                            self.IGNORE_NON_MALWARE_DDOS = (
-                                self.endpoints_config.get("extra_settings", {}).get(
-                                    "ignore_non_malware_ddos", True
-                                )
-                            )
+                            self.IGNORE_NON_MALWARE_DDOS = self.endpoints_config.get(
+                                "extra_settings", {}
+                            ).get("ignore_non_malware_ddos", True)
                             self.IGNORE_NON_INDICATOR_THREATS = (
                                 self.endpoints_config.get("extra_settings", {}).get(
                                     "ignore_non_indicator_threats", False
