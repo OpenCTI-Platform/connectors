@@ -1,5 +1,6 @@
 import json
 import os
+import traceback
 from datetime import datetime
 from typing import Dict
 
@@ -516,5 +517,9 @@ class GreyNoiseVulnConnector:
 
 
 if __name__ == "__main__":
-    greyNoiseInstance = GreyNoiseVulnConnector()
-    greyNoiseInstance.start()
+    try:
+        greyNoiseInstance = GreyNoiseVulnConnector()
+        greyNoiseInstance.start()
+    except Exception:
+        traceback.print_exc()
+        exit(1)
