@@ -6,7 +6,7 @@
             "title": "title",
             "portal_link": {
                 "__concatenate": {
-                    "__": "TI Portal Report external reference",
+                    "__": "TI Portal: Report - external reference",
                     "static": "https://tap.group-ib.com/ta/last-threats?threat=",
                     "dynamic": "id"
                 }
@@ -42,7 +42,7 @@
                 "aliases": "",
                 "portal_link": {
                     "__concatenate": {
-                        "__": "TI Portal Malware external reference",
+                        "__": "TI Portal: Malware - external reference",
                         "static": "https://tap.group-ib.com/malware/reports/",
                         "dynamic": "id"
                     }
@@ -60,7 +60,7 @@
             "roles": "",
             "portal_link": {
                 "__concatenate": {
-                    "__": "TI Portal Threat Actor external reference",
+                    "__": "TI Portal: Threat Actor - external reference",
                     "static": "https://tap.group-ib.com/ta/actors?ta=",
                     "dynamic": "threatActor.id"
                 }
@@ -88,7 +88,7 @@
                 "kill_chain_phase": "attackTactic",
                 "portal_link": {
                     "__concatenate": {
-                        "__": "MITRE ATT&CK external reference",
+                        "__": "MITRE ATT&CK: Pattern - external reference",
                         "static": "https://attack.mitre.org/techniques/",
                         "dynamic": "mitreId"
                     }
@@ -99,7 +99,9 @@
             "__": "*Event date",
             "first-seen": "dateFirstSeen",
             "last-seen": "dateLastSeen",
-            "date-published": "datePublished"
+            "date-published": "datePublished",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
         }
     },
     "apt/threat_actor": {
@@ -125,9 +127,9 @@
             "roles": "roles",
             "portal_link": {
                 "__concatenate": {
-                    "__": "TI Portal Threat Actor external reference",
+                    "__": "TI Portal: Threat Actor - external reference",
                     "static": "https://tap.group-ib.com/ta/actors?ta=",
-                    "dynamic": "threatActor.id"
+                    "dynamic": "id"
                 }
             }
         },
@@ -142,7 +144,9 @@
         "date": {
             "__": "*Event date",
             "first-seen": "stat.dateFirstSeen",
-            "last-seen": "stat.dateLastSeen"
+            "last-seen": "stat.dateLastSeen",
+            "date-created": "stat.dateFirstSeen",
+            "date-modified": "stat.dateLastSeen"
         }
     },
     "attacks/ddos": {
@@ -162,7 +166,7 @@
                 "aliases": "",
                 "portal_link": {
                     "__concatenate": {
-                        "__": "TI Portal Malware external reference",
+                        "__": "TI Portal: Malware - external reference",
                         "static": "https://tap.group-ib.com/malware/reports/",
                         "dynamic": "id"
                     }
@@ -180,7 +184,7 @@
             "roles": "",
             "portal_link": {
                 "__concatenate": {
-                    "__": "TI Portal Threat Actor external reference",
+                    "__": "TI Portal: Threat Actor - external reference",
                     "static": "https://tap.group-ib.com/ta/actors?ta=",
                     "dynamic": "threatActor.id"
                 }
@@ -217,7 +221,7 @@
             "roles": "",
             "portal_link": {
                 "__concatenate": {
-                    "__": "TI Portal Threat Actor external reference",
+                    "__": "TI Portal: Threat Actor - external reference",
                     "static": "https://tap.group-ib.com/ta/actors?ta=",
                     "dynamic": "threatActor.id"
                 }
@@ -255,7 +259,7 @@
             "roles": "",
             "portal_link": {
                 "__concatenate": {
-                    "__": "TI Portal Threat Actor external reference",
+                    "__": "TI Portal: Threat Actor - external reference",
                     "static": "https://tap.group-ib.com/ta/actors?ta=",
                     "dynamic": "threatActor.id"
                 }
@@ -270,7 +274,9 @@
         "date": {
             "__": "*Event date",
             "submission-time": "date.detected",
-            "takedown-time": "date.blocked"
+            "takedown-time": "date.blocked",
+            "date-created": "date.added",
+            "date-modified": "date.updated"
         }
     },
     "attacks/phishing_kit": {
@@ -291,6 +297,10 @@
                 "ip-address": ""
             }
         },
+        "ungrouped": {
+            "__": "*Ungrouped items",
+            "emails": "emails"
+        },
         "evaluation": {
             "__": "*Evaluation",
             "tlp": "evaluation.tlp",
@@ -301,7 +311,9 @@
             "__": "*Event date",
             "detection-date": "dateDetected",
             "first-seen": "dateFirstSeen",
-            "last-seen": "dateLastSeen"
+            "last-seen": "dateLastSeen",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
         }
     },
     "hi/threat": {
@@ -311,7 +323,7 @@
             "title": "title",
             "portal_link": {
                 "__concatenate": {
-                    "__": "TI Portal Report external reference",
+                    "__": "TI Portal: Report - external reference",
                     "static": "https://tap.group-ib.com/ta/last-threats?threat=",
                     "dynamic": "id"
                 }
@@ -347,7 +359,7 @@
                 "aliases": "",
                 "portal_link": {
                     "__concatenate": {
-                        "__": "TI Portal Malware external reference",
+                        "__": "TI Portal: Malware - external reference",
                         "static": "https://tap.group-ib.com/malware/reports/",
                         "dynamic": "id"
                     }
@@ -365,7 +377,7 @@
             "roles": "",
             "portal_link": {
                 "__concatenate": {
-                    "__": "TI Portal Threat Actor external reference",
+                    "__": "TI Portal: Threat Actor - external reference",
                     "static": "https://tap.group-ib.com/ta/actors?ta=",
                     "dynamic": "threatActor.id"
                 }
@@ -393,7 +405,7 @@
                 "kill_chain_phase": "attackTactic",
                 "portal_link": {
                     "__concatenate": {
-                        "__": "MITRE ATT&CK external reference",
+                        "__": "MITRE ATT&CK: Pattern - external reference",
                         "static": "https://attack.mitre.org/techniques/",
                         "dynamic": "mitreId"
                     }
@@ -404,7 +416,9 @@
             "__": "*Event date",
             "first-seen": "dateFirstSeen",
             "last-seen": "dateLastSeen",
-            "date-published": "datePublished"
+            "date-published": "datePublished",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
         }
     },
     "hi/threat_actor": {
@@ -430,9 +444,9 @@
             "roles": "roles",
             "portal_link": {
                 "__concatenate": {
-                    "__": "TI Portal Threat Actor external reference",
+                    "__": "TI Portal: Threat Actor - external reference",
                     "static": "https://tap.group-ib.com/ta/actors?ta=",
-                    "dynamic": "threatActor.id"
+                    "dynamic": "id"
                 }
             }
         },
@@ -447,7 +461,9 @@
         "date": {
             "__": "*Event date",
             "first-seen": "stat.dateFirstSeen",
-            "last-seen": "stat.dateLastSeen"
+            "last-seen": "stat.dateLastSeen",
+            "date-created": "stat.dateFirstSeen",
+            "date-modified": "stat.dateLastSeen"
         }
     },
     "malware/malware": {
@@ -459,7 +475,7 @@
             "aliases": "malwareAliasList",
             "portal_link": {
                 "__concatenate": {
-                    "__": "TI Portal Malware external reference",
+                    "__": "TI Portal: Malware - external reference",
                     "static": "https://tap.group-ib.com/malware/reports/",
                     "dynamic": "id"
                 }
@@ -486,7 +502,7 @@
                 "aliases": "",
                 "portal_link": {
                     "__concatenate": {
-                        "__": "TI Portal Malware external reference",
+                        "__": "TI Portal: Malware - external reference",
                         "static": "https://tap.group-ib.com/malware/reports/",
                         "dynamic": "id"
                     }
@@ -514,7 +530,7 @@
                 "aliases": "",
                 "portal_link": {
                     "__concatenate": {
-                        "__": "TI Portal Malware external reference",
+                        "__": "TI Portal: Malware - external reference",
                         "static": "https://tap.group-ib.com/malware/reports/",
                         "dynamic": "id"
                     }
@@ -576,7 +592,9 @@
             "__": "*Event date",
             "first-seen": "dateFirstSeen",
             "last-seen": "dateLastSeen",
-            "detection-date": "dateDetected"
+            "detection-date": "dateDetected",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
         }
     },
     "suspicious_ip/scanner": {
@@ -594,7 +612,9 @@
             "__": "*Event date",
             "first-seen": "dateFirstSeen",
             "last-seen": "dateLastSeen",
-            "detection-date": "dateDetected"
+            "detection-date": "dateDetected",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
         }
     },
     "suspicious_ip/socks_proxy": {
@@ -612,7 +632,9 @@
             "__": "*Event date",
             "first-seen": "dateFirstSeen",
             "last-seen": "dateLastSeen",
-            "detection-date": "dateDetected"
+            "detection-date": "dateDetected",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
         }
     },
     "suspicious_ip/tor_node": {
@@ -630,7 +652,9 @@
             "__": "*Event date",
             "first-seen": "dateFirstSeen",
             "last-seen": "dateLastSeen",
-            "detection-date": "dateDetected"
+            "detection-date": "dateDetected",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
         }
     },
     "suspicious_ip/vpn": {
@@ -648,7 +672,9 @@
             "__": "*Event date",
             "first-seen": "dateFirstSeen",
             "last-seen": "dateLastSeen",
-            "detection-date": "dateDetected"
+            "detection-date": "dateDetected",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
         }
     }
 }

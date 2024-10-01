@@ -222,7 +222,6 @@ class TIAMapping:
         "author-email": "files.revisions.info.authorEmail",
     }
     # MISP-object: ti-ip-address
-    # TODO: add extra info from ipv4 (provider, region)
     IP_ADDRESS = {  # MISP
         "__description": "*Source IP address",
         "ip-src": "ipv4.ip",
