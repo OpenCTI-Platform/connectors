@@ -39,3 +39,4 @@ If you are using it independently, remember that the connector will try to conne
 ## Subscription Information
 
 This connector requires an API key from GreyNoise, which can be access [here](https://viz.greynoise.io/account/api-key).  This connector will provide enrichment data based on your API key type automatically.  Those users with a Vulnerability Prioritization License will see the full data response available.  Please contact [sales@greynoise.io](mailto:sales@greynoise.io) for more information.
+
