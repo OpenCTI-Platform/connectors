@@ -251,16 +251,6 @@ class CustomConnector(ExternalImportConnector):
         if stix_ungrouped_list:
             [x.extend(ob.stix_objects) for ob in stix_ungrouped_list]
 
-        # TODO:
-        #   - extend suspicious_ip collections with attributed data     --
-        #   - add apply_hunting_rules=1 and tailored tag                --
-        #   - ask OpenCTI how to add cpeTable to vulnerability obj?     --
-        #   - add extra info from ipv4 (provider, region) qIP_ADDRESS   --
-        #   - ask OpenCTI to add leaked acc (login pass) tab to serv    --
-        #   - create independent objects from relations. Relations      --
-        #     should be applied after object is ready. Not inside obj
-        #   - add local custom tags                                     --
-
         stix_report = report_adapter.generate_stix_report(
             obj=json_threat_report_obj,
             json_date_obj=json_date_obj,
