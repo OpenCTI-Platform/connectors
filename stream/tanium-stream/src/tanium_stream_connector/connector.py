@@ -107,7 +107,10 @@ class TaniumStreamConnector:
         try:
             data = json.loads(msg.data)["data"]
         except:
-            raise ValueError("Cannot process the message")
+            self.helper.connector_logger.error(
+                "[ERROR] Cannot process the message", {"msg_data": msg.data}
+            )
+            return
 
         handled_event = msg.event in ["create", "update", "delete"]
         handled_entity = is_indicator(data) or is_observable(data) or is_file(data)
