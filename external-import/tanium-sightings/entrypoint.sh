@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-tanium-sightings
 
 # Launch the worker
-python3 tanium-sightings.py
+python3 main.py
