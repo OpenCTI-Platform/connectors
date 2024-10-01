@@ -51,4 +51,4 @@ The connector adds the following Entities:
 | `x_opencti_score_url`     | `THREATFOX_X_OPENCTI_SCORE_URL`     | No        | Set the x_opencti_score for URL observables/indicators.    |
 | `x_opencti_score_hash`    | `THREATFOX_X_OPENCTI_SCORE_HASH`    | No        | Set the x_opencti_score for Hash observables/indicators.   |
 | `interval`                | `THREATFOX_INTERVAL`                | No        | Run interval. Defaults to `3`                                                                                                                        |
-| `ioc_types`            | `THREATFOX_IOC_TYPES`            | No        | List of IOC types to retrieve, available parameter: `all_types, ip:port, domain, url, md5_hash, sha1_hash, sha256_hash` |
+| `ioc_to_import`            | `THREATFOX_IOC_TO_IMPORT`            | No        | List of IOC types to retrieve, available parameter: `all_types, ip:port, domain, url, md5_hash, sha1_hash, sha256_hash` |
