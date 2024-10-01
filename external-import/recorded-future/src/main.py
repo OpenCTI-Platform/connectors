@@ -18,6 +18,7 @@ import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from rflib import (
     APP_VERSION,
+    CustomBundles,
     RecordedFutureAlertConnector,
     RFClient,
     RiskList,
@@ -38,7 +39,9 @@ class BaseRFConnector:
 
         # Extra config
         self.rf_token = get_config_variable(
-            "RECORDED_FUTURE_TOKEN", ["rf", "token"], config
+            "RECORDED_FUTURE_TOKEN",
+            ["rf", "token"],
+            config,
         )
         self.rf_initial_lookback = get_config_variable(
             "RECORDED_FUTURE_INITIAL_LOOKBACK",
@@ -97,6 +100,27 @@ class BaseRFConnector:
 
         self.rf_pull_threat_maps = get_config_variable(
             "RECORDED_FUTURE_PULL_THREAT_MAPS", ["rf", "pull_threat_maps"], config
+        )
+
+        self.custom_bundle_paths = get_config_variable(
+            "RECORDED_FUTURE_CUSTOM_BUNDLE_PATHS",
+            ["rf", "custom_bundle_paths"],
+            config,
+        )
+        self.custom_bundle_interval = get_config_variable(
+            "RECORDED_FUTURE_CUSTOM_BUNDLE_INTERVAL",
+            ["rf", "custom_bundle_interval"],
+            config,
+        )
+        self.custom_bundle_paths = get_config_variable(
+            "RECORDED_FUTURE_CUSTOM_BUNDLE_PATHS",
+            ["rf", "custom_bundle_paths"],
+            config,
+        )
+        self.custom_bundle_interval = get_config_variable(
+            "RECORDED_FUTURE_CUSTOM_BUNDLE_INTERVAL",
+            ["rf", "custom_bundle_interval"],
+            config,
         )
 
         risklist_related_entities_list = get_config_variable(
@@ -321,6 +345,18 @@ class RFConnector:
         else:
             self.RF.helper.log_info("[ANALYST NOTES] Analyst notes fetching disabled")
 
+        if self.RF.custom_bundle_paths:
+            self.RF.helper.log_info("[CUSTOM BUNDLES] Starting bundles thread...")
+            self.CustomBundles = CustomBundles(
+                self.RF.helper,
+                self.RF.custom_bundle_interval,
+                self.RF.rfapi,
+                self.RF.custom_bundle_paths,
+            )
+            self.CustomBundles.start()
+        else:
+            self.RF.helper.log_info("[CUSTOM BUNDLES] Fetching custom bundles disabled")
+
     def run_all_processes(self):
         if self.RF.duration_period:
             self.RF.helper.schedule_iso(
@@ -339,6 +375,7 @@ if __name__ == "__main__":
     try:
         RF_connector = RFConnector()
         RF_connector.run_all_processes()
+
     except Exception:
         traceback.print_exc()
         exit(1)

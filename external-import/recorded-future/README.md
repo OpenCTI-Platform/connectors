@@ -110,6 +110,9 @@ Below are the parameters you'll need to set for Recorded Future connector:
 | Risk list threshold          | `risk_list_threshold`        | `RECORDED_FUTURE_RISK_LIST_THRESHOLD`       | `70`                                                  | No        | A threshold under which related indicators are not taken into account. Indicators from Risk Lists.                                                                                                                                                             |
 | Risk list related entities   | `risklist_related_entities`  | `RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES` | `Malware,Hash,URL,Threat Actor,MitreAttackIdentifier` | Yes       | Related entities to an indicator from Risk List when it's imported. Required if pull_risk_list is True, possible values: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier. Multiple related entities are allowed (separated by ',')                         |
 | Pull threat maps             | `pull_threat_maps`           | `RECORDED_FUTURE_PULL_THREAT_MAPS`          | `False`                                               | No        | A boolean flag of whether to pull entities from Threat Maps into OpenCTI.                                                                                                                                                                                      |
+| RF Custom Bundle Paths         | custom_bundle_paths      | `RECORDED_FUTURE_CUSTOM_BUNDLE_PATHS`      | /public/opencti/threat_actor_bundle.json                                                    | Yes       | Comma seperated Fusion file paths of STIX2 bundles to import from the Recorded Future API. Leaving this empty will import no bundles. Currently only one bundle contaiing threat actor profiles is availible.                                                                                                                                                              |
+| RF Custom Bundle interval         | custom_bundle_interval      | `RECORDED_CUSTOM_BUNDLE_INTERVAL`      | 24                                                    | Yes       | Interval in hours to reimport custom bundles specified in the preivous argument 1                                                                                                                                                               |
+                                                                                                                                                      |
 
 
 ## Deployment
@@ -242,7 +245,7 @@ Recorded Future comes equipped with five Recorded Future Risk Lists, which serve
 
 Subscribers who have API access can retrieve lists of entities that have been assigned risk scores by Recorded Future by utilizing the Connect API calls.
 
-Every item in a Risk List, whether it's an IP address, domain, or another element, comes with a risk score and the details that influenced that score. Additionally, having Fusion access enables the customization of Risk Lists.
+Every item in a Risk List, whether it's an IP address, domain, or another element, comes with a risk score and the details that influenced that score.
 
 Vulnerabilities are not handled by the connector.
 
