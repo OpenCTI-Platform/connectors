@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-tanium-stream
 
 # Launch the worker
-python3 tanium.py
+python3 main.py
