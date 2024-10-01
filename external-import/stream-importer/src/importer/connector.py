@@ -185,7 +185,6 @@ class StreamImporterConnector(ExternalImportConnector):
             self.helper.log_debug("Event is empty, skipping")
             return
 
-        self.helper.log_debug(f"Event received: {event}")
         event_parsed = json.loads(event)
         self.helper.log_debug(f"Event parsed: {event_parsed}")
 
