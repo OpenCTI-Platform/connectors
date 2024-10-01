@@ -360,7 +360,11 @@ jobs:
       - run:
           working_directory: ~/opencti/internal-enrichment/shadowtrackr
           name: Build Docker image opencti/connector-shadowtrackr
-          command: docker build -t opencti/connector-shadowtrackr:latest . && docker tag opencti/connector-shadowtrackr:latest opencti/connector-shadowtrackr:${CIRCLE_TAG}
+        command: docker build -t opencti/connector-shadowtrackr:latest . && docker tag opencti/connector-shadowtrackr:latest opencti/connector-shadowtrackr:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/greynoise-vuln
+          name: Build Docker image opencti/connector-greynoise-vuln
+          command: docker build -t opencti/connector-greynoise-vuln:latest . && docker tag opencti/connector-greynoise-vuln:latest opencti/connector-greynoise-vuln:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -512,7 +516,9 @@ jobs:
             docker push opencti/connector-reversinglabs-spectra-analyze:latest
             docker push opencti/connector-reversinglabs-spectra-analyze:${CIRCLE_TAG}
             docker push opencti/connector-shadowtrackr:latest
-            docker push opencti/connector-shadowtrackr:${CIRCLE_TAG}
+            docker push opencti/connector-shadowtrackr:${CIRCLE_TAG}            
+            docker push opencti/connector-greynoise-vuln:latest
+            docker push opencti/connector-greynoise-vuln:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1282,6 +1288,10 @@ jobs:
           name: Build Docker image opencti/connector-shadowtrackr
           command: docker build -t opencti/connector-shadowtrackr:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/greynoise-vuln
+          name: Build Docker image opencti/connector-greynoise-vuln
+          command: docker build -t opencti/connector-greynoise-vuln:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1356,7 +1366,8 @@ jobs:
             docker push opencti/connector-group-ib:rolling
             docker push opencti/connector-first-epss:rolling
             docker push opencti/connector-reversinglabs-spectra-analyze:rolling
-            docker push opencti/connector-shadowtrackr:rolling
+            docker push opencti/connector-shadowtrackr:rolling            
+            docker push opencti/connector-greynoise-vuln:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
