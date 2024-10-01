@@ -4,7 +4,6 @@ import threading
 import pycti
 import pytz
 import stix2
-import tldextract
 
 from .constants import TLP_MAP
 from .make_markdown_table import make_markdown_table
