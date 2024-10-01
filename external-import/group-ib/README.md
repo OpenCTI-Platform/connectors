@@ -317,35 +317,35 @@ extra_settings:
 
 Threat Reports
 
-![Reports](__docs__/media/reports.png)
+![Reports](./__docs__/media/reports.png)
 
 Threat Report with TI direct links 
 
-![Report](__docs__/media/report.png)
+![Report](./__docs__/media/report.png)
 
 Threat Report `Knowledge` tab graph
 
-![Report graph](__docs__/media/report_graph.png)
+![Report graph](./__docs__/media/report_graph.png)
 
 Indicators based on Observables
 
-![Indicators](__docs__/media/indicators.png)
+![Indicators](./__docs__/media/indicators.png)
 
 Threat Report Actors
 
-![Threat actors](__docs__/media/threat_actors.png)
+![Threat actors](./__docs__/media/threat_actors.png)
 
 Threat Report Actor with related objects
 
-![Threat actor](__docs__/media/threat_actor.png)
+![Threat actor](./__docs__/media/threat_actor.png)
 
 Threat Report Actor TTP
 
-![Threat actor TTP](__docs__/media/threat_actor_ttp.png)
+![Threat actor TTP](./__docs__/media/threat_actor_ttp.png)
 
 The way how relations names organized
 
-![mapping relationships](__docs__/media/mapping-relationships.png)
+![mapping relationships](./__docs__/media/mapping-relationships.png)
 
 
 <br/>
