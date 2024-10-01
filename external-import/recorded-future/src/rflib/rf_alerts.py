@@ -6,40 +6,10 @@ from re import search
 import pycti
 import pytz
 import stix2
-import tldextract
-from pycti import Incident
+from pycti import CustomObjectChannel, CustomObservableText, Incident
 
 from .constants import TLP_MAP
 from .make_markdown_table import make_markdown_table
-
-
-@stix2.CustomObject(
-    "fakechannelbecauseofbug",
-    [
-        ("name", stix2.properties.StringProperty(required=True)),
-        ("description", stix2.properties.StringProperty()),
-        (
-            "channel_types",
-            stix2.properties.ListProperty(contained=stix2.properties.StringProperty()),
-        ),
-        ("object_marking_refs", stix2.properties.STIXObjectProperty()),
-        ("createdBy", stix2.properties.StringProperty()),
-        ("created", stix2.properties.StringProperty()),
-    ],
-)
-class OpenCTIChannel:
-    pass
-
-
-@stix2.CustomObject(
-    "text",
-    [
-        ("value", stix2.properties.StringProperty(required=True)),
-        ("object_marking_refs", stix2.properties.STIXObjectProperty()),
-    ],
-)
-class OpenCTIText:
-    pass
 
 
 class Vocabulary:
@@ -87,10 +57,6 @@ class RecordedFutureAlertConnector(threading.Thread):
             name="Recorded Future",
             identity_class="organization",
         )
-
-    def get_root_domain(self, url):
-        extracted = tldextract.extract(url)
-        return extracted.registered_domain
 
     def update_rules(self):
         self.vocabulary_list = []
@@ -299,13 +265,18 @@ class RecordedFutureAlertConnector(threading.Thread):
                         )
                 elif entity["type"] == "URL":
                     stix_url = stix2.URL(
-                        value=entity["name"], object_marking_refs=self.tlp
+                        value=entity["name"],
+                        object_marking_refs=self.tlp,
+                        custom_properties={
+                            "x_opencti_created_by_ref": self.author["id"],
+                        },
                     )
                     stix_relationship = stix2.Relationship(
                         relationship_type="related-to",
                         source_ref=stix_incident.id,
                         target_ref=stix_url.id,
                         created_by_ref=self.author,
+                        object_marking_refs=self.tlp,
                     )
                     bundle_objects.append(stix_url)
                     bundle_objects.append(stix_relationship)
@@ -315,7 +286,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         value=entity["name"],
                         object_marking_refs=self.tlp,
                         custom_properties={
-                            "x_opencti_created_by_ref": self.author,
+                            "x_opencti_created_by_ref": self.author["id"],
                         },
                     )
                     stix_relationship = stix2.Relationship(
@@ -323,6 +294,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         source_ref=stix_incident.id,
                         target_ref=stix_ipv4address.id,
                         created_by_ref=self.author,
+                        object_marking_refs=self.tlp,
                     )
                     bundle_objects.append(stix_ipv4address)
                     bundle_objects.append(stix_relationship)
@@ -331,7 +303,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         value=entity["name"],
                         object_marking_refs=self.tlp,
                         custom_properties={
-                            "x_opencti_created_by_ref": self.author,
+                            "x_opencti_created_by_ref": self.author["id"],
                         },
                     )
                     stix_relationship = stix2.Relationship(
@@ -339,6 +311,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         source_ref=stix_incident.id,
                         target_ref=stix_emailaddress.id,
                         created_by_ref=self.author,
+                        object_marking_refs=self.tlp,
                     )
                     bundle_objects.append(stix_emailaddress)
                     bundle_objects.append(stix_relationship)
@@ -348,7 +321,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                             value=entity["name"],
                             object_marking_refs=self.tlp,
                             custom_properties={
-                                "x_opencti_created_by_ref": self.author,
+                                "x_opencti_created_by_ref": self.author["id"],
                             },
                         ),
                     )
@@ -357,6 +330,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         source_ref=stix_incident.id,
                         target_ref=stix_domain.id,
                         created_by_ref=self.author,
+                        object_marking_refs=self.tlp,
                     )
                     bundle_objects.append(stix_domain)
                     bundle_objects.append(stix_relationship)
@@ -384,6 +358,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                             source_ref=stix_incident.id,
                             target_ref=octi_malware["standard_id"],
                             created_by_ref=self.author,
+                            object_marking_refs=self.tlp,
                         )
                         bundle_objects.append(stix_relationship)
                 elif entity["type"] == "MitreAttackIdentifier":
@@ -405,6 +380,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                             source_ref=stix_incident.id,
                             target_ref=octi_technique_mittre["standard_id"],
                             created_by_ref=self.author,
+                            object_marking_refs=self.tlp,
                         )
                         bundle_objects.append(stix_relationship)
             if len(image_list) > 0:
@@ -417,7 +393,6 @@ class RecordedFutureAlertConnector(threading.Thread):
             stix_channel = None
             stix_text = None
             if hit["document"]["url"] is not None:
-                description = ""
                 for channel in self.stix_channels:
                     if hit["document"]["source"]["name"] is not None:
                         if (
@@ -434,46 +409,55 @@ class RecordedFutureAlertConnector(threading.Thread):
                             else:
                                 value = value[0]
                                 description = "Channel created automatically based on Recorded Future's alert."
-                            stix_channel = OpenCTIChannel(
-                                **{
-                                    "created": alert.alert_date,
-                                    "channel_types": channel["name"],
-                                    "name": str(value).replace("https://", ""),
-                                    "description": description,
-                                    "object_marking_refs": self.tlp,
-                                }
+                            stix_channel = CustomObjectChannel(
+                                id=pycti.Channel.generate_id(channel["name"]),
+                                name=str(value).replace("https://", ""),
+                                channel_types=channel["name"],
+                                description=description,
+                                created=alert.alert_date,
+                                object_marking_refs=self.tlp,
+                                custom_properties={
+                                    "x_opencti_created_by_ref": self.author["id"],
+                                },
                             )
                             stix_relationship = stix2.Relationship(
                                 relationship_type="related-to",
                                 source_ref=stix_incident.id,
                                 target_ref=stix_channel.id,
                                 created_by_ref=self.author,
+                                object_marking_refs=self.tlp,
                             )
                             bundle_objects.append(stix_channel)
                             bundle_objects.append(stix_relationship)
-                stix_text = OpenCTIText(
-                    **{
-                        "value": str(hit["fragment"]),
-                        "object_marking_refs": self.tlp,
-                    }
+                stix_text = CustomObservableText(
+                    value=str(hit["fragment"]),
+                    object_marking_refs=self.tlp,
+                    custom_properties={
+                        "x_opencti_created_by_ref": self.author["id"],
+                    },
                 )
                 stix_relationship = stix2.Relationship(
                     relationship_type="related-to",
                     source_ref=stix_incident.id,
                     target_ref=stix_text.id,
                     created_by_ref=self.author,
+                    object_marking_refs=self.tlp,
                 )
                 bundle_objects.append(stix_text)
                 bundle_objects.append(stix_relationship)
                 stix_url_doc = stix2.URL(
                     value=hit["document"]["url"],
                     object_marking_refs=self.tlp,
+                    custom_properties={
+                        "x_opencti_created_by_ref": self.author["id"],
+                    },
                 )
                 stix_relationship = stix2.Relationship(
                     relationship_type="related-to",
                     source_ref=stix_incident.id,
                     target_ref=stix_url_doc.id,
                     created_by_ref=self.author,
+                    object_marking_refs=self.tlp,
                 )
                 bundle_objects.append(stix_url_doc)
                 bundle_objects.append(stix_relationship)
@@ -482,6 +466,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     source_ref=stix_url_doc.id,
                     target_ref=stix_text.id,
                     created_by_ref=self.author,
+                    object_marking_refs=self.tlp,
                 )
                 bundle_objects.append(stix_relationship)
                 if stix_channel is not None:
@@ -490,6 +475,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         source_ref=stix_channel.id,
                         target_ref=stix_url_doc.id,
                         created_by_ref=self.author,
+                        object_marking_refs=self.tlp,
                     )
                     bundle_objects.append(stix_relationship)
             for author in hit["document"]["authors"]:
@@ -504,7 +490,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     object_marking_refs=self.tlp,
                     display_name=author["name"],
                     custom_properties={
-                        "x_opencti_created_by_ref": self.author,
+                        "x_opencti_created_by_ref": self.author["id"],
                     },
                 )
                 stix_relationship = stix2.Relationship(
@@ -512,6 +498,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     source_ref=stix_incident.id,
                     target_ref=stix_user.id,
                     created_by_ref=self.author,
+                    object_marking_refs=self.tlp,
                 )
                 bundle_objects.append(stix_user)
                 bundle_objects.append(stix_relationship)
@@ -520,6 +507,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     source_ref=stix_user.id,
                     target_ref=stix_text.id,
                     created_by_ref=self.author,
+                    object_marking_refs=self.tlp,
                 )
                 bundle_objects.append(stix_relationship)
                 if stix_url_doc is not None:
@@ -528,6 +516,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         target_ref=stix_url_doc.id,
                         source_ref=stix_user.id,
                         created_by_ref=self.author,
+                        object_marking_refs=self.tlp,
                     )
                     bundle_objects.append(stix_relationship)
                 if stix_channel is not None:
@@ -536,6 +525,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         target_ref=stix_channel.id,
                         source_ref=stix_user.id,
                         created_by_ref=self.author,
+                        object_marking_refs=self.tlp,
                     )
                     bundle_objects.append(stix_relationship)
             stix_note = stix2.Note(

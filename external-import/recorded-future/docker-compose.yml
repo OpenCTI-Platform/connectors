@@ -29,6 +29,7 @@ services:
       - RECORDED_FUTURE_PULL_THREAT_MAPS=False #optional, can remove
       - ALERT_ENABLE=False # REQUIRED
       - ALERT_DEFAULT_OPENCTI_SEVERITY= 'low' # OPTIONAL - default: 'low'
+      - ALERT_PRIORITY_ALERTS_ONLY=False # OPTIONAL - default: False
       - PLAYBOOK_ALERT_ENABLE=False # REQUIRED
       - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_DOMAIN_ABUSE= 'Informational' # OPTIONAL - default: 'Informational'
       - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_IDENTITY_NOVEL_EXPOSURES= 'Informational' # OPTIONAL - default: 'Informational'

@@ -135,10 +135,18 @@ class BaseRFConnector:
             default=24,  # in Hours
         )
 
+        self.priority_alerts_only = get_config_variable(
+            "ALERT_PRIORITY_ALERTS_ONLY",
+            ["alert", "priority_alerts_only"],
+            config,
+            default=False,
+        )
+
         self.rf_alerts_api = RecordedFutureApiClient(
             x_rf_token=self.rf_token,
             helper=self.helper,
             base_url="https://api.recordedfuture.com/",
+            priority_alerts_only=self.priority_alerts_only,
         )
 
         self.rf_alert_enable = get_config_variable(

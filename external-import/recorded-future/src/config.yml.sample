@@ -33,6 +33,7 @@ rf:
 alert:
   enable: False # required
   default_opencti_severity: "low" # optional
+  priority_alerts_only: False # optional - default: False
 
 playbook_alert:
   enable: False # required

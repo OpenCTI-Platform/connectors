@@ -62,7 +62,13 @@ class Alert:
 
 
 class RecordedFutureApiClient:
-    def __init__(self, x_rf_token, helper, base_url="https://api.recordedfuture.com/"):
+    def __init__(
+        self,
+        x_rf_token,
+        helper,
+        base_url="https://api.recordedfuture.com/",
+        priority_alerts_only: bool = None,
+    ):
         self.x_rf_token = x_rf_token
         self.base_url = base_url
         self.priorited_rules = []
@@ -71,6 +77,7 @@ class RecordedFutureApiClient:
         self.playbook_alerts = []
         self.helper = helper
         self.playbook_alerts_summaries = []
+        self.priority_alerts_only = priority_alerts_only
 
     def get_playbook_id(self, category, trigger_from, trigger_to, priority_threshold):
         assert self.x_rf_token is not None, "You must provide an XRF-Token."
@@ -302,7 +309,6 @@ class RecordedFutureApiClient:
             str(self.base_url + "v3/alerts/") + str(alert_id),
             headers={
                 "X-RFToken": self.x_rf_token,
-                "Content-Type": "multipar/form-data",
             },
         )
         data = response.json()
@@ -325,7 +331,6 @@ class RecordedFutureApiClient:
                 str(self.base_url + "v3/alerts/image"),
                 headers={
                     "X-RFToken": self.x_rf_token,
-                    "Content-Type": "multipar/form-data",
                 },
                 params={
                     "id": str(image_id),
@@ -350,7 +355,6 @@ class RecordedFutureApiClient:
             return False, str("error.png"), str("error.png")
 
     def get_alert_by_rule_and_by_trigger(self, date, after=None):
-        assert self.x_rf_token is not None, "You must provide an XRF-Token."
         alert_filtered = 0
         after_log = ""
         if after is not None:
@@ -365,7 +369,6 @@ class RecordedFutureApiClient:
                         str(self.base_url + "v3/alerts"),
                         headers={
                             "X-RFToken": self.x_rf_token,
-                            "Content-Type": "multipar/form-data",
                         },
                         params={
                             "alertRule": str(priorited_rule.rule_id),
@@ -467,6 +470,20 @@ class RecordedFutureApiClient:
                 + rule.rule_intelligence_goal
             )
 
+    def extract_priority_rules(self, each_rule):
+        if len(each_rule["intelligence_goals"]) == 0:
+            self.priorited_rules.append(
+                PrioritiedRule(each_rule["id"], each_rule["title"], "N/A")
+            )
+        else:
+            self.priorited_rules.append(
+                PrioritiedRule(
+                    each_rule["id"],
+                    each_rule["title"],
+                    str(each_rule["intelligence_goals"][0]["name"]),
+                )
+            )
+
     def get_prioritedrule_ids(self, limit=100):
         self.priorited_rules = []
         try:
@@ -477,7 +494,6 @@ class RecordedFutureApiClient:
                     str(self.base_url + "v2/alert/rule"),
                     headers={
                         "X-RFToken": self.x_rf_token,
-                        "Content-Type": "multipar/form-data",
                     },
                     params={"from": str(from_api), "limit": str(limit)},
                 )
@@ -502,21 +518,10 @@ class RecordedFutureApiClient:
                 self.alert_count = data["counts"]["total"]
                 from_api = from_api + data["counts"]["returned"]
                 for each_rule in data["data"]["results"]:
-                    if each_rule["priority"]:
-                        if len(each_rule["intelligence_goals"]) == 0:
-                            self.priorited_rules.append(
-                                PrioritiedRule(
-                                    each_rule["id"], each_rule["title"], "N/A"
-                                )
-                            )
-                        else:
-                            self.priorited_rules.append(
-                                PrioritiedRule(
-                                    each_rule["id"],
-                                    each_rule["title"],
-                                    str(each_rule["intelligence_goals"][0]["name"]),
-                                )
-                            )
+                    if self.priority_alerts_only and each_rule["priority"]:
+                        self.extract_priority_rules(each_rule)
+                    elif not self.priority_alerts_only:
+                        self.extract_priority_rules(each_rule)
             self.priorited_rules.append(
                 PrioritiedRule(
                     "Fake-Id-Playbook-Alert", "Domain Abuse", "TYPOSQUATTING DETECTION"

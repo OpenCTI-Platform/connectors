@@ -138,10 +138,6 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         for playbook_type in playbook_types:
             self.update_state(playbook_type)
 
-    def get_root_domain(self, url):
-        extracted = tldextract.extract(url)
-        return extracted.registered_domain
-
     def debug(self, text):
         if self.debug_var:
             self.helper.log_error(text)
@@ -485,6 +481,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                             source_ref=stix_incident.id,
                             target_ref=stix_ipv4address.id,
                             created_by_ref=self.author,
+                            object_marking_refs=self.tlp,
                         )
                         bundle_objects.append(stix_ipv4address)
                         bundle_objects.append(stix_relationship)
@@ -585,6 +582,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             source_ref=stix_incident.id,
             target_ref=stix_url.id,
             created_by_ref=self.author,
+            object_marking_refs=self.tlp,
         )
         bundle_objects.append(stix_url)
         bundle_objects.append(stix_relationship)
@@ -638,6 +636,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                     source_ref=stix_incident.id,
                     target_ref=stix_ipv4address.id,
                     created_by_ref=self.author,
+                    object_marking_refs=self.tlp,
                 )
                 bundle_objects.append(stix_ipv4address)
                 bundle_objects.append(stix_relationship)
@@ -668,6 +667,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                     source_ref=stix_incident.id,
                     target_ref=stix_domain.id,
                     created_by_ref=self.author,
+                    object_marking_refs=self.tlp,
                 )
                 bundle_objects.append(stix_domain)
                 bundle_objects.append(stix_relationship)
