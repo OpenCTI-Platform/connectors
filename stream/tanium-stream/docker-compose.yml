@@ -11,7 +11,6 @@ services:
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       - "CONNECTOR_NAME=Tanium Threat Response"
       - CONNECTOR_SCOPE=tanium
-      - CONNECTOR_CONFIDENCE_LEVEL=60 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - TANIUM_URL=https://console.changeme.com
       - TANIUM_URL_CONSOLE=https://console.changeme.com
