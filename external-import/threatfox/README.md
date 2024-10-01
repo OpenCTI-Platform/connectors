@@ -28,7 +28,7 @@ The connector adds the following Entities:
 
 ### Requirements
 
-- OpenCTI Platform >= 6.3.3
+- OpenCTI Platform >= 6.3.4
 
 ### Configuration
 
@@ -45,5 +45,10 @@ The connector adds the following Entities:
 | `csv_url`              | `THREATFOX_CSV_URL`              | No        | Defaults to `https://threatfox.abuse.ch/export/csv/recent/`                                                                                                                        |
 | `import_offline`       | `THREATFOX_IMPORT_OFFLINE`       | No        | Create records for indicators that are offline. Defaults to `True`                                                                                                                        |
 | `create_indicators`    | `THREATFOX_CREATE_INDICATORS`    | No        | Create indicators in addition to observables. Defaults to `True`                                                                                                                        |
-| `interval`             | `THREATFOX_INTERVAL`             | No        | Run interval. Defaults to `3`                                                                                                                        |
+| `default_x_opencti_score` | `THREATFOX_DEFAULT_X_OPENCTI_SCORE` | No        | The default x_opencti_score to use. Defaults to `50`.      |
+| `x_opencti_score_ip`      | `THREATFOX_X_OPENCTI_SCORE_IP`      | No        | Set the x_opencti_score for IP observables/indicators.     |
+| `x_opencti_score_domain`  | `THREATFOX_X_OPENCTI_SCORE_DOMAIN`  | No        | Set the x_opencti_score for Domain observables/indicators. |
+| `x_opencti_score_url`     | `THREATFOX_X_OPENCTI_SCORE_URL`     | No        | Set the x_opencti_score for URL observables/indicators.    |
+| `x_opencti_score_hash`    | `THREATFOX_X_OPENCTI_SCORE_HASH`    | No        | Set the x_opencti_score for Hash observables/indicators.   |
+| `interval`                | `THREATFOX_INTERVAL`                | No        | Run interval. Defaults to `3`                                                                                                                        |
 | `ioc_types`            | `THREATFOX_IOC_TYPES`            | No        | List of IOC types to retrieve, available parameter: `all_types, ip:port, domain, url, md5_hash, sha1_hash, sha256_hash` |

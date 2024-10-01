@@ -142,6 +142,13 @@ class ConfigCrowdstrike:
             self.load,
         )
 
+        self.default_x_opencti_score: int = get_config_variable(
+            "CROWDSTRIKE_DEFAULT_X_OPENCTI_SCORE",
+            ["crowdstrike", "default_x_opencti_score"],
+            self.load,
+            isNumber=True,
+        )
+
         self.indicator_low_score: int = get_config_variable(
             "CROWDSTRIKE_INDICATOR_LOW_SCORE",
             ["crowdstrike", "indicator_low_score"],
@@ -152,6 +159,32 @@ class ConfigCrowdstrike:
         self.indicator_low_score_labels: str = get_config_variable(
             "CROWDSTRIKE_INDICATOR_LOW_SCORE_LABELS",
             ["crowdstrike", "indicator_low_score_labels"],
+            self.load,
+        )
+
+        self.indicator_medium_score: int = get_config_variable(
+            "CROWDSTRIKE_INDICATOR_MEDIUM_SCORE",
+            ["crowdstrike", "indicator_medium_score"],
+            self.load,
+            isNumber=True,
+        )
+
+        self.indicator_medium_score_labels: str = get_config_variable(
+            "CROWDSTRIKE_INDICATOR_MEDIUM_SCORE_LABELS",
+            ["crowdstrike", "indicator_medium_score_labels"],
+            self.load,
+        )
+
+        self.indicator_high_score: int = get_config_variable(
+            "CROWDSTRIKE_INDICATOR_HIGH_SCORE",
+            ["crowdstrike", "indicator_high_score"],
+            self.load,
+            isNumber=True,
+        )
+
+        self.indicator_high_score_labels: str = get_config_variable(
+            "CROWDSTRIKE_INDICATOR_HIGH_SCORE_LABELS",
+            ["crowdstrike", "indicator_high_score_labels"],
             self.load,
         )
 
