@@ -15,7 +15,7 @@ import pytest
 sys.path.append(str((Path(__file__).resolve().parent.parent.parent / "src")))
 
 from tenable_vuln_management.models.tenable import (
-    AssetReport,
+    VulnerabilityFinding,
     _convert_empty_dicts_to_none,
 )
 
@@ -37,14 +37,13 @@ def load_responses():
         for raw_report in load_responses()
     ],
 )
-def test_assets_report_model_is_compatible_with_tenable_api_doc(
+def test_vulnerability_finding_model_is_compatible_with_tenable_api_doc(
     tenable_api_response_1_report,
 ):
     # Given a tenable api response
-    # When instantiating an AssetReport
+    # When instantiating a vulnerability_finding
     # Then no pydantic issue is raised
-    _ = AssetReport.model_validate(tenable_api_response_1_report)
-
+    _ = VulnerabilityFinding.model_validate(tenable_api_response_1_report)
 
 def test_convert_empty_dicts_to_none_should_clean_nested_empty_dicts():
     # Given a tenable api response boby like dictionary
