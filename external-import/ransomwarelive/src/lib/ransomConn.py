@@ -488,7 +488,7 @@ class RansomwareAPIConnector:
         object_refs = [
             victim.get("id"),
             intrusion_set.get("id"),
-            relation_VI_IS.get("id")
+            relation_VI_IS.get("id"),
         ]
         if self.create_threat_actor:
             object_refs.append(Target_relation.get("id"))
