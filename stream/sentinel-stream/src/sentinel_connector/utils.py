@@ -1,6 +1,6 @@
-from pycti import OpenCTIConnectorHelper
 from datetime import datetime, timedelta
 
+from pycti import OpenCTIConnectorHelper
 
 OBSERVABLE_TYPES = [
     "ipv4-addr",

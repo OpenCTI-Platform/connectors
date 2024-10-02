@@ -1,16 +1,16 @@
 import requests
-
 from pycti import OpenCTIConnectorHelper
+
 from .utils import (
-    get_ioc_type,
-    get_threat_type,
-    get_tlp_level,
-    get_tags,
+    get_action,
     get_description,
+    get_expiration_datetime,
     get_hash_type,
     get_hash_value,
-    get_action,
-    get_expiration_datetime,
+    get_ioc_type,
+    get_tags,
+    get_threat_type,
+    get_tlp_level,
 )
 
 

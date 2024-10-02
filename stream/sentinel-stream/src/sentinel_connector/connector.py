@@ -3,9 +3,9 @@ import json
 from pycti import OpenCTIConnectorHelper
 from stix_shifter.stix_translation import stix_translation
 
-from .config_variables import ConfigConnector
-from .utils import is_stix_indicator, is_observable
 from .api_handler import SentinelApiHandler
+from .config_variables import ConfigConnector
+from .utils import is_observable, is_stix_indicator
 
 
 class SentinelStreamConnector:
