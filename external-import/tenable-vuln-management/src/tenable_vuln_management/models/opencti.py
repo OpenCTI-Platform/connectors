@@ -1,33 +1,40 @@
-import datetime
 from abc import abstractmethod
+from datetime import datetime
 from typing import Any, Literal, Optional
 
 import stix2
+import validators
 from pycti import CustomObservableHostname as PyCTIHostname
 from pycti import Identity as PyCTIIdentity
 from pycti import StixCoreRelationship as PyCTIRelationship
 from pycti import Vulnerability as PyCTIVulnerability
-from pydantic import Field
+from pydantic import Field, PrivateAttr, field_validator
 
-from .common import FrozenBaseModelWithoutExtra
+from .common import FrozenBaseModelWithoutExtra, make_validator
 
 
 class BaseEntity(FrozenBaseModelWithoutExtra):
-    def __init__(self, **kwargs):
+    _stix2_representation: Optional[Any] = PrivateAttr(None)
+    _id: Any = PrivateAttr(None)
+
+    def model_post_init(self, context__):
         self._stix2_representation = self.to_stix2_object()
-        self.id = self._stix2_representation["id"]
-        super().__init__(**kwargs)
+        self._id = self._stix2_representation["id"]
 
     @abstractmethod
     def to_stix2_object(self) -> Any:
         """Construct stix object (usually from stix2 python lib objects)"""
         ...
 
+    @property
+    def id(self):
+        return self._id
+
 
 class Author(BaseEntity):
     """Represents an author identity, typically an organization."""
 
-    name: str = Field(..., description="Name of the author.")
+    name: str = Field(..., description="Name of the author.", min_length=1)
     description: Optional[str] = Field(None, description="Description of the author.")
     contact_information: Optional[str] = Field(
         None, description="Contact information for the author."
@@ -53,14 +60,14 @@ class Author(BaseEntity):
             id=PyCTIIdentity.generate_id(identity_class=identity_class, name=self.name),
             identity_class=identity_class,
             name=self.name,
-            created_by_ref=self.created_by_ref,
             description=self.description,
-            object_marking_refs=self.object_marking_refs,
             contact_information=self.contact_information,
             confidence=self.confidence,
             # unused
             created=None,
             modified=None,
+            created_by_ref=None,
+            object_marking_refs=None,
             roles=None,  # type: list[str] | None
             sectors=None,  # type: list[str] | None # in stix2 industry sectors list
             revoked=None,  # type: bool | None
@@ -78,7 +85,7 @@ class Author(BaseEntity):
 class System(BaseEntity):
     """Represents a system identity, such as a network device or a host."""
 
-    name: str = Field(..., description="Name of the system.")
+    name: str = Field(..., description="Name of the system.", min_length=1)
     author: Optional[Author] = Field(
         None, description="The Author reporting this System."
     )
@@ -124,8 +131,8 @@ class System(BaseEntity):
 class Observable(BaseEntity):
     """Represents observables associated with a system or an asset."""
 
-    object_marking_refs: list[str] = Field(
-        ..., description="References for object marking."
+    object_marking_refs: Optional[list[Any]] = Field(
+        None, description="References for object marking."
     )
     author: Optional[Author] = Field(
         None, description="The Author reporting this Observable."
@@ -139,6 +146,9 @@ class MACAddress(Observable):
     """Represents a MAC address observable."""
 
     value: str = Field(..., description="The MAC address value.")
+    __value_validator = field_validator("value", mode="after")(
+        make_validator("value", validators.mac_address)
+    )
 
     def to_stix2_object(self) -> Any:
         return stix2.MACAddress(
@@ -158,6 +168,9 @@ class IPAddress(Observable):
     resolves_to_mac_addresses: Optional[list[MACAddress]] = Field(
         None, description="the Mac Addresses it resolves to."
     )
+    __value_validator = field_validator("value", mode="after")(
+        make_validator("value", {"or": [validators.ipv4, validators.ipv6]})
+    )
 
     def to_stix2_object(self) -> Any:
         builders = {
@@ -167,7 +180,11 @@ class IPAddress(Observable):
         return builders[self.version](
             value=self.value,
             object_marking_refs=self.object_marking_refs,
-            resolves_to_refs=self.resolves_to_mac_addresses,  # 'mac addresses{ id only
+            resolves_to_refs=(
+                [mac_address.id for mac_address in self.resolves_to_mac_addresses]
+                if self.resolves_to_mac_addresses
+                else None
+            ),
             # unused
             belongs_to_refs=None,  # 'autonomous system' id only
             # customs
@@ -179,12 +196,16 @@ class IPAddress(Observable):
 class DomainName(Observable):
     """Represents a domain name observable."""
 
-    value: str = Field(..., description="The domain name value.")
+    value: str = Field(..., description="The domain name value.", min_length=1)
     resolves_to_ips: Optional[list[IPAddress]] = Field(
         None, description="IP addresses it resolves to."
     )
     resolves_to_mac_addresses: Optional[list[MACAddress]] = Field(
         None, description="Mac addresses it resolves to."
+    )
+
+    __value_validator = field_validator("value", mode="after")(
+        make_validator("value", validators.domain)
     )
 
     def to_stix2_object(self) -> Any:
@@ -210,14 +231,17 @@ class DomainName(Observable):
 class Hostname(Observable):
     """Represents a hostname observable."""
 
-    value: str = Field(..., description="The hostname.")
+    value: str = Field(..., description="The hostname.", min_length=1)
+    __value_validator = field_validator("value", mode="after")(
+        make_validator("value", validators.hostname)
+    )
 
     def to_stix2_object(self) -> Any:
         return PyCTIHostname(
-            value=self.values,
+            value=self.value,
             object_marking_refs=self.object_marking_refs,
             # customs
-            allow_customs=True,
+            allow_custom=True,
             created_by_ref=self.author.id if self.author else None,
         )
 
@@ -225,9 +249,15 @@ class Hostname(Observable):
 class Software(Observable):
     """Represents software associated with a system."""
 
-    name: str = Field(..., description="Name of the software.")
-    cpe: str = Field(..., description="Common Platform Enumeration (CPE) identifier.")
-    vendor: str = Field(..., description="The Software vendor Name")
+    name: str = Field(..., description="Name of the software.", min_length=1)
+    cpe: str = Field(
+        ..., description="Common Platform Enumeration (CPE) identifier.", min_length=1
+    )
+    vendor: str = Field(..., description="The Software vendor Name", min_length=1)
+
+    __value_validator = field_validator("cpe", mode="after")(
+        make_validator("cpe", lambda v: v.startswith("cpe:"))
+    )
 
     def to_stix2_object(self) -> Any:
         return stix2.Software(
@@ -248,7 +278,7 @@ class Software(Observable):
 class OperatingSystem(Observable):
     """Represents one of the operating system installed on a system."""
 
-    name: str = Field(..., description="Name of the Operating system.")
+    name: str = Field(..., description="Name of the Operating system.", min_length=1)
 
     def to_stix2_object(self) -> Any:
         return stix2.Software(
@@ -272,22 +302,64 @@ class Vulnerability(BaseEntity):
     author: Optional[Author] = Field(
         ..., description="The Author reporting this Vulnerability."
     )
-    created: datetime.datetime = Field(
+    created: datetime = Field(
         ..., description="Creation datetime of the vulnerability."
     )
-    modified: datetime.datetime = Field(
+    modified: datetime = Field(
         ..., description="Last modification datetime of the vulnerability."
     )
-    name: str = Field(..., description="Name of the vulnerability.")
+    name: str = Field(..., description="Name of the vulnerability.", min_length=1)
     description: str = Field(..., description="Description of the vulnerability.")
-    confidence: int = Field(
-        ..., description="Confidence level of the vulnerability.", ge=0, le=100
+    confidence: Optional[int] = Field(
+        None, description="Confidence level of the vulnerability.", ge=0, le=100
     )
     object_marking_refs: Optional[list[Any]] = Field(
         None,
         description="References for object marking, "
         "usually TLP:xxx objects or their marking ids",
     )
+    cvss3_score: Optional[float] = Field(
+        None, description="The CVSS v3 base score.", ge=0, le=10
+    )
+    cvss3_severity: Optional[
+        Literal[
+            "UNKNOWN",
+            "Unknown",
+            "LOW",
+            "Low",
+            "MEDIUM",
+            "Medium",
+            "HIGH",
+            "High",
+            "CRITICAL",
+            "Critical",
+        ]
+    ] = Field(None, description="CVSS3 Severity")
+    cvss3_attack_vector: Optional[
+        Literal[
+            "NETWORK",
+            "N",
+            "Network",
+            "ADJACENT",
+            "A",
+            "Adjacent",
+            "LOCAL",
+            "L",
+            "Local",
+            "PHYSICAL",
+            "P",
+            "Physical",
+        ]
+    ] = Field(None, description="CVSS3 Attack vector (AV)")
+    cvss3_integrity_impact: Optional[
+        Literal["NONE", "N", "None", "LOW", "L", "Low", "HIGH", "H", "High"]
+    ] = Field(None, description="CVSS3 Integrity impact (I)")
+    cvss3_availability_impact: Optional[
+        Literal["NONE", "N", "None", "LOW", "L", "Low", "HIGH", "H", "High"]
+    ] = Field(None, description="CVSS3 Availability impact (A)")
+    cvss3_confidentiality_impact: Optional[
+        Literal["NONE", "N", "None", "LOW", "L", "Low", "HIGH", "H", "High"]
+    ] = Field(None, description="CVSS3 Confidentiality impact (C)")
 
     def to_stix2_object(self) -> Any:
         return stix2.Vulnerability(
@@ -302,6 +374,15 @@ class Vulnerability(BaseEntity):
             # unused
             lang=None,
             external_references=None,
+            # custom
+            allow_custom=True,
+            x_opencti_aliases=[],
+            x_opencti_cvss_base_score=self.cvss3_score,
+            x_opencti_cvss_base_severity=self.cvss3_severity,
+            x_opencti_cvss_attack_vector=self.cvss3_attack_vector,
+            x_opencti_cvss_integrity_impact=self.cvss3_integrity_impact,
+            x_opencti_cvss_availability_impact=self.cvss3_availability_impact,
+            x_opencti_cvss_confidentiality_impact=self.cvss3_confidentiality_impact,
         )
 
 
