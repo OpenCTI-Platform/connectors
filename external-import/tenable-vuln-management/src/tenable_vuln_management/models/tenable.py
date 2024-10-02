@@ -8,8 +8,8 @@ from pydantic import Field
 from .common import FrozenBaseModelWithoutExtra
 
 
-def _convert_empty_dicts_to_none(value: Any) -> Any:
-    """Convert recursively nested empty dictionaries to None value.
+def _convert_empty_dicts_and_lists_to_none(value: Any) -> Any:
+    """Convert recursively nested empty dictionaries and lists to None value.
 
     This is useful when receiving empty objects from Tenable Vuln Management API response.
 
@@ -20,24 +20,28 @@ def _convert_empty_dicts_to_none(value: Any) -> Any:
         (Any): The cleaned structure.
 
     Notes:
-        Removing empty dict could also be a strategy to clean a response body. However, it appears to be more complex
-            solution as a first pass of the algorythm could also create empty dictionaries. This simplier implemented
-            method does fullfill our needs.
+        Removing empty dict, rather than replacing them with null value, could also be a strategy to clean a response
+            body. However, it appears to be more complex solution as a first pass of the algorythm could also create
+            empty dictionaries. This simplier implemented method does fullfill our needs.
 
     Examples:
         >>> to_clean = {'a': {"b": {}, "c": [1, {"e": {}}]}}
-        >>> _convert_empty_dicts_to_none(to_clean)
+        >>> _convert_empty_dicts_and_lists_to_none(to_clean)
         {'a': {"b":None, "c": [1, "e": None]}}
     """
     # If the value is a dictionary, recursively process it
     if isinstance(value, dict):
         return {
-            k: _convert_empty_dicts_to_none(v) if v != {} else None
+            k: _convert_empty_dicts_and_lists_to_none(v) if v != {} else None
             for k, v in value.items()
         }
     # If the value is a list, apply the conversion to each item
     elif isinstance(value, list):
-        return [_convert_empty_dicts_to_none(item) for item in value]
+        return (
+            [_convert_empty_dicts_and_lists_to_none(item) for item in value]
+            if value
+            else None
+        )
     return value
 
 
@@ -72,7 +76,7 @@ class CvssTemporalVector(FrozenBaseModelWithoutExtra):
     Represents the temporal CVSS vector, which includes factors that change over time, like exploitability.
     """
 
-    exploitability: str = Field(
+    exploitability: Optional[str] = Field(
         ..., description="The level of exploitability of the vulnerability."
     )
     remediation_level: str = Field(
@@ -143,11 +147,11 @@ class Plugin(FrozenBaseModelWithoutExtra):
     checks_for_malware: bool = Field(
         ..., description="Indicates if the plugin checks for malware."
     )
-    cpe: list[str] = Field(
-        ..., description="Common Platform Enumeration (CPE) identifiers."
+    cpe: Optional[list[str]] = Field(
+        None, description="Common Platform Enumeration (CPE) identifiers."
     )
     cvss3_base_score: Optional[float] = Field(
-        None, description="The CVSS v3 base score."
+        None, description="The CVSS v3 base score.", ge=0, le=10
     )
     cvss3_temporal_score: Optional[float] = Field(
         None, description="The CVSS v3 temporal score."
@@ -195,7 +199,9 @@ class Plugin(FrozenBaseModelWithoutExtra):
     family: str = Field(
         ..., description="The family of vulnerabilities this plugin belongs to."
     )
-    family_id: int = Field(..., description="The ID of the vulnerability family.")
+    family_id: Optional[int] = Field(
+        None, description="The ID of the vulnerability family."
+    )
     has_patch: bool = Field(..., description="Indicates if a patch is available.")
     id: int = Field(..., description="The plugin ID.")
     in_the_news: bool = Field(
@@ -220,7 +226,9 @@ class Plugin(FrozenBaseModelWithoutExtra):
     see_also: Optional[list[str]] = Field(
         None, description="Additional links for reference."
     )
-    solution: str = Field(..., description="The solution to address the vulnerability.")
+    solution: Optional[str] = Field(
+        None, description="The solution to address the vulnerability."
+    )
     stig_severity: Optional[str] = Field(
         None, description="Severity based on STIG guidelines."
     )
@@ -288,8 +296,8 @@ class Port(FrozenBaseModelWithoutExtra):
         ..., description="The port number on which the service is running."
     )
     protocol: str = Field(..., description="The protocol of the port (e.g., TCP).")
-    service: str = Field(
-        ..., description="The service running on the port (e.g., HTTP, CIFS)."
+    service: Optional[str] = Field(
+        None, description="The service running on the port (e.g., HTTP, CIFS)."
     )
 
 
@@ -305,7 +313,7 @@ class Scan(FrozenBaseModelWithoutExtra):
     uuid: str = Field(..., description="The UUID of the scan.")
 
 
-class AssetReport(FrozenBaseModelWithoutExtra):
+class VulnerabilityFinding(FrozenBaseModelWithoutExtra):
     """
     Represents the full report of an asset's vulnerability detection, including its plugin, port, scan, and metadata.
     """
@@ -331,6 +339,9 @@ class AssetReport(FrozenBaseModelWithoutExtra):
     last_found: datetime = Field(
         ..., description="Timestamp when the vulnerability was last found."
     )
+    last_fixed: Optional[datetime] = Field(
+        None, description="Timestamp when the vulnerability was last fixed."
+    )
     state: str = Field(
         ..., description="The state of the vulnerability (e.g., OPEN, CLOSED)."
     )
@@ -341,15 +352,16 @@ class AssetReport(FrozenBaseModelWithoutExtra):
     )
 
     @classmethod
-    def from_api_response_body(cls, data: list[dict[str, Any]]) -> list["AssetReport"]:
-        """Make a list of AssertReport from API response body.
+    def from_api_response_body(
+        cls, data: list[dict[str, Any]]
+    ) -> list["VulnerabilityFinding"]:
+        """Make a list of VulnerabilityFinding from API response body.
 
         Args:
             data (list[dict[str, Any]]): Raw response body from TenableIO Api.
 
         Returns:
-            (list[AssetReport]): List of AssertReport objects.
+            (list[VulnerabilityFinding]): List of AssertReport objects.
         """
-        data = _convert_empty_dicts_to_none(value=data)
-
+        data = _convert_empty_dicts_and_lists_to_none(value=data)
         return [cls(**item) for item in data]
