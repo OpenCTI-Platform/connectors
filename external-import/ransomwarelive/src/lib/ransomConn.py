@@ -488,11 +488,11 @@ class RansomwareAPIConnector:
         object_refs = [
             victim.get("id"),
             intrusion_set.get("id"),
-            Target_relation.get("id"),
-            relation_VI_IS.get("id"),
-            relation_IS_TA.get("id"),
+            relation_VI_IS.get("id")
         ]
         if self.create_threat_actor:
+            object_refs.append(Target_relation.get("id"))
+            object_refs.append(relation_IS_TA.get("id"))
             object_refs.append(relation_IS_TA.get("id"))
         report = Report(
             report_types=["Ransomware-report"],
@@ -513,12 +513,12 @@ class RansomwareAPIConnector:
             self.author,
             victim,
             intrusion_set,
-            Target_relation,
             relation_VI_IS,
         ]
         if self.create_threat_actor:
             bundle.append(threat_actor)
             bundle.append(relation_IS_TA)
+            bundle.append(Target_relation)
 
         # Creating Sector object
 
