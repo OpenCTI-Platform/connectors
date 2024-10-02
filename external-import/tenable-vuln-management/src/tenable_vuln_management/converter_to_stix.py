@@ -1,0 +1,394 @@
+"""
+Provides use cases to convert
+"""
+
+import re
+from typing import Any, Literal
+
+import stix2
+
+from .models.opencti import (
+    Author,
+    BaseEntity,
+    DomainName,
+    Hostname,
+    IPAddress,
+    MACAddress,
+    OperatingSystem,
+    RelatedToRelationship,
+    Software,
+    System,
+    Vulnerability,
+)
+from .models.tenable import Asset, Plugin, VulnerabilityFinding
+
+
+def parse_cpe_uri(cpe_str: str) -> dict[str, str]:
+    """Parse CPE URI following format 1 or 2.3.
+
+    Args:
+        cpe_str: the CPE URI
+
+    Returns:
+        (dict[str|str]):  {"part": part, "vendor": vendor, "product": product}
+
+    Examples:
+        >>> dct = parse_cpe_uri("cpe:2.3:a:vendor:product:1.0:*:*:*:*:*:*:*")
+    """
+    supported_patterns = {
+        "cpe:/": r"^cpe:/(?P<part>[a-z]):(?P<vendor>[a-zA-Z0-9_\-]+):(?P<product>[a-zA-Z0-9_\-]+)",
+        "cpe:2.3": r"^cpe:2\.3:(?P<part>[a-z]+):(?P<vendor>[^:]+):(?P<product>[^:]+)",
+    }
+    for key, supported_pattern in supported_patterns.items():
+        if cpe_str.startswith(key):
+            match = re.match(pattern=supported_pattern, string=cpe_str)
+            part, vendor, product = (
+                match.group("part"),
+                match.group("vendor"),
+                match.group("product"),
+            )
+            if part and vendor and product:
+                return {"part": part, "vendor": vendor, "product": product}
+            raise ValueError("CPE URI is missing mandatory information.")
+    raise NotImplementedError("Unknown CPE URI format")
+
+
+def cvss3_severity_from_score(
+    score: float,
+) -> Literal["None", "Low", "Medium", "High", "Critical"]:
+    """
+    Determine the CVSS v3 severity rating based on the CVSS score.
+
+    This function maps the CVSS score to its qualitative severity rating
+    as defined by the CVSS v3 specification (Table 14).
+
+    Severity ratings and corresponding score ranges:
+      - None: 0.0
+      - Low: 0.1 - 3.9
+      - Medium: 4.0 - 6.9
+      - High: 7.0 - 8.9
+      - Critical: 9.0 - 10.0
+
+    Args:
+        score (float): The CVSS v3 score, which should be in the range 0.0 to 10.0.
+
+    Returns:
+        str: The severity rating ("None", "Low", "Medium", "High", or "Critical").
+
+    Raises:
+        ValueError: If the score is outside the valid range (0.0 - 10.0).
+
+    References:
+        https://www.first.org/cvss/v3.0/specification-document [consulted on September 30th, 2024]
+    """
+    match score:
+        case 0.0:
+            return "None"
+        case _ if 0.1 <= score <= 3.9:
+            return "Low"
+        case _ if 4.0 <= score <= 6.9:
+            return "Medium"
+        case _ if 7.0 <= score <= 8.9:
+            return "High"
+        case _ if 9.0 <= score <= 10.0:
+            return "Critical"
+        case _:
+            raise ValueError("Invalid CVSS score. It must be between 0.0 and 10.0.")
+
+
+def tlp_marking_definition_handler(
+    marking_definition: Literal[
+        "TLP:CLEAR", "TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"
+    ]
+) -> stix2.MarkingDefinition:
+    """
+    Handles Traffic Light Protocol (TLP) marking definitions and returns the
+    corresponding STIX2 marking definition.
+
+    Args:
+        marking_definition (Literal["TLP:CLEAR", "TLP:WHITE", "TLP:GREEN",
+        "TLP:AMBER", "TLP:RED"]): The TLP marking definition..
+
+    Returns:
+        stix2.MarkingDefinition: The corresponding STIX2 marking definition.
+
+    Raises:
+        ValueError: If the provided marking definition is not supported.
+    """
+    return {
+        "TLP:CLEAR": stix2.TLP_WHITE,  # "TLP:CLEAR" and "TLP:WHITE" map to the same marking
+        "TLP:WHITE": stix2.TLP_WHITE,
+        "TLP:GREEN": stix2.TLP_GREEN,
+        "TLP:AMBER": stix2.TLP_AMBER,
+        "TLP:RED": stix2.TLP_RED,
+    }.get(
+        marking_definition, ValueError(f"Unsupported TLP marking: {marking_definition}")
+    )
+
+
+class ConverterToStix:
+    """
+    Provides methods for converting various types of input data into STIX 2.1 objects.
+    """
+
+    def __init__(
+        self,
+        helper,
+        default_marking: Literal[
+            "TLP:CLEAR", "TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"
+        ],
+    ):
+        self.helper = helper
+        self.author = ConverterToStix.make_author()
+        self.object_marking_refs = [
+            tlp_marking_definition_handler(default_marking)["id"]
+        ]
+
+    @staticmethod
+    def make_author() -> Author:
+        return Author(
+            name="Tenable-Vuln-Management",
+            description="Tenable Vulnerability Management® (formerly known as Tenable.io) allows security and audit "
+            "teams to share multiple Tenable Nessus, Tenable Nessus Agent, and Tenable Nessus Network "
+            "Monitor scanners, scan schedules, scan policies, and scan results among an unlimited set of "
+            "users or groups.",
+            contact_information="https://www.tenable.com/about-tenable/contact-tenable",
+            x_opencti_organization_type="vendor",
+        )
+
+    def make_system(self, asset: Asset) -> System:
+        return System(
+            author=self.author,
+            object_marking_refs=self.object_marking_refs,
+            name=asset.hostname,
+        )
+
+    def make_mac_address(self, asset: Asset) -> MACAddress | None:
+        if asset.mac_address is None:
+            return None
+        return MACAddress(
+            author=self.author,
+            object_marking_refs=self.object_marking_refs,
+            value=asset.mac_address,
+        )
+
+    def make_ipv4_address(self, asset: Asset) -> IPAddress:
+        return IPAddress(
+            author=self.author,
+            object_marking_refs=self.object_marking_refs,
+            version="v4",
+            value=asset.ipv4,
+            resolves_to_mac_addresses=(
+                [self.make_mac_address(asset)]
+                if asset.mac_address is not None
+                else None
+            ),
+        )
+
+    def make_ipv6_address(self, asset: Asset) -> IPAddress | None:
+        return (
+            IPAddress(
+                author=self.author,
+                object_marking_refs=self.object_marking_refs,
+                version="v6",
+                value=asset.ipv6,
+                resolves_to_mac_addresses=(
+                    [self.make_mac_address(asset)]
+                    if asset.mac_address is not None
+                    else None
+                ),
+            )
+            if asset.ipv6
+            else None
+        )
+
+    def make_hostname(self, asset: Asset) -> Hostname:
+        return Hostname(
+            author=self.author,
+            object_marking_refs=self.object_marking_refs,
+            value=asset.hostname,
+        )
+
+    def make_operating_systems(self, asset: Asset) -> list[OperatingSystem]:
+        return [
+            OperatingSystem(
+                author=self.author,
+                object_marking_refs=self.object_marking_refs,
+                name=name,
+            )
+            for name in asset.operating_system
+        ]
+
+    def make_domain_name(self, asset: Asset) -> DomainName | None:
+        return (
+            DomainName(
+                author=self.author,
+                object_marking_refs=self.object_marking_refs,
+                value=asset.fqdn,
+                resolves_to_mac_addresses=(
+                    [self.make_mac_address(asset)]
+                    if asset.mac_address is not None
+                    else None
+                ),
+                resolves_to_ips=[self.make_ipv4_address(asset)]
+                + ([self.make_ipv6_address(asset)] if asset.ipv6 is not None else []),
+            )
+            if asset.fqdn
+            else None
+        )
+
+    def process_asset(self, asset: Asset) -> dict[str, Any]:
+        system = self.make_system(asset=asset)
+        observables = [
+            obs
+            for obs in (
+                self.make_ipv4_address(asset=asset),
+                self.make_hostname(asset=asset),
+                # optional
+                self.make_mac_address(asset=asset),
+                self.make_ipv6_address(asset=asset),
+                self.make_domain_name(asset=asset),
+            )
+            if obs is not None
+        ]
+        observables += self.make_operating_systems(asset=asset)  # A list
+
+        relationships = [
+            RelatedToRelationship(
+                author=self.author,
+                created=None,
+                modified=None,
+                description=None,
+                source_ref=system.id,
+                target_ref=obs.id,
+                start_time=None,
+                stop_time=None,
+                confidence=None,
+                object_marking_refs=self.object_marking_refs,
+            )
+            for obs in observables
+        ]
+        return {
+            "system": system,
+            "observables": observables,
+            "relationships": relationships,
+        }
+
+    def make_targeted_software_s(self, plugin: Plugin) -> list[Software]:
+        return (
+            [
+                Software(
+                    author=self.author,
+                    object_marking_refs=self.object_marking_refs,
+                    name=cpe_data["product"],
+                    vendor=cpe_data["vendor"],
+                    cpe=cpe_uri,
+                )
+                for cpe_uri in plugin.cpe
+                for cpe_data in [parse_cpe_uri(cpe_uri)]
+            ]
+            if plugin.cpe is not None
+            else []
+        )
+
+    def make_vulnerabilities(self, plugin: Plugin) -> list[Vulnerability]:
+        base = dict(
+            author=self.author,
+            object_marking_refs=self.object_marking_refs,
+            created=plugin.publication_date,
+            modified=plugin.modification_date,
+            description=plugin.description,
+            confidence=None,
+            cvss3_score=plugin.cvss3_base_score,
+            cvss3_severity=(
+                cvss3_severity_from_score(plugin.cvss3_base_score)
+                if plugin.cvss3_base_score
+                else None
+            ),
+        )
+        cvss3_vector = plugin.cvss3_vector
+        details = (
+            dict(
+                cvss3_attack_vector=cvss3_vector.access_vector,
+                cvss3_integrity_impact=cvss3_vector.integrity_impact,
+                cvss3_availability_impact=cvss3_vector.availability_impact,
+                cvss3_confidentiality_impact=cvss3_vector.confidentiality_impact,
+            )
+            if cvss3_vector
+            else {}
+        )
+
+        return (
+            [Vulnerability(name=cve, **base, **details) for cve in plugin.cve]
+            if plugin.cve
+            else [Vulnerability(name=plugin.name, **base, **details)]
+        )
+
+    def process_plugin(self, plugin: Plugin) -> dict[str, Any]:
+        software_s = self.make_targeted_software_s(plugin=plugin)
+        vulnerabilities = self.make_vulnerabilities(plugin=plugin)
+
+        relationships_soft_vulns = [
+            RelatedToRelationship(
+                author=self.author,
+                created=None,
+                modified=None,
+                description=None,
+                source_ref=vulnerability.id,
+                target_ref=software.id,
+                start_time=None,
+                stop_time=None,
+                confidence=None,
+                object_marking_refs=self.object_marking_refs,
+            )
+            for software in software_s
+            for vulnerability in vulnerabilities
+        ]
+        return {
+            "vulnerabilities": vulnerabilities,
+            "software_s": software_s,
+            "relationships": relationships_soft_vulns,
+        }
+
+    def process_vuln_finding(
+        self, vuln_finding: VulnerabilityFinding
+    ) -> list[BaseEntity]:
+        system_related_objects = self.process_asset(vuln_finding.asset)
+        vulnerability_related_objects = self.process_plugin(vuln_finding.plugin)
+
+        system = system_related_objects["system"]
+        vulnerabilities = vulnerability_related_objects["vulnerabilities"]
+
+        # TODO Replace with Relationship (s:System) - [:HAS] -> (v:Vulnerability) when available in OCTI 6.3.4 version
+        system_to_vulnerabilities = [
+            RelatedToRelationship(
+                author=self.author,
+                created=None,
+                modified=None,
+                description=None,
+                source_ref=system.id,
+                target_ref=vulnerability.id,
+                start_time=vuln_finding.first_found,
+                stop_time=(
+                    vuln_finding.last_found
+                    if vuln_finding.state.lower() == "fixed"
+                    else None
+                ),  # open or reopen
+                confidence=None,
+                object_marking_refs=self.object_marking_refs,
+                # x_octi_workflow_id workflow tor create and retrieve
+            )
+            for vulnerability in vulnerabilities
+        ]
+
+        return list(
+            set(
+                [self.author, system]
+                + vulnerabilities
+                + system_to_vulnerabilities
+                + system_related_objects["observables"]
+                + system_related_objects["relationships"]
+                + vulnerability_related_objects["software_s"]
+                + vulnerability_related_objects["relationships"]
+            )
+        )
