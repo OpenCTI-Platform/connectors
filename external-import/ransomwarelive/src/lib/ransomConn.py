@@ -102,6 +102,7 @@ class RansomwareAPIConnector:
             msg = f"Error when grabbing CONNECTOR_CREATE_THREAT_ACTOR environment variable: '{create_threat_actor}'. It SHOULD be either `true` or `false`. `false` is assumed. "
             self.helper.log_warning(msg)
             self.create_threat_actor = "false"
+
     # Generates a group description from the ransomware.live API data
     def threat_description_generator(self, group_name, group_data):
 
@@ -263,7 +264,7 @@ class RansomwareAPIConnector:
             return None
 
     def sector_fetcher(self, sector):
-        if sector  == "":
+        if sector == "":
             return None
         try:
             sectors_split = []
