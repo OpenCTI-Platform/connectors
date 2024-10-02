@@ -43,6 +43,31 @@ class IntelManager:
                 external_reference_id=external_reference["id"],
             )
 
+    def _delete_entity_external_reference(self, intel_document_id):
+        """
+        Delete external reference on OpenCTI representing the Tanium intel document URL of an entity.
+        :param intel_document_id: ID of Tanium intel document to delete as external reference
+        """
+        # /!\ OpenCTI API shouldn't be used in stream connectors - waiting for a better solution
+        external_reference = self.helper.api.external_reference.read(
+            filters={
+                "mode": "and",
+                "filters": [
+                    {
+                        "key": "source_name",
+                        "values": ["Tanium", self.helper.connect_name],
+                    },
+                    {
+                        "key": "external_id",
+                        "values": [intel_document_id],
+                    },
+                ],
+                "filterGroups": [],
+            }
+        )
+        if external_reference:
+            self.helper.api.external_reference.delete(external_reference["id"])
+
     def _add_intel_labels(self, entity, intel_document_id):
         """
         Update intel document on Tanium by adding OpenCTI entity labels as labels.
@@ -176,18 +201,7 @@ class IntelManager:
 
         self.tanium_api_handler.delete_intel(intel_id)
         self.cache.delete("intel", entity_opencti_id)
-
-        if entity["type"] == "indicator":
-            entity = self.helper.api.indicator.read(id=entity_opencti_id)
-        else:
-            entity = self.helper.api.stix_cyber_observable.read(id=entity_opencti_id)
-
-        # /!\ OpenCTI API shouldn't be used in stream connectors - waiting for a better solution
-        external_references = entity.get("externalReferences", []) if entity else None
-        if external_references:
-            for external_reference in external_references:
-                if external_reference["source_name"] == "Tanium":
-                    self.helper.api.external_reference.delete(external_reference["id"])
+        self._delete_entity_external_reference(intel_id)
 
     def delete_reputation(self, file):
         """
