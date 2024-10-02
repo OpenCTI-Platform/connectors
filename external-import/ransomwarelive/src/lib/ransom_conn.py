@@ -103,7 +103,7 @@ class RansomwareAPIConnector:
             "false",
         ]:
             self.create_threat_actor = (
-                True if update_existing_data.lower() == "true" else False
+                True if create_threat_actor.lower() == "true" else False
             )
         elif isinstance(create_threat_actor, bool) and create_threat_actor.lower in [
             True,
