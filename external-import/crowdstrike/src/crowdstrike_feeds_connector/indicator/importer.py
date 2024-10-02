@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator importer module."""
 
-from typing import Any, Dict, Generator, List, NamedTuple, Optional, Set
+from typing import Any, Dict, List, NamedTuple, Optional, Set
 
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.utils import (
@@ -42,6 +42,8 @@ class IndicatorImporterConfig(NamedTuple):
 
 class IndicatorImporter(BaseImporter):
     """CrowdStrike indicator importer."""
+
+    _NAME = "Indicator"
 
     _LATEST_INDICATOR_TIMESTAMP = "latest_indicator_timestamp"
 
@@ -86,98 +88,89 @@ class IndicatorImporter(BaseImporter):
             self._LATEST_INDICATOR_TIMESTAMP, self.default_latest_timestamp
         )
 
-        latest_indicator_published_datetime = None
+        latest_indicator_updated_datetime = None
 
-        for indicator_batch in self._fetch_indicators(fetch_timestamp):
-            if not indicator_batch:
-                break
+        indicator_batch = self._fetch_indicators(fetch_timestamp)
+        if indicator_batch:
 
-            latest_batch_published_datetime = self._process_indicators(indicator_batch)
+            latest_batch_updated_datetime = self._process_indicators(indicator_batch)
 
-            if latest_batch_published_datetime is not None and (
-                latest_indicator_published_datetime is None
-                or latest_batch_published_datetime > latest_indicator_published_datetime
+            if latest_batch_updated_datetime is not None and (
+                latest_indicator_updated_datetime is None
+                or latest_batch_updated_datetime > latest_indicator_updated_datetime
             ):
-                latest_indicator_published_datetime = latest_batch_published_datetime
+                latest_indicator_updated_datetime = latest_batch_updated_datetime
 
-        latest_indicator_published_timestamp = fetch_timestamp
+        latest_indicator_updated_timestamp = fetch_timestamp
 
-        if latest_indicator_published_datetime is not None:
-            latest_indicator_published_timestamp = datetime_to_timestamp(
-                latest_indicator_published_datetime
+        if latest_indicator_updated_datetime is not None:
+            latest_indicator_updated_timestamp = datetime_to_timestamp(
+                latest_indicator_updated_datetime
             )
 
         self._info(
             "Indicator importer completed, latest fetch {0}.",
-            timestamp_to_datetime(latest_indicator_published_timestamp),
+            timestamp_to_datetime(latest_indicator_updated_timestamp),
         )
 
-        return {self._LATEST_INDICATOR_TIMESTAMP: latest_indicator_published_timestamp}
+        return {self._LATEST_INDICATOR_TIMESTAMP: latest_indicator_updated_timestamp}
 
     def _clear_report_fetcher_cache(self) -> None:
         self.report_fetcher.clear_cache()
 
-    def _fetch_indicators(self, fetch_timestamp: int) -> Generator[List, None, None]:
+    def _fetch_indicators(self, fetch_timestamp: int) -> [List, None, None]:
         limit = 10000
-        sort = "_marker"
-        fql_filter = f"published_date:>{fetch_timestamp}"
+        sort = "last_updated|asc"
+        fql_filter = f"last_updated:>{fetch_timestamp}"
 
         if self.exclude_types:
             fql_filter = f"{fql_filter}+type:!{self.exclude_types}"
 
         return self._query_indicators(limit, sort, fql_filter)
 
-    def _query_indicators(
-        self, limit, sort, fql_filter
-    ) -> Generator[List, None, None] | None:
+    def _query_indicators(self, limit, sort, fql_filter) -> [List]:
         _limit = limit
         _sort = sort
         _fql_filter = fql_filter
 
-        total_count = 0
+        response = self.indicators_api_cs.get_combined_indicator_entities(
+            limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
+        )
 
-        while True:
-            response = self.indicators_api_cs.get_combined_indicator_entities(
-                limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
+        # Add info to know how much data needs to be retrieved until now
+        meta = response["meta"]
+        _meta_total = None
+
+        if meta["pagination"] is not None:
+            pagination = meta["pagination"]
+
+            _meta_total = pagination["total"]
+
+            self.helper.connector_logger.info(
+                "Indicator total resources to query until now", {"total": _meta_total}
             )
-            meta = response["meta"]
-            if meta["pagination"] is not None:
-                pagination = meta["pagination"]
 
-                _meta_limit = pagination["limit"]
-                _meta_offset = pagination["offset"]
-                _meta_total = pagination["total"]
+        resources = response["resources"]
+        resources_count = len(resources)
+        remaining_resources = None
+        if _meta_total is not None:
+            remaining_resources = _meta_total - resources_count
 
-                self._info(
-                    "Indicator query pagination limit: {0}, offset: {1}, total: {2}",
-                    _meta_limit,
-                    _meta_offset,
-                    _meta_total,
-                )
+        self.helper.connector_logger.info(
+            "Indicators fetched to be processed (Crowdstrike max limit = 10000)",
+            {
+                "resources_count": resources_count,
+                "remaining_resources": remaining_resources,
+            },
+        )
 
-            resources = response["resources"]
-            resources_count = len(resources)
-
-            self._info("Indicator query fetched {0} resources", resources_count)
-
-            total_count += resources_count
-
-            yield resources
-
-            next_page_params = response["next_page_details"]
-            if next_page_params is not None:
-                _limit = int(next_page_params["limit"][0])
-                _sort = next_page_params["sort"][0]
-                _fql_filter = next_page_params["filter"][0]
-            else:
-                self._info("Fetched {0} indicators in total", total_count)
-                return
+        return resources
 
     def _process_indicators(self, indicators: List) -> Optional[int]:
         indicator_count = len(indicators)
         self._info("Processing {0} indicators...", indicator_count)
 
-        latest_published_datetime = None
+        latest_updated_datetime = None
 
         failed = 0
         for indicator in indicators:
@@ -185,12 +178,12 @@ class IndicatorImporter(BaseImporter):
             if not result:
                 failed += 1
 
-            published_date = timestamp_to_datetime(indicator["published_date"])
+            updated_date = timestamp_to_datetime(indicator["last_updated"])
             if (
-                latest_published_datetime is None
-                or published_date > latest_published_datetime
+                latest_updated_datetime is None
+                or updated_date > latest_updated_datetime
             ):
-                latest_published_datetime = published_date
+                latest_updated_datetime = updated_date
 
         imported = indicator_count - failed
         total = imported + failed
@@ -200,10 +193,10 @@ class IndicatorImporter(BaseImporter):
             imported,
             failed,
             total,
-            latest_published_datetime,
+            latest_updated_datetime,
         )
 
-        return latest_published_datetime
+        return latest_updated_datetime
 
     def _process_indicator(self, indicator: dict) -> bool:
         self._info("Processing indicator {0}...", indicator["id"])
