@@ -113,7 +113,6 @@ class RecordedFutureAlertConnector(threading.Thread):
                         self.alert_to_incident(alert)
                     except Exception as err:
                         self.helper.log_error(err)
-                        self.create_bugged_incident(alert)
                     timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
                     self.helper.set_state(
                         {
@@ -141,7 +140,6 @@ class RecordedFutureAlertConnector(threading.Thread):
                         self.alert_to_incident(alert)
                     except Exception as err:
                         self.helper.log_error(err)
-                        self.create_bugged_incident(alert)
                     timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
                     self.helper.set_state(
                         {
@@ -157,7 +155,6 @@ class RecordedFutureAlertConnector(threading.Thread):
                     self.alert_to_incident(alert)
                 except Exception as err:
                     self.helper.log_error(err)
-                    self.create_bugged_incident(alert)
                 timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
                 self.helper.set_state(
                     {
@@ -170,30 +167,6 @@ class RecordedFutureAlertConnector(threading.Thread):
         self.helper.set_state(
             {"last_alert_run": timestamp.strftime("%Y-%m-%dT%H:%M:%S")}
         )
-
-    def create_bugged_incident(self, alert):
-        bundle_objects = []
-        alert_name = str("[BUGGED] " + str(alert.alert_id))
-        alert_description = "A bug was encountered while creating incident " + str(
-            alert.alert_id
-        )
-        stix_incident = stix2.Incident(
-            id=pycti.Incident.generate_id(
-                alert_name,
-                datetime.datetime.now(pytz.timezone("UTC")).strftime(
-                    "%Y-%m-%dT%H:%M:%S"
-                ),
-            ),
-            name=alert_name,
-            description=alert_description,
-            object_marking_refs=self.tlp,
-            labels=["BUGGED"],
-            created_by_ref=self.author,
-        )
-        bundle_objects.append(stix_incident)
-        bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
-        self.helper.log_error(str(bundle))
-        self.helper.send_stix2_bundle(bundle, update=True, work_id=self.work_id)
 
     def alert_to_incident(self, alert):
         bundle_objects = [self.author]
