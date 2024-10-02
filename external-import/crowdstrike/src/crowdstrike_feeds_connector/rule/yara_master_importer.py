@@ -36,6 +36,8 @@ class YaraMaster(NamedTuple):
 class YaraMasterImporter(BaseImporter):
     """CrowdStrike YARA master importer."""
 
+    _NAME = "Yara"
+
     _E_TAG = "yara_master_e_tag"
     _LAST_MODIFIED = "yara_master_last_modified"
 

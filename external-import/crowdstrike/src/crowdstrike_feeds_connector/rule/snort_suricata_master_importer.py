@@ -36,6 +36,8 @@ class SnortMaster(NamedTuple):
 class SnortMasterImporter(BaseImporter):
     """CrowdStrike Snort master importer."""
 
+    _NAME = "Snort"
+
     _E_TAG = "snort_master_e_tag"
     _LAST_MODIFIED = "snort_master_last_modified"
 

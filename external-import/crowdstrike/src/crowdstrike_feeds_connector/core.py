@@ -310,28 +310,26 @@ class CrowdStrike:
 
             self.helper.log_info(f"Loaded state: {current_state}")
 
-            work_id = self._initiate_work(timestamp)
-
             new_state = current_state.copy()
 
             for importer in self.importers:
+                work_id = self._initiate_work(timestamp, importer.name)
                 importer_state = importer.start(work_id, new_state)
                 new_state.update(importer_state)
 
                 self._info("Storing updated new state: {0}", new_state)
                 self.helper.set_state(new_state)
 
+                message = (
+                    f"{self.helper.connect_name} {importer.name} successfully run, storing last_run as "
+                    + str(timestamp)
+                )
+                self.helper.api.work.to_processed(work_id, message)
+
             new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
 
             self._info("Storing new state: {0}", new_state)
             self.helper.set_state(new_state)
-
-            message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(timestamp)
-            )
-
-            self.helper.api.work.to_processed(work_id, message)
 
         except (KeyboardInterrupt, SystemExit):
             self._info("CrowdStrike connector stopping...")
@@ -353,15 +351,16 @@ class CrowdStrike:
                 time_unit=self.helper.TimeUnit.SECONDS,
             )
 
-    def _initiate_work(self, timestamp: int) -> str:
+    def _initiate_work(self, timestamp: int, importer_name: str) -> str:
         datetime_str = timestamp_to_datetime(timestamp)
-        friendly_name = f"{self.helper.connect_name} @ {datetime_str}"
+        friendly_name = (
+            f"{self.helper.connect_name}/{importer_name} run @ {datetime_str}"
+        )
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
 
-        self._info("New work '{0}' initiated", work_id)
-
+        self._info(f"New '{importer_name} work '{work_id}' initiated", work_id)
         return work_id
 
     def _info(self, msg: str, *args: Any) -> None:

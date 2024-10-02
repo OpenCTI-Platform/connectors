@@ -23,6 +23,8 @@ from .builder import ReportBundleBuilder
 class ReportImporter(BaseImporter):
     """CrowdStrike report importer."""
 
+    _NAME = "Report"
+
     _LATEST_REPORT_TIMESTAMP = "latest_report_timestamp"
 
     _GUESS_NOT_A_MALWARE = "GUESS_NOT_A_MALWARE"
