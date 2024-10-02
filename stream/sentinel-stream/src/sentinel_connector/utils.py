@@ -33,20 +33,40 @@ THREAT_TYPES = {
 }
 
 
-def is_stix_indicator(data) -> bool:
+def is_stix_indicator(data: dict) -> bool:
+    """
+    Check if data represents a STIX Indicator.
+    :param data: Data to check
+    :return: True if data represents a STIX Indicator, False otherwise
+    """
     return data["type"] == "indicator" and data["pattern_type"].startswith("stix")
 
 
-def is_observable(data) -> bool:
+def is_observable(data: dict) -> bool:
+    """
+    Check if data represents a STIX Observable.
+    :param data: Data to check
+    :return: True if data represents a STIX Observable, False otherwise
+    """
     return data["type"] in OBSERVABLE_TYPES
 
 
-def get_ioc_type(data) -> str:
+def get_ioc_type(data: dict) -> str | None:
+    """
+    Get valid IOC type for Sentinel from data.
+    :param data: Data to get IOC type from
+    :return: IOC type if found, None otherwise
+    """
     data_type = data["type"]
     return IOC_TYPES.get(data_type.upper(), None)
 
 
-def get_threat_type(data) -> str:
+def get_threat_type(data: dict) -> str | None:
+    """
+    Get valid threat type for Sentinel from data.
+    :param data: Data to get threat type from
+    :return: Threat type if found, None otherwise
+    """
     threat_type = "WatchList"
     labels = OpenCTIConnectorHelper.get_attribute_in_extension("labels", data)
     if labels is not None:
@@ -55,14 +75,24 @@ def get_threat_type(data) -> str:
     return threat_type
 
 
-def get_description(data) -> str:
+def get_description(data: dict) -> str:
+    """
+    Get a description according to observable.
+    :param data: Observable data to extract description from
+    :return: Observable description summary or "No Description"
+    """
     stix_description = OpenCTIConnectorHelper.get_attribute_in_extension(
         "description", data
     )
     return stix_description[0:99] if stix_description is not None else "No description"
 
 
-def get_action(data):
+def get_action(data: dict) -> str:
+    """
+    Get an action according to observable score.
+    :param data: Observable data to get action from
+    :return: Action name or "unknown"
+    """
     score = OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
     if score is None:
         action = "unknown"
@@ -77,7 +107,13 @@ def get_action(data):
     return action
 
 
-def get_expiration_datetime(data, expiration_time: int):
+def get_expiration_datetime(data: dict, expiration_time: int) -> str:
+    """
+    Get an expiration datetime for an observable.
+    :param data: Observable data to calculate expiration with
+    :param expiration_time: Duration after which observable is considered as expired
+    :return: Datetime of observable expiration
+    """
     updated_at = OpenCTIConnectorHelper.get_attribute_in_extension("updated_at", data)
     datetime_object = datetime.strptime(updated_at, "%Y-%m-%dT%H:%M:%S.%fZ")
     age = timedelta(expiration_time)
@@ -86,7 +122,12 @@ def get_expiration_datetime(data, expiration_time: int):
     return expiration_datetime
 
 
-def get_tlp_level(data) -> str:
+def get_tlp_level(data: dict) -> str:
+    """
+    Get a TLP level for an observable.
+    :param data: Observable data to extract TLP level from
+    :return: TLP level or "unknown"
+    """
     if "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed" in str(data):
         tlp_level = "red"
     elif "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37" in str(
@@ -102,13 +143,23 @@ def get_tlp_level(data) -> str:
     return tlp_level
 
 
-def get_tags(data) -> list[str]:
+def get_tags(data: dict) -> list[str]:
+    """
+    Get tags for an observable.
+    :param data: Observable data to extract tags from
+    :return: List of tags
+    """
     tags = ["opencti"]
     labels = OpenCTIConnectorHelper.get_attribute_in_extension("labels", data)
     return tags + labels if labels is not None else tags
 
 
-def get_hash_type(data) -> str:
+def get_hash_type(data: dict) -> str:
+    """
+    Get hash type for a file.
+    :param data: File data to get hash type for
+    :return: Hash type
+    """
     if data["type"] != "file":
         raise ValueError("Data type is not file")
 
@@ -120,7 +171,12 @@ def get_hash_type(data) -> str:
         return "sha256"
 
 
-def get_hash_value(data) -> str:
+def get_hash_value(data: dict) -> str:
+    """
+    Get hash value for a file.
+    :param data: File data to get hash value for
+    :return: Hash value
+    """
     if data["type"] != "file":
         raise ValueError("Data type is not file")
 

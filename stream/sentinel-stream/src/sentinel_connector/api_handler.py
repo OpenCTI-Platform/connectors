@@ -28,6 +28,9 @@ class SentinelApiHandler:
         self._set_authorization_header()
 
     def _set_authorization_header(self):
+        """
+        Get an OAuth access token and set it as Authorization header in headers.
+        """
         try:
             url = f"https://login.microsoftonline.com/{self.config.tenant_id}/oauth2/v2.0/token"
             body = {
@@ -44,7 +47,12 @@ class SentinelApiHandler:
         except Exception as e:
             raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
 
-    def _get_request_body(self, observable) -> dict:
+    def _build_request_body(self, observable: dict) -> dict:
+        """
+        Build Sentinel POST/PATCH request's body from an observable.
+        :param observable: Observable to build body from
+        :return: Dict containing keys/values required for POST/PATCH requests on Sentinel.
+        """
         body = {
             "threatType": get_threat_type(observable),
             "description": get_description(observable),
@@ -86,7 +94,11 @@ class SentinelApiHandler:
             body = {}
         return body
 
-    def get_indicators(self) -> list[dict] | bool:
+    def get_indicators(self) -> list[dict] | None:
+        """
+        Get Threat Intelligence Indicators from Sentinel.
+        :return: List of Threat Intelligence Indicators if request is succesful, None otherwise
+        """
         try:
             response = requests.get(
                 f"{self.config.resource_url}{self.config.request_url}",
@@ -105,9 +117,14 @@ class SentinelApiHandler:
                 "[API] Error while fetching data: ",
                 {"url_path": f"GET {self.config.request_url}", "error": str(err)},
             )
-            return False
+            return None
 
-    def search_indicator(self, observable_opencti_id) -> dict | bool:
+    def search_indicator(self, observable_opencti_id: str) -> dict | None:
+        """
+        Search a Threath Intelligence Indicator on Sentinel that corresponds to an OpenCTI observable.
+        :param observable_opencti_id: OpenCTI ID of the observable to get Threat Intelligence Indicator for
+        :return: Threat Intelligence Indicator if request is succesful, None otherwise
+        """
         try:
             params = f"$filter=externalId eq '{observable_opencti_id}'"
             response = requests.get(
@@ -130,13 +147,18 @@ class SentinelApiHandler:
                 "[API] Error while fetching data: ",
                 {"url_path": f"GET {self.config.request_url}", "error": str(err)},
             )
-            return False
+            return None
 
-    def post_indicator(self, observable) -> dict | bool:
+    def post_indicator(self, observable: dict) -> dict | None:
+        """
+        Create a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
+        :param observable: OpenCTI observable to create Threat Intelligence Indicator for
+        :return: Threat Intelligence Indicator if request is succesful, None otherwise
+        """
         try:
             response = requests.post(
                 f"{self.config.resource_url}{self.config.request_url}",
-                json=self._get_request_body(observable),
+                json=self._build_request_body(observable),
                 headers=self.headers,
             )
             response.raise_for_status()
@@ -152,9 +174,14 @@ class SentinelApiHandler:
                 "[API] Error while sending data: ",
                 {"url_path": f"POST {self.config.request_url}", "error": str(err)},
             )
-            return False
+            return None
 
-    def patch_indicator(self, observable) -> bool:
+    def patch_indicator(self, observable: dict) -> bool:
+        """
+        Update a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
+        :param observable: OpenCTI observable to update Threat Intelligence Indicator from
+        :return: True if request is succesful, False otherwise
+        """
         try:
             indicator_external_id = OpenCTIConnectorHelper.get_attribute_in_extension(
                 "id", observable
@@ -164,7 +191,7 @@ class SentinelApiHandler:
 
             response = requests.patch(
                 f"{self.config.resource_url}{self.config.request_url}/{indicator_id}",
-                json=self._get_request_body(observable),
+                json=self._build_request_body(observable),
                 headers=self.headers,
             )
             response.raise_for_status()
@@ -182,7 +209,12 @@ class SentinelApiHandler:
             )
             return False
 
-    def delete_indicator(self, indicator_id) -> bool:
+    def delete_indicator(self, indicator_id: str) -> bool:
+        """
+        Delete a Threat Intelligence Indicator on Sentinel corresponding to an OpenCTI observable.
+        :param indicator_id: OpenCTI observable to delete Threat Intelligence Indicator for
+        :return: True if request is succesful, False otherwise
+        """
         try:
             response = requests.delete(
                 f"{self.config.resource_url}{self.config.request_url}/{indicator_id}",

@@ -162,6 +162,7 @@ class SentinelStreamConnector:
         for indicator_data in indicators_data:
             if indicator_data["externalId"] == observable_opencti_id:
                 result = self.api.delete_indicator(indicator_data["id"])
+                # TODO: should we delete external references on OpenCTI too?
                 if result:
                     self.helper.connector_logger.info(
                         "[DELETE] ID {" + observable_opencti_id + "} Success"
@@ -169,7 +170,7 @@ class SentinelStreamConnector:
                 did_delete = result
         return did_delete
 
-    def _handle_create(self, data):
+    def _handle_create_event(self, data):
         """
         Handle create event by trying to create the corresponding Threat Intelligence Indicator on Sentinel.
         :param data: Streamed data (representing either an observable or an indicator)
@@ -188,7 +189,7 @@ class SentinelStreamConnector:
         elif is_observable(data):
             self._create_sentinel_indicator(data)
 
-    def _handle_update(self, data):
+    def _handle_update_event(self, data):
         """
         Handle update event by trying to update the corresponding Threat Intelligence Indicator on Sentinel.
         :param data: Streamed data (representing either an observable or an indicator)
@@ -207,7 +208,7 @@ class SentinelStreamConnector:
         elif is_observable(data):
             self._update_sentinel_indicator(data)
 
-    def _handle_delete(self, data):
+    def _handle_delete_event(self, data):
         """
         Handle delete event by trying to delete the corresponding Threat Intelligence Indicators on Sentinel.
         :param data: Streamed data (representing either an observable or an indicator)
@@ -252,11 +253,11 @@ class SentinelStreamConnector:
                 return
 
             if msg.event == "create":
-                self._handle_create(data)
+                self._handle_create_event(data)
             if msg.event == "update":
-                self._handle_update(data)
+                self._handle_update_event(data)
             if msg.event == "delete":
-                self._handle_delete(data)
+                self._handle_delete_event(data)
 
         except Exception as ex:
             self.helper.connector_logger.error(
