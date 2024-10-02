@@ -6,7 +6,7 @@ connector:
   id: 'CHANGEME'
   type: 'EXTERNAL_IMPORT'
   name: 'TAXII2_Import' # Required
-  scope:'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
+  scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   update_existing_data: false
   log_level: 'info'
@@ -21,7 +21,7 @@ taxii2:
   v2.1: true
   collections: '*.*'
   initial_history: 24 # Required, in hours
-  interval: 1000 # Required, in hours
+  interval: 1 # Required, in hours
   verify_ssl: true
   create_indicators: true # Generate indicators for ingested observables
   create_observables: true # Generate observables for ingested indicators
@@ -31,3 +31,5 @@ taxii2:
   force_multiple_pattern_name: 'Multiple Indicators'
   stix_custom_property_to_label: false
   stix_custom_property: 'x_foo'
+  enable_url_query_limit: false
+  url_query_limit: 100
