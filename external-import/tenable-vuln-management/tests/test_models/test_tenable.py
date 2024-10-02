@@ -45,6 +45,7 @@ def test_vulnerability_finding_model_is_compatible_with_tenable_api_doc(
     # Then no pydantic issue is raised
     _ = VulnerabilityFinding.model_validate(tenable_api_response_1_report)
 
+
 def test_convert_empty_dicts_to_none_should_clean_nested_empty_dicts():
     # Given a tenable api response boby like dictionary
     to_clean = {"a": {"b": {}, "c": [1, {"e": {}}]}}
