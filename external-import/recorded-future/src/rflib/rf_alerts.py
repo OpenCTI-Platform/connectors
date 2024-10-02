@@ -112,7 +112,10 @@ class RecordedFutureAlertConnector(threading.Thread):
                     try:
                         self.alert_to_incident(alert)
                     except Exception as err:
-                        self.helper.log_error(err)
+                        self.helper.connector_logger.error(
+                            "Incident cannot be created",
+                            {"alert_id": alert["id"], "error_msg": err},
+                        )
                     timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
                     self.helper.set_state(
                         {
@@ -139,7 +142,10 @@ class RecordedFutureAlertConnector(threading.Thread):
                     try:
                         self.alert_to_incident(alert)
                     except Exception as err:
-                        self.helper.log_error(err)
+                        self.helper.connector_logger.error(
+                            "Incident cannot be created",
+                            {"alert_id": alert["id"], "error_msg": err},
+                        )
                     timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
                     self.helper.set_state(
                         {
@@ -154,7 +160,10 @@ class RecordedFutureAlertConnector(threading.Thread):
                 try:
                     self.alert_to_incident(alert)
                 except Exception as err:
-                    self.helper.log_error(err)
+                    self.helper.connector_logger.error(
+                        "Incident cannot be created",
+                        {"alert_id": alert["id"], "error_msg": err},
+                    )
                 timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
                 self.helper.set_state(
                     {
