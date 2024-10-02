@@ -12,7 +12,7 @@ connector:
   live_stream_listen_delete: true
   live_stream_no_dependencies: true
 
-sentinel:
+sentinel_stream:
   tenant_id: 'ChangeMe'
   workspace_id: 'ChangeMe' # Only for Sentinel
   client_id: 'ChangeMe' 
@@ -20,13 +20,8 @@ sentinel:
   login_url: 'https://login.microsoft.com'
   resource_url: 'https://graph.microsoft.com'
   request_url: '/beta/security/tiIndicators'
-  incident_url : '/v1.0/security/incidents'
-  sentinel_url: 'https://sentinelus.azure-api.net'
-  use_new_sentinel_api: false
-  confidence_level: 50 
   expire_time: 30
   target_product: 'Azure Sentinel'
   action: alert
   tlp_level: amber 
   passive_only: true
-  import_incidents: true
