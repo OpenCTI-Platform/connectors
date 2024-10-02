@@ -505,12 +505,12 @@ class RansomwareAPIConnector:
             self.author,
             victim,
             intrusion_set,
-            target_relation,
             relation_vi_is,
         ]
         if self.create_threat_actor:
             bundle.append(threat_actor)
             bundle.append(relation_is_ta)
+            bundle.append(target_relation)
 
         # Creating Sector object
         try:
