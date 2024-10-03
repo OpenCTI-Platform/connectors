@@ -12,7 +12,7 @@ connector:
   scope: 'tanium' # Reserved
   log_level: 'info'
 
-tanium:
+tanium_intel:
   url: 'https://console.changeme.com'
   url_console: 'https://console.changeme.com'
   ssl_verify: true

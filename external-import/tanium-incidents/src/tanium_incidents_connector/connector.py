@@ -20,7 +20,7 @@ from .utils import (
 MITRE_PROCESS_INJECTION_ID = 1055
 
 
-class TaniumSightingsConnector:
+class TaniumIncidentsConnector:
     """
     Specifications of the external import connector
 

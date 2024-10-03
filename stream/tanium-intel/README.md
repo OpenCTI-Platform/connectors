@@ -59,16 +59,16 @@ in `config.yml` (for manual deployment).
 
 Below are the parameters you'll need to set for OpenCTI:
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+| Parameter `opencti` | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL         | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token       | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
 ### Base connector environment variables
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter                             | config.yml                  | Docker environment variable             | Default | Mandatory | Description                                                                                                                                            |
+| Parameter `connector`                 | config.yml                  | Docker environment variable             | Default | Mandatory | Description                                                                                                                                            |
 |---------------------------------------|-----------------------------|-----------------------------------------|---------|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Connector ID                          | id                          | `CONNECTOR_ID`                          | /       | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                              |
 | Connector Type                        | type                        | `CONNECTOR_TYPE`                        | STREAM  | Yes       | Should always be set to `STREAM` for this connector.                                                                                                   |
@@ -83,16 +83,16 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter              | config.yml                  | Docker environment variable   | Default | Mandatory | Description                                                                                                              |
-|------------------------|-----------------------------|-------------------------------|---------|-----------|--------------------------------------------------------------------------------------------------------------------------|
-| Tanium API base URL    | tanium_url                  | `TANIUM_URL`                  |         | Yes       | The Tanium instance API URL.                                                                                             |
-| Tanium console URL     | tanium_url_console          | `TANIUM_URL_CONSOLE`          |         | Yes       | The Tanium instance console URL.                                                                                         |
-| SSL verification       | tanium_ssl_verify           | `TANIUM_SSL_VERIFY`           | True    | Yes       | Enable the SSL certificate check                                                                                         |
-| Tanium API token       | tanium_token                | `TANIUM_TOKEN`                |         | Yes       | The Tanium login user.                                                                                                   |
-| Hashes in reputation   | tanium_hashes_in_reputation | `TANIUM_HASHES_IN_REPUTATION` | True    | Yes       | Put hashes in the Reputation shared service.                                                                             |
-| No hashes in intels    | tanium_no_hashes_in_intels  | `TANIUM_NO_HASHES_IN_INTELS`  | True    | Yes       | Do not insert hashes in intel documents.                                                                                 |
-| Auto on-demand scan    | auto_ondemand_scan          | `TANIUM_AUTO_ONDEMAND_SCAN`   | True    | No        | Trigger a quickscan for each inserted intel document in Tanium.                                                          |
-| Tanium computer groups | tanium_computer_groups      | `TANIUM_COMPUTER_GROUPS`      | `1`     | No        | A list of computer groups separated by `,`, which will be the targets of the automatic quickscan the automatic quickscan |
+| Parameter `tanium_intel` | config.yml           | Docker environment variable         | Default | Mandatory | Description                                                                                                              |
+|--------------------------|----------------------|-------------------------------------|---------|-----------|--------------------------------------------------------------------------------------------------------------------------|
+| Tanium API base URL      | url                  | `TANIUM_INTEL_URL`                  |         | Yes       | The Tanium instance API URL.                                                                                             |
+| Tanium console URL       | url_console          | `TANIUM_INTEL_URL_CONSOLE`          |         | Yes       | The Tanium instance console URL.                                                                                         |
+| SSL verification         | ssl_verify           | `TANIUM_INTEL_SSL_VERIFY`           | True    | Yes       | Enable the SSL certificate check                                                                                         |
+| Tanium API token         | token                | `TANIUM_INTEL_TOKEN`                |         | Yes       | The Tanium login user.                                                                                                   |
+| Hashes in reputation     | hashes_in_reputation | `TANIUM_INTEL_HASHES_IN_REPUTATION` | True    | Yes       | Put hashes in the Reputation shared service.                                                                             |
+| No hashes in intels      | no_hashes_in_intels  | `TANIUM_INTEL_NO_HASHES_IN_INTELS`  | True    | Yes       | Do not insert hashes in intel documents.                                                                                 |
+| Auto on-demand scan      | auto_ondemand_scan   | `TANIUM_INTEL_AUTO_ONDEMAND_SCAN`   | True    | No        | Trigger a quickscan for each inserted intel document in Tanium.                                                          |
+| Tanium computer groups   | computer_groups      | `TANIUM_INTEL_COMPUTER_GROUPS`      | `1`     | No        | A list of computer groups separated by `,`, which will be the targets of the automatic quickscan the automatic quickscan |
 
 ## Deployment
 

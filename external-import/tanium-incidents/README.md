@@ -1,4 +1,4 @@
-# OpenCTI Tanium Connector
+# OpenCTI Tanium Incidents Connector
 
 <!--
 General description of the connector
@@ -11,7 +11,7 @@ General description of the connector
 
 Table of Contents
 
-- [OpenCTI Stream Connector Template](#opencti-stream-connector-template)
+- [OpenCTI Tanium Incidents Connector](#opencti-tanium-incidents-connector)
     - [Introduction](#introduction)
     - [Installation](#installation)
         - [Requirements](#requirements)
@@ -47,12 +47,12 @@ in OpenCTI at a defined periodicity.
 
 | Parameter                            | Docker envvar                        | Mandatory | Description                                                                             |
 |--------------------------------------|--------------------------------------|-----------|-----------------------------------------------------------------------------------------|
-| `tanium_sightings_url`               | `TANIUM_SIGHTINGS_URL`               | Yes       | The Tanium instance API URL.                                                            |
-| `tanium_sightings_url_console`       | `TANIUM_SIGHTINGS_URL_CONSOLE`       | Yes       | The Tanium instance console URL.                                                        |
-| `tanium_sightings_ssl_verify`        | `TANIUM_SIGHTINGS_SSL_VERIFY`        | Yes       | Enable the SSL certificate check (default: `true`)                                      |
-| `tanium_sightings_token`             | `TANIUM_SIGHTINGS_TOKEN`             | Yes       | The Tanium login user.                                                                  |
-| `tanium_sightings_import_alerts`     | `TANIUM_SIGHTINGS_IMPORT_ALERTS`     | No        | Enable alerts import                                                                    |
-| `tanium_sightings_import_start_date` | `TANIUM_SIGHTINGS_IMPORT_START_DATE` | No        | Import starting date (in YYYY-MM-DD format) - used only if connector's state is not set |
+| `tanium_incidents_url`               | `TANIUM_INCIDENTS_URL`               | Yes       | The Tanium instance API URL.                                                            |
+| `tanium_incidents_url_console`       | `TANIUM_INCIDENTS_URL_CONSOLE`       | Yes       | The Tanium instance console URL.                                                        |
+| `tanium_incidents_ssl_verify`        | `TANIUM_INCIDENTS_SSL_VERIFY`        | Yes       | Enable the SSL certificate check (default: `true`)                                      |
+| `tanium_incidents_token`             | `TANIUM_INCIDENTS_TOKEN`             | Yes       | The Tanium login user.                                                                  |
+| `tanium_incidents_import_alerts`     | `TANIUM_INCIDENTS_IMPORT_ALERTS`     | No        | Enable alerts import                                                                    |
+| `tanium_incidents_import_start_date` | `TANIUM_INCIDENTS_IMPORT_START_DATE` | No        | Import starting date (in YYYY-MM-DD format) - used only if connector's state is not set |
 
 ## Configuration variables
 
@@ -87,12 +87,12 @@ Below are the parameters you'll need to set for the connector:
 
 | Parameter               | config.yml                         | Docker environment variable          | Default | Mandatory | Description                                                                             |
 |-------------------------|------------------------------------|--------------------------------------|---------|-----------|-----------------------------------------------------------------------------------------|
-| Tanium API base URL     | tanium_sightings_url               | `TANIUM_SIGHTINGS_URL`               |         | Yes       | The Tanium instance API URL.                                                            |
-| Tanium Console base URL | tanium_sightings_url_console       | `TANIUM_SIGHTINGS_URL_CONSOLE`       |         | Yes       | The Tanium instance console URL.                                                        |
-| SSL verification        | tanium_sightings_ssl_verify        | `TANIUM_SIGHTINGS_SSL_VERIFY`        | True    | Yes       | Enable the SSL certificate check                                                        |
-| Tanium API token        | tanium_sightings_token             | `TANIUM_SIGHTINGS_TOKEN`             |         | Yes       | The Tanium login user.                                                                  |
-| Alerts import           | tanium_sightings_import_alerts     | `TANIUM_SIGHTINGS_IMPORT_ALERTS`     | True    | No        | Enable alerts import                                                                    |
-| Import start date       | tanium_sightings_import_start_date | `TANIUM_SIGHTINGS_IMPORT_START_DATE` |         | No        | Import starting date (in YYYY-MM-DD format) - used only if connector's state is not set |
+| Tanium API base URL     | tanium_incidents_url               | `TANIUM_INCIDENTS_URL`               |         | Yes       | The Tanium instance API URL.                                                            |
+| Tanium Console base URL | tanium_incidents_url_console       | `TANIUM_INCIDENTS_URL_CONSOLE`       |         | Yes       | The Tanium instance console URL.                                                        |
+| SSL verification        | tanium_incidents_ssl_verify        | `TANIUM_INCIDENTS_SSL_VERIFY`        | True    | Yes       | Enable the SSL certificate check                                                        |
+| Tanium API token        | tanium_incidents_token             | `TANIUM_INCIDENTS_TOKEN`             |         | Yes       | The Tanium login user.                                                                  |
+| Alerts import           | tanium_incidents_import_alerts     | `TANIUM_INCIDENTS_IMPORT_ALERTS`     | True    | No        | Enable alerts import                                                                    |
+| Import start date       | tanium_incidents_import_start_date | `TANIUM_INCIDENTS_IMPORT_START_DATE` |         | No        | Import starting date (in YYYY-MM-DD format) - used only if connector's state is not set |
 
 ## Deployment
 

@@ -1,6 +1,6 @@
 import traceback
 
-from tanium_sightings_connector import TaniumSightingsConnector
+from tanium_intel_connector import TaniumIntelConnector
 
 if __name__ == "__main__":
     """
@@ -13,7 +13,7 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        connector = TaniumSightingsConnector()
+        connector = TaniumIntelConnector()
         connector.run()
     except Exception:
         traceback.print_exc()

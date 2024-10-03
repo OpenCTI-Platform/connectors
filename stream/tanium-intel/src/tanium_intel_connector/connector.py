@@ -9,7 +9,7 @@ from .intel_manager import IntelManager
 from .utils import is_file, is_indicator, is_observable
 
 
-class TaniumStreamConnector:
+class TaniumIntelConnector:
     """
     Specifications of the Stream connector
 
