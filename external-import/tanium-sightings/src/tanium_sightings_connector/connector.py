@@ -293,7 +293,9 @@ class TaniumSightingsConnector:
                         )
 
                         bundles_sent = self.helper.send_stix2_bundle(
-                            stix_bundle, work_id=work_id
+                            stix_bundle,
+                            work_id=work_id,
+                            cleanup_inconsistent_bundle=True,
                         )
                         self.helper.connector_logger.info(
                             "Sending STIX objects to OpenCTI...",
