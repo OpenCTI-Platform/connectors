@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-sentinel:
+  connector-sentinel-intel:
     image: opencti/connector-sentinel-intel:6.3.3
     environment:
       - OPENCTI_URL=http://localhost
