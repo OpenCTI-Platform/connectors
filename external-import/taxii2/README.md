@@ -30,7 +30,7 @@ There are a number of configuration options, which are set either in `docker-com
 | TAXII2_FORCE_MULTIPLE_PATTERN_NAME | string | String to use for indicators that contain multiple indicators in a single pattern. Requires TAXII2_FORCE_PATTERN_AS_NAME to be configured.
 | TAXII2_STIX_CUSTOM_PROPERTY_TO_LABEL | false | Boolean statement on whether to create a label from a stix custom property.
 | TAXII2_STIX_CUSTOM_PROPERTY | string | String to match the stix custom property you wish to add as a label e.g. x_foo. Requires TAXII2_STIX_CUSTOM_PROPERTY_TO_LABEL to be configured.
-| TAXII2_ENABLE_URL_QUERY_LIMIT | false | Boolean statement on whether to limit the number of responses in a query
+| TAXII2_ENABLE_URL_QUERY_LIMIT | false | Boolean statement on whether to limit the number of responses in a Taxii 2.1 query
 | TAXII2_URL_QUERY_LIMIT | value | The number of responses to limit in a query
 
 ### Collections and API roots

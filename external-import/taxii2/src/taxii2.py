@@ -344,7 +344,7 @@ class Taxii2Connector:
             return objects
 
         filters = {}
-        if self.enable_url_query_limit:
+        if self.enable_url_query_limit and self.taxii2v21:
             filters["limit"] = self.url_query_limit
         if self.first_run:
             lookback = self.initial_history or None
@@ -356,8 +356,10 @@ class Taxii2Connector:
         self.helper.log_info(f"Polling Collection {collection.title}")
 
         # Initial request
-        more = None
+        new_objects = True
         response = collection.get_objects(**filters)
+        if len(response["objects"]) == 0:
+            new_objects = False
         objects = []
         if "objects" in response and len(response["objects"]) > 0:
             if "spec_version" in response:
@@ -366,7 +368,7 @@ class Taxii2Connector:
                 version = response["objects"][0]["spec_version"]
             # Taxii 2.0 doesn't support using next, using manifest lookup instead
             if version == "2.0":
-                while more != False:
+                while new_objects:
                     objects = process_response(objects, response, version)
                     # Get the manifest for the last object
                     last_obj = response["objects"][-1]
@@ -390,10 +392,11 @@ class Taxii2Connector:
                         filters["added_after"] = date_added
                         # Get the next set of objects
                         response = collection.get_objects(**filters)
-                        more = "objects" in response and len(response["objects"]) > 0
+                        if len(response["objects"]) == 0:
+                            new_objects = False
                     else:
                         self.helper.log_info("No manifest found. Stopping pagination.")
-                        more = False
+                        new_objects = False
             else:
                 # Assuming newer versions will support next
                 while True:
