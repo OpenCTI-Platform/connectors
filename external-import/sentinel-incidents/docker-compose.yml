@@ -29,7 +29,6 @@ services:
       - SENTINEL_INCIDENTS_LOGIN_URL=https://login.microsoft.com
       - SENTINEL_INCIDENTS_API_BASE_URL=https://graph.microsoft.com
       - SENTINEL_INCIDENTS_INCIDENT_PATH=/v1.0/security/incidents
-      - SENTINEL_INCIDENTS_CONFIDENCE_LEVEL=50 # Alerts equal to or higher than this will be blocked, Lower will be alerted, and 0 will be allowed
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME

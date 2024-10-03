@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import yaml
+from dateutil.parser import parse
 from pycti import get_config_variable
 
 
@@ -82,4 +83,14 @@ class ConfigConnector:
             "SENTINEL_INCIDENTS_TARGET_PRODUCT",
             ["sentinel_incidents", "target_product"],
             self.load,
+        )
+        sentinel_import_start_date_var = get_config_variable(
+            "SENTIL_INCIDENTS_IMPORT_START_DATE",
+            ["sentinel_incidents", "import_start_date"],
+            self.load,
+        )
+        self.tanium_import_start_date = (
+            parse(sentinel_import_start_date_var).timestamp()
+            if sentinel_import_start_date_var
+            else None
         )

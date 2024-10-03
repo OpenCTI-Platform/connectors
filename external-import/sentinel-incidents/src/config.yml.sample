@@ -29,3 +29,4 @@ sentinel_incidents:
   incident_path : '/v1.0/security/incidents'
   confidence_level: 50
   target_product: 'Azure Sentinel'
+  import_start_date: ''
