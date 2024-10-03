@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-tanium:
-    image: opencti/connector-tanium-sightings:6.3.3
+    image: opencti/connector-tanium-incidents:6.3.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -11,9 +11,9 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=60 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=PT12H
-      - TANIUM_SIGHTINGS_URL=https://console.changeme.com
-      - TANIUM_SIGHTINGS_URL_CONSOLE=https://console.changeme.com
-      - TANIUM_SIGHTINGS_SSL_VERIFY=true
-      - TANIUM_SIGHTINGS_TOKEN=ChangeMe
-      - TANIUM_SIGHTINGS_IMPORT_ALERTS=true
+      - TANIUM_INCIDENTS_URL=https://console.changeme.com
+      - TANIUM_INCIDENTS_URL_CONSOLE=https://console.changeme.com
+      - TANIUM_INCIDENTS_SSL_VERIFY=true
+      - TANIUM_INCIDENTS_TOKEN=ChangeMe
+      - TANIUM_INCIDENTS_IMPORT_ALERTS=true
     restart: always

@@ -35,34 +35,34 @@ class ConfigConnector:
         :return: None
         """
         self.tanium_url = get_config_variable(
-            "TANIUM_URL", ["tanium", "url"], self.load
+            "TANIUM_URL", ["tanium_intel", "url"], self.load
         )
         self.tanium_url_console = get_config_variable(
-            "TANIUM_URL_CONSOLE", ["tanium", "url_console"], self.load
+            "TANIUM_URL_CONSOLE", ["tanium_intel", "url_console"], self.load
         )
         self.tanium_ssl_verify = get_config_variable(
-            "TANIUM_SSL_VERIFY", ["tanium", "ssl_verify"], self.load, False, True
+            "TANIUM_SSL_VERIFY", ["tanium_intel", "ssl_verify"], self.load, False, True
         )
         self.tanium_token = get_config_variable(
-            "TANIUM_TOKEN", ["tanium", "token"], self.load
+            "TANIUM_TOKEN", ["tanium_intel", "token"], self.load
         )
         self.tanium_hashes_in_reputation = get_config_variable(
             "TANIUM_HASHES_IN_REPUTATION",
-            ["tanium", "hashes_in_reputation"],
+            ["tanium_intel", "hashes_in_reputation"],
             self.load,
             False,
             True,
         )
         self.tanium_no_hashes_in_intels = get_config_variable(
             "TANIUM_NO_HASHES_IN_INTELS",
-            ["tanium", "no_hashes_in_intels"],
+            ["tanium_intel", "no_hashes_in_intels"],
             self.load,
             False,
             True,
         )
         self.tanium_auto_ondemand_scan = get_config_variable(
             "TANIUM_AUTO_ONDEMAND_SCAN",
-            ["tanium", "ondemand_scan"],
+            ["tanium_intel", "auto_ondemand_scan"],
             self.load,
             False,
             True,
@@ -70,7 +70,7 @@ class ConfigConnector:
         # Target computer group of the automatic quickscan (if enable)
         tanium_computer_groups_var = get_config_variable(
             "TANIUM_COMPUTER_GROUPS",
-            ["tanium", "computer_groups"],
+            ["tanium_intel", "computer_groups"],
             self.load,
             False,
             "1",

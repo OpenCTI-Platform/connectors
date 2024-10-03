@@ -12,12 +12,12 @@ services:
       - "CONNECTOR_NAME=Tanium Threat Response"
       - CONNECTOR_SCOPE=tanium
       - CONNECTOR_LOG_LEVEL=error
-      - TANIUM_URL=https://console.changeme.com
-      - TANIUM_URL_CONSOLE=https://console.changeme.com
-      - TANIUM_SSL_VERIFY=true
-      - TANIUM_TOKEN=ChangeMe
-      - TANIUM_HASHES_IN_REPUTATION=true
-      - TANIUM_NO_HASHES_IN_INTELS=true
-      - TANIUM_AUTO_ONDEMAND_SCAN=true # trigger a quick scan when an intel document is imported
-      - TANIUM_COMPUTER_GROUPS=1 # computer groups targeted by the auto on-demand scan (separated by ,)
+      - TANIUM_INTEL_URL=https://console.changeme.com
+      - TANIUM_INTEL_URL_CONSOLE=https://console.changeme.com
+      - TANIUM_INTEL_SSL_VERIFY=true
+      - TANIUM_INTEL_TOKEN=ChangeMe
+      - TANIUM_INTEL_HASHES_IN_REPUTATION=true
+      - TANIUM_INTEL_NO_HASHES_IN_INTELS=true
+      - TANIUM_INTEL_AUTO_ONDEMAND_SCAN=true # trigger a quick scan when an intel document is imported
+      - TANIUM_INTEL_COMPUTER_GROUPS=1 # computer groups targeted by the auto on-demand scan (separated by ,)
     restart: always
