@@ -457,7 +457,7 @@ class TaniumApiHandler:
         tanium_labels = self._request_data(
             "GET",
             "/plugin/products/threat-response/api/v1/labels",
-            params={"limit": 500},
+            params={"noLimit": True},
         )
 
         tanium_labels_dict = {}
