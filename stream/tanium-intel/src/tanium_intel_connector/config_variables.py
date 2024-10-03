@@ -35,33 +35,37 @@ class ConfigConnector:
         :return: None
         """
         self.tanium_url = get_config_variable(
-            "TANIUM_URL", ["tanium_intel", "url"], self.load
+            "TANIUM_INTEL_URL", ["tanium_intel", "url"], self.load
         )
         self.tanium_url_console = get_config_variable(
-            "TANIUM_URL_CONSOLE", ["tanium_intel", "url_console"], self.load
+            "TANIUM_INTEL_URL_CONSOLE", ["tanium_intel", "url_console"], self.load
         )
         self.tanium_ssl_verify = get_config_variable(
-            "TANIUM_SSL_VERIFY", ["tanium_intel", "ssl_verify"], self.load, False, True
+            "TANIUM_INTEL_SSL_VERIFY",
+            ["tanium_intel", "ssl_verify"],
+            self.load,
+            False,
+            True,
         )
         self.tanium_token = get_config_variable(
-            "TANIUM_TOKEN", ["tanium_intel", "token"], self.load
+            "TANIUM_INTEL_TOKEN", ["tanium_intel", "token"], self.load
         )
         self.tanium_hashes_in_reputation = get_config_variable(
-            "TANIUM_HASHES_IN_REPUTATION",
+            "TANIUM_INTEL_HASHES_IN_REPUTATION",
             ["tanium_intel", "hashes_in_reputation"],
             self.load,
             False,
             True,
         )
         self.tanium_no_hashes_in_intels = get_config_variable(
-            "TANIUM_NO_HASHES_IN_INTELS",
+            "TANIUM_INTEL_NO_HASHES_IN_INTELS",
             ["tanium_intel", "no_hashes_in_intels"],
             self.load,
             False,
             True,
         )
         self.tanium_auto_ondemand_scan = get_config_variable(
-            "TANIUM_AUTO_ONDEMAND_SCAN",
+            "TANIUM_INTEL_AUTO_ONDEMAND_SCAN",
             ["tanium_intel", "auto_ondemand_scan"],
             self.load,
             False,
@@ -69,7 +73,7 @@ class ConfigConnector:
         )
         # Target computer group of the automatic quickscan (if enable)
         tanium_computer_groups_var = get_config_variable(
-            "TANIUM_COMPUTER_GROUPS",
+            "TANIUM_INTEL_COMPUTER_GROUPS",
             ["tanium_intel", "computer_groups"],
             self.load,
             False,
