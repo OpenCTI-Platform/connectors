@@ -27,4 +27,12 @@ services:
       - RECORDED_FUTURE_RISK_LIST_THRESHOLD=70 #optional, can remove
       - RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES='Malware,Hash,URL,Threat Actor,MitreAttackIdentifier' #required if RECORDED_FUTURE_PULL_RISK_LIST is True, possible values: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier
       - RECORDED_FUTURE_PULL_THREAT_MAPS=False #optional, can remove
+      - ALERT_ENABLE=False # REQUIRED
+      - ALERT_DEFAULT_OPENCTI_SEVERITY= 'low' # OPTIONAL - default: 'low'
+      - ALERT_PRIORITY_ALERTS_ONLY=False # OPTIONAL - default: False
+      - PLAYBOOK_ALERT_ENABLE=False # REQUIRED
+      - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_DOMAIN_ABUSE= 'Informational' # OPTIONAL - default: 'Informational'
+      - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_IDENTITY_NOVEL_EXPOSURES= 'Informational' # OPTIONAL - default: 'Informational'
+      - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CODE_REPO_LEAKAGE= 'Informational' # OPTIONAL - default: 'Informational'
+      - PLAYBOOK_ALERT_DEBUG=False # OPTIONAL - default: False
     restart: always
