@@ -532,9 +532,8 @@ class RecordedFutureAlertConnector(threading.Thread):
             )
             bundle_objects.append(stix_note)
         bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
-        self.helper.log_error(str(bundle).replace("fakechannelbecauseofbug", "channel"))
         self.helper.send_stix2_bundle(
-            str(bundle).replace("fakechannelbecauseofbug", "channel"),
+            bundle,
             update=True,
             work_id=self.work_id,
         )
