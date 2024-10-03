@@ -112,7 +112,7 @@ class ConverterToStix:
         :param alert: Alert to create User Account from
         :return: User Account in STIX 2.1 format
         """
-        alert_user = alert["details"]["match"]["properties"]["user"]
+        alert_user = alert["details"]["match"]["properties"]["process"]["user"]
         login = alert_user.split("\\")[-1]
 
         user_account = stix2.UserAccount(
@@ -130,7 +130,7 @@ class ConverterToStix:
         :param alert: Alert to create File from
         :return: File in STIX 2.1 format
         """
-        file = alert["details"]["match"]["properties"]["file"]
+        file = alert["details"]["match"]["properties"]["process"]["file"]
         hashes = {}
         if "md5" in file:
             hashes["MD5"] = file["md5"]

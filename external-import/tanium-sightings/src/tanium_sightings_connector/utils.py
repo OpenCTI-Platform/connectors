@@ -44,7 +44,7 @@ def has_user_details(alert) -> bool:
         match = alert["details"]["match"]  # "match" can be None
         if not match:
             return False
-        return bool(match["properties"]["user"])
+        return bool(match["properties"]["process"]["user"])
     except (AttributeError, KeyError):
         return False
 
@@ -59,7 +59,7 @@ def has_file_details(alert) -> bool:
         match = alert["details"]["match"]  # "match" can be None
         if not match:
             return False
-        file = match["properties"]["file"]
+        file = match["properties"]["process"]["file"]
         if not file:
             return False
         return ("md5" in file) or ("sha256" in file) or ("sha1" in file)
