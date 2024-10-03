@@ -109,10 +109,6 @@ class TaniumSightingsConnector:
                 "mode": "and",
                 "filters": [
                     {
-                        "key": "source_name",
-                        "values": ["Tanium", self.helper.connect_name],
-                    },
-                    {
                         "key": "external_id",
                         "values": [alert["intelDocId"]],
                     },
