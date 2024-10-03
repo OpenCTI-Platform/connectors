@@ -8,7 +8,7 @@ from .config_variables import ConfigConnector
 from .utils import is_observable, is_stix_indicator
 
 
-class SentinelStreamConnector:
+class SentinelIntelConnector:
     """
     Specifications of the Stream connector
 

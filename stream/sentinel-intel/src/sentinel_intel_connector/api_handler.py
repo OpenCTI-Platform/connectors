@@ -101,21 +101,21 @@ class SentinelApiHandler:
         """
         try:
             response = requests.get(
-                f"{self.config.resource_url}{self.config.request_url}",
+                f"{self.config.base_url}{self.config.resource_path}",
                 headers=self.headers,
             )
             response.raise_for_status()
 
             self.helper.connector_logger.info(
                 f"[API] HTTP GET Request to endpoint",
-                {"url_path": self.config.request_url},
+                {"url_path": self.config.resource_path},
             )
 
             return response.json()["value"]
         except requests.RequestException as err:
             self.helper.connector_logger.error(
                 "[API] Error while fetching data: ",
-                {"url_path": f"GET {self.config.request_url}", "error": str(err)},
+                {"url_path": f"GET {self.config.resource_path}", "error": str(err)},
             )
             return None
 
@@ -128,7 +128,7 @@ class SentinelApiHandler:
         try:
             params = f"$filter=externalId eq '{observable_opencti_id}'"
             response = requests.get(
-                f"{self.config.resource_url}{self.config.request_url}",
+                f"{self.config.base_url}{self.config.resource_path}",
                 params=params,
                 headers=self.headers,
             )
@@ -136,7 +136,7 @@ class SentinelApiHandler:
 
             self.helper.connector_logger.info(
                 f"[API] HTTP GET Request to endpoint",
-                {"url_path": self.config.request_url},
+                {"url_path": self.config.resource_path},
             )
 
             response_json = response.json()
@@ -145,7 +145,7 @@ class SentinelApiHandler:
         except requests.RequestException as err:
             self.helper.connector_logger.error(
                 "[API] Error while fetching data: ",
-                {"url_path": f"GET {self.config.request_url}", "error": str(err)},
+                {"url_path": f"GET {self.config.resource_path}", "error": str(err)},
             )
             return None
 
@@ -157,7 +157,7 @@ class SentinelApiHandler:
         """
         try:
             response = requests.post(
-                f"{self.config.resource_url}{self.config.request_url}",
+                f"{self.config.base_url}{self.config.resource_path}",
                 json=self._build_request_body(observable),
                 headers=self.headers,
             )
@@ -165,14 +165,14 @@ class SentinelApiHandler:
 
             self.helper.connector_logger.info(
                 f"[API] HTTP POST Request to endpoint",
-                {"url_path": self.config.request_url},
+                {"url_path": self.config.resource_path},
             )
 
             return response.json()
         except requests.RequestException as err:
             self.helper.connector_logger.error(
                 "[API] Error while sending data: ",
-                {"url_path": f"POST {self.config.request_url}", "error": str(err)},
+                {"url_path": f"POST {self.config.resource_path}", "error": str(err)},
             )
             return None
 
@@ -190,7 +190,7 @@ class SentinelApiHandler:
             indicator_id = indicator_data["id"]
 
             response = requests.patch(
-                f"{self.config.resource_url}{self.config.request_url}/{indicator_id}",
+                f"{self.config.base_url}{self.config.resource_path}/{indicator_id}",
                 json=self._build_request_body(observable),
                 headers=self.headers,
             )
@@ -198,14 +198,14 @@ class SentinelApiHandler:
 
             self.helper.connector_logger.info(
                 f"[API] HTTP PATCH Request to endpoint",
-                {"url_path": self.config.request_url},
+                {"url_path": self.config.resource_path},
             )
 
             return True
         except requests.RequestException as err:
             self.helper.connector_logger.error(
                 "[API] Error while sending data: ",
-                {"url_path": f"PATCH {self.config.request_url}", "error": str(err)},
+                {"url_path": f"PATCH {self.config.resource_path}", "error": str(err)},
             )
             return False
 
@@ -217,20 +217,20 @@ class SentinelApiHandler:
         """
         try:
             response = requests.delete(
-                f"{self.config.resource_url}{self.config.request_url}/{indicator_id}",
+                f"{self.config.base_url}{self.config.resource_path}/{indicator_id}",
                 headers=self.headers,
             )
             response.raise_for_status()
 
             self.helper.connector_logger.info(
                 f"[API] HTTP DELETE Request to endpoint",
-                {"url_path": f"{self.config.request_url}/{indicator_id}"},
+                {"url_path": f"{self.config.resource_path}/{indicator_id}"},
             )
 
             return True
         except requests.RequestException as err:
             self.helper.connector_logger.error(
                 "[API] Error while fetching data: ",
-                {"url_path": f"DELETE {self.config.request_url}", "error": str(err)},
+                {"url_path": f"DELETE {self.config.resource_path}", "error": str(err)},
             )
             return False

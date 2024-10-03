@@ -4,7 +4,7 @@
 
 
 # @pytest.mark.usefixtures("setup_config")
-class TestTemplateConnector(object):
+class TestSentinelIntelConnector(object):
     def test_to_do(self) -> None:
         """
         Check if running test works

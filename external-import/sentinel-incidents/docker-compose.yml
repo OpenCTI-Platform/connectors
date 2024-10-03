@@ -1,7 +1,7 @@
 version: '3'
 services:
-  connector-sentinal-sightings:
-    image: opencti/connector-sentinal-sightings:6.2.4
+  connector-sentinel-incidents:
+    image: opencti/connector-sentinel-incidents:6.2.4
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
@@ -21,15 +21,15 @@ services:
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
       # Connector's custom execution parameters
-      - SENTINEL_SIGHTINGS_TENANT_ID=ChangeMe # Azure Tentant ID
-      - SENTINEL_SIGHTINGS_WORKSPACE_ID=ChangeMe # Sentinel Workspace ID (only for Azure Sentinel)
-      - SENTINEL_SIGHTINGS_CLIENT_ID=ChangeMe # Azure App Client ID
-      - SENTINEL_SIGHTINGS_CLIENT_SECRET=ChangeMe # Azure App Client Secret
-      - SENTINEL_SIGHTINGS_"TARGET_PRODUCT=Azure Sentinel" # "Azure Sentinel" or "Microsoft Defender ATP"
-      - SENTINEL_SIGHTINGS_LOGIN_URL=https://login.microsoft.com
-      - SENTINEL_SIGHTINGS_API_BASE_URL=https://graph.microsoft.com
-      - SENTINEL_SIGHTINGS_INCIDENT_PATH=/v1.0/security/incidents
-      - SENTINEL_SIGHTINGS_CONFIDENCE_LEVEL=50 # Alerts equal to or higher than this will be blocked, Lower will be alerted, and 0 will be allowed
+      - SENTINEL_INCIDENTS_TENANT_ID=ChangeMe # Azure Tentant ID
+      - SENTINEL_INCIDENTS_WORKSPACE_ID=ChangeMe # Sentinel Workspace ID (only for Azure Sentinel)
+      - SENTINEL_INCIDENTS_CLIENT_ID=ChangeMe # Azure App Client ID
+      - SENTINEL_INCIDENTS_CLIENT_SECRET=ChangeMe # Azure App Client Secret
+      - SENTINEL_INCIDENTS_"TARGET_PRODUCT=Azure Sentinel" # "Azure Sentinel" or "Microsoft Defender ATP"
+      - SENTINEL_INCIDENTS_LOGIN_URL=https://login.microsoft.com
+      - SENTINEL_INCIDENTS_API_BASE_URL=https://graph.microsoft.com
+      - SENTINEL_INCIDENTS_INCIDENT_PATH=/v1.0/security/incidents
+      - SENTINEL_INCIDENTS_CONFIDENCE_LEVEL=50 # Alerts equal to or higher than this will be blocked, Lower will be alerted, and 0 will be allowed
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME

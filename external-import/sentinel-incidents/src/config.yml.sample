@@ -19,7 +19,7 @@ connector:
   #send_to_directory_path: 'ChangeMe'
   #send_to_directory_retention: 7
 
-sentinel_sightings:
+sentinel_incidents:
   tenant_id: 'ChangeMe'
   workspace_id: 'ChangeMe' # Only for Sentinel
   client_id: 'ChangeMe'

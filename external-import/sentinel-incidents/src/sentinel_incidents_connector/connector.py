@@ -8,7 +8,7 @@ from .converter_to_stix import ConverterToStix
 from .utils import format_incident, validate_incident
 
 
-class SentinelSightingsConnector:
+class SentinelIncidentsConnector:
     """
     Specifications of the external import connector
 

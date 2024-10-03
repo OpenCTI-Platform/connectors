@@ -36,46 +36,50 @@ class ConfigConnector:
         :return: None
         """
         # OpenCTI configurations
+        self.duration_period = get_config_variable(
+            "CONNECTOR_DURATION_PERIOD",
+            ["connector", "duration_period"],
+            self.load,
+        )
 
         # Connector extra parameters
         self.tenant_id = get_config_variable(
-            "SENTINEL_STREAM_TENANT_ID", ["sentinel_stream", "tenant_id"], self.load
+            "SENTINEL_INCIDENTS_TENANT_ID",
+            ["sentinel_incidents", "tenant_id"],
+            self.load,
         )
         self.client_id = get_config_variable(
-            "SENTINEL_STREAM_CLIENT_ID", ["sentinel_stream", "client_id"], self.load
+            "SENTINEL_INCIDENTS_CLIENT_ID",
+            ["sentinel_incidents", "client_id"],
+            self.load,
         )
         self.client_secret = get_config_variable(
-            "SENTINEL_STREAM_CLIENT_SECRET",
-            ["sentinel_stream", "client_secret"],
+            "SENTINEL_INCIDENTS_CLIENT_SECRET",
+            ["sentinel_incidents", "client_secret"],
             self.load,
         )
         self.login_url = get_config_variable(
-            "SENTINEL_STREAM_LOGIN_URL", ["sentinel_stream", "login_url"], self.load
-        )
-        self.resource_url = get_config_variable(
-            "SENTINEL_STREAM_RESOURCE_URL",
-            ["sentinel_stream", "resource_url"],
+            "SENTINEL_INCIDENTS_LOGIN_URL",
+            ["sentinel_incidents", "login_url"],
             self.load,
         )
-        self.request_url = get_config_variable(
-            "SENTINEL_STREAM_REQUEST_URL", ["sentinel_stream", "request_url"], self.load
+        self.api_base_url = get_config_variable(
+            "SENTINEL_INCIDENTS_API_BASE_URL",
+            ["sentinel_incidents", "api_base_url"],
+            self.load,
         )
-        self.expire_time = get_config_variable(
-            "SENTINEL_STREAM_EXPIRE_TIME", ["sentinel_stream", "expire_time"], self.load
+        self.incident_path = get_config_variable(
+            "SENTINEL_INCIDENTS_INCIDENT_PATH",
+            ["sentinel_incidents", "incident_path"],
+            self.load,
+        )
+        self.confidence_level = get_config_variable(
+            "SENTINEL_INCIDENTS_CONFIDENCE_LEVEL",
+            ["sentinel_incidents", "confidence_level"],
+            self.load,
         )
         self.target_product = get_config_variable(
-            "SENTINEL_STREAM_TARGET_PRODUCT",
-            ["sentinel_stream", "target_product"],
-            self.load,
-        )
-        self.action = get_config_variable(
-            "ACTION", ["sentinel_stream", "action"], self.load
-        )
-        self.tlp_level = get_config_variable(
-            "SENTINEL_STREAM_TLP_LEVEL", ["sentinel_stream", "tlp_level"], self.load
-        )
-        self.passive_only = get_config_variable(
-            "SENTINEL_STREAM_PASSIVE_ONLY",
-            ["sentinel_stream", "passive_only"],
+            "SENTINEL_INCIDENTS_TARGET_PRODUCT",
+            ["sentinel_incidents", "target_product"],
             self.load,
         )

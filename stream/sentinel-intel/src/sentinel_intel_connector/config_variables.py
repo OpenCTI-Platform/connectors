@@ -36,50 +36,48 @@ class ConfigConnector:
         :return: None
         """
         # OpenCTI configurations
-        self.duration_period = get_config_variable(
-            "CONNECTOR_DURATION_PERIOD",
-            ["connector", "duration_period"],
-            self.load,
-        )
 
         # Connector extra parameters
         self.tenant_id = get_config_variable(
-            "SENTINEL_SIGHTINGS_TENANT_ID",
-            ["sentinel_sightings", "tenant_id"],
-            self.load,
+            "SENTINEL_INTEL_TENANT_ID", ["sentinel_intel", "tenant_id"], self.load
         )
         self.client_id = get_config_variable(
-            "SENTINEL_SIGHTINGS_CLIENT_ID",
-            ["sentinel_sightings", "client_id"],
-            self.load,
+            "SENTINEL_INTEL_CLIENT_ID", ["sentinel_intel", "client_id"], self.load
         )
         self.client_secret = get_config_variable(
-            "SENTINEL_SIGHTINGS_CLIENT_SECRET",
-            ["sentinel_sightings", "client_secret"],
+            "SENTINEL_INTEL_CLIENT_SECRET",
+            ["sentinel_intel", "client_secret"],
             self.load,
         )
         self.login_url = get_config_variable(
-            "SENTINEL_SIGHTINGS_LOGIN_URL",
-            ["sentinel_sightings", "login_url"],
+            "SENTINEL_INTEL_LOGIN_URL", ["sentinel_intel", "login_url"], self.load
+        )
+        self.base_url = get_config_variable(
+            "SENTINEL_INTEL_BASE_URL",
+            ["sentinel_intel", "base_url"],
             self.load,
         )
-        self.api_base_url = get_config_variable(
-            "SENTINEL_SIGHTINGS_API_BASE_URL",
-            ["sentinel_sightings", "api_base_url"],
+        self.resource_path = get_config_variable(
+            "SENTINEL_INTEL_RESOURCE_PATH",
+            ["sentinel_intel", "resource_path"],
             self.load,
         )
-        self.incident_path = get_config_variable(
-            "SENTINEL_SIGHTINGS_INCIDENT_PATH",
-            ["sentinel_sightings", "incident_path"],
-            self.load,
-        )
-        self.confidence_level = get_config_variable(
-            "SENTINEL_SIGHTINGS_CONFIDENCE_LEVEL",
-            ["sentinel_sightings", "confidence_level"],
-            self.load,
+        self.expire_time = get_config_variable(
+            "SENTINEL_INTEL_EXPIRE_TIME", ["sentinel_intel", "expire_time"], self.load
         )
         self.target_product = get_config_variable(
-            "SENTINEL_SIGHTINGS_TARGET_PRODUCT",
-            ["sentinel_sightings", "target_product"],
+            "SENTINEL_INTEL_TARGET_PRODUCT",
+            ["sentinel_intel", "target_product"],
+            self.load,
+        )
+        self.action = get_config_variable(
+            "ACTION", ["sentinel_intel", "action"], self.load
+        )
+        self.tlp_level = get_config_variable(
+            "SENTINEL_INTEL_TLP_LEVEL", ["sentinel_intel", "tlp_level"], self.load
+        )
+        self.passive_only = get_config_variable(
+            "SENTINEL_INTEL_PASSIVE_ONLY",
+            ["sentinel_intel", "passive_only"],
             self.load,
         )

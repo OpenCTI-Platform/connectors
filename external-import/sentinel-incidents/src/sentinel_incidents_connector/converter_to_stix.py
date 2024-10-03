@@ -27,7 +27,7 @@ class ConverterToStix:
         self.author = self.create_author_identity(
             name=helper.connect_name,
             identity_class="organization",
-            description="Import Sightings according to alerts found in Microsoft Sentinel",
+            description="Import Indicents according to alerts found in Microsoft Sentinel",
         )
 
     @staticmethod
