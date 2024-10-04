@@ -14,28 +14,6 @@ class ConnectorClient:
 
         self.generate_oauth_token()
 
-    def _request_data(self, api_url: str, params=None):
-        """
-        Internal method to handle API requests
-        :return: Response in JSON format
-        """
-        try:
-            response = self.session.get(api_url, params=params)
-
-            self.helper.connector_logger.info(
-                "[API] HTTP Get Request to endpoint", {"url_path": api_url}
-            )
-
-            response.raise_for_status()
-            return response
-
-        except requests.RequestException as err:
-            error_msg = "[API] Error while fetching data: "
-            self.helper.connector_logger.error(
-                error_msg, {"url_path": {api_url}, "error": {str(err)}}
-            )
-            return None
-
     def generate_oauth_token(self):
         try:
             url = f"https://login.microsoftonline.com/{self.config.tenant_id}/oauth2/v2.0/token"
