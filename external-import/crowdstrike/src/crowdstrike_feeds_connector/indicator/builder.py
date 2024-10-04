@@ -5,7 +5,6 @@ import logging
 from typing import List, Mapping, NamedTuple, Optional, Set
 
 from crowdstrike_feeds_services.utils import (
-    DEFAULT_X_OPENCTI_SCORE,
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
     OBSERVATION_FACTORY_DOMAIN_NAME,
     OBSERVATION_FACTORY_EMAIL_ADDRESS,
@@ -64,11 +63,16 @@ class IndicatorBundleBuilderConfig(NamedTuple):
     confidence_level: int
     create_observables: bool
     create_indicators: bool
+    default_x_opencti_score: int
     indicator_report_status: int
     indicator_report_type: str
     indicator_reports: List[FetchedReport]
     indicator_low_score: int
     indicator_low_score_labels: Set[str]
+    indicator_medium_score: int
+    indicator_medium_score_labels: Set[str]
+    indicator_high_score: int
+    indicator_high_score_labels: Set[str]
     indicator_unwanted_labels: Set[str]
 
 
@@ -132,11 +136,16 @@ class IndicatorBundleBuilder:
         self.confidence_level = config.confidence_level
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
+        self.default_x_opencti_score = config.default_x_opencti_score
         self.indicator_reports = config.indicator_reports
         self.indicator_report_status = config.indicator_report_status
         self.indicator_report_type = config.indicator_report_type
         self.indicator_low_score = config.indicator_low_score
         self.indicator_low_score_labels = config.indicator_low_score_labels
+        self.indicator_medium_score = config.indicator_medium_score
+        self.indicator_medium_score_labels = config.indicator_medium_score_labels
+        self.indicator_high_score = config.indicator_high_score
+        self.indicator_high_score_labels = config.indicator_high_score_labels
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
 
         self.observation_factory = self._get_observation_factory(self.indicator["type"])
@@ -337,14 +346,20 @@ class IndicatorBundleBuilder:
         )
 
     def _determine_score_by_labels(self, labels: List[str]) -> int:
-        score = DEFAULT_X_OPENCTI_SCORE
+        label_score = None
 
+        # Score will be given floored at lowest score label found.
         for label in labels:
             if label in self.indicator_low_score_labels:
-                score = self.indicator_low_score
+                label_score = self.indicator_low_score
                 break
-
-        return score
+            if label in self.indicator_medium_score_labels:
+                if label_score is None or label_score > self.indicator_medium_score:
+                    label_score = self.indicator_medium_score
+            elif label in self.indicator_high_score_labels:
+                if label_score is None:
+                    label_score = self.indicator_high_score
+        return label_score if label_score is not None else self.default_x_opencti_score
 
     def _create_indicator(
         self,

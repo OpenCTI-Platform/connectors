@@ -982,10 +982,11 @@ def create_indicator(
     x_opencti_score: Optional[int] = None,
 ) -> stix2.Indicator:
     """Create an indicator."""
-    custom_properties: Dict[str, Any] = {X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE}
+    custom_properties: Dict[str, Any] = {}
 
-    if x_opencti_score is not None:
-        custom_properties[X_OPENCTI_SCORE] = x_opencti_score
+    custom_properties[X_OPENCTI_SCORE] = (
+        x_opencti_score if x_opencti_score is not None else DEFAULT_X_OPENCTI_SCORE
+    )
 
     if x_opencti_main_observable_type is not None:
         custom_properties[X_OPENCTI_MAIN_OBSERVABLE_TYPE] = (

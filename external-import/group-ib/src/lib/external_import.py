@@ -94,6 +94,8 @@ class ExternalImportConnector:
         self.endpoints_config = self.fh.read_yaml_config(config=Config.CONFIG_YML)
         self.mapping_config = self.fh.read_json_config(config=Config.CONFIG_JSON)
 
+        self.ttl = None
+
         self.ti_api_url = os.environ.get("TI_API_URL")
         self._ti_api_username = os.environ.get("TI_API_USERNAME")
         self._ti_api_token = os.environ.get("TI_API_TOKEN")
@@ -105,10 +107,9 @@ class ExternalImportConnector:
         self._proxy_password = os.environ.get("PROXY_PASSWORD")
 
         # Global collections filters
-        self.IGNORE_NON_MALWARE_DDOS = os.environ.get("IGNORE_NON_MALWARE_DDOS")
-        self.IGNORE_NON_INDICATOR_THREATS = os.environ.get(
-            "IGNORE_NON_INDICATOR_THREAT_REPORTS"
-        )
+        self.IGNORE_NON_MALWARE_DDOS = False
+        self.IGNORE_NON_INDICATOR_THREATS = False
+        self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR = False
 
         # gather TI API creds
         self.creds = {"api_key": self._ti_api_token, "username": self._ti_api_username}
@@ -131,7 +132,9 @@ class ExternalImportConnector:
         self.generators_list = None
         self.MITRE_MAPPER = None
 
-    def _collect_intelligence(self, collection, portion, mitre_mapper) -> list:
+    def _collect_intelligence(
+        self, collection, ttl, portion, mitre_mapper, flag=False
+    ) -> list:
         """Collect intelligence from the source"""
         raise NotImplementedError
 
@@ -232,9 +235,31 @@ class ExternalImportConnector:
                                 )
                                 continue
 
+                            # TTL
+                            self.ttl = (
+                                self.endpoints_config.get("collections", {})
+                                .get(collection, {})
+                                .get("ttl", None)
+                            )
+
+                            # Global collections filters
+                            self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR = (
+                                self.endpoints_config.get("extra_settings", {}).get(
+                                    "intrusion_set_instead_of_threat_actor", False
+                                )
+                            )
+                            self.IGNORE_NON_MALWARE_DDOS = self.endpoints_config.get(
+                                "extra_settings", {}
+                            ).get("ignore_non_malware_ddos", True)
+                            self.IGNORE_NON_INDICATOR_THREATS = (
+                                self.endpoints_config.get("extra_settings", {}).get(
+                                    "ignore_non_indicator_threats", False
+                                )
+                            )
+
                             for portion in generator:
 
-                                # Extra processing for collections
+                                # Extra pre-processing for collections
                                 if (
                                     collection == "attacks/ddos"
                                     and self.IGNORE_NON_MALWARE_DDOS
@@ -261,7 +286,11 @@ class ExternalImportConnector:
                                     self.helper.log_debug(f"Parsing {count}/{size}")
 
                                     bundle_objects = self._collect_intelligence(
-                                        collection, event, self.MITRE_MAPPER
+                                        collection,
+                                        self.ttl,
+                                        event,
+                                        self.MITRE_MAPPER,
+                                        flag=self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR,
                                     )
                                     bundle = stix2.Bundle(
                                         objects=bundle_objects, allow_custom=True
@@ -275,6 +304,14 @@ class ExternalImportConnector:
                                         update=self.update_existing_data,
                                         work_id=work_id,
                                     )
+
+                                # Update seqUpdate param
+                                prepared_data = {"seqUpdate": portion.sequpdate}
+                                self.fh.save_collection_info(
+                                    config=Config.CONFIG_YML,
+                                    collection=collection,
+                                    **prepared_data,
+                                )
 
                     except Exception as e:
                         self.helper.log_error(str(e))
