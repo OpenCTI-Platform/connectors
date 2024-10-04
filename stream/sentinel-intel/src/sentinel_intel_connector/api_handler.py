@@ -107,7 +107,7 @@ class SentinelApiHandler:
             response.raise_for_status()
 
             self.helper.connector_logger.info(
-                f"[API] HTTP GET Request to endpoint",
+                "[API] HTTP GET Request to endpoint",
                 {"url_path": self.config.resource_path},
             )
 
@@ -135,7 +135,7 @@ class SentinelApiHandler:
             response.raise_for_status()
 
             self.helper.connector_logger.info(
-                f"[API] HTTP GET Request to endpoint",
+                "[API] HTTP GET Request to endpoint",
                 {"url_path": self.config.resource_path},
             )
 
@@ -164,7 +164,7 @@ class SentinelApiHandler:
             response.raise_for_status()
 
             self.helper.connector_logger.info(
-                f"[API] HTTP POST Request to endpoint",
+                "[API] HTTP POST Request to endpoint",
                 {"url_path": self.config.resource_path},
             )
 
@@ -197,7 +197,7 @@ class SentinelApiHandler:
             response.raise_for_status()
 
             self.helper.connector_logger.info(
-                f"[API] HTTP PATCH Request to endpoint",
+                "[API] HTTP PATCH Request to endpoint",
                 {"url_path": self.config.resource_path},
             )
 
@@ -223,7 +223,7 @@ class SentinelApiHandler:
             response.raise_for_status()
 
             self.helper.connector_logger.info(
-                f"[API] HTTP DELETE Request to endpoint",
+                "[API] HTTP DELETE Request to endpoint",
                 {"url_path": f"{self.config.resource_path}/{indicator_id}"},
             )
 

@@ -61,8 +61,8 @@ class SentinelIncidentsConnector:
         state = self.helper.get_state()
         if state and "last_incident_timestamp" in state:
             last_timestamp = state["last_incident_timestamp"]
-        elif self.config.tanium_import_start_date:
-            last_timestamp = self.config.tanium_import_start_date
+        elif self.config.import_start_date:
+            last_timestamp = self.config.import_start_date
         else:
             last_timestamp = 0
         return last_timestamp

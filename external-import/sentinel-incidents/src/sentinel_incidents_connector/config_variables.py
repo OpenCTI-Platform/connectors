@@ -85,11 +85,11 @@ class ConfigConnector:
             self.load,
         )
         sentinel_import_start_date_var = get_config_variable(
-            "SENTIL_INCIDENTS_IMPORT_START_DATE",
+            "SENTINEL_INCIDENTS_IMPORT_START_DATE",
             ["sentinel_incidents", "import_start_date"],
             self.load,
         )
-        self.tanium_import_start_date = (
+        self.import_start_date = (
             parse(sentinel_import_start_date_var).timestamp()
             if sentinel_import_start_date_var
             else None
