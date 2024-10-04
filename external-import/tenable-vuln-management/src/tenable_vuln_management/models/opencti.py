@@ -42,7 +42,20 @@ class BaseEntity(FrozenBaseModelWithoutExtra):
     _stix2_representation: Optional[Any] = PrivateAttr(None)
     _id: Any = PrivateAttr(None)
 
-    def model_post_init(self, context__): # TODO docstring and reference to Pydantic V2
+    def model_post_init(self, context__: Any) -> None:
+        """
+        Define the post initialization method, automatically called after __init__ in a pydantic model initialization.
+
+        Notes:
+            This allows a last modification of the pydantic Model before it is eventually frozen.
+
+        Args:
+            context__(Any): The pydantic context used by pydantic framework.
+
+        References:
+            https://docs.pydantic.dev/latest/api/base_model/#pydantic.BaseModel.model_parametrized_name [consulted on
+                October 4th, 2024]
+        """
         self._stix2_representation = self.to_stix2_object()
         self._id = self._stix2_representation["id"]
 
