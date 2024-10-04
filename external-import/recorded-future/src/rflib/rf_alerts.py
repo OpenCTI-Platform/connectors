@@ -198,7 +198,7 @@ class RecordedFutureAlertConnector(threading.Thread):
             allow_custom=True,
             severity=str(self.opencti_default_severity),
             incident_type=str(alert.alert_rf_rule.rule_intelligence_goal),
-            x_opencti_files=external_files
+            x_opencti_files=external_files,
         )
 
         reference_number = 0

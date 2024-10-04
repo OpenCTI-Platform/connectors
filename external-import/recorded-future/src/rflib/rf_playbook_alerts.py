@@ -47,9 +47,9 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         self.api_recorded_future = rf_alerts_api
 
         self.severity_links = {
-            "High": "P1 - high",
-            "Moderate": "P2 - medium",
-            "Informational": "P3 - low",
+            "High": "high",
+            "Moderate": "medium",
+            "Informational": "low",
         }
 
     @staticmethod
