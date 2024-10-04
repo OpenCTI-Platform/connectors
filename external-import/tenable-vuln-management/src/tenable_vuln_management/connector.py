@@ -141,32 +141,49 @@ class Connector:
 
         """
         _ = export_uuid, export_type, export_chunk_id
-        stix_objects, vuln_findings = [], []  # results holder
+        vuln_findings, entities, stix_objects = [], [], []  # results holder
         success_flag = True
-        try:
-            vuln_findings = VulnerabilityFinding.from_api_response_body(data)
-        except ValidationError as e:
-            success_flag = False
-            self.helper.log_error("Unexpected Tenable API response", {"error": str(e)})
-        except Exception as e:
-            success_flag = False
-            self.helper.log_error(
-                "Error when trying to acquire a tenable finding", {"error": str(e)}
-            )
 
+        # Acquire
+        for item in data:
+            try:
+                # even though we implemented the ability to bulk convert api response, we do it one by one to maximize
+                # the amount of ingested data in case of a corrupted line
+                vuln_findings.extend(
+                    VulnerabilityFinding.from_api_response_body([item])
+                )
+            except ValidationError as e:
+                success_flag = False
+                self.helper.log_error(
+                    "Unexpected Tenable API response", {"error": str(e)}
+                )
+            except Exception as e:
+                success_flag = False
+                self.helper.log_error(
+                    "Error when trying to acquire tenable findings", {"error": str(e)}
+                )
+        # Revamp
         for vuln_finding in vuln_findings:
             try:
-                entities = self.converter_to_stix.process_vuln_finding(
-                    vuln_finding=vuln_finding
+                entities.extend(
+                    self.converter_to_stix.process_vuln_finding(
+                        vuln_finding=vuln_finding
+                    )
                 )
-                stix_objects.extend([entity.to_stix2_object() for entity in entities])
             except Exception as e:
                 success_flag = False
                 self.helper.log_error(
                     "Error when trying to process a tenable finding",
                     {"tenable_finding": vuln_finding, "error": str(e)},
                 )
+        # Deduplicate chunk if needed to lighten stress on queue later
+        # E.g. Assets are repeated in vuln findings => leading to duplicated Systems
+        entities = list(set(entities))
 
+        # Convert
+        stix_objects.extend([entity.to_stix2_object() for entity in entities])
+
+        # Load
         if stix_objects:
             stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
             bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
@@ -193,9 +210,9 @@ class Connector:
     def _finalize_work(self, work_id: str, results=list[bool]) -> None:
         """Finalize the work process and logs the completion message.
 
-        This method:
-            1. Update the connector state depending on the results
-            2. Marks the work as processed on the OpenCTI platform
+        This method
+            1. Update the connector state depending on the results.
+            2. Marks the work as processed on the OpenCTI platform.
             3. Logs a message indicating that the connector ran.
 
         Args:
