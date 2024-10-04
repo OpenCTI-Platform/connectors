@@ -46,7 +46,11 @@ def parse_cpe_uri(cpe_str: str) -> dict[str, str]:
         if cpe_str.startswith(key):
             match = re.match(pattern=supported_pattern, string=cpe_str)
             if match is not None:
-                return {"part": match.group("part"), "vendor": match.group("vendor"), "product": match.group("product")}
+                return {
+                    "part": match.group("part"),
+                    "vendor": match.group("vendor"),
+                    "product": match.group("product"),
+                }
             raise ValueError("CPE URI is missing mandatory information.")
     raise NotImplementedError("Unknown CPE URI format")
 
