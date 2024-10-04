@@ -362,6 +362,10 @@ jobs:
           name: Build Docker image opencti/connector-shadowtrackr
           command: docker build -t opencti/connector-shadowtrackr:latest . && docker tag opencti/connector-shadowtrackr:latest opencti/connector-shadowtrackr:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/tenable-vuln-management
+          name: Build Docker image opencti/connector-tenable-vuln-management
+          command: docker build -t opencti/connector-tenable-vuln-management:latest . && docker tag opencti/connector-tenable-vuln-management:latest opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -513,6 +517,8 @@ jobs:
             docker push opencti/connector-reversinglabs-spectra-analyze:${CIRCLE_TAG}
             docker push opencti/connector-shadowtrackr:latest
             docker push opencti/connector-shadowtrackr:${CIRCLE_TAG}
+            docker push opencti/connector-tenable-vuln-management:latest 
+            docker push opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1282,6 +1288,10 @@ jobs:
           name: Build Docker image opencti/connector-shadowtrackr
           command: docker build -t opencti/connector-shadowtrackr:rolling .
       - run:
+          working_directory: ~/opencti/external-import/tenable-vuln-management
+          name: Build Docker image opencti/connector-tenable-vuln-management
+          command: docker build -t opencti/connector-tenable-vuln-management:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1357,6 +1367,7 @@ jobs:
             docker push opencti/connector-first-epss:rolling
             docker push opencti/connector-reversinglabs-spectra-analyze:rolling
             docker push opencti/connector-shadowtrackr:rolling
+            docker push opencti/connector-tenable-vuln-management:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
