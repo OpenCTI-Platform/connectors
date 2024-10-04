@@ -3,7 +3,7 @@ Provides use cases to convert
 """
 
 import re
-from typing import Any, Literal
+from typing import Any, Literal, TYPE_CHECKING
 
 import stix2
 
@@ -21,6 +21,9 @@ from .models.opencti import (
     Vulnerability,
 )
 from .models.tenable import Asset, Plugin, VulnerabilityFinding
+
+if TYPE_CHECKING:
+    from pycti import OpenCTIConnectorHelper
 
 
 def parse_cpe_uri(cpe_str: str) -> dict[str, str]:
@@ -134,7 +137,7 @@ class ConverterToStix:
 
     def __init__(
         self,
-        helper,
+        helper: "OpenCTIConnectorHelper",
         default_marking: Literal[
             "TLP:CLEAR", "TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"
         ],
@@ -410,7 +413,7 @@ class ConverterToStix:
         system = system_related_objects["system"]
         vulnerabilities = vulnerability_related_objects["vulnerabilities"]
 
-        # TODO Replace with Relationship (s:System) - [:HAS] -> (v:Vulnerability) when available in OCTI 6.3.4 version
+        # TODO Replace with Relationship (s:System) - [:HAS] -> (v:Vulnerability) when available in OCTI 6.3.5 version
         system_to_vulnerabilities = [
             RelatedToRelationship(
                 author=self.author,
