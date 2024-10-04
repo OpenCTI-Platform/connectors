@@ -120,6 +120,3 @@ class ConfigConnector:
             required=False,
             default="TLP:CLEAR",
         )
-
-        # TODO Add var to control Customization Relation Workflow auto-creation
-        # TODO Add VARS to affect Relationship status on system -> vuln relationship
