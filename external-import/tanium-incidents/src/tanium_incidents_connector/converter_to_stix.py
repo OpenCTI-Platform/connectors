@@ -168,7 +168,7 @@ class ConverterToStix:
     ) -> stix2.Sighting:
         """
         Create STIX 2.1 Sighting object
-        :param source_id: Sighted entity ID
+        :param source_id: Sighted STIX Domain Object ID
         :param target_id: ID of who/what sighted the entity
         :param first_seen: When entity has been seen for the first time
         :param last_seen: When entity has been seen for the last time
