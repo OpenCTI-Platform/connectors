@@ -57,6 +57,85 @@ class ImportExternalReferenceConnector:
         if os.path.exists("data.pdf"):
             os.remove("data.pdf")
 
+    @staticmethod
+    def _is_cookies_accepted(page):
+        """
+        Attempts to accept cookies on a web page.
+        This method searches for various elements (links and buttons) that are commonly used for cookie consent prompts.
+        It uses a list of predefined selectors to identify and click on elements that contain text variations related to cookie acceptance.
+
+        :param page: The Playwright Page object representing the current web page.
+        :return: bool: Returns True if a cookie acceptance element was successfully clicked, otherwise returns False.
+        """
+
+        found = False
+
+        selectors = [
+            'a:has-text("agree")',
+            'button:has-text("agree")',
+            'a:has-text("accept all")',
+            'button:has-text("accept all")',
+            'a:has-text("accept")',
+            'button:has-text("accept")',
+            'a:has-text("i agree")',
+            'button:has-text("i agree")',
+            'a:has-text("allow")',
+            'button:has-text("allow")',
+        ]
+
+        for selector in selectors:
+            try:
+                page.locator(selector).first.click(timeout=1000, force=True)
+                found = True
+                break
+            except:
+                continue
+        return found
+
+    @staticmethod
+    def _hides_unwanted_elements(page):
+        """
+        Hides unwanted elements of the page to improve the readability of the pdf if the click to accept cookies has failed.
+        :param page: The Playwright Page object representing the current web page.
+        :return: None
+        """
+
+        page.evaluate(
+            """
+        const elements = document.querySelectorAll('[id*="popup"], [class*="popup"], [id*="cookie"], [class*="cookie"], [id*="privacy"], [class*="privacy"], [id*="consent"], [class*="consent"]');
+        elements.forEach(el => el.style.display = 'none');
+        """
+        )
+
+    def _process_playwright(self, p, url_to_import):
+        """
+        Launches a Playwright browser instance, navigates to the specified URL, and performs actions such as simulating
+        a user environment and handling cookie consent pop-ups.
+
+        :param p: The Playwright instance used to interact with the browser (e.g., `playwright`).
+        :param url_to_import: The URL of the page to load in the browser.
+        :return: A tuple containing the browser and page objects.
+                 - browser: The launched browser instance.
+                 - page: The browser page object used to interact with the loaded web page.
+        """
+        browser = p.chromium.launch()
+
+        # Create a new browser context with a specified user agent to simulate a particular browser
+        # environment, which helps to bypass certain security measures.
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36"
+        )
+        page = context.new_page()
+        page.goto(url_to_import)
+
+        is_cookies_accepted = self._is_cookies_accepted(page)
+
+        if not is_cookies_accepted:
+            self._hides_unwanted_elements(page)
+
+        page.wait_for_timeout(2000)
+        return browser, page
+
     def _process_external_reference(self, external_reference):
         self.helper.log_info("Processing external reference....")
         if "url" not in external_reference:
@@ -82,29 +161,18 @@ class ImportExternalReferenceConnector:
                 else:
                     file_name = url_to_import.split("/")[-1] + ".pdf"
                     with sync_playwright() as p:
-                        browser = p.chromium.launch()
-                        page = browser.new_page()
-                        page.goto(url_to_import)
-                        page.wait_for_timeout(2000)
-                        found = False
-                        try:
-                            page.locator('a:has-text("accept all")').first.click(
-                                timeout=1000, force=True
-                            )
-                            found = True
-                        except:
-                            pass
-                        if not found:
-                            try:
-                                page.locator(
-                                    'button:has-text("accept all")'
-                                ).first.click(timeout=1000, force=True)
-                                found = True
-                            except:
-                                pass
-                        if found:
-                            page.wait_for_timeout(2000)
-                        page.pdf(format="A4", path="data.pdf")
+                        browser, page = self._process_playwright(p, url_to_import)
+                        page.pdf(
+                            path="data.pdf",
+                            format="A4",
+                            margin={
+                                "top": "10mm",
+                                "bottom": "10mm",
+                                "left": "15mm",
+                                "right": "15mm",
+                            },
+                            scale=0.9,
+                        )
                         browser.close()
                     with open("./data.pdf", "rb") as file:
                         data = file.read()
@@ -179,28 +247,7 @@ class ImportExternalReferenceConnector:
                     text_maker.protect_links = True
                     text_maker.mark_code = True
                     with sync_playwright() as p:
-                        browser = p.chromium.launch()
-                        page = browser.new_page()
-                        page.goto(url_to_import)
-                        page.wait_for_timeout(2000)
-                        found = False
-                        try:
-                            page.locator('a:has-text("accept all")').first.click(
-                                timeout=1000, force=True
-                            )
-                            found = True
-                        except:
-                            pass
-                        if not found:
-                            try:
-                                page.locator(
-                                    'button:has-text("accept all")'
-                                ).first.click(timeout=1000, force=True)
-                                found = True
-                            except:
-                                pass
-                        if found:
-                            page.wait_for_timeout(2000)
+                        browser, page = self._process_playwright(p, url_to_import)
                         html = page.content()
                         browser.close()
                     data = text_maker.handle(html)
