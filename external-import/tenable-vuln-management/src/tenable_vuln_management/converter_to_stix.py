@@ -3,7 +3,7 @@ Provides use cases to convert
 """
 
 import re
-from typing import Any, Literal, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
 import stix2
 
