@@ -200,8 +200,8 @@ class DomainName(Observable):
     resolves_to_ips: Optional[list[IPAddress]] = Field(
         None, description="IP addresses it resolves to."
     )
-    resolves_to_mac_addresses: Optional[list[MACAddress]] = Field(
-        None, description="Mac addresses it resolves to."
+    resolves_to_domain_names: Optional[list["DomainName"]] = Field(
+        None, description="the domain names it resolves to."
     )
 
     __value_validator = field_validator("value", mode="after")(
@@ -212,8 +212,8 @@ class DomainName(Observable):
         resolves_to_objects = (
             self.resolves_to_ips if self.resolves_to_ips is not None else []
         ) + (
-            self.resolves_to_mac_addresses
-            if self.resolves_to_mac_addresses is not None
+            self.resolves_to_domain_names
+            if self.resolves_to_domain_names is not None
             else []
         )
         resolves_to_ref_ids = [item.id for item in resolves_to_objects]
