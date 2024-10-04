@@ -154,7 +154,8 @@ class TaniumIncidentsConnector:
 
         # Check if the intel is in OpenCTI
         entity = self._get_sighted_entity(alert)
-        if entity is not None:
+        # Create a Sighting ONLY for Indicators (Observables can't be embedded in a Sighting)
+        if entity and entity["entity_type"] == "Indicator":
             stix_sighting = self.converter_to_stix.create_sighting(
                 source_id=entity["standard_id"],
                 target_id=self.author["id"],
