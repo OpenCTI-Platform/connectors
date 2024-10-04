@@ -115,15 +115,16 @@ def tlp_marking_definition_handler(
     Raises:
         ValueError: If the provided marking definition is not supported.
     """
-    return {
+    output = {
         "TLP:CLEAR": stix2.TLP_WHITE,  # "TLP:CLEAR" and "TLP:WHITE" map to the same marking
         "TLP:WHITE": stix2.TLP_WHITE,
         "TLP:GREEN": stix2.TLP_GREEN,
         "TLP:AMBER": stix2.TLP_AMBER,
         "TLP:RED": stix2.TLP_RED,
-    }.get(
-        marking_definition, ValueError(f"Unsupported TLP marking: {marking_definition}")
-    )
+    }.get(marking_definition, None)
+    if output is None:
+        raise ValueError(f"Unsupported TLP marking: {marking_definition}.")
+    return output
 
 
 class ConverterToStix:
@@ -139,13 +140,13 @@ class ConverterToStix:
         ],
     ):
         self.helper = helper
-        self.author = ConverterToStix.make_author()
+        self.author = ConverterToStix._make_author()
         self.object_marking_refs = [
             tlp_marking_definition_handler(default_marking)["id"]
         ]
 
     @staticmethod
-    def make_author() -> Author:
+    def _make_author() -> Author:
         return Author(
             name="Tenable-Vuln-Management",
             description="Tenable Vulnerability Management® (formerly known as Tenable.io) allows security and audit "
@@ -156,14 +157,22 @@ class ConverterToStix:
             x_opencti_organization_type="vendor",
         )
 
-    def make_system(self, asset: Asset) -> System:
+    def _make_system(self, asset: Asset) -> System:
         return System(
             author=self.author,
             object_marking_refs=self.object_marking_refs,
             name=asset.hostname,
         )
 
-    def make_mac_address(self, asset: Asset) -> MACAddress | None:
+    def _make_mac_address(self, asset: Asset) -> MACAddress | None:
+        """Create a MACAddress object from an asset if a MAC address exists.
+
+        Args:
+            asset (Asset): The asset containing MAC address information.
+
+        Returns:
+            MACAddress | None: A MACAddress object if the MAC address is available, otherwise None.
+        """
         if asset.mac_address is None:
             return None
         return MACAddress(
@@ -172,37 +181,45 @@ class ConverterToStix:
             value=asset.mac_address,
         )
 
-    def make_ipv4_address(self, asset: Asset) -> IPAddress:
+    def _make_ipv4_address(self, asset: Asset) -> IPAddress:
         return IPAddress(
             author=self.author,
             object_marking_refs=self.object_marking_refs,
             version="v4",
             value=asset.ipv4,
             resolves_to_mac_addresses=(
-                [self.make_mac_address(asset)]
+                [self._make_mac_address(asset)]
                 if asset.mac_address is not None
                 else None
             ),
         )
 
-    def make_ipv6_address(self, asset: Asset) -> IPAddress | None:
-        return (
-            IPAddress(
-                author=self.author,
-                object_marking_refs=self.object_marking_refs,
-                version="v6",
-                value=asset.ipv6,
-                resolves_to_mac_addresses=(
-                    [self.make_mac_address(asset)]
-                    if asset.mac_address is not None
-                    else None
-                ),
-            )
-            if asset.ipv6
-            else None
-        )
+    def _make_ipv6_address(self, asset: Asset) -> IPAddress | None:
+        """Create an IPv6 address object for the given asset, if available.
 
-    def make_hostname(self, asset: Asset) -> Hostname:
+        Args:
+            asset (Asset): The asset containing the IPv6 address.
+
+        Returns:
+            IPAddress | None: An IPAddress object for the IPv6 address if available, otherwise None.
+        """
+        return (
+                IPAddress(
+                    author=self.author,
+                    object_marking_refs=self.object_marking_refs,
+                    version="v6",
+                    value=asset.ipv6,
+                    resolves_to_mac_addresses=(
+                        [self._make_mac_address(asset)]
+                        if asset.mac_address is not None
+                        else None
+                    ),
+                )
+                if asset.ipv6
+                else None
+            )
+
+    def _make_hostname(self, asset: Asset) -> Hostname:
         return Hostname(
             author=self.author,
             object_marking_refs=self.object_marking_refs,
@@ -219,35 +236,40 @@ class ConverterToStix:
             for name in asset.operating_system
         ]
 
-    def make_domain_name(self, asset: Asset) -> DomainName | None:
+    def _make_domain_name(self, asset: Asset) -> DomainName | None:
+        """Create a DomainName object for the given asset, if available.
+
+        Args:
+            asset (Asset): The asset containing the fully qualified domain name (FQDN).
+
+        Returns:
+            DomainName | None: A DomainName object for the asset if an FQDN is available, otherwise None.
+        """
+
         return (
-            DomainName(
-                author=self.author,
-                object_marking_refs=self.object_marking_refs,
-                value=asset.fqdn,
-                resolves_to_mac_addresses=(
-                    [self.make_mac_address(asset)]
-                    if asset.mac_address is not None
-                    else None
-                ),
-                resolves_to_ips=[self.make_ipv4_address(asset)]
-                + ([self.make_ipv6_address(asset)] if asset.ipv6 is not None else []),
+                DomainName(
+                    author=self.author,
+                    object_marking_refs=self.object_marking_refs,
+                    value=asset.fqdn,
+                    resolves_to_domain_names=None,
+                    resolves_to_ips=[self._make_ipv4_address(asset)]
+                    + ([self._make_ipv6_address(asset)] if asset.ipv6 is not None else []),
+                )
+                if asset.fqdn
+                else None
             )
-            if asset.fqdn
-            else None
-        )
 
     def process_asset(self, asset: Asset) -> dict[str, Any]:
-        system = self.make_system(asset=asset)
+        system = self._make_system(asset=asset)
         observables = [
             obs
             for obs in (
-                self.make_ipv4_address(asset=asset),
-                self.make_hostname(asset=asset),
+                self._make_ipv4_address(asset=asset),
+                self._make_hostname(asset=asset),
                 # optional
-                self.make_mac_address(asset=asset),
-                self.make_ipv6_address(asset=asset),
-                self.make_domain_name(asset=asset),
+                self._make_mac_address(asset=asset),
+                self._make_ipv6_address(asset=asset),
+                self._make_domain_name(asset=asset),
             )
             if obs is not None
         ]
@@ -274,38 +296,57 @@ class ConverterToStix:
             "relationships": relationships,
         }
 
-    def make_targeted_software_s(self, plugin: Plugin) -> list[Software]:
-        return (
-            [
-                Software(
-                    author=self.author,
-                    object_marking_refs=self.object_marking_refs,
-                    name=cpe_data["product"],
-                    vendor=cpe_data["vendor"],
-                    cpe=cpe_uri,
-                )
-                for cpe_uri in plugin.cpe
-                for cpe_data in [parse_cpe_uri(cpe_uri)]
-            ]
-            if plugin.cpe is not None
-            else []
-        )
+    def _make_targeted_software_s(self, plugin: Plugin) -> list[Software]:
+        """Create a list of Software objects based on the CPE URIs in the plugin.
 
-    def make_vulnerabilities(self, plugin: Plugin) -> list[Vulnerability]:
+        Args:
+            plugin (Plugin): The plugin containing CPE URIs.
+
+        Returns:
+            list[Software]: A list of Software objects extracted from the CPE URIs in the plugin.
+        """
+
+        return (
+                [
+                    Software(
+                        author=self.author,
+                        object_marking_refs=self.object_marking_refs,
+                        name=cpe_data["product"],
+                        vendor=cpe_data["vendor"],
+                        cpe=cpe_uri,
+                    )
+                    for cpe_uri in plugin.cpe
+                    for cpe_data in [parse_cpe_uri(cpe_uri)]
+                ]
+                if plugin.cpe is not None
+                else []
+            )
+
+    def _make_vulnerabilities(self, plugin: Plugin) -> list[Vulnerability]:
+        """
+        Create a list of Vulnerability objects from the given plugin.
+
+        Args:
+            plugin (Plugin): The plugin containing vulnerability information such as CVEs and CVSS scores.
+
+        Returns:
+            list[Vulnerability]: A list of Vulnerability objects.
+        """
+
         base = dict(
-            author=self.author,
-            object_marking_refs=self.object_marking_refs,
-            created=plugin.publication_date,
-            modified=plugin.modification_date,
-            description=plugin.description,
-            confidence=None,
-            cvss3_score=plugin.cvss3_base_score,
-            cvss3_severity=(
-                cvss3_severity_from_score(plugin.cvss3_base_score)
-                if plugin.cvss3_base_score
-                else None
-            ),
-        )
+                author=self.author,
+                object_marking_refs=self.object_marking_refs,
+                created=plugin.publication_date,
+                modified=plugin.modification_date,
+                description=plugin.description,
+                confidence=None,
+                cvss3_score=plugin.cvss3_base_score,
+                cvss3_severity=(
+                    cvss3_severity_from_score(plugin.cvss3_base_score)
+                    if plugin.cvss3_base_score
+                    else None
+                ),
+            )
         cvss3_vector = plugin.cvss3_vector
         details = (
             dict(
@@ -325,8 +366,8 @@ class ConverterToStix:
         )
 
     def process_plugin(self, plugin: Plugin) -> dict[str, Any]:
-        software_s = self.make_targeted_software_s(plugin=plugin)
-        vulnerabilities = self.make_vulnerabilities(plugin=plugin)
+        software_s = self._make_targeted_software_s(plugin=plugin)
+        vulnerabilities = self._make_vulnerabilities(plugin=plugin)
 
         relationships_soft_vulns = [
             RelatedToRelationship(
@@ -353,6 +394,16 @@ class ConverterToStix:
     def process_vuln_finding(
         self, vuln_finding: VulnerabilityFinding
     ) -> list[BaseEntity]:
+        """
+       Process a vulnerability finding by extracting related system and vulnerability objects,
+       and establish relationships between them.
+
+       Args:
+           vuln_finding (VulnerabilityFinding): The vulnerability finding containing asset and plugin data.
+
+       Returns:
+           list[BaseEntity]: A list of BaseEntity objects including systems, vulnerabilities, observables, and relationships.
+       """
         system_related_objects = self.process_asset(vuln_finding.asset)
         vulnerability_related_objects = self.process_plugin(vuln_finding.plugin)
 
