@@ -130,8 +130,8 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                             + playbook_alert["data"]["playbook_alert_id"]
                         )
                 except Exception as err:
+                    print(err)
                     self.helper.log_error(err)
-                    self.create_bugged_incident(plb_alert)
                 self.update_state(plb_alert.category)
 
         for playbook_type in playbook_types:
@@ -155,30 +155,6 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 timestamp_checkpoint.strftime("%Y-%m-%dT%H:%M:%S")
             )
             self.helper.set_state(current_state_new)
-
-    def create_bugged_incident(self, plb_alert):
-        bundle_objects = []
-        playbook_alert_name = str("[BUGGED] " + str(plb_alert.playbook_alert_id))
-        playbook_alert_description = (
-            "A bug was encountered while creating incident "
-            + str(plb_alert.playbook_alert_id)
-        )
-        stix_incident = stix2.Incident(
-            id=pycti.Incident.generate_id(
-                playbook_alert_name,
-                datetime.datetime.now(pytz.timezone("UTC")).strftime(
-                    "%Y-%m-%dT%H:%M:%S"
-                ),
-            ),
-            name=playbook_alert_name,
-            description=playbook_alert_description,
-            object_marking_refs=self.tlp,
-            labels=["BUGGED"],
-            created_by_ref=self.author,
-        )
-        bundle_objects.append(stix_incident)
-        bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
-        self.helper.send_stix2_bundle(bundle, update=True, work_id=self.work_id)
 
     def create_incident_from_playbook_alert_code_repo_leakage(self, playbook_alert):
         bundle_objects = []
@@ -712,4 +688,3 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 )
         bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
         self.helper.send_stix2_bundle(bundle, update=True, work_id=self.work_id)
-        self.helper.log_info(bundle)

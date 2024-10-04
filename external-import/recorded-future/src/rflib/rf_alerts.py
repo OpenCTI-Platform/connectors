@@ -200,7 +200,6 @@ class RecordedFutureAlertConnector(threading.Thread):
             incident_type=str(alert.alert_rf_rule.rule_intelligence_goal),
             x_opencti_files=external_files
         )
-        # bundle_objects.append(stix_incident)
 
         reference_number = 0
         for hit in alert.alert_hits:
