@@ -77,7 +77,7 @@ class CvssTemporalVector(FrozenBaseModelWithoutExtra):
     """
 
     exploitability: Optional[str] = Field(
-        ..., description="The level of exploitability of the vulnerability."
+        None, description="The level of exploitability of the vulnerability."
     )
     remediation_level: str = Field(
         ..., description="Remediation status of the vulnerability."
