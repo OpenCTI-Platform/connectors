@@ -1,74 +1,72 @@
-# OpenCTI External Ingestion Connector Template
+# OpenCTI Tenable Vulnerability Management Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+This connector integrates Tenable Vulnerability Management with the OpenCTI platform. It pulls vulnerability data from Tenable, such as vulnerabilities, severity levels, and asset data, and imports it into OpenCTI to provide comprehensive visibility into security risks.
 
-Table of Contents
+See https://docs.tenable.com/vulnerability-management.htm
 
-- [OpenCTI External Ingestion Connector Template](#opencti-external-ingestion-connector-template)
-  - [Introduction](#introduction)
-  - [Installation](#installation)
-    - [Requirements](#requirements)
-  - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-  - [Deployment](#deployment)
-    - [Docker Deployment](#docker-deployment)
-    - [Manual Deployment](#manual-deployment)
-  - [Usage](#usage)
-  - [Behavior](#behavior)
-  - [Debugging](#debugging)
-  - [Additional information](#additional-information)
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration variables](#configuration-variables)
+  - [OpenCTI environment variables](#opencti-environment-variables)
+  - [Base connector environment variables](#base-connector-environment-variables)
+  - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+- [Debugging](#debugging)
+- [Additional information](#additional-information)
 
 ## Introduction
+
+The Tenable Vulnerability Management Connector for OpenCTI imports vulnerability data from Tenable and maps it to relevant entities in the OpenCTI ecosystem. This includes vulnerabilities, CVEs, severity levels, and affected assets. The data can be used to enhance threat intelligence, vulnerability management, and security operation workflows in OpenCTI.
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6...
+- OpenCTI Platform >= 6.x
+- Tenable Vulnerability Management API access (API key required)
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+The configuration variables for the connector can be set in `docker-compose.yml` for Docker deployments or `config.yml` for manual deployments.
 
 ### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
 |---------------|------------|-----------------------------|-----------|------------------------------------------------------|
 | OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform.  |
 
 ### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
 
 | Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
 |-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
 | Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
 | Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
 | Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           | vulnerability   | Yes       | The scope or type of data the connector is importing (e.g., vulnerability).               |
+| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options: `debug`, `info`, `warn`, `error`.         |
 
 ### Connector extra parameters environment variables
 
-Below are the parameters you'll need to set for the connector:
-
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
+| Parameter             | config.yml                | Docker environment variable | Default                      | Mandatory | Description                                                                                  |
+|-----------------------|---------------------------|-----------------------------|------------------------------|-----------|----------------------------------------------------------------------------------------------|
+| API base URL          | api_base_url              | `TIO_API_BASE_URL`           | https://cloud.tenable.com     | Yes       | Base URL for the Tenable API.                                                                 |
+| API access key        | api_access_key            | `TIO_API_ACCESS_KEY`         |                              | Yes       | Tenable API access key.                                                                       |
+| API secret key        | api_secret_key            | `TIO_API_SECRET_KEY`         |                              | Yes       | Tenable API secret key.                                                                       |
+| API timeout           | api_timeout               | `TIO_API_TIMEOUT`            | 30                           | No        | Timeout for API requests in seconds.                                                          |
+| API retries           | api_retries               | `TIO_API_RETRIES`            | 5                            | No        | Number of retries in case of failure.                                                         |
+| API backoff           | api_backoff               | `TIO_API_BACKOFF`            | 1                            | No        | Time (in seconds) to wait before retrying after receiving a 429 response from the API.        |
+| Export since date     | export_since              | `TIO_EXPORT_SINCE`           | 1970-01-01T00:00:00+00       | No        | Date from which to start pulling vulnerability data.                                          |
+| Minimum severity      | min_severity              | `TIO_MIN_SEVERITY`           | low                          | No        | The minimum severity level of vulnerabilities to import (`low`, `medium`, `high`, `critical`).|
+| Marking definition    | marking_definition        | `TIO_MARKING_DEFINITION`     | TLP:CLEAR                    | No        | Default marking definition for imported data (e.g., `TLP:AMBER`, `TLP:GREEN`, `TLP:CLEAR`).   |
+| Number of threads     | num_thread                | `TIO_NUM_THREADS`            | 1                            | No        | Number of threads to use for the connector.                                                   |
 
 ## Deployment
 
@@ -108,7 +106,7 @@ Install the required python dependencies (preferably in a virtual environment):
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+Then, start the connector from /src:
 
 ```shell
 python3 main.py
@@ -127,27 +125,93 @@ download of data by re-running the connector.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+### Global Flow
+```mermaid
+graph TD
+    start_run([Start Connector triggered by Scheduler])
+    load_config[Load Configurations]
+    initiate[Initialize OpenCTI Helper &  Initiate Work]
+    test_previous_successful_run{Previous Successful Run?}
+    overwrite_import_start_date[Overwrite Import Start Date Parameter]
+    start_export[Trigger Tenable Vulnerability Findings Export]
+    spawn_threads[Spawn processing threads]
 
+    subgraph process
+    direction TB
+        fetch_data[Fetch data available chunk] -->
+        map_to_octi_entity[Map to Open CTI entity] -->
+        convert_to_stix2[Cnovert to STIX2 bundle] -->
+        send_bundle[Send Bundle to Open CTI Queue]
+    end
+
+    test_all_jobs_successful{All Jobs Succeeded?}
+    update_run_state[Update Last Successful Run Datetime]
+    log_error[Log Error and Partial Results]
+    end_run([End Run])
+
+start_run -->
+load_config -->
+initiate -->
+test_previous_successful_run -->|YES| overwrite_import_start_date --> start_export
+test_previous_successful_run -->|NO| start_export
+--> spawn_threads --> process --> test_all_jobs_successful
+test_all_jobs_successful -->|YES| update_run_state --> end_run
+test_all_jobs_successful -->|NO| log_error --> end_run
+```
+
+### Mapping details
+
+```mermaid
+graph LR
+    subgraph TenableVulnerabilityFinding
+        direction TB
+        TenableAsset[Asset]
+        TenablePlugin[Plugin]
+    end
+
+    subgraph OpenCTI
+        direction TB
+        OpenCTISystem[System]
+        OpenCTIMACAddress[MACAddress]
+        OpenCTIPv4Address[IPAddress v4]
+        OpenCTIPv6Address[IPAddress v6]
+        OpenCTIHostname[Hostname]
+        OpenCTIDomainName[DomainName]
+        OpenCTIOperatingSystem[OperatingSystems]
+        OpenCTISoftware[Software_s]
+        OpenCTIVulnerability[Vulnerabilities]
+    end
+
+    %% Asset generates System and Observables
+    TenableAsset --> OpenCTISystem & OpenCTIMACAddress & OpenCTIPv4Address & OpenCTIPv6Address & OpenCTIHostname & OpenCTIDomainName
+    TenableAsset-->|looping over installed OS| OpenCTIOperatingSystem
+
+    %% Plugin generates Software and Vulnerability
+    TenablePlugin -->|looping over targeted CPE URIs| OpenCTISoftware
+    TenablePlugin -->|looping over detected CVEs| OpenCTIVulnerability
+
+    %% Relationships between System and Observables
+    OpenCTISystem -.-> |"Related to"| OpenCTIMACAddress & OpenCTIPv4Address & OpenCTIPv6Address & OpenCTIHostname & OpenCTIDomainName & OpenCTIOperatingSystem
+
+    %% Relationships between Vulnerabilities and Software
+    OpenCTIVulnerability -.-> |"Related to"| OpenCTISoftware
+
+    OpenCTISystem -.-> |"Related to"| OpenCTIVulnerability
+
+```
 
 ## Debugging
+Set the log level by configuring CONNECTOR_LOG_LEVEL. Example log levels:
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
-
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+debug: Detailed logs for troubleshooting.
+info: General operational logs.
+warn: Warnings on non-critical issues.
+error: Logs only critical errors.
+Logging can be customized via the self.helper.connector_logger calls within the connector's codebase.
 
 ## Additional information
+- Ensure your Tenable API access is configured correctly (API keys, base URL).
+- The connector handles rate limits using a backoff and retry mechanism for 429 HTTP responses.
+- Consider the `min_severity` threshold and `export_since` parameters for performance optimization.
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+
