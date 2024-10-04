@@ -98,7 +98,6 @@ class RecordedFutureAlertConnector(threading.Thread):
         self.update_rules()
         timestamp = datetime.datetime.now(pytz.timezone("UTC"))
         current_state = self.helper.get_state()
-
         if current_state is not None and "last_alert_run" in current_state:
             current_state_datetime = datetime.datetime.strptime(
                 current_state["last_alert_run"], "%Y-%m-%dT%H:%M:%S"
@@ -178,6 +177,7 @@ class RecordedFutureAlertConnector(threading.Thread):
         )
 
     def alert_to_incident(self, alert):
+        external_files = []
         bundle_objects = [self.author]
         stix_external_refs = []
         stix_external_ref = stix2.ExternalReference(
@@ -198,9 +198,10 @@ class RecordedFutureAlertConnector(threading.Thread):
             allow_custom=True,
             severity=str(self.opencti_default_severity),
             incident_type=str(alert.alert_rf_rule.rule_intelligence_goal),
-            x_opencti_files=[],
+            x_opencti_files=external_files
         )
-        bundle_objects.append(stix_incident)
+        # bundle_objects.append(stix_incident)
+
         reference_number = 0
         for hit in alert.alert_hits:
             reference_number = reference_number + 1
@@ -226,7 +227,6 @@ class RecordedFutureAlertConnector(threading.Thread):
             )
             hit_note = hit_note + "\n### Entities"
 
-            image_list = []
             for entity in hit["entities"]:
                 table_markdown = [["Entity's", "value"]]
                 for key in entity:
@@ -237,7 +237,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         self.api_recorded_future.get_image_alert(entity["name"])
                     )
                     if image_presence:
-                        image_list.append(
+                        external_files.append(
                             {
                                 "name": image_name,
                                 "data": base64.b64encode(image_data),
@@ -298,14 +298,12 @@ class RecordedFutureAlertConnector(threading.Thread):
                     bundle_objects.append(stix_emailaddress)
                     bundle_objects.append(stix_relationship)
                 elif entity["type"] == "InternetDomainName":
-                    stix_domain = (
-                        stix2.DomainName(
-                            value=entity["name"],
-                            object_marking_refs=self.tlp,
-                            custom_properties={
-                                "x_opencti_created_by_ref": self.author["id"],
-                            },
-                        ),
+                    stix_domain = stix2.DomainName(
+                        value=entity["name"],
+                        object_marking_refs=self.tlp,
+                        custom_properties={
+                            "x_opencti_created_by_ref": self.author["id"],
+                        },
                     )
                     stix_relationship = stix2.Relationship(
                         relationship_type="related-to",
@@ -344,7 +342,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         )
                         bundle_objects.append(stix_relationship)
                 elif entity["type"] == "MitreAttackIdentifier":
-                    octi_technique_mittre = self.helper.api.attack_pattern.list(
+                    octi_technique_mitre = self.helper.api.attack_pattern.list(
                         **{
                             "filters": {
                                 "mode": "and",
@@ -355,20 +353,17 @@ class RecordedFutureAlertConnector(threading.Thread):
                             }
                         }
                     )
-                    if len(octi_technique_mittre) > 0:
-                        octi_technique_mittre = octi_technique_mittre[0]
+                    if len(octi_technique_mitre) > 0:
+                        octi_technique_mitre = octi_technique_mitre[0]
                         stix_relationship = stix2.Relationship(
                             relationship_type="related-to",
                             source_ref=stix_incident.id,
-                            target_ref=octi_technique_mittre["standard_id"],
+                            target_ref=octi_technique_mitre["standard_id"],
                             created_by_ref=self.author,
                             object_marking_refs=self.tlp,
                         )
                         bundle_objects.append(stix_relationship)
-            if len(image_list) > 0:
-                bundle_objects[0] = bundle_objects[0].new_version(
-                    x_opencti_files=image_list
-                )
+
             if len(hit["document"]["authors"]) > 0:
                 hit_note = hit_note + "\n### Authors"
             stix_url_doc = None
@@ -531,6 +526,11 @@ class RecordedFutureAlertConnector(threading.Thread):
                 created_by_ref=self.author,
             )
             bundle_objects.append(stix_note)
+
+        if len(external_files) > 0:
+            stix_incident = stix_incident.new_version(x_opencti_files=external_files)
+        bundle_objects.append(stix_incident)
+
         bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
         self.helper.send_stix2_bundle(
             bundle,
