@@ -68,12 +68,12 @@ class Author(BaseEntity):
             modified=None,
             created_by_ref=None,
             object_marking_refs=None,
-            roles=None,  # type: list[str] | None
-            sectors=None,  # type: list[str] | None # in stix2 industry sectors list
-            revoked=None,  # type: bool | None
-            labels=None,  # type: list[str] | None
-            lang=None,  # type: str | None
-            external_references=None,  # type: list[dict] | None
+            roles=None,
+            sectors=None,
+            revoked=None,
+            labels=None,
+            lang=None,
+            external_references=None,
             # customs
             allow_custom=True,
             x_opencti_organization_type=self.x_opencti_organization_type,
@@ -116,14 +116,14 @@ class System(BaseEntity):
             description=self.description,
             object_marking_refs=self.object_marking_refs,
             # unused
-            confidence=None,  # type: int | None  # from 0 to 100
-            roles=None,  # type: list[str] | None
-            sectors=None,  # type: list[str] | None # in stix2 industry sectors list
-            contact_information=None,  # type: str | None
-            revoked=None,  # type: bool | None
-            labels=None,  # type: list[str] | None
-            lang=None,  # type: str | None
-            external_references=None,  # type: list[dict] | None
+            confidence=None,
+            roles=None,
+            sectors=None,
+            contact_information=None,
+            revoked=None,
+            labels=None,
+            lang=None,
+            external_references=None,
             allow_custom=False,
         )
 
@@ -266,9 +266,9 @@ class Software(Observable):
             vendor=self.vendor,
             object_marking_refs=self.object_marking_refs,
             # unused
-            swid=None,  # type: str|None  # see https://csrc.nist.gov/projects/Software-Identification-SWID
-            languages=None,  # type: list[str]|None
-            version=None,  # type: str | None
+            swid=None,  # see https://csrc.nist.gov/projects/Software-Identification-SWID
+            languages=None,
+            version=None,
             # custom
             allow_custom=True,
             created_by_ref=self.author.id if self.author else None,
@@ -287,9 +287,9 @@ class OperatingSystem(Observable):
             # unused
             cpe=None,
             vendor=None,
-            swid=None,  # type: str|None  # see https://csrc.nist.gov/projects/Software-Identification-SWID
-            languages=None,  # type: list[str]|None
-            version=None,  # type: str | None
+            swid=None,  # see https://csrc.nist.gov/projects/Software-Identification-SWID
+            languages=None,
+            version=None,
             # custom
             allow_custom=True,
             created_by_ref=self.author.id if self.author else None,

@@ -18,8 +18,6 @@ from tenable_vuln_management.models.opencti import (
     Hostname,
     IPAddress,
     MACAddress,
-    Observable,
-    OperatingSystem,
     RelatedToRelationship,
     Software,
     System,

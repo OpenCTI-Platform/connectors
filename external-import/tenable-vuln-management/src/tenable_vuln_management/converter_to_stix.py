@@ -204,20 +204,20 @@ class ConverterToStix:
             IPAddress | None: An IPAddress object for the IPv6 address if available, otherwise None.
         """
         return (
-                IPAddress(
-                    author=self.author,
-                    object_marking_refs=self.object_marking_refs,
-                    version="v6",
-                    value=asset.ipv6,
-                    resolves_to_mac_addresses=(
-                        [self._make_mac_address(asset)]
-                        if asset.mac_address is not None
-                        else None
-                    ),
-                )
-                if asset.ipv6
-                else None
+            IPAddress(
+                author=self.author,
+                object_marking_refs=self.object_marking_refs,
+                version="v6",
+                value=asset.ipv6,
+                resolves_to_mac_addresses=(
+                    [self._make_mac_address(asset)]
+                    if asset.mac_address is not None
+                    else None
+                ),
             )
+            if asset.ipv6
+            else None
+        )
 
     def _make_hostname(self, asset: Asset) -> Hostname:
         return Hostname(
@@ -247,17 +247,17 @@ class ConverterToStix:
         """
 
         return (
-                DomainName(
-                    author=self.author,
-                    object_marking_refs=self.object_marking_refs,
-                    value=asset.fqdn,
-                    resolves_to_domain_names=None,
-                    resolves_to_ips=[self._make_ipv4_address(asset)]
-                    + ([self._make_ipv6_address(asset)] if asset.ipv6 is not None else []),
-                )
-                if asset.fqdn
-                else None
+            DomainName(
+                author=self.author,
+                object_marking_refs=self.object_marking_refs,
+                value=asset.fqdn,
+                resolves_to_domain_names=None,
+                resolves_to_ips=[self._make_ipv4_address(asset)]
+                + ([self._make_ipv6_address(asset)] if asset.ipv6 is not None else []),
             )
+            if asset.fqdn
+            else None
+        )
 
     def process_asset(self, asset: Asset) -> dict[str, Any]:
         system = self._make_system(asset=asset)
@@ -307,20 +307,20 @@ class ConverterToStix:
         """
 
         return (
-                [
-                    Software(
-                        author=self.author,
-                        object_marking_refs=self.object_marking_refs,
-                        name=cpe_data["product"],
-                        vendor=cpe_data["vendor"],
-                        cpe=cpe_uri,
-                    )
-                    for cpe_uri in plugin.cpe
-                    for cpe_data in [parse_cpe_uri(cpe_uri)]
-                ]
-                if plugin.cpe is not None
-                else []
-            )
+            [
+                Software(
+                    author=self.author,
+                    object_marking_refs=self.object_marking_refs,
+                    name=cpe_data["product"],
+                    vendor=cpe_data["vendor"],
+                    cpe=cpe_uri,
+                )
+                for cpe_uri in plugin.cpe
+                for cpe_data in [parse_cpe_uri(cpe_uri)]
+            ]
+            if plugin.cpe is not None
+            else []
+        )
 
     def _make_vulnerabilities(self, plugin: Plugin) -> list[Vulnerability]:
         """
@@ -334,19 +334,19 @@ class ConverterToStix:
         """
 
         base = dict(
-                author=self.author,
-                object_marking_refs=self.object_marking_refs,
-                created=plugin.publication_date,
-                modified=plugin.modification_date,
-                description=plugin.description,
-                confidence=None,
-                cvss3_score=plugin.cvss3_base_score,
-                cvss3_severity=(
-                    cvss3_severity_from_score(plugin.cvss3_base_score)
-                    if plugin.cvss3_base_score
-                    else None
-                ),
-            )
+            author=self.author,
+            object_marking_refs=self.object_marking_refs,
+            created=plugin.publication_date,
+            modified=plugin.modification_date,
+            description=plugin.description,
+            confidence=None,
+            cvss3_score=plugin.cvss3_base_score,
+            cvss3_severity=(
+                cvss3_severity_from_score(plugin.cvss3_base_score)
+                if plugin.cvss3_base_score
+                else None
+            ),
+        )
         cvss3_vector = plugin.cvss3_vector
         details = (
             dict(
@@ -395,15 +395,15 @@ class ConverterToStix:
         self, vuln_finding: VulnerabilityFinding
     ) -> list[BaseEntity]:
         """
-       Process a vulnerability finding by extracting related system and vulnerability objects,
-       and establish relationships between them.
+        Process a vulnerability finding by extracting related system and vulnerability objects,
+        and establish relationships between them.
 
-       Args:
-           vuln_finding (VulnerabilityFinding): The vulnerability finding containing asset and plugin data.
+        Args:
+            vuln_finding (VulnerabilityFinding): The vulnerability finding containing asset and plugin data.
 
-       Returns:
-           list[BaseEntity]: A list of BaseEntity objects including systems, vulnerabilities, observables, and relationships.
-       """
+        Returns:
+            list[BaseEntity]: A list of BaseEntity objects including systems, vulnerabilities, observables, and relationships.
+        """
         system_related_objects = self.process_asset(vuln_finding.asset)
         vulnerability_related_objects = self.process_plugin(vuln_finding.plugin)
 

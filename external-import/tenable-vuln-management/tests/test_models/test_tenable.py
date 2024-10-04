@@ -16,7 +16,7 @@ sys.path.append(str((Path(__file__).resolve().parent.parent.parent / "src")))
 
 from tenable_vuln_management.models.tenable import (
     VulnerabilityFinding,
-    _convert_empty_dicts_to_none,
+    _convert_empty_dicts_and_lists_to_none,
 )
 
 BASE_DIR = Path(__file__).parent
@@ -46,10 +46,10 @@ def test_vulnerability_finding_model_is_compatible_with_tenable_api_doc(
     _ = VulnerabilityFinding.model_validate(tenable_api_response_1_report)
 
 
-def test_convert_empty_dicts_to_none_should_clean_nested_empty_dicts():
+def test__convert_empty_dicts_and_lists_to_none_should_clean_nested_empty_dicts():
     # Given a tenable api response boby like dictionary
-    to_clean = {"a": {"b": {}, "c": [1, {"e": {}}]}}
+    to_clean = {"a": {"b": {}, "c": [1, {"e": {}, "f": []}]}}
     # When using the cleaning method
-    cleaned = _convert_empty_dicts_to_none(to_clean)
+    cleaned = _convert_empty_dicts_and_lists_to_none(to_clean)
     # Then it should be cleaned
-    assert cleaned == {"a": {"b": None, "c": [1, {"e": None}]}}
+    assert cleaned == {"a": {"b": None, "c": [1, {"e": None, "f": None}]}}
