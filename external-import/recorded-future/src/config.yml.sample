@@ -31,12 +31,13 @@ rf:
   pull_threat_maps: False # optional - Pull Threat Actors and Malware maps
 
 alert:
-  enable: False
-  incident_vocabulary_name: 'incident_type_ov'
-  channels_vocabulary_name: 'channel_types_ov'
-  default_marking: 'TLP:AMBER'
-  incident_default_description : 'Analyst's comment : \n\n'
-  logo_abuse_rule_id: 'ChangeMe'
-  initial_pull_off: 1
-  download_path: 'images/'
-  logo_abuse_rule_id: 'ChangeMe'
+  enable: False # required
+  default_opencti_severity: "low" # optional
+  priority_alerts_only: False # optional - default: False
+
+playbook_alert:
+  enable: False # required
+  severity_threshold_domain_abuse: 'Informational' # optional
+  severity_threshold_identity_novel_exposures: 'Informational' # optional
+  severity_threshold_code_repo_leakage: 'Informational' # optional
+  debug: False # optional
