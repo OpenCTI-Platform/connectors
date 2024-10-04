@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'Tenable Vuln Management'
-  scope: 'ChangeMe'
+  scope: 'vulnerability'
   log_level: 'info'
   duration_period: 'PT30M' # Interval given for scheduler process in ISO-8601 format
   #============================================#
@@ -21,9 +21,9 @@ connector:
 
 tenable_vuln_management:
   num_thread: 2
-  api_base_url:
-  api_access_key:
-  api_secret_key:
+  api_base_url: 'ChangeMe'
+  api_access_key: 'ChangeMe'
+  api_secret_key: 'ChangeMe'
   api_timeout: 30
   api_backoff: 1
   api_retries: 5
