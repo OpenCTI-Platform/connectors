@@ -9,8 +9,8 @@ created_by_ref = "x_opencti_created_by_ref"
 
 def _get_observable_type(cls: Type[_Observable]) -> str:
     _type = {
-        "IPv4-Address": "IPv4-Addr",
-        "IPv6-Address": "IPv6-Addr",
+        "IPv4Address": "IPv4-Addr",
+        "IPv6Address": "IPv6-Addr",
         "File": "StixFile",
         "URL": "Url",
         "AutonomousSystem": "Autonomous-System",
