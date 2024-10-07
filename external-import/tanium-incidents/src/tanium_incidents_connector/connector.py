@@ -270,42 +270,49 @@ class TaniumIncidentsConnector:
         )
 
         try:
-            alerts = self.api.get_alerts()
-            for alert in reversed(alerts):
-                alert = format_alert(alert)
+            should_continue_import = True
+            while should_continue_import:
                 last_alert_date = self._get_last_alert_date()
-                if validate_alert(alert, last_alert_date):
-                    stix_objects = self._collect_intelligence(alert)
-                    if stix_objects:
-                        stix_objects.append(self.author)
-                        stix_bundle = self.helper.stix2_create_bundle(stix_objects)
+                alerts = self.api.get_alerts(since=last_alert_date)
+                for alert in alerts:
+                    alert = format_alert(alert)
+                    last_alert_date = (
+                        self._get_last_alert_date()
+                    )  # is updated during every iteration
+                    if validate_alert(alert, last_alert_date):
+                        stix_objects = self._collect_intelligence(alert)
+                        if stix_objects:
+                            stix_objects.append(self.author)
+                            stix_bundle = self.helper.stix2_create_bundle(stix_objects)
 
-                        friendly_name = (
-                            self.helper.connect_name
-                            + "run @ "
-                            + datetime.now().astimezone(pytz.UTC).isoformat()
-                        )
-                        work_id = self.helper.api.work.initiate_work(
-                            self.helper.connect_id, friendly_name
-                        )
+                            friendly_name = (
+                                self.helper.connect_name
+                                + "run @ "
+                                + datetime.now().astimezone(pytz.UTC).isoformat()
+                            )
+                            work_id = self.helper.api.work.initiate_work(
+                                self.helper.connect_id, friendly_name
+                            )
 
-                        bundles_sent = self.helper.send_stix2_bundle(
-                            stix_bundle,
-                            work_id=work_id,
-                            cleanup_inconsistent_bundle=True,
-                        )
-                        self.helper.connector_logger.info(
-                            "Sending STIX objects to OpenCTI...",
-                            {"bundles_sent": str(len(bundles_sent))},
-                        )
+                            bundles_sent = self.helper.send_stix2_bundle(
+                                stix_bundle,
+                                work_id=work_id,
+                                cleanup_inconsistent_bundle=True,
+                            )
+                            self.helper.connector_logger.info(
+                                "Sending STIX objects to OpenCTI...",
+                                {"bundles_sent": str(len(bundles_sent))},
+                            )
 
-                        self._set_last_alert_date(alert)
-                        message = (
-                            f"{self.helper.connect_name} connector successfully run, storing last_alert_date as "
-                            + str(last_alert_date)
-                        )
-                        self.helper.api.work.to_processed(work_id, message)
-                        self.helper.connector_logger.info(message)
+                            self._set_last_alert_date(alert)
+                            message = (
+                                f"{self.helper.connect_name} connector successfully run, storing last_alert_date as "
+                                + str(alert["alertedAt"])
+                            )
+                            self.helper.api.work.to_processed(work_id, message)
+                            self.helper.connector_logger.info(message)
+                # Alerts are paginated by 100, so the last "page" will contain less than 100 dicts
+                should_continue_import = len(alerts) == 100
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",
