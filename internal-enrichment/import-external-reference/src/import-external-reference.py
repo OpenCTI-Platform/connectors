@@ -45,11 +45,6 @@ class ImportExternalReferenceConnector:
             True,
         )
         self.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64)"}
-        self.wkhtmltopdf_path = get_config_variable(
-            "WKHTMLTOPDF_PATH",
-            ["import_external_reference", "wkhtmltopdf_path"],
-            config,
-        )
 
     def delete_files(self):
         if os.path.exists("data.html"):
@@ -123,7 +118,7 @@ class ImportExternalReferenceConnector:
         # Create a new browser context with a specified user agent to simulate a particular browser
         # environment, which helps to bypass certain security measures.
         context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36"
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
         )
         page = context.new_page()
         page.goto(url_to_import)
