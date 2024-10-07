@@ -85,7 +85,11 @@ class ImportExternalReferenceConnector:
             except Error as error:
                 self.helper.connector_logger.debug(
                     "A playwrigth error has been identified when using locator",
-                    {"name": str(error.name), "message": str(error.message), "selector": selector},
+                    {
+                        "name": str(error.name),
+                        "message": str(error.message),
+                        "selector": selector,
+                    },
                 )
                 continue
             except Exception as e:
