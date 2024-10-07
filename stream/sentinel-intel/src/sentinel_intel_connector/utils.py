@@ -94,16 +94,14 @@ def get_action(data: dict) -> str:
     :return: Action name or "unknown"
     """
     score = OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
-    if score is None:
-        action = "unknown"
-    elif score >= 50:  # self.config.confidence_levek == 50
+
+    action = "unknown"
+    if score >= 50:  # self.config.confidence_level == 50
         action = "block"
-    elif score < 50 and score != 0:  # self.config.confidence_levek == 50
+    elif 0 < score < 50:
         action = "alert"
     elif score == 0:
         action = "allow"
-    else:
-        action = "unknown"
     return action
 
 
@@ -115,10 +113,10 @@ def get_expiration_datetime(data: dict, expiration_time: int) -> str:
     :return: Datetime of observable expiration
     """
     updated_at = OpenCTIConnectorHelper.get_attribute_in_extension("updated_at", data)
-    datetime_object = datetime.strptime(updated_at, "%Y-%m-%dT%H:%M:%S.%fZ")
+    datetime_object = datetime.fromisoformat(updated_at)
     age = timedelta(expiration_time)
     expire_datetime = datetime_object + age
-    expiration_datetime = expire_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
+    expiration_datetime = expire_datetime.isoformat()
     return expiration_datetime
 
 
@@ -128,6 +126,7 @@ def get_tlp_level(data: dict) -> str:
     :param data: Observable data to extract TLP level from
     :return: TLP level or "unknown"
     """
+    tlp_level = "unknown"
     if "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed" in str(data):
         tlp_level = "red"
     elif "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37" in str(
@@ -138,8 +137,6 @@ def get_tlp_level(data: dict) -> str:
         tlp_level = "green"
     elif "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9" in str(data):
         tlp_level = "white"
-    else:
-        tlp_level = "unknown"
     return tlp_level
 
 
@@ -154,7 +151,7 @@ def get_tags(data: dict) -> list[str]:
     return tags + labels if labels is not None else tags
 
 
-def get_hash_type(data: dict) -> str:
+def get_hash_type(data: dict) -> str | None:
     """
     Get hash type for a file.
     :param data: File data to get hash type for
@@ -163,15 +160,17 @@ def get_hash_type(data: dict) -> str:
     if data["type"] != "file":
         raise ValueError("Data type is not file")
 
+    hash_type = None
     if "MD5" in data["hashes"]:
-        return "md5"
+        hash_type = "md5"
     if "SHA-1" in data["hashes"]:
-        return "sha1"
+        hash_type = "sha1"
     if "SHA-256" in data["hashes"]:
-        return "sha256"
+        hash_type = "sha256"
+    return hash_type
 
 
-def get_hash_value(data: dict) -> str:
+def get_hash_value(data: dict) -> str | None:
     """
     Get hash value for a file.
     :param data: File data to get hash value for
@@ -180,9 +179,11 @@ def get_hash_value(data: dict) -> str:
     if data["type"] != "file":
         raise ValueError("Data type is not file")
 
+    hash_value = None
     if "MD5" in data["hashes"]:
-        return data["hashes"]["MD5"]
+        hash_value = data["hashes"]["MD5"]
     if "SHA-1" in data["hashes"]:
-        return data["hashes"]["SHA-1"]
+        hash_value = data["hashes"]["SHA-1"]
     if "SHA-256" in data["hashes"]:
-        return data["hashes"]["SHA-256"]
+        hash_value = data["hashes"]["SHA-256"]
+    return hash_value
