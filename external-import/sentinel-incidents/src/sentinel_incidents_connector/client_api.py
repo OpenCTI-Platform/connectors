@@ -12,9 +12,13 @@ class ConnectorClient:
         self.config = config
         self.headers = None
 
-        self.generate_oauth_token()
+        # Define headers in session and update when needed
+        oauth_token = self._get_oauth_token()
+        headers = {"Authorization": oauth_token}
+        self.session = requests.Session()
+        self.session.headers.update(headers)
 
-    def generate_oauth_token(self):
+    def _get_oauth_token(self) -> str:
         try:
             url = f"https://login.microsoftonline.com/{self.config.tenant_id}/oauth2/v2.0/token"
             oauth_data = {
@@ -27,7 +31,7 @@ class ConnectorClient:
             response_json = json.loads(response.text)
 
             oauth_token = response_json["access_token"]
-            self.headers = {"Authorization": oauth_token}
+            return oauth_token
         except Exception as e:
             raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
 
@@ -40,7 +44,9 @@ class ConnectorClient:
             url = (
                 f"{self.config.api_base_url}{self.config.incident_path}?$expand=alerts"
             )
-            response = requests.get(url, headers=self.headers)
+            response = self.session.get(url)
+            response.raise_for_status()
+
             return response.json()["value"] if "value" in response.json() else []
         except Exception as err:
             self.helper.connector_logger.error(err)
