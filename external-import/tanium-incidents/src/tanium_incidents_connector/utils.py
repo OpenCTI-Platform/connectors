@@ -10,12 +10,12 @@ def format_alert(alert) -> dict:
     :param alert: Tanium alert to format
     :return: Formatted alert
     """
-    alert_date = parse(alert["createdAt"]).astimezone(pytz.UTC)
+    alert_date = parse(alert["alertedAt"]).astimezone(pytz.UTC)
     alert_details = json.loads(alert["details"])
     alert_intel_doc_id = str(alert["intelDocId"])
     alert_description = "Type: " + alert["type"] + " | MatchType:" + alert["matchType"]
 
-    alert["createdAt"] = alert_date
+    alert["alertedAt"] = alert_date
     alert["details"] = alert_details
     alert["intelDocId"] = alert_intel_doc_id
     alert["description"] = alert_description
@@ -31,7 +31,7 @@ def validate_alert(alert, last_alert_date) -> bool:
     """
     if alert["state"] == "suppressed":
         return False
-    return alert["createdAt"] > last_alert_date
+    return alert["alertedAt"] > last_alert_date
 
 
 def has_user_details(alert) -> bool:
