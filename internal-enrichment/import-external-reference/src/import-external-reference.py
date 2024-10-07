@@ -9,7 +9,7 @@ from pdfminer.converter import HTMLConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
 from pdfminer.pdfpage import PDFPage
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -52,8 +52,7 @@ class ImportExternalReferenceConnector:
         if os.path.exists("data.pdf"):
             os.remove("data.pdf")
 
-    @staticmethod
-    def _is_cookies_accepted(page):
+    def _is_cookies_accepted(self, page):
         """
         Attempts to accept cookies on a web page.
         This method searches for various elements (links and buttons) that are commonly used for cookie consent prompts.
@@ -83,7 +82,17 @@ class ImportExternalReferenceConnector:
                 page.locator(selector).first.click(timeout=1000, force=True)
                 found = True
                 break
-            except:
+            except TimeoutError as error:
+                self.helper.connector_logger.debug(
+                    "The locator used has reached a timeout",
+                    {"message": str(error.message), "selector": selector},
+                )
+                continue
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    "An unknown error occurred when using the locator",
+                    {"error": str(e), "selector": selector},
+                )
                 continue
         return found
 
