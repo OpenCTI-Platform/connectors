@@ -257,6 +257,7 @@ class VirusTotalConnector:
                     + " |\n\n"
                 )
                 content += "## Last Analysis Results\n\n"
+                content += "Any falsy value will be replaced by ‘N/A’\n"
                 content += (
                     "| Engine name | Engine version | Method | Category | Result |\n"
                 )
