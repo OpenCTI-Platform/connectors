@@ -301,24 +301,24 @@ class RansomwareAPIConnector:
                         },
                     ],
                     "filterGroups": [
-                    {   
-                        "mode": "or",
-                        "filters": [
-                            {   
-                                "key": "x_opencti_aliases",
-                                "values": sector,
-                                "mode": "or",
-                                "operator": "search"
-                            },
-                            {   
-                                "key": "name",
-                                "values": sector,
-                                "mode": "or",
-                                "operator": "search"
-                            }  
-                        ]       
-                    }          
-                ],
+                        {
+                            "mode": "or",
+                            "filters": [
+                                {
+                                    "key": "x_opencti_aliases",
+                                    "values": sector,
+                                    "mode": "or",
+                                    "operator": "search",
+                                },
+                                {
+                                    "key": "name",
+                                    "values": sector,
+                                    "mode": "or",
+                                    "operator": "search",
+                                },
+                            ],
+                        }
+                    ],
                 },
             )
             if sector_out and sector_out.get("standard_id").startswith("identity--"):
