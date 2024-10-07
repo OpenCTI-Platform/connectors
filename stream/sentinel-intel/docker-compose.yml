@@ -24,4 +24,4 @@ services:
       - SENTINEL_INTEL_ACTION=alert # Optional: Setting this will override all alerts to be this action (unknown, allow, block, alert)
       - SENTINEL_INTEL_TLP_LEVEL=amber # Optional: This will override all TLP submitted to Sentinel. (unknown, white, green, amber, red)
       - SENTINEL_INTEL_PASSIVE_ONLY=false # Optional: Defaults to false.
-    restart: always
+    restart: unless-stopped

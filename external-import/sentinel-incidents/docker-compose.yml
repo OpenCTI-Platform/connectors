@@ -34,7 +34,7 @@ services:
       # - HTTP_PROXY=CHANGEME
       # - HTTPS_PROXY=CHANGEME
       # - NO_PROXY=CHANGEME
-    restart: always
+    restart: unless-stopped
     # networks:
     #   - docker_default
 
