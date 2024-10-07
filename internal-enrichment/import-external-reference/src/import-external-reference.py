@@ -9,7 +9,7 @@ from pdfminer.converter import HTMLConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
 from pdfminer.pdfpage import PDFPage
-from playwright.sync_api import sync_playwright, TimeoutError
+from playwright.sync_api import TimeoutError, sync_playwright
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
