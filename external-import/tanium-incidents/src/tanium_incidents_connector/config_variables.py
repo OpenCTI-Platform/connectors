@@ -39,31 +39,33 @@ class ConfigConnector:
         """
         # Initialize the Tanium API Handler
         self.tanium_url = get_config_variable(
-            "TANIUM_INSIGHTS_URL", ["tanium_insights", "url"], self.load
+            "TANIUM_INCIDENTS_URL", ["tanium_incidents", "url"], self.load
         )
         self.tanium_url_console = get_config_variable(
-            "TANIUM_INSIGHTS_URL_CONSOLE", ["tanium_insights", "url_console"], self.load
+            "TANIUM_INCIDENTS_URL_CONSOLE",
+            ["tanium_incidents", "url_console"],
+            self.load,
         )
         self.tanium_ssl_verify = get_config_variable(
-            "TANIUM_INSIGHTS_SSL_VERIFY",
-            ["tanium_insights", "ssl_verify"],
+            "TANIUM_INCIDENTS_SSL_VERIFY",
+            ["tanium_incidents", "ssl_verify"],
             self.load,
             False,
             True,
         )
         self.tanium_token = get_config_variable(
-            "TANIUM_INSIGHTS_TOKEN", ["tanium_insights", "token"], self.load
+            "TANIUM_INCIDENTS_TOKEN", ["tanium_incidents", "token"], self.load
         )
         self.tanium_import_alerts = get_config_variable(
-            "TANIUM_INSIGHTS_IMPORT_ALERTS",
-            ["tanium_insights", "import_alerts"],
+            "TANIUM_INCIDENTS_IMPORT_ALERTS",
+            ["tanium_incidents", "import_alerts"],
             self.load,
             False,
             True,
         )
         tanium_import_start_date_var = get_config_variable(
-            "TANIUM_INSIGHTS_IMPORT_START_DATE",
-            ["tanium_insights", "import_start_date"],
+            "TANIUM_INCIDENTS_IMPORT_START_DATE",
+            ["tanium_incidents", "import_start_date"],
             self.load,
             False,
             None,

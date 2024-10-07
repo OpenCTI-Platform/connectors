@@ -10,7 +10,7 @@ connector:
   log_level: 'info'
   duration_period: 'PT12H'
 
-tanium_insights:
+tanium_incidents:
   url: 'https://console.changeme.com'
   url_console: 'https://console.changeme.com'
   ssl_verify: true
