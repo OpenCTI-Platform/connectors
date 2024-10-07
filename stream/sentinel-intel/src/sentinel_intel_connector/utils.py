@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from pycti import OpenCTIConnectorHelper
+from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 OBSERVABLE_TYPES = [
     "ipv4-addr",
@@ -31,6 +32,7 @@ THREAT_TYPES = {
     "PROXY": "Proxy",
     "PUA": "PUA",
 }
+TLP_AMBER_STRICT_ID = "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
 
 
 def is_stix_indicator(data: dict) -> bool:
@@ -127,16 +129,16 @@ def get_tlp_level(data: dict) -> str:
     :return: TLP level or "unknown"
     """
     tlp_level = "unknown"
-    if "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed" in str(data):
-        tlp_level = "red"
-    elif "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37" in str(
-        data
-    ) or "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82" in str(data):
-        tlp_level = "amber"
-    elif "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da" in str(data):
-        tlp_level = "green"
-    elif "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9" in str(data):
-        tlp_level = "white"
+    if "object_marking_refs" in data:
+        marking_refs = data["object_marking_refs"]
+        if TLP_RED.id in marking_refs:
+            tlp_level = "red"
+        elif TLP_AMBER.id in marking_refs or TLP_AMBER_STRICT_ID in marking_refs:
+            tlp_level = "amber"
+        elif TLP_GREEN.id in marking_refs:
+            tlp_level = "green"
+        elif TLP_WHITE.id in marking_refs:
+            tlp_level = "white"
     return tlp_level
 
 
