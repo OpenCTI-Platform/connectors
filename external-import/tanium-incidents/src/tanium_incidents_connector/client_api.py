@@ -40,13 +40,21 @@ class ConnectorAPI:
             )
             return None
 
-    def get_alerts(self):
+    def get_alerts(self, since=None):
         """
         Get alerts from Tanium API.
         :return: Alerts data
         """
         alerts_url = self.url + "/plugin/products/threat-response/api/v1/alerts"
-        response = self._request_data(alerts_url, params={"sort": "-createdAt"})
+        params = (
+            {
+                "alertedAtFrom": since.isoformat(),
+                "sort": "+alertedAt",
+            }
+            if since
+            else None
+        )
+        response = self._request_data(alerts_url, params=params)
         body = response.json()
         return body["data"]
 
