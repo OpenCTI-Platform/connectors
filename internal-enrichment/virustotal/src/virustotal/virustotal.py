@@ -267,15 +267,15 @@ class VirusTotalConnector:
                     result = data["attributes"]["last_analysis_results"][key]
                     content += (
                         "| "
-                        + str(result.get("engine_name", "N/A") or "N/A")
+                        + str(result.get("engine_name") or "N/A")
                         + " | "
-                        + str(result.get("engine_version", "N/A") or "N/A")
+                        + str(result.get("engine_version") or "N/A")
                         + " | "
-                        + str(result.get("method", "N/A") or "N/A")
+                        + str(result.get("method") or "N/A")
                         + " | "
-                        + str(result.get("category", "N/A") or "N/A")
+                        + str(result.get("category") or "N/A")
                         + " | "
-                        + str(result.get("result", "N/A") or "N/A")
+                        + str(result.get("result") or "N/A")
                         + " | \n"
                     )
                 builder.create_note("VirusTotal Report", content)
