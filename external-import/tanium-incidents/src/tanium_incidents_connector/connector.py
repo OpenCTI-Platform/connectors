@@ -92,7 +92,7 @@ class TaniumIncidentsConnector:
         Set last alert date of connector's state
         :param alert: Last alert to set connector's state from
         """
-        alert_date = alert["createdAt"].isoformat()
+        alert_date = alert["alertedAt"].isoformat()
 
         state = self.helper.get_state()
         if state is not None:
@@ -159,8 +159,8 @@ class TaniumIncidentsConnector:
             stix_sighting = self.converter_to_stix.create_sighting(
                 source_id=entity["standard_id"],
                 target_id=self.author["id"],
-                first_seen=alert["createdAt"],
-                last_seen=alert["createdAt"],
+                first_seen=alert["alertedAt"],
+                last_seen=alert["alertedAt"],
             )
             stix_objects.append(stix_sighting)
 

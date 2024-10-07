@@ -68,9 +68,9 @@ class ConverterToStix:
         """
 
         stix_incident = stix2.Incident(
-            id=Incident.generate_id(alert["name"], alert["createdAt"]),
+            id=Incident.generate_id(alert["name"], alert["alertedAt"]),
             name=alert["name"],
-            created=alert["createdAt"],
+            created=alert["alertedAt"],
             description=alert["description"],
             object_marking_refs=[stix2.TLP_RED],
             created_by_ref=self.author["id"],
