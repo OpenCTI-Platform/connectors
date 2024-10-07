@@ -9,7 +9,7 @@ from pdfminer.converter import HTMLConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
 from pdfminer.pdfpage import PDFPage
-from playwright.sync_api import TimeoutError, sync_playwright
+from playwright.sync_api import Error, sync_playwright
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -82,10 +82,10 @@ class ImportExternalReferenceConnector:
                 page.locator(selector).first.click(timeout=1000, force=True)
                 found = True
                 break
-            except TimeoutError as error:
+            except Error as error:
                 self.helper.connector_logger.debug(
-                    "The locator used has reached a timeout",
-                    {"message": str(error.message), "selector": selector},
+                    "A playwrigth error has been identified when using locator",
+                    {"name": str(error.name), "message": str(error.message), "selector": selector},
                 )
                 continue
             except Exception as e:
