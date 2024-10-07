@@ -24,10 +24,13 @@ class SentinelApiHandler:
         self.helper = helper
         self.config = config
 
-        self.headers = None
-        self._set_authorization_header()
+        # Define headers in session and update when needed
+        oauth_token = self._get_authorization_header()
+        headers = {"Authorization": oauth_token}
+        self.session = requests.Session()
+        self.session.headers.update(headers)
 
-    def _set_authorization_header(self):
+    def _get_authorization_header(self):
         """
         Get an OAuth access token and set it as Authorization header in headers.
         """
@@ -41,11 +44,37 @@ class SentinelApiHandler:
             }
             response = requests.post(url, data=body)
             response_json = response.json()
-            oauth_token = response_json["access_token"]
 
-            self.headers = {"Authorization": oauth_token}
+            oauth_token = response_json["access_token"]
+            return oauth_token
         except Exception as e:
             raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
+
+    def _send_request(self, method: str, url: str, **kwargs) -> dict | None:
+        """
+        Send a request to Sentinel API.
+        :param method: Request HTTP method
+        :param url: Request URL
+        :param kwargs: Any arguments valid for session.requests() method
+        :return: Any data returned by the API
+        """
+        try:
+            response = self.session.request(method, url, **kwargs)
+            response.raise_for_status()
+
+            self.helper.connector_logger.info(
+                f"[API] HTTP {method.upper()} Request to endpoint",
+                {"url_path": url},
+            )
+
+            if response.content:
+                return response.json()
+        except requests.RequestException as err:
+            self.helper.connector_logger.error(
+                "[API] Error while requesting : ",
+                {"url_path": f"{method.upper()} {url}", "error": str(err)},
+            )
+            return None
 
     def _build_request_body(self, observable: dict) -> dict:
         """
@@ -99,25 +128,10 @@ class SentinelApiHandler:
         Get Threat Intelligence Indicators from Sentinel.
         :return: List of Threat Intelligence Indicators if request is succesful, None otherwise
         """
-        try:
-            response = requests.get(
-                f"{self.config.base_url}{self.config.resource_path}",
-                headers=self.headers,
-            )
-            response.raise_for_status()
-
-            self.helper.connector_logger.info(
-                "[API] HTTP GET Request to endpoint",
-                {"url_path": self.config.resource_path},
-            )
-
-            return response.json()["value"]
-        except requests.RequestException as err:
-            self.helper.connector_logger.error(
-                "[API] Error while fetching data: ",
-                {"url_path": f"GET {self.config.resource_path}", "error": str(err)},
-            )
-            return None
+        data = self._send_request(
+            "get", f"{self.config.base_url}{self.config.resource_path}"
+        )
+        return data["value"]
 
     def search_indicator(self, observable_opencti_id: str) -> dict | None:
         """
@@ -125,29 +139,13 @@ class SentinelApiHandler:
         :param observable_opencti_id: OpenCTI ID of the observable to get Threat Intelligence Indicator for
         :return: Threat Intelligence Indicator if request is succesful, None otherwise
         """
-        try:
-            params = f"$filter=externalId eq '{observable_opencti_id}'"
-            response = requests.get(
-                f"{self.config.base_url}{self.config.resource_path}",
-                params=params,
-                headers=self.headers,
-            )
-            response.raise_for_status()
+        params = f"$filter=externalId eq '{observable_opencti_id}'"
 
-            self.helper.connector_logger.info(
-                "[API] HTTP GET Request to endpoint",
-                {"url_path": self.config.resource_path},
-            )
-
-            response_json = response.json()
-            if len(response_json["value"]) == 1:
-                return response_json["value"][0]
-        except requests.RequestException as err:
-            self.helper.connector_logger.error(
-                "[API] Error while fetching data: ",
-                {"url_path": f"GET {self.config.resource_path}", "error": str(err)},
-            )
-            return None
+        data = self._send_request(
+            "get", f"{self.config.base_url}{self.config.resource_path}", params=params
+        )
+        if len(data["value"]) == 1:
+            return data["value"][0]
 
     def post_indicator(self, observable: dict) -> dict | None:
         """
@@ -155,26 +153,16 @@ class SentinelApiHandler:
         :param observable: OpenCTI observable to create Threat Intelligence Indicator for
         :return: Threat Intelligence Indicator if request is succesful, None otherwise
         """
-        try:
-            response = requests.post(
-                f"{self.config.base_url}{self.config.resource_path}",
-                json=self._build_request_body(observable),
-                headers=self.headers,
-            )
-            response.raise_for_status()
-
-            self.helper.connector_logger.info(
-                "[API] HTTP POST Request to endpoint",
-                {"url_path": self.config.resource_path},
-            )
-
-            return response.json()
-        except requests.RequestException as err:
-            self.helper.connector_logger.error(
-                "[API] Error while sending data: ",
-                {"url_path": f"POST {self.config.resource_path}", "error": str(err)},
-            )
+        request_body = self._build_request_body(observable)
+        if not request_body:
             return None
+
+        data = self._send_request(
+            "post",
+            f"{self.config.base_url}{self.config.resource_path}",
+            json=request_body,
+        )
+        return data
 
     def patch_indicator(self, observable: dict) -> bool:
         """
@@ -182,32 +170,21 @@ class SentinelApiHandler:
         :param observable: OpenCTI observable to update Threat Intelligence Indicator from
         :return: True if request is succesful, False otherwise
         """
-        try:
-            indicator_external_id = OpenCTIConnectorHelper.get_attribute_in_extension(
-                "id", observable
-            )
-            indicator_data = self.search_indicator(indicator_external_id)
-            indicator_id = indicator_data["id"]
-
-            response = requests.patch(
-                f"{self.config.base_url}{self.config.resource_path}/{indicator_id}",
-                json=self._build_request_body(observable),
-                headers=self.headers,
-            )
-            response.raise_for_status()
-
-            self.helper.connector_logger.info(
-                "[API] HTTP PATCH Request to endpoint",
-                {"url_path": self.config.resource_path},
-            )
-
-            return True
-        except requests.RequestException as err:
-            self.helper.connector_logger.error(
-                "[API] Error while sending data: ",
-                {"url_path": f"PATCH {self.config.resource_path}", "error": str(err)},
-            )
+        indicator_external_id = OpenCTIConnectorHelper.get_attribute_in_extension(
+            "id", observable
+        )
+        indicator_data = self.search_indicator(indicator_external_id)
+        if not indicator_data:
             return False
+
+        indicator_id = indicator_data["id"]
+
+        self._send_request(
+            "patch",
+            f"{self.config.base_url}{self.config.resource_path}/{indicator_id}",
+            json=self._build_request_body(observable),
+        )
+        return True
 
     def delete_indicator(self, indicator_id: str) -> bool:
         """
@@ -215,22 +192,8 @@ class SentinelApiHandler:
         :param indicator_id: OpenCTI observable to delete Threat Intelligence Indicator for
         :return: True if request is succesful, False otherwise
         """
-        try:
-            response = requests.delete(
-                f"{self.config.base_url}{self.config.resource_path}/{indicator_id}",
-                headers=self.headers,
-            )
-            response.raise_for_status()
-
-            self.helper.connector_logger.info(
-                "[API] HTTP DELETE Request to endpoint",
-                {"url_path": f"{self.config.resource_path}/{indicator_id}"},
-            )
-
-            return True
-        except requests.RequestException as err:
-            self.helper.connector_logger.error(
-                "[API] Error while fetching data: ",
-                {"url_path": f"DELETE {self.config.resource_path}", "error": str(err)},
-            )
-            return False
+        self._send_request(
+            "delete",
+            f"{self.config.base_url}{self.config.resource_path}/{indicator_id}",
+        )
+        return True
