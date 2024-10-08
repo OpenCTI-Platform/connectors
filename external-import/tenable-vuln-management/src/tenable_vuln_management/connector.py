@@ -60,19 +60,16 @@ class Connector:
         self.converter_to_stix = ConverterToStix(
             self.helper, default_marking=self.config.tio_marking_definition
         )
-        self.friendly_name = "Tenable Vuln Management Connector feed"
+        self.work_id: str | None = None
 
-    def _initiate_work(self) -> str:
+    def _initiate_work(self) -> None:
         """Initiate a new work process in the OpenCTI platform.
 
         This method:
             1. Update data retrieval start date based on state
-            2. Initiates work in OpenCTI platform
+            2. Initiates work in OpenCTI platform and register work_id attribute
             3. Logs the event
             4. Returns the work ID for future use.
-
-        Returns:
-            work_id (str): The ID of the initiated work.
         """
         now_isodatetime = datetime.now(timezone.utc).isoformat()
 
@@ -103,14 +100,13 @@ class Connector:
             self.helper.connector_logger.info("[CONNECTOR] Connector has never run...")
 
         # Initiate a new work
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, self.friendly_name
+        self.work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, self.helper.connect_name
         )
         self.helper.connector_logger.info(
             "[CONNECTOR] Running connector...",
             {"connector_name": self.helper.connect_name},
         )
-        return work_id
 
     def _process(
         self,
@@ -154,12 +150,12 @@ class Connector:
                 )
             except ValidationError as e:
                 success_flag = False
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     "Unexpected Tenable API response", {"error": str(e)}
                 )
             except Exception as e:
                 success_flag = False
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     "Error when trying to acquire tenable findings", {"error": str(e)}
                 )
         # Revamp
@@ -172,7 +168,7 @@ class Connector:
                 )
             except Exception as e:
                 success_flag = False
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     "Error when trying to process a tenable finding",
                     {"tenable_finding": vuln_finding, "error": str(e)},
                 )
@@ -186,7 +182,9 @@ class Connector:
         # Load
         if stix_objects:
             stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
-            bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
+            bundles_sent = self.helper.send_stix2_bundle(
+                bundle=stix_objects_bundle, work_id=self.work_id
+            )
             self.helper.connector_logger.info(
                 "Sending STIX objects to OpenCTI...",
                 {"bundles_sent": str(len(bundles_sent))},
@@ -207,7 +205,7 @@ class Connector:
         )
         return [job.result() for job in concurrent.futures.as_completed(jobs)]
 
-    def _finalize_work(self, work_id: str, results=list[bool]) -> None:
+    def _finalize_work(self, results: list[bool]) -> None:
         """Finalize the work process and logs the completion message.
 
         This method
@@ -216,7 +214,6 @@ class Connector:
             3. Logs a message indicating that the connector ran.
 
         Args:
-            work_id(str): The ID of the work to finalize.
             results(list[bool]): The processing results (True if OK False otherwise).
 
         See Also:
@@ -244,18 +241,19 @@ class Connector:
             f"{self.helper.connect_name} connector {'successfully' if success_flag else ''} run, "
             f"storing last_run as {now_isodatetime}"
         )
-        self.helper.api.work.to_processed(work_id, message)
         self.helper.connector_logger.info(message)
 
     def process_message(self) -> None:
+        in_error = True
         try:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starting connector work...",
                 {"connector_name": self.helper.connect_name},
             )
-            work_id = self._initiate_work()
+            self._initiate_work()
             results = self._run_threaded_jobs()
-            self._finalize_work(work_id, results)
+            self._finalize_work(results)
+            in_error = not (all(results))
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
@@ -265,6 +263,14 @@ class Connector:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+
+        finally:
+            self.helper.api.work.to_processed(
+                work_id=self.work_id,
+                message="[CONNECTOR] Connector exited gracefully",
+                in_error=in_error,
+            )
+            self.work_id = None
 
     def run(self) -> None:
         """
