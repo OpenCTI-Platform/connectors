@@ -228,14 +228,8 @@ class Connector:
                     "last_successful_run_start_datetime": state.get(
                         "last_run_start_datetime"
                     ),
-                    "last_successful_run_stop_datetime": now_isodatetime,
                 }
             )
-        state.update(
-            {
-                "last_run_stop_datetime": now_isodatetime,
-            }
-        )
         self.helper.set_state(state=state)
         message = (
             f"{self.helper.connect_name} connector {'successfully' if success_flag else ''} run, "
