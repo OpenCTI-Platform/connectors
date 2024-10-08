@@ -1,4 +1,4 @@
-FROM python:3.11-alpine
+FROM python:3.13-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy only requirements, to cache them in docker layer

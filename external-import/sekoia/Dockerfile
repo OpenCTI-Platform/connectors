@@ -1,4 +1,4 @@
-FROM python:3.11-alpine
+FROM python:3.13-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 COPY requirements.txt /opt/requirements.txt

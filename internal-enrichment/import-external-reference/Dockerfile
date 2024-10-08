@@ -1,4 +1,4 @@
-FROM python:3.11-bullseye
+FROM python:3.13-bullseye
 ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
 # Copy the connector
