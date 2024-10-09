@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Tanium Sightings'
+  scope: 'tanium' # Reserved
+  log_level: 'info'
+  duration_period: 'PT12H'
+
+tanium_incidents:
+  url: 'https://console.changeme.com'
+  url_console: 'https://console.changeme.com'
+  ssl_verify: true
+  token: 'ChangeMe'
+  import_alerts: true
+  import_start_date: '' # Date in format YYYY-DD-MM
