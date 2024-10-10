@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-socradar
 
 # Start the connector
-python3 connector.py
+python3 socradar.py
