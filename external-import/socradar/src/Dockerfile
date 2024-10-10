@@ -4,9 +4,9 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y libmagic-dev
 
-COPY connector.py .
+COPY socradar.py .
 COPY config.yml .
 
 RUN pip install pycti requests pandas pyyaml
 
-CMD ["python", "connector.py"]
+CMD ["python", "socradar.py"]
