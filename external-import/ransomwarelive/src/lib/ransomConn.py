@@ -4,6 +4,7 @@ import sys
 import time
 from datetime import datetime
 
+import pycti
 import requests
 import tldextract
 import validators
@@ -59,6 +60,7 @@ class RansomwareAPIConnector:
         self.tlp_marking = "TLP:WHITE"
         self.marking = TLP_WHITE
         author = Identity(
+            id=pycti.Identity.generate_id("Ransomware.Live", "organization"),
             name="Ransomware.Live",
             identity_class="organization",
             type="identity",
@@ -107,6 +109,11 @@ class RansomwareAPIConnector:
     # Generates a relationship object
     def relationship_generator(self, source_ref, target_ref, relationship_type):
         relation = Relationship(
+            id=pycti.StixCoreRelationship.generate_id(
+                relationship_type,
+                source_ref,
+                target_ref,
+            ),
             relationship_type=relationship_type,
             source_ref=source_ref,
             target_ref=target_ref,
@@ -227,22 +234,15 @@ class RansomwareAPIConnector:
 
     # Fetches the location object from OpenCTI
     def opencti_location_check(self, country):
-
+        country_id = pycti.Location.generate_id(country, "Country")
         try:
-            country_out = self.helper.api.stix_domain_object.read(
-                type=["location"],
-                filters={
-                    "mode": "and",
-                    "filters": [{"key": "name", "values": [country]}],
-                    "filterGroups": [],
-                },
-            )
+            country_out = self.helper.api.stix_domain_object.read(id=country_id)
             if country_out and country_out.get("standard_id").startswith("location--"):
                 return country_out.get("standard_id")
             else:
                 return None
         except Exception as e:
-            self.helper.log_error(f"Errot fetching location{country}")
+            self.helper.log_error(f"Error fetching location{country}")
             self.helper.log_error(str(e))
             return None
 
@@ -369,39 +369,37 @@ class RansomwareAPIConnector:
     def stix_object_generator(self, item, group_data):
         """Generates STIX objects from the ransomware.live API data"""
 
-        bundle = []
-        resolved_ip = None
         # Creating Victim object
-        if len(item.get("post_title")) > 2:
-            victim = Identity(
-                name=item.get("post_title"),
-                identity_class="organization",
-                type="identity",
-                created_by_ref=self.author.get("id"),
-                object_marking_refs=[self.marking.get("id")],
-            )
-        else:
-            victim = Identity(
-                name=item.get("post_title") + ":<)",
-                identity_class="individual",
-                type="identity",
-                created_by_ref=self.author.get("id"),
-                object_marking_refs=[self.marking.get("id")],
-            )
+        post_title = item.get("post_title")
+        victim_name, identity_class = (
+            (post_title, "organization")
+            if len(post_title) > 2
+            else ((post_title + ":<)"), "individual")
+        )
+        victim = Identity(
+            id=pycti.Identity.generate_id(victim_name, identity_class.capitalize()),
+            name=victim_name,
+            identity_class=identity_class,
+            type="identity",
+            created_by_ref=self.author.get("id"),
+            object_marking_refs=[self.marking.get("id")],
+        )
 
         # RansomNote External Reference
-        exteernal_references_group = self.ransome_note_generator(item.get("group_name"))
+        external_references_group = self.ransome_note_generator(item.get("group_name"))
 
         # Creating Threat Actor object
+        threat_actor_name = item.get("group_name")
         threat_actor = ThreatActor(
-            name=item.get("group_name"),
+            id=pycti.ThreatActor.generate_id(threat_actor_name),
+            name=threat_actor_name,
             labels=["ransomware"],
             created_by_ref=self.author.get("id"),
             description=self.threat_discription_generater(
                 item.get("group_name"), group_data
             ),
             object_marking_refs=[self.marking.get("id")],
-            external_references=[exteernal_references_group],
+            external_references=[external_references_group],
         )
 
         Target_relation = self.relationship_generator(
@@ -416,6 +414,7 @@ class RansomwareAPIConnector:
             ):
 
                 intrusionset = IntrusionSet(
+                    id=pycti.IntrusionSet.generate_id("lockbit"),
                     name="lockbit",
                     labels=["ransomware"],
                     created_by_ref=self.author.get("id"),
@@ -423,19 +422,21 @@ class RansomwareAPIConnector:
                         item.get("lockbit3"), group_data
                     ),
                     object_marking_refs=[self.marking.get("id")],
-                    external_references=[exteernal_references_group],
+                    external_references=[external_references_group],
                 )
 
             else:
+                intrusionset_name = item.get("group_name")
                 intrusionset = IntrusionSet(
-                    name=item.get("group_name"),
+                    id=pycti.IntrusionSet.generate_id(intrusionset_name),
+                    name=intrusionset_name,
                     labels=["ransomware"],
                     created_by_ref=self.author.get("id"),
                     description=self.threat_discription_generater(
                         item.get("group_name"), group_data
                     ),
                     object_marking_refs=[self.marking.get("id")],
-                    external_references=[exteernal_references_group],
+                    external_references=[external_references_group],
                 )
 
             relation_VI_IS = self.relationship_generator(
@@ -448,9 +449,8 @@ class RansomwareAPIConnector:
         except Exception as e:
             self.helper.log_error(str(e))
 
-        # Creating External References Object if they have external referncees
-        external_references = []
-        external_references.append(exteernal_references_group)
+        # Creating External References Object if they have external references
+        external_references = [external_references_group]
 
         for field in ["screenshot", "website", "post_url"]:
 
@@ -463,11 +463,15 @@ class RansomwareAPIConnector:
                 external_references.append(external_reference)
 
         # Creating Report object
+        report_name = (
+            item.get("group_name") + " has published a new victim: " + post_title
+        )
+        report_created = datetime.fromisoformat(item.get("discovered"))
+        report_published = datetime.fromisoformat(item.get("published"))
         report = Report(
+            id=pycti.Report.generate_id(report_name, report_published),
             report_types=["Ransomware-report"],
-            name=item.get("group_name")
-            + " has published a new victim: "
-            + item.get("post_title"),
+            name=report_name,
             description=item.get("description"),
             created_by_ref=self.author.get("id"),
             object_refs=[
@@ -478,8 +482,8 @@ class RansomwareAPIConnector:
                 relation_VI_IS.get("id"),
                 relation_IS_TA.get("id"),
             ],
-            published=datetime.strptime(item.get("published"), "%Y-%m-%d %H:%M:%S.%f"),
-            created=datetime.strptime(item.get("discovered"), "%Y-%m-%d %H:%M:%S.%f"),
+            published=report_published,
+            created=report_created,
             object_marking_refs=[self.marking.get("id")],
             external_references=external_references,
         )
@@ -605,26 +609,19 @@ class RansomwareAPIConnector:
             and len(item.get("country", "Four")) < 4
         ):
 
-            country_stix_id = self.opencti_location_check(item.get("country"))
-
-            if country_stix_id is not None:
-                location3 = Location(
-                    id=country_stix_id,
-                    name=item.get("country"),
-                    country=item.get("country"),
-                    type="location",
-                    created_by_ref=self.author.get("id"),
-                    object_marking_refs=[self.marking.get("id")],
-                )
-
-            else:
-                location3 = Location(
-                    name=item.get("country"),
-                    country=item.get("country"),
-                    type="location",
-                    created_by_ref=self.author.get("id"),
-                    object_marking_refs=[self.marking.get("id")],
-                )
+            country_name = item.get("country")
+            country_stix_id = self.opencti_location_check(country_name)
+            location3 = Location(
+                id=country_stix_id
+                or pycti.Location.generate_id(country_name, "Country"),
+                name=country_name,
+                country=item.get("country"),
+                type="location",
+                created_by_ref=self.author.get("id"),
+                object_marking_refs=[self.marking.get("id")],
+            )
+            # If country not yet available, add it in the bundle for creation
+            if country_stix_id is None:
                 bundle.append(location3)
 
             Location_relation = self.relationship_generator(
@@ -688,7 +685,6 @@ class RansomwareAPIConnector:
                 try:
                     if response.status_code == 200:
                         response_json = response.json()
-                        print(response.raise_for_status())
 
                         for item in response_json:
 
@@ -759,7 +755,6 @@ class RansomwareAPIConnector:
             self.helper.log_error(str(e))
         if response.status_code == 200:
             response_json = response.json()
-            print(response.raise_for_status())
 
             stix_objects = []
 
@@ -819,7 +814,7 @@ class RansomwareAPIConnector:
                 return None
 
         else:
-            print("Error: ", response.status_code)
+            self.helper.log_error(response.status_code)
             return None
         return None
 
