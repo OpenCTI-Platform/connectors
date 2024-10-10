@@ -97,3 +97,4 @@ Set the appropriate log level for debugging. Use `self.helper.log_{LOG_LEVEL}("M
 ### Additional Information
 
 The VirusTotal connector performs enrichment for files, IP addresses, domains, and URLs. It sends observables to the VirusTotal API and creates indicators in OpenCTI based on threat intelligence from VirusTotal.
+Information when creating a note full report ‘Last Analysis Results’ any value returned by virustotal that is falsy will return ‘N/A’.
