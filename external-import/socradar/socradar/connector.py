@@ -1,12 +1,12 @@
-import yaml
-import requests
-from pycti import OpenCTIApiClient
-from datetime import datetime
-import time
 import logging
 import re
+import time
 import urllib.parse
-from stix2 import DomainName, IPv4Address, IPv6Address, File, URL
+from datetime import datetime
+import requests
+import yaml
+from pycti import OpenCTIApiClient
+from stix2 import URL, DomainName, File, IPv4Address, IPv6Address
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 with open('config.yml', 'r') as file:
@@ -139,16 +139,13 @@ def process_feed(THREAT_FEED, COLLECTION_ID):
 def main():
     while True:
         for collection in collection_catalog:
-            try:
-                COLLECTION_ID = COLLECTIONS_UUID[collection]["id"][0]
-                THREAT_FEED = (
+            COLLECTION_ID = COLLECTIONS_UUID[collection]["id"][0]
+            THREAT_FEED = (
                 THREAT_FEED_BASE_URL + COLLECTION_ID + THREAT_FEED_FORMAT_TYPE + SOCRADAR_KEY
-                )
-                logger.info(f"Current collection: {collection}")
-                logger.info(f"Current feed: {THREAT_FEED}")
-                process_feed(THREAT_FEED, COLLECTION_ID)
-            except Exception as e:
-                logger.error(f"Error processing feed: {str(e)}", exc_info=True)
+            )
+            logger.info(f"Current collection: {collection}")
+            logger.info(f"Current feed: {THREAT_FEED}")
+            process_feed(THREAT_FEED, COLLECTION_ID)
         logger.info(f"Sleeping for {RUN_INTERVAL} seconds")
         time.sleep(RUN_INTERVAL)
 if __name__ == "__main__":
