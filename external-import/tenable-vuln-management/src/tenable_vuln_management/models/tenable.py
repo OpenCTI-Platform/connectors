@@ -350,6 +350,9 @@ class VulnerabilityFinding(FrozenBaseModelWithoutExtra):
         ...,
         description="The source that provided the vulnerability data (e.g., NESSUS).",
     )
+    finding_id: Optional[str] = Field(
+        None, description="the Tenable Vuln Management finding internal uuid."
+    )
 
     @classmethod
     def from_api_response_body(
@@ -365,3 +368,40 @@ class VulnerabilityFinding(FrozenBaseModelWithoutExtra):
         """
         data = _convert_empty_dicts_and_lists_to_none(value=data)
         return [cls(**item) for item in data]
+
+    @classmethod
+    def from_api_response_body_with_finding_id(
+        cls,
+        data_vuln_export: list[dict[str, Any]],
+        metadata: list[dict[str, Any]],
+    ) -> list["VulnerabilityFinding"]:
+        """Make a list of VulnerabilityFinding from API response body.
+
+        Args:
+            data_vuln_export (list[dict[str, Any]]): Raw response body from TenableIO API.
+            metadata(list[dict[str, Any]]): Response from the Tenable V3 API containing:
+                - id : vulnerability Tenable internal id
+                - asset_id: the id of the targeted asset
+                - definition_id: the id of the plugin
+
+        Returns:
+            (list[VulnerabilityFinding]): List of VulnerabilityFinding objects.
+        """
+
+        data_vuln_export = _convert_empty_dicts_and_lists_to_none(
+            value=data_vuln_export
+        )
+
+        # Create a lookup dictionary for fast meta_data access based on 'id', 'asset_id', and 'definition_id'
+        meta_data_lookup = {
+            (item["asset.id"], item["definition.id"]): item["id"] for item in metadata
+        }
+        joined_data = []  # result holder
+        for item in data_vuln_export:
+            meta_item = meta_data_lookup.get(
+                (item["asset"]["uuid"], item["plugin"]["id"])
+            )
+            if meta_item:
+                item["finding_id"] = meta_item
+            joined_data.append(item)
+        return [cls(**item) for item in joined_data]
