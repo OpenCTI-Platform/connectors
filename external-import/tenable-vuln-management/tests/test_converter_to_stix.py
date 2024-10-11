@@ -31,6 +31,11 @@ def mock_helper():
 
 
 @pytest.fixture
+def mock_config():
+    return MagicMock()
+
+
+@pytest.fixture
 def fake_asset():
     return Asset.model_validate_json(
         """
@@ -196,19 +201,23 @@ def test_tlp_marking_definition_handler_should_fails_with_unsupported_TLP():
     assert "Unsupported TLP" in str(exc_info.value)
 
 
-def test_converter_to_stix_make_author(mock_helper):
+def test_converter_to_stix_make_author(mock_helper, mock_config):
     # Given a converter to stix instance
-    converter_to_stix = ConverterToStix(helper=mock_helper, default_marking="TLP:CLEAR")
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
     # When calling make_author
     author = converter_to_stix._make_author()
     # Then a valid Author should be returned and assigned to converter attribute
     assert converter_to_stix.author == author
 
 
-def test_converter_to_stix_make_system(mock_helper, fake_asset):
+def test_converter_to_stix_make_system(mock_helper, mock_config, fake_asset):
     # Given a converter to stix instance
     # and a valid asset instance
-    converter_to_stix = ConverterToStix(helper=mock_helper, default_marking="TLP:CLEAR")
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
     asset = fake_asset
     # When calling make_system
     system = converter_to_stix._make_system(asset=asset)
@@ -216,9 +225,11 @@ def test_converter_to_stix_make_system(mock_helper, fake_asset):
     assert system.name == "sharepoint2016"
 
 
-def test_converter_to_stix_make_mac_address(mock_helper, fake_asset):
+def test_converter_to_stix_make_mac_address(mock_helper, mock_config, fake_asset):
     # Given a converter to stix instance
-    converter_to_stix = ConverterToStix(helper=mock_helper, default_marking="TLP:CLEAR")
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
 
     # Case 1: Asset with a valid MAC address
     asset_with_mac = fake_asset
@@ -235,9 +246,11 @@ def test_converter_to_stix_make_mac_address(mock_helper, fake_asset):
     assert mac_address_none is None
 
 
-def test_converter_to_stix_make_ipv4_address(mock_helper, fake_asset):
+def test_converter_to_stix_make_ipv4_address(mock_helper, mock_config, fake_asset):
     # Given a converter to stix instance
-    converter_to_stix = ConverterToStix(helper=mock_helper, default_marking="TLP:CLEAR")
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
     asset = fake_asset
 
     # When calling make_ipv4_address
@@ -249,9 +262,11 @@ def test_converter_to_stix_make_ipv4_address(mock_helper, fake_asset):
     assert len(ipv4_address.resolves_to_mac_addresses) == 1
 
 
-def test_converter_to_stix_make_ipv6_address(mock_helper, fake_asset):
+def test_converter_to_stix_make_ipv6_address(mock_helper, mock_config, fake_asset):
     # Given a converter to stix instance
-    converter_to_stix = ConverterToStix(helper=mock_helper, default_marking="TLP:CLEAR")
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
 
     # Case 1: Asset with a valid IPv6 address
     asset_with_ipv6 = fake_asset
@@ -269,9 +284,11 @@ def test_converter_to_stix_make_ipv6_address(mock_helper, fake_asset):
     assert ipv6_address_none is None
 
 
-def test_converter_to_stix_make_hostname(mock_helper, fake_asset):
+def test_converter_to_stix_make_hostname(mock_helper, mock_config, fake_asset):
     # Given a converter to stix instance
-    converter_to_stix = ConverterToStix(helper=mock_helper, default_marking="TLP:CLEAR")
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
     asset = fake_asset
 
     # When calling make_hostname
@@ -281,9 +298,11 @@ def test_converter_to_stix_make_hostname(mock_helper, fake_asset):
     assert hostname.value == "sharepoint2016"
 
 
-def test_converter_to_stix_make_operating_systems(mock_helper, fake_asset):
+def test_converter_to_stix_make_operating_systems(mock_helper, mock_config, fake_asset):
     # Given a converter to stix instance
-    converter_to_stix = ConverterToStix(helper=mock_helper, default_marking="TLP:CLEAR")
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
     asset = fake_asset
 
     # When calling make_operating_systems
@@ -293,9 +312,11 @@ def test_converter_to_stix_make_operating_systems(mock_helper, fake_asset):
     assert operating_systems[0].name == "Microsoft Windows Server 2016 Standard"
 
 
-def test_converter_to_stix_make_domain_name(mock_helper, fake_asset):
+def test_converter_to_stix_make_domain_name(mock_helper, mock_config, fake_asset):
     # Given a converter to stix instance
-    converter_to_stix = ConverterToStix(helper=mock_helper, default_marking="TLP:CLEAR")
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
 
     # Case 1: Asset with a valid FQDN
     asset_with_fqdn = fake_asset
@@ -313,9 +334,13 @@ def test_converter_to_stix_make_domain_name(mock_helper, fake_asset):
     assert domain_name_none is None
 
 
-def test_converter_to_stix_make_targeted_software_s(mock_helper, fake_plugin):
+def test_converter_to_stix_make_targeted_software_s(
+    mock_helper, mock_config, fake_plugin
+):
     # Given a converter to stix instance and a fake plugin
-    converter_to_stix = ConverterToStix(helper=mock_helper, default_marking="TLP:CLEAR")
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
 
     # When calling _make_targeted_software_s
     targeted_software = converter_to_stix._make_targeted_software_s(plugin=fake_plugin)
@@ -328,9 +353,11 @@ def test_converter_to_stix_make_targeted_software_s(mock_helper, fake_plugin):
     assert software.cpe == "cpe:/a:microsoft:sharepoint_server"
 
 
-def test_converter_to_stix_make_vulnerabilities(mock_helper, fake_plugin):
+def test_converter_to_stix_make_vulnerabilities(mock_helper, mock_config, fake_plugin):
     # Given a converter to stix instance and a fake plugin instance
-    converter_to_stix = ConverterToStix(helper=mock_helper, default_marking="TLP:CLEAR")
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
 
     # When calling _make_vulnerabilities
     vulnerabilities = converter_to_stix._make_vulnerabilities(plugin=fake_plugin)
@@ -342,9 +369,11 @@ def test_converter_to_stix_make_vulnerabilities(mock_helper, fake_plugin):
     assert vulnerability.name == "CVE-2022-21837"
 
 
-def test_converter_to_stix_process_asset(mock_helper, fake_asset):
+def test_converter_to_stix_process_asset(mock_helper, mock_config, fake_asset):
     # Given a converter to stix instance and a fake asset
-    converter_to_stix = ConverterToStix(helper=mock_helper, default_marking="TLP:CLEAR")
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
 
     # When calling process_asset
     result = converter_to_stix.process_asset(asset=fake_asset)
@@ -359,9 +388,11 @@ def test_converter_to_stix_process_asset(mock_helper, fake_asset):
     assert len(result["relationships"]) == 6
 
 
-def test_converter_to_stix_process_plugin(mock_helper, fake_plugin):
+def test_converter_to_stix_process_plugin(mock_helper, mock_config, fake_plugin):
     # Given a converter to stix instance
-    converter_to_stix = ConverterToStix(helper=mock_helper, default_marking="TLP:CLEAR")
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
 
     # When calling process_plugin
     result = converter_to_stix.process_plugin(plugin=fake_plugin)
