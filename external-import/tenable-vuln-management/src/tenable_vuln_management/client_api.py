@@ -97,7 +97,7 @@ class ConnectorClient:
         """
         self.helper = helper
         self.config = config
-        self.tio_client = TenableIO(
+        self._tio_client = TenableIO(
             access_key=self.config.tio_api_access_key,
             secret_key=self.config.tio_api_secret_key,
             url=self.config.tio_api_base_url,
@@ -112,7 +112,7 @@ class ConnectorClient:
         self.helper.log_debug(
             "Tenable Vuln Management API Client User Agent details",
             {
-                "user-agent": dict(self.tio_client._session.headers.lower_items()).get(
+                "user-agent": dict(self._tio_client._session.headers.lower_items()).get(
                     "user-agent"
                 )
             },
@@ -153,7 +153,7 @@ class ConnectorClient:
                 "status": scan.get("status"),
                 "name": scan.get("name"),
             }
-            for scan in self.tio_client.scans.list()
+            for scan in self._tio_client.scans.list()
         ]
 
     @safe_call
@@ -176,8 +176,10 @@ class ConnectorClient:
                 - https://docs.tenable.com/vulnerability-management/Content/Settings/Tagging/Tags.htm
             [Consulted on September 27th, 2024].
         """
-        return self.tio_client.exports.vulns(
+        return self._tio_client.exports.vulns(
             since=int(parser.parse(self.config.tio_export_since).timestamp()),
             severity=SeverityLevel.levels_above(self.config.tio_severity_min_level),
         )
+
+
 
