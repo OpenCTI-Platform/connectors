@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - "CONNECTOR_NAME=Tanium Sightings"
       - CONNECTOR_SCOPE=tanium
-      - CONNECTOR_CONFIDENCE_LEVEL=60 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=PT12H
       - TANIUM_INCIDENTS_URL=https://console.changeme.com
