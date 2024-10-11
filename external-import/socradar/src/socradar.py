@@ -21,20 +21,10 @@ THREAT_FEED_FORMAT_TYPE = config["format_type"]
 SOCRADAR_KEY = config["socradar_key"]
 COLLECTIONS_UUID = config["collections_uuid"]
 collection_catalog = [
-    "collection_1",
-    "collection_2",
-    "collection_3",
-    "collection_4",
-    "collection_5",
-    "collection_6",
-    "collection_7",
-    "collection_8",
-    "collection_9",
-    "collection_10",
-    "collection_11",
-    "collection_12",
-    "collection_13",
-    "collection_14",
+    "collection_1", "collection_2", "collection_3", "collection_4",
+    "collection_5", "collection_6", "collection_7", "collection_8",
+    "collection_9", "collection_10", "collection_11", "collection_12",
+    "collection_13", "collection_14",
 ]
 RUN_INTERVAL = config.get("run_interval", 86400)
 
@@ -189,6 +179,7 @@ def main():
                 pass
         logger.info(f"Sleeping for {RUN_INTERVAL} seconds")
         time.sleep(RUN_INTERVAL)
+
 
 
 if __name__ == "__main__":
