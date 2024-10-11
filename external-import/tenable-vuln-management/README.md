@@ -125,40 +125,6 @@ download of data by re-running the connector.
 
 ## Behavior
 
-### Global Flow
-```mermaid
-graph TD
-    start_run([Start Connector triggered by Scheduler])
-    load_config[Load Configurations]
-    initiate[Initialize OpenCTI Helper &  Initiate Work]
-    test_previous_successful_run{Previous Successful Run?}
-    overwrite_import_start_date[Overwrite Import Start Date Parameter]
-    start_export[Trigger Tenable Vulnerability Findings Export]
-    spawn_threads[Spawn processing threads]
-
-    subgraph process
-    direction TB
-        fetch_data[Fetch data available chunk] -->
-        map_to_octi_entity[Map to Open CTI entity] -->
-        convert_to_stix2[Cnovert to STIX2 bundle] -->
-        send_bundle[Send Bundle to Open CTI Queue]
-    end
-
-    test_all_jobs_successful{All Jobs Succeeded?}
-    update_run_state[Update Last Successful Run Datetime]
-    log_error[Log Error and Partial Results]
-    end_run([End Run])
-
-start_run -->
-load_config -->
-initiate -->
-test_previous_successful_run -->|YES| overwrite_import_start_date --> start_export
-test_previous_successful_run -->|NO| start_export
---> spawn_threads --> process --> test_all_jobs_successful
-test_all_jobs_successful -->|YES| update_run_state --> end_run
-test_all_jobs_successful -->|NO| log_error --> end_run
-```
-
 ### Mapping details
 
 ```mermaid
@@ -213,5 +179,37 @@ Logging can be customized via the self.helper.connector_logger calls within the 
 - Ensure your Tenable API access is configured correctly (API keys, base URL).
 - The connector handles rate limits using a backoff and retry mechanism for 429 HTTP responses.
 - Consider the `min_severity` threshold and `export_since` parameters for performance optimization.
+- global flow:
+```mermaid
+graph TD
+    start_run([Start Connector triggered by Scheduler])
+    load_config[Load Configurations]
+    initiate[Initialize OpenCTI Helper &  Initiate Work]
+    test_previous_successful_run{Previous Successful Run?}
+    overwrite_import_start_date[Overwrite Import Start Date Parameter]
+    start_export[Trigger Tenable Vulnerability Findings Export]
+    spawn_threads[Spawn processing threads]
 
+    subgraph process
+    direction TB
+        fetch_data[Fetch data available chunk] -->
+        map_to_octi_entity[Map to Open CTI entity] -->
+        convert_to_stix2[Cnovert to STIX2 bundle] -->
+        send_bundle[Send Bundle to Open CTI Queue]
+    end
+
+    test_all_jobs_successful{All Jobs Succeeded?}
+    update_run_state[Update Last Successful Run Datetime]
+    log_error[Log Error and Partial Results]
+    end_run([End Run])
+
+start_run -->
+load_config -->
+initiate -->
+test_previous_successful_run -->|YES| overwrite_import_start_date --> start_export
+test_previous_successful_run -->|NO| start_export
+--> spawn_threads --> process --> test_all_jobs_successful
+test_all_jobs_successful -->|YES| update_run_state --> end_run
+test_all_jobs_successful -->|NO| log_error --> end_run
+```
 
