@@ -257,6 +257,7 @@ class VirusTotalConnector:
                     + " |\n\n"
                 )
                 content += "## Last Analysis Results\n\n"
+                content += "Any falsy value will be replaced by ‘N/A’\n"
                 content += (
                     "| Engine name | Engine version | Method | Category | Result |\n"
                 )
@@ -267,15 +268,15 @@ class VirusTotalConnector:
                     result = data["attributes"]["last_analysis_results"][key]
                     content += (
                         "| "
-                        + result["engine_name"]
+                        + str(result.get("engine_name") or "N/A")
                         + " | "
-                        + result["engine_version"]
+                        + str(result.get("engine_version") or "N/A")
                         + " | "
-                        + result["method"]
+                        + str(result.get("method") or "N/A")
                         + " | "
-                        + result["category"]
+                        + str(result.get("category") or "N/A")
                         + " | "
-                        + (result["result"] if result["result"] is not None else "N/A")
+                        + str(result.get("result") or "N/A")
                         + " | \n"
                     )
                 builder.create_note("VirusTotal Report", content)
