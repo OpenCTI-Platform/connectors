@@ -1,18 +1,18 @@
+from dateutil import parser
 from enum import Enum
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal
 
-from dateutil import parser
 from tenable.io import TenableIO
 from tenable.io.exports.iterator import ExportsIterator
 
 from .config_variables import ConfigConnector
 
-# from tenable.errors import TioExportsTimeout
-
 
 if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
+
+SeverityLevelLiteral = Literal["info", "low", "medium", "high", "critical"]
 
 
 class SeverityLevel(Enum):
@@ -26,7 +26,7 @@ class SeverityLevel(Enum):
 
     @staticmethod
     def levels_above(
-        min_level: Literal["info", "low", "medium", "high", "critical"]
+        min_level: SeverityLevelLiteral
     ) -> list[str]:
         """Returns a list of string values of all severity levels greater than or equal to the given min_level.
 
@@ -42,6 +42,26 @@ class SeverityLevel(Enum):
         levels = [level.value for level in SeverityLevel]
         min_index = levels.index(min_level)
         return levels[min_index:]
+
+    @staticmethod
+    def index_range(
+            min_level: SeverityLevelLiteral
+    ) -> list[int]:
+        """Returns the index list corresponding to the given min_level and all levels above.
+
+        Args:
+            min_level (str): the min vulnerability level.
+
+        Returns:
+            (list[int]): the list of indexes corresponding to levels from min_level to the highest.
+
+        Examples:
+            >>> indexes = SeverityLevel.index_range('low')
+            [1, 2, 3, 4]
+        """
+        levels = [level.value for level in SeverityLevel]
+        min_index = levels.index(min_level)
+        return list(range(min_index, len(levels)))
 
 
 def _get_opencti_version() -> str:
@@ -160,3 +180,4 @@ class ConnectorClient:
             since=int(parser.parse(self.config.tio_export_since).timestamp()),
             severity=SeverityLevel.levels_above(self.config.tio_severity_min_level),
         )
+
