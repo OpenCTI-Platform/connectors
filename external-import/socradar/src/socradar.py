@@ -47,7 +47,8 @@ regex_patterns = {
     "ipv4": re.compile(r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"),
     "ipv6": re.compile(r"^(?:[a-fA-F\d]{1,4}:){7}[a-fA-F\d]{1,4}$"),
     "domain": re.compile(
-        r"^(?=.{1,255}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,6}$"
+        r"^(?=.{1,255}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+"
+        r"[A-Za-z]{2,6}$"
     ),
     "url": re.compile(r"^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$"),
 }
@@ -67,7 +68,6 @@ def process_feed(THREAT_FEED, COLLECTION_ID):
         response.raise_for_status()
         response_dict = response.json()
         # response_dict = response_dict[:10]
-        # hash_entries = [entry for entry in response_dict if entry['feed_type'] == 'hash']
 
         for item in response_dict:
             # Extract data
