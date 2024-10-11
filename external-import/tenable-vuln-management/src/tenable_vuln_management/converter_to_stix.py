@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import stix2
 
+from .config_variables import ConfigConnector
 from .models.opencti import (
     Author,
     BaseEntity,
@@ -137,11 +138,13 @@ class ConverterToStix:
     def __init__(
         self,
         helper: "OpenCTIConnectorHelper",
+        config: "ConfigConnector",
         default_marking: Literal[
             "TLP:CLEAR", "TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"
         ],
     ):
         self.helper = helper
+        self.config = config
         self.author = ConverterToStix._make_author()
         self.object_marking_refs = [
             tlp_marking_definition_handler(default_marking)["id"]
@@ -429,7 +432,15 @@ class ConverterToStix:
                 ),  # open or reopen
                 confidence=None,
                 object_marking_refs=self.object_marking_refs,
-                # x_octi_workflow_id workflow tor create and retrieve
+                external_references=[
+                    {
+                        "source_name": "Tenable Vulnerability Management",
+                        "url": f"{self.config.tio_api_base_url}/tio/app.html#/findings/host-vulnerabilities/details/"
+                        f"{vuln_finding.finding_id}/asset/{vuln_finding.asset.uuid}/asset-affected",
+                        "description": "A detailed analysis of the vulnerability.",
+                    }
+                ],
+                # x_octi_workflow_id
             )
             for vulnerability in vulnerabilities
         ]
