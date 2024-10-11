@@ -466,6 +466,10 @@ class RelatedToRelationship(BaseEntity):
         description="References for object marking, "
         "usually TLP:xxx objects or their marking ids",
     )
+    external_references: Optional[list[Any]] = Field(
+        None,
+        description="External references",
+    )
 
     def to_stix2_object(self) -> Any:
         return stix2.Relationship(
@@ -487,4 +491,5 @@ class RelatedToRelationship(BaseEntity):
             stop_time=self.stop_time,
             confidence=self.confidence,
             object_marking_refs=self.object_marking_refs,
+            external_references=self.external_references,
         )
