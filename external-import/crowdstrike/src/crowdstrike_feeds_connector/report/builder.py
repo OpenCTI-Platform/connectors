@@ -15,8 +15,6 @@ from crowdstrike_feeds_services.utils import (
     create_stix2_report_from_report,
     create_targets_relationships,
     create_uses_relationships,
-    datetime_utc_epoch_start,
-    datetime_utc_now,
     normalize_start_time_and_stop_time,
     timestamp_to_datetime,
 )
@@ -66,12 +64,7 @@ class ReportBundleBuilder:
 
         # Use report dates for start time and stop time.
         start_time = timestamp_to_datetime(self.report["created_date"])
-        if start_time is None:
-            start_time = datetime_utc_epoch_start()
-
-        stop_time = timestamp_to_datetime(self.report["last_modified_date"])
-        if stop_time is None:
-            stop_time = datetime_utc_now()
+        stop_time = None
 
         start_time, stop_time = normalize_start_time_and_stop_time(
             start_time, stop_time
