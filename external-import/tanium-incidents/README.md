@@ -43,17 +43,6 @@ in OpenCTI at a defined periodicity.
 - OpenCTI Platform >= 5.0.0
 - Tanium Threat Response >= 3.X.X
 
-### Configuration
-
-| Parameter                            | Docker envvar                        | Mandatory | Description                                                                             |
-|--------------------------------------|--------------------------------------|-----------|-----------------------------------------------------------------------------------------|
-| `tanium_incidents_url`               | `TANIUM_INCIDENTS_URL`               | Yes       | The Tanium instance API URL.                                                            |
-| `tanium_incidents_url_console`       | `TANIUM_INCIDENTS_URL_CONSOLE`       | Yes       | The Tanium instance console URL.                                                        |
-| `tanium_incidents_ssl_verify`        | `TANIUM_INCIDENTS_SSL_VERIFY`        | Yes       | Enable the SSL certificate check (default: `true`)                                      |
-| `tanium_incidents_token`             | `TANIUM_INCIDENTS_TOKEN`             | Yes       | The Tanium login user.                                                                  |
-| `tanium_incidents_import_alerts`     | `TANIUM_INCIDENTS_IMPORT_ALERTS`     | No        | Enable alerts import                                                                    |
-| `tanium_incidents_import_start_date` | `TANIUM_INCIDENTS_IMPORT_START_DATE` | No        | Import starting date (in YYYY-MM-DD format) - used only if connector's state is not set |
-
 ## Configuration variables
 
 There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
@@ -150,28 +139,8 @@ However, if you would like to force an immediate download of a new batch of enti
 Find the connector, and click on the refresh button to reset the connector's state and force a new
 download of data by re-running the connector.
 
-## Behavior
-
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
-
 ## Debugging
 
 The connector can be debugged by setting the appropiate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.e.,
 `self.helper.connector_logger.error("An error message")`.
-
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
-
-## Additional information
-
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
