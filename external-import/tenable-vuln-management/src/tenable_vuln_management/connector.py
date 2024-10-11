@@ -58,9 +58,12 @@ class Connector:
         self.helper = OpenCTIConnectorHelper(self.config.load)
         self.client = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(
-            self.helper, default_marking=self.config.tio_marking_definition
+            helper=self.helper,
+            config=self.config,
+            default_marking=self.config.tio_marking_definition,
         )
         self.work_id: str | None = None
+        self._metadata: list[dict[str, Any]] | None = None
 
     def _initiate_work(self) -> None:
         """Initiate a new work process in the OpenCTI platform.
@@ -97,12 +100,16 @@ class Connector:
                 {"previous": previous_since, "current": self.config.tio_export_since},
             )
         else:
-            self.helper.connector_logger.info("[CONNECTOR] Connector has never run...")
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Connector has never run successfully..."
+            )
 
         # Initiate a new work
         self.work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, self.helper.connect_name
         )
+        # reset metadata
+        self._metadata = None
         self.helper.connector_logger.info(
             "[CONNECTOR] Running connector...",
             {"connector_name": self.helper.connect_name},
@@ -140,13 +147,25 @@ class Connector:
         vuln_findings, entities, stix_objects = [], [], []  # results holder
         success_flag = True
 
+        # Acquire vulnerability uuids
+        try:
+            self._metadata = (
+                self.client.get_finding_ids() if self._metadata is None else None
+            )
+        except Exception as e:
+            self.helper.connector_logger.error(
+                "Error when trying to acquire tenable finding ids", {"error": str(e)}
+            )
+
         # Acquire
         for item in data:
             try:
                 # even though we implemented the ability to bulk convert api response, we do it one by one to maximize
                 # the amount of ingested data in case of a corrupted line
                 vuln_findings.extend(
-                    VulnerabilityFinding.from_api_response_body([item])
+                    VulnerabilityFinding.from_api_response_body_with_finding_id(
+                        [item], metadata=self._metadata or []
+                    )
                 )
             except ValidationError as e:
                 success_flag = False
