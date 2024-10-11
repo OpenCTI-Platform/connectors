@@ -1,13 +1,13 @@
-from dateutil import parser
+import datetime
 from enum import Enum
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal
 
+from dateutil import parser
 from tenable.io import TenableIO
 from tenable.io.exports.iterator import ExportsIterator
 
 from .config_variables import ConfigConnector
-
 
 if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
@@ -25,9 +25,7 @@ class SeverityLevel(Enum):
     CRITICAL = "critical"
 
     @staticmethod
-    def levels_above(
-        min_level: SeverityLevelLiteral
-    ) -> list[str]:
+    def levels_above(min_level: SeverityLevelLiteral) -> list[str]:
         """Returns a list of string values of all severity levels greater than or equal to the given min_level.
 
         Args:
@@ -44,9 +42,7 @@ class SeverityLevel(Enum):
         return levels[min_index:]
 
     @staticmethod
-    def index_range(
-            min_level: SeverityLevelLiteral
-    ) -> list[int]:
+    def levels_index_above(min_level: SeverityLevelLiteral) -> list[int]:
         """Returns the index list corresponding to the given min_level and all levels above.
 
         Args:
@@ -56,7 +52,7 @@ class SeverityLevel(Enum):
             (list[int]): the list of indexes corresponding to levels from min_level to the highest.
 
         Examples:
-            >>> indexes = SeverityLevel.index_range('low')
+            >>> indexes = SeverityLevel.levels_index_above('low')
             [1, 2, 3, 4]
         """
         levels = [level.value for level in SeverityLevel]
@@ -181,5 +177,139 @@ class ConnectorClient:
             severity=SeverityLevel.levels_above(self.config.tio_severity_min_level),
         )
 
+    def _since_filter_api_V3(self):
+        """Create a `since` filter equivalent of API V2 to be used in api V3.
 
+        Returns:
+            (dict[str, Any]): The equivalent since filter
 
+        References:
+            https://community.tenable.com/s/article/since-filter-changes-for-Tenable-io-vulns-exports-API
+
+        """
+        parsed_with_tz = parser.parse(self.config.tio_export_since)
+        utc_datetime = (
+            datetime.datetime.fromtimestamp(parsed_with_tz.timestamp()).isoformat()
+            + "Z"
+        )
+        # only utc isoformat date seems supported by API V3
+        return {
+            "or": [
+                {
+                    "and": [
+                        {
+                            "property": "state",
+                            "operator": "eq",
+                            "value": ["ACTIVE", "RESURFACED"],  # ~ OPEN REOPENED in v2
+                        },
+                        {
+                            "property": "last_seen",  # ~ last_found in v2
+                            "operator": "gt",
+                            "operatorVariation": "date",
+                            "value": utc_datetime,
+                        },
+                    ]
+                },
+                {
+                    "and": [
+                        {"property": "state", "operator": "eq", "value": ["FIXED"]},
+                        {
+                            "property": "last_fixed",
+                            "operator": "gt",
+                            "operatorVariation": "date",
+                            "value": utc_datetime,
+                        },
+                    ]
+                },
+            ]
+        }
+
+    def _get_findings_meta_page(
+        self,
+        page_size: int | None,
+        filters: dict[str, Any] | None,
+        fields: list[str] | None,
+        next_page: str | None,
+    ) -> tuple[list[dict[str, Any]], str]:
+        """Use V3 Tenable API endpoint to retrieve vulnerabilities metadata.
+
+        Args:
+            page_size: the number of element to retrieve per page. (Unused if next_page is passed).
+            filters: the filter to apply when retrieving elements. (Unused if next_page is passed).
+            fields: the fields names to retrieve. (Unused if next_page is passed).
+            next_page: The next page id returned by a previous call.
+
+        Returns:
+            results, next_page_id
+
+        See Also:
+            https://cloud.tenable.com/tio/app.html#/findings/host-vulnerabilities
+
+        """
+
+        meta_findings_endpoint = "/api/v3/findings/vulnerabilities/host/search"
+        resp = self._tio_client.post(
+            path=meta_findings_endpoint,
+            json=(
+                {
+                    "filter": filters,
+                    "limit": page_size,
+                    "next": None,
+                    "fields": fields,
+                }
+                if next_page is None
+                else {"next": next_page}
+            ),
+        )
+        resp.raise_for_status()
+        content = resp.json()
+        pagination = content["pagination"]
+        return content["findings"], (
+            pagination.get("next") if pagination is not None else None
+        )
+
+    @safe_call
+    def get_finding_ids(self) -> list[dict[str, str]]:
+        """Get findings ids from the Tenable V3 API
+
+        Returns:
+            (list[dict[str, str]]): Containing `id` (the finding id), `asset.id` and `definition.id` (to join data later)
+
+        """
+        # Note this must be sync as pagination is handle via the next_page id, returned by the current call.
+        # We then cannot just get a total count, then used async calls to get particular chunks.
+        filter_since = self._since_filter_api_V3()
+        filter_severity = {
+            "operator": "eq",
+            "value": SeverityLevel.levels_index_above(
+                self.config.tio_severity_min_level
+            ),
+            "property": "severity",
+        }
+        fields = [
+            "id",
+            "asset.id",
+            "definition.id",
+        ]  # finding_id, targeted asset_id, plugin_id
+
+        output, next_page = self._get_findings_meta_page(
+            page_size=200,
+            filters={"and": [filter_since, filter_severity]},
+            fields=fields,
+            next_page=None,
+        )
+        while next_page is not None:
+            output_page, next_page = self._get_findings_meta_page(
+                page_size=None, filters=None, fields=None, next_page=next_page
+            )
+            output.extend(output_page)
+
+        # flatten results
+        return [
+            {
+                "id": item["id"],
+                "asset.id": item["asset"]["id"],
+                "definition.id": item["definition"]["id"],
+            }
+            for item in output
+        ]
