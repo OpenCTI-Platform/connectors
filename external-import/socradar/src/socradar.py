@@ -1,7 +1,6 @@
 import logging
 import re
 import time
-import urllib.parse
 from datetime import datetime
 
 import requests
@@ -125,12 +124,12 @@ def process_feed(THREAT_FEED, COLLECTION_ID):
                     logger.info("Creating Indicator")
                     logger.info(f"Name: {value}")
                     logger.info(f"Description: Feed from {maintainer_name}")
-                    logger.info(f"Pattern Type: stix")
+                    logger.info("Pattern Type: stix")
                     logger.info(f"Pattern: {pattern}")
                     logger.info(f"Valid From: {first_seen_date}")
                     logger.info(f"Valid Until: {latest_seen_date}")
                     logger.info(f"Main Observable Type: {observable_type}")
-                    logger.info(f"Labels: ['malicious-activity']")
+                    logger.info("Labels: ['malicious-activity']")
 
                     maintainer_identity = client.identity.create(
                         name=maintainer_name, type="Organization", update=True
@@ -181,16 +180,19 @@ def process_feed(THREAT_FEED, COLLECTION_ID):
 def main():
     while True:
         for collection in collection_catalog:
-            COLLECTION_ID = COLLECTIONS_UUID[collection]["id"][0]
-            THREAT_FEED = (
-                THREAT_FEED_BASE_URL
-                + COLLECTION_ID
-                + THREAT_FEED_FORMAT_TYPE
-                + SOCRADAR_KEY
-            )
-            logger.info(f"Current collection: {collection}")
-            logger.info(f"Current feed: {THREAT_FEED}")
-            process_feed(THREAT_FEED, COLLECTION_ID)
+            try: 
+                COLLECTION_ID = COLLECTIONS_UUID[collection]["id"][0]
+                THREAT_FEED = (
+                    THREAT_FEED_BASE_URL
+                    + COLLECTION_ID
+                    + THREAT_FEED_FORMAT_TYPE
+                    + SOCRADAR_KEY
+                )
+                logger.info(f"Current collection: {collection}")
+                logger.info(f"Current feed: {THREAT_FEED}")
+                process_feed(THREAT_FEED, COLLECTION_ID)
+            except:
+                pass
         logger.info(f"Sleeping for {RUN_INTERVAL} seconds")
         time.sleep(RUN_INTERVAL)
 
