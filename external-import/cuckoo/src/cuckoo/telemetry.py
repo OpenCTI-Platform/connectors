@@ -8,7 +8,6 @@ from cuckoo.cuckoo import (
     cuckooReportSignature,
     cuckooReportTCPUDP,
 )
-
 from pycti import StixCoreRelationship
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2.v21 import AttackPattern, DomainName, IPv4Address, Process, Relationship

@@ -7,9 +7,9 @@ import magic
 from pycti import CustomObjectCaseIncident
 from pycti import Identity as pycti_identity
 from pycti import Note as pycti_note
+from pycti import ObservedData as pycti_observed_data
 from pycti import OpenCTIConnectorHelper
 from pycti import Report as pycti_report
-from pycti import ObservedData as pycti_observed_data
 from stix2 import (
     Artifact,
     AutonomousSystem,

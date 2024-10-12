@@ -1,9 +1,8 @@
 import logging
 from re import search
 
-from countryinfo import CountryInfo
-
 import pycti
+from countryinfo import CountryInfo
 from pycti import Location as pycti_location
 from pycti import StixCoreRelationship
 from stix2 import (

@@ -6,9 +6,8 @@ from datetime import datetime, timezone
 from typing import Any, Mapping
 from urllib.parse import urlparse
 
-import requests
-
 import pycti
+import requests
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2 import Bundle, ExternalReference, Identity, Indicator, Relationship
 

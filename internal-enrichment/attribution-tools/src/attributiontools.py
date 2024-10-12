@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Dict
 from urllib.parse import urljoin
 
+import pycti
 import yaml
 
 # Import attribution_tools parser:
@@ -17,8 +18,6 @@ from attribution_tools import parsers
 from attribution_tools.attribution_model import AttributionToolsModel
 from attribution_tools.train_attribution_model import TrainingAttributionToolsModel
 from cron_converter import Cron
-
-import pycti
 from dataexport import DataExport
 from pycti import OpenCTIApiClient, OpenCTIConnectorHelper, get_config_variable
 from stix2 import Bundle, Note, Relationship
