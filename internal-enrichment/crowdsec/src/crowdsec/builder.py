@@ -549,11 +549,10 @@ class CrowdSecBuilder:
         if attack_patterns or observable_id:
             for country_alpha_2, val in self.target_countries.items():
                 country_info = pycountry.countries.get(alpha_2=country_alpha_2)
-                country_id = self.helper.api.location.generate_id(
-                    name=country_info.name, x_opencti_location_type="Country"
-                )
                 country = Location(
-                    id=country_id,
+                    id=self.helper.api.location.generate_id(
+                        name=country_info.name, x_opencti_location_type="Country"
+                    ),
                     name=country_info.name,
                     country=(
                         country_info.official_name
@@ -579,7 +578,7 @@ class CrowdSecBuilder:
                 if observable_id:
                     sighting = Sighting(
                         id=StixSightingRelationship.generate_id(
-                            country_id,
+                            country.get("id"),
                             observable_id,
                             first_seen=None,
                             last_seen=None,
@@ -595,7 +594,7 @@ class CrowdSecBuilder:
                         sighting_of_ref=(
                             indicator_id if indicator_id else FAKE_INDICATOR_ID
                         ),
-                        where_sighted_refs=[country_id],
+                        where_sighted_refs=[country.get("id")],
                         custom_properties={"x_opencti_sighting_of_ref": observable_id},
                     )
                     self.add_to_bundle([sighting])
@@ -606,12 +605,12 @@ class CrowdSecBuilder:
                         id=StixCoreRelationship.generate_id(
                             "targets",
                             attack_pattern_id,
-                            country_id,
+                            country.get("id"),
                         ),
                         relationship_type="targets",
                         created_by_ref=self.get_or_create_crowdsec_ent()["standard_id"],
                         source_ref=attack_pattern_id,
-                        target_ref=country_id,
+                        target_ref=country.get("id"),
                         confidence=self.helper.connect_confidence_level,
                         allow_custom=True,
                     )

@@ -435,11 +435,8 @@ class SocprimeConnector:
     def _create_author_identity(self, work_id: str) -> str:
         """Creates SOC Prime author and returns its id."""
         name = "SOC Prime"
-        identity_id = pycti.Identity.generate_id(
-            name=name, identity_class="organization"
-        )
         author_identity = Identity(
-            id=identity_id,
+            id=pycti.Identity.generate_id(name=name, identity_class="organization"),
             type="identity",
             name=name,
             identity_class="organization",
@@ -454,7 +451,7 @@ class SocprimeConnector:
 
         serialized_bundle = Bundle(objects=[author_identity]).serialize()
         self.helper.send_stix2_bundle(serialized_bundle, work_id=work_id)
-        return identity_id
+        return author_identity.get("id")
 
     def send_rules_from_tdm(self, work_id: str) -> None:
         author_id = self._create_author_identity(work_id)

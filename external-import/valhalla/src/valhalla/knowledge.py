@@ -7,6 +7,8 @@ from typing import Any, Mapping
 from urllib.parse import urlparse
 
 import requests
+
+import pycti
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2 import Bundle, ExternalReference, Identity, Indicator, Relationship
 
@@ -35,6 +37,7 @@ class KnowledgeImporter:
         self.default_marking = default_marking
         self.valhalla_client = valhalla_client
         self.organization = Identity(
+            id=pycti.Identity.generate_id("Nextron Systems GmbH", "organization"),
             name="Nextron Systems GmbH",
             identity_class="organization",
             description="THOR APT scanner and Valhalla Yara Rule API Provider",
@@ -92,6 +95,7 @@ class KnowledgeImporter:
                     continue
 
             indicator = Indicator(
+                id=pycti.Indicator.generate_id(yr.content),
                 name=yr.name,
                 description=yr.cti_description,
                 pattern_type="yara",

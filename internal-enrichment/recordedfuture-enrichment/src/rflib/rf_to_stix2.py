@@ -320,7 +320,7 @@ class Identity(RFStixEntity):
         return self.type_to_class[self.type]
 
 
-class ThreatActor(RFStixEntity):
+class RfThreatActor(RFStixEntity):
     """Converts various RF Threat Actor Organization to a STIX2 Threat Actor"""
 
     type_to_class = {
@@ -333,7 +333,7 @@ class ThreatActor(RFStixEntity):
         """Creates STIX objects from object attributes"""
         self.helper.log_debug("Add Threat Actor.")
         self.stix_obj = stix2.ThreatActor(
-            id=pycti.ThreatActor.generate_id(self.name),
+            id=pycti.ThreatActor.generate_id(self.name, "Threat-Actor-Group"),
             name=self.name,
             created_by_ref=self.author.id,
         )
@@ -530,9 +530,9 @@ class EnrichedIndicator:
                     if any(
                         attr.get("id") == "threat_actor" for attr in link["attributes"]
                     ):
-                        link_object = ThreatActor(
-                            link["name"],
-                            self.author,
+                        link_object = RfThreatActor(
+                            name=link["name"],
+                            author=self.author,
                             type_=type_,
                             opencti_helper=self.helper,
                         )

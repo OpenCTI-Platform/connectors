@@ -12,7 +12,7 @@ from cape.cape import (
     cuckooReportTTP,
     cuckooTarget,
 )
-from pycti import Note as pyctiNote
+from pycti import Note as pyctiNote, StixCoreRelationship
 from pycti import Report as pyctiReport
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2.v21 import (
@@ -129,6 +129,7 @@ class openCTIInterface:
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(host.ip, "ipv4")
                 IPind = Indicator(
+                    id=Indicator.generate_id(STIXPattern),
                     name=host.ip, pattern=STIXPattern, pattern_type="stix"
                 )
                 IPObs.append(IPind)
@@ -145,6 +146,7 @@ class openCTIInterface:
                 value=host.domain
             )  # , resolves_to_refs=IP.id) ref https://github.com/OpenCTI-Platform/client-python/issues/155
             Rel = Relationship(
+                id=StixCoreRelationship.generate_id("resolves-to", DNS.id, IP.id),
                 source_ref=DNS.id,
                 target_ref=IP.id,
                 relationship_type="resolves-to",
@@ -154,10 +156,12 @@ class openCTIInterface:
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(host.domain, "FQDN")
                 DNSind = Indicator(
+                    id=Indicator.generate_id(STIXPattern),
                     name=host.domain, pattern=STIXPattern, pattern_type="stix"
                 )
                 STIXPattern = self.getStixPattern(host.ip, "ipv4")
                 IPind = Indicator(
+                    id=Indicator.generate_id(STIXPattern),
                     name=host.ip, pattern=STIXPattern, pattern_type="stix"
                 )
                 DNSObs.append(DNSind)
@@ -306,6 +310,7 @@ class openCTIInterface:
             mime_type=file.type,
         )
         ind = Indicator(
+            id=Indicator.generate_id(STIXPattern),
             name=file.name,
             pattern=STIXPattern,
             pattern_type="stix",
@@ -313,6 +318,11 @@ class openCTIInterface:
         )
 
         rel = Relationship(
+            id=StixCoreRelationship.generate_id(
+                "based-on",
+                ind.id,
+                Filex.id,
+            ),
             source_ref=ind.id,
             relationship_type="based-on",
             target_ref=Filex.id,
@@ -339,6 +349,7 @@ class openCTIInterface:
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(file.sha256.upper(), "sha256")
                 fileind = Indicator(
+                    id=Indicator.generate_id(STIXPattern),
                     name=file.name, pattern=STIXPattern, pattern_type="stix"
                 )
                 iocs.append(fileind)
@@ -440,7 +451,7 @@ class openCTIInterface:
             return None
 
         if not MalwareX:
-            MalwareX = Malware(name=Detection, is_family=False)
+            MalwareX = Malware(id=Malware.generate_id(name=Detection), name=Detection, is_family=False)
 
         return MalwareX
 

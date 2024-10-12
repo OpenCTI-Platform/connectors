@@ -8,6 +8,8 @@ from cuckoo.cuckoo import (
     cuckooReportSignature,
     cuckooReportTCPUDP,
 )
+
+from pycti import StixCoreRelationship
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2.v21 import AttackPattern, DomainName, IPv4Address, Process, Relationship
 from stix2.v21.bundle import Bundle
@@ -93,7 +95,7 @@ class openCTIInterface:
             IPObs.append(IPv4Address(value=host))
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(host, "ipv4")
-                IPind = Indicator(name=host, pattern=STIXPattern, pattern_type="stix")
+                IPind = Indicator(id=Indicator.generate_id(STIXPattern), name=host, pattern=STIXPattern, pattern_type="stix")
                 IPObs.append(IPind)
         return IPObs
 
@@ -107,6 +109,7 @@ class openCTIInterface:
                 value=host["domain"]
             )  # , resolves_to_refs=IP.id) ref https://github.com/OpenCTI-Platform/client-python/issues/155
             Rel = Relationship(
+                id=StixCoreRelationship.generate_id("resolves-to", DNS.id, IP.id),
                 source_ref=DNS.id,
                 target_ref=IP.id,
                 relationship_type="resolves-to",
@@ -116,10 +119,12 @@ class openCTIInterface:
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(host["domain"], "FQDN")
                 DNSind = Indicator(
+                    id=Indicator.generate_id(STIXPattern),
                     name=host["domain"], pattern=STIXPattern, pattern_type="stix"
                 )
                 STIXPattern = self.getStixPattern(host["ip"], "ipv4")
                 IPind = Indicator(
+                    id=Indicator.generate_id(STIXPattern),
                     name=host["ip"], pattern=STIXPattern, pattern_type="stix"
                 )
                 DNSObs.append(DNSind)
@@ -201,6 +206,7 @@ class openCTIInterface:
 
         Filex = File(hashes=hashes, size=size, name=file.name, mime_type=file.type)
         ind = Indicator(
+            id=Indicator.generate_id(STIXPattern),
             name=file.name,
             pattern=STIXPattern,
             pattern_type="stix",
@@ -208,6 +214,7 @@ class openCTIInterface:
         )
 
         rel = Relationship(
+            id=StixCoreRelationship.generate_id("based-on", Filex.id, ind.id),
             source_ref=Filex.id,
             relationship_type="based-on",
             target_ref=ind.id,
@@ -241,6 +248,7 @@ class openCTIInterface:
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(file.sha256.upper(), "sha256")
                 fileind = Indicator(
+                    id=Indicator.generate_id(STIXPattern),
                     name=file.name, pattern=STIXPattern, pattern_type="stix"
                 )
                 iocs.append(fileind)
@@ -265,10 +273,12 @@ class openCTIInterface:
         if conf > 100:
             conf = 100
 
+        published = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         report = Report(
+            id=Report.generate_id(name, published),
             name=name,
             report_types="sandbox-report",
-            published=datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            published=published,
             object_refs=object_refs,
             description=desc,
             external_references=external_refs,
@@ -304,6 +314,7 @@ class openCTIInterface:
             return ATP["standard_id"]
 
         ATP = AttackPattern(
+            id=AttackPattern.generate_id(attack_pattern.name),
             name=attack_pattern.name,
             description="[Cuckoo Sandbox] " + attack_pattern.description,
         )

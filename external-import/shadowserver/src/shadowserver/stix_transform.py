@@ -9,6 +9,7 @@ from pycti import Identity as pycti_identity
 from pycti import Note as pycti_note
 from pycti import OpenCTIConnectorHelper
 from pycti import Report as pycti_report
+from pycti import ObservedData as pycti_observed_data
 from stix2 import (
     Artifact,
     AutonomousSystem,
@@ -342,7 +343,9 @@ class ShadowserverStixTransformation:
             "object_marking_refs": self.marking_refs,
             "labels": labels,
         }
-        stix_report = Report(**kwargs)
+        stix_report = Report(id=pycti_report.generate_id(
+            name=self.report.get("id"), published=self.published
+        ), **kwargs)
         self.report_id = stix_report.get("id", None)
         if self.report_id:
             self.stix_objects.append(stix_report)
@@ -401,7 +404,7 @@ class ShadowserverStixTransformation:
         if self.marking_refs:
             kwargs.update(object_marking_refs=self.marking_refs)
 
-        author = Identity(**kwargs)
+        author = Identity(id=pycti_identity.generate_id("Shadowserver Connector", "Organization"), **kwargs)
 
         if author.get("id"):
             self.author_id = author.get("id")
@@ -526,7 +529,7 @@ class ShadowserverStixTransformation:
             "object_marking_refs": self.marking_refs,
         }
 
-        opencti_obj = Vulnerability(**kwargs)
+        opencti_obj = Vulnerability(id=Vulnerability.generate_id(name), **kwargs)
 
         if opencti_obj.get("id"):
             self.object_refs.append(opencti_obj.get("id"))
@@ -788,14 +791,13 @@ class ShadowserverStixTransformation:
 
             kwargs = {
                 "object_refs": observables,
-                "first_observed": first_observed.isoformat(timespec="milliseconds")
-                + "Z",
+                "first_observed": first_observed.isoformat(timespec="milliseconds") + "Z",
                 "last_observed": last_observed.isoformat(timespec="milliseconds") + "Z",
                 "number_observed": len(observables),
             }
 
             self.extend_stix_object(kwargs, labels_list)
-            stix_object = ObservedData(**kwargs)
+            stix_object = ObservedData(id=pycti_observed_data.generate_id(observables), **kwargs)
 
             if stix_object:
                 self.helper.connector_logger.debug(
@@ -828,7 +830,6 @@ class ShadowserverStixTransformation:
             abstract = f'Shadowserver {self.type} Report {self.report_id} - {element.get("timestamp", "") if isinstance(element, dict) else ""}'
 
             kwargs = {
-                "id": pycti_note.generate_id(abstract, content),
                 "abstract": abstract,
                 "content": content,
                 "created": (
@@ -851,7 +852,7 @@ class ShadowserverStixTransformation:
                 kwargs["object_refs"].append(self.report_id)
 
             if kwargs["object_refs"]:
-                stix_object = Note(**kwargs)
+                stix_object = Note(id=pycti_note.generate_id(abstract, content), **kwargs)
                 if stix_object and not self.stix_object_exists(kwargs.get("id")):
                     self.stix_objects.append(stix_object)
                     self.object_refs.append(stix_object.get("id"))

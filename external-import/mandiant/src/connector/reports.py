@@ -39,7 +39,7 @@ def process(connector, report):
         report_bundle["objects"] = list(
             filter(lambda item: not item["id"].startswith("x-"), bundle_objects)
         )
-        report = Report(
+        report = MandiantReport(
             bundle=report_bundle,
             details=report_details,
             pdf=report_pdf,
@@ -56,7 +56,7 @@ def process(connector, report):
     return bundle
 
 
-class Report:
+class MandiantReport:
     def __init__(
         self,
         bundle,
