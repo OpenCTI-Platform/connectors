@@ -42,9 +42,7 @@ class RansomwareAPIConnector:
     def __init__(self):
         self.helper = OpenCTIConnectorHelper({})
         self.work_id = None
-        self.get_historic = os.environ.get(
-            "CONNECTOR_PULL_HISTORY", "false"
-        ).lower()
+        self.get_historic = os.environ.get("CONNECTOR_PULL_HISTORY", "false").lower()
         self.get_historic_year = os.environ.get(
             "CONNECTOR_HISTORY_START_YEAR", 2020
         ).lower()
@@ -59,9 +57,11 @@ class RansomwareAPIConnector:
                 raise TypeError
             int(self.interval[:-1])
         except TypeError as _:
-            msg = (f"Error ({_}) when grabbing CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. It SHOULD"
-                   f" be a string in the format '7d', '12h', '10m', '30s' where the final letter SHOULD be one of 'd',"
-                   f" 'h', 'm', 's' standing for day, hour, minute, second respectively. ")
+            msg = (
+                f"Error ({_}) when grabbing CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. It SHOULD"
+                f" be a string in the format '7d', '12h', '10m', '30s' where the final letter SHOULD be one of 'd',"
+                f" 'h', 'm', 's' standing for day, hour, minute, second respectively. "
+            )
             self.helper.log_error(msg)
             raise ValueError(msg) from _
 
@@ -91,8 +91,10 @@ class RansomwareAPIConnector:
         ]:
             self.update_existing_data = update_existing_data
         else:
-            msg = (f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'."
-                   f" It SHOULD be either `true` or `false`. `false` is assumed. ")
+            msg = (
+                f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'."
+                f" It SHOULD be either `true` or `false`. `false` is assumed. "
+            )
             self.helper.log_warning(msg)
             self.update_existing_data = "false"
 
@@ -150,7 +152,10 @@ class RansomwareAPIConnector:
             headers = {"accept": "application/json", "User-Agent": "OpenCTI"}
 
             response = requests.get(
-                "https://dns.google/resolve", headers=headers, params=params, timeout=(20000, 20000)
+                "https://dns.google/resolve",
+                headers=headers,
+                params=params,
+                timeout=(20000, 20000),
             )
 
             if response.status_code == 200:
@@ -826,7 +831,6 @@ class RansomwareAPIConnector:
                 # Get the current timestamp and check
                 timestamp = int(time.time())
                 current_state = self.helper.get_state()
-
 
                 if current_state is not None and "last_run" in current_state:
                     last_run = current_state["last_run"]

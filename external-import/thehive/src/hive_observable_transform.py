@@ -238,7 +238,9 @@ class HiveObservableTransform:
 
     def create_organization(self):
         return Identity(
-            id=pycti.Identity.generate_id(self.observable.get("data").title(), "organization"),
+            id=pycti.Identity.generate_id(
+                self.observable.get("data").title(), "organization"
+            ),
             type="identity",
             name=self.observable.get("data").title(),
             object_marking_refs=self.markings,

@@ -131,7 +131,9 @@ class openCTIInterface:
                 STIXPattern = self.getStixPattern(host.ip, "ipv4")
                 IPind = Indicator(
                     id=Indicator.generate_id(STIXPattern),
-                    name=host.ip, pattern=STIXPattern, pattern_type="stix"
+                    name=host.ip,
+                    pattern=STIXPattern,
+                    pattern_type="stix",
                 )
                 IPObs.append(IPind)
         return IPObs
@@ -158,12 +160,16 @@ class openCTIInterface:
                 STIXPattern = self.getStixPattern(host.domain, "FQDN")
                 DNSind = Indicator(
                     id=Indicator.generate_id(STIXPattern),
-                    name=host.domain, pattern=STIXPattern, pattern_type="stix"
+                    name=host.domain,
+                    pattern=STIXPattern,
+                    pattern_type="stix",
                 )
                 STIXPattern = self.getStixPattern(host.ip, "ipv4")
                 IPind = Indicator(
                     id=Indicator.generate_id(STIXPattern),
-                    name=host.ip, pattern=STIXPattern, pattern_type="stix"
+                    name=host.ip,
+                    pattern=STIXPattern,
+                    pattern_type="stix",
                 )
                 DNSObs.append(DNSind)
                 DNSObs.append(IPind)
@@ -351,7 +357,9 @@ class openCTIInterface:
                 STIXPattern = self.getStixPattern(file.sha256.upper(), "sha256")
                 fileind = Indicator(
                     id=Indicator.generate_id(STIXPattern),
-                    name=file.name, pattern=STIXPattern, pattern_type="stix"
+                    name=file.name,
+                    pattern=STIXPattern,
+                    pattern_type="stix",
                 )
                 iocs.append(fileind)
 
@@ -452,7 +460,9 @@ class openCTIInterface:
             return None
 
         if not MalwareX:
-            MalwareX = Malware(id=Malware.generate_id(name=Detection), name=Detection, is_family=False)
+            MalwareX = Malware(
+                id=Malware.generate_id(name=Detection), name=Detection, is_family=False
+            )
 
         return MalwareX
 

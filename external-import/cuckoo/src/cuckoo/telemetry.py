@@ -94,7 +94,12 @@ class openCTIInterface:
             IPObs.append(IPv4Address(value=host))
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(host, "ipv4")
-                IPind = Indicator(id=Indicator.generate_id(STIXPattern), name=host, pattern=STIXPattern, pattern_type="stix")
+                IPind = Indicator(
+                    id=Indicator.generate_id(STIXPattern),
+                    name=host,
+                    pattern=STIXPattern,
+                    pattern_type="stix",
+                )
                 IPObs.append(IPind)
         return IPObs
 
@@ -119,12 +124,16 @@ class openCTIInterface:
                 STIXPattern = self.getStixPattern(host["domain"], "FQDN")
                 DNSind = Indicator(
                     id=Indicator.generate_id(STIXPattern),
-                    name=host["domain"], pattern=STIXPattern, pattern_type="stix"
+                    name=host["domain"],
+                    pattern=STIXPattern,
+                    pattern_type="stix",
                 )
                 STIXPattern = self.getStixPattern(host["ip"], "ipv4")
                 IPind = Indicator(
                     id=Indicator.generate_id(STIXPattern),
-                    name=host["ip"], pattern=STIXPattern, pattern_type="stix"
+                    name=host["ip"],
+                    pattern=STIXPattern,
+                    pattern_type="stix",
                 )
                 DNSObs.append(DNSind)
                 DNSObs.append(IPind)
@@ -248,7 +257,9 @@ class openCTIInterface:
                 STIXPattern = self.getStixPattern(file.sha256.upper(), "sha256")
                 fileind = Indicator(
                     id=Indicator.generate_id(STIXPattern),
-                    name=file.name, pattern=STIXPattern, pattern_type="stix"
+                    name=file.name,
+                    pattern=STIXPattern,
+                    pattern_type="stix",
                 )
                 iocs.append(fileind)
 
