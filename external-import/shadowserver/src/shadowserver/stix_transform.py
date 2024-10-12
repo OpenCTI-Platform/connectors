@@ -330,9 +330,6 @@ class ShadowserverStixTransformation:
     def create_stix_report(self, labels):
         description = self.create_description()
         kwargs = {
-            "id": pycti_report.generate_id(
-                name=self.report.get("id"), published=self.published
-            ),
             "report_types": ["tool"],
             "name": f"Shadowserver Report {self.type}: {self.report.get('id')}",
             "published": self.published,
@@ -393,7 +390,6 @@ class ShadowserverStixTransformation:
         """Creates the author of the report."""
         self.helper.connector_logger.debug("Creating author: Shadowserver Connector")
         kwargs = {
-            "id": pycti_identity.generate_id("Shadowserver Connector", "Organization"),
             "name": "Shadowserver Connector",
             "identity_class": "Organization",
             "type": "identity",
@@ -657,7 +653,6 @@ class ShadowserverStixTransformation:
         labels: list = [],
     ):
         description = []
-        kwargs = {}
         if not protocol:
             return None
 
