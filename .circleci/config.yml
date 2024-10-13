@@ -30,14 +30,17 @@ jobs:
           webhook_url: $MS_TEAMS_WEBHOOK_URL
   linter:
     docker:
-      - image: alpine/flake8
+      - image: cimg/python:3.12
     working_directory: ~/repo
     steps:
       - checkout
       - run: apk update && apk upgrade && apk --no-cache add curl gettext
       - run:
-          name: flake8
-          command: flake8 --ignore=E,W ~/repo
+          name: install dependencies
+          command: pip install pylint
+      - run:
+          name: pylint
+          command: pylint **/*.py --fail-on=ERROR --disable=all --enable=no_generated_id_stix
       - slack/notify:
           event: fail
           template: basic_fail_1

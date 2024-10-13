@@ -366,7 +366,7 @@ class RansomwareAPIConnector:
             else ((post_title + ":<)"), "individual")
         )
         victim = Identity(
-            id=pycti.Identity.generate_id(victim_name, identity_class),
+            # id=pycti.Identity.generate_id(victim_name, identity_class),
             name=victim_name,
             identity_class=identity_class,
             type="identity",
