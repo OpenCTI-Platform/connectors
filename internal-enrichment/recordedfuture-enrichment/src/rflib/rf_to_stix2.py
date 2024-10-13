@@ -390,7 +390,10 @@ class DetectionRule(RFStixEntity):
     def __init__(self, name, opencti_helper, type_, content):
         # TODO: possibly need to accomodate multi-rule. Right now just shoving everything in one
         super().__init__(
-            name=name.split(".")[0], type=type_, opencti_helper=opencti_helper
+            name=name.split(".")[0],
+            author=None,
+            opencti_helper=opencti_helper,
+            type_=type_,
         )
         self.content = content
 

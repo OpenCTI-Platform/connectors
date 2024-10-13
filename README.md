@@ -16,9 +16,11 @@ If you want to help use improve or develop new connector, please check out the *
 
 Any connector must be fully validated through pylint. Example of commands:
 
+To full check a connector
 > pylint external-import/ransomwarelive/src/*.py
 
-> pylint **/*.py --disable=all --enable=no_generated_id_stix
+To apply specific rules on everything
+> pylint **/*.py --disable=all --enable=no_generated_id_stix,no-value-for-parameter
 
 ## License
 

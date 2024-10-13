@@ -381,7 +381,7 @@ class ThreatActor(RFStixEntity):
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         ta_args = {
-            "id": pycti.ThreatActor.generate_id(self.name),
+            "id": pycti.ThreatActor.generate_id(self.name, "Threat-Actor-Group"),
             "name": self.name,
             "created_by_ref": self.author.id,
             "object_marking_refs": self.tlp,

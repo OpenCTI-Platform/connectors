@@ -597,7 +597,7 @@ class GreyNoiseConnector:
         ):
             # Generate Threat Actor
             stix_threat_actor = stix2.ThreatActor(
-                id=ThreatActor.generate_id(data["actor"]),
+                id=ThreatActor.generate_id(data["actor"], "Threat-Actor-Group"),
                 name=data["actor"],
                 created_by_ref=self.greynoise_identity["id"],
             )

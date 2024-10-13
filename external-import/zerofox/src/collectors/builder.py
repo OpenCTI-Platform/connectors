@@ -2,6 +2,7 @@ from typing import List
 
 from collectors.collector import Collector
 from collectors.mappers import threat_feed_to_stix
+from lxml.saxparser import value
 from zerofox.app.endpoints import CTIEndpoint
 
 
@@ -38,7 +39,7 @@ def _parse(feeds_str: str) -> List[CTIEndpoint]:
     endpoints = []
     for feed in feeds:
         try:
-            endpoint = CTIEndpoint(feed)
+            endpoint = CTIEndpoint(feed, None)
             endpoints.append(endpoint)
         except ValueError:
             pass
