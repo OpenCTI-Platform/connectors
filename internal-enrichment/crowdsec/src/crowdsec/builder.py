@@ -383,14 +383,15 @@ class CrowdSecBuilder:
             if self.last_seen
             else None
         )
-        sighting = Sighting(
+        created_by_ref = self.get_or_create_crowdsec_ent()["standard_id"]
+        sighting_observable = Sighting(
             id=StixSightingRelationship.generate_id(
-                self.get_or_create_crowdsec_ent()["standard_id"],
                 observable_id,
+                created_by_ref,
                 first_seen,
                 last_seen,
             ),
-            created_by_ref=self.get_or_create_crowdsec_ent()["standard_id"],
+            created_by_ref=created_by_ref,
             first_seen=first_seen,
             last_seen=last_seen,
             count=1,
@@ -398,14 +399,35 @@ class CrowdSecBuilder:
             confidence=_get_confidence_level(self.confidence),
             object_marking_refs=markings,
             external_references=sighting_ext_refs,
-            sighting_of_ref=indicator.id if indicator else FAKE_INDICATOR_ID,
-            where_sighted_refs=[self.get_or_create_crowdsec_ent()["standard_id"]],
+            where_sighted_refs=[created_by_ref],
+            # As SDO are not supported in official STIX, we use a fake ID in ref
+            # Worker will use custom_properties instead
+            sighting_of_ref=FAKE_INDICATOR_ID,  # Fake
             custom_properties={"x_opencti_sighting_of_ref": observable_id},
         )
+        self.add_to_bundle([sighting_observable])
+        if indicator:
+            sighting_indicator = Sighting(
+                id=StixSightingRelationship.generate_id(
+                    indicator.id,
+                    created_by_ref,
+                    first_seen,
+                    last_seen,
+                ),
+                created_by_ref=created_by_ref,
+                first_seen=first_seen,
+                last_seen=last_seen,
+                count=1,
+                description=f"CrowdSec CTI sighting for IP: {self.ip}",
+                confidence=_get_confidence_level(self.confidence),
+                object_marking_refs=markings,
+                external_references=sighting_ext_refs,
+                sighting_of_ref=indicator.id,
+                where_sighted_refs=[created_by_ref],
+            )
+            self.add_to_bundle([sighting_indicator])
 
-        self.add_to_bundle([sighting])
-
-        return sighting
+        return sighting_observable
 
     def add_vulnerability_from_cve(
         self, cve: str, markings: List[str], observable_id: str
@@ -576,12 +598,10 @@ class CrowdSecBuilder:
 
                 # Create relationship between country and indicator/observable
                 if observable_id:
-                    sighting = Sighting(
+                    sighting_from_observable = Sighting(
                         id=StixSightingRelationship.generate_id(
-                            country.get("id"),
                             observable_id,
-                            first_seen=None,
-                            last_seen=None,
+                            country.get("id"),
                         ),
                         created_by_ref=self.get_or_create_crowdsec_ent()["standard_id"],
                         first_seen=None,
@@ -591,13 +611,31 @@ class CrowdSecBuilder:
                         confidence=_get_confidence_level(self.confidence),
                         object_marking_refs=markings,
                         external_references=None,
-                        sighting_of_ref=(
-                            indicator_id if indicator_id else FAKE_INDICATOR_ID
-                        ),
                         where_sighted_refs=[country.get("id")],
+                        # As SDO are not supported in official STIX, we use a fake ID in ref
+                        # Worker will use custom_properties instead
+                        sighting_of_ref=FAKE_INDICATOR_ID,
                         custom_properties={"x_opencti_sighting_of_ref": observable_id},
                     )
-                    self.add_to_bundle([sighting])
+                    self.add_to_bundle([sighting_from_observable])
+                if indicator_id:
+                    sighting_from_indicator = Sighting(
+                        id=StixSightingRelationship.generate_id(
+                            indicator_id,
+                            country.get("id"),
+                        ),
+                        created_by_ref=self.get_or_create_crowdsec_ent()["standard_id"],
+                        first_seen=None,
+                        last_seen=None,
+                        count=val,
+                        description=f"CrowdSec CTI sighting for country: {country_alpha_2}",
+                        confidence=_get_confidence_level(self.confidence),
+                        object_marking_refs=markings,
+                        external_references=None,
+                        sighting_of_ref=indicator_id,
+                        where_sighted_refs=[country.get("id")],
+                    )
+                    self.add_to_bundle([sighting_from_indicator])
 
                 # Create relationship between country and attack pattern
                 for attack_pattern_id in attack_patterns:

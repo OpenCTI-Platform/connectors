@@ -599,6 +599,9 @@ class openCTIInterface:
                 if IDx:
                     payload_relations.append(
                         Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", payload[0].id, IDx
+                            ),
                             relationship_type="related-to",
                             source_ref=payload[0].id,
                             target_ref=IDx,
@@ -608,6 +611,9 @@ class openCTIInterface:
             for ATP in AttackPatterns:
                 payload_relations.append(
                     Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", payload[0].id, ATP["standard_id"]
+                        ),
                         relationship_type="related-to",
                         source_ref=payload[0].id,
                         target_ref=ATP["standard_id"],
@@ -621,6 +627,9 @@ class openCTIInterface:
                     ID = Malware["id"]
 
                 Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", payload[0].id, ID
+                    ),
                     relationship_type="related-to",
                     source_ref=payload[0].id,
                     target_ref=ID,

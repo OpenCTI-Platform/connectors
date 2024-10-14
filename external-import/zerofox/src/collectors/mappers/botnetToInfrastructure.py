@@ -21,12 +21,12 @@ def botnet_to_infrastructure(
     objects = []
 
     botnet = infrastructure(
-        created_by=created_by,
         name=f"{entry.bot_name}",
         labels=entry.tags,
         created=now,
         first_seen=entry.listed_at,
         infrastructure_types="botnet",
+        created_by_ref=created_by,
     )
     objects.append(botnet)
 
@@ -56,10 +56,11 @@ def botnet_to_infrastructure(
 def get_location_objects(now, created_by, entry: Botnet, ip_address):
     postal_code = entry.zip_code if entry.zip_code else ""
     country = location(
-        created_by=created_by,
+        id=pycti.Location.generate_id(entry.country_code, "Country"),
         country=entry.country_code,
         postal_code=postal_code,
         created=now,
+        created_by_ref=created_by,
     )
     rel = relationship(
         source=ip_address.id,
@@ -70,10 +71,11 @@ def get_location_objects(now, created_by, entry: Botnet, ip_address):
 
 
 def get_c2_objects(created_by, entry: Botnet, botnet):
-    c2_domain = infrastructure(
-        created_by=created_by,
-        name=entry.c2_domain,
+    c2_domain = Infrastructure(
+        id=pycti.Infrastructure.generate_id(f"{entry.c2_domain}"),
+        name=f"{entry.c2_domain}",
         infrastructure_types=INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL,
+        created_by_ref=created_by,
     )
     c2_ip = ip_address(
         created_by=created_by,

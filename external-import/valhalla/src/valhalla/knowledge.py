@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 import pycti
 import requests
+from pycti import StixCoreRelationship
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2 import Bundle, ExternalReference, Identity, Indicator, Relationship
 
@@ -124,6 +125,9 @@ class KnowledgeImporter:
                         return None
 
                     ap_rel = Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "indicates", indicator, attack_pattern_id
+                        ),
                         relationship_type="indicates",
                         source_ref=indicator,
                         target_ref=attack_pattern_id,
@@ -142,6 +146,9 @@ class KnowledgeImporter:
                         return None
 
                     is_rel = Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "indicates", indicator, intrusion_set_id
+                        ),
                         relationship_type="indicates",
                         source_ref=indicator,
                         target_ref=intrusion_set_id,

@@ -19,7 +19,8 @@ def c2_domains_to_infrastructure(
     tags, tags_obtained_observables = _parse_tag_observables(entry_tags)
 
     intra_entry = infrastructure(
-        created_by=created_by,
+        id=pycti.Infrastructure.generate_id(f"{entry.domain}"),
+        created_by_ref=created_by,
         name=f"{entry.domain}",
         labels=tags,
         created=now,

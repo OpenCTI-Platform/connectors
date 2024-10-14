@@ -283,16 +283,14 @@ class MandiantReport:
         if text == "":
             return
 
-        note = utils.generate_note(
-            {
-                "id": Note.generate_id(report["created"], text),
-                "abstract": "Analysis",
-                "content": text,
-                "created_by_ref": self.identity["standard_id"],
-                "object_refs": [report.get("id")],
-                "object_marking_refs": report["object_marking_refs"],
-                "note_types": ["analysis", "external"],
-            }
+        note = stix2.Note(
+            id=Note.generate_id(report["created"], text),
+            abstract="Analysis",
+            content=text,
+            created_by_ref=self.identity["standard_id"],
+            object_refs=[report.get("id")],
+            object_marking_refs=report["object_marking_refs"],
+            note_types=["analysis", "external"],
         )
 
         self.bundle["objects"].append(note)

@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Union
 import pycti
 import yaml
 from dateutil.parser import parse as parse_date_str
+from pycti import StixCoreRelationship
 from pycti.connector.opencti_connector_helper import (
     OpenCTIConnectorHelper,
     get_config_variable,
@@ -236,6 +237,9 @@ class SocprimeConnector:
             if tool:
                 res.append(tool)
                 rel = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "indicates", indicator_id, tool.id
+                    ),
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=tool.id,
@@ -264,6 +268,9 @@ class SocprimeConnector:
             if technique:
                 res.append(technique)
                 rel = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "indicates", indicator_id, technique.id
+                    ),
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=technique.id,
@@ -289,6 +296,9 @@ class SocprimeConnector:
             if intusion_set:
                 res.append(intusion_set)
                 rel = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "indicates", indicator_id, intusion_set.id
+                    ),
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=intusion_set.id,
@@ -564,6 +574,9 @@ class SocprimeConnector:
             if vuln:
                 res.append(vuln)
                 rel = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "indicates", indicator_id, vuln.id
+                    ),
                     relationship_type="indicates",
                     source_ref=indicator_id,
                     target_ref=vuln.id,

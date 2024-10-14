@@ -484,6 +484,7 @@ class EnrichedIndicator:
         if risk:
             self.notes.append(
                 stix2.Note(
+                    id=pycti.Note.generate_id(None, "{}/99".format(risk)),
                     abstract="Recorded Future Risk Score",
                     content="{}/99".format(risk),
                     created_by_ref=self.author.id,
@@ -494,6 +495,7 @@ class EnrichedIndicator:
             if rule.get("rule"):
                 self.notes.append(
                     stix2.Note(
+                        id=pycti.Note.generate_id(None, f"{rule['evidenceString']}"),
                         abstract=f"{rule['rule']}",
                         content=f"{rule['evidenceString']}",
                         created_by_ref=self.author.id,

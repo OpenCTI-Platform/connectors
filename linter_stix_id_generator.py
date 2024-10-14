@@ -6,7 +6,7 @@ from pylint.checkers import BaseChecker
 if TYPE_CHECKING:
     from pylint.lint import PyLinter
 
-STIX_ENTITIES = (
+STIX_TYPES = (
     "AttackPattern",
     "Campaign",
     "CourseOfAction",
@@ -26,6 +26,8 @@ STIX_ENTITIES = (
     "ThreatActor",
     "Tool",
     "Vulnerability",
+    "Sighting",
+    "Relationship",
 )
 
 
@@ -39,31 +41,28 @@ class StixIdGeneratorChecker(BaseChecker):
         )
     }
 
+    def check_arg(self, target_node) -> None:
+        first_arg = next((x for x in target_node.keywords if x.arg == "id"), None)
+        if first_arg is None:
+            self.add_message("generated-id-stix", node=target_node)
+            return
+
     def visit_call(self, node: nodes.Call) -> None:
+        # Case where call is inside attribute (like stix2.Indicator(...))
+        if isinstance(node.func, nodes.Attribute):
+            if node.func.attrname in STIX_TYPES:
+                # parent_node = node.func.parent
+                if node.func.expr.repr_name() == "stix2" and isinstance(
+                    node, nodes.Call
+                ):
+                    self.check_arg(node)
+            return
+        # Case where call is direct (like Indicator(...))
         if isinstance(node.func, nodes.Name):
-            if node.func.name in STIX_ENTITIES:
+            if node.func.name in STIX_TYPES:
                 if len(node.keywords) == 0:
                     return
-                # looking for id arg
-                first_arg = next((x for x in node.keywords if x.arg == "id"), None)
-                if first_arg is None:
-                    self.add_message("generated-id-stix", node=node)
-                    return
-                if first_arg.value:
-                    # if id is a function, it must be a generated_id method
-                    if isinstance(first_arg.value, nodes.Call):
-                        if first_arg.value.func.repr_name() != "generate_id":
-                            self.add_message("generated-id-stix", node=node)
-                    elif isinstance(first_arg.value, BoolOp):
-                        found_generate_id = False
-                        for value in first_arg.value.values:
-                            if isinstance(value, nodes.Call):
-                                if value.func.repr_name() == "generate_id":
-                                    found_generate_id = True
-                        if not found_generate_id:
-                            self.add_message("generated-id-stix", node=node)
-                    else:
-                        self.add_message("generated-id-stix", node=node)
+                self.check_arg(node)
 
 
 def register(linter: "PyLinter") -> None:

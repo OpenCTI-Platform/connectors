@@ -458,6 +458,9 @@ class openCTIInterface:
                 IDx = ID
             payload_relations.append(
                 Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", payload[0].id, IDx
+                    ),
                     relationship_type="related-to",
                     source_ref=payload[0].id,
                     target_ref=IDx,
@@ -467,6 +470,9 @@ class openCTIInterface:
         for ATP in AttackPatterns:
             payload_relations.append(
                 Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", payload[0].id, ATP
+                    ),
                     relationship_type="related-to",
                     source_ref=payload[0].id,
                     target_ref=ATP,
