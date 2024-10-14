@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from open_cti import domain_object, observable
+from open_cti import infrastructure, observable, relationship
 from stix2 import (
     URL,
     AutonomousSystem,
@@ -30,9 +30,8 @@ def phishing_to_infrastructure(created_by, now: str, entry: Phishing) -> List[
         - a X509Certificate object for the certificate authority and fingerprint, if present.
 
     """
-    phishing = domain_object(
+    phishing = infrastructure(
         created_by=created_by,
-        cls=Infrastructure,
         name=f"{entry.domain}",
         created=now,
         infrastructure_types=["phishing"],
@@ -47,10 +46,10 @@ def phishing_to_infrastructure(created_by, now: str, entry: Phishing) -> List[
         value=entry.url,
     )
 
-    url_relationship = Relationship(
-        source_ref=phishing.id,
-        target_ref=url.id,
-        relationship_type="consists-of",
+    url_relationship = relationship(
+        source=phishing.id,
+        target=url.id,
+        type="consists-of",
         start_time=entry.scanned,
     )
 
@@ -60,10 +59,10 @@ def phishing_to_infrastructure(created_by, now: str, entry: Phishing) -> List[
         value=entry.host.ip,
     )
 
-    ip_relationship = Relationship(
-        source_ref=phishing.id,
-        target_ref=ip.id,
-        relationship_type="consists-of",
+    ip_relationship = relationship(
+        source=phishing.id,
+        target=ip.id,
+        type="consists-of",
         start_time=entry.scanned,
     )
 
@@ -73,10 +72,10 @@ def phishing_to_infrastructure(created_by, now: str, entry: Phishing) -> List[
         number=entry.host.asn,
     )
 
-    asn_relationship = Relationship(
-        source_ref=phishing.id,
-        target_ref=asn.id,
-        relationship_type="consists-of",
+    asn_relationship = relationship(
+        source=phishing.id,
+        target=asn.id,
+        type="consists-of",
         start_time=entry.scanned,
     )
 
@@ -100,10 +99,10 @@ def build_certificate_objects(created_by, entry: Phishing, stix_phishing):
         issuer=entry.cert.authority,
         hashes={"SHA-1": entry.cert.fingerprint} if entry.cert.fingerprint else None,
     )
-    certificate_relationship = Relationship(
-        source_ref=stix_phishing.id,
-        target_ref=certificate.id,
-        relationship_type="consists-of",
+    certificate_relationship = relationship(
+        source=stix_phishing.id,
+        target=certificate.id,
+        type="consists-of",
         start_time=entry.scanned,
     )
 
