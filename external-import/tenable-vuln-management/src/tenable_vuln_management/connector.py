@@ -163,7 +163,7 @@ class Connector:
                 # even though we implemented the ability to bulk convert api response, we do it one by one to maximize
                 # the amount of ingested data in case of a corrupted line
                 vuln_findings.extend(
-                    VulnerabilityFinding.from_api_response_body_with_finding_id(
+                    VulnerabilityFinding.from_api_response_body(
                         [item], metadata=self._metadata or []
                     )
                 )
@@ -266,7 +266,7 @@ class Connector:
             self._initiate_work()
             results = self._run_threaded_jobs()
             self._finalize_work(results)
-            in_error = not (all(results))
+            in_error = not all(results)
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(

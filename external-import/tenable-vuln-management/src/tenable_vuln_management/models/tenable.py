@@ -356,21 +356,6 @@ class VulnerabilityFinding(FrozenBaseModelWithoutExtra):
 
     @classmethod
     def from_api_response_body(
-        cls, data: list[dict[str, Any]]
-    ) -> list["VulnerabilityFinding"]:
-        """Make a list of VulnerabilityFinding from API response body.
-
-        Args:
-            data (list[dict[str, Any]]): Raw response body from TenableIO Api.
-
-        Returns:
-            (list[VulnerabilityFinding]): List of AssertReport objects.
-        """
-        data = _convert_empty_dicts_and_lists_to_none(value=data)
-        return [cls(**item) for item in data]
-
-    @classmethod
-    def from_api_response_body_with_finding_id(
         cls,
         data_vuln_export: list[dict[str, Any]],
         metadata: list[dict[str, Any]],
