@@ -1,3 +1,9 @@
+"""
+This module provides functionality to interact with Tenable Vulnerability Management API,
+including models for severity levels, and a client to handle various API operations such
+as retrieving scans, exporting vulnerabilities, and managing findings.
+"""
+
 import datetime
 from enum import Enum
 from functools import wraps
@@ -87,6 +93,8 @@ def _get_opencti_version() -> str:
 
 
 class ConnectorClient:
+    """Client for interacting with the Tenable Vulnerability Management API."""
+
     def __init__(self, helper: "OpenCTIConnectorHelper", config: ConfigConnector):
         """
         Initialize the client with necessary configurations
@@ -116,6 +124,8 @@ class ConnectorClient:
 
     @staticmethod
     def safe_call(method) -> Callable[..., Any]:
+        """Decorator to try/catch and log error."""
+
         @wraps(method)
         def wrapper(self, *args, **kwargs) -> Any:
             try:
@@ -177,7 +187,7 @@ class ConnectorClient:
             severity=SeverityLevel.levels_above(self.config.tio_severity_min_level),
         )
 
-    def _since_filter_api_V3(self):
+    def _since_filter_api_v3(self):
         """Create a `since` filter equivalent of API V2 to be used in api V3.
 
         Returns:
@@ -278,7 +288,7 @@ class ConnectorClient:
         """
         # Note this must be sync as pagination is handle via the next_page id, returned by the current call.
         # We then cannot just get a total count, then used async calls to get particular chunks.
-        filter_since = self._since_filter_api_V3()
+        filter_since = self._since_filter_api_v3()
         filter_severity = {
             "operator": "eq",
             "value": SeverityLevel.levels_index_above(
