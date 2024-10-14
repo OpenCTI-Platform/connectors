@@ -302,7 +302,7 @@ class CrowdSecBuilderTest(unittest.TestCase):
 
         self.assertEqual(
             sighting_2["sighting_of_ref"],
-            "indicator--94c598e8-9174-58e0-9731-316e18f26916",
+            "indicator--51b92778-cef0-4a90-b7ec-ebd620d01ac8",
         )
         first_seen = self.cti_data.get("history", {}).get("first_seen", "")
         last_seen = self.cti_data.get("history", {}).get("last_seen", "")
@@ -338,8 +338,8 @@ class CrowdSecBuilderTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            len(builder.bundle_objects), 30
-        )  # 10 countries + 10 relationships + 10 sightings
+            len(builder.bundle_objects), 40
+        )  # 10 countries + 10 relationships + 20 sightings
         # Check countries
         self.assertEqual(builder.bundle_objects[0]["name"], "United States")
         self.assertEqual(builder.bundle_objects[9]["name"], "United Kingdom")
@@ -376,8 +376,8 @@ class CrowdSecBuilderTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            len(builder.bundle_objects), 20
-        )  # 10 countries + 10 relationships
+            len(builder.bundle_objects), 30
+        )  # 10 countries + 10 relationships + 10 sightings
         # Check countries
         self.assertEqual(builder.bundle_objects[0]["name"], "United States")
         self.assertEqual(builder.bundle_objects[8]["name"], "Japan")
@@ -405,7 +405,7 @@ class CrowdSecBuilderTest(unittest.TestCase):
             indicator_id=indicator.id,
         )
 
-        self.assertEqual(len(builder.bundle_objects), 20)  # 10 countries + 10 sightings
+        self.assertEqual(len(builder.bundle_objects), 30)  # 10 countries + 20 sightings
         # Check countries
         self.assertEqual(builder.bundle_objects[0]["name"], "United States")
         self.assertEqual(builder.bundle_objects[8]["name"], "Japan")
