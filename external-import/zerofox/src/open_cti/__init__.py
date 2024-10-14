@@ -1,9 +1,22 @@
 from open_cti.domain_objects import (
-    domain_object,
+    indicator,
     infrastructure,
     location,
+    malware,
     relationship,
+    tool,
+    vulnerability,
 )
-from open_cti.observables import observable
+from open_cti.observables import ip_address, observable
 
-__all__ = ["observable", "domain_object", "location", "infrastructure", "relationship"]
+__all__ = [
+    "indicator",
+    "infrastructure",
+    "ip_address",
+    "location",
+    "malware",
+    "observable",
+    "relationship",
+    "tool",
+    "vulnerability",
+]

@@ -1,6 +1,7 @@
 from typing import List, Union
 
 from open_cti import infrastructure, location, relationship
+from open_cti.observables import ip_address
 from stix2 import Infrastructure, Location, Relationship
 from stix2.v21.vocab import INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL
 from zerofox.domain.botnet import Botnet
@@ -29,17 +30,16 @@ def botnet_to_infrastructure(
     )
     objects.append(botnet)
 
-    ip_address = infrastructure(
+    botnet_ip = ip_address(
         created_by=created_by,
-        name=entry.ip_address,
-        infrastructure_types="botnet",
+        value=entry.ip_address,
     )
-    objects.append(ip_address)
+    objects.append(botnet_ip)
     objects.append(
         relationship(
             source=botnet.id,
-            target=ip_address.id,
-            type="controls",
+            target=botnet_ip.id,
+            type="communicates-with",
         )
     )
 
@@ -47,7 +47,7 @@ def botnet_to_infrastructure(
         objects += get_c2_objects(created_by, entry, botnet)
 
     if entry.country_code:
-        objects += get_location_objects(now, created_by, entry, ip_address)
+        objects += get_location_objects(now, created_by, entry, botnet_ip)
 
     # Return all created objects
     return objects
@@ -75,10 +75,9 @@ def get_c2_objects(created_by, entry: Botnet, botnet):
         name=entry.c2_domain,
         infrastructure_types=INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL,
     )
-    c2_ip = infrastructure(
+    c2_ip = ip_address(
         created_by=created_by,
-        name=entry.c2_ip_address,
-        infrastructure_types=INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL,
+        value=entry.c2_ip_address,
     )
     domain_ip_rel = relationship(
         source=c2_domain.id,

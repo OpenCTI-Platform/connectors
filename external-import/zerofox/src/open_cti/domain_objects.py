@@ -1,5 +1,3 @@
-from typing import Type
-
 from pycti import (
     Indicator,
     Infrastructure,
@@ -9,11 +7,14 @@ from pycti import (
     Tool,
     Vulnerability,
 )
-from stix2 import TLP_AMBER
+from stix2 import TLP_AMBER, ExternalReference
+from stix2 import Indicator as stixIndicator
 from stix2 import Infrastructure as stixInfra
 from stix2 import Location as stixLocation
+from stix2 import Malware as stixMalware
 from stix2 import Relationship
-from stix2.base import _DomainObject
+from stix2 import Tool as stixTool
+from stix2 import Vulnerability as stixVulnerability
 
 
 def _additional_kwargs(created_by) -> dict:
@@ -23,21 +24,41 @@ def _additional_kwargs(created_by) -> dict:
     }
 
 
-def domain_object(created_by: str, cls: Type[_DomainObject], **kwargs) -> _DomainObject:
-    name = kwargs.get("name", None)
-    kwargs.pop("created_by_ref", None)
-    identity_generator = {
-        "Indicator": Indicator.generate_id,
-        "Infrastructure": Infrastructure.generate_id,
-        "Location": lambda name: Location.generate_id(
-            name, x_opencti_location_type="Country"
-        ),
-        "Malware": Malware.generate_id,
-        "Tool": Tool.generate_id,
-        "Vulnerability": Vulnerability.generate_id,
-    }
-    return cls(
-        id=identity_generator[cls.__name__](name=name),
+def indicator(
+    name: str,
+    created_by: str,
+    valid_from,
+    pattern: str,
+    pattern_type: str,
+    indicator_types: list,
+):
+    return stixIndicator(
+        id=Indicator.generate_id(pattern=pattern),
+        name=name,
+        valid_from=valid_from,
+        pattern=pattern,
+        pattern_type=pattern_type,
+        indicator_types=indicator_types,
+        **_additional_kwargs(created_by),
+    )
+
+
+def infrastructure(
+    created_by: str,
+    name: str,
+    infrastructure_types: str,
+    created: str | None = None,
+    first_seen=None,
+    labels=None,
+    **kwargs,
+):
+    return stixInfra(
+        id=Infrastructure.generate_id(name=name),
+        created=created,
+        name=name,
+        first_seen=first_seen,
+        labels=labels,
+        infrastructure_types=infrastructure_types,
         **kwargs,
         **_additional_kwargs(created_by),
     )
@@ -60,21 +81,55 @@ def location(
     )
 
 
-def infrastructure(
+def malware(
     created_by: str,
-    name: str,
-    infrastructure_types: str,
-    created: str | None = None,
-    first_seen=None,
-    labels=None,
+    family: str,
+    name: str = None,
+    **kwargs,
 ):
-    return stixInfra(
-        id=Infrastructure.generate_id(name=name),
-        created=created,
+    name = name or family
+    return stixMalware(
+        id=Malware.generate_id(name=family),
         name=name,
-        first_seen=first_seen,
-        labels=labels,
-        infrastructure_types=infrastructure_types,
+        is_family=True,
+        **kwargs,
+        **_additional_kwargs(created_by),
+    )
+
+
+def tool(
+    created_by,
+    description,
+    created,
+    urls: list,
+    tool_types: list,
+):
+    return stixTool(
+        id=Tool.generate_id(name=description),
+        created=created,
+        description=description,
+        external_references=[
+            ExternalReference(source_name="link", url=url) for url in urls
+        ],
+        tool_types=tool_types,
+        **_additional_kwargs(created_by),
+    )
+
+
+def vulnerability(
+    created_by,
+    cve,
+    created,
+    modified,
+    description="",
+):
+    return stixVulnerability(
+        id=Vulnerability.generate_id(name=cve),
+        name=cve,
+        description=description,
+        external_references=[ExternalReference(source_name="cve", external_id=cve)],
+        created=created,
+        modified=modified,
         **_additional_kwargs(created_by),
     )
 
