@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Any
 
@@ -24,11 +23,10 @@ class ConfigConnector:
             (dict[Any, Any]): Configuration dictionary
         """
         config_file_path = Path(__file__).parents[1].joinpath("config.yml")
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
+        config = {}
+        if config_file_path.is_file():
+            with open(config_file_path, encoding="utf-8") as f:
+                config = yaml.load(f, Loader=yaml.FullLoader)
         return config
 
     def _initialize_configurations(self) -> None:
