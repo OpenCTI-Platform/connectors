@@ -354,12 +354,12 @@ class ConverterToStix:
         )
         cvss3_vector = plugin.cvss3_vector
         details = (
-            dict(
-                cvss3_attack_vector=cvss3_vector.access_vector,
-                cvss3_integrity_impact=cvss3_vector.integrity_impact,
-                cvss3_availability_impact=cvss3_vector.availability_impact,
-                cvss3_confidentiality_impact=cvss3_vector.confidentiality_impact,
-            )
+            {
+                "cvss3_attack_vector": cvss3_vector.access_vector,
+                "cvss3_integrity_impact": cvss3_vector.integrity_impact,
+                "cvss3_availability_impact": cvss3_vector.availability_impact,
+                "cvss3_confidentiality_impact": cvss3_vector.confidentiality_impact,
+            }
             if cvss3_vector
             else {}
         )

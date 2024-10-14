@@ -75,7 +75,7 @@ def make_validator(field_name: str, validator: Callable[..., bool] | dict[str, A
                     evaluate_validator(sub_validator, value)
                     for sub_validator in evaluated_validator["or"]
                 )
-            elif "and" in evaluated_validator:
+            if "and" in evaluated_validator:
                 # All validators in the list should pass
                 return all(
                     evaluate_validator(sub_validator, value)
