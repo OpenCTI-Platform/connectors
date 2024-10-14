@@ -3,6 +3,7 @@ from pathlib import Path
 
 import yaml
 from pycti import get_config_variable
+from dateutil.parser import parse
 
 
 class ConfigConnector:
@@ -43,14 +44,86 @@ class ConfigConnector:
         )
 
         # Connector extra parameters
-        self.api_base_url = get_config_variable(
+        self.harfanglab_api_base_url = get_config_variable(
             "HARFANGLAB_INCIDENTS_API_BASE_URL",
-            ["connector_template", "api_base_url"],
+            ["harfanglab_incidents", "api_base_url"],
+            self.load,
+        )
+        self.harfanglab_ssl_verify = get_config_variable(
+            "HARFANGLAB_INCIDENTS_SSL_VERIFY",
+            ["harfanglab_incidents", "ssl_verify"],
+            self.load,
+            False,
+            True,
+        )
+        self.harfanglab_token = get_config_variable(
+            "HARFANGLAB_INCIDENTS_TOKEN", ["harfanglab_incidents", "token"], self.load
+        )
+        self.harfanglab_login = get_config_variable(
+            "HARFANGLAB_INCIDENTS_LOGIN", ["harfanglab_incidents", "login"], self.load
+        )
+        self.harfanglab_password = get_config_variable(
+            "HARFANGLAB_INCIDENTS_PASSWORD",
+            ["harfanglab_incidents", "password"],
             self.load,
         )
 
-        self.api_key = get_config_variable(
-            "HARFANGLAB_INCIDENTS_API_KEY",
-            ["connector_template", "api_key"],
+        self.harfanglab_source_list_name = get_config_variable(
+            "HARFANGLAB_INCIDENTS_SOURCE_LIST_NAME",
+            ["harfanglab_incidents", "source_list_name"],
             self.load,
+        )
+        self.harfanglab_remove_indicator = get_config_variable(
+            "HARFANGLAB_INCIDENTS_REMOVE_INDICATOR",
+            ["harfanglab_incidents", "remove_indicator"],
+            self.load,
+        )
+        self.harfanglab_rule_maturity = get_config_variable(
+            "HARFANGLAB_INCIDENTS_RULE_MATURITY",
+            ["harfanglab_incidents", "rule_maturity"],
+            self.load,
+        )
+        self.harfanglab_import_security_events_as_incidents = get_config_variable(
+            "HARFANGLAB_INCIDENTS_IMPORT_SECURITY_EVENTS_AS_INCIDENTS",
+            ["harfanglab_incidents", "import_security_events_as_incidents"],
+            self.load,
+        )
+        self.harfanglab_import_threats_as_case_incidents = get_config_variable(
+            "HARFANGLAB_INCIDENTS_IMPORT_THREATS_AS_CASE_INCIDENTS",
+            ["harfanglab_incidents", "import_threats_as_case_incidents"],
+            self.load,
+        )
+        self.harfanglab_import_security_events_filters_by_status = get_config_variable(
+            "HARFANGLAB_INCIDENTS_IMPORT_SECURITY_EVENTS_FILTERS_BY_STATUS",
+            ["harfanglab_incidents", "import_security_events_filters_by_status"],
+            self.load,
+        )
+        self.harfanglab_import_filters_by_alert_type = get_config_variable(
+            "HARFANGLAB_INCIDENTS_IMPORT_FILTERS_BY_ALERT_TYPE",
+            ["harfanglab_incidents", "import_filters_by_alert_type"],
+            self.load,
+        )
+        self.harfanglab_default_markings = get_config_variable(
+            "HARFANGLAB_INCIDENTS_DEFAULT_MARKINGS",
+            ["harfanglab_incidents", "default_markings"],
+            self.load,
+        )
+        self.source_list = {
+            "name": self.harfanglab_source_list_name,
+            "description": "Cyber Threat Intelligence knowledge imported from OpenCTI, and any changes must be made only to it.",
+            "enabled": True,
+        }
+        self.default_score = get_config_variable(
+            "HARFANGLAB_INCIDENTS_DEFAULT_SCORE",
+            ["harfanglab_incidents", "default_score"],
+        )
+        harfanglab_import_start_date_var = get_config_variable(
+            "SENTINEL_INCIDENTS_IMPORT_START_DATE",
+            ["sentinel_incidents", "import_start_date"],
+            self.load,
+        )
+        self.import_start_date = (
+            parse(harfanglab_import_start_date_var)
+            if harfanglab_import_start_date_var
+            else None
         )
