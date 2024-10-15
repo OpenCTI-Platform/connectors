@@ -2,6 +2,7 @@ import stix2
 from pycti import Indicator
 
 from . import utils
+from .campaigns import process as process_campaign
 from .common import create_stix_relationship
 
 MAPPING = {
@@ -144,20 +145,34 @@ def process(connector, indicator):
         # "name": "CAMP.22.049",
         # "title": "EMOTET Operations Resume in November 2022 Following Hiatus"
         # }
+
         # Add the campaign
-        stix_campaign = stix2.Campaign(
-            id=campaign["id"],
-            name=campaign["title"],
-            aliases=[campaign["name"]],
-            created_by_ref=connector.identity.get("standard_id"),
-            allow_custom=True,
-        )
-        items.append(stix_campaign)
-        items.append(
-            indicator_create_stix_relationship(
-                connector, stix_indicator, indicator, stix_campaign
+        # Allow import of Campaigns with related entities
+        if connector.import_full_campaigns:
+            bundle_campaign_with_rel = process_campaign(connector, campaign)
+            campaign_items = bundle_campaign_with_rel["objects"]
+
+            items += campaign_items
+            items.append(
+                indicator_create_stix_relationship(
+                    connector, stix_indicator, indicator, campaign
+                )
             )
-        )
+        else:
+            # Keep original behavior => Create the campaign to link to the Indicator
+            stix_campaign = stix2.Campaign(
+                id=campaign["id"],
+                name=campaign["title"],
+                aliases=[campaign["name"]],
+                created_by_ref=connector.identity.get("standard_id"),
+                allow_custom=True,
+            )
+            items.append(stix_campaign)
+            items.append(
+                indicator_create_stix_relationship(
+                    connector, stix_indicator, indicator, stix_campaign
+                )
+            )
 
     bundle = stix2.Bundle(objects=items, allow_custom=True)
 
