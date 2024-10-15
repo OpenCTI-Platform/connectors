@@ -15,5 +15,10 @@ threatfox:
   csv_url: 'https://threatfox.abuse.ch/export/csv/full/'
   import_offline: true
   create_indicators: true
+  default_x_opencti_score: 50  # Optional: Default is 50
+  x_opencti_score_ip: 60       # Optional
+  x_opencti_score_domain: 70   # Optional
+  x_opencti_score_url: 75      # Optional
+  x_opencti_score_hash: 80     # Optional
   interval: 3 # In days, must be strictly greater than 1
   ioc_to_import:'ip:port,domain,url' # List of IOC types to import

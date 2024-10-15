@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'CofenseIntel'
+  type: 'EXTERNAL_IMPORT'
+  name: 'CofenseIntel'
+  scope: 'cofenseintel'
+  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+cofense:
+  user: 'ChangeMe'
+  password: 'ChangeMe'
+  interval: '3600' # every 60 minutes
+  update_existing_data : 'False'

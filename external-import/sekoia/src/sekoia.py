@@ -37,6 +37,13 @@ class Sekoia(object):
 
         self._cache = {}
         # Extra config
+        self.duration_period = get_config_variable(
+            "CONNECTOR_DURATION_PERIOD",
+            ["connector", "duration_period"],
+            config,
+            default="PT60S",
+        )
+
         self.base_url = self.get_config("base_url", config, "https://api.sekoia.io")
         self.start_date: str = self.get_config("start_date", config, None)
         self.collection = self.get_config(
@@ -69,42 +76,40 @@ class Sekoia(object):
     def requested_types(self) -> str:
         return self.helper.connect_scope
 
-    def run(self):
+    def process_message(self):
         self.helper.log_info("Starting SEKOIA.IO connector")
         state = self.helper.get_state() or {}
         cursor = state.get("last_cursor", self.generate_first_cursor())
         self.helper.log_info(f"Starting with {cursor}")
-        while True:
-            friendly_name = "SEKOIA run @ " + datetime.utcnow().strftime(
-                "%Y-%m-%d %H:%M:%S"
+
+        friendly_name = "SEKOIA run @ " + datetime.utcnow().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        try:
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
             )
-            try:
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
-                cursor = self._run(cursor, work_id)
-                message = f"Connector successfully run, cursor updated to {cursor}"
-                self.helper.log_info(message)
-                self.helper.api.work.to_processed(work_id, message)
-            except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("Connector stop")
-                self.helper.api.work.to_processed(work_id, "Connector is stopping")
-                sys.exit(0)
-            except Exception as ex:
-                # In case of error try to get the last updated cursor
-                # since `_run` updates it after every successful request
-                state = self.helper.get_state() or {}
-                cursor = state.get("last_cursor", cursor)
-                self.helper.log_error(str(ex))
-                message = f"Connector encountered an error, cursor updated to {cursor}"
-                self.helper.api.work.to_processed(work_id, message)
+            cursor = self._run(cursor, work_id)
+            message = f"Connector successfully run, cursor updated to {cursor}"
+            self.helper.log_info(message)
+            self.helper.api.work.to_processed(work_id, message)
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.log_info("Connector stop")
+            self.helper.api.work.to_processed(work_id, "Connector is stopping")
+            sys.exit(0)
+        except Exception as ex:
+            # In case of error try to get the last updated cursor
+            # since `_run` updates it after every successful request
+            state = self.helper.get_state() or {}
+            cursor = state.get("last_cursor", cursor)
+            self.helper.log_error(str(ex))
+            message = f"Connector encountered an error, cursor updated to {cursor}"
+            self.helper.api.work.to_processed(work_id, message)
 
-            if self.helper.connect_run_and_terminate:
-                self.helper.log_info("Connector stop")
-                self.helper.force_ping()
-                sys.exit(0)
-
-            time.sleep(60)
+    def run(self):
+        self.helper.schedule_iso(
+            message_callback=self.process_message, duration_period=self.duration_period
+        )
 
     @staticmethod
     def get_config(name: str, config, default: Any = None):
@@ -163,66 +168,65 @@ class Sekoia(object):
     def _run(self, cursor, work_id):
         current_time = f"{datetime.utcnow().isoformat()}Z"
         current_cursor = base64.b64encode(current_time.encode("utf-8")).decode("utf-8")
-        while True:
-            params = {"limit": self.limit, "cursor": cursor}
-            if self.requested_types:
-                params["match[type]"] = self.requested_types
 
-            data = self._send_request(self.get_collection_url(), params)
-            if not data:
-                return cursor
+        params = {"limit": self.limit, "cursor": cursor}
+        if self.requested_types:
+            params["match[type]"] = self.requested_types
 
-            cursor = (
-                data["next_cursor"] or current_cursor
-            )  # In case next_cursor is None
-            items = data["items"]
-            if not items or len(items) == 0:
-                return cursor
+        data = self._send_request(self.get_collection_url(), params)
+        if not data:
+            return cursor
 
-            items = self._retrieve_references(items)
-            self._add_main_observable_type_to_indicators(items)
-            if self.create_observables:
-                self._add_create_observables_to_indicators(items)
-            self._clean_external_references_fields(items)
-            items = self._clean_ic_fields(items)
-            self._add_files_to_items(items)
+        cursor = data["next_cursor"] or current_cursor  # In case next_cursor is None
+        items = data["items"]
+        if not items or len(items) == 0:
+            return cursor
 
-            [all_related_objects, all_relationships] = (
-                self._retrieve_related_objects_and_relationships(items)
+        items = self._retrieve_references(items)
+        self._add_main_observable_type_to_indicators(items)
+        if self.create_observables:
+            self._add_create_observables_to_indicators(items)
+        self._clean_external_references_fields(items)
+        items = self._clean_ic_fields(items)
+        self._add_files_to_items(items)
+        [all_related_objects, all_relationships] = (
+            self._retrieve_related_objects_and_relationships(items)
+        )
+        items += all_related_objects + all_relationships
+        bundle = self.helper.stix2_create_bundle(items)
+        try:
+            self.helper.send_stix2_bundle(bundle, work_id=work_id)
+        except RecursionError:
+            self.helper.log_error(
+                "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole bundle but please fix it"
             )
-            items += all_related_objects + all_relationships
+            self.helper.send_stix2_bundle(bundle, work_id=work_id, bypass_split=True)
 
-            bundle = self.helper.stix2_create_bundle(items)
-            try:
-                self.helper.send_stix2_bundle(bundle, work_id=work_id)
-            except RecursionError:
-                self.helper.log_error(
-                    "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole bundle but please fix it"
-                )
-                self.helper.send_stix2_bundle(
-                    bundle, work_id=work_id, bypass_split=True
-                )
-
-            self.helper.set_state({"last_cursor": cursor})
-            if len(items) < self.limit:
-                # We got the last results
-                return cursor
+        self.helper.set_state({"last_cursor": cursor})
+        if len(items) < self.limit:
+            # We got the last results
+            return cursor
 
     def _clean_external_references_fields(self, items: List[Dict]):
         """
         Remove empty values from external references and add link to original object in Sekoia.io platform
         """
         for item in items:
-            item["external_references"] = [
-                {k: v for k, v in ref.items() if v}
-                for ref in item.get("external_references", [])
-            ]
-            item["external_references"].append(
-                {
-                    "source_name": "Sekoia.io",
-                    "url": f"https://app.sekoia.io/intelligence/objects/{item['id']}",
-                }
-            )
+            has_sekoia_source = False
+            external_references = item.setdefault("external_references", [])
+            for ref in external_references:
+                if ref.get("source_name") == "Sekoia.io":
+                    has_sekoia_source = True
+                for key in list(ref.keys()):
+                    if not ref[key]:
+                        del ref[key]
+            if not has_sekoia_source:
+                external_references.append(
+                    {
+                        "source_name": "Sekoia.io",
+                        "url": f"https://app.sekoia.io/intelligence/objects/{item['id']}",
+                    }
+                )
 
     def _clean_ic_fields(self, items: List[Dict]) -> List[Dict]:
         """
@@ -254,12 +258,27 @@ class Sekoia(object):
         all_relationships = []
         for indicator in indicators:
             indicator_id = indicator["id"]
-            all_data = self._send_request(self.get_relationship(indicator_id))
-            for data in all_data["items"]:
-                if "related_object" in data:
-                    all_related_objects.append(data["related_object"])
-                if "relationship" in data:
-                    all_relationships.append(data["relationship"])
+            if not indicator_id.startswith("indicator--"):
+                continue
+            try:
+                all_data = self._send_request(self.get_relationship(indicator_id))
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    "[ERROR] An error occurred while retrieving related entities for indicator",
+                    {"indicator_id": indicator_id, "error": str(e)},
+                )
+                continue
+            if "items" in all_data:
+                for data in all_data["items"]:
+                    if "related_object" in data:
+                        all_related_objects.append(data["related_object"])
+                    if "relationship" in data:
+                        all_relationships.append(data["relationship"])
+            else:
+                self.helper.connector_logger.debug(
+                    "[DEBUG] No object associated with the indicator",
+                    {"indicator_id": indicator_id},
+                )
 
         uniq_related_objects = list(
             {obj["id"]: obj for obj in all_related_objects}.values()
@@ -475,6 +494,13 @@ class Sekoia(object):
             item["x_opencti_files"] = []
             for file in item.get("x_inthreat_uploaded_files", []):
                 url = self.get_file_url(item["id"], file["sha256"])
+
+                if "mime_type" in file and file["mime_type"] == "application/pdf":
+                    if "file_name" in file:
+                        # Check that the extension exists in the file_name. If not, it will be added.
+                        if not os.path.splitext(file["file_name"])[1]:
+                            file["file_name"] += ".pdf"
+
                 data = self._send_request(url, binary=True)
                 if data:
                     item["x_opencti_files"].append(

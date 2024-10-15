@@ -1,3 +1,4 @@
+import builtins
 import json
 import os
 import sys
@@ -49,9 +50,16 @@ class ThreatMatch:
             False,
             True,
         )
-        self.threatmatch_import_reports = get_config_variable(
-            "THREATMATCH_IMPORT_REPORTS",
-            ["threatmatch", "import_reports"],
+        # self.threatmatch_import_reports = get_config_variable(
+        #    "THREATMATCH_IMPORT_REPORTS",
+        #    ["threatmatch", "import_reports"],
+        #    config,
+        #    False,
+        #    True,
+        # )
+        self.threatmatch_import_iocs = get_config_variable(
+            "THREATMATCH_IMPORT_IOCS",
+            ["threatmatch", "import_iocs"],
             config,
             False,
             True,
@@ -86,29 +94,48 @@ class ThreatMatch:
         data = r.json()
         return data.get("access_token")
 
-    def _process_list(self, work_id, token, type, list):
+    def _get_item(self, token, type, item_id):
         headers = {"Authorization": "Bearer " + token}
-        for item in list:
-            r = requests.get(
-                self.threatmatch_url + "/api/stix/" + type + "/" + str(item),
-                headers=headers,
-            )
-            if r.status_code != 200:
-                self.helper.log_error(str(r.text))
-            bundle = r.json()
-            if "objects" in bundle and len(bundle) > 0:
-                final_objects = []
-                for stix_object in bundle["objects"]:
-                    if "created_by_ref" not in stix_object:
-                        stix_object["created_by_ref"] = self.identity["standard_id"]
-                    if "object_refs" in stix_object and stix_object["type"] not in [
-                        "report",
-                        "note",
-                        "opinion",
-                        "observed-data",
-                    ]:
-                        del stix_object["object_refs"]
-                    final_objects.append(stix_object)
+        r = requests.get(
+            self.threatmatch_url + "/api/stix/" + type + "/" + str(item_id),
+            headers=headers,
+        )
+        if r.status_code != 200:
+            self.helper.log_error(str(r.text))
+            return []
+        # if 'error' in r.json():
+        #    return []
+        if r.status_code == 200:
+            data = r.json()["objects"]
+            return data
+
+    def _process_list(self, work_id, token, type, list):
+        if len(list) > 0:
+            if builtins.type(list[0]) is dict:
+                bundle = list
+                self._process_bundle(work_id, bundle)
+            else:
+                for item in list:
+                    bundle = self._get_item(token, type, item)
+                    self._process_bundle(work_id, bundle)
+
+    def _process_bundle(self, work_id, bundle):
+        if len(bundle) > 0:
+            final_objects = []
+            for stix_object in bundle:
+                if "error" in stix_object:
+                    continue
+                if "created_by_ref" not in stix_object:
+                    stix_object["created_by_ref"] = self.identity["standard_id"]
+                if "object_refs" in stix_object and stix_object["type"] not in [
+                    "report",
+                    "note",
+                    "opinion",
+                    "observed-data",
+                ]:
+                    del stix_object["object_refs"]
+                    pass
+                final_objects.append(stix_object)
                 final_bundle = {"type": "bundle", "objects": final_objects}
                 final_bundle_json = json.dumps(final_bundle)
                 self.helper.send_stix2_bundle(
@@ -188,21 +215,61 @@ class ThreatMatch:
                             self._process_list(
                                 work_id, token, "alerts", data.get("list")
                             )
-                        if self.threatmatch_import_reports:
-                            r = requests.get(
-                                self.threatmatch_url + "/api/reports/all",
+                        # if self.threatmatch_import_reports:
+                        #    r = requests.get(
+                        #        self.threatmatch_url + "/api/reports/all",
+                        #        headers=headers,
+                        #        json={
+                        #            "mode": "compact",
+                        #            "date_since": import_from_date,
+                        #        },
+                        #    )
+                        #    if r.status_code != 200:
+                        #        self.helper.log_error(str(r.text))
+                        #    data = r.json()
+                        #    self._process_list(
+                        #        work_id, token, "reports", data.get("list")
+                        #    )
+                        if self.threatmatch_import_iocs:
+                            response = requests.get(
+                                self.threatmatch_url + "/api/taxii/groups",
                                 headers=headers,
-                                json={
-                                    "mode": "compact",
-                                    "date_since": import_from_date,
-                                },
+                            ).json()
+                            all_results_id = response[0]["id"]
+                            date = datetime.strptime(import_from_date, "%Y-%m-%d %H:%M")
+                            date = date.isoformat(timespec="milliseconds") + "Z"
+                            params = {
+                                "groupId": all_results_id,
+                                "stixTypeName": "indicator",
+                                "modifiedAfter": date,
+                            }
+                            r = requests.get(
+                                self.threatmatch_url + "/api/taxii/objects",
+                                headers=headers,
+                                params=params,
                             )
                             if r.status_code != 200:
                                 self.helper.log_error(str(r.text))
-                            data = r.json()
-                            self._process_list(
-                                work_id, token, "reports", data.get("list")
-                            )
+                            more = r.json()["more"]
+                            if not more:
+                                data = r.json()["objects"]
+                            else:
+                                data = []
+                            # This bit is necessary to load all the indicators to upload by checking by date
+                            while more:
+                                params["modifiedAfter"] = date
+                                r = requests.get(
+                                    self.threatmatch_url + "/api/taxii/objects",
+                                    headers=headers,
+                                    params=params,
+                                )
+                                if r.status_code != 200:
+                                    self.helper.log_error(str(r.text))
+                                data.extend(r.json().get("objects", []))
+                                date = r.json()["objects"][-1]["modified"]
+                                more = r.json().get("more", False)
+                            self.helper.log_info(data)
+                            self._process_list(work_id, token, "indicators", data)
                     except Exception as e:
                         self.helper.log_error(str(e))
                     # Store the current timestamp as a last run
@@ -234,7 +301,6 @@ class ThreatMatch:
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
-                self.helper.force_ping()
                 sys.exit(0)
 
             time.sleep(60)

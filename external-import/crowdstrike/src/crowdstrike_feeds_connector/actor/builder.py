@@ -11,8 +11,6 @@ from crowdstrike_feeds_services.utils import (
     create_regions_and_countries_from_entities,
     create_sectors_from_entities,
     create_targets_relationships,
-    datetime_utc_epoch_start,
-    datetime_utc_now,
     normalize_start_time_and_stop_time,
     remove_html_tags,
     timestamp_to_datetime,
@@ -62,12 +60,7 @@ class ActorBundleBuilder:
         self.confidence_level = confidence_level
 
         first_seen = timestamp_to_datetime(self.actor["first_activity_date"])
-        if first_seen is None:
-            first_seen = datetime_utc_epoch_start()
-
         last_seen = timestamp_to_datetime(self.actor["last_activity_date"])
-        if last_seen is None:
-            last_seen = datetime_utc_now()
 
         first_seen, last_seen = normalize_start_time_and_stop_time(
             first_seen, last_seen
@@ -233,8 +226,6 @@ class ActorBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            start_time=self.first_seen,
-            stop_time=self.last_seen,
         )
 
     def build(self) -> Bundle:

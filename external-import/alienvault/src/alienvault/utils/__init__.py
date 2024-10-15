@@ -6,7 +6,6 @@ from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Uni
 
 import stix2
 from alienvault.utils.constants import (
-    DEFAULT_X_OPENCTI_SCORE,
     TLP_MARKING_DEFINITION_MAPPING,
     X_MITRE_ID,
     X_OPENCTI_LOCATION_TYPE,
@@ -184,6 +183,7 @@ def create_external_reference(
 def create_indicator(
     pattern: str,
     pattern_type: str,
+    x_opencti_score: int,
     created_by: Optional[stix2.Identity] = None,
     name: Optional[str] = None,
     description: Optional[str] = None,
@@ -194,12 +194,13 @@ def create_indicator(
     x_opencti_main_observable_type: Optional[str] = None,
 ) -> stix2.Indicator:
     """Create an indicator."""
-    custom_properties: Dict[str, Any] = {X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE}
+    custom_properties: Dict[str, Any] = {}
 
     if x_opencti_main_observable_type is not None:
         custom_properties[X_OPENCTI_MAIN_OBSERVABLE_TYPE] = (
             x_opencti_main_observable_type
         )
+    custom_properties[X_OPENCTI_SCORE] = x_opencti_score
 
     return stix2.Indicator(
         id=Indicator.generate_id(pattern),

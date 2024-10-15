@@ -32,7 +32,6 @@ def process(connector, vulnerability):
         name=utils.sanitizer("cve_id", vulnerability),
         description=utils.sanitizer("description", vulnerability),
         created=utils.sanitizer("publish_date", vulnerability),
-        confidence=connector.helper.connect_confidence_level,
         created_by_ref=connector.identity["standard_id"],
         object_marking_refs=[stix2.TLP_AMBER.get("id")],
         allow_custom=True,

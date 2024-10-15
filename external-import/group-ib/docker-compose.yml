@@ -1,0 +1,35 @@
+version: '3'
+services:
+  connector:
+    build: .
+    container_name: ${CONTAINER_NAME}
+    image: opencti/connector-group-ib:6.3.1
+    volumes:
+      - ./docs/:/opt/connector/docs/
+    environment:
+      # Connector's definition parameters:
+      - CONNECTOR_NAME=${CONNECTOR_NAME}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE}
+      # Connector's generic execution parameters:
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_CONFIDENCE_LEVEL} # From 0 (Unknown) to 100 (Fully trusted).
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL}
+      - CONNECTOR_RUN_EVERY=${CONNECTOR_RUN_EVERY}
+      # Connector's TI API execution parameters:
+      - TI_API_URL=${TI_API_URL}
+      - TI_API_USERNAME=${TI_API_USERNAME}
+      - TI_API_TOKEN=${TI_API_TOKEN}
+      # Connector's proxy parameters:
+      - PROXY_IP=${PROXY_IP}
+      - PROXY_PORT=${PROXY_PORT}
+      - PROXY_PROTOCOL=${PROXY_PROTOCOL}
+      - PROXY_USERNAME=${PROXY_USERNAME}
+      - PROXY_PASSWORD=${PROXY_PASSWORD}
+    restart: always
+
+networks:
+  default:
+    external: true
+    name: docker_default

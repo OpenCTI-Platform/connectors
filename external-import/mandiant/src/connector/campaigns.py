@@ -83,7 +83,6 @@ def create_stix_campaign(connector, campaign_details):
         description=campaign_description,
         first_seen=first_observed[0] if len(first_observed) != 0 else None,
         last_seen=utils.sanitizer("last_activity_time", campaign_details),
-        confidence=connector.helper.connect_confidence_level,
         created_by_ref=connector.identity.get("standard_id"),
         allow_custom=True,
     )

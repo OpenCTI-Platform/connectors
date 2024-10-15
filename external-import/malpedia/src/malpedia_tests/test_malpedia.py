@@ -88,8 +88,8 @@ class TestMalpediaClient:
             (False, 403, {"detail": "Invalid token."}),
             (True, 404, None),
             (False, 404, None),
-            (True, 429, None),
-            (False, 429, None),
+            (True, 429, {"available_in": "16 seconds"}),
+            (False, 429, {"available_in": "16 seconds"}),
             (True, 200, {"data": "fake_data"}),
             (False, 200, {"data": "fake_data"}),
             (True, 500, None),
@@ -111,20 +111,32 @@ class TestMalpediaClient:
     def test_api_response(
         self, malpedia_client, authenticated, status_code, expected_result
     ):
-        with patch("malpedia_services.client.requests.get") as mock_get:
+        with patch("malpedia_services.client.requests.get") as mock_get, patch(
+            "time.sleep"
+        ) as mock_sleep:
             mock_get.return_value.status_code = status_code
+
             if status_code == 403:
                 mock_get.return_value.text = '{"detail": "Invalid token."}'
                 mock_get.return_value.json.return_value = expected_result
             elif status_code == 404:
                 mock_get.return_value.reason = "No Found"
+            elif status_code == 429:
+                mock_get.return_value.text = '{"available_in": "16 seconds"}'
             elif status_code == 200:
                 mock_get.return_value.json.return_value = expected_result
             else:
                 pass
 
             result = malpedia_client.api_response("fake_url", 0, auth=authenticated)
-            assert result == expected_result
+
+            # Check if time.sleep was called if status code is 429
+            if status_code == 429:
+                mock_sleep.assert_called_once()
+                assert result is None
+            else:
+                mock_sleep.assert_not_called()
+                assert result == expected_result
 
     def test_current_version(self, malpedia_client):
         with patch.object(malpedia_client, "query", return_value={"version": 10}):

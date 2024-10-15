@@ -46,6 +46,38 @@ class Phishunt:
             False,
             default=True,
         )
+        self.default_x_opencti_score = get_config_variable(
+            "PHISHUNT_DEFAULT_X_OPENCTI_SCORE",
+            ["phishunt", "default_x_opencti_score"],
+            config,
+            isNumber=True,
+            default=40,
+            required=False,
+        )
+        self.x_opencti_score_domain = get_config_variable(
+            "PHISHUNT_X_OPENCTI_SCORE_DOMAIN",
+            ["phishunt", "x_opencti_score_domain"],
+            config,
+            isNumber=True,
+            default=None,
+            required=False,
+        )
+        self.x_opencti_score_ip = get_config_variable(
+            "PHISHUNT_X_OPENCTI_SCORE_IP",
+            ["phishunt", "x_opencti_score_ip"],
+            config,
+            isNumber=True,
+            default=None,
+            required=False,
+        )
+        self.x_opencti_score_url = get_config_variable(
+            "PHISHUNT_X_OPENCTI_SCORE_URL",
+            ["phishunt", "x_opencti_score_url"],
+            config,
+            isNumber=True,
+            default=None,
+            required=False,
+        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -94,7 +126,8 @@ class Phishunt:
                         object_marking_refs=[stix2.TLP_WHITE],
                         custom_properties={
                             "x_opencti_description": "Phishunt malicious URL",
-                            "x_opencti_score": 40,
+                            "x_opencti_score": self.x_opencti_score_url
+                            or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
                             "x_opencti_created_by_ref": self.identity["standard_id"],
                         },
@@ -135,8 +168,8 @@ class Phishunt:
             )
             if os.path.exists(os.path.dirname(os.path.abspath(__file__)) + "/data.txt"):
                 os.remove(os.path.dirname(os.path.abspath(__file__)) + "/data.txt")
-        except Exception as e:
-            self.helper.log_error(str(e))
+        except Exception as error:
+            self.helper.log_error(str(error))
 
     def _process_private_feed(self, work_id):
         try:
@@ -153,7 +186,8 @@ class Phishunt:
                     object_marking_refs=[stix2.TLP_WHITE],
                     custom_properties={
                         "x_opencti_description": "Phishunt malicious URL",
-                        "x_opencti_score": 40,
+                        "x_opencti_score": self.x_opencti_score_url
+                        or self.default_x_opencti_score,
                         "x_opencti_labels": ["osint", "phishing"],
                         "x_opencti_created_by_ref": self.identity["standard_id"],
                     },
@@ -191,7 +225,8 @@ class Phishunt:
                         object_marking_refs=[stix2.TLP_WHITE],
                         custom_properties={
                             "x_opencti_description": "Phishunt domain based on malicious URL",
-                            "x_opencti_score": 40,
+                            "x_opencti_score": self.x_opencti_score_domain
+                            or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
                             "x_opencti_created_by_ref": self.identity["standard_id"],
                         },
@@ -233,7 +268,8 @@ class Phishunt:
                         object_marking_refs=[stix2.TLP_WHITE],
                         custom_properties={
                             "x_opencti_description": "Phishunt domain based on malicious URL",
-                            "x_opencti_score": 40,
+                            "x_opencti_score": self.x_opencti_score_ip
+                            or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
                             "x_opencti_created_by_ref": self.identity["standard_id"],
                         },
@@ -276,8 +312,8 @@ class Phishunt:
                 update=self.update_existing_data,
                 work_id=work_id,
             )
-        except Exception as e:
-            self.helper.log_error(str(e))
+        except Exception as error:
+            self.helper.log_error(str(error))
 
     def run(self):
         self.helper.log_info("Fetching Phishunt dataset...")
@@ -338,8 +374,8 @@ class Phishunt:
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
-            except Exception as e:
-                self.helper.log_error(str(e))
+            except Exception as error:
+                self.helper.log_error(str(error))
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")

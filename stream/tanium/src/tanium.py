@@ -94,7 +94,7 @@ class TaniumConnector:
     def _process_message(self, msg):
         try:
             data = json.loads(msg.data)["data"]
-        except:
+        except Exception:
             raise ValueError("Cannot process the message")
         # Handle creation
         if msg.event == "create":

@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'Internal Enrichment Connector Template'
+  scope: 'ChangeMe'
+  log_level: 'info'
+  auto: true # Enable/disable auto-enrichment of observables
+
+connector_template:
+  api_base_url: 'ChangeMe'
+  api_key: 'ChangeMe'
+  max_tlp: "TLP:AMBER" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED

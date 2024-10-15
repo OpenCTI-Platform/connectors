@@ -103,12 +103,12 @@ class VirusTotalBuilder:
 
     def create_asn_belongs_to(self):
         """Create AutonomousSystem and Relationship between the observable."""
-        if self.attributes.get("asn") is not None:
+        if self.attributes.get("asn", None):
             self.helper.log_debug(f'[VirusTotal] creating asn {self.attributes["asn"]}')
             as_stix = stix2.AutonomousSystem(
-                number=self.attributes["asn"],
-                name=self.attributes["as_owner"],
-                rir=self.attributes["regional_internet_registry"],
+                number=self.attributes.get("asn"),
+                name=self.attributes.get("as_owner", None),
+                rir=self.attributes.get("regional_internet_registry", None),
             )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
@@ -124,6 +124,14 @@ class VirusTotalBuilder:
                 allow_custom=True,
             )
             self.bundle += [as_stix, relationship]
+        else:
+            self.helper.connector_logger.debug(
+                "[VirusTotal] The creation of the ASN was not successful for this entity.",
+                {
+                    "entity_id": self.stix_entity.get("id", None),
+                    "entity_value": self.stix_entity.get("value", None),
+                },
+            )
 
     def _create_external_reference(
         self,
@@ -267,28 +275,37 @@ class VirusTotalBuilder:
 
     def create_location_located_at(self):
         """Create a Location and link it to the observable."""
-        self.helper.log_debug(
-            f'[VirusTotal] creating location with country {self.attributes["country"]}'
-        )
-        location_stix = stix2.Location(
-            id=Location.generate_id(self.attributes["country"], "Country"),
-            created_by_ref=self.author,
-            country=self.attributes["country"],
-        )
-        relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                "located-at",
-                self.stix_entity["id"],
-                location_stix.id,
-            ),
-            relationship_type="located-at",
-            created_by_ref=self.author,
-            source_ref=self.stix_entity["id"],
-            target_ref=location_stix.id,
-            confidence=self.helper.connect_confidence_level,
-            allow_custom=True,
-        )
-        self.bundle += [location_stix, relationship]
+        if self.attributes.get("country", None):
+            self.helper.log_debug(
+                f'[VirusTotal] creating location with country {self.attributes["country"]}'
+            )
+            location_stix = stix2.Location(
+                id=Location.generate_id(self.attributes["country"], "Country"),
+                created_by_ref=self.author,
+                country=self.attributes["country"],
+            )
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "located-at",
+                    self.stix_entity["id"],
+                    location_stix.id,
+                ),
+                relationship_type="located-at",
+                created_by_ref=self.author,
+                source_ref=self.stix_entity["id"],
+                target_ref=location_stix.id,
+                confidence=self.helper.connect_confidence_level,
+                allow_custom=True,
+            )
+            self.bundle += [location_stix, relationship]
+        else:
+            self.helper.connector_logger.debug(
+                "[VirusTotal] The creation of the location country was not successful for this entity.",
+                {
+                    "entity_id": self.stix_entity.get("id", None),
+                    "entity_value": self.stix_entity.get("value", None),
+                },
+            )
 
     def create_note(self, abstract: str, content: str):
         """
@@ -321,20 +338,46 @@ class VirusTotalBuilder:
         Notes are directly append in the bundle.
         """
         if self.attributes["last_analysis_stats"]["malicious"] != 0:
+            content = "| Total Analyses | Malicious | Harmless |\n"
+            content += "|----------------|-----------|----------|\n"
+            content += (
+                "| "
+                + str(len(self.attributes["last_analysis_results"].keys()))
+                + " |"
+                + str(self.attributes["last_analysis_stats"]["malicious"])
+                + " | "
+                + str(self.attributes["last_analysis_stats"]["harmless"])
+                + " |\n\n"
+            )
+            content += "## Last Analysis Results\n\n"
+            content += "| Engine name | Method | Category | Result |\n"
+            content += "|-------------|---------|---------|--------|\n"
+            for key in self.attributes["last_analysis_results"]:
+                result = self.attributes["last_analysis_results"][key]
+                content += (
+                    "| "
+                    + result["engine_name"]
+                    + " | "
+                    + result["method"]
+                    + " | "
+                    + result["category"]
+                    + " | "
+                    + (result["result"] if result["result"] is not None else "N/A")
+                    + " | \n"
+                )
             self.create_note(
-                "VirusTotal Positives",
-                f"""```\n{
-                json.dumps(
-                    [v for v in self.attributes["last_analysis_results"].values()
-                     if v["category"] == "malicious"], indent=2
-                )}\n```""",
+                "VirusTotal Results",
+                content,
             )
 
         if "categories" in self.attributes and len(self.attributes["categories"]) > 0:
-            self.create_note(
-                "VirusTotal Categories",
-                f'```\n{json.dumps(self.attributes["categories"], indent=2)}\n```',
-            )
+            content = "| Vendor | Category |\n"
+            content += "|--------|----------|\n"
+            for key in self.attributes["categories"]:
+                content += (
+                    "| " + key + " | " + self.attributes["categories"][key] + " | \n"
+                )
+            self.create_note("VirusTotal Categories", content)
 
     def create_yara(
         self, yara: dict, ruleset: dict, valid_from: Optional[float] = None

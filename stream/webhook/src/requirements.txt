@@ -1,3 +1,3 @@
-pycti==6.2.12
-stix-shifter==7.0.11
+pycti==6.3.6
+stix-shifter==7.1.1
 pydantic==2.8.2

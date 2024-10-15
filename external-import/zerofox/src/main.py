@@ -7,7 +7,7 @@ from typing import Dict
 import stix2
 from collectors.builder import build_collectors
 from collectors.collector import Collector
-from pycti import OpenCTIConnectorHelper
+from pycti import Identity, OpenCTIConnectorHelper
 from time_.interval import delta_from_interval, seconds_from_interval
 from zerofox.app.zerofox import ZeroFox
 
@@ -16,12 +16,13 @@ ZEROFOX_REFERENCE = stix2.ExternalReference(
     url="https://www.zerofox.com/threat-intelligence/",
     description="ZeroFox provides comprehensive, accurate, and timely intelligence bundles through its API.",
 )
+ZEROFOX = "ZeroFox"
 
 
 class ZeroFoxConnector:
-    def __init__(self):
+    def __init__(self, helper: OpenCTIConnectorHelper = None):
         """ZeroFox connector for OpenCTI."""
-        self.helper = OpenCTIConnectorHelper({})
+        self.helper = helper if helper else OpenCTIConnectorHelper({})
 
         # Specific connector attributes for external import connectors
         self.interval = os.environ.get("CONNECTOR_RUN_EVERY", "1d").lower()
@@ -42,6 +43,12 @@ class ZeroFoxConnector:
             client=self.client,
             feeds=os.environ.get("ZEROFOX_COLLECTORS", None),
             logger=self.helper.connector_logger,
+        )
+        self.author = stix2.Identity(
+            id=Identity.generate_id(ZEROFOX, "organization"),
+            name=ZEROFOX,
+            identity_class="organization",
+            object_marking_refs=[stix2.TLP_WHITE.id],
         )
 
     def _validate_interval(self, env_var, interval):
@@ -142,9 +149,13 @@ class ZeroFoxConnector:
             self.helper.log_debug(
                 f"{self.helper.connect_name} connector is starting the collection of objects..."
             )
+            self.send_bundle(work_id=work_id, bundle_objects=[self.author])
             self.helper.log_info(f"Running collector: {collector_name}")
             missed_entries, bundle_objects = collector.collect_intelligence(
-                now, datetime.fromtimestamp(last_run, UTC), self.helper.connector_logger
+                created_by=self.author.id,
+                now=now,
+                last_run_date=datetime.fromtimestamp(last_run, UTC),
+                logger=self.helper.connector_logger,
             )
             if missed_entries > 0:
                 self.helper.log_warning(
@@ -201,7 +212,10 @@ class ZeroFoxConnector:
                         )
 
                     self.collect_intelligence_for_endpoint(
-                        current_time, last_run, collector_name, collector
+                        current_time=current_time,
+                        last_run=last_run,
+                        collector_name=collector_name,
+                        collector=collector,
                     )
 
             except (KeyboardInterrupt, SystemExit):

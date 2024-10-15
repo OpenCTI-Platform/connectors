@@ -146,7 +146,6 @@ class YaraRuleBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            start_time=self.first_seen,
         )
 
     def _create_indicators(self) -> List[Indicator]:
@@ -162,6 +161,7 @@ class YaraRuleBundleBuilder:
             name=rule.name,
             description=rule.description,
             valid_from=self.first_seen,
+            created=self.first_seen,
             confidence=self.confidence_level,
             object_markings=self.object_markings,
         )
@@ -175,7 +175,6 @@ class YaraRuleBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            start_time=self.first_seen,
         )
 
     def _create_reports(self, objects: List[_DomainObject]) -> List[STIXReport]:

@@ -776,18 +776,25 @@ class HarfangLabConnector:
         entity = self.helper.api.indicator.read(
             id=OpenCTIConnectorHelper.get_attribute_in_extension("source_ref", data)
         )
-        self.log_info_process(data, "[CREATE]")
 
         observable = self.build_stix_observable_object(data, entity, True)
-        if observable is not None:
-            observable_value = observable["value"]
-            observable_matched = self.get_and_match_element(
-                data, uri, observable_value, source_list_id
-            )
 
-            self.process_create_observable(
-                observable, uri, pattern_type, observable_matched
-            )
+        if observable is not None:
+            translation = stix_translation.StixTranslation()
+            parsed = translation.translate("splunk", "parse", "{}", entity["pattern"])
+            indicator_value = parsed["parsed_stix"][0]["value"]
+
+            observable_value = observable["value"]
+            if observable_value != indicator_value:
+                self.log_info_process(data, "[CREATE]")
+
+                observable_matched = self.get_and_match_element(
+                    data, uri, observable_value, source_list_id
+                )
+
+                self.process_create_observable(
+                    observable, uri, pattern_type, observable_matched
+                )
 
     def process_create_observable(self, data, uri, pattern_type, observable_matched):
         if observable_matched is not None:

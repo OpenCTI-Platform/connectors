@@ -34,7 +34,7 @@ class SentinelConnector:
             else {}
         )
 
-        # Get Enviornment Variables
+        # Configuration
         self.helper = OpenCTIConnectorHelper(config)
         self.tenant_id = get_config_variable(
             "TENANT_ID", ["sentinel", "tenant_id"], config

@@ -8,6 +8,7 @@ connector:
   name: 'CrowdStrike'
   scope: 'crowdstrike'
   log_level: 'info'
+  duration_period: 'PT30M' # In ISO8601 format, start with 'P' for period
 
 crowdstrike:
   base_url: 'https://api.crowdstrike.com'
@@ -25,7 +26,11 @@ crowdstrike:
   report_guess_malware: false                                       # Use report tags to guess malware
   indicator_start_timestamp: 0                                      # BEWARE! All the indicators!
   indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1'
+  default_x_opencti_score: 50
   indicator_low_score: 40
   indicator_low_score_labels: 'MaliciousConfidence/Low'
+  indicator_medium_score: 60
+  indicator_medium_score_labels: 'MaliciousConfidence/Medium'
+  indicator_high_score: 80
+  indicator_high_score_labels: 'MaliciousConfidence/High'
   indicator_unwanted_labels: ''                                     # Can be used to filter low confidence indicators: "MaliciousConfidence/Low", "MaliciousConfidence/Medium"
-  interval_sec: 1800                                                # Seconds

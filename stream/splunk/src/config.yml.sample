@@ -10,13 +10,12 @@ connector:
   live_stream_no_dependencies: true
   name: 'Splunk'
   scope: 'splunk' # Reserved
-  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
   consumer_count: 5 # number of consumer/worker used to push data to splunk
 
 splunk:
   url: 'https://splunk1.changeme.com:8089'
-  token: 'Token'
+  token: 'ChangeMe'
   owner: 'nobody'
   ssl_verify: true
   app: 'search'

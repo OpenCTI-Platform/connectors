@@ -22,18 +22,19 @@ from .builder import ActorBundleBuilder
 class ActorImporter(BaseImporter):
     """CrowdStrike actor importer."""
 
+    _NAME = "Actor"
+
     _LATEST_ACTOR_TIMESTAMP = "latest_actor_timestamp"
 
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        update_existing_data: bool,
         author: Identity,
         default_latest_timestamp: int,
         tlp_marking: MarkingDefinition,
     ) -> None:
         """Initialize CrowdStrike actor importer."""
-        super().__init__(helper, author, tlp_marking, update_existing_data)
+        super().__init__(helper, author, tlp_marking)
         self.actors_api_cs = ActorsAPI(helper)
         self.default_latest_timestamp = default_latest_timestamp
 
@@ -74,8 +75,8 @@ class ActorImporter(BaseImporter):
 
     def _fetch_actors(self, start_timestamp: int) -> Generator[List, None, None]:
         limit = 50
-        sort = "created_date|asc"
-        fql_filter = f"created_date:>{start_timestamp}"
+        sort = "last_modified_date|asc"
+        fql_filter = f"last_modified_date:>{start_timestamp}"
         fields = ["__full__"]
 
         paginated_query = paginate(self._query_actor_entities)
@@ -111,13 +112,13 @@ class ActorImporter(BaseImporter):
         actor_count = len(actors)
         self._info("Processing {0} actors...", actor_count)
 
-        latest_created_datetime = None
+        latest_modified_datetime = None
 
         for actor in actors:
             self._process_actor(actor)
 
-            created_date = actor["created_date"]
-            if created_date is None:
+            modified_date = actor["last_modified_date"]
+            if modified_date is None:
                 self._error(
                     "Missing created date for actor {0} ({1})",
                     actor["name"],
@@ -126,18 +127,18 @@ class ActorImporter(BaseImporter):
                 continue
 
             if (
-                latest_created_datetime is None
-                or created_date > latest_created_datetime
+                latest_modified_datetime is None
+                or modified_date > latest_modified_datetime
             ):
-                latest_created_datetime = created_date
+                latest_modified_datetime = modified_date
 
         self._info(
             "Processing actors completed (imported: {0}, latest: {1})",
             actor_count,
-            latest_created_datetime,
+            latest_modified_datetime,
         )
 
-        return timestamp_to_datetime(latest_created_datetime)
+        return timestamp_to_datetime(latest_modified_datetime)
 
     def _process_actor(self, actor) -> None:
         self._info("Processing actor {0} ({1})...", actor["name"], actor["id"])

@@ -19,5 +19,5 @@ threatmatch:
   import_from_date: '2010-01-01 00:00'
   import_profiles: true # Import profiles
   import_alerts: true # Import alerts
-  import_reports: true # Import reports
+  import_iocs: true # Import iocs
 

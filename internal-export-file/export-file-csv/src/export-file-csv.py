@@ -56,6 +56,8 @@ class ExportFileCsv:
                     row.append(d[h])
                 elif isinstance(d[h], int):
                     row.append(str(d[h]))
+                elif isinstance(d[h], float):
+                    row.append(str(d[h]))
                 elif isinstance(d[h], list):
                     if len(d[h]) > 0 and isinstance(d[h][0], str):
                         row.append(",".join(d[h]))

@@ -1,6 +1,6 @@
-pycti==6.2.12
-pandas==2.2.2
-elasticsearch==7.17.9
+pycti==6.3.6
+pandas==2.2.3
+elasticsearch==7.17.12
 scalpl==0.4.2
 docopt==0.6.2
 python-json-logger~=2.0.4
