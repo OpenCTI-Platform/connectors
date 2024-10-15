@@ -195,7 +195,6 @@ class LIAFileFeed:
                 )
             )
 
-
             if detected_malware:
                 relationships.append(
                     self.generate_relationship(
@@ -255,10 +254,12 @@ class LIAFileFeed:
 
                     self.helper.log_debug("Fetching external data...")
                     data = self.get_feed_data()
-                    if 'results' in data.keys():
+                    if "results" in data.keys():
                         self.process_data(data)
                     else:
-                        self.helper.log_info(f"No data retrieved or invalid response: {data}")
+                        self.helper.log_info(
+                            f"No data retrieved or invalid response: {data}"
+                        )
 
                     message = "Connector successfully run, storing last_run as " + str(
                         timestamp
