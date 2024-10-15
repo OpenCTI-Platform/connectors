@@ -1,13 +1,15 @@
 import pycti
-
-from stix2 import TLP_AMBER, ExternalReference
-from stix2 import Indicator
-from stix2 import Infrastructure
-from stix2 import Location
-from stix2 import Malware
-from stix2 import Relationship
-from stix2 import Tool
-from stix2 import Vulnerability
+from stix2 import (
+    TLP_AMBER,
+    ExternalReference,
+    Indicator,
+    Infrastructure,
+    Location,
+    Malware,
+    Relationship,
+    Tool,
+    Vulnerability,
+)
 
 
 def _additional_kwargs(created_by) -> dict:
@@ -126,7 +128,7 @@ def vulnerability(
     )
 
 
-def relationship(source: str, target: str, type: str, start_time: str):
+def relationship(source: str, target: str, type: str, start_time: str = None):
     return Relationship(
         id=pycti.StixCoreRelationship.generate_id(type, source, target, start_time),
         source_ref=source,
