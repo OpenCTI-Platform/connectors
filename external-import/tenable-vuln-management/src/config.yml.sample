@@ -1,0 +1,32 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Tenable Vuln Management'
+  scope: 'vulnerability'
+  log_level: 'info'
+  duration_period: 'PT30M' # Interval given for scheduler process in ISO-8601 format
+  #============================================#
+  # Optional connector's definition parameters #
+  #============================================#
+  #queue_threshold: 500
+  #run_and_terminate: 'False'
+  #send_to_queue: 'True'
+  #send_to_directory: 'False'
+  #send_to_directory_path: 'ChangeMe'
+  #send_to_directory_retention: 7
+
+tenable_vuln_management:
+  num_thread: 2
+  api_base_url: 'ChangeMe'
+  api_access_key: 'ChangeMe'
+  api_secret_key: 'ChangeMe'
+  api_timeout: 30
+  api_backoff: 1
+  api_retries: 5
+  export_since: "1970-01-01 00:00:00+00"
+  min_severity: "low"
+  marking_definition: "TLP:CLEAR"
