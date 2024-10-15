@@ -291,6 +291,7 @@ class Misp:
             cert=self.misp_client_cert,
             ssl=self.misp_ssl_verify,
             debug=False,
+            tool="OpenCTI MISP connector",
         )
 
     def get_interval(self):
