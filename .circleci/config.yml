@@ -372,7 +372,7 @@ jobs:
       - run:
           working_directory: ~/opencti/stream/sentinel-intel
           name: Build Docker image opencti/connector-sentinel-intel
-          command: docker build -t opencti/connector-sentinel-intel:latest . && docker tag opencti/connector-sentinel-incidents:latest opencti/connector-sentinel-incidents:${CIRCLE_TAG}
+          command: docker build -t opencti/connector-sentinel-intel:latest . && docker tag opencti/connector-sentinel-intel:latest opencti/connector-sentinel-intel:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
