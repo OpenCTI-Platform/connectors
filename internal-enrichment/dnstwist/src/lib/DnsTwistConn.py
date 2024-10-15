@@ -3,12 +3,7 @@ import re
 import time
 
 import dnstwist
-from pycti import (
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    StixNestedRefRelationship,
-    StixSightingRelationship,
-)
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship
 from stix2 import DomainName, IPv4Address, IPv6Address, Relationship
 
 

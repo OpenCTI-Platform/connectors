@@ -20,7 +20,15 @@ To full check a connector
 > pylint external-import/ransomwarelive/src/*.py
 
 To apply specific rules on everything
-> pylint **/*.py --disable=all --enable=no_generated_id_stix,no-value-for-parameter
+> pylint **/*.py --disable=all --enable=no_generated_id_stix,no-value-for-parameter,unused-import
+
+Next to activate 
+no-member
+access-member-before-definition
+undefined-variable
+function-redefined
+unsubscripable-object
+too-many-function-args
 
 ## License
 

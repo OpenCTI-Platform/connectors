@@ -40,7 +40,7 @@ jobs:
           command: pip install pylint
       - run:
           name: pylint
-          command: pylint **/*.py --fail-on=ERROR --disable=all --enable=no_generated_id_stix,no-value-for-parameter
+          command: pylint **/*.py --fail-on=ERROR --disable=all --enable=no_generated_id_stix,no-value-for-parameter,unused-import
       - slack/notify:
           event: fail
           template: basic_fail_1
