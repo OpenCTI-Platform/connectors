@@ -2,7 +2,6 @@ from typing import List
 
 from collectors.collector import Collector
 from collectors.mappers import threat_feed_to_stix
-from lxml.saxparser import value
 from zerofox.app.endpoints import CTIEndpoint
 
 
