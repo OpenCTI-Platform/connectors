@@ -1,6 +1,5 @@
 from typing import List, Union
 
-import pycti
 from open_cti import infrastructure, observable, relationship
 from stix2 import (
     URL,
@@ -31,14 +30,13 @@ def phishing_to_infrastructure(created_by, now: str, entry: Phishing) -> List[
         - a X509Certificate object for the certificate authority and fingerprint, if present.
 
     """
-    phishing = Infrastructure(
-        id=pycti.Infrastructure.generate_id(entry.domain),
-        name=entry.domain,
+    phishing = infrastructure(
+        created_by=created_by,
+        name=f"{entry.domain}",
         created=now,
         infrastructure_types=["phishing"],
         first_seen=entry.scanned,
         external_references=[],
-        created_by_ref=created_by,
     )
     certificate_objects = build_certificate_objects(created_by, entry, phishing)
 
