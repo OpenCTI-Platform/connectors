@@ -162,10 +162,10 @@ class Mandiant:
         )
         self.mandiant_campaigns_interval = timedelta(hours=mandiant_campaigns_interval)
 
-        # Import campaigns with related entities when importing IOC related to the campaign
-        self.import_full_campaigns = get_config_variable(
-            "MANDIANT_IMPORT_FULL_CAMPAIGNS",
-            ["mandiant", "import_full_campaigns"],
+        # When import indicators, import full campaigns (campaign details his related entities)
+        self.import_indicators_with_full_campaigns = get_config_variable(
+            "MANDIANT_IMPORT_INDICATORS_WITH_FULL_CAMPAIGNS",
+            ["mandiant", "import_indicators_with_full_campaigns"],
             config,
             default=False,
         )

@@ -148,16 +148,11 @@ def process(connector, indicator):
 
         # Add the campaign
         # Allow import of Campaigns with related entities
-        if connector.import_full_campaigns:
+        if connector.import_indicators_with_full_campaigns:
             bundle_campaign_with_rel = process_campaign(connector, campaign)
             campaign_items = bundle_campaign_with_rel["objects"]
 
             items += campaign_items
-            items.append(
-                indicator_create_stix_relationship(
-                    connector, stix_indicator, indicator, campaign
-                )
-            )
         else:
             # Keep original behavior => Create the campaign to link to the Indicator
             stix_campaign = stix2.Campaign(
@@ -168,11 +163,11 @@ def process(connector, indicator):
                 allow_custom=True,
             )
             items.append(stix_campaign)
-            items.append(
-                indicator_create_stix_relationship(
-                    connector, stix_indicator, indicator, stix_campaign
-                )
+        items.append(
+            indicator_create_stix_relationship(
+                connector, stix_indicator, indicator, campaign
             )
+        )
 
     bundle = stix2.Bundle(objects=items, allow_custom=True)
 
