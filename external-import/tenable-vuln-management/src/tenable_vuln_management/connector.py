@@ -266,8 +266,9 @@ class Connector:
             self._initiate_work()
             results = self._run_threaded_jobs()
             self._finalize_work(results)
-            in_error = not all(results)
-
+            in_error = (
+                not all(results) if len(results) != 0 else False
+            )  # no error if nothing to retrieve
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",
