@@ -136,34 +136,44 @@ graph LR
     end
 
     subgraph OpenCTI
-        direction TB
-        OpenCTISystem[System]
-        OpenCTIMACAddress[MACAddress]
-        OpenCTIPv4Address[IPAddress v4]
-        OpenCTIPv6Address[IPAddress v6]
-        OpenCTIHostname[Hostname]
-        OpenCTIDomainName[DomainName]
-        OpenCTIOperatingSystem[OperatingSystems]
-        OpenCTISoftware[Software_s]
-        OpenCTIVulnerability[Vulnerabilities]
+        direction LR
+        subgraph DomainObjects
+            direction TB
+            OpenCTISystem[System]
+            OpenCTIVulnerability[Vulnerabilities]
+        end
+
+        subgraph Observables
+            direction TB
+            OpenCTIMACAddress[MACAddress]
+            OpenCTIPv4Address[IPAddress v4]
+            OpenCTIPv6Address[IPAddress v6]
+            OpenCTIHostname[Hostname]
+            OpenCTIDomainName[DomainName]
+            OpenCTIOperatingSystem[OperatingSystems]
+            OpenCTISoftware[Software_s]
+        
+        end
+        %% OpenCTIMACAddress ~~~ OpenCTIPv4Address
     end
 
     %% Asset generates System and Observables
-    TenableAsset --> OpenCTISystem & OpenCTIMACAddress & OpenCTIPv4Address & OpenCTIPv6Address & OpenCTIHostname & OpenCTIDomainName
-    TenableAsset-->|looping over installed OS| OpenCTIOperatingSystem
+    TenableAsset ==> OpenCTISystem & OpenCTIMACAddress & OpenCTIPv4Address & OpenCTIPv6Address & OpenCTIHostname & OpenCTIDomainName
+    TenableAsset==>|looping over installed OS| OpenCTIOperatingSystem
 
     %% Plugin generates Software and Vulnerability
-    TenablePlugin -->|looping over targeted CPE URIs| OpenCTISoftware
-    TenablePlugin -->|looping over detected CVEs| OpenCTIVulnerability
+    TenablePlugin ==>|looping over targeted CPE URIs| OpenCTISoftware
+    TenablePlugin ==>|looping over detected CVEs| OpenCTIVulnerability
 
     %% Relationships between System and Observables
     OpenCTISystem -.-> |"Related to"| OpenCTIMACAddress & OpenCTIPv4Address & OpenCTIPv6Address & OpenCTIHostname & OpenCTIDomainName & OpenCTIOperatingSystem
-
+    %% Relationships between observables
+    OpenCTIDomainName -.->|"Resolves to"| OpenCTIPv4Address & OpenCTIPv6Address -.->|"Resolves to"| OpenCTIMACAddress
+    
     %% Relationships between Vulnerabilities and Software
     OpenCTIVulnerability -.-> |"Related to"| OpenCTISoftware
 
     OpenCTISystem -.-> |"Has"| OpenCTIVulnerability
-
 ```
 
 ## Debugging
