@@ -41,32 +41,32 @@ The configuration variables for the connector can be set in `docker-compose.yml`
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
 |---------------|------------|-----------------------------|-----------|------------------------------------------------------|
 | OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform.  |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
 ### Base connector environment variables
 
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | vulnerability   | Yes       | The scope or type of data the connector is importing (e.g., vulnerability).               |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options: `debug`, `info`, `warn`, `error`.         |
+| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                      |
+|-----------------|------------|-----------------------------|-----------------|-----------|----------------------------------------------------------------------------------|
+| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                        |
+| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                    |
+| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                           |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           | vulnerability   | Yes       | The scope or type of data the connector is importing (e.g., vulnerability).      |
+| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options: `debug`, `info`, `warn`, `error`. |
 
 ### Connector extra parameters environment variables
 
-| Parameter             | config.yml                | Docker environment variable | Default                      | Mandatory | Description                                                                                  |
-|-----------------------|---------------------------|-----------------------------|------------------------------|-----------|----------------------------------------------------------------------------------------------|
-| API base URL          | api_base_url              | `TIO_API_BASE_URL`           | https://cloud.tenable.com     | Yes       | Base URL for the Tenable API.                                                                 |
-| API access key        | api_access_key            | `TIO_API_ACCESS_KEY`         |                              | Yes       | Tenable API access key.                                                                       |
-| API secret key        | api_secret_key            | `TIO_API_SECRET_KEY`         |                              | Yes       | Tenable API secret key.                                                                       |
-| API timeout           | api_timeout               | `TIO_API_TIMEOUT`            | 30                           | No        | Timeout for API requests in seconds.                                                          |
-| API retries           | api_retries               | `TIO_API_RETRIES`            | 5                            | No        | Number of retries in case of failure.                                                         |
-| API backoff           | api_backoff               | `TIO_API_BACKOFF`            | 1                            | No        | Time (in seconds) to wait before retrying after receiving a 429 response from the API.        |
-| Export since date     | export_since              | `TIO_EXPORT_SINCE`           | 1970-01-01T00:00:00+00       | No        | Date from which to start pulling vulnerability data.                                          |
-| Minimum severity      | min_severity              | `TIO_MIN_SEVERITY`           | low                          | No        | The minimum severity level of vulnerabilities to import (`low`, `medium`, `high`, `critical`).|
-| Marking definition    | marking_definition        | `TIO_MARKING_DEFINITION`     | TLP:CLEAR                    | No        | Default marking definition for imported data (e.g., `TLP:AMBER`, `TLP:GREEN`, `TLP:CLEAR`).   |
-| Number of threads     | num_thread                | `TIO_NUM_THREADS`            | 1                            | No        | Number of threads to use for the connector.                                                   |
+| Parameter          | config.yml         | Docker environment variable | Default                   | Mandatory | Description                                                                                    |
+|--------------------|--------------------|-----------------------------|---------------------------|-----------|------------------------------------------------------------------------------------------------|
+| API base URL       | api_base_url       | `TIO_API_BASE_URL`          | https://cloud.tenable.com | Yes       | Base URL for the Tenable API.                                                                  |
+| API access key     | api_access_key     | `TIO_API_ACCESS_KEY`        |                           | Yes       | Tenable API access key.                                                                        |
+| API secret key     | api_secret_key     | `TIO_API_SECRET_KEY`        |                           | Yes       | Tenable API secret key.                                                                        |
+| API timeout        | api_timeout        | `TIO_API_TIMEOUT`           | 30                        | No        | Timeout for API requests in seconds.                                                           |
+| API retries        | api_retries        | `TIO_API_RETRIES`           | 5                         | No        | Number of retries in case of failure.                                                          |
+| API backoff        | api_backoff        | `TIO_API_BACKOFF`           | 1                         | No        | Time (in seconds) to wait before retrying after receiving a 429 response from the API.         |
+| Export since date  | export_since       | `TIO_EXPORT_SINCE`          | 1970-01-01T00:00:00+00    | No        | Date from which to start pulling vulnerability data.                                           |
+| Minimum severity   | min_severity       | `TIO_MIN_SEVERITY`          | low                       | No        | The minimum severity level of vulnerabilities to import (`low`, `medium`, `high`, `critical`). |
+| Marking definition | marking_definition | `TIO_MARKING_DEFINITION`    | TLP:CLEAR                 | No        | Default marking definition for imported data (e.g., `TLP:AMBER`, `TLP:GREEN`, `TLP:CLEAR`).    |
+| Number of threads  | num_thread         | `TIO_NUM_THREADS`           | 1                         | No        | Number of threads to use for the connector.                                                    |
 
 ## Deployment
 
