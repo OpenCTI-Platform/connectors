@@ -162,7 +162,7 @@ graph LR
     %% Relationships between Vulnerabilities and Software
     OpenCTIVulnerability -.-> |"Related to"| OpenCTISoftware
 
-    OpenCTISystem -.-> |"Related to"| OpenCTIVulnerability
+    OpenCTISystem -.-> |"Has"| OpenCTIVulnerability
 
 ```
 
@@ -174,6 +174,16 @@ info: General operational logs.
 warn: Warnings on non-critical issues.
 error: Logs only critical errors.
 Logging can be customized via the self.helper.connector_logger calls within the connector's codebase.
+
+## Tests
+Unit tests are available in /tests repository and can be run using pytest:
+
+```shell
+pip install -r test-requirements.txt
+python -m pytest ./tests
+```
+
+Note : fake data used for unit tests comes from Tenable Vuln Management [API doc example](https://developer.tenable.com/reference/exports-vulns-download-chunk) [consulted on October 16th, 2024]
 
 ## Additional information
 - Ensure your Tenable API access is configured correctly (API keys, base URL).
