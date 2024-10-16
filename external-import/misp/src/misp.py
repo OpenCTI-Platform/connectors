@@ -1742,6 +1742,10 @@ class Misp:
                     galaxy["namespace"] == "misp"
                     and galaxy["name"] == "Microsoft Activity Group actor"
                 )
+                or (
+                    galaxy["namespace"] == "misp"
+                    and galaxy["name"] == "ESET Threat Actor"
+                )
             ):
                 for galaxy_entity in galaxy["GalaxyCluster"]:
                     if " - G" in galaxy_entity["value"]:
