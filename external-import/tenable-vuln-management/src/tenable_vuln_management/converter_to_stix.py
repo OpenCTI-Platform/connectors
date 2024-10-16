@@ -12,6 +12,7 @@ from .models.opencti import (
     Author,
     BaseEntity,
     DomainName,
+    HasRelationship,
     Hostname,
     IPAddress,
     MACAddress,
@@ -415,9 +416,8 @@ class ConverterToStix:
         system = system_related_objects["system"]
         vulnerabilities = vulnerability_related_objects["vulnerabilities"]
 
-        # TODO Replace with Relationship (s:System) - [:HAS] -> (v:Vulnerability) when available in OCTI 6.3.5 version
         system_to_vulnerabilities = [
-            RelatedToRelationship(
+            HasRelationship(
                 author=self.author,
                 created=None,
                 modified=None,
@@ -429,7 +429,7 @@ class ConverterToStix:
                     vuln_finding.last_found
                     if vuln_finding.state.lower() == "fixed"
                     else None
-                ),  # open or reopen
+                ),  # fixed, open or reopen
                 confidence=None,
                 object_marking_refs=self.object_marking_refs,
                 external_references=[

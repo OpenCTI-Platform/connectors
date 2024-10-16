@@ -424,12 +424,8 @@ class Vulnerability(BaseEntity):
         )
 
 
-class RelatedToRelationship(BaseEntity):
-    """Represents a relationship indicating that one object is related to another.
-
-    Notes:
-        the Relationship id is determinist and exclude the stop_time from the hash as it might be updated.
-    """
+class BaseRelationship(BaseEntity):
+    """Represents a Base relationship."""
 
     author: Author = Field(
         ..., description="Reference to the author that reported this relationship."
@@ -439,9 +435,6 @@ class RelatedToRelationship(BaseEntity):
     )
     modified: Optional[datetime] = Field(
         None, description="Last modification timestamp of the relationship."
-    )
-    relationship_type: str = Field(
-        "related-to", description="Type of the relationship, defaults to 'related-to'."
     )
     description: Optional[str] = Field(
         None, description="Description of the relationship."
@@ -471,6 +464,32 @@ class RelatedToRelationship(BaseEntity):
         description="External references",
     )
 
+    @abstractmethod
+    def to_stix2_object(self) -> Any: ...
+
+    def _common_stix2_args(self) -> dict[str, Any]:
+        return {
+            "source_ref": self.source_ref,
+            "target_ref": self.target_ref,
+            # optional
+            "created_by_ref": self.author.id if self.author else None,
+            "created": self.created,
+            "modified": self.modified,
+            "description": self.description,
+            "start_time": self.start_time,
+            "stop_time": self.stop_time,
+            "confidence": self.confidence,
+            "object_marking_refs": self.object_marking_refs,
+            "external_references": self.external_references,
+        }
+
+
+class RelatedToRelationship(BaseRelationship):
+    """Represents a relationship indicating that one object is related to another. Used mainly in Observable use cases.
+    Notes:
+        The Relationship id is determinist.
+    """
+
     def to_stix2_object(self) -> Any:
         return stix2.Relationship(
             id=PyCTIRelationship.generate_id(
@@ -478,18 +497,30 @@ class RelatedToRelationship(BaseEntity):
                 source_ref=self.source_ref,
                 target_ref=self.target_ref,
                 start_time=self.start_time,
+                stop_time=self.stop_time,
             ),
             relationship_type="related-to",
-            source_ref=self.source_ref,
-            target_ref=self.target_ref,
-            # optional
-            created_by_ref=self.author.id if self.author else None,
-            created=self.created,
-            modified=self.modified,
-            description=self.description,
-            start_time=self.start_time,
-            stop_time=self.stop_time,
-            confidence=self.confidence,
-            object_marking_refs=self.object_marking_refs,
-            external_references=self.external_references,
+            **self._common_stix2_args(),
+        )
+
+
+class HasRelationship(BaseRelationship):
+    """Represents a relationship indicating that one object is related to another with "HAS".
+
+    Mainly used between (:System)-[:HAS]->(:Vulnerability).
+
+    Notes:
+        The Relationship id is determinist and excludes the stop_time from the hash as it might be updated.
+    """
+
+    def to_stix2_object(self) -> Any:
+        return stix2.Relationship(
+            id=PyCTIRelationship.generate_id(
+                relationship_type="has",
+                source_ref=self.source_ref,
+                target_ref=self.target_ref,
+                start_time=self.start_time,
+            ),
+            relationship_type="has",
+            **self._common_stix2_args(),
         )
