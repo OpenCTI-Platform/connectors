@@ -412,7 +412,6 @@ def test_vulnerability_class_should_not_accept_invalid_inputs(input_data, error_
                 "author": Author(name="Minimal Author"),
                 "created": datetime(2023, 1, 1),
                 "modified": datetime(2023, 1, 2),
-                "relationship_type": "related-to",
                 "description": "This object is related to another object.",
                 "source_ref": "vulnerability--6cfc1763-04a9-4652-8331-0ed2aa3660bb",
                 "target_ref": "vulnerability--3f5d8868-7343-4a96-81fd-93188d835eeb",

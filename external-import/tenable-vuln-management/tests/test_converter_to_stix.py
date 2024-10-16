@@ -12,7 +12,12 @@ from tenable_vuln_management.converter_to_stix import (
     ConverterToStix,
     tlp_marking_definition_handler,
 )
-from tenable_vuln_management.models.tenable import Asset, Plugin
+from tenable_vuln_management.models.opencti import (
+    HasRelationship,
+    System,
+    Vulnerability,
+)
+from tenable_vuln_management.models.tenable import Asset, Plugin, VulnerabilityFinding
 
 BASE_DIR = Path(__file__).parent
 RESPONSE_FILE = BASE_DIR / "resources" / "tenable_api_response.json"
@@ -186,6 +191,85 @@ def fake_plugin():
           "type": "local"
         }
     """
+    )
+
+
+@pytest.fixture
+def fake_vuln_finding():
+    return VulnerabilityFinding.model_validate_json(
+        """{
+            "asset": {
+              "device_type": "hypervisor",
+              "fqdn": "vcsa8.target.example.com",
+              "hostname": "vcsa8.target.example.com",
+              "uuid": "1babf006-b1f0-4dee-86a1-7a55888336c3",
+              "ipv4": "192.0.2.246",
+              "operating_system": [
+                "VMware vCenter Server 8.0.0 build-20037386"
+              ],
+              "network_id": "00000000-0000-0000-0000-000000000000",
+              "tracked": true
+            },
+            "output": "The following pages do not set a Content-Security-Policy frame-ancestors response header or set a permissive policy:  - https://vcsa8.target.example.com/  - https://vcsa8.target.example.com/ui/",
+            "plugin": {
+              "bid": [
+                50344
+              ],
+              "checks_for_default_account": false,
+              "checks_for_malware": false,
+              "cpe": [],
+              "description": "The remote web server in some responses sets a permissive Content-Security-Policy (CSP) frame-ancestors response header or does not set one at all.The CSP frame-ancestors header has been proposed by the W3C Web Application Security Working Group as a way to mitigate cross-site scripting and clickjacking attacks.",
+              "exploit_available": false,
+              "exploit_framework_canvas": false,
+              "exploit_framework_core": false,
+              "exploit_framework_d2_elliot": false,
+              "exploit_framework_exploithub": false,
+              "exploit_framework_metasploit": false,
+              "exploited_by_malware": false,
+              "exploited_by_nessus": false,
+              "family": "CGI abuses",
+              "family_id": 3,
+              "has_patch": false,
+              "id": 50344,
+              "in_the_news": false,
+              "name": "Missing or Permissive Content-Security-Policy frame-ancestors HTTP Response Header",
+              "modification_date": "2021-01-19T00:00:00Z",
+              "publication_date": "2010-10-26T00:00:00Z",
+              "risk_factor": "info",
+              "see_also": [
+                "http://www.nessus.org/u?55aa8f57",
+                "http://www.nessus.org/u?07cc2a06",
+                "https://content-security-policy.com/",
+                "https://www.w3.org/TR/CSP2/"
+              ],
+              "solution": "Set a non-permissive Content-Security-Policy frame-ancestors header for all requested resources.",
+              "synopsis": "The remote web server does not take steps to mitigate a class of web application vulnerabilities.",
+              "unsupported_by_vendor": false,
+              "version": "1.6",
+              "xrefs": [],
+              "type": "remote"
+            },
+            "port": {
+              "port": 443,
+              "protocol": "TCP",
+              "service": "www"
+            },
+            "scan": {
+              "schedule_uuid": "16cf08d3-3f94-79f4-8038-996376eabd4f186741fe15533e70",
+              "started_at": "2023-05-03T14:13:56.983Z",
+              "uuid": "e86252a3-8dc0-43b6-8ddd-afb219d040ed"
+            },
+            "severity": "info",
+            "severity_id": 0,
+            "severity_default_id": 0,
+            "severity_modification_type": "NONE",
+            "first_found": "2022-11-08T06:12:27.940Z",
+            "last_found": "2023-05-04T09:39:26.415Z",
+            "state": "OPEN",
+            "indexed": "2023-05-04T09:44:55.673359Z",
+            "source": "NESSUS"
+          }
+          """
     )
 
 
@@ -404,3 +488,31 @@ def test_converter_to_stix_process_plugin(mock_helper, mock_config, fake_plugin)
     assert len(result["software_s"]) == 1  # One software from the plugin's CPE
     # Validate relationships between vulnerabilities and software
     assert len(result["relationships"]) == 3
+
+
+def test_converter_to_stix_process_vuln_finding(
+    mock_helper, mock_config, fake_vuln_finding
+):
+    # Given a converter to stix instance
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
+
+    # When calling process_vuln_findings
+    result = converter_to_stix.process_vuln_finding(vuln_finding=fake_vuln_finding)
+
+    # Then the result contains 1 system
+    systems = [item for item in result if type(item) == System]
+    assert len(systems) == 1
+
+    # & the result contains 1 vulnerability (proper to the given fake data)
+    vulnerabilities = [item for item in result if type(item) == Vulnerability]
+    assert len(vulnerabilities) == 1
+
+    # &the System and the Vulnerability are linked with a Has Relationship
+    has_relationships = [item for item in result if type(item) == HasRelationship]
+    assert len(has_relationships) == 1
+    assert (
+        has_relationships[0].source_ref == systems[0].id
+        and has_relationships[0].target_ref == vulnerabilities[0].id
+    )
