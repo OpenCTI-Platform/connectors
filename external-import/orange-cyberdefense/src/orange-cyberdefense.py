@@ -763,7 +763,9 @@ class OrangeCyberDefense:
                         work_id=self.work_id,
                     )
                     self._log_and_terminate_work()
-                if datetime.datetime.fromisoformat(content_block["timestamp_updated"]).date() <= datetime.date.fromtimestamp(time.time()):
+                if datetime.datetime.fromisoformat(
+                    content_block["timestamp_updated"]
+                ).date() <= datetime.date.fromtimestamp(time.time()):
                     current_state["worldwatch"] = content_block["timestamp_updated"]
                 self.helper.set_state(current_state)
         except Exception as e:
