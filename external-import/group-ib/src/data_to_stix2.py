@@ -577,7 +577,7 @@ class ThreatActor(_BaseSDO):
 
     def _generate_sdo(self):
         self.stix_main_object = stix2.ThreatActor(
-            id=pycti.ThreatActor.generate_id(self.name),
+            id=pycti.ThreatActor.generate_id(self.name, "Threat-Actor-Group"),
             name=self.name,
             description=self.description,
             aliases=self.aliases,

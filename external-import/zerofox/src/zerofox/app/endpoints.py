@@ -1,12 +1,12 @@
 # standard library
 from enum import Enum
 
-from zerofox.domain.botnet import Botnet
+from zerofox.domain.botnet import FoxBotnet
 from zerofox.domain.c2Domains import C2Domain
 from zerofox.domain.exploits import Exploit
-from zerofox.domain.malware import Malware
-from zerofox.domain.phishing import Phishing
-from zerofox.domain.ransomware import Ransomware
+from zerofox.domain.malware import FoxMalware
+from zerofox.domain.phishing import FoxPhishing
+from zerofox.domain.ransomware import FoxRansomware
 from zerofox.domain.vulnerabilities import Vulnerability
 
 
@@ -33,16 +33,16 @@ class CTIEndpoint(Enum):
     )
     Malware = (
         "malware",
-        Malware,
+        FoxMalware,
     )
     Phishing = (
         "phishing",
-        Phishing,
+        FoxPhishing,
         "scanned_after",
     )
     Ransomware = (
         "ransomware",
-        Ransomware,
+        FoxRansomware,
     )
     Vulnerabilities = (
         "vulnerabilities",
@@ -51,6 +51,6 @@ class CTIEndpoint(Enum):
 
     Botnet = (
         "botnet",
-        Botnet,
+        FoxBotnet,
         "listed_after",
     )

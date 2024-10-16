@@ -11,7 +11,7 @@ import plyara
 import plyara.utils
 import stix2
 import vt
-from pycti import Incident, OpenCTIConnectorHelper, StixCoreRelationship
+from pycti import Incident, Indicator, OpenCTIConnectorHelper, StixCoreRelationship
 
 plyara.logger.setLevel(logging.ERROR)
 
@@ -397,6 +397,7 @@ class LivehuntBuilder:
                     )
 
                 indicator = stix2.Indicator(
+                    id=Indicator.generate_id(plyara.utils.rebuild_yara_rule(rule)),
                     created_by_ref=self.author["standard_id"],
                     name=rule["rule_name"],
                     description=next(

@@ -3,6 +3,7 @@
 
 from datetime import datetime
 
+import pycti
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship
 from stix2 import (
     AutonomousSystem,
@@ -128,6 +129,7 @@ class IPQSBuilder:
         self.helper.log_debug(f"[IPQS] creating indicator with pattern {pattern}")
 
         indicator = Indicator(
+            id=pycti.Indicator.generate_id(pattern),
             created_by_ref=self.author,
             name=indicator_value,
             description=description,

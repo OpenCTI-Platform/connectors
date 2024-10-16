@@ -1,8 +1,5 @@
-import json
 import re
 from datetime import datetime, timedelta, timezone
-
-import stix2
 
 
 class Timestamp:
@@ -86,14 +83,6 @@ def clean_aliases(object):
             aliases.append(name)
 
     return aliases
-
-
-def generate_note(data):
-    note = json.loads(
-        stix2.Note(object_refs=data["object_refs"], content="").serialize()
-    )
-    note.update(**data)
-    return note
 
 
 def retrieve(bundle, key, value):
