@@ -1,8 +1,7 @@
 import ipaddress
 from typing import List, Tuple, Union
 
-from open_cti import observable
-from open_cti.domain_objects import domain_object
+from open_cti import infrastructure, observable, relationship
 from stix2 import Infrastructure, IPv4Address, IPv6Address, Relationship, Software
 from zerofox.domain.c2Domains import C2Domain
 
@@ -19,9 +18,8 @@ def c2_domains_to_infrastructure(
     entry_tags = entry.tags
     tags, tags_obtained_observables = _parse_tag_observables(entry_tags)
 
-    infrastructure = domain_object(
+    intra_entry = infrastructure(
         created_by=created_by,
-        cls=Infrastructure,
         name=f"{entry.domain}",
         labels=tags,
         created=now,
@@ -31,7 +29,7 @@ def c2_domains_to_infrastructure(
     )
 
     tag_observables_relationships = _get_observables_relationships(
-        entry, infrastructure, tags_obtained_observables
+        entry, intra_entry, tags_obtained_observables
     )
     ip_addresses = (
         [build_ip_stix_object(created_by, ip) for ip in entry.ip_addresses]
@@ -39,17 +37,17 @@ def c2_domains_to_infrastructure(
         else []
     )
     c2_ip_relationships = [
-        Relationship(
-            source_ref=infrastructure.id,
-            target_ref=ip.id,
-            relationship_type="consists-of",
+        relationship(
+            source=intra_entry.id,
+            target=ip.id,
+            relationship="consists-of",
             start_time=entry.created_at,
         )
         for ip in ip_addresses
     ]
 
     return (
-        [infrastructure]
+        [intra_entry]
         + ip_addresses
         + c2_ip_relationships
         + tags_obtained_observables
@@ -76,10 +74,10 @@ def _get_observables_relationships(
     entry: C2Domain, infra: Infrastructure, observables: List[Software]
 ) -> List[Relationship]:
     return [
-        Relationship(
-            source_ref=infra.id,
-            target_ref=obs.id,
-            relationship_type="consists-of",
+        relationship(
+            source=infra.id,
+            target=obs.id,
+            type="consists-of",
             start_time=entry.created_at,
         )
         for obs in observables

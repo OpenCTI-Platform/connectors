@@ -19,7 +19,7 @@ class Collector:
                 stix_data = self.mapper(created_by, now, entry)
                 stix_objects += stix_data
             except Exception as ex:
-                logger.debug(
+                logger.error(
                     f"There was an exception while processing entry: {ex}, created={now}"
                 )
                 missed_entries += 1
