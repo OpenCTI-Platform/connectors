@@ -46,7 +46,7 @@ class ConfigCrowdstrike:
         # Crowdstrike configurations
 
         self.base_url: str = get_config_variable(
-            "CROWDSTRIKE_API_BASE_URL",
+            "CROWDSTRIKE_BASE_URL",
             ["crowdstrike", "base_url"],
             self.load,
             default="https://api.crowdstrike.com",
