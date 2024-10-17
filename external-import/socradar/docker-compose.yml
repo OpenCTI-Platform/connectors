@@ -1,0 +1,18 @@
+version: '3'
+services:
+  connector-socradar:
+    build:
+      context: ./src
+    environment:
+      OPENCTI_URL: http://opencti:8080
+      OPENCTI_TOKEN: ${OPENCTI_ADMIN_TOKEN}
+      CONNECTOR_ID: ${CONNECTOR_FEED_ID} 
+      CONNECTOR_TYPE: EXTERNAL_IMPORT
+      CONNECTOR_NAME: socradar
+      CONNECTOR_SCOPE: observable
+      CONNECTOR_LOG_LEVEL: info
+    restart: always
+    depends_on:
+      opencti:
+        condition: service_healthy
+
