@@ -5,7 +5,7 @@ orbs:
 jobs:
   ensure_formatting:
     docker:
-      - image: cimg/python:3.12
+      - image: cimg/python:3.13
     working_directory: ~/repo
     steps:
       - checkout
@@ -46,7 +46,7 @@ jobs:
           webhook_url: $MS_TEAMS_WEBHOOK_URL
   test:
     docker:
-      - image: cimg/python:3.12
+      - image: cimg/python:3.13
     working_directory: ~/repo
     steps:
       - checkout
