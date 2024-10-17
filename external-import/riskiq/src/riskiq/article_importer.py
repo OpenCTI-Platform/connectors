@@ -81,6 +81,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "StixFile",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -114,6 +117,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "StixFile",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -148,6 +154,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "StixFile",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -182,6 +191,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "Domain-Name",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -216,6 +228,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "Email-Addr",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -249,6 +264,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "StixFile",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -283,6 +301,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "IPv4-Addr",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -317,6 +338,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "Mutex",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -351,6 +375,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "Url",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -386,6 +413,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "X509-Certificate",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -423,6 +453,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "X509-Certificate",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -461,6 +494,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "X509-Certificate",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -498,6 +534,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "X509-Certificate",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
