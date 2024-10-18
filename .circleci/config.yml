@@ -1310,7 +1310,7 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/greynoise-vuln
           name: Build Docker image opencti/connector-greynoise-vuln
           command: docker build -t opencti/connector-greynoise-vuln:rolling .
-      - run :
+      - run:
           working_directory: ~/opencti/external-import/sentinel-incidents
           name: Build Docker image opencti/connector-sentinel-incidents
           command: docker build -t opencti/connector-sentinel-incidents:rolling .
