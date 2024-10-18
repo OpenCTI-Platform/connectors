@@ -45,8 +45,8 @@ class ConfigConnector:
 
         # Connector extra parameters
         self.harfanglab_api_base_url = get_config_variable(
-            "HARFANGLAB_INCIDENTS_API_BASE_URL",
-            ["harfanglab_incidents", "api_base_url"],
+            "HARFANGLAB_INCIDENTS_URL",
+            ["harfanglab_incidents", "url"],
             self.load,
         )
         self.harfanglab_ssl_verify = get_config_variable(
@@ -108,12 +108,12 @@ class ConfigConnector:
             ["harfanglab_incidents", "default_markings"],
             self.load,
         )
-        self.source_list = {
+        self.harfanglab_source_list = {
             "name": self.harfanglab_source_list_name,
             "description": "Cyber Threat Intelligence knowledge imported from OpenCTI, and any changes must be made only to it.",
             "enabled": True,
         }
-        self.default_score = get_config_variable(
+        self.harfanglab_default_score = get_config_variable(
             "HARFANGLAB_INCIDENTS_DEFAULT_SCORE",
             ["harfanglab_incidents", "default_score"],
         )
@@ -122,7 +122,7 @@ class ConfigConnector:
             ["sentinel_incidents", "import_start_date"],
             self.load,
         )
-        self.import_start_date = (
+        self.harfanglab_import_start_date = (
             parse(harfanglab_import_start_date_var)
             if harfanglab_import_start_date_var
             else None
