@@ -2077,18 +2077,21 @@ class MispImportFile:
         self.helper.listen(self._process_message)
 
     @staticmethod
-    def _contains_container(bundle):
+    def _is_container(element_type: str):
+        return (
+            element_type == "report"
+            or element_type == "grouping"
+            or element_type == "observed-data"
+            or element_type == "x-opencti-case-incident"
+            or element_type == "x-opencti-case-rfi"
+            or element_type == "x-opencti-case-rft"
+            or element_type == "x-opencti-task"
+            or element_type == "x-opencti-feedback"
+        )
+
+    def _contains_container(self, bundle) -> bool:
         for elem in bundle:
-            if (
-                elem.get("type") == "report"
-                or elem.get("type") == "grouping"
-                or elem.get("type") == "observed-data"
-                or elem.get("type") == "x-opencti-case-incident"
-                or elem.get("type") == "x-opencti-case-rfi"
-                or elem.get("type") == "x-opencti-case-rft"
-                or elem.get("type") == "x-opencti-task"
-                or elem.get("type") == "x-opencti-feedback"
-            ):
+            if self._is_container(elem.get("type")):
                 return True
         return False
 
@@ -2106,7 +2109,19 @@ class MispImportFile:
                 if "x_opencti_id" in object
                 and object["x_opencti_id"] == container["id"]
             ][0]
-            container_stix["object_refs"] = [object["id"] for object in bundle]
+            if self._contains_container(bundle):
+                self.helper.log_info("Bundle contains container.")
+                container_stix["object_refs"] = []
+                for elem in bundle:
+                    if self._is_container(elem.get("type")):
+                        container_stix["object_refs"].append(elem["id"])
+                        for object_id in elem.get("object_refs"):
+                            container_stix["object_refs"].append(object_id)
+            else:
+                self.helper.log_info(
+                    "No container in Stix file. Updating current container"
+                )
+                container_stix["object_refs"] = [object["id"] for object in bundle]
             bundle.append(container_stix)
         return bundle
 

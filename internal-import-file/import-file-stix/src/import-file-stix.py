@@ -36,13 +36,7 @@ class ImportFileStix:
         if entity_id:
             self.helper.log_info("Contextual import.")
             bundle = json.loads(file_content)["objects"]
-            if self._contains_container(bundle):
-                self.helper.log_info("Bundle contains container.")
-            else:
-                self.helper.log_info(
-                    "No container in Stix file. Updating current container"
-                )
-                bundle = self._update_container(bundle, entity_id)
+            bundle = self._update_container(bundle, entity_id)
             file_content = self.helper.stix2_create_bundle(bundle)
         bundles_sent = self.helper.send_stix2_bundle(
             file_content,
@@ -60,20 +54,42 @@ class ImportFileStix:
         self.helper.listen(self._process_message)
 
     @staticmethod
-    def _contains_container(bundle: List) -> bool:
+    def _is_container(element_type: str):
+        return (
+            element_type == "report"
+            or element_type == "grouping"
+            or element_type == "observed-data"
+            or element_type == "x-opencti-case-incident"
+            or element_type == "x-opencti-case-rfi"
+            or element_type == "x-opencti-case-rft"
+            or element_type == "x-opencti-task"
+            or element_type == "x-opencti-feedback"
+        )
+
+    def _contains_container(self, bundle: List) -> bool:
         for elem in bundle:
-            if (
-                elem.get("type") == "report"
-                or elem.get("type") == "grouping"
-                or elem.get("type") == "observed-data"
-                or elem.get("type") == "x-opencti-case-incident"
-                or elem.get("type") == "x-opencti-case-rfi"
-                or elem.get("type") == "x-opencti-case-rft"
-                or elem.get("type") == "x-opencti-task"
-                or elem.get("type") == "x-opencti-feedback"
-            ):
+            if self._is_container(elem.get("type")):
                 return True
         return False
+
+    def _add_containers_entities_to_entity_container(
+        self, bundle: List, entity_id: int
+    ) -> List:
+        container = self.helper.api.stix_domain_object.read(id=entity_id)
+        container_stix_bundle = (
+            self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type=container["entity_type"], entity_id=container["id"]
+            )
+        )
+        if len(container_stix_bundle["objects"]) > 0:
+            container_stix = [
+                object
+                for object in container_stix_bundle["objects"]
+                if "x_opencti_id" in object
+                and object["x_opencti_id"] == container["id"]
+            ][0]
+            bundle.append(container_stix)
+        return bundle
 
     def _update_container(self, bundle: List, entity_id: int) -> List:
         container = self.helper.api.stix_domain_object.read(id=entity_id)
@@ -89,7 +105,19 @@ class ImportFileStix:
                 if "x_opencti_id" in object
                 and object["x_opencti_id"] == container["id"]
             ][0]
-            container_stix["object_refs"] = [object["id"] for object in bundle]
+            if self._contains_container(bundle):
+                self.helper.log_info("Bundle contains container.")
+                container_stix["object_refs"] = []
+                for elem in bundle:
+                    if self._is_container(elem.get("type")):
+                        container_stix["object_refs"].append(elem["id"])
+                        for object_id in elem.get("object_refs"):
+                            container_stix["object_refs"].append(object_id)
+            else:
+                self.helper.log_info(
+                    "No container in Stix file. Updating current container"
+                )
+                container_stix["object_refs"] = [object["id"] for object in bundle]
             bundle.append(container_stix)
         return bundle
 
