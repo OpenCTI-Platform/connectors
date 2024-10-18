@@ -1,5 +1,12 @@
 from dateutil.parser import parse
-import ipaddress
+from ..utils import (
+    is_ipv4,
+    is_ipv6,
+    is_md5,
+    is_sha1,
+    is_sha256,
+    is_sha512,
+)  # TODO: relaplace relative import
 
 
 class Agent:
@@ -108,48 +115,25 @@ class Indicator:
 
         indicator_type = None
         if original_type in ["ip_src", "ip_dst", "ip_both"]:
-            if Indicator.is_ipv4(original_value):
+            if is_ipv4(original_value):
                 indicator_type = indicator_types["ip"]["ipv4"]
-            if Indicator.is_ipv6(original_value):
+            if is_ipv6(original_value):
                 indicator_type = indicator_types["ip"]["ipv6"]
         elif original_type == "hash":
-            hash_algorithms_by_length = {
-                128: "sha-512",
-                64: "sha-256",
-                40: "sha-1",
-                32: "md5",
-            }
-            hash_algorithm = hash_algorithms_by_length[len(original_value)]
+            hash_algorithm = None
+            match original_value:
+                case _ if is_md5(original_value):
+                    hash_algorithm = "md5"
+                case _ if is_sha1(original_value):
+                    hash_algorithm = "sha-1"
+                case _ if is_sha256(original_value):
+                    hash_algorithm = "sha-256"
+                case _ if is_sha256(original_value):
+                    hash_algorithm = "sha-512"
             indicator_type = indicator_types["hash"][hash_algorithm]
         else:
             indicator_type = indicator_types[original_type]
         return indicator_type
-
-    @staticmethod
-    def is_ipv4(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv4
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv4Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
-    @staticmethod
-    def is_ipv6(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv6
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv6Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
 
 
 class Process:

@@ -2,7 +2,7 @@ import datetime
 from abc import abstractmethod
 from typing import Any
 
-import ipaddress
+from ..utils import is_ipv4, is_ipv6, is_domain  # TODO: replace relative import
 
 import stix2
 from pycti import (
@@ -99,6 +99,9 @@ class DomainName(BaseModel):
     """
 
     def __init__(self, value=None, author=None, object_marking_refs=None):
+        if not is_domain(value):
+            raise ValueError("Invalid DomainName value")
+
         self.id = None  # placeholder for stix2 ID generation
         self.value = value
         self.author = author
@@ -168,7 +171,9 @@ class IPv4(BaseModel):
     """
 
     def __init__(self, value=None, author=None, object_marking_refs=None):
-        # TODO: validate IPv4 value
+        if not is_ipv4(value):
+            raise ValueError("Invalid IPv4 address value")
+
         self.id = None  # placeholder for stix2 ID generation
         self.value = value
         self.author = author
@@ -189,7 +194,9 @@ class IPv6(BaseModel):
     """
 
     def __init__(self, value=None, author=None, object_marking_refs=None):
-        # TODO: validate IPv6 value
+        if not is_ipv6(value):
+            raise ValueError("Invalid IPv6 address value")
+
         self.id = None  # placeholder for stix2 ID generation
         self.value = value
         self.author = author
