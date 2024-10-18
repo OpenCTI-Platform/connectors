@@ -366,6 +366,14 @@ jobs:
           name: Build Docker image opencti/connector-greynoise-vuln
           command: docker build -t opencti/connector-greynoise-vuln:latest . && docker tag opencti/connector-greynoise-vuln:latest opencti/connector-greynoise-vuln:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/sentinel-incidents
+          name: Build Docker image opencti/connector-sentinel-incidents
+          command: docker build -t opencti/connector-sentinel-incidents:latest . && docker tag opencti/connector-sentinel-incidents:latest opencti/connector-sentinel-incidents:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/sentinel-intel
+          name: Build Docker image opencti/connector-sentinel-intel
+          command: docker build -t opencti/connector-sentinel-intel:latest . && docker tag opencti/connector-sentinel-intel:latest opencti/connector-sentinel-intel:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/external-import/tenable-vuln-management
           name: Build Docker image opencti/connector-tenable-vuln-management
           command: docker build -t opencti/connector-tenable-vuln-management:latest . && docker tag opencti/connector-tenable-vuln-management:latest opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
@@ -523,8 +531,13 @@ jobs:
             docker push opencti/connector-shadowtrackr:${CIRCLE_TAG}
             docker push opencti/connector-greynoise-vuln:latest
             docker push opencti/connector-greynoise-vuln:${CIRCLE_TAG}
+            docker push opencti/connector-sentinel-incidents:latest
+            docker push opencti/connector-sentinel-incidents:${CIRCLE_TAG}
+            docker push opencti/connector-sentinel-intel:latest
+            docker push opencti/connector-sentinel-intel:${CIRCLE_TAG}
             docker push opencti/connector-tenable-vuln-management:latest 
             docker push opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
+
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1297,6 +1310,14 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/greynoise-vuln
           name: Build Docker image opencti/connector-greynoise-vuln
           command: docker build -t opencti/connector-greynoise-vuln:rolling .
+      - run :
+          working_directory: ~/opencti/external-import/sentinel-incidents
+          name: Build Docker image opencti/connector-sentinel-incidents
+          command: docker build -t opencti/connector-sentinel-incidents:rolling .
+      - run:
+          working_directory: ~/opencti/stream/sentinel-intel
+          name: Build Docker image opencti/connector-sentinel-intel
+          command: docker build -t opencti/connector-sentinel-intel:rolling .
       - run:
           working_directory: ~/opencti/external-import/tenable-vuln-management
           name: Build Docker image opencti/connector-tenable-vuln-management
@@ -1378,6 +1399,8 @@ jobs:
             docker push opencti/connector-reversinglabs-spectra-analyze:rolling
             docker push opencti/connector-shadowtrackr:rolling
             docker push opencti/connector-greynoise-vuln:rolling
+            docker push opencti/connector-sentinel-incidents:rolling
+            docker push opencti/connector-sentinel-intel:rolling
             docker push opencti/connector-tenable-vuln-management:rolling
       - slack/notify:
           event: fail
