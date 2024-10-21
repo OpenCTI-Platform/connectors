@@ -229,11 +229,13 @@ class Sightings(threading.Thread):
                             "match" in alert_details
                             and alert_details["match"] is not None
                             and "properties" in alert_details["match"]
-                            and "user" in alert_details["match"]["properties"]
+                            and "process" in alert_details["match"]["properties"]
+                            and "user"
+                            in alert_details["match"]["properties"]["process"]
                         ):
-                            login = alert_details["match"]["properties"]["user"].split(
-                                "\\"
-                            )[-1]
+                            login = alert_details["match"]["properties"]["process"][
+                                "user"
+                            ].split("\\")[-1]
                             stix_user = stix2.UserAccount(
                                 account_login=login,
                                 object_marking_refs=[stix2.TLP_RED],
@@ -257,9 +259,13 @@ class Sightings(threading.Thread):
                             "match" in alert_details
                             and alert_details["match"] is not None
                             and "properties" in alert_details["match"]
-                            and "file" in alert_details["match"]["properties"]
+                            and "process" in alert_details["match"]["properties"]
+                            and "file"
+                            in alert_details["match"]["properties"]["process"]
                         ):
-                            file = alert_details["match"]["properties"]["file"]
+                            file = alert_details["match"]["properties"]["process"][
+                                "file"
+                            ]
                             hashes = {}
                             if "md5" in file:
                                 hashes["MD5"] = file["md5"]
