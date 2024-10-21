@@ -512,6 +512,7 @@ def test_converter_to_stix_process_vuln_finding(
     # &the System and the Vulnerability are linked with a Has Relationship
     has_relationships = [item for item in result if isinstance(item, HasRelationship)]
     assert len(has_relationships) == 1  # Note: OK because there is no cpe uris in the fake plugin used
+
     assert (
         has_relationships[0].source_ref == systems[0].id
         and has_relationships[0].target_ref == vulnerabilities[0].id
