@@ -171,7 +171,7 @@ graph LR
     OpenCTIDomainName -.->|"Resolves to"| OpenCTIPv4Address & OpenCTIPv6Address -.->|"Resolves to"| OpenCTIMACAddress
     
     %% Relationships between Vulnerabilities and Software
-    OpenCTIVulnerability -.-> |"Related to"| OpenCTISoftware
+    OpenCTISoftware -.-> |"Has"| OpenCTIVulnerability
 
     OpenCTISystem -.-> |"Has"| OpenCTIVulnerability
 ```
