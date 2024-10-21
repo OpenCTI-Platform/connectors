@@ -149,8 +149,10 @@ def process(connector, indicator):
         # Add the campaign
         # Allow import of Campaigns with related entities
         if connector.import_indicators_with_full_campaigns:
-            bundle_campaign_with_rel = process_campaign(connector, campaign)
-            campaign_items = bundle_campaign_with_rel["objects"]
+            bundle_campaign_with_related_entities = process_campaign(
+                connector, campaign
+            )
+            campaign_items = bundle_campaign_with_related_entities["objects"]
 
             items += campaign_items
         else:
