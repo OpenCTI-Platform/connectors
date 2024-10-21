@@ -817,6 +817,14 @@ jobs:
           name: Build Docker image opencti/connector-import-file-misp
           command: docker build -t opencti/connector-import-file-misp:latest . && docker tag opencti/connector-import-file-misp:latest opencti/connector-import-file-misp:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/tanium-incidents
+          name: Build Docker image opencti/connector-tanium-incidents
+          command: docker build -t opencti/connector-tanium-incidents:latest . && docker tag opencti/connector-tanium-incidents:latest opencti/connector-tanium-incidents:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/tanium-intel
+          name: Build Docker image opencti/connector-tanium-intel
+          command: docker build -t opencti/connector-tanium-intel:latest . && docker tag opencti/connector-tanium-intel:latest opencti/connector-tanium-intel:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -952,6 +960,10 @@ jobs:
             docker push opencti/connector-reversinglabs-spectra-intel-submission:${CIRCLE_TAG}
             docker push opencti/connector-import-file-misp:latest
             docker push opencti/connector-import-file-misp:${CIRCLE_TAG}
+            docker push opencti/connector-tanium-incidents:latest
+            docker push opencti/connector-tanium-incidents:${CIRCLE_TAG}
+            docker push opencti/connector-tanium-intel:latest
+            docker push opencti/connector-tanium-intel:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1689,6 +1701,14 @@ jobs:
           name: Build Docker image opencti/connector-import-file-misp
           command: docker build -t opencti/connector-import-file-misp:rolling .
       - run:
+          working_directory: ~/opencti/external-import/tanium-incidents
+          name: Build Docker image opencti/connector-tanium-incidents
+          command: docker build -t opencti/connector-tanium-incidents:rolling .
+      - run:
+          working_directory: ~/opencti/stream/tanium-intel
+          name: Build Docker image opencti/connector-tanium-intel
+          command: docker build -t opencti/connector-tanium-intel:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1759,6 +1779,8 @@ jobs:
             docker push opencti/connector-webhook:rolling
             docker push opencti/connector-reversinglabs-spectra-intel-submission:rolling
             docker push opencti/connector-import-file-misp:rolling
+            docker push opencti/connector-tanium-incidents:rolling
+            docker push opencti/connector-tanium-intel:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
