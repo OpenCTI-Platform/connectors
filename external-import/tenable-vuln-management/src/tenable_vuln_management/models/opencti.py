@@ -485,7 +485,7 @@ class BaseRelationship(BaseEntity):
 
 
 class RelatedToRelationship(BaseRelationship):
-    """Represents a relationship indicating that one object is related to another. Used mainly in Observable use cases.
+    """Represents a relationship indicating that one object is related to another. Mainly used in Observable use cases.
     Notes:
         The Relationship id is determinist.
     """
@@ -507,7 +507,7 @@ class RelatedToRelationship(BaseRelationship):
 class HasRelationship(BaseRelationship):
     """Represents a relationship indicating that one object is related to another with "HAS".
 
-    Mainly used between (:System)-[:HAS]->(:Vulnerability).
+    Mainly used between (:System)-[:HAS]->(:Vulnerability) and (:Software)-[:Has]->(:Vulnerability)
 
     Notes:
         The Relationship id is determinist and excludes the stop_time from the hash as it might be updated.

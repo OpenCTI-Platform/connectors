@@ -376,13 +376,13 @@ class ConverterToStix:
         vulnerabilities = self._make_vulnerabilities(plugin=plugin)
 
         relationships_soft_vulns = [
-            RelatedToRelationship(
+            HasRelationship(
                 author=self.author,
                 created=None,
                 modified=None,
                 description=None,
-                source_ref=vulnerability.id,
-                target_ref=software.id,
+                source_ref=software.id,
+                target_ref=vulnerability.id,
                 start_time=None,
                 stop_time=None,
                 confidence=None,
