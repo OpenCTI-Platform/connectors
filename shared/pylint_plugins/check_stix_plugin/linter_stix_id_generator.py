@@ -1,20 +1,15 @@
-from typing import TYPE_CHECKING, Tuple, Dict, Optional, List, Any, Generator
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple
 
+from astroid import InferenceError, nodes
 from pylint.checkers import BaseChecker
-
 from stix2.v21.sdo import _DomainObject
 from stix2.v21.sro import Relationship
-
-from astroid import nodes, InferenceError
 
 if TYPE_CHECKING:
     from pylint.lint import PyLinter
 
 STIX2_PACKAGE_NAME = "stix2"
-STIX2_OBJETS_NAMES = [
-    _DomainObject.__name__,
-    Relationship.__name__
-]
+STIX2_OBJETS_NAMES = [_DomainObject.__name__, Relationship.__name__]
 
 
 def is_constructor_call(call_node: nodes.Call) -> Tuple[bool, Optional[nodes.ClassDef]]:
@@ -50,8 +45,11 @@ def is_classdef_in_package(class_def: nodes.ClassDef, package_name: str) -> bool
     return class_def.qname().startswith(package_name)
 
 
-def is_class_inheriting_from(class_def: nodes.ClassDef, class_names: List[str],
-                             package_name: Optional[str] = None) -> bool:
+def is_class_inheriting_from(
+    class_def: nodes.ClassDef,
+    class_names: List[str],
+    package_name: Optional[str] = None,
+) -> bool:
     """
     Recursively checks if the given class or any of its ancestor classes inherit from
     any class listed in `class_names` and, optionally, if it belongs to a specific package.
@@ -73,7 +71,9 @@ def is_class_inheriting_from(class_def: nodes.ClassDef, class_names: List[str],
             inferred_bases = base.infer()
             for inferred_base in inferred_bases:
                 if isinstance(inferred_base, nodes.ClassDef):
-                    if is_class_inheriting_from(inferred_base, class_names, package_name):
+                    if is_class_inheriting_from(
+                        inferred_base, class_names, package_name
+                    ):
                         return True
         except InferenceError:
             continue
@@ -98,8 +98,8 @@ def extract_kwargs(call_node: nodes.Call) -> Dict[str, str]:
 
 
 def constructor_call_details(
-        call_node: nodes.Call,
-        class_def: nodes.ClassDef,
+    call_node: nodes.Call,
+    class_def: nodes.ClassDef,
 ) -> dict[str, Any]:
     """Handles the processing of a detected constructor call.
 
@@ -125,8 +125,9 @@ def constructor_call_details(
     }
 
 
-def find_constructor_calls(node: nodes.NodeNG, class_names: List[str], package_name: Optional[str] = None) \
-        -> Generator[dict[str, Any], None, None]:
+def find_constructor_calls(
+    node: nodes.NodeNG, class_names: List[str], package_name: Optional[str] = None
+) -> Generator[dict[str, Any], None, None]:
     """Recursively traverses the AST to detect constructor calls."""
 
     if isinstance(node, nodes.Call):
@@ -156,7 +157,9 @@ class StixIdGeneratorChecker(BaseChecker):
         Note:
             This is automatically called by pylint process.
         """
-        calls = find_constructor_calls(node=node, class_names=STIX2_OBJETS_NAMES, package_name=STIX2_PACKAGE_NAME)
+        calls = find_constructor_calls(
+            node=node, class_names=STIX2_OBJETS_NAMES, package_name=STIX2_PACKAGE_NAME
+        )
         for call in calls:
             if call["kwargs"].get("id") is None:
                 self.add_message("generated-id-stix", node=node)
@@ -165,5 +168,3 @@ class StixIdGeneratorChecker(BaseChecker):
 def register(linter: "PyLinter") -> None:
     """Register checker to linter."""
     linter.register_checker(StixIdGeneratorChecker(linter))
-
-
