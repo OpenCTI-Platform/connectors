@@ -1,11 +1,9 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple, Dict, Optional, List, Any, Generator
 
 from pylint.checkers import BaseChecker
 
 from stix2.v21.sdo import _DomainObject
 from stix2.v21.sro import Relationship
-
-from typing import Tuple, Dict, Optional, List, Any, Generator
 
 from astroid import nodes, InferenceError
 
@@ -126,6 +124,7 @@ def constructor_call_details(
         "package": in_package,
     }
 
+
 def find_constructor_calls(node: nodes.NodeNG, class_names: List[str], package_name: Optional[str] = None) \
         -> Generator[dict[str, Any], None, None]:
     """Recursively traverses the AST to detect constructor calls."""
@@ -152,6 +151,11 @@ class StixIdGeneratorChecker(BaseChecker):
     }
 
     def visit_call(self, node: nodes.Call) -> None:
+        """Handle process when a Node of Call type is visited.
+
+        Note:
+            This is automatically called by pylint process.
+        """
         calls = find_constructor_calls(node=node, class_names=STIX2_OBJETS_NAMES, package_name=STIX2_PACKAGE_NAME)
         for call in calls:
             if call["kwargs"].get("id") is None:
@@ -159,100 +163,7 @@ class StixIdGeneratorChecker(BaseChecker):
 
 
 def register(linter: "PyLinter") -> None:
+    """Register checker to linter."""
     linter.register_checker(StixIdGeneratorChecker(linter))
 
 
-if __name__ =="__main__":
-    # Examples
-    from astroid import parse
-
-    # Examples
-    example_direct_call = """
-        from stix2 import Location
-        print( Location(
-            name="name"
-        ))
-        """
-
-    example_simple2 = """
-        from stix2 import Location
-        loc = Location(
-            name="name"
-        )
-        """
-
-    example_simple = """
-        import stix2
-        loc = stix2.Location(
-            name="name"
-        )
-        """
-
-    example_wrap = """
-        import stix2
-        
-        class MyLocation(stix2.Location):
-            def __init__(self, **kwargs):
-                super().__init__(**kwargs)
-                
-        loc = MyLocation(name="name")
-        """
-
-    example_double_wrap = """
-        import stix2
-        
-        class MyLocation(stix2.Location):
-            def __init__(self, **kwargs):
-                super().__init__(**kwargs)
-        
-        class MyLocation2(stix2.Location):
-            def __init__(self, **kwargs):
-                super().__init__(**kwargs)
-                
-        loc = MyLocation2(name="name")
-        """
-
-    example_with_method = """
-        import stix2
-        
-        class MyLocation():
-            def __init__(self, id, name):
-                self.id = id
-                self.name = name
-        
-            def to_stix():
-                stix2.Location(
-                name=self.name
-                )
-        
-        loc = MyLocation(name="name")
-        res = loc.to_stix()
-        """
-
-    example_with_2_instances="""
-        import stix2
-        loc = stix2.Location(
-            id=generate_id("name"),
-            name="name"
-        )
-        author = stix2.Identity(
-            name="author"
-        )
-        """
-
-    example_false_positive="""
-        
-        class MyLocation():
-            def __init__(self, id, name):
-                self.id = id
-                self.name = name
-                
-        loc = MyLocation("1234", "foo")
-        
-        """
-
-    module = parse(example_with_2_instances)
-    for node in module.body:
-        calls = find_constructor_calls(node, ["_DomainObject"], "stix2")
-        for constructor_call in calls:
-            print(constructor_call)
