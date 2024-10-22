@@ -1,5 +1,4 @@
 """Offer unit tests fo ../../ check_stix_plugin/linter_stix_id_generator checker"""
-
 import pathlib
 import sys
 
@@ -7,13 +6,6 @@ import pylint.testutils
 import pytest
 from astroid import extract_node, parse
 
-print(
-    str(
-        (
-            pathlib.Path(__file__).parent.parent.parent.resolve() / "check_stix_plugin"
-        ).resolve()
-    )
-)
 
 sys.path.append(
     str(
