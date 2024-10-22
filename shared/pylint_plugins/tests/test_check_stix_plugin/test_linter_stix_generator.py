@@ -1,11 +1,11 @@
 """Offer unit tests fo ../../ check_stix_plugin/linter_stix_id_generator checker"""
+
 import pathlib
 import sys
 
 import pylint.testutils
 import pytest
 from astroid import extract_node, parse
-
 
 sys.path.append(
     str(
