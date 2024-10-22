@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from sightings import Sightings
+from sightings import SentinelSightings
 from stix_shifter.stix_translation import stix_translation
 
 
@@ -488,7 +488,7 @@ class SentinelConnector:
     # Listen to OpenCTI stream and calls the _process_message function
     def start(self):
         if self.import_incidents:
-            self.sightings = Sightings(
+            self.sightings = SentinelSightings(
                 self.helper,
                 self.tenant_id,
                 self.client_id,

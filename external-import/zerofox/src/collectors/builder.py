@@ -38,7 +38,7 @@ def _parse(feeds_str: str) -> List[CTIEndpoint]:
     endpoints = []
     for feed in feeds:
         try:
-            endpoint = CTIEndpoint(feed)
+            endpoint = CTIEndpoint(feed, None)
             endpoints.append(endpoint)
         except ValueError:
             pass

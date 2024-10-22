@@ -268,19 +268,20 @@ class TheHive:
     def generate_sighting(self, observable, stix_observable):
         """Generate a stix sighting from a provided observable and stix observable."""
         if observable.get("sighted"):
-            fake_indicator_id = "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
             int_start_date = int(observable.get("startDate")) / 1000
             stix_sighting = stix2.Sighting(
                 id=StixSightingRelationship.generate_id(
-                    stix_observable.id,
-                    self.identity.get("standard_id"),
+                    stix_observable.id,  # from sighting_of_ref
+                    self.identity.get("standard_id"),  # to where_sighted_refs
                     format_datetime(int_start_date, DEFAULT_UTC_DATETIME),
                     format_datetime(int_start_date + 3600, DEFAULT_UTC_DATETIME),
                 ),
                 first_seen=format_datetime(int_start_date, DEFAULT_UTC_DATETIME),
                 last_seen=format_datetime(int_start_date + 3600, DEFAULT_UTC_DATETIME),
                 where_sighted_refs=[self.identity.get("standard_id")],
-                sighting_of_ref=fake_indicator_id,
+                # As SDO are not supported in official STIX, we use a fake ID in ref
+                # Worker will use custom_properties instead
+                sighting_of_ref="indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e",  # Fake
                 custom_properties={"x_opencti_sighting_of_ref": stix_observable.id},
             )
             return stix_sighting

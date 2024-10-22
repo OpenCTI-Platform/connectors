@@ -1,6 +1,7 @@
 import logging
 from re import search
 
+import pycti
 from countryinfo import CountryInfo
 from pycti import Location as pycti_location
 from pycti import StixCoreRelationship
@@ -149,6 +150,7 @@ class BaseStixTransformation:
     def _create_company(self, company):
         """Create the STIX Organization object."""
         company_sco = Identity(
+            id=pycti.Identity.generate_id(company.get("name"), "organization"),
             name=company.get("name"),
             identity_class="organization",
             object_marking_refs=self.marking_refs,

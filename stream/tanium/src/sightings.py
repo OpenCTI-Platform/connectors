@@ -20,7 +20,7 @@ from pycti import (
 )
 
 
-class Sightings(threading.Thread):
+class TaniumSightings(threading.Thread):
     def __init__(
         self, helper, tanium_api_handler, tanium_import_alerts, tanium_url_console
     ):

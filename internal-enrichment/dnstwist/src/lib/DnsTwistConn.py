@@ -3,7 +3,7 @@ import re
 import time
 
 import dnstwist
-from pycti import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship
 from stix2 import DomainName, IPv4Address, IPv6Address, Relationship
 
 
@@ -89,6 +89,9 @@ class DnsTwistConnector:
                 )
 
                 relation_object = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", self.entity_id, domain_object.id
+                    ),
                     relationship_type="related-to",
                     source_ref=self.entity_id,
                     target_ref=domain_object.id,
@@ -107,6 +110,11 @@ class DnsTwistConnector:
                             )
 
                             ns_relation_object = Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "resolves-to",
+                                    domain_object.get("id"),
+                                    ns_object.get("id"),
+                                ),
                                 relationship_type="resolves-to",
                                 source_ref=domain_object.get("id"),
                                 target_ref=ns_object.get("id"),
@@ -135,6 +143,11 @@ class DnsTwistConnector:
                                 )
 
                             a_relation_object = Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "resolves-to",
+                                    domain_object.get("id"),
+                                    a_object.get("id"),
+                                ),
                                 relationship_type="resolves-to",
                                 source_ref=domain_object.get("id"),
                                 target_ref=a_object.get("id"),
@@ -167,6 +180,11 @@ class DnsTwistConnector:
                                 )
 
                             aaaa_relation_object = Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "resolves-to",
+                                    domain_object.get("id"),
+                                    aaaa_object.get("id"),
+                                ),
                                 relationship_type="resolves-to",
                                 source_ref=domain_object.get("id"),
                                 target_ref=aaaa_object.get("id"),
@@ -193,6 +211,11 @@ class DnsTwistConnector:
                                 type="domain-name", value=mx_record, allow_custom=True
                             )
                             mx_relation_object = Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "resolves-to",
+                                    domain_object.get("id"),
+                                    mx_object.get("id"),
+                                ),
                                 relationship_type="resolves-to",
                                 source_ref=domain_object.get("id"),
                                 target_ref=mx_object.get("id"),
@@ -236,6 +259,9 @@ class DnsTwistConnector:
                 try:
                     time.sleep(1)
                     self.helper.api.stix_nested_ref_relationship.create(
+                        stix_id=StixCoreRelationship.generate_id(
+                            "resolves-to", self.entity_id, domain_object.get("id")
+                        ),
                         fromId=self.entity_id,
                         toId=domain_object.get("id"),
                         relationship_type="resolves-to",

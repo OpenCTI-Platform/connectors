@@ -7,6 +7,7 @@ import magic
 from pycti import CustomObjectCaseIncident
 from pycti import Identity as pycti_identity
 from pycti import Note as pycti_note
+from pycti import ObservedData as pycti_observed_data
 from pycti import OpenCTIConnectorHelper
 from pycti import Report as pycti_report
 from stix2 import (
@@ -329,9 +330,6 @@ class ShadowserverStixTransformation:
     def create_stix_report(self, labels):
         description = self.create_description()
         kwargs = {
-            "id": pycti_report.generate_id(
-                name=self.report.get("id"), published=self.published
-            ),
             "report_types": ["tool"],
             "name": f"Shadowserver Report {self.type}: {self.report.get('id')}",
             "published": self.published,
@@ -342,7 +340,12 @@ class ShadowserverStixTransformation:
             "object_marking_refs": self.marking_refs,
             "labels": labels,
         }
-        stix_report = Report(**kwargs)
+        stix_report = Report(
+            id=pycti_report.generate_id(
+                name=self.report.get("id"), published=self.published
+            ),
+            **kwargs,
+        )
         self.report_id = stix_report.get("id", None)
         if self.report_id:
             self.stix_objects.append(stix_report)
@@ -387,7 +390,6 @@ class ShadowserverStixTransformation:
         """Creates the author of the report."""
         self.helper.connector_logger.debug("Creating author: Shadowserver Connector")
         kwargs = {
-            "id": pycti_identity.generate_id("Shadowserver Connector", "Organization"),
             "name": "Shadowserver Connector",
             "identity_class": "Organization",
             "type": "identity",
@@ -401,7 +403,10 @@ class ShadowserverStixTransformation:
         if self.marking_refs:
             kwargs.update(object_marking_refs=self.marking_refs)
 
-        author = Identity(**kwargs)
+        author = Identity(
+            id=pycti_identity.generate_id("Shadowserver Connector", "Organization"),
+            **kwargs,
+        )
 
         if author.get("id"):
             self.author_id = author.get("id")
@@ -526,7 +531,7 @@ class ShadowserverStixTransformation:
             "object_marking_refs": self.marking_refs,
         }
 
-        opencti_obj = Vulnerability(**kwargs)
+        opencti_obj = Vulnerability(id=Vulnerability.generate_id(name), **kwargs)
 
         if opencti_obj.get("id"):
             self.object_refs.append(opencti_obj.get("id"))
@@ -648,7 +653,6 @@ class ShadowserverStixTransformation:
         labels: list = [],
     ):
         description = []
-        kwargs = {}
         if not protocol:
             return None
 
@@ -795,7 +799,9 @@ class ShadowserverStixTransformation:
             }
 
             self.extend_stix_object(kwargs, labels_list)
-            stix_object = ObservedData(**kwargs)
+            stix_object = ObservedData(
+                id=pycti_observed_data.generate_id(observables), **kwargs
+            )
 
             if stix_object:
                 self.helper.connector_logger.debug(
@@ -828,7 +834,6 @@ class ShadowserverStixTransformation:
             abstract = f'Shadowserver {self.type} Report {self.report_id} - {element.get("timestamp", "") if isinstance(element, dict) else ""}'
 
             kwargs = {
-                "id": pycti_note.generate_id(abstract, content),
                 "abstract": abstract,
                 "content": content,
                 "created": (
@@ -851,7 +856,9 @@ class ShadowserverStixTransformation:
                 kwargs["object_refs"].append(self.report_id)
 
             if kwargs["object_refs"]:
-                stix_object = Note(**kwargs)
+                stix_object = Note(
+                    id=pycti_note.generate_id(abstract, content), **kwargs
+                )
                 if stix_object and not self.stix_object_exists(kwargs.get("id")):
                     self.stix_objects.append(stix_object)
                     self.object_refs.append(stix_object.get("id"))

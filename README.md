@@ -14,6 +14,16 @@ This repository is used to host connectors that are supported by the core develo
 
 If you want to help use improve or develop new connector, please check out the **[development documentation for new connectors](https://docs.opencti.io/latest/development/connectors)**. If you want to make your connector available to the community, **please create a Pull Request on this repository**, then we will integrate it to the CI and in the [OpenCTI ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
 
+Any connector should be validated through pylint. Example of commands:
+
+To full check a connector
+> pylint external-import/ransomwarelive/src/*.py
+
+To apply specific rules on everything
+> pylint **/*.py --disable=all --enable=no_generated_id_stix,no-value-for-parameter,unused-import
+
+Note: no_generated_id_stix is a custom checker available in [shared tools](./shared/README.md)
+
 ## License
 
 **Unless specified otherwise**, connectors are released under the [Apache 2.0](https://github.com/OpenCTI-Platform/connectors/blob/master/LICENSE). If a connector is released by its author under a different license, the subfolder corresponding to it will contain a *LICENSE* file.

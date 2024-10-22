@@ -166,7 +166,6 @@ class AbuseIPDBConnector:
                     },
                 )
                 stix_objects.append(country_location)
-                fake_indicator_id = "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
                 sighting = stix2.Sighting(
                     id=StixSightingRelationship.generate_id(
                         stix_entity["id"],
@@ -174,12 +173,14 @@ class AbuseIPDBConnector:
                         parse(cl[ckey]["firstseen"]),
                         parse(cl[ckey]["lastseen"]),
                     ),
-                    sighting_of_ref=fake_indicator_id,
-                    custom_properties={"x_opencti_sighting_of_ref": stix_entity["id"]},
                     where_sighted_refs=[country_location.id],
                     count=cl[ckey]["count"],
                     first_seen=parse(cl[ckey]["firstseen"]),
                     last_seen=parse(cl[ckey]["lastseen"]),
+                    # As SDO are not supported in official STIX, we use a fake ID in ref
+                    # Worker will use custom_properties instead
+                    sighting_of_ref="indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e",  # Fake
+                    custom_properties={"x_opencti_sighting_of_ref": stix_entity["id"]},
                 )
                 stix_objects.append(sighting)
         serialized_bundle = self.helper.stix2_create_bundle(stix_objects)

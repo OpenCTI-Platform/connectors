@@ -11,6 +11,7 @@ from hashlib import sha256
 from typing import Dict
 
 import magic
+import pycti
 import stix2
 import yaml
 from pycti import (
@@ -149,9 +150,11 @@ class HatchingTriageSandboxConnector:
                 # Create a Note
                 config_json = json.dumps(extracted_dict, indent=2)
                 config_rule = extracted_dict["config"]["rule"]
+                note_content = f"```\n{config_json}\n```"
                 note = stix2.Note(
+                    id=pycti.Note.generate_id(None, note_content),
                     abstract=f"{config_rule} Config",
-                    content=f"```\n{config_json}\n```",
+                    content=note_content,
                     created_by_ref=self.identity,
                     object_refs=[observable["standard_id"]],
                 )

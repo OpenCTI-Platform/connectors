@@ -9,6 +9,7 @@ import plyara.utils
 import stix2
 from pycti import (
     STIX_EXT_OCTI_SCO,
+    Indicator,
     Location,
     Note,
     OpenCTIConnectorHelper,
@@ -202,6 +203,7 @@ class VirusTotalBuilder:
             valid_until = now_time + datetime.timedelta(minutes)
 
             indicator = stix2.Indicator(
+                id=Indicator.generate_id(pattern),
                 created_by_ref=self.author,
                 name=self.opencti_entity["observable_value"],
                 description=(
@@ -413,6 +415,7 @@ class VirusTotalBuilder:
             return
 
         indicator = stix2.Indicator(
+            id=Indicator.generate_id(plyara.utils.rebuild_yara_rule(rule[0])),
             created_by_ref=self.author,
             name=yara.get("rule_name", "No rulename provided"),
             description=f"""```\n{json.dumps(
