@@ -342,6 +342,42 @@ jobs:
           name: Build Docker image opencti/connector-google-safebrowsing
           command: docker build -t opencti/connector-google-safebrowsing:latest . && docker tag opencti/connector-google-safebrowsing:latest opencti/connector-google-safebrowsing:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/cofense
+          name: Build Docker image opencti/connector-cofense
+          command: docker build -t opencti/connector-cofense:latest . && docker tag opencti/connector-cofense:latest opencti/connector-cofense:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/group-ib
+          name: Build Docker image opencti/connector-group-ib
+          command: docker build -t opencti/connector-group-ib:latest . && docker tag opencti/connector-group-ib:latest opencti/connector-group-ib:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/first-epss
+          name: Build Docker image opencti/connector-first-epss
+          command: docker build -t opencti/connector-first-epss:latest . && docker tag opencti/connector-first-epss:latest opencti/connector-first-epss:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/reversinglabs-spectra-analyze
+          name: Build Docker image opencti/connector-reversinglabs-spectra-analyze
+          command: docker build -t opencti/connector-reversinglabs-spectra-analyze:latest . && docker tag opencti/connector-reversinglabs-spectra-analyze:latest opencti/connector-reversinglabs-spectra-analyze:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/shadowtrackr
+          name: Build Docker image opencti/connector-shadowtrackr
+          command: docker build -t opencti/connector-shadowtrackr:latest . && docker tag opencti/connector-shadowtrackr:latest opencti/connector-shadowtrackr:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/greynoise-vuln
+          name: Build Docker image opencti/connector-greynoise-vuln
+          command: docker build -t opencti/connector-greynoise-vuln:latest . && docker tag opencti/connector-greynoise-vuln:latest opencti/connector-greynoise-vuln:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/sentinel-incidents
+          name: Build Docker image opencti/connector-sentinel-incidents
+          command: docker build -t opencti/connector-sentinel-incidents:latest . && docker tag opencti/connector-sentinel-incidents:latest opencti/connector-sentinel-incidents:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/sentinel-intel
+          name: Build Docker image opencti/connector-sentinel-intel
+          command: docker build -t opencti/connector-sentinel-intel:latest . && docker tag opencti/connector-sentinel-intel:latest opencti/connector-sentinel-intel:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/tenable-vuln-management
+          name: Build Docker image opencti/connector-tenable-vuln-management
+          command: docker build -t opencti/connector-tenable-vuln-management:latest . && docker tag opencti/connector-tenable-vuln-management:latest opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -483,6 +519,25 @@ jobs:
             docker push opencti/connector-fortinet-ti:${CIRCLE_TAG}
             docker push opencti/connector-google-safebrowsing:latest
             docker push opencti/connector-google-safebrowsing:${CIRCLE_TAG}
+            docker push opencti/connector-cofense:latest
+            docker push opencti/connector-cofense:${CIRCLE_TAG}
+            docker push opencti/connector-group-ib:latest
+            docker push opencti/connector-group-ib:${CIRCLE_TAG}
+            docker push opencti/connector-first-epss:latest
+            docker push opencti/connector-first-epss:${CIRCLE_TAG}
+            docker push opencti/connector-reversinglabs-spectra-analyze:latest
+            docker push opencti/connector-reversinglabs-spectra-analyze:${CIRCLE_TAG}
+            docker push opencti/connector-shadowtrackr:latest
+            docker push opencti/connector-shadowtrackr:${CIRCLE_TAG}
+            docker push opencti/connector-greynoise-vuln:latest
+            docker push opencti/connector-greynoise-vuln:${CIRCLE_TAG}
+            docker push opencti/connector-sentinel-incidents:latest
+            docker push opencti/connector-sentinel-incidents:${CIRCLE_TAG}
+            docker push opencti/connector-sentinel-intel:latest
+            docker push opencti/connector-sentinel-intel:${CIRCLE_TAG}
+            docker push opencti/connector-tenable-vuln-management:latest 
+            docker push opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
+
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -758,6 +813,18 @@ jobs:
           name: Build Docker image opencti/connector-reversinglabs-spectra-intel-submission
           command: docker build -t opencti/connector-reversinglabs-spectra-intel-submission:latest . && docker tag opencti/connector-reversinglabs-spectra-intel-submission:latest opencti/connector-reversinglabs-spectra-intel-submission:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-import-file/import-file-misp
+          name: Build Docker image opencti/connector-import-file-misp
+          command: docker build -t opencti/connector-import-file-misp:latest . && docker tag opencti/connector-import-file-misp:latest opencti/connector-import-file-misp:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/tanium-incidents
+          name: Build Docker image opencti/connector-tanium-incidents
+          command: docker build -t opencti/connector-tanium-incidents:latest . && docker tag opencti/connector-tanium-incidents:latest opencti/connector-tanium-incidents:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/tanium-intel
+          name: Build Docker image opencti/connector-tanium-intel
+          command: docker build -t opencti/connector-tanium-intel:latest . && docker tag opencti/connector-tanium-intel:latest opencti/connector-tanium-intel:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -891,6 +958,12 @@ jobs:
             docker push opencti/connector-webhook:${CIRCLE_TAG}
             docker push opencti/connector-reversinglabs-spectra-intel-submission:latest
             docker push opencti/connector-reversinglabs-spectra-intel-submission:${CIRCLE_TAG}
+            docker push opencti/connector-import-file-misp:latest
+            docker push opencti/connector-import-file-misp:${CIRCLE_TAG}
+            docker push opencti/connector-tanium-incidents:latest
+            docker push opencti/connector-tanium-incidents:${CIRCLE_TAG}
+            docker push opencti/connector-tanium-intel:latest
+            docker push opencti/connector-tanium-intel:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1226,6 +1299,42 @@ jobs:
           name: Build Docker image opencti/connector-google-safebrowsing
           command: docker build -t opencti/connector-google-safebrowsing:rolling .
       - run:
+          working_directory: ~/opencti/external-import/cofense
+          name: Build Docker image opencti/connector-cofense
+          command: docker build -t opencti/connector-cofense:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/group-ib
+          name: Build Docker image opencti/connector-group-ib
+          command: docker build -t opencti/connector-group-ib:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/first-epss
+          name: Build Docker image opencti/connector-first-epss
+          command: docker build -t opencti/connector-first-epss:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/reversinglabs-spectra-analyze
+          name: Build Docker image opencti/connector-reversinglabs-spectra-analyze
+          command: docker build -t opencti/connector-reversinglabs-spectra-analyze:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/shadowtrackr
+          name: Build Docker image opencti/connector-shadowtrackr
+          command: docker build -t opencti/connector-shadowtrackr:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/greynoise-vuln
+          name: Build Docker image opencti/connector-greynoise-vuln
+          command: docker build -t opencti/connector-greynoise-vuln:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/sentinel-incidents
+          name: Build Docker image opencti/connector-sentinel-incidents
+          command: docker build -t opencti/connector-sentinel-incidents:rolling .
+      - run:
+          working_directory: ~/opencti/stream/sentinel-intel
+          name: Build Docker image opencti/connector-sentinel-intel
+          command: docker build -t opencti/connector-sentinel-intel:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/tenable-vuln-management
+          name: Build Docker image opencti/connector-tenable-vuln-management
+          command: docker build -t opencti/connector-tenable-vuln-management:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1296,6 +1405,15 @@ jobs:
             docker push opencti/connector-cisco-sma:rolling
             docker push opencti/connector-fortinet-ti:rolling
             docker push opencti/connector-google-safebrowsing:rolling
+            docker push opencti/connector-cofense:rolling
+            docker push opencti/connector-group-ib:rolling
+            docker push opencti/connector-first-epss:rolling
+            docker push opencti/connector-reversinglabs-spectra-analyze:rolling
+            docker push opencti/connector-shadowtrackr:rolling
+            docker push opencti/connector-greynoise-vuln:rolling
+            docker push opencti/connector-sentinel-incidents:rolling
+            docker push opencti/connector-sentinel-intel:rolling
+            docker push opencti/connector-tenable-vuln-management:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1579,6 +1697,18 @@ jobs:
           name: Build Docker image opencti/connector-reversinglabs-spectra-intel-submission
           command: docker build -t opencti/connector-reversinglabs-spectra-intel-submission:rolling .
       - run:
+          working_directory: ~/opencti/internal-import-file/import-file-misp
+          name: Build Docker image opencti/connector-import-file-misp
+          command: docker build -t opencti/connector-import-file-misp:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/tanium-incidents
+          name: Build Docker image opencti/connector-tanium-incidents
+          command: docker build -t opencti/connector-tanium-incidents:rolling .
+      - run:
+          working_directory: ~/opencti/stream/tanium-intel
+          name: Build Docker image opencti/connector-tanium-intel
+          command: docker build -t opencti/connector-tanium-intel:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1648,6 +1778,9 @@ jobs:
             docker push opencti/connector-jira:rolling
             docker push opencti/connector-webhook:rolling
             docker push opencti/connector-reversinglabs-spectra-intel-submission:rolling
+            docker push opencti/connector-import-file-misp:rolling
+            docker push opencti/connector-tanium-incidents:rolling
+            docker push opencti/connector-tanium-intel:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1

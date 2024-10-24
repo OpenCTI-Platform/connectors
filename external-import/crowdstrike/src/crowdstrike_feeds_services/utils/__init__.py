@@ -270,13 +270,13 @@ def normalize_start_time_and_stop_time(
     STIX 2 Relationship object expects the stop time to be later than the start time
     or the creation of Relationship object fails.
     """
-    if start_time == stop_time:
+    if start_time is not None and stop_time is not None and start_time == stop_time:
         logger.warning("Start time equals stop time, adding 1 second to stop time")
 
         stop_time += timedelta(seconds=1)
         return start_time, stop_time
 
-    if start_time > stop_time:
+    if start_time is not None and stop_time is not None and start_time > stop_time:
         logger.warning("Start time is greater than stop time, swapping times")
 
         start_time, stop_time = stop_time, start_time
@@ -686,8 +686,6 @@ def create_indicates_relationships(
     targets: List[_DomainObject],
     confidence: int,
     object_markings: List[stix2.MarkingDefinition],
-    start_time: Optional[datetime] = None,
-    stop_time: Optional[datetime] = None,
 ) -> List[stix2.Relationship]:
     """Create 'indicates' relationships."""
     return create_relationships(
@@ -697,8 +695,6 @@ def create_indicates_relationships(
         targets,
         confidence,
         object_markings,
-        start_time=start_time,
-        stop_time=stop_time,
     )
 
 
@@ -708,8 +704,6 @@ def create_originates_from_relationships(
     targets: List[_DomainObject],
     confidence: int,
     object_markings: List[stix2.MarkingDefinition],
-    start_time: Optional[datetime] = None,
-    stop_time: Optional[datetime] = None,
 ) -> List[stix2.Relationship]:
     """Create 'originates-from' relationships."""
     return create_relationships(
@@ -719,8 +713,6 @@ def create_originates_from_relationships(
         targets,
         confidence,
         object_markings,
-        start_time=start_time,
-        stop_time=stop_time,
     )
 
 
@@ -730,8 +722,6 @@ def create_based_on_relationships(
     targets: List[_DomainObject],
     confidence: int,
     object_markings: List[stix2.MarkingDefinition],
-    start_time: Optional[datetime] = None,
-    stop_time: Optional[datetime] = None,
 ) -> List[stix2.Relationship]:
     """Create 'based-on' relationships."""
     return create_relationships(
@@ -741,8 +731,6 @@ def create_based_on_relationships(
         targets,
         confidence,
         object_markings,
-        start_time=start_time,
-        stop_time=stop_time,
     )
 
 
@@ -868,7 +856,7 @@ def create_stix2_report_from_report(
     report_tags = report["tags"]
     if report_tags is not None:
         for tag in report_tags:
-            value = tag["value"]
+            value = tag.get("value")
             if value is None or not value:
                 continue
 
@@ -974,6 +962,7 @@ def create_indicator(
     name: Optional[str] = None,
     description: Optional[str] = None,
     valid_from: Optional[datetime] = None,
+    created: Optional[datetime] = None,
     kill_chain_phases: Optional[List[stix2.KillChainPhase]] = None,
     labels: Optional[List[str]] = None,
     confidence: Optional[int] = None,
@@ -982,10 +971,11 @@ def create_indicator(
     x_opencti_score: Optional[int] = None,
 ) -> stix2.Indicator:
     """Create an indicator."""
-    custom_properties: Dict[str, Any] = {X_OPENCTI_SCORE: DEFAULT_X_OPENCTI_SCORE}
+    custom_properties: Dict[str, Any] = {}
 
-    if x_opencti_score is not None:
-        custom_properties[X_OPENCTI_SCORE] = x_opencti_score
+    custom_properties[X_OPENCTI_SCORE] = (
+        x_opencti_score if x_opencti_score is not None else DEFAULT_X_OPENCTI_SCORE
+    )
 
     if x_opencti_main_observable_type is not None:
         custom_properties[X_OPENCTI_MAIN_OBSERVABLE_TYPE] = (
@@ -1000,6 +990,7 @@ def create_indicator(
         pattern=pattern,
         pattern_type=pattern_type,
         valid_from=valid_from,
+        created=created,
         kill_chain_phases=kill_chain_phases,
         labels=labels,
         confidence=confidence,

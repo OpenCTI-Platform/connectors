@@ -62,7 +62,7 @@ class LogrhythmList:
 "listType":"GeneralValue",
 "status":"Active",
 "name":"%s",
-"shortDescription":"Innovative Solutions Threat Intelligence Feeds",
+"shortDescription":"Threat Intelligence Feeds",
 "useContext":[
             "DomainOrigin",
             "DomainImpacted",

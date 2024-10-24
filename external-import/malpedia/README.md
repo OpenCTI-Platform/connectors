@@ -64,6 +64,11 @@ Information The connector states takes 2 items into account to get started:
 
 So, apart from the first run, if the 24 hour interval is respected and there is a new version of Malpedia, the connector will be restarted.
 
+It's important to note that Malpedia imposes a rate limit, set to "60 API requests per minute" or "2000 API requests per hour". 
+This limit is managed within this connector: if a request returns a status code of 429, in this case the request is automatically retried after a delay of 65 seconds (up to 3 attempts). 
+If the value of "available_in" (variable returned by Malpedia) is greater than the value of "retry_delay" (Default value = 65 seconds), the latter will be used as the delay. 
+Although this may slow down the connector during data recovery, it guarantees that the entire data set will be recovered without failures due to exceeding the throughput limit.
+
 ---
 The API authentication key. Can be retrieved with a valid account from:
 

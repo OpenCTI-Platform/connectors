@@ -1,0 +1,680 @@
+{
+    "apt/threat": {
+        "threat_report": {
+            "__": "*Threat Report",
+            "id": "id",
+            "title": "title",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Report - external reference",
+                    "static": "https://tap.group-ib.com/ta/last-threats?threat=",
+                    "dynamic": "id"
+                }
+            }
+        },
+        "file": {
+            "__": "*IoC File",
+            "file_list": {
+                "__nested_dot_path_to_list": "indicators.params",
+                "md5": "hashes.md5",
+                "sha1": "hashes.sha1",
+                "sha256": "hashes.sha256",
+                "filename": "name",
+                "size-in-bytes": "size"
+            }
+        },
+        "network": {
+            "__": "*IoC Network",
+            "network_list": {
+                "__nested_dot_path_to_list": "indicators.params",
+                "domain": "domain",
+                "url": "url",
+                "ip-address": "ipv4"
+            }
+        },
+        "malware_report": {
+            "__": "*Malware Report",
+            "malware_report_list": {
+                "__nested_dot_path_to_list": "malwareList",
+                "name": "name",
+                "category": "category",
+                "platform": "platform",
+                "aliases": "",
+                "portal_link": {
+                    "__concatenate": {
+                        "__": "TI Portal: Malware - external reference",
+                        "static": "https://tap.group-ib.com/malware/reports/",
+                        "dynamic": "id"
+                    }
+                }
+            }
+        },
+        "threat_actor": {
+            "__": "*Threat Actor",
+            "name": "threatActor.name",
+            "country": "threatActor.country",
+            "targeted_countries": "countries",
+            "aliases": "",
+            "description": "",
+            "goals": "",
+            "roles": "",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Threat Actor - external reference",
+                    "static": "https://tap.group-ib.com/ta/actors?ta=",
+                    "dynamic": "threatActor.id"
+                }
+            }
+        },
+        "vulnerability": {
+            "__": "*List of CVE",
+            "vulnerability_list": {
+                "__nested_dot_path_to_list": "cveList",
+                "object_id": "name",
+                "description": ""
+            }
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "tlp": "evaluation.tlp",
+            "admiralty_code": "evaluation.admiralty_code",
+            "severity": "evaluation.severity"
+        },
+        "mitre_matrix": {
+            "__": "*MITRE ATT&CK",
+            "mitre_matrix_list": {
+                "__nested_dot_path_to_list": "mitreMatrix",
+                "attack_pattern": "mitreId",
+                "kill_chain_phase": "attackTactic",
+                "portal_link": {
+                    "__concatenate": {
+                        "__": "MITRE ATT&CK: Pattern - external reference",
+                        "static": "https://attack.mitre.org/techniques/",
+                        "dynamic": "mitreId"
+                    }
+                }
+            }
+        },
+        "date": {
+            "__": "*Event date",
+            "first-seen": "dateFirstSeen",
+            "last-seen": "dateLastSeen",
+            "date-published": "datePublished",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
+        }
+    },
+    "apt/threat_actor": {
+        "malware_report": {
+            "__": "*Malware Report",
+            "malware_report_list": {
+                "__nested_dot_path_to_list": "stat",
+                "name": "malware",
+                "category": "",
+                "platform": "",
+                "aliases": "",
+                "portal_link": {}
+            }
+        },
+        "threat_actor": {
+            "__": "*Threat Actor",
+            "name": "name",
+            "country": "country",
+            "targeted_countries": "stat.countries",
+            "aliases": "aliases",
+            "description": "description",
+            "goals": "goals",
+            "roles": "roles",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Threat Actor - external reference",
+                    "static": "https://tap.group-ib.com/ta/actors?ta=",
+                    "dynamic": "id"
+                }
+            }
+        },
+        "vulnerability": {
+            "__": "*List of CVE",
+            "vulnerability_list": {
+                "__nested_dot_path_to_list": "stat",
+                "object_id": "cve",
+                "description": ""
+            }
+        },
+        "date": {
+            "__": "*Event date",
+            "first-seen": "stat.dateFirstSeen",
+            "last-seen": "stat.dateLastSeen",
+            "date-created": "stat.dateFirstSeen",
+            "date-modified": "stat.dateLastSeen"
+        }
+    },
+    "attacks/ddos": {
+        "network": {
+            "__": "*IoC Network",
+            "domain": "cnc.domain",
+            "url": "cnc.url",
+            "ip-address": "cnc.ipv4.ip"
+        },
+        "malware_report": {
+            "__": "*Malware Report",
+            "malware_report_list": {
+                "__nested_dot_path_to_list": "malware",
+                "name": "name",
+                "category": "category",
+                "platform": "platform",
+                "aliases": "",
+                "portal_link": {
+                    "__concatenate": {
+                        "__": "TI Portal: Malware - external reference",
+                        "static": "https://tap.group-ib.com/malware/reports/",
+                        "dynamic": "id"
+                    }
+                }
+            }
+        },
+        "threat_actor": {
+            "__": "*Threat Actor",
+            "name": "threatActor.name",
+            "country": "threatActor.country",
+            "targeted_countries": "",
+            "aliases": "",
+            "description": "",
+            "goals": "",
+            "roles": "",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Threat Actor - external reference",
+                    "static": "https://tap.group-ib.com/ta/actors?ta=",
+                    "dynamic": "threatActor.id"
+                }
+            }
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "tlp": "evaluation.tlp",
+            "admiralty_code": "evaluation.admiralty_code",
+            "severity": "evaluation.severity"
+        },
+        "date": {
+            "__": "*Event date",
+            "detection-date": "dateReg",
+            "submission-time": "dateBegin",
+            "takedown-time": "dateEnd"
+        }
+    },
+    "attacks/deface": {
+        "network": {
+            "__": "*DEFACE Network",
+            "domain": "targetDomain",
+            "url": "url",
+            "ip-address": "targetIp.ip"
+        },
+        "threat_actor": {
+            "__": "*Threat Actor",
+            "name": "threatActor.name",
+            "country": "threatActor.country",
+            "targeted_countries": "",
+            "aliases": "",
+            "description": "",
+            "goals": "",
+            "roles": "",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Threat Actor - external reference",
+                    "static": "https://tap.group-ib.com/ta/actors?ta=",
+                    "dynamic": "threatActor.id"
+                }
+            }
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "tlp": "evaluation.tlp",
+            "admiralty_code": "evaluation.admiralty_code",
+            "severity": "evaluation.severity"
+        },
+        "date": {
+            "__": "*Event date",
+            "detection-date": "date"
+        }
+    },
+    "attacks/phishing_group": {
+        "network": {
+            "__": "*Phishing Network",
+            "network_list": {
+                "__nested_dot_path_to_list": "phishing",
+                "domain": "phishing_domain.domain",
+                "url": "url",
+                "ip-address": "phishing_ip.ip"
+            }
+        },
+        "threat_actor": {
+            "__": "*Threat Actor",
+            "name": "threatActor.name",
+            "country": "",
+            "targeted_countries": "",
+            "aliases": "",
+            "description": "",
+            "goals": "",
+            "roles": "",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Threat Actor - external reference",
+                    "static": "https://tap.group-ib.com/ta/actors?ta=",
+                    "dynamic": "threatActor.id"
+                }
+            }
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "tlp": "evaluation.tlp",
+            "admiralty_code": "evaluation.admiralty_code",
+            "severity": "evaluation.severity"
+        },
+        "date": {
+            "__": "*Event date",
+            "submission-time": "date.detected",
+            "takedown-time": "date.blocked",
+            "date-created": "date.added",
+            "date-modified": "date.updated"
+        }
+    },
+    "attacks/phishing_kit": {
+        "file": {
+            "__": "*Phishing File",
+            "md5": "hash",
+            "sha1": "hash",
+            "sha256": "hash",
+            "filename": "",
+            "size-in-bytes": ""
+        },
+        "network": {
+            "__": "*Phishing source Network",
+            "network_list": {
+                "__nested_dot_path_to_list": "downloadedFrom",
+                "domain": "domain",
+                "url": "url",
+                "ip-address": ""
+            }
+        },
+        "ungrouped": {
+            "__": "*Ungrouped items",
+            "emails": "emails"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "tlp": "evaluation.tlp",
+            "admiralty_code": "evaluation.admiralty_code",
+            "severity": "evaluation.severity"
+        },
+        "date": {
+            "__": "*Event date",
+            "detection-date": "dateDetected",
+            "first-seen": "dateFirstSeen",
+            "last-seen": "dateLastSeen",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
+        }
+    },
+    "hi/threat": {
+        "threat_report": {
+            "__": "*Threat Report",
+            "id": "id",
+            "title": "title",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Report - external reference",
+                    "static": "https://tap.group-ib.com/ta/last-threats?threat=",
+                    "dynamic": "id"
+                }
+            }
+        },
+        "file": {
+            "__": "*IoC File",
+            "file_list": {
+                "__nested_dot_path_to_list": "indicators.params",
+                "md5": "hashes.md5",
+                "sha1": "hashes.sha1",
+                "sha256": "hashes.sha256",
+                "filename": "name",
+                "size-in-bytes": "size"
+            }
+        },
+        "network": {
+            "__": "*IoC Network",
+            "network_list": {
+                "__nested_dot_path_to_list": "indicators.params",
+                "domain": "domain",
+                "url": "url",
+                "ip-address": "ipv4"
+            }
+        },
+        "malware_report": {
+            "__": "*Malware Report",
+            "malware_report_list": {
+                "__nested_dot_path_to_list": "malwareList",
+                "name": "name",
+                "category": "category",
+                "platform": "platform",
+                "aliases": "",
+                "portal_link": {
+                    "__concatenate": {
+                        "__": "TI Portal: Malware - external reference",
+                        "static": "https://tap.group-ib.com/malware/reports/",
+                        "dynamic": "id"
+                    }
+                }
+            }
+        },
+        "threat_actor": {
+            "__": "*Threat Actor",
+            "name": "threatActor.name",
+            "country": "threatActor.country",
+            "targeted_countries": "countries",
+            "aliases": "",
+            "description": "",
+            "goals": "",
+            "roles": "",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Threat Actor - external reference",
+                    "static": "https://tap.group-ib.com/ta/actors?ta=",
+                    "dynamic": "threatActor.id"
+                }
+            }
+        },
+        "vulnerability": {
+            "__": "*List of CVE",
+            "vulnerability_list": {
+                "__nested_dot_path_to_list": "cveList",
+                "object_id": "name",
+                "description": ""
+            }
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "tlp": "evaluation.tlp",
+            "admiralty_code": "evaluation.admiralty_code",
+            "severity": "evaluation.severity"
+        },
+        "mitre_matrix": {
+            "__": "*MITRE ATT&CK",
+            "mitre_matrix_list": {
+                "__nested_dot_path_to_list": "mitreMatrix",
+                "attack_pattern": "mitreId",
+                "kill_chain_phase": "attackTactic",
+                "portal_link": {
+                    "__concatenate": {
+                        "__": "MITRE ATT&CK: Pattern - external reference",
+                        "static": "https://attack.mitre.org/techniques/",
+                        "dynamic": "mitreId"
+                    }
+                }
+            }
+        },
+        "date": {
+            "__": "*Event date",
+            "first-seen": "dateFirstSeen",
+            "last-seen": "dateLastSeen",
+            "date-published": "datePublished",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
+        }
+    },
+    "hi/threat_actor": {
+        "malware_report": {
+            "__": "*Malware Report",
+            "malware_report_list": {
+                "__nested_dot_path_to_list": "stat",
+                "name": "malware",
+                "category": "",
+                "platform": "",
+                "aliases": "",
+                "portal_link": {}
+            }
+        },
+        "threat_actor": {
+            "__": "*Threat Actor",
+            "name": "name",
+            "country": "country",
+            "targeted_countries": "stat.countries",
+            "aliases": "aliases",
+            "description": "description",
+            "goals": "goals",
+            "roles": "roles",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Threat Actor - external reference",
+                    "static": "https://tap.group-ib.com/ta/actors?ta=",
+                    "dynamic": "id"
+                }
+            }
+        },
+        "vulnerability": {
+            "__": "*List of CVE",
+            "vulnerability_list": {
+                "__nested_dot_path_to_list": "stat",
+                "object_id": "cve",
+                "description": ""
+            }
+        },
+        "date": {
+            "__": "*Event date",
+            "first-seen": "stat.dateFirstSeen",
+            "last-seen": "stat.dateLastSeen",
+            "date-created": "stat.dateFirstSeen",
+            "date-modified": "stat.dateLastSeen"
+        }
+    },
+    "malware/malware": {
+        "malware_report": {
+            "__": "*Malware Report",
+            "name": "name",
+            "category": "category",
+            "platform": "platform",
+            "aliases": "malwareAliasList",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Malware - external reference",
+                    "static": "https://tap.group-ib.com/malware/reports/",
+                    "dynamic": "id"
+                }
+            }
+        },
+        "date": {
+            "__": "*Event date",
+            "date-updated": "updatedAt"
+        }
+    },
+    "malware/signature": {
+        "suricata_report": {
+            "sid": "sid",
+            "signature": "name",
+            "context": "content"
+        },
+        "malware_report": {
+            "__": "*Malware Report",
+            "malware_report_list": {
+                "__nested_dot_path_to_list": "malware",
+                "name": "name",
+                "category": "",
+                "platform": "",
+                "aliases": "",
+                "portal_link": {
+                    "__concatenate": {
+                        "__": "TI Portal: Malware - external reference",
+                        "static": "https://tap.group-ib.com/malware/reports/",
+                        "dynamic": "id"
+                    }
+                }
+            }
+        },
+        "date": {
+            "__": "*Event date",
+            "date-created": "createdAt"
+        }
+    },
+    "malware/yara": {
+        "yara_report": {
+            "yara": "name",
+            "yara-rule-name": "sourceName",
+            "context": "content"
+        },
+        "malware_report": {
+            "__": "*Malware Report",
+            "malware_report_list": {
+                "__nested_dot_path_to_list": "malware",
+                "name": "name",
+                "category": "",
+                "platform": "",
+                "aliases": "",
+                "portal_link": {
+                    "__concatenate": {
+                        "__": "TI Portal: Malware - external reference",
+                        "static": "https://tap.group-ib.com/malware/reports/",
+                        "dynamic": "id"
+                    }
+                }
+            }
+        },
+        "date": {
+            "__": "*Event date",
+            "date-created": "createdAt"
+        }
+    },
+    "osi/vulnerability": {
+        "vulnerability": {
+            "__": "*List of CVE",
+            "object_id": "id",
+            "description": "description"
+        },
+        "cpe_table": {
+            "__description": "*CPE table for vulnerability",
+            "cpe_table_list": {
+                "__nested_dot_path_to_list": "cpeTable",
+                "type": "type",
+                "vendor": "vendor",
+                "product": "product",
+                "version": "version",
+                "string": "string",
+                "raw_string": "string23"
+            }
+        },
+        "cvssv3": {
+            "__description": "*CVSSv3 information",
+            "score": "cvss.score",
+            "vector": "cvss.vector"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "tlp": "evaluation.tlp",
+            "admiralty_code": "evaluation.admiralty_code",
+            "severity": "evaluation.severity"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-published": "datePublished",
+            "date-modified": "dateModified"
+        }
+    },
+    "suspicious_ip/open_proxy": {
+        "network": {
+            "__": "*Open Proxy Network",
+            "ip-address": "ipv4.ip"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "tlp": "evaluation.tlp",
+            "admiralty_code": "evaluation.admiralty_code",
+            "severity": "evaluation.severity"
+        },
+        "date": {
+            "__": "*Event date",
+            "first-seen": "dateFirstSeen",
+            "last-seen": "dateLastSeen",
+            "detection-date": "dateDetected",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
+        }
+    },
+    "suspicious_ip/scanner": {
+        "network": {
+            "__": "*Scanner Network",
+            "ip-address": "ipv4.ip"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "tlp": "evaluation.tlp",
+            "admiralty_code": "evaluation.admiralty_code",
+            "severity": "evaluation.severity"
+        },
+        "date": {
+            "__": "*Event date",
+            "first-seen": "dateFirstSeen",
+            "last-seen": "dateLastSeen",
+            "detection-date": "dateDetected",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
+        }
+    },
+    "suspicious_ip/socks_proxy": {
+        "network": {
+            "__": "*Socks Proxy Network",
+            "ip-address": "ipv4.ip"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "tlp": "evaluation.tlp",
+            "admiralty_code": "evaluation.admiralty_code",
+            "severity": "evaluation.severity"
+        },
+        "date": {
+            "__": "*Event date",
+            "first-seen": "dateFirstSeen",
+            "last-seen": "dateLastSeen",
+            "detection-date": "dateDetected",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
+        }
+    },
+    "suspicious_ip/tor_node": {
+        "network": {
+            "__": "*Tor Node Network",
+            "ip-address": "ipv4.ip"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "tlp": "evaluation.tlp",
+            "admiralty_code": "evaluation.admiralty_code",
+            "severity": "evaluation.severity"
+        },
+        "date": {
+            "__": "*Event date",
+            "first-seen": "dateFirstSeen",
+            "last-seen": "dateLastSeen",
+            "detection-date": "dateDetected",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
+        }
+    },
+    "suspicious_ip/vpn": {
+        "network": {
+            "__": "*VPN Network",
+            "ip-address": "ipv4.ip"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "tlp": "evaluation.tlp",
+            "admiralty_code": "evaluation.admiralty_code",
+            "severity": "evaluation.severity"
+        },
+        "date": {
+            "__": "*Event date",
+            "first-seen": "dateFirstSeen",
+            "last-seen": "dateLastSeen",
+            "detection-date": "dateDetected",
+            "date-created": "dateFirstSeen",
+            "date-modified": "dateLastSeen"
+        }
+    }
+}

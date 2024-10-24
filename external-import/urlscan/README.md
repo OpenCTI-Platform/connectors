@@ -25,6 +25,10 @@ If you are using it independently, remember that the connector will try to conne
 | `connector_create_indicators`    | `CONNECTOR_CREATE_INDICATORS`    | No        | Create indicators for each observable processed.                                                   |
 | `connector_tlp`                  | `CONNECTOR_TLP`                  | No        | The TLP to apply to any indicators and observables, this could be `white`,`green`,`amber` or `red` |
 | `connector_labels`               | `CONNECTOR_LABELS`               | No        | Comma delimited list of labels to apply to each observable.                                        |
-| `connector_interval`             | `CONNECTOR_INTERVAL`             | No        | An interval (in minutes) for data gathering from Urlscan.                                          |
-| `urlscan_url`                    | `URLSCAN_URL`                    | Yes       | The Urlscan URL.                                                                                   |
-| `urlscan_api_key`                | `URLSCAN_API_KEY`                | Yes       | The Urlscan client secret.                                                                         |
+| `connector_interval`             | `CONNECTOR_INTERVAL`             | No        | An interval (in seconds) for data gathering from Urlscan.                                          |
+| `connector_lookback`             | `CONNECTOR_LOOKBACK`             | No        | How far to look back in days if the connector has never run or the last run is older than this value. Default is 3. You should not go above 7. |
+| `urlscan_url`                    | `URLSCAN_URL`                    | Yes       | The Urlscan URL.                                                                                    |
+| `urlscan_api_key`                | `URLSCAN_API_KEY`                | Yes       | The Urlscan client secret.                                                                          |
+| `urlscan_default_x_opencti_score`| `URLSCAN_DEFAULT_X_OPENCTI_SCORE`| No        | The default x_opencti_score to use across observable/indicator types. Default is 50.                |
+| `urlscan_x_opencti_score_domain` | `URLSCAN_X_OPENCTI_SCORE_DOMAIN` | No        | The x_opencti_score to use across Domain-Name observable and indicators. Defaults to default score. |
+| `urlscan_x_opencti_score_url`    | `URLSCAN_X_OPENCTI_URL`          | No        | The x_opencti_score to use across Url observable and indicators. Defaults to default score.         |

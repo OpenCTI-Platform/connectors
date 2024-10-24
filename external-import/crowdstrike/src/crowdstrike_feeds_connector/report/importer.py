@@ -23,6 +23,8 @@ from .builder import ReportBundleBuilder
 class ReportImporter(BaseImporter):
     """CrowdStrike report importer."""
 
+    _NAME = "Report"
+
     _LATEST_REPORT_TIMESTAMP = "latest_report_timestamp"
 
     _GUESS_NOT_A_MALWARE = "GUESS_NOT_A_MALWARE"
@@ -30,7 +32,6 @@ class ReportImporter(BaseImporter):
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        update_existing_data: bool,
         author: Identity,
         default_latest_timestamp: int,
         tlp_marking: MarkingDefinition,
@@ -40,7 +41,7 @@ class ReportImporter(BaseImporter):
         guess_malware: bool,
     ) -> None:
         """Initialize CrowdStrike report importer."""
-        super().__init__(helper, author, tlp_marking, update_existing_data)
+        super().__init__(helper, author, tlp_marking)
 
         self.reports_api_cs = ReportsAPI(helper)
         self.default_latest_timestamp = default_latest_timestamp
@@ -54,8 +55,7 @@ class ReportImporter(BaseImporter):
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
         self._info(
-            "Running report importer (update data: {0}, guess malware: {1}) with state: {2}...",  # noqa: E501
-            self.update_existing_data,
+            "Running report importer (guess malware: {0}) with state: {1}...",  # noqa: E501
             self.guess_malware,
             state,
         )

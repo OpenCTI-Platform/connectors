@@ -1,2 +1,2 @@
-pycti==6.2.15
+pycti==6.3.6
 pydantic==2.8.2

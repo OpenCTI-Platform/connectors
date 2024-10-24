@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-greynoise-feed:
-    image: opencti/connector-greynoise-feed:6.2.15
+    image: opencti/connector-greynoise-feed:6.3.6
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
@@ -11,10 +11,12 @@ services:
       - CONNECTOR_SCOPE=greynoisefeed
       - CONNECTOR_LOG_LEVEL=info
       - GREYNOISE_API_KEY=ChangeMe
-      - GREYNOISE_SOURCE="feed"
-      - GREYNOISE_FEED_TYPE="benign"
-      - GREYNOISE_TAG_SLUGS="tag-slug-1,tag-slug-2"
-      - GREYNOISE_INDICATOR_SCORE=50
+      - GREYNOISE_FEED_TYPE=malicious
+      - GREYNOISE_INDICATOR_SCORE_MALICIOUS=75
+      - GREYNOISE_INDICATOR_SCORE_BENIGN=20
+      - "GREYNOISE_NAME=GreyNoise Feed"
+      - "GREYNOISE_DESCRIPTION=GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet."
       - GREYNOISE_LIMIT=10000
-      - GREYNOISE_INTERVAL=2 #Day
+      - GREYNOISE_IMPORT_METADATA=false
+      - GREYNOISE_INTERVAL=12 # In hours (the connector will always pull last 2 days each run)
     restart: always
