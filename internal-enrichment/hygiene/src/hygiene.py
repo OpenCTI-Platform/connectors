@@ -75,6 +75,7 @@ LIST_MAPPING = {
     "List of known Ovh Cluster IP": "lists/ovh-cluster/list.json",
     "Parking domains": "lists/parking-domain/list.json",
     "Parking domains name server": "lists/parking-domain-ns/list.json",
+    "Unattributed phone number.": "lists/phone_numbers/list.json",
     "List of known public DNS resolvers expressed as hostname": "lists/public-dns-hostname/list.json",
     "List of known IPv4 public DNS resolvers": "lists/public-dns-v4/list.json",
     "List of known IPv6 public DNS resolvers": "lists/public-dns-v6/list.json",
