@@ -3,8 +3,8 @@ from datetime import datetime
 
 from feedly.api_client.enterprise.indicators_of_compromise import StixIoCDownloader
 from feedly.api_client.session import FeedlySession
+from markdown import markdown
 from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils
-from stix2 import Note
 
 FEEDLY_AI_UUID = "identity--477866fd-8784-46f9-ab40-5592ed4eddd7"
 
@@ -26,8 +26,9 @@ class FeedlyConnector:
         bundle = StixIoCDownloader(
             self.feedly_session, newer_than, stream_id
         ).download_all()
-        _replace_description_with_note(bundle)
+        _make_reports_content_instead_of_descriptions(bundle)
         _add_main_observable_type_to_indicators(bundle)
+        _transform_threat_actors_to_intrusion_sets(bundle)
         self.cti_helper.log_info(f"Found {_count_reports(bundle)} new reports")
         return bundle
 
@@ -36,18 +37,14 @@ def _count_reports(bundle: dict) -> int:
     return sum(1 for o in bundle["objects"] if o["type"] == "report")
 
 
-def _replace_description_with_note(bundle: dict) -> None:
+def _make_reports_content_instead_of_descriptions(bundle: dict) -> None:
     notes = []
     for o in bundle["objects"]:
         if o["type"] == "report":
-            notes.append(
-                Note(
-                    content=o["description"],
-                    object_refs=[o["id"]],
-                    created_by_ref=FEEDLY_AI_UUID,
-                )
+            o["content"], o["description"] = (
+                markdown(o["description"]),
+                o["name"],
             )
-            o["description"] = ""
     bundle["objects"].extend([json.loads(note.serialize()) for note in notes])
 
 
@@ -58,4 +55,18 @@ def _add_main_observable_type_to_indicators(bundle: dict) -> None:
             stix_type = pattern.removeprefix("[").split(":")[0].strip()
             o["x_opencti_main_observable_type"] = (
                 OpenCTIStix2Utils.stix_observable_opencti_type(stix_type)
+            )
+
+
+def _transform_threat_actors_to_intrusion_sets(bundle: dict) -> None:
+    for o in bundle["objects"]:
+        if o["type"] == "threat-actor":
+            o["type"] = "intrusion-set"
+            o["id"] = o.get("id").replace("threat-actor", "intrusion-set")
+        if o["type"] == "relationship":
+            o["source_ref"] = o.get("source_ref").replace(
+                "threat-actor", "intrusion-set"
+            )
+            o["target_ref"] = o.get("target_ref").replace(
+                "threat-actor", "intrusion-set"
             )

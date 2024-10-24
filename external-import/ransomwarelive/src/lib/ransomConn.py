@@ -4,12 +4,20 @@ import sys
 import time
 from datetime import datetime
 
+import pycti
 import requests
+import tldextract
+import validators
 from pycti import OpenCTIConnectorHelper
 from stix2 import (
+    TLP_WHITE,
     Bundle,
+    DomainName,
     ExternalReference,
     Identity,
+    IntrusionSet,
+    IPv4Address,
+    IPv6Address,
     Location,
     Relationship,
     Report,
@@ -49,6 +57,20 @@ class RansomwareAPIConnector:
             raise ValueError(msg)
 
         update_existing_data = os.environ.get("CONNECTOR_UPDATE_EXISTING_DATA", "false")
+        self.tlp_marking = "TLP:WHITE"
+        self.marking = TLP_WHITE
+        author = Identity(
+            id=pycti.Identity.generate_id("Ransomware.Live", "organization"),
+            name="Ransomware.Live",
+            identity_class="organization",
+            type="identity",
+            object_marking_refs=[self.marking.get("id")],
+            contact_information="https://www.ransomware.live/#/about?id=⚙️-integration-with-opencti",
+            x_opencti_reliability="A - Completely reliable",
+            allow_custom=True,
+        )
+        self.author = author
+
         if isinstance(update_existing_data, str) and update_existing_data.lower() in [
             "true",
             "false",
@@ -66,18 +88,372 @@ class RansomwareAPIConnector:
             self.helper.log_warning(msg)
             self.update_existing_data = "false"
 
-    def stix_object_generator(self, item):
-        """Comment"""
+    # Generates a group description from the ransomware.live API data
+    def threat_discription_generater(self, group_name, group_data):
 
-        self.helper.log_info(f"Processing {item}.")
-        threat_actor = ThreatActor(name=item["group_name"], labels=["ransomware"])
+        matching_items = [
+            item for item in group_data if item.get("name", None) == group_name
+        ]
 
-        identity = Identity(name=item["post_title"], identity_class="organisation")
+        if matching_items and matching_items[0].get("description") is not (
+            None or "" or " " or "null"
+        ):
+            description = matching_items[0].get(
+                "description", "No description available"
+            )
 
-        # Creating External References Object if they have external referncees
-        external_references = []
+        else:
+            description = "No description available"
+        return description
+
+    # Generates a relationship object
+    def relationship_generator(self, source_ref, target_ref, relationship_type):
+        relation = Relationship(
+            id=pycti.StixCoreRelationship.generate_id(
+                relationship_type,
+                source_ref,
+                target_ref,
+            ),
+            relationship_type=relationship_type,
+            source_ref=source_ref,
+            target_ref=target_ref,
+            created_by_ref=self.author.get("id"),
+        )
+        return relation
+
+    # Validates if the input is a domain
+    def is_domain(self, name):
+
+        if validators.domain(name):
+            return True
+        else:
+            return False
+
+    # Validates if the input is an IPv4 address
+    def is_ipv4(self, ip):
+        if validators.ipv4(ip):
+            return True
+        else:
+            return False
+
+    # Validates if the input is an IPv6 address
+    def is_ipv6(self, ip):
+        if validators.ipv6(ip):
+            return True
+        else:
+            return False
+
+    # Fetches the IP address of a domain
+    def ip_fetcher(self, domain):
+
+        try:
+            params = {"name": domain, "type": "A"}
+
+            headers = {"accept": "application/json", "User-Agent": "OpenCTI"}
+
+            response = requests.get(
+                "https://dns.google/resolve", headers=headers, params=params
+            )
+
+            if response.status_code == 200:
+                response_json = response.json()
+                if response_json.get("Answer") is not None:
+                    for item in response_json.get("Answer"):
+
+                        if item.get("type") == 1 and self.is_ipv4(item.get("data")):
+                            ip_address = item.get("data")
+                            return ip_address
+                        else:
+                            return None
+
+            else:
+                return None
+        except Exception as e:
+
+            self.helper.log_error(f"Error fetching IP address{domain}")
+            self.helper.log_error(str(e))
+            return None
+
+    # Fetches the whois information of a domain
+    def fetch_country_domain(self, domain):
+        url = f"https://who-dat.as93.net/{domain}"
+        headers = {"user-agent": "OpenCTI"}
+        try:
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                response_json = response.json()
+                if response_json.get("whoisparser") == "domain is not found":
+                    self.helper.log_info(f"Domain {domain} is not found")
+                    return None
+
+            else:
+                return None
+        except Exception as e:
+            self.helper.log_error(f"Error fetching WHOIS for domain {domain}")
+            self.helper.log_error(str(e))
+            return None
+        try:
+            description = f"Domain:{domain}  \n"
+            if (
+                response_json.get("domain") is not None
+                and response_json.get("administrative") is not None
+            ):
+                if response_json.get("administrative").get("country") is not None:
+                    description += f" is registered in {response_json.get('administrative').get('country')}  \n"
+            if response_json.get("registrar") is not None:
+                description += (
+                    f"registered with {response_json.get('registrar').get('name')}  \n"
+                )
+            if response_json.get("domain").get("created_date") is not None:
+                description += f" creation_date {response_json.get('domain').get('created_date')}  \n"
+            if response_json.get("domain").get("expiration_date") is not None:
+                description += f" expiration_date {response_json.get('domain').get('expiration_date')}  \n"
+
+        except Exception as e:
+            self.helper.log_error(f"Error fetching whois for domain {domain}")
+            self.helper.log_error(str(e))
+            return None
+
+        return description
+
+    # Extracts the domain from a URL
+    def domain_extractor(self, url):
+        try:
+            if validators.domain(url):
+                return url
+            else:
+                domain = tldextract.extract(url).registered_domain
+                if validators.domain(domain):
+                    return domain
+                else:
+                    return None
+        except Exception as e:
+            self.helper.log_error("Error extracting domain")
+            self.helper.log_error(str(e))
+            return None
+
+    # Fetches the location object from OpenCTI
+    def opencti_location_check(self, country):
+        country_id = pycti.Location.generate_id(country, "Country")
+        try:
+            country_out = self.helper.api.stix_domain_object.read(id=country_id)
+            if country_out and country_out.get("standard_id").startswith("location--"):
+                return country_out.get("standard_id")
+            else:
+                return None
+        except Exception as e:
+            self.helper.log_error(f"Error fetching location{country}")
+            self.helper.log_error(str(e))
+            return None
+
+    def sector_fetcher(self, sector):
+        try:
+            sectors_split = []
+            rubbish = [" and ", " or ", " ", ";"]
+            for item in rubbish:
+                sector = " ".join(sector.split(item))
+
+            sectors_split = sector.split()
+            for item in sectors_split:
+                if item == "and" or item == "or" or item == "," or item == ", ":
+                    sectors_split.remove(item)
+                else:
+                    item2 = item.strip()
+                    sectors_split.remove(item)
+                    sectors_split.append(item2)
+
+            filtered_sectors = [
+                {"key": "entity_type", "values": ["Sector"], "operator": "eq"},
+            ]
+            for sub_sector in sectors_split:
+                sub_filter = {
+                    "key": "name",
+                    "values": [sub_sector],
+                    "mode": "or",
+                    "operator": "eq",
+                }
+                filtered_sectors.append(sub_filter)
+
+            sector_out = self.helper.api.identity.read(
+                filters={
+                    "mode": "and",
+                    "filters": [
+                        {"key": "entity_type", "values": ["Sector"], "operator": "eq"},
+                        {
+                            "key": "name",
+                            "values": sector,
+                            "mode": "or",
+                            "operator": "search",
+                        },
+                    ],
+                    "filterGroups": [],
+                },
+            )
+            if sector_out and sector_out.get("standard_id").startswith("identity--"):
+                return sector_out.get("standard_id")
+            else:
+                return None
+
+        except Exception as e:
+            self.helper.log_error(f"Errot fetching sector{sector}")
+            self.helper.log_error(str(e))
+            return None
+
+    def ip_object_creator(self, ip):
+        try:
+            if self.is_ipv4(ip):
+                Ipv4 = self.ipv4_generator(ip)
+                return Ipv4
+            elif self.is_ipv6(ip):
+                Ipv6 = self.ipv6_generator(ip)
+                return Ipv6
+            else:
+                return None
+        except Exception as e:
+            self.helper.log_error(f"Error creating IP object{ip}")
+            self.helper.log_error(str(e))
+            return None
+
+    # Generates a ransom note external reference
+
+    def ransome_note_generator(self, group_name):
+
+        if group_name == "lockbit3" or group_name == "lockbit2":
+            return ExternalReference(
+                source_name="Ransom Note",
+                url="https://www.ransomware.live/#/notes/lockbit",
+                description="Sample Ransom Note",
+            )
+        else:
+            return ExternalReference(
+                source_name="Ransom Note",
+                url=f"https://www.ransomware.live/#/notes/{group_name}",
+                description="Sample Ransom Note",
+            )
+
+    # Generates a STIX object for an IPv4 address
+    def ipv4_generator(self, ip):
+        Ipv4 = IPv4Address(
+            value=ip,
+            type="ipv4-addr",
+            object_marking_refs=[self.marking.get("id")],
+            created_by_ref=self.author.get("id"),
+            allow_custom=True,
+        )
+        return Ipv4
+
+    # Generates a STIX object for an IPv6 address
+    def ipv6_generator(self, ip):
+        Ipv6 = IPv6Address(
+            value=ip,
+            type="ipv6-addr",
+            object_marking_refs=[self.marking.get("id")],
+            created_by_ref=self.author.get("id"),
+            allow_custom=True,
+        )
+        return Ipv6
+
+    # Generates a STIX object for a domain
+    def domain_generator(self, domain_name, description="-"):
+        domain = DomainName(
+            value=domain_name,
+            type="domain-name",
+            object_marking_refs=[self.marking.get("id")],
+            allow_custom=True,
+            created_by_ref=self.author.get("id"),
+            x_opencti_description=description,
+        )
+        return domain
+
+    # Generates STIX objects from the ransomware.live API data
+    def stix_object_generator(self, item, group_data):
+        """Generates STIX objects from the ransomware.live API data"""
+
+        # Creating Victim object
+        post_title = item.get("post_title")
+        victim_name, identity_class = (
+            (post_title, "organization")
+            if len(post_title) > 2
+            else ((post_title + ":<)"), "individual")
+        )
+        victim = Identity(
+            id=pycti.Identity.generate_id(victim_name, identity_class.capitalize()),
+            name=victim_name,
+            identity_class=identity_class,
+            type="identity",
+            created_by_ref=self.author.get("id"),
+            object_marking_refs=[self.marking.get("id")],
+        )
+
+        # RansomNote External Reference
+        external_references_group = self.ransome_note_generator(item.get("group_name"))
+
+        # Creating Threat Actor object
+        threat_actor_name = item.get("group_name")
+        threat_actor = ThreatActor(
+            id=pycti.ThreatActor.generate_id(threat_actor_name),
+            name=threat_actor_name,
+            labels=["ransomware"],
+            created_by_ref=self.author.get("id"),
+            description=self.threat_discription_generater(
+                item.get("group_name"), group_data
+            ),
+            object_marking_refs=[self.marking.get("id")],
+            external_references=[external_references_group],
+        )
+
+        Target_relation = self.relationship_generator(
+            threat_actor.get("id"), victim.get("id"), "targets"
+        )
+
+        # Creating Intrusion Set object
+        try:
+            if (
+                item.get("group_name") == "lockbit3"
+                or item.get("group_name") == "lockbit2"
+            ):
+
+                intrusionset = IntrusionSet(
+                    id=pycti.IntrusionSet.generate_id("lockbit"),
+                    name="lockbit",
+                    labels=["ransomware"],
+                    created_by_ref=self.author.get("id"),
+                    description=self.threat_discription_generater(
+                        item.get("lockbit3"), group_data
+                    ),
+                    object_marking_refs=[self.marking.get("id")],
+                    external_references=[external_references_group],
+                )
+
+            else:
+                intrusionset_name = item.get("group_name")
+                intrusionset = IntrusionSet(
+                    id=pycti.IntrusionSet.generate_id(intrusionset_name),
+                    name=intrusionset_name,
+                    labels=["ransomware"],
+                    created_by_ref=self.author.get("id"),
+                    description=self.threat_discription_generater(
+                        item.get("group_name"), group_data
+                    ),
+                    object_marking_refs=[self.marking.get("id")],
+                    external_references=[external_references_group],
+                )
+
+            relation_VI_IS = self.relationship_generator(
+                intrusionset.get("id"), victim.get("id"), "targets"
+            )
+            relation_IS_TA = self.relationship_generator(
+                intrusionset.get("id"), threat_actor.get("id"), "attributed-to"
+            )
+
+        except Exception as e:
+            self.helper.log_error(str(e))
+
+        # Creating External References Object if they have external references
+        external_references = [external_references_group]
 
         for field in ["screenshot", "website", "post_url"]:
+
             if item.get(field):
                 external_reference = ExternalReference(
                     source_name="ransomware.live",
@@ -87,90 +463,208 @@ class RansomwareAPIConnector:
                 external_references.append(external_reference)
 
         # Creating Report object
+        report_name = (
+            item.get("group_name") + " has published a new victim: " + post_title
+        )
+        report_created = datetime.fromisoformat(item.get("discovered"))
+        report_published = datetime.fromisoformat(item.get("published"))
         report = Report(
+            id=pycti.Report.generate_id(report_name, report_published),
             report_types=["Ransomware-report"],
-            name=item.get("post_title"),
+            name=report_name,
             description=item.get("description"),
-            object_refs=[threat_actor.get("id")],
-            published=datetime.strptime(item.get("published"), "%Y-%m-%d %H:%M:%S.%f"),
-            created=datetime.strptime(item.get("discovered"), "%Y-%m-%d %H:%M:%S.%f"),
+            created_by_ref=self.author.get("id"),
+            object_refs=[
+                threat_actor.get("id"),
+                victim.get("id"),
+                intrusionset.get("id"),
+                Target_relation.get("id"),
+                relation_VI_IS.get("id"),
+                relation_IS_TA.get("id"),
+            ],
+            published=report_published,
+            created=report_created,
+            object_marking_refs=[self.marking.get("id")],
             external_references=external_references,
         )
-        # Creating Relationships
-        Target_attribution = Relationship(
-            relationship_type="attributed-to",
-            source_ref=threat_actor.get("id"),
-            target_ref=identity.get("id"),
-        )
-        Target_relation = Relationship(
-            relationship_type="targets",
-            source_ref=threat_actor.get("id"),
-            target_ref=identity.get("id"),
-        )
-        Report_relation = Relationship(
-            relationship_type="related-to",
-            source_ref=report.get("id"),
-            target_ref=threat_actor.get("id"),
-        )
-        Threat_relation = Relationship(
-            relationship_type="related-to",
-            source_ref=threat_actor.get("id"),
-            target_ref=report.get("id"),
-        )
 
-        Report_Organisation_relation = Relationship(
-            relationship_type="related-to",
-            source_ref=report.get("id"),
-            target_ref=identity.get("id"),
-        )
+        # Initial Bundle objects
+        bundle = [
+            self.author,
+            victim,
+            threat_actor,
+            intrusionset,
+            Target_relation,
+            relation_IS_TA,
+            relation_VI_IS,
+        ]
+
+        # Creating Sector object
+
+        try:
+
+            if item.get("activity") is not None:
+
+                sector_id = self.sector_fetcher(item.get("activity"))
+                if sector_id is not None:
+                    relation_sec_vic = self.relationship_generator(
+                        victim.get("id"), sector_id, "part-of"
+                    )
+                    relation_sec_TA = self.relationship_generator(
+                        threat_actor.get("id"), sector_id, "targets"
+                    )
+                    relation_is_sec = self.relationship_generator(
+                        intrusionset.get("id"), sector_id, "targets"
+                    )
+                    bundle.append(relation_sec_vic)
+                    bundle.append(relation_sec_TA)
+                    bundle.append(relation_is_sec)
+
+                    report.get("object_refs").append(sector_id)
+                    report.get("object_refs").append(relation_sec_vic.get("id"))
+                    report.get("object_refs").append(relation_sec_TA.get("id"))
+                    report.get("object_refs").append(relation_is_sec.get("id"))
+
+        except Exception as e:
+            self.helper.log_error(str(e))
+
+        # Creating Domain object
+        if self.is_domain(item.get("post_title")):
+
+            domain_name = item.get("post_title")
+            # Extracting domain name
+            domain_name = self.domain_extractor(domain_name)
+            # Fetching domain description
+            description = self.fetch_country_domain(domain_name)
+
+            domain = self.domain_generator(item.get("post_title"), description)
+            relation_VI_DO = self.relationship_generator(
+                domain.get("id"), victim.get("id"), "belongs-to"
+            )
+
+            # Fetching IP address of the domain
+            resolved_ip = self.ip_fetcher(domain_name)
+
+            ip_object = self.ip_object_creator(resolved_ip)
+
+            if ip_object is not None and ip_object.get("id") is not None:
+                relation_DO_IP = self.relationship_generator(
+                    domain.get("id"), ip_object.get("id"), "resolves-to"
+                )
+                bundle.append(ip_object)
+                bundle.append(relation_DO_IP)
+                report.get("object_refs").append(ip_object.get("id"))
+                report.get("object_refs").append(relation_DO_IP.get("id"))
+
+            # self.helper.api.stix_cyber_observable.ask_for_enrichment(domain.get("id"))
+            report.get("object_refs").append(domain.get("id"))
+            report.get("object_refs").append(relation_VI_DO.get("id"))
+            bundle.append(domain)
+            bundle.append(relation_VI_DO)
+
+        elif (
+            item.get("website") != ""
+            and not self.is_domain(item.get("post_title"))
+            and item.get("website") is not None
+        ):
+
+            if self.domain_extractor(item.get("website")) is not None:
+
+                domain_name = self.domain_extractor(item.get("website"))
+
+                description = self.fetch_country_domain(domain_name)
+                try:
+                    domain2 = self.domain_generator(domain_name, description)
+                except Exception as e:
+                    self.helper.log_error(
+                        f"Error creating domain object: {domain_name} {description}"
+                    )
+                    self.helper.log_error(str(e))
+
+                relation_VI_DO2 = self.relationship_generator(
+                    domain2.get("id"), victim.get("id"), "belongs-to"
+                )
+                resolved_ip = self.ip_fetcher(domain_name)
+
+                ip_object = self.ip_object_creator(resolved_ip)
+
+                if ip_object is not None:
+                    relation_DO_IP2 = self.relationship_generator(
+                        domain2.get("id"), ip_object.get("id"), "resolves-to"
+                    )
+                    bundle.append(ip_object)
+                    bundle.append(relation_DO_IP2)
+                    report.get("object_refs").append(ip_object.get("id"))
+                    report.get("object_refs").append(relation_DO_IP2.get("id"))
+
+                report.get("object_refs").append(domain2.get("id"))
+                report.get("object_refs").append(relation_VI_DO2.get("id"))
+                bundle.append(domain2)
+                bundle.append(relation_VI_DO2)
 
         # Creating Location object
-        if item["country"] != "":
-            location = Location(name=item["country"], country=item["country"])
+        if (
+            item.get("country") != ""
+            and item.get("country") is not None
+            and len(item.get("country", "Four")) < 4
+        ):
 
-            Location_relation = Relationship(
-                relationship_type="located-at",
-                source_ref=identity.get("id"),
-                target_ref=location.get("id"),
+            country_name = item.get("country")
+            country_stix_id = self.opencti_location_check(country_name)
+            location3 = Location(
+                id=country_stix_id
+                or pycti.Location.generate_id(country_name, "Country"),
+                name=country_name,
+                country=item.get("country"),
+                type="location",
+                created_by_ref=self.author.get("id"),
+                object_marking_refs=[self.marking.get("id")],
+            )
+            # If country not yet available, add it in the bundle for creation
+            if country_stix_id is None:
+                bundle.append(location3)
+
+            Location_relation = self.relationship_generator(
+                victim.get("id"), location3.get("id"), "located-at"
             )
 
-            bundle = Bundle(
-                objects=[
-                    report,
-                    identity,
-                    threat_actor,
-                    location,
-                    Target_attribution,
-                    Target_relation,
-                    Report_relation,
-                    Threat_relation,
-                    Report_Organisation_relation,
-                    Location_relation,
-                ],
-                allow_custom=True,
-            )
-        else:
-            bundle = Bundle(
-                objects=[
-                    report,
-                    identity,
-                    threat_actor,
-                    Target_attribution,
-                    Target_relation,
-                    Report_relation,
-                    Threat_relation,
-                    Report_Organisation_relation,
-                ],
-                allow_custom=True,
+            relation_IS_LO = self.relationship_generator(
+                intrusionset.get("id"), location3.get("id"), "targets"
             )
 
-        self.helper.log_info(f"Sending {bundle} STIX objects to collect_intellegince.")
+            relation_TA_LO = self.relationship_generator(
+                threat_actor.get("id"), location3.get("id"), "targets"
+            )
+
+            bundle.append(relation_IS_LO)
+            bundle.append(Location_relation)
+            bundle.append(relation_TA_LO)
+
+            report.get("object_refs").append(location3.get("id"))
+            report.get("object_refs").append(relation_IS_LO.get("id"))
+            report.get("object_refs").append(relation_TA_LO.get("id"))
+            report.get("object_refs").append(Location_relation.get("id"))
+
+        bundle.append(report)
+        self.helper.log_info(
+            f"Sending {len(bundle)} STIX objects to collect_intellegince."
+        )
         return bundle
 
+    # Collects historic intelligence from ransomware.live
     def collect_historic_intelligence(self):
         """Collects historic intelligence from ransomware.live"""
         base_url = "https://api.ransomware.live/victims/"
-        headers = {"User-Agent": "OpenCTI Connector", "accept": "application/json"}
+        groups_url = "https://api.ransomware.live/groups"
+        headers = {"accept": "application/json", "User-Agent": "OpenCTI"}
+
+        # fetching group information
+        try:
+            response = requests.get(groups_url, headers=headers)
+            group_data = response.json()
+        except Exception as e:
+            self.helper.log_error(str(e))
+            group_data = []
 
         curent_year = int(dt.date.today().year)
         # Checking if the historic year is less than 2020 as there is no data past 2020
@@ -179,8 +673,8 @@ class RansomwareAPIConnector:
         else:
             year = int(self.get_historic_year)
 
-        stix_bundles = []
         stix_objects = []
+        bundle = []
 
         for year in range(year, curent_year + 1):  # Looping through the years
             year_url = base_url + str(year)
@@ -191,15 +685,45 @@ class RansomwareAPIConnector:
                 try:
                     if response.status_code == 200:
                         response_json = response.json()
-                        print(response.raise_for_status())
 
                         for item in response_json:
-                            bundle = self.stix_object_generator(
-                                item
-                            )  # calling the stix_object_generator method to create stix objects
-                            stix_bundles.append(bundle)
-                            stix_objects.extend(bundle.objects)
+
+                            try:
+                                bundle_list = self.stix_object_generator(
+                                    item, group_data
+                                )
+                            except Exception as e:
+                                self.helper.log_error(
+                                    f"Error creating STIX objects: {item.get('post_title')}"
+                                )
+                                self.helper.log_error(str(e))
+
+                            if bundle_list is None:
+                                self.helper.log_info("No new data to process")
+
+                            else:
+
+                                # Deduplicate the objects
+                                bundle_list = self.helper.stix2_deduplicate_objects(
+                                    bundle_list
+                                )
+
+                                bundle = Bundle(
+                                    objects=bundle_list, allow_custom=True
+                                ).serialize()
+
+                            if bundle is not None:
+                                self.helper.send_stix2_bundle(
+                                    bundle,
+                                    update=self.update_existing_data,
+                                    work_id=self.work_id,
+                                )
+
+                            self.helper.log_info(
+                                f"Sending {len(bundle_list)} STIX objects to OpenCTI..."
+                            )
                     else:
+
                         self.helper.log_info(
                             f"Error and response status code {response.status_code}"
                         )
@@ -208,55 +732,91 @@ class RansomwareAPIConnector:
                     self.helper.log_error(str(e))
                     return stix_objects
 
-        return stix_objects
+        return None
 
     def collect_intelligence(self, last_run) -> list:
+
         url = "https://api.ransomware.live/recentvictims"
-        headers = {"User-Agent": "OpenCTI Connector", "accept": "application/json"}
-        response = requests.get(url, headers=headers)
+        groups_url = "https://api.ransomware.live/groups"
+        headers = {"accept": "application/json"}
+
+        # fetching group information
+        try:
+            response = requests.get(groups_url, headers=headers)
+            group_data = response.json()
+        except Exception as e:
+            self.helper.log_error(str(e))
+            group_data = []
+
+        # fetching recent requests
+        try:
+            response = requests.get(url, headers=headers)
+        except Exception as e:
+            self.helper.log_error(str(e))
         if response.status_code == 200:
             response_json = response.json()
-            print(response.raise_for_status())
-            stix_bundles = []
+
             stix_objects = []
 
             try:
                 for item in response_json:
+
                     created = datetime.strptime(
                         item.get("discovered"), "%Y-%m-%d %H:%M:%S.%f"
                     )
-                    time_diff = int(datetime.timestamp(created)) - (int(last_run) - 30)
 
                     if last_run is None:
                         time_diff = 1
                     else:
                         time_diff = int(datetime.timestamp(created)) - (
-                            int(last_run) - 30
-                        )  # 30 seconds is added to avoid missing any data that might have caused due to code execution time
-
+                            int(last_run) - 84600
+                        )  # pushing all the data from the last 24 hours
                     if time_diff > 0:
-                        bundle = self.stix_object_generator(
-                            item
+
+                        bundle_list = self.stix_object_generator(
+                            item, group_data
                         )  # calling the stix_object_generator method to create stix objects
-                        stix_bundles.append(bundle)
-                        stix_objects.extend(bundle.objects)
+
+                        stix_objects.extend(bundle_list)
+
+                        if bundle_list is None:
+                            self.helper.log_info("No new data to process")
+
+                        else:
+
+                            # Deduplicate the objects
+                            bundle_list = self.helper.stix2_deduplicate_objects(
+                                bundle_list
+                            )
+
+                            self.helper.log_info(
+                                f"Sending {len(bundle_list)} STIX objects to OpenCTI..."
+                            )
+
+                            # Creating Bundle
+                            bundle = Bundle(
+                                objects=bundle_list, allow_custom=True
+                            ).serialize()
+
+                        if bundle is not None:
+                            self.helper.send_stix2_bundle(
+                                bundle,
+                                update=self.update_existing_data,
+                                work_id=self.work_id,
+                            )
 
                 self.helper.log_info(
-                    f"Sending {stix_objects} STIX objects to OpenCTI..."
+                    f"Sending {len(stix_objects)} STIX objects to OpenCTI..."
                 )
 
             except Exception as e:
                 self.helper.log_error(str(e))
-                return []
-
-            if len(stix_objects) > 0:
-                return stix_objects
-            else:
                 return None
 
         else:
-            print("Error: ", response.status_code)
-            return []
+            self.helper.log_error(response.status_code)
+            return None
+        return None
 
     def _get_interval(self) -> int:
         """Returns the interval to use for the connector
@@ -296,10 +856,10 @@ class RansomwareAPIConnector:
                 timestamp = int(time.time())
                 current_state = self.helper.get_state()
                 self.get_historic = os.environ.get(
-                    "CONNECTOR_PULL_HISTORY", None
+                    "CONNECTOR_PULL_HISTORY", "false"
                 ).lower()
                 self.get_historic_year = os.environ.get(
-                    "CONNECTOR_HISTORY_START_YEAR", None
+                    "CONNECTOR_HISTORY_START_YEAR", 2020
                 ).lower()
 
                 if current_state is not None and "last_run" in current_state:
@@ -326,32 +886,56 @@ class RansomwareAPIConnector:
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
                     )
+                    self.work_id = work_id
                     # testing get_historic or pull history config variable
 
                     try:  # Performing the collection of intelligence
-                        if last_run is None and self.get_historic:
+
+                        if (last_run is None) and (self.get_historic.upper() == "TRUE"):
                             bundle_objects = self.collect_historic_intelligence()
                         else:
                             bundle_objects = self.collect_intelligence(last_run)
 
-                        # Creating Bundle
+                        if bundle_objects is None:
+                            self.helper.log_info("No new data to process")
+                            bundle = Bundle(
+                                objects=bundle_objects, allow_custom=True
+                            ).serialize()
 
-                        bundle = Bundle(
-                            objects=bundle_objects, allow_custom=True
-                        ).serialize()
+                        else:
+
+                            # Deduplicate the objects
+                            bundle_objects = self.helper.stix2_deduplicate_objects(
+                                bundle_objects
+                            )
+
+                            self.helper.log_info(
+                                f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
+                            )
+
+                            # Creating Bundle
+                            bundle = Bundle(
+                                objects=bundle_objects, allow_custom=True
+                            ).serialize()
 
                         # self.helper.log_info(f"Sending {bundle_objects} STIX objects to OpenCTI...")
 
-                        self.helper.log_info(
-                            f"Sending {bundle_objects} STIX objects to OpenCTI..."
-                        )
-                        self.helper.send_stix2_bundle(
-                            bundle,
-                            update=self.update_existing_data,
-                            work_id=work_id,
-                        )
                     except Exception as e:
                         self.helper.log_error(str(e))
+                        self.helper.log_error("Something Wrong with Bundle creation")
+
+                    try:
+                        if bundle_objects is not None:
+                            self.helper.send_stix2_bundle(
+                                bundle,
+                                update=self.update_existing_data,
+                                work_id=work_id,
+                            )
+
+                    except Exception as e:
+
+                        self.helper.log_error(str(e))
+                        self.helper.log_error("Error sending STIX2 bundle to OpenCTI")
 
                     # Store the current timestamp as a last run
                     message = (

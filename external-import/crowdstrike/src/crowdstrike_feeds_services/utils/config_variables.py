@@ -36,16 +36,17 @@ class ConfigCrowdstrike:
         :return: None
         """
         # OpenCTI configurations
-        self.update_existing_data: bool = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
+
+        self.duration_period: str = get_config_variable(
+            "CONNECTOR_DURATION_PERIOD",
+            ["connector", "duration_period"],
             self.load,
         )
 
         # Crowdstrike configurations
 
         self.base_url: str = get_config_variable(
-            "CROWDSTRIKE_API_BASE_URL",
+            "CROWDSTRIKE_BASE_URL",
             ["crowdstrike", "base_url"],
             self.load,
             default="https://api.crowdstrike.com",
@@ -141,6 +142,13 @@ class ConfigCrowdstrike:
             self.load,
         )
 
+        self.default_x_opencti_score: int = get_config_variable(
+            "CROWDSTRIKE_DEFAULT_X_OPENCTI_SCORE",
+            ["crowdstrike", "default_x_opencti_score"],
+            self.load,
+            isNumber=True,
+        )
+
         self.indicator_low_score: int = get_config_variable(
             "CROWDSTRIKE_INDICATOR_LOW_SCORE",
             ["crowdstrike", "indicator_low_score"],
@@ -151,6 +159,32 @@ class ConfigCrowdstrike:
         self.indicator_low_score_labels: str = get_config_variable(
             "CROWDSTRIKE_INDICATOR_LOW_SCORE_LABELS",
             ["crowdstrike", "indicator_low_score_labels"],
+            self.load,
+        )
+
+        self.indicator_medium_score: int = get_config_variable(
+            "CROWDSTRIKE_INDICATOR_MEDIUM_SCORE",
+            ["crowdstrike", "indicator_medium_score"],
+            self.load,
+            isNumber=True,
+        )
+
+        self.indicator_medium_score_labels: str = get_config_variable(
+            "CROWDSTRIKE_INDICATOR_MEDIUM_SCORE_LABELS",
+            ["crowdstrike", "indicator_medium_score_labels"],
+            self.load,
+        )
+
+        self.indicator_high_score: int = get_config_variable(
+            "CROWDSTRIKE_INDICATOR_HIGH_SCORE",
+            ["crowdstrike", "indicator_high_score"],
+            self.load,
+            isNumber=True,
+        )
+
+        self.indicator_high_score_labels: str = get_config_variable(
+            "CROWDSTRIKE_INDICATOR_HIGH_SCORE_LABELS",
+            ["crowdstrike", "indicator_high_score_labels"],
             self.load,
         )
 
@@ -167,4 +201,5 @@ class ConfigCrowdstrike:
             ["crowdstrike", "interval_sec"],
             self.load,
             isNumber=True,
+            default=1800,
         )

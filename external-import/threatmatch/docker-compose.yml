@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-threatmatch:
-    image: opencti/connector-threatmatch:6.2.12
+    image: opencti/connector-threatmatch:6.3.6
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -17,5 +17,5 @@ services:
       - "THREATMATCH_IMPORT_FROM_DATE=2010-01-01 00:00"
       - THREATMATCH_IMPORT_PROFILES=true # Import profiles
       - THREATMATCH_IMPORT_ALERTS=true # Import alerts
-      - THREATMATCH_IMPORT_REPORTS=true # Import reports
+      - THREATMATCH_IMPORT_IOCS=true # Import iocs
     restart: always

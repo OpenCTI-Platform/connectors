@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI Malpedia Knowledge importer module."""
 import sys
-import time
 from datetime import datetime
 from typing import Any
 
@@ -35,122 +34,138 @@ class MalpediaConnector:
         self.helper.metric.state("idle")
 
         """
-        If we run without API key we can assume all data is TLP:WHITE 
+        If the default_marking environment variable does not exist,
+        then if we run without API key we can assume all data is TLP:WHITE 
         else we default to TLP:AMBER to be safe.
         """
-        self.default_marking = (
-            stix2.TLP_WHITE if self.api_client.unauthenticated else stix2.TLP_AMBER
-        )
+
+        self.default_marking = getattr(self.config, "default_marking", None)
+
+        if self.default_marking is not None:
+            default_marking_normalized = self.default_marking.strip().upper()
+            # Convert Markings for Stix2
+            if default_marking_normalized in TLP_MAPPING:
+                self.default_marking = TLP_MAPPING[default_marking_normalized]
+            else:
+                self.helper.connector_logger.info(
+                    "[INFO] Default marking defined in config is not supported by stix2, "
+                    "TLP marking will be defined by default TLP:CLEAR",
+                    {
+                        "default_marking_in_config": self.default_marking,
+                        "TLP_availables": "TLP:CLEAR, TLP:GREEN, TLP:AMBER, TLP:RED",
+                    },
+                )
+                self.default_marking = stix2.TLP_WHITE
+        else:
+            self.default_marking = (
+                stix2.TLP_WHITE if self.api_client.unauthenticated else stix2.TLP_AMBER
+            )
 
         self.models = MalpediaModels()
         self.utils = MalpediaUtils(self.helper, self.config.interval_sec)
         self.converter = MalpediaConverter(self.helper, self.default_marking)
-        self.update_existing_data = self.config.update_existing_data
 
         self.work_id = None
         self.stix_objects = []
         self.stix_relationships = []
 
+    def run(self):
+        self.helper.schedule_unit(
+            message_callback=self.start,
+            duration_period=self.config.interval_sec,
+            time_unit=self.helper.TimeUnit.SECONDS,
+        )
+
     def start(self):
         """Malpedia Connector execution"""
         self.helper.connector_logger.info("[CONNECTOR] Starting Malpedia connector...")
 
-        while True:
-            try:
-                current_malpedia_version = self.api_client.current_version()
+        try:
+            current_malpedia_version = self.api_client.current_version()
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Current Malpedia version",
+                {"version": current_malpedia_version},
+            )
+            timestamp = self.utils.current_unix_timestamp()
+            current_state = self.utils.load_state()
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Loaded state",
+                {
+                    "current_state": (
+                        "First run" if current_state == {} else str(current_state)
+                    )
+                },
+            )
+
+            last_run = self.utils.get_state_value(current_state, LAST_RUN)
+            last_version = self.utils.get_state_value(current_state, LAST_VERSION)
+
+            """
+            Only run the connector if:
+            1. It is scheduled to run per interval
+            2. The global Malpedia version from the API is newer than our last stored version.
+            """
+            if self.utils.is_scheduled(
+                last_run, timestamp
+            ) and self.utils.check_version(last_version, current_malpedia_version):
+                self.helper.connector_logger.info("[CONNECTOR] Running importers")
+                self.helper.metric.inc("run_count")
+                self.helper.metric.state("running")
+                self.work_id = self.utils.initiate_work_id(timestamp)
+
                 self.helper.connector_logger.info(
-                    "[CONNECTOR] Current Malpedia version",
-                    {"version": current_malpedia_version},
-                )
-                timestamp = self.utils.current_unix_timestamp()
-                current_state = self.utils.load_state()
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Loaded state",
+                    "[CONNECTOR] Running Malpedia process...",
                     {
-                        "current_state": (
+                        "state": (
                             "First run" if current_state == {} else str(current_state)
                         )
                     },
                 )
+                self._run_malpedia_process()
 
-                last_run = self.utils.get_state_value(current_state, LAST_RUN)
-                last_version = self.utils.get_state_value(current_state, LAST_VERSION)
+                new_state = current_state.copy()
+                new_state[LAST_RUN] = self.utils.current_unix_timestamp()
+                new_state[LAST_VERSION] = current_malpedia_version
 
-                """
-                Only run the connector if:
-                1. It is scheduled to run per interval
-                2. The global Malpedia version from the API is newer than our last stored version.
-                """
-                if self.utils.is_scheduled(
-                    last_run, timestamp
-                ) and self.utils.check_version(last_version, current_malpedia_version):
-                    self.helper.connector_logger.info("[CONNECTOR] Running importers")
-                    self.helper.metric.inc("run_count")
-                    self.helper.metric.state("running")
-                    self.work_id = self.utils.initiate_work_id(timestamp)
+                msg = "[CONNECTOR] Connector successfully run, storing the new state..."
+                self.helper.connector_logger.info(msg, {"new_state": new_state})
+                self.helper.api.work.to_processed(self.work_id, msg)
 
-                    self.helper.connector_logger.info(
-                        "[CONNECTOR] Running Malpedia process...",
-                        {
-                            "state": (
-                                "First run"
-                                if current_state == {}
-                                else str(current_state)
-                            )
-                        },
-                    )
-                    self._run_malpedia_process()
-
-                    new_state = current_state.copy()
-                    new_state[LAST_RUN] = self.utils.current_unix_timestamp()
-                    new_state[LAST_VERSION] = current_malpedia_version
-
-                    msg = "[CONNECTOR] Connector successfully run, storing the new state..."
-                    self.helper.connector_logger.info(msg, {"new_state": new_state})
-                    self.helper.api.work.to_processed(self.work_id, msg)
-
-                    self.helper.set_state(new_state)
-                    new_interval_in_hours = round(self.config.interval_sec / 60 / 60, 2)
-                    self.helper.connector_logger.info(
-                        "[CONNECTOR] State stored, next run in hours.",
-                        {"next_run": new_interval_in_hours},
-                    )
-
-                else:
-                    new_interval = self.config.interval_sec - (timestamp - last_run)
-                    if new_interval < 0:
-                        next_run = "waiting for a new version"
-                    else:
-                        next_run = round(new_interval / 60 / 60, 2)
-
-                    self.helper.connector_logger.info(
-                        "[CONNECTOR] The connector will not run, next run in hours.",
-                        {
-                            "config_interval_sec": self.config.interval_sec,
-                            "next_run": str(next_run),
-                        },
-                    )
-
-            except (KeyboardInterrupt, SystemExit):
-                self.helper.connector_logger.info("[CONNECTOR] Connector stop...")
-                self.helper.metric.state("stopped")
-                sys.exit(0)
-
-            except Exception as e:
-                self.helper.connector_logger.error(
-                    "[CONNECTOR] Error while processing data:", {"error": str(e)}
+                self.helper.set_state(new_state)
+                new_interval_in_hours = round(self.config.interval_sec / 60 / 60, 2)
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] State stored, next run in hours.",
+                    {"next_run": new_interval_in_hours},
                 )
-                self.helper.metric.state("stopped")
-                sys.exit(0)
 
-            if self.helper.connect_run_and_terminate:
-                self.helper.connector_logger.info("[CONNECTOR] Connector stop...")
-                self.helper.metric.state("stopped")
-                self.helper.force_ping()
-                sys.exit(0)
+            else:
+                new_interval = self.config.interval_sec - (timestamp - last_run)
+                if new_interval < 0:
+                    next_run = "waiting for a new version"
+                else:
+                    next_run = round(new_interval / 60 / 60, 2)
 
-            self.helper.metric.state("idle")
-            time.sleep(60)
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] The connector will not run, next run in hours.",
+                    {
+                        "config_interval_sec": self.config.interval_sec,
+                        "next_run": str(next_run),
+                    },
+                )
+
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info("[CONNECTOR] Connector stop...")
+            self.helper.metric.state("stopped")
+            sys.exit(0)
+
+        except Exception as e:
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Error while processing data:", {"error": str(e)}
+            )
+            self.helper.metric.state("stopped")
+            sys.exit(0)
+
+        self.helper.metric.state("idle")
 
     def _run_malpedia_process(self):
 
@@ -174,7 +189,6 @@ class MalpediaConnector:
         self.helper.send_stix2_bundle(
             stix2_bundle,
             work_id=self.work_id,
-            update=self.config.update_existing_data,
         )
 
         self.helper.metric.inc("record_send", len(final_stix_objects))
@@ -554,10 +568,20 @@ class MalpediaConnector:
                 )
                 continue
 
-            if "detail" in actor_json and actor_json["detail"] == "Not found":
+            if (
+                "detail" in actor_json
+                and actor_json["detail"] == "No Actor matches the given query."
+            ):
+                self.helper.connector_logger.info(
+                    "[API] No Actor matches the given query", {"actor": actor}
+                )
                 continue
 
             if actor_json["value"] == "" or actor_json["value"] is None:
+                self.helper.connector_logger.info(
+                    "[API] No value returned for the actor for the given query",
+                    {"actor": actor},
+                )
                 continue
 
             if self.config.import_intrusion_sets:
@@ -592,7 +616,7 @@ class MalpediaConnector:
                         secondary_motivations = []
 
                     # List of external references
-                    actor_external_references = actor_json["meta"]["refs"]
+                    actor_external_references = actor_json["meta"].get("refs", [])
                     actor_main_url = URLS_MAPPING["base_url_actor"] + actor_json[
                         "value"
                     ].lower().replace(" ", "_")

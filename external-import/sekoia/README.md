@@ -1,14 +1,14 @@
 # Sekoia CTI Connector
 
 ## Objective
-Collect Sekoia.io CTI data in an existing self-managed OpenCTI instance for any operational purpose (such as CTI aggregation, dissemination, hunting...).
+Collect Sekoia.io CTI data in an existing OpenCTI instance for any operational purpose (such as CTI aggregation, dissemination, hunting...).
 
 ## Prerequisites
-- An operational OpenCTI instance with administrator privileges
-- An active Sekoia.io subscription. It could be a CTI-only subscription ([Sekoia Intelligence](https://www.sekoia.io/en/product/cti/)) or a XDR/SOC platform subscription ([Sekoia Defend](https://www.sekoia.io/en/product/xdr/)) which natively includes Sekoia CTI
+- An operational OpenCTI on-prem instance with administrator privileges or an OpenCTI Saas version
+- An active Sekoia CTI subscription (Sekoia Intelligence) : https://www.sekoia.io/en/product/cti/. If you want to test Sekoia CTI please contact : contact@sekoia.io 
 - [Creating a Sekoia.io API KEY](https://docs.sekoia.io/getting_started/manage_api_keys/) with the "View intelligence" premission (at least)
 
-## Configuration
+## OpenCTI on-prem version configuration
 
 1. Add the following code to the end of docker-compose.yml file in the OpenCTI docker repository
 
@@ -22,8 +22,8 @@ connector-sekoia:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=SEKOIA.IO
       - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,location,vulnerability,indicator,campaign,infrastructure,relationship
-      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=ChangeMe # by default PT60S
       - SEKOIA_BASE_URL=ChangeMe # by default 'https://api.sekoia.io'
       - SEKOIA_API_KEY=<Replace_by_Sekoia_API_key>
       - SEKOIA_COLLECTION=d6092c37-d8d7-45c3-8aff-c4dc26030608
@@ -57,6 +57,10 @@ Note:Sekoia connector should be named **connector-sekoia** as described in the p
 4. Check if Sekoia connector is running
 
 `docker-compose ps connector-sekoia`
+
+## OpenCTI SaaS version configuration
+
+Contact the Filigran support (support@filigran.com) to configure the Sekoia CTI connector.
 
 ## Sekoia Intelligence in OpenCTI
 

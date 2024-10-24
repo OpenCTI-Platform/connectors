@@ -32,12 +32,6 @@ class MalpediaConfig:
         """
         Extra config
         """
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            self.load,
-        )
-
         self.auth_key = get_config_variable(
             "MALPEDIA_AUTH_KEY",
             ["malpedia", "auth_key"],
@@ -70,5 +64,11 @@ class MalpediaConfig:
         self.create_observables = get_config_variable(
             "MALPEDIA_CREATE_OBSERVABLES",
             ["malpedia", "create_observables"],
+            self.load,
+        )
+
+        self.default_marking = get_config_variable(
+            "MALPEDIA_DEFAULT_MARKING",
+            ["malpedia", "default_marking"],
             self.load,
         )

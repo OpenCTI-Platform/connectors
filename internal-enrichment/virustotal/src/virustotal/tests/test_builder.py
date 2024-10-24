@@ -154,7 +154,7 @@ class VirusTotalBuilderTest(unittest.TestCase):
         builder.create_notes()
         # Bundle should have 3 elements: the author, the asn and the relationship.
         self.assertEqual(len(builder.bundle), 4)
-        self.assertEqual(builder.bundle[2].abstract, "VirusTotal Positives")
+        self.assertEqual(builder.bundle[2].abstract, "VirusTotal Results")
         self.assertTrue("Sangfor" in builder.bundle[2].content)
         self.assertEqual(builder.bundle[2].created_by_ref, self.author.id)
         self.assertTrue(

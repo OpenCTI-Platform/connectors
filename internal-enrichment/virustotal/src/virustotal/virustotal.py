@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """VirusTotal enrichment module."""
-import json
 from pathlib import Path
 from typing import Dict
 
@@ -55,7 +54,13 @@ class VirusTotalConnector:
             "VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT",
             ["virustotal", "file_create_note_full_report"],
             config,
-            default=False,
+            default=True,
+        )
+        self.file_import_yara = get_config_variable(
+            "VIRUSTOTAL_FILE_IMPORT_YARA",
+            ["virustotal", "file_import_yara"],
+            config,
+            default=True,
         )
         self.file_upload_unseen_artifacts = get_config_variable(
             "VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS",
@@ -220,9 +225,61 @@ class VirusTotalConnector:
 
         # Create a Note with the full report
         if self.file_create_note_full_report:
-            builder.create_note(
-                "VirusTotal Report", f"```\n{json.dumps(json_data, indent=2)}\n```"
-            )
+            if (
+                "data" in json_data
+                and "attributes" in json_data["data"]
+                and "last_analysis_results" in json_data["data"]["attributes"]
+            ):
+                data = json_data["data"]
+                content = "| Total Analyses | Malicious | Suspicious | Undetected | Harmless | Timeout | Confirmed timeout | Failure | Unsupported |\n"
+                content += "|----------------|-----------|------------|------------|----------|---------|-------------------|---------|-------------|\n"
+                content += (
+                    "| "
+                    + str(len(data["attributes"]["last_analysis_results"].keys()))
+                    + " |"
+                    + str(data["attributes"]["last_analysis_stats"]["malicious"])
+                    + " | "
+                    + str(data["attributes"]["last_analysis_stats"]["suspicious"])
+                    + " | "
+                    + str(data["attributes"]["last_analysis_stats"]["undetected"])
+                    + " | "
+                    + str(data["attributes"]["last_analysis_stats"]["harmless"])
+                    + " | "
+                    + str(data["attributes"]["last_analysis_stats"]["timeout"])
+                    + " | "
+                    + str(
+                        data["attributes"]["last_analysis_stats"]["confirmed-timeout"]
+                    )
+                    + " | "
+                    + str(data["attributes"]["last_analysis_stats"]["failure"])
+                    + " | "
+                    + str(data["attributes"]["last_analysis_stats"]["type-unsupported"])
+                    + " |\n\n"
+                )
+                content += "## Last Analysis Results\n\n"
+                content += "Any falsy value will be replaced by ‘N/A’\n"
+                content += (
+                    "| Engine name | Engine version | Method | Category | Result |\n"
+                )
+                content += (
+                    "|-------------|----------------|--------|----------|--------|\n"
+                )
+                for key in data["attributes"]["last_analysis_results"]:
+                    result = data["attributes"]["last_analysis_results"][key]
+                    content += (
+                        "| "
+                        + str(result.get("engine_name") or "N/A")
+                        + " | "
+                        + str(result.get("engine_version") or "N/A")
+                        + " | "
+                        + str(result.get("method") or "N/A")
+                        + " | "
+                        + str(result.get("category") or "N/A")
+                        + " | "
+                        + str(result.get("result") or "N/A")
+                        + " | \n"
+                    )
+                builder.create_note("VirusTotal Report", content)
         return builder.send_bundle()
 
     def _process_ip(self, stix_objects, stix_entity, opencti_entity):

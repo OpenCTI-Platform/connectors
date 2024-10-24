@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-ransomware:
-    image: opencti/connector-ransomwarelive:6.2.12
+    image: opencti/connector-ransomwarelive:6.3.6
     container_name: ransomware-connector
     environment:
       # Connector's definition parameters:
@@ -12,11 +12,11 @@ services:
       - OPENCTI_TOKEN=Changeme #generate user token
       - CONNECTOR_ID=Changeme #Valid UUIDv4 tokem
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted).
-      - CONNECTOR_LOG_LEVEL=info # Log level: debug, info, warn, error, fatal
+      - CONNECTOR_LOG_LEVEL=info # Log level: debug, info, warn, error
       - CONNECTOR_UPDATE_EXISTING_DATA=false
-      - CONNECTOR_PULL_HISTORY=true # If true, the connector will pull the history of the data.
-      - CONNECTOR_HISTORY_START_YEAR=2020 # Data only goes back till 2020
-      - CONNECTOR_RUN_EVERY=300s # In seconds.
+      - CONNECTOR_PULL_HISTORY=false # If true, the connector will pull the history of the data. But it is not recommended to set it to true as there will a large influx of data.
+      - CONNECTOR_HISTORY_START_YEAR=2023 # Data only goes back till 2020
+      - CONNECTOR_RUN_EVERY=10m # 10 minutes will be the ideal time
       # Connector's custom execution parameters:
       
     restart: always

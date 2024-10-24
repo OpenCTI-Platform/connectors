@@ -16,6 +16,7 @@ from dateutil.parser import parse
 from pycti import (
     AttackPattern,
     CustomObservableHostname,
+    CustomObservablePhoneNumber,
     CustomObservableText,
     Identity,
     Indicator,
@@ -64,6 +65,15 @@ OPENCTISTIX2 = {
         "path": ["serial_number"],
     },
     "text": {"type": "text", "path": ["value"]},
+    "user-agent": {"type": "user-agent", "path": ["value"]},
+    "phone-number": {"type": "phone-number", "path": ["value"]},
+    "user-account": {"type": "user-account", "path": ["account_login"]},
+    "user-account-github": {
+        "type": "user-account",
+        "path": ["account_login"],
+        "account_type": "github",
+    },
+    "identity-individual": {"type": "identity", "identity_class": "individual"},
 }
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
@@ -843,12 +853,24 @@ class MispFeed:
                 {"resolver": "ipv4-addr", "type": "IPv4-Addr"},
             ],
             "email-subject": [{"resolver": "email-subject", "type": "Email-Message"}],
+            "email": [{"resolver": "email-address", "type": "Email-Addr"}],
             "email-src": [{"resolver": "email-address", "type": "Email-Addr"}],
             "email-dst": [{"resolver": "email-address", "type": "Email-Addr"}],
             "url": [{"resolver": "url", "type": "Url"}],
             "windows-scheduled-task": [
                 {"resolver": "windows-scheduled-task", "type": "Text"}
             ],
+            "regkey": [{"resolver": "registry-key", "type": "Windows-Registry-Key"}],
+            "user-agent": [{"resolver": "user-agent", "type": "User-Agent"}],
+            "phone-number": [{"resolver": "phone-number", "type": "Phone-Number"}],
+            "whois-registrant-email": [
+                {"resolver": "email-address", "type": "Email-Addr"}
+            ],
+            "text": [{"resolver": "text", "type": "Text"}],
+            "github-username": [
+                {"resolver": "user-account-github", "type": "User-Account"}
+            ],
+            "full-name": [{"resolver": "identity-individual", "type": "Identity"}],
         }
         if type in types:
             resolved_types = types[type]
@@ -874,7 +896,11 @@ class MispFeed:
                 else:
                     return None
             else:
-                if resolved_types[0] == "ipv4-addr":
+                if (
+                    "resolver" in resolved_types[0]
+                    and resolved_types[0]["resolver"] == "ipv4-addr"
+                    or resolved_types[0] == "ipv4-addr"
+                ):
                     resolver_0 = self._detect_ip_version(value)
                     type_0 = self._detect_ip_version(value, True)
                 else:
@@ -1007,22 +1033,31 @@ class MispFeed:
             observable_resolver = resolved_attribute["resolver"]
             observable_type = resolved_attribute["type"]
             observable_value = resolved_attribute["value"]
-            name = resolved_attribute["value"]
+            name = (
+                resolved_attribute["value"]
+                if len(resolved_attribute["value"]) > 2
+                else (
+                    attribute["comment"]
+                    if len(attribute["comment"]) > 2
+                    else observable_type
+                )
+            )
             pattern_type = "stix"
+            pattern = None
             # observable type is yara or sigma for instance
             if observable_resolver in PATTERNTYPES:
                 pattern_type = observable_resolver
                 pattern = observable_value
                 name = (
                     attribute["comment"]
-                    if len(attribute["comment"]) > 0
+                    if len(attribute["comment"]) > 2
                     else observable_type
                 )
             # observable type is not in stix 2
             elif observable_resolver not in OPENCTISTIX2:
                 return None
             # observable type is in stix
-            else:
+            elif "path" in OPENCTISTIX2[observable_resolver]:
                 if "transform" in OPENCTISTIX2[observable_resolver]:
                     if (
                         OPENCTISTIX2[observable_resolver]["transform"]["operation"]
@@ -1049,7 +1084,7 @@ class MispFeed:
                 score = self.misp_feed_import_to_ids_no_score
 
             indicator = None
-            if self.misp_feed_create_indicators:
+            if self.misp_feed_create_indicators and pattern is not None:
                 try:
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
@@ -1151,6 +1186,22 @@ class MispFeed:
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
                         )
+                    elif observable_type == "User-Account":
+                        if "account_type" in OPENCTISTIX2[observable_resolver]:
+                            observable = stix2.UserAccount(
+                                account_login=observable_value,
+                                account_type=OPENCTISTIX2[observable_resolver][
+                                    "account_type"
+                                ],
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
+                        else:
+                            observable = stix2.UserAccount(
+                                account_login=observable_value,
+                                object_marking_refs=attribute_markings,
+                                custom_properties=custom_properties,
+                            )
                     elif observable_type == "File":
                         if OPENCTISTIX2[observable_resolver]["path"][0] == "name":
                             observable = stix2.File(
@@ -1203,11 +1254,32 @@ class MispFeed:
                                 object_marking_refs=attribute_markings,
                                 custom_properties=custom_properties,
                             )
+                    elif observable_type == "Phone-Number":
+                        observable = CustomObservablePhoneNumber(
+                            value=observable_value,
+                            object_marking_refs=attribute_markings,
+                            custom_properties=custom_properties,
+                        )
                     elif observable_type == "Text":
                         observable = CustomObservableText(
                             value=observable_value,
                             object_marking_refs=attribute_markings,
                             custom_properties=custom_properties,
+                        )
+                    elif observable_type == "Identity":
+                        observable = stix2.Identity(
+                            id=Identity.generate_id(
+                                observable_value,
+                                OPENCTISTIX2[observable_resolver]["identity_class"],
+                            ),
+                            name=observable_value,
+                            identity_class=OPENCTISTIX2[observable_resolver][
+                                "identity_class"
+                            ],
+                            description=attribute["comment"],
+                            labels=attribute_tags,
+                            created_by_ref=author["id"],
+                            external_references=attribute_external_references,
                         )
                 except Exception as e:
                     self.helper.log_error(

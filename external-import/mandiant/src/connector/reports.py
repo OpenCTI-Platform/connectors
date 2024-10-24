@@ -23,7 +23,7 @@ def process(connector, report):
                     "report_title": report_title,
                 },
             )
-            return
+            return None
         connector.helper.connector_logger.info(
             "Processing report",
             {
@@ -70,7 +70,6 @@ class Report:
         self.connector = connector
         self.details = details
         self.pdf = pdf
-        self.confidence = connector.helper.connect_confidence_level
         self.identity = connector.identity
         self.report_id = details.get("report_id", details.get("reportId", None))
         self.report_type = connector.mandiant_report_types[report_type]
@@ -84,6 +83,8 @@ class Report:
         self.update_country()
         self.update_report()
         self.update_vulnerability()
+        if not self.connector.mandiant_import_software_cpe:
+            self.update_software()
         self.create_relationships()
         if self.create_notes:
             self.create_note()
@@ -169,7 +170,6 @@ class Report:
 
     def update_report(self):
         report = utils.retrieve(self.bundle, "type", "report")
-        report["confidence"] = self.confidence
         report["created_by_ref"] = self.identity["standard_id"]
         report["report_types"] = [self.report_type]
         report["object_refs"] = list(
@@ -288,7 +288,6 @@ class Report:
                 "id": Note.generate_id(report["created"], text),
                 "abstract": "Analysis",
                 "content": text,
-                "confidence": self.confidence,
                 "created_by_ref": self.identity["standard_id"],
                 "object_refs": [report.get("id")],
                 "object_marking_refs": report["object_marking_refs"],
@@ -344,6 +343,35 @@ class Report:
             for item in self.bundle.get("objects"):
                 if tag == item.get("name"):
                     yield item
+
+    def update_software(self):
+        tmp_software_list = []
+
+        for bundle_obj in self.bundle["objects"]:
+            if "software" in bundle_obj["type"]:
+
+                # recreate Software STIX object with new generated ID
+                software = stix2.Software(
+                    name=bundle_obj["name"],
+                    vendor=bundle_obj["vendor"],
+                    object_marking_refs=bundle_obj["object_marking_refs"],
+                )
+
+                tmp_software_list.append(software)
+
+        # Remove all software from current bundle object
+        self.bundle["objects"] = [
+            obj for obj in self.bundle["objects"] if obj.get("type") != "software"
+        ]
+
+        # Remove all duplicates
+        final_software = [
+            software
+            for n, software in enumerate(tmp_software_list)
+            if software not in tmp_software_list[:n]
+        ]
+
+        self.bundle["objects"].extend(final_software)
 
     def create_relationships(self):
         # Get related objects
@@ -467,12 +495,19 @@ class Report:
             ]
 
         if len(vulnerabilities) > 0:
+
+            if self.connector.vulnerability_max_cpe_relationship and len(
+                softwares
+            ) < int(self.connector.vulnerability_max_cpe_relationship):
+                definitions += [
+                    {
+                        "type": "has",
+                        "sources": softwares,
+                        "destinations": vulnerabilities,
+                    },
+                ]
+
             definitions += [
-                {
-                    "type": "has",
-                    "sources": softwares,
-                    "destinations": vulnerabilities,
-                },
                 {
                     "type": "mitigates",
                     "sources": course_actions,
@@ -505,6 +540,8 @@ class Report:
                 relationships.append(relationship)
                 relationships_ids.append(relationship.id)
 
+        # Remove duplicates relationships
+        relationships_ids = list(dict.fromkeys(relationships_ids))
         report = utils.retrieve(self.bundle, "type", "report")
         report["object_refs"] += relationships_ids
         self.bundle["objects"] += relationships

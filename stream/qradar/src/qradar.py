@@ -5,275 +5,18 @@
 import json
 import logging
 import os
-import re
-import urllib
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
-from queue import Queue
+import sys
+import time
 
 import requests
 import yaml
-from prometheus_client import Counter, Gauge, start_http_server
 from pycti import OpenCTIConnectorHelper, get_config_variable
-
-
-class QradarReference:
-    def __init__(
-        self,
-        helper,
-        qradar_url: str,
-        qradar_url_reference: str,
-        qradar_token: str,
-        qradar_reference_name: str,
-        qradar_ssl_verify: bool,
-    ) -> None:
-        self.helper = helper
-        self.qradar_url = qradar_url
-        self.qradar_url_reference = qradar_url_reference
-        self.qradar_token = qradar_token
-        self.qradar_reference_name = qradar_reference_name
-        self.qradar_ssl_verify = qradar_ssl_verify
-
-    @property
-    def collection_url(self) -> str:
-        return (
-            f"{self.qradar_url}{self.qradar_url_reference}/{self.qradar_reference_name}"
-        )
-
-    @property
-    def headers(self) -> dict:
-        return {
-            "SEC": f"{self.qradar_token}",
-        }
-
-    @staticmethod
-    def init() -> bool:
-        return True
-
-    @staticmethod
-    def get_type(payload):
-        main_type = "main_observable_type" if payload["type"] == "indicator" else "type"
-        get_extension = OpenCTIConnectorHelper.get_attribute_in_extension(
-            main_type, payload
-        )
-        return get_extension
-
-    def create(self, id: str, payload: dict, create_alphanumeric: bool = False):
-        try:
-            url_request = (
-                f"{self.collection_url}_{self.get_type(payload)}"
-                if not create_alphanumeric
-                else f"{self.qradar_url}{self.qradar_url_reference}?element_type=ALN&name={self.qradar_reference_name}_{self.get_type(payload)}"
-            )
-            payload["_key"] = id
-
-            if payload["type"] == "file":
-                payload_value = next(iter(payload["hashes"].values()))
-            else:
-                payload_value = payload.get("name", payload.get("value"))
-
-            if payload_value is None:
-                return self.helper.connector_logger.info(
-                    "[CREATE] The creation was canceled because the entity value was not correctly identified.",
-                    {
-                        "entity_id": payload["id"],
-                        "entity_type -> type": f"{payload['type']} -> {self.get_type(payload)}",
-                    },
-                )
-
-            prepared_value = {"value": payload_value}
-            r = requests.post(
-                url_request,
-                prepared_value,
-                headers=self.headers,
-                verify=self.qradar_ssl_verify,
-            )
-            r.raise_for_status()
-            return self.helper.connector_logger.info(
-                "[API] The API request was successful",
-                {
-                    "entity_id": payload["id"],
-                    "entity_type -> type": f"{payload['type']} -> {self.get_type(payload)}",
-                    "status_code": r.status_code,
-                },
-            )
-
-        except requests.exceptions.HTTPError as e:
-            text_without_tags = re.sub(
-                r"<[^>]*>", "", e.response.text.replace("\n", " ")
-            )
-            logger_message = (
-                (
-                    "[ERROR-API] API request failed during creation. "
-                    "Attempted to create with ALN for alphanumeric values."
-                )
-                if not create_alphanumeric
-                else "[ERROR-API] API request failed during second attempted creation."
-            )
-            self.helper.connector_logger.error(
-                logger_message,
-                {
-                    "entity_id": payload["id"],
-                    "entity_type -> type": f"{payload['type']} -> {self.get_type(payload)}",
-                    "status_code": e.response.status_code,
-                    "reason": e.response.reason,
-                    "error": text_without_tags.strip(),
-                },
-            )
-            if not create_alphanumeric:
-                return self.create(id, payload, True)
-
-    def update(self, id: str, payload: dict):
-        payload["_key"] = id
-
-        r = requests.post(
-            f"{self.collection_url}_{self.get_type(payload)}",
-            {"value": payload.get("name")},
-            headers=self.headers,
-            verify=self.qradar_ssl_verify,
-        )
-        if r.status_code == 404:
-            self.create(id, payload)
-        else:
-            r.raise_for_status()
-
-    def delete(self, id: str, payload):
-        name = urllib.parse.quote(payload.get("name"), safe=".?#=&")
-        r = requests.delete(
-            f"{self.collection_url}_{self.get_type(payload)}/{name}",
-            headers=self.headers,
-            verify=self.qradar_ssl_verify,
-        )
-        if r.status_code != 404:
-            r.raise_for_status()
-
-
-class Metrics:
-    def __init__(self, name: str, addr: str, port: int) -> None:
-        self.name = name
-        self.addr = addr
-        self.port = port
-
-        self._processed_messages_counter = Counter(
-            "processed_messages", "Number of processed messages", ["name", "action"]
-        )
-        self._current_state_gauge = Gauge(
-            "current_state", "Current connector state", ["name"]
-        )
-
-    def msg(self, action: str):
-        self._processed_messages_counter.labels(self.name, action).inc()
-
-    def state(self, event_id: str):
-        """Set current state metric from an event id.
-
-        An event id looks like 1679004823824-0, it contains time information
-        about when the event was generated."""
-
-        ts = int(event_id.split("-")[0])
-        self._current_state_gauge.labels(self.name).set(ts)
-
-    def start_server(self):
-        start_http_server(self.port, addr=self.addr)
-
-
-class QradarConnector:
-    def __init__(
-        self,
-        helper: OpenCTIConnectorHelper,
-        qradar_reference: QradarReference,
-        queue: Queue,
-        ignore_types: list[str],
-        consumer_count: int,
-        metrics: Metrics | None = None,
-    ) -> None:
-        self.qradar_reference = qradar_reference
-        self.queue = queue
-        self.helper = helper
-        self.ignore_types = ignore_types
-        self.metrics = metrics
-        self.consumer_count = consumer_count
-
-        self._org_name_cache = {}
-
-    def is_filtered(self, data: dict):
-        return "type" in data and data["type"] in self.ignore_types
-
-    def get_org_name(self, entity_id: str) -> str | None:
-        if entity_id in self._org_name_cache:
-            return self._org_name_cache.get(entity_id)
-
-        entity = self.helper.api.stix_domain_object.read(id=entity_id)
-        org_name = entity.get("name")
-        self._org_name_cache[entity_id] = org_name
-
-        return org_name
-
-    def register_producer(self):
-        self.helper.listen_stream(self.produce)
-
-    def produce(self, msg):
-        self.queue.put(msg)
-
-    def start_consumers(self):
-        self.helper.log_info(f"starting {self.consumer_count} consumer threads")
-        with ThreadPoolExecutor() as executor:
-            for _ in range(self.consumer_count):
-                executor.submit(self.consume)
-
-    def consume(self):
-        # ensure the process stop when there is an issue while
-        # processing message
-        try:
-            self._consume()
-        except Exception as e:
-            self.helper.log_error("an error occurred while consuming messages")
-            self.helper.log_error(e)
-            os._exit(1)  # exit the current process, killing all threads
-
-    def _consume(self):
-        while True:
-            msg = self.queue.get()
-
-            payload = json.loads(msg.data)["data"]
-            id = OpenCTIConnectorHelper.get_attribute_in_extension("id", payload)
-
-            self.helper.log_debug(f"processing message with id {id}")
-
-            if self.is_filtered(payload):
-                self.helper.log_debug(f"item with id {id} is filtered")
-                continue
-
-            match msg.event:
-                case "create":
-                    self.qradar_reference.create(id, payload)
-                    self.helper.log_debug(f"reference_set item with id {id} created")
-
-                case "update":
-                    self.qradar_reference.update(id, payload)
-                    self.helper.log_debug(f"reference_set item with id {id} updated")
-
-                case "delete":
-                    self.qradar_reference.delete(id, payload)
-                    self.helper.log_debug(f"reference_set item with id {id} deleted")
-
-            if self.metrics is not None:
-                self.metrics.msg(msg.event)
-                self.metrics.state(msg.id)
-
-    def start(self):
-        if self.qradar_reference.init():
-            self.helper.log_info("reference_set created")
-        else:
-            self.helper.log_warning("unable to create reference_set")
-
-        self.register_producer()
-        self.start_consumers()
+from stix_shifter.stix_translation import stix_translation
 
 
 def fix_loggers() -> None:
     logging.getLogger(
-        "stix_shifter_modules.qradar.stix_translation.query_translator"
+        "stix_shifter_modules.splunk.stix_translation.query_translator"
     ).setLevel(logging.CRITICAL)
     logging.getLogger("stix_shifter.stix_translation.stix_translation").setLevel(
         logging.CRITICAL
@@ -283,103 +26,340 @@ def fix_loggers() -> None:
     ).setLevel(logging.CRITICAL)
 
 
-def load_config_file() -> dict:
-    config_file = Path(__file__).parent / "config.yml"
+class QRadarConnector:
+    def __init__(self):
+        # Instantiate the connector helper from config
+        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        config = (
+            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+            if os.path.isfile(config_file_path)
+            else {}
+        )
 
-    if not config_file.is_file():
-        return {}
+        # Configuration
+        self.helper = OpenCTIConnectorHelper(config)
+        self.qradar_url = get_config_variable("QRADAR_URL", ["qradar", "url"], config)
+        self.qradar_ssl_verify = get_config_variable(
+            "QRADAR_SSL_VERIFY", ["qradar", "ssl_verify"], config, default=True
+        )
+        self.qradar_token = get_config_variable(
+            "QRADAR_TOKEN", ["qradar", "token"], config
+        )
+        self.qradar_reference_name = get_config_variable(
+            "QRADAR_REFERENCE_NAME",
+            ["qradar", "reference_name"],
+            config,
+            default="OpenCTI",
+        )
 
-    config_content = config_file.read_text()
-    config = yaml.safe_load(config_content)
-    return config
+        self.base_url_sets = self.qradar_url + "/api/reference_data_collections/sets"
+        self.base_url_set_entries = (
+            self.qradar_url + "/api/reference_data_collections/set_entries"
+        )
+        self.headers = {"SEC": self.qradar_token}
 
+        # Collections sets
+        self.collection_sets = {
+            "ipv4-addr": {
+                "name": self.qradar_reference_name + " - " + "IPv4 Addresses",
+                "type": "IP",
+                "qradar_id": None,
+            },
+            "ipv6-addr": {
+                "name": self.qradar_reference_name + " - " + "IPv6 Addresses",
+                "type": "ALNIC",
+                "qradar_id": None,
+            },
+            "domain-name": {
+                "name": self.qradar_reference_name + " - " + "Domain Names",
+                "type": "ALNIC",
+                "qradar_id": None,
+            },
+            "hostname": {
+                "name": self.qradar_reference_name + " - " + "Hostnames",
+                "type": "ALNIC",
+                "qradar_id": None,
+            },
+            "url": {
+                "name": self.qradar_reference_name + " - " + "URLs",
+                "type": "ALNIC",
+                "qradar_id": None,
+            },
+            "email-addr": {
+                "name": self.qradar_reference_name + " - " + "Email Addresses",
+                "type": "ALNIC",
+                "qradar_id": None,
+            },
+            "file-md5": {
+                "name": self.qradar_reference_name + " - " + "MD5 File Hashes",
+                "type": "ALNIC",
+                "qradar_id": None,
+            },
+            "file-sha1": {
+                "name": self.qradar_reference_name + " - " + "SHA1 File Hashes",
+                "type": "ALNIC",
+                "qradar_id": None,
+            },
+            "file-sha256": {
+                "name": self.qradar_reference_name + " - " + "SHA256 File Hashes",
+                "type": "ALNIC",
+                "qradar_id": None,
+            },
+            "file-sha512": {
+                "name": self.qradar_reference_name + " - " + "SHA512 File Hashes",
+                "type": "ALNIC",
+                "qradar_id": None,
+            },
+        }
 
-def check_helper(helper: OpenCTIConnectorHelper) -> None:
-    if (
-        helper.connect_live_stream_id is None
-        or helper.connect_live_stream_id == "ChangeMe"
-    ):
-        helper.log_error("missing Live Stream ID")
-        exit(1)
+        # Initialize OpenCTI collection sets
+        r = requests.get(
+            url=self.base_url_sets, headers=self.headers, verify=self.qradar_ssl_verify
+        )
+        data = r.json()
+        for key in self.collection_sets.keys():
+            already_exist = False
+            for collection_set in data:
+                if collection_set["name"] == self.collection_sets[key]["name"]:
+                    self.collection_sets[key]["qradar_id"] = collection_set["id"]
+                    already_exist = True
+            if not already_exist:
+                r = requests.post(
+                    url=self.base_url_sets,
+                    json={
+                        "name": self.collection_sets[key]["name"],
+                        "entry_type": self.collection_sets[key]["type"],
+                    },
+                    headers=self.headers,
+                    verify=self.qradar_ssl_verify,
+                )
+                result = r.json()
+                self.collection_sets[key]["qradar_id"] = result["id"]
+
+    def _search_object(self, collection_set_id, internal_id):
+        r = requests.get(
+            url=self.base_url_set_entries,
+            params={
+                "filter": "collection_id="
+                + str(collection_set_id)
+                + ' and notes="'
+                + internal_id
+                + '"'
+            },
+            headers=self.headers,
+            verify=self.qradar_ssl_verify,
+        )
+        r.raise_for_status()
+        result = r.json()
+        if len(result) > 0:
+            return result[0]
+        else:
+            return None
+
+    def _create_object(self, collection_set_id, data):
+        internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+        try:
+            external_references = OpenCTIConnectorHelper.get_attribute_in_extension(
+                "external_references", data
+            )
+            if external_references is not None and len(external_references) > 0:
+                source = external_references[0]["source_name"]
+            else:
+                source = "OpenCTI"
+            body = {
+                "collection_id": collection_set_id,
+                "notes": internal_id,
+                "source": source,
+                "value": data["value"],
+            }
+            r = requests.post(
+                url=self.base_url_set_entries,
+                json=body,
+                headers=self.headers,
+                verify=self.qradar_ssl_verify,
+            )
+            r.raise_for_status()
+        except Exception as ex:
+            self.helper.connector_logger.error(
+                "[Creating] Failed processing data {" + str(ex) + "}"
+            )
+
+    def _update_object(self, collection_set_id, data):
+        internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+        try:
+            resolved_object = self._search_object(collection_set_id, internal_id)
+            if resolved_object is not None:
+                external_references = OpenCTIConnectorHelper.get_attribute_in_extension(
+                    "external_references", data
+                )
+                if external_references is not None and len(external_references) > 0:
+                    source = "OpenCTI - " + external_references[0]["source_name"]
+                else:
+                    source = "OpenCTI"
+                body = {
+                    "collection_id": collection_set_id,
+                    "notes": internal_id,
+                    "source": source,
+                    "value": data["value"],
+                }
+                r = requests.post(
+                    url=self.base_url_set_entries + "/" + str(resolved_object["id"]),
+                    json=body,
+                    headers=self.headers,
+                    verify=self.qradar_ssl_verify,
+                )
+                r.raise_for_status()
+        except Exception as ex:
+            self.helper.connector_logger.error(
+                "[Updating] Failed processing data {" + str(ex) + "}"
+            )
+
+    def _delete_object(self, collection_set_id, data):
+        internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+        try:
+            resolved_object = self._search_object(collection_set_id, internal_id)
+            if resolved_object is not None:
+                r = requests.delete(
+                    url=self.base_url_set_entries + "/" + str(resolved_object["id"]),
+                    headers=self.headers,
+                    verify=self.qradar_ssl_verify,
+                )
+                r.raise_for_status()
+        except Exception as ex:
+            self.helper.connector_logger.error(
+                "[Deleting] Failed processing data {" + str(ex) + "}"
+            )
+
+    def _process_indicator(self, data):
+        final_data = []
+        internal_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
+        try:
+            translation = stix_translation.StixTranslation()
+            parsed = translation.translate("splunk", "parse", "{}", data["pattern"])
+            if "parsed_stix" in parsed:
+                results = parsed["parsed_stix"]
+                for result in results:
+                    result_data = data.copy()
+                    stix_value = result["value"]
+                    if result["attribute"] in [
+                        "domain-name:value",
+                        "hostname:value",
+                        "ipv4-addr:value",
+                        "ipv6-addr:value",
+                        "url:value",
+                        "email-addr:value",
+                    ]:
+                        stix_type = result["attribute"].replace(":value", "")
+                        result_data["type"] = stix_type
+                        result_data["value"] = stix_value
+                        final_data.append(result_data)
+                    elif result["attribute"] == "file:hashes.MD5":
+                        result_data["type"] = "file-md5"
+                        result_data["value"] = stix_value
+                        final_data.append(result_data)
+                    elif result["attribute"] == "file:hashes.'SHA-1'":
+                        result_data["type"] = "file-sha1"
+                        result_data["value"] = stix_value
+                        final_data.append(result_data)
+                    elif result["attribute"] == "file:hashes.'SHA-256'":
+                        result_data["type"] = "file-sha256"
+                        result_data["value"] = stix_value
+                        final_data.append(result_data)
+                    elif result["attribute"] == "file:hashes.'SHA-512'":
+                        result_data["type"] = "file-sha512"
+                        result_data["value"] = stix_value
+                        final_data.append(result_data)
+                return final_data
+        except:
+            self.helper.connector_logger.warning(
+                "[Processing] Cannot convert STIX indicator { " + internal_id + "}"
+            )
+            return []
+
+    def _process_message(self, msg):
+        try:
+            data = json.loads(msg.data)["data"]
+            if data["type"] == "indicator" and data["pattern_type"].startswith("stix"):
+                indicator_data = self._process_indicator(data)
+            elif data["type"] == "file":
+                indicator_data = []
+                if "hashes" in data and "MD5" in data["hashes"]:
+                    data_md5 = data.copy()
+                    data_md5["type"] = "file-md5"
+                    data_md5["value"] = data["hashes"]["MD5"]
+                    indicator_data.append(data_md5)
+                if "hashes" in data and "SHA-1" in data["hashes"]:
+                    data_sha1 = data.copy()
+                    data_sha1["type"] = "file-sha1"
+                    data_sha1["value"] = data["hashes"]["SHA-1"]
+                    indicator_data.append(data_sha1)
+                if "hashes" in data and "SHA-256" in data["hashes"]:
+                    data_sha256 = data.copy()
+                    data_sha256["type"] = "file-sha256"
+                    data_sha256["value"] = data["hashes"]["SHA-256"]
+                    indicator_data.append(data_sha256)
+                if "hashes" in data and "SHA-512" in data["hashes"]:
+                    data_sha512 = data.copy()
+                    data_sha512["type"] = "file-sha512"
+                    data_sha512["value"] = data["hashes"]["SHA-512"]
+                    indicator_data.append(data_sha512)
+            else:
+                indicator_data = [data]
+
+            for d in indicator_data:
+                if d["type"] in [
+                    "ipv4-addr",
+                    "ipv6-addr",
+                    "domain-name",
+                    "hostname",
+                    "url",
+                    "email-addr",
+                    "file",
+                    "file-md5",
+                    "file-sha1",
+                    "file-sha256",
+                    "file-sha512",
+                ]:
+                    # Resolve the collection set
+                    collection_set_id = None
+                    if (
+                        d["type"] in self.collection_sets
+                        and self.collection_sets[d["type"]]["qradar_id"] is not None
+                    ):
+                        collection_set_id = self.collection_sets[d["type"]]["qradar_id"]
+
+                    if collection_set_id is None:
+                        self.helper.connector_logger.error(
+                            "[Processing] Cannot find the QRadar collection set for { "
+                            + d["type"]
+                            + "}"
+                        )
+                    else:
+                        if msg.event == "create":
+                            self._create_object(collection_set_id, d)
+                        elif msg.event == "update":
+                            self._update_object(collection_set_id, d)
+                        elif msg.event == "delete":
+                            self._delete_object(collection_set_id, d)
+        except Exception as ex:
+            self.helper.connector_logger.error(
+                "[Processing] Failed processing data {" + str(ex) + "}"
+            )
+            self.helper.connector_logger.error(
+                "[Processing] Message data {" + str(msg) + "}"
+            )
+            return None
+
+    def start(self):
+        self.helper.listen_stream(self._process_message)
 
 
 if __name__ == "__main__":
-    # fix loggers
     fix_loggers()
-
-    # load and check config
-    config = load_config_file()
-    # create opencti helper
-    helper = OpenCTIConnectorHelper(config)
-    helper.log_info("connector helper initialized")
-    check_helper(helper)
-
-    # read config
-    ignore_types = get_config_variable(
-        "QRADAR_IGNORE_TYPES", ["qradar", "ignore_types"], config
-    ).split(",")
-    qradar_url = get_config_variable("QRADAR_URL", ["qradar", "url"], config)
-    qradar_url_reference = get_config_variable(
-        "QRADAR_URL_REFERENCE",
-        ["qradar", "url_reference"],
-        config,
-        default="/api/reference_data_collections/sets",
-    )
-    qradar_token = get_config_variable("QRADAR_TOKEN", ["qradar", "token"], config)
-    qradar_ssl_verify = get_config_variable(
-        "QRADAR_SSL_VERIFY", ["qradar", "ssl_verify"], config, False, True
-    )
-    qradar_reference_name = get_config_variable(
-        "QRADAR_REFERENCE_NAME", ["qradar", "reference_name"], config
-    )
-
-    # additional connector conf
-    consumer_count: int = get_config_variable(
-        "CONNECTOR_CONSUMER_COUNT",
-        ["connector", "consumer_count"],
-        config,
-        isNumber=True,
-        default=10,
-    )
-
-    # metrics conf
-    enable_prom_metrics: bool = get_config_variable(
-        "METRICS_ENABLE", ["metrics", "enable"], config, default=False
-    )
-    metrics_port: int = get_config_variable(
-        "METRICS_PORT", ["metrics", "port"], config, isNumber=True, default=9113
-    )
-    metrics_addr: str = get_config_variable(
-        "METRICS_ADDR", ["metrics", "addr"], config, default="0.0.0.0"
-    )
-
-    # create reference_set instance
-    reference_set = QradarReference(
-        helper,
-        qradar_url,
-        qradar_url_reference,
-        qradar_token,
-        qradar_reference_name,
-        qradar_ssl_verify,
-    )
-
-    # create queue
-    queue = Queue(maxsize=2 * consumer_count)
-
-    # create prom metrics
-    if enable_prom_metrics:
-        metrics = Metrics(helper.connect_name, metrics_addr, metrics_port)
-        helper.log_info(f"starting metrics server on {metrics_addr}:{metrics_port}")
-        metrics.start_server()
-    else:
-        metrics = None
-
-    # create connector and start
-    QradarConnector(
-        helper,
-        reference_set,
-        queue,
-        ignore_types,
-        consumer_count,
-        metrics=metrics,
-    ).start()
+    try:
+        connector = QRadarConnector()
+        connector.start()
+    except Exception as e:
+        print(e)
+        time.sleep(10)
+        sys.exit(0)
