@@ -102,7 +102,7 @@ class SentinelApiHandler:
             "targetProduct": self.config.target_product,
             "additionalInformation": OpenCTIConnectorHelper.get_attribute_in_extension(
                 "score", observable
-            )
+            ),
         }
 
         network_types = ["ipv4-addr", "ipv6-addr", "domain-name", "url"]
