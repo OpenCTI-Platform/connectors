@@ -25,7 +25,7 @@ services:
       - SENTINEL_INCIDENTS_WORKSPACE_ID=ChangeMe # Sentinel Workspace ID (only for Azure Sentinel)
       - SENTINEL_INCIDENTS_CLIENT_ID=ChangeMe # Azure App Client ID
       - SENTINEL_INCIDENTS_CLIENT_SECRET=ChangeMe # Azure App Client Secret
-      - SENTINEL_INCIDENTS_"TARGET_PRODUCT=Azure Sentinel" # "Azure Sentinel" or "Microsoft Defender ATP"
+      - SENTINEL_INCIDENTS_TARGET_PRODUCT=Azure Sentinel # "Azure Sentinel" or "Microsoft Defender ATP"
       - SENTINEL_INCIDENTS_LOGIN_URL=https://login.microsoft.com
       - SENTINEL_INCIDENTS_API_BASE_URL=https://graph.microsoft.com
       - SENTINEL_INCIDENTS_INCIDENT_PATH=/v1.0/security/incidents

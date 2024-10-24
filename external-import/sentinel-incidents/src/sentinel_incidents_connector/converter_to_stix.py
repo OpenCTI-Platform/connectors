@@ -7,6 +7,7 @@ from pycti import (
     CustomObservableHostname,
     Identity,
     Incident,
+    Malware,
     StixCoreRelationship,
 )
 
@@ -29,6 +30,7 @@ class ConverterToStix:
             identity_class="organization",
             description="Import Indicents according to alerts found in Microsoft Sentinel",
         )
+        self.all_hashes = set()
 
     @staticmethod
     def create_author_identity(
@@ -50,28 +52,39 @@ class ConverterToStix:
         return author
 
     def create_incident(self, alert) -> stix2.Incident:
-        alert_date = parse(alert["createdDateTime"]).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        alert_created = parse(alert["createdDateTime"]).strftime("%Y-%m-%dT%H:%M:%SZ")
+        alert_modified = parse(alert["lastUpdateDateTime"]).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+
+        description = (
+            alert.get("description", "")
+            + "\n\nRecommanded Actions:\n\n"
+            + alert.get("recommendedActions", "")
+        )
 
         stix_incident = stix2.Incident(
-            id=Incident.generate_id(alert["title"], alert_date),
-            created=alert_date,
+            id=Incident.generate_id(alert["title"], alert_created),
+            created=alert_created,
+            modified=alert_modified,
             name=alert["title"],
-            description=alert["description"],
-            object_marking_refs=[stix2.TLP_RED],
+            labels=[alert.get("category")],
+            description=description,
+            object_marking_refs=[stix2.TLP_RED.get("id")],
             created_by_ref=self.author["id"],
-            confidence=self.helper.connect_confidence_level,
             external_references=[
                 {
                     "source_name": self.config.target_product.replace(
                         "Azure", "Microsoft"
                     ),
-                    "url": alert["alertWebUrl"],
-                    "external_id": alert["id"],
+                    "url": alert.get("alertWebUrl"),
+                    "external_id": alert.get("id"),
                 }
             ],
             custom_properties={
                 "source": self.config.target_product.replace("Azure", "Microsoft"),
-                "severity": alert["severity"],
+                "severity": alert.get("severity"),
                 "incident_type": "alert",
             },
         )
@@ -111,9 +124,8 @@ class ConverterToStix:
                     "url": incident["incidentWebUrl"],
                 }
             ],
-            confidence=self.helper.connect_confidence_level,
             created_by_ref=self.author["id"],
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[stix2.TLP_RED.get("id")],
             object_refs=bundle_objects,
         )
         return stix_case
@@ -127,7 +139,7 @@ class ConverterToStix:
         user_account = stix2.UserAccount(
             account_login=evidence["userAccount"]["accountName"],
             display_name=evidence["userAccount"]["displayName"],
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[stix2.TLP_RED.get("id")],
             custom_properties={
                 "created_by_ref": self.author["id"],
             },
@@ -149,7 +161,7 @@ class ConverterToStix:
 
         ipv4 = stix2.IPv4Address(
             value=ip_address,
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[stix2.TLP_RED.get("id")],
             custom_properties={
                 "created_by_ref": self.author["id"],
             },
@@ -164,38 +176,72 @@ class ConverterToStix:
         """
         stix_url = stix2.URL(
             value=evidence["url"],
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[stix2.TLP_RED.get("id")],
             custom_properties={
                 "created_by_ref": self.author["id"],
             },
         )
         return stix_url
 
-    def create_evidence_file(self, evidence: dict) -> stix2.File:
+    def create_evidence_file(self, evidence: dict) -> tuple | None:
         """
-        Create STIX 2.1 File object
-        :param evidence: Evidence to create File from
-        :return: File in STIX 2.1 format
-        """
-        file = evidence["imageFile"]
-        hashes = {}
-        if "md5" in file:
-            hashes["MD5"] = file["md5"]
-        if "sha1" in file:
-            hashes["SHA-1"] = file["sha1"]
-        if "sha256" in file:
-            hashes["SHA-256"] = file["sha256"]
+        Create a STIX 2.1 File object based on the provided evidence.
+        Evidence type: processEvidence, fileEvidence and fileHashEvidence
 
-        stix_file = stix2.File(
-            hashes=hashes,
-            name=file["fileName"],
-            size=file["fileSize"],
-            object_marking_refs=[stix2.TLP_RED],
-            custom_properties={
-                "created_by_ref": self.author["id"],
-            },
+        :param evidence: A dictionary containing evidence related to the File.
+        :return: A tuple containing:
+                - A STIX `File` object representing the file described in the evidence (if valid hashes are found).
+                - A STIX `Directory` object representing the file's directory (if applicable).
+                Returns `(None, None)` if no valid hash information is present.
+        """
+        hashes_mapping = {
+            "md5": "MD5",
+            "sha1": "SHA-1",
+            "sha256": "SHA-256",
+        }
+        hashes = {}
+        file = (
+            evidence.get("imageFile")
+            or evidence.get("fileDetails")
+            or evidence.get("value")
         )
-        return stix_file
+
+        # processEvidence & fileEvidence
+        if isinstance(file, dict):
+            for algorithm, hash_name in hashes_mapping.items():
+                file_hash = file.get(algorithm)
+                if file_hash:
+                    hashes[hash_name] = file_hash
+                    self.all_hashes.add(file_hash)
+                else:
+                    continue
+
+        # fileHashEvidence
+        if isinstance(file, str):
+            algorithm = evidence.get("algorithm")
+            if algorithm and file not in self.all_hashes:
+                hashes[algorithm] = file
+                self.all_hashes.add(file)
+            else:
+                return None, None
+
+        if hashes:
+            stix_directory = (
+                self.create_evidence_directory(file) if isinstance(file, dict) else None
+            )
+            stix_file = stix2.File(
+                hashes=hashes,
+                name=file.get("fileName") if isinstance(file, dict) else None,
+                size=file.get("fileSize") if isinstance(file, dict) else None,
+                parent_directory_ref=stix_directory,
+                object_marking_refs=[stix2.TLP_RED.get("id")],
+                custom_properties={
+                    "created_by_ref": self.author["id"],
+                },
+            )
+            return stix_file, stix_directory
+        else:
+            return None, None
 
     def create_evidence_custom_observable_hostname(
         self, evidence: dict
@@ -207,7 +253,7 @@ class ConverterToStix:
         """
         stix_hostname = CustomObservableHostname(
             value=evidence["deviceDnsName"],
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[stix2.TLP_RED.get("id")],
             custom_properties={
                 "created_by_ref": self.author["id"],
             },
@@ -224,9 +270,62 @@ class ConverterToStix:
             id=AttackPattern.generate_id(technique, technique),
             name=technique,
             allow_custom=True,
-            custom_properties={"x_mitre_id": technique},
+            object_marking_refs=[stix2.TLP_RED.get("id")],
+            custom_properties={
+                "x_mitre_id": technique,
+                "created_by_ref": self.author["id"],
+            },
         )
         return stix_attack_pattern
+
+    def create_evidence_malware(
+        self, evidence: dict, sample_refs: list
+    ) -> stix2.Malware:
+        """
+        Create a STIX 2.1 Malware object based on the provided evidence.
+        Evidence type: malwareEvidence
+
+        :param sample_refs: A list of references to sample files (file hashes) associated with
+                            the malware. If no samples are provided, this will be set to `None`.
+        :param evidence: A dictionary containing evidence related to the malware.
+        :return: A STIX 2.1 Malware object representing the malware described in the evidence.
+        """
+
+        malware_name = evidence.get("name")
+        malware_created = parse(evidence["createdDateTime"]).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+
+        stix_malware = stix2.Malware(
+            id=Malware.generate_id(malware_name),
+            name=malware_name,
+            is_family=False,
+            malware_types=evidence.get("category"),
+            sample_refs=sample_refs if len(sample_refs) != 0 else None,
+            created=malware_created,
+            object_marking_refs=[stix2.TLP_RED.get("id")],
+            custom_properties={
+                "created_by_ref": self.author["id"],
+            },
+        )
+        return stix_malware
+
+    def create_evidence_directory(self, evidence: dict) -> stix2.Directory:
+        """
+        Create a STIX 2.1 Directory object based on the provided evidence.
+        Evidence type: processEvidence, fileEvidence and malwareEvidence
+
+        :param evidence: A dictionary containing evidence related to the directory.
+        :return: A STIX 2.1 Directory object representing the directory described in the evidence.
+        """
+        stix_directory = stix2.Directory(
+            path=evidence.get("filePath"),
+            object_marking_refs=[stix2.TLP_RED.get("id")],
+            custom_properties={
+                "created_by_ref": self.author["id"],
+            },
+        )
+        return stix_directory
 
     def create_relationship(
         self, source_id=None, target_id=None, relationship_type=None
@@ -245,7 +344,7 @@ class ConverterToStix:
             relationship_type=relationship_type,
             source_ref=source_id,
             target_ref=target_id,
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[stix2.TLP_RED.get("id")],
             created_by_ref=self.author["id"],
         )
         return relationship

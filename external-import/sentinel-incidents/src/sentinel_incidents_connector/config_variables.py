@@ -1,8 +1,8 @@
 import os
+from datetime import datetime
 from pathlib import Path
 
 import yaml
-from dateutil.parser import parse
 from pycti import get_config_variable
 
 
@@ -15,6 +15,25 @@ class ConfigConnector:
         # Load configuration file
         self.load = self._load_config()
         self._initialize_configurations()
+
+    @staticmethod
+    def prepare_iso_format(date: str) -> str | datetime:
+        try:
+            if len(date) == 10:
+                prepared_date = datetime.strptime(date, "%Y-%m-%d").strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+            elif len(date) == 20:
+                prepared_date = datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ").strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+            else:
+                default_date = "2020-01-01T00:00:00Z"
+                return default_date
+            return prepared_date
+        except ValueError:
+            default_date = "2020-01-01T00:00:00Z"
+            return default_date
 
     @staticmethod
     def _load_config() -> dict:
@@ -89,8 +108,4 @@ class ConfigConnector:
             ["sentinel_incidents", "import_start_date"],
             self.load,
         )
-        self.import_start_date = (
-            parse(sentinel_import_start_date_var).timestamp()
-            if sentinel_import_start_date_var
-            else None
-        )
+        self.import_start_date = self.prepare_iso_format(sentinel_import_start_date_var)
