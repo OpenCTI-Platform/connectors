@@ -100,6 +100,9 @@ class SentinelApiHandler:
             "tlpLevel": self.config.tlp_level or get_tlp_level(observable),
             "passiveOnly": "true" if self.config.passive_only else "false",
             "targetProduct": self.config.target_product,
+            "additionalInformation": OpenCTIConnectorHelper.get_attribute_in_extension(
+                "score", observable
+            )
         }
 
         network_types = ["ipv4-addr", "ipv6-addr", "domain-name", "url"]
