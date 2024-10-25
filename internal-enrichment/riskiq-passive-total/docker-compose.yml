@@ -1,0 +1,33 @@
+version: '3'
+services:
+  connector-riskiq-passive-total:
+    image: opencti/connector-riskiq-passive-total:6.3.5
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=CHANGEME
+      - "CONNECTOR_NAME=RiskIQ PassiveTotal"
+      - CONNECTOR_SCOPE=domain, ipv4-address, indicator
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_AUTO=false
+
+      # Connector's custom execution parameters
+      - RISKIQ_USERNAME=samuel.hassine@luatix.org
+      - RISKIQ_KEY=11c7f601b30661c279ce004404e3f078108dbb8e87c7b012495db264902dc0b5
+      - RISKIQ_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+
+      # Add proxy parameters below if needed
+      # - HTTP_PROXY=CHANGEME
+      # - HTTPS_PROXY=CHANGEME
+      # - NO_PROXY=CHANGEME
+    restart: always
+    # networks:
+    #   - docker_default
+
+# networks:
+#   default:
+#     external: true
+#     name: docker_default
+
