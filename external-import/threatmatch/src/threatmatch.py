@@ -4,6 +4,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from html.parser import HTMLParser
 
 import requests
 import yaml
@@ -81,6 +82,23 @@ class ThreatMatch:
     def next_run(self, seconds):
         return
 
+    def remove_html_tags(self, text):
+        class HTMLTagRemover(HTMLParser):
+            def __init__(self):
+                    super().__init__()
+                    self.fed = []
+
+            def handle_data(self, data):
+                    self.fed.append(data)
+
+            def get_data(self):
+                    return ''.join(self.fed)
+
+        parser = HTMLTagRemover()
+        parser.feed(text)
+        return parser.get_data()
+
+    
     def _get_token(self):
         r = requests.post(
             self.threatmatch_url + "/api/developers-platform/token",
@@ -101,12 +119,16 @@ class ThreatMatch:
             headers=headers,
         )
         if r.status_code != 200:
-            self.helper.log_error(str(r.text))
+            self.helper.log_error(f"Could not fetch item: {item_id}, Error: {str(r.text)}")
             return []
         # if 'error' in r.json():
         #    return []
         if r.status_code == 200:
             data = r.json()["objects"]
+            for object in data:
+                if "description" in object:
+                    object['description'] = self.remove_html_tags(object['description'])
+                    self.helper.log_info(f"Cleaned data : {object['description']}")
             return data
 
     def _process_list(self, work_id, token, type, list):
