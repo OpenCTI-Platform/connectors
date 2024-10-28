@@ -182,6 +182,6 @@ if __name__ == "__main__":
     try:
         TaniumInstance = TaniumConnector()
         TaniumInstance.start()
-    except Exception as err:
+    except Exception:
         traceback.print_exc()
         exit(1)
