@@ -1,5 +1,6 @@
 from os import environ
 
+import pycti
 from hostio import HostIODomain, HostIOIPtoDomain, IPInfo
 from hostio.hostio_utils import (
     can_be_int,
@@ -146,6 +147,7 @@ class HostIOConnector(InternalEnrichmentConnector):
         if len(note_content) > 0:
             stix_objects.append(
                 Note(
+                    id=pycti.Note.generate_id(None, note_content),
                     type="note",
                     abstract=f"IPInfo enrichment content for `{ipinfo_object.ip}`",
                     content=note_content,
@@ -224,6 +226,7 @@ class HostIOConnector(InternalEnrichmentConnector):
         if len(note_content) > 0:
             stix_objects.append(
                 Note(
+                    id=pycti.Note.generate_id(None, note_content),
                     type="note",
                     abstract=f"Host IO enrichment content for `{domain_object.domain}`",
                     content=note_content,
