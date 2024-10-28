@@ -6,7 +6,7 @@ COPY src /opt/opencti-connector-attribution-tools
 
 # Install dependencies
 RUN apk update && apk upgrade && \
-    apk --no-cache add libmagic-dev git build-base
+    apk --no-cache add gcc git build-base libmagic libffi-dev
 
 # Install Python modules
 RUN cd /opt/opencti-connector-attribution-tools && \
