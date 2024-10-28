@@ -1,10 +1,14 @@
 import requests
 import urllib.parse
+from datetime import datetime
 
-from models.harfanglab import (
+from .models.harfanglab import (
     Alert as HarfanglabAlert,
-    Indicator as HarfanglabIndicator,
+    IocRule as HarfanglabIocRule,
+    SigmaRule as HarfanglabSigmaRule,
+    YaraSignature as HarfanglabYaraSignature,
     Threat as HarfanglabThreat,
+    ThreatNote as HarfanglabThreatNote,
 )
 
 
@@ -33,137 +37,188 @@ class HarfanglabClient:
         :param kwargs: Any arguments accepted by request.request()
         :return: Parsed response body
         """
-        method = kwargs.get("method", "get")
+        method = kwargs.get("method")
         url = kwargs.get("url")
 
         try:
-            response = self.session.request(method, **kwargs)
+            response = self.session.request(verify=self.ssl_verify, **kwargs)
             response.raise_for_status()
 
             self.helper.connector_logger.info(
-                f"[API] HTTP {method.upper()} Request to endpoint", {"url_path": url}
+                f"[API] HTTP {method.upper()} Request to endpoint", {"url": url}
             )
 
-            return response.json()
+            return response.json() if response.content else None
         except requests.RequestException as err:
             error_msg = f"[API] Error while sending {method.upper()} request: "
             self.helper.connector_logger.error(
-                error_msg, {"url_path": {url}, "error": {str(err)}}
+                error_msg, {"url": {url}, "error": {str(err)}}
             )
             return None
 
-    def generate_alerts_lists(self, threat_id=None):
+    def generate_alerts(self, since: datetime = None, threat_id: str = None):
         """
         Get lists of alerts from Harfanglab API.
+        :param since: Minimum alerts creation datetime
+        :param threat_id: ID of the threat to filter alerts for
         :return: Generator yielding list of alerts from Harfanglab
         """
-        alerts_status = self.config.harfanglab_import_security_events_filters_by_status
-        alerts_types = self.config.harfanglab_import_filters_by_alert_type
-
         path = "/api/data/alert/alert/Alert"
         params = {
+            "status": self.config.harfanglab_alert_statuses,
+            "alert_type": self.config.harfanglab_alert_types,
             "maturity": "stable",
-            "status": alerts_status,
-            "alert_type": alerts_types,
-            "threat_key": threat_id,  # filter alerts for given threat
-            "ordering": "+alert_time",
+            "ordering": "alert_time",  # alert_time ASC
             "limit": 100,
         }
+        if since:
+            params["from"] = since.isoformat()
+        if threat_id:
+            params["threat_key"] = threat_id  # filter alerts for given threat
+
+        # params are encoded directly in url, instead of sent as self._request() argument,
+        # to avoid sending them twice (they are already encoded in next_path)
         url = f"{self.api_base_url}{path}?{urllib.parse.urlencode(params)}"
 
         while url:
             data = self._request(
                 method="get",
                 url=url,
-                params=params,
-                verify=self.ssl_verify,
             )
+
             results = data["results"] if data else []
+            alerts = [HarfanglabAlert(result) for result in results]
+            for alert in alerts:
+                yield alert
 
-            yield [HarfanglabAlert(result) for result in results]
-            url = (
-                f"{self.api_base_url}{data['next']}" if data else None
-            )  # next page url or None
+            next_path = data["next"] if data else None
+            if next_path:
+                url = f"{self.api_base_url}{next_path}"
+            else:
+                url = None
 
-    def generate_threats_lists(self):
+    def generate_threats(self, since: datetime = None):
         """
         Get lists of threats from Harfanglab API.
+        :param since: Minimum threats creation datetime
         :return: Generator yielding list of threats from Harfanglab
         """
         path = "/api/data/alert/alert/Threat"
         params = {
             "limit": 100,
-            "ordering": "+creation_date",
+            "ordering": "creation_date",  # creation_date ASC
         }
+        if since:
+            params["from"] = since.isoformat()
+
+        # params are encoded directly in url, instead of sent as self._request() argument,
+        # to avoid sending them twice (they are already encoded in next_path)
         url = f"{self.api_base_url}{path}?{urllib.parse.urlencode(params)}"
 
         while url:
             data = self._request(
                 method="get",
                 url=url,
-                params=params,
-                verify=self.ssl_verify,
             )
+
             results = data["results"] if data else []
+            threats = [HarfanglabThreat(result) for result in results]
+            for threat in threats:
+                yield threat
 
-            yield [HarfanglabThreat(result) for result in results]
-            url = (
-                f"{self.api_base_url}{data['next']}" if data else None
-            )  # next page url or None
+            next_path = data["next"] if data else None
+            if next_path:
+                url = f"{self.api_base_url}{next_path}"
+            else:
+                url = None
 
-    def get_alert_ioc_rules(self, rule_name: str) -> list[HarfanglabIndicator]:
+    def get_alert_ioc_rule(self, alert: HarfanglabAlert) -> HarfanglabIocRule | None:
         """
-        Get a list of IOCs (indicators) for a given rule name.
-        :param rule_name: IOC rule name
-        :return: List of indicators from Harfanglab
+        Get an IOC rule for a given alert.
+        :param alert: Alerts to get IOC for
+        :return: IOC rule from Harfanglab
         """
+        ioc_value = None
+        if alert.message:
+            split_message = alert.message.split("=") or alert.message.split(":")
+            if len(split_message) == 2:
+                ioc_value = split_message[1]
+        if ioc_value is None:
+            return None
+
         path = "/api/data/threat_intelligence/IOCRule"
-        params = {"search": rule_name}
+        params = {"value__exact": ioc_value}
+        url = f"{self.api_base_url}{path}"
 
         data = self._request(
             method="get",
-            url=self.api_base_url + path,
+            url=url,
             params=params,
-            verify=self.ssl_verify,
         )
-        results = data["results"] if data else []
+        if data and len(data["results"]):
+            result = data["results"][0]
+            return HarfanglabIocRule(result)
 
-        return [HarfanglabIndicator(result) for result in results]
+    def get_alert_sigma_rule(
+        self, alert: HarfanglabAlert
+    ) -> HarfanglabSigmaRule | None:
+        """
+        Get a Sigma rule for a given alert.
+        :param alert: Alerts to get Sigma rule for
+        :return: Sigma rule from Harfanglab
+        """
+        if alert.rule_name is None:
+            return None
 
-    def get_alert_sigma_rules(self, rule_name) -> list[HarfanglabIndicator]:
-        """
-        Get a list of Sigma indicators for a given rule name.
-        :param rule_name: Sigma rule name
-        :return: List of indicators from Harfanglab
-        """
         path = "/api/data/threat_intelligence/SigmaRule"
-        params = {"search": rule_name}
+        params = {"rule_name__exact": alert.rule_name}
+        url = f"{self.api_base_url}{path}"
 
         data = self._request(
             method="get",
-            url=self.api_base_url + path,
+            url=url,
             params=params,
-            verify=self.ssl_verify,
         )
-        results = data["results"] if data else []
+        if data and len(data["results"]):
+            result = data["results"][0]
+            return HarfanglabSigmaRule(result)
 
-        return [HarfanglabIndicator(result) for result in results]
+    def get_alert_yara_signature(
+        self, alert: HarfanglabAlert
+    ) -> HarfanglabYaraSignature | None:
+        """
+        Get a YARA signature for a given alert.
+        :param alert: Alerts to get YARA signature for
+        :return: Yara signature from Harfanglab
+        """
+        yara_file_name = None
+        if alert.rule_name:
+            split_rule_name = alert.rule_name.split(":")
+            if len(split_rule_name) == 2:
+                yara_file_name = split_rule_name[1].strip()
+        if yara_file_name is None:
+            return None
 
-    def get_alert_yara_files(self, rule_name) -> list[HarfanglabIndicator]:
-        """
-        Get a list of YARA indicators for a given rule name.
-        :param rule_name: YARA rule name
-        :return: List of indicators from Harfanglab
-        """
         path = "/api/data/threat_intelligence/YaraFile"
-        params = {"search": rule_name}
+        params = {"name__exact": yara_file_name}
+        url = f"{self.api_base_url}{path}"
 
         data = self._request(
             method="get",
-            url=self.api_base_url + path,
+            url=url,
             params=params,
-            verify=self.ssl_verify,
         )
-        results = data["results"] if data else []
+        if data and len(data["results"]):
+            result = data["results"][0]
+            return HarfanglabYaraSignature(result)
 
-        return [HarfanglabIndicator(result) for result in results]
+    def get_threat_note(self, threat_id=None) -> HarfanglabThreatNote:
+        path = f"/api/data/alert/alert/Threat/{threat_id}/note"
+        url = f"{self.api_base_url}{path}"
+
+        data = self._request(
+            method="get",
+            url=url,
+        )
+        if data:
+            return HarfanglabThreatNote(data)
