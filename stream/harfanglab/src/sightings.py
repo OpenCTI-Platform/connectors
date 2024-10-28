@@ -1090,7 +1090,7 @@ class Sightings(threading.Thread):
             global_sightings_relationship = stix2.Sighting(
                 id=StixSightingRelationship.generate_id(
                     sighting["sighting_of_ref"],
-                    self.identity["id"],
+                    self.identity["standard_id"],
                     alert_date,
                     alert_date,
                 ),
@@ -1186,7 +1186,7 @@ class Sightings(threading.Thread):
         return stix2.Sighting(
             id=StixSightingRelationship.generate_id(
                 indicator,
-                self.identity["id"],
+                self.identity["standard_id"],
                 alert_date,
                 alert_date,
             ),
