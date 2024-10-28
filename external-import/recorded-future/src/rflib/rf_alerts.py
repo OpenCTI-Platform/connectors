@@ -6,7 +6,12 @@ from re import search
 import pycti
 import pytz
 import stix2
-from pycti import CustomObjectChannel, CustomObservableText, Incident
+from pycti import (
+    CustomObjectChannel,
+    CustomObservableText,
+    Incident,
+    StixCoreRelationship,
+)
 
 from .constants import TLP_MAP
 from .make_markdown_table import make_markdown_table
@@ -253,6 +258,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                         },
                     )
                     stix_relationship = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", stix_incident.id, stix_url.id
+                        ),
                         relationship_type="related-to",
                         source_ref=stix_incident.id,
                         target_ref=stix_url.id,
@@ -271,6 +279,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                         },
                     )
                     stix_relationship = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", stix_incident.id, stix_ipv4address.id
+                        ),
                         relationship_type="related-to",
                         source_ref=stix_incident.id,
                         target_ref=stix_ipv4address.id,
@@ -288,6 +299,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                         },
                     )
                     stix_relationship = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", stix_incident.id, stix_emailaddress.id
+                        ),
                         relationship_type="related-to",
                         source_ref=stix_incident.id,
                         target_ref=stix_emailaddress.id,
@@ -305,6 +319,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                         },
                     )
                     stix_relationship = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", stix_incident.id, stix_domain.id
+                        ),
                         relationship_type="related-to",
                         source_ref=stix_incident.id,
                         target_ref=stix_domain.id,
@@ -333,6 +350,11 @@ class RecordedFutureAlertConnector(threading.Thread):
                     if len(octi_malware) > 0:
                         octi_malware = octi_malware[0]
                         stix_relationship = stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to",
+                                stix_incident.id,
+                                octi_malware["standard_id"],
+                            ),
                             relationship_type="related-to",
                             source_ref=stix_incident.id,
                             target_ref=octi_malware["standard_id"],
@@ -355,6 +377,11 @@ class RecordedFutureAlertConnector(threading.Thread):
                     if len(octi_technique_mitre) > 0:
                         octi_technique_mitre = octi_technique_mitre[0]
                         stix_relationship = stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to",
+                                stix_incident.id,
+                                octi_technique_mitre["standard_id"],
+                            ),
                             relationship_type="related-to",
                             source_ref=stix_incident.id,
                             target_ref=octi_technique_mitre["standard_id"],
@@ -397,6 +424,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                                 },
                             )
                             stix_relationship = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "related-to", stix_incident.id, stix_channel.id
+                                ),
                                 relationship_type="related-to",
                                 source_ref=stix_incident.id,
                                 target_ref=stix_channel.id,
@@ -413,6 +443,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                     },
                 )
                 stix_relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", stix_incident.id, stix_text.id
+                    ),
                     relationship_type="related-to",
                     source_ref=stix_incident.id,
                     target_ref=stix_text.id,
@@ -429,6 +462,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                     },
                 )
                 stix_relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", stix_incident.id, stix_url_doc.id
+                    ),
                     relationship_type="related-to",
                     source_ref=stix_incident.id,
                     target_ref=stix_url_doc.id,
@@ -438,6 +474,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                 bundle_objects.append(stix_url_doc)
                 bundle_objects.append(stix_relationship)
                 stix_relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", stix_url_doc.id, stix_text.id
+                    ),
                     relationship_type="related-to",
                     source_ref=stix_url_doc.id,
                     target_ref=stix_text.id,
@@ -447,6 +486,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                 bundle_objects.append(stix_relationship)
                 if stix_channel is not None:
                     stix_relationship = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "publishes", stix_channel.id, stix_url_doc.id
+                        ),
                         relationship_type="publishes",
                         source_ref=stix_channel.id,
                         target_ref=stix_url_doc.id,
@@ -470,6 +512,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                     },
                 )
                 stix_relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", stix_incident.id, stix_user.id
+                    ),
                     relationship_type="related-to",
                     source_ref=stix_incident.id,
                     target_ref=stix_user.id,
@@ -479,6 +524,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                 bundle_objects.append(stix_user)
                 bundle_objects.append(stix_relationship)
                 stix_relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", stix_user.id, stix_text.id
+                    ),
                     relationship_type="related-to",
                     source_ref=stix_user.id,
                     target_ref=stix_text.id,
@@ -488,6 +536,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                 bundle_objects.append(stix_relationship)
                 if stix_url_doc is not None:
                     stix_relationship = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", stix_url_doc.id, stix_user.id
+                        ),
                         relationship_type="related-to",
                         target_ref=stix_url_doc.id,
                         source_ref=stix_user.id,
@@ -497,6 +548,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                     bundle_objects.append(stix_relationship)
                 if stix_channel is not None:
                     stix_relationship = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", stix_channel.id, stix_user.id
+                        ),
                         relationship_type="related-to",
                         target_ref=stix_channel.id,
                         source_ref=stix_user.id,
