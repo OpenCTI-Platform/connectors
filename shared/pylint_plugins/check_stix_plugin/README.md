@@ -50,7 +50,7 @@ To avoid the warning, generate an ID using helper method. For instance :
 from stix2 import Location
 from pycti.entities.opencti_location import Location as PyctiLocation
 loc = Location(
-    id=PyctiLocation.generate_id(name="example"),
+    id=PyctiLocation.generate_id(name="example", x_opencti_location_type="City"),
     name="example",
 )
 ```
