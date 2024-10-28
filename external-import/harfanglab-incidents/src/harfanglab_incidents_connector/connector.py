@@ -1,11 +1,14 @@
 import sys
+from dateutil.parser import parse
 from datetime import datetime
 
 from pycti import OpenCTIConnectorHelper
 
-from .client_api import ConnectorClient
+from .client_api import HarfanglabClient
 from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
+from .models.harfanglab import Threat as HarfanglabThreat, YaraSignature
+from .constants import EPOCH_DATETIME
 
 
 class HarfanglabIncidentsConnector:
@@ -48,37 +51,210 @@ class HarfanglabIncidentsConnector:
         """
         Initialize the Connector with necessary configurations
         """
-
-        # Load configuration file and connection helper
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper)
+        self.api = HarfanglabClient(self.helper, self.config)
+        self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
-    def _collect_intelligence(self) -> list:
+        self.should_import_case_incidents = self.config.harfanglab_import_threats
+        self.last_import_datetime_key = (
+            "last_case_incident_datetime"
+            if self.should_import_case_incidents
+            else "last_incident_datetime"
+        )
+        self.last_import_datetime_value = self._get_state_last_datetime()
+
+    def _initiate_work(self) -> str:
         """
-        Collect intelligence from the source and convert into STIX object
+        Initiate an atomic unit of work that will be handled by the worker.
+        A work can contain one or many STIX bundles.
+        :return: Initialized work ID
+        """
+        if self.last_import_datetime_value > EPOCH_DATETIME:
+            self.helper.connector_logger.info(
+                f"[CONNECTOR] Connector {self.last_import_datetime_key}:",
+                {self.last_import_datetime_key: self.last_import_datetime_value},
+            )
+        else:
+            self.helper.connector_logger.info("[CONNECTOR] Connector has never run...")
+
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, self.helper.connect_name
+        )
+        return work_id
+
+    def _terminate_work(self, work_id):
+        """
+        Terminate and send a work to the worker in order to process it.
+        :param work_id: ID of the work to send
+        """
+        message = (
+            f"{self.helper.connect_name} connector successfully run, "
+            f"storing {self.last_import_datetime_key} as {self.last_import_datetime_value.isoformat()}"
+        )
+        self.helper.api.work.to_processed(work_id, message)
+        self.helper.connector_logger.info(message)
+
+    def _get_state_last_datetime(self) -> datetime:
+        """
+        Get either "last_incident_datetime" or "last_case_incident_datetime" from connector's state.
+        The state key is "Last_case_incident_datetime" if the connector imports Harfanglab threats,
+        otherwise it's "last_incident_datetime".
+        :return: Datetime of the state key
+        """
+        state_last_datetime = None
+        state = self.helper.get_state()
+        if state:
+            state_last_datetime = state.get(self.last_import_datetime_key)
+            state_last_datetime = (
+                parse(state_last_datetime) if state_last_datetime else None
+            )
+        if state_last_datetime is None:
+            state_last_datetime = self.config.harfanglab_import_start_datetime
+        return state_last_datetime
+
+    def _set_state_last_datetime(self, value: datetime):
+        """
+        Set either "last_incident_datetime" or "last_case_incident_datetime" in connector's state.
+        It sets "Last_case_incident_datetime" if the connector imports Harfanglab threats, otherwise "last_incident_datetime".
+        :param value: Datetime to set as key's value
+        """
+        state = self.helper.get_state()
+        if state:
+            state[self.last_import_datetime_key] = value.isoformat()
+        else:
+            state = {self.last_import_datetime_key: value.isoformat()}
+        self.helper.set_state(state)
+
+    def _collect_incident_intelligence(
+        self, threat: HarfanglabThreat = None
+    ) -> list[dict]:
+        """
+        Collect intelligence from Harfanglab and convert into STIX object
+        If `threat` is provided, all the alerts related to the threat are collected,
+        otherwise alerts are filtered by creation date according to connector's state.
+        :param threat: [optional] Threat to collect alert intelligence for.
         :return: List of STIX objects
         """
         stix_objects = []
 
-        # ===========================
-        # === Add your code below ===
-        # ===========================
+        if threat:
+            alerts = self.api.generate_alerts(threat_id=threat.id)
+        else:
+            alerts = self.api.generate_alerts(since=self.last_import_datetime_value)
+        for alert in alerts:
+            alert_intelligence = None
+            match alert.type.lower():
+                case "ioc":
+                    alert_intelligence = self.api.get_alert_ioc_rule(alert)
+                case "sigma":
+                    alert_intelligence = self.api.get_alert_sigma_rule(alert)
+                case "yara":
+                    alert_intelligence = self.api.get_alert_yara_signature(alert)
+            if alert_intelligence:
+                stix_incident = self.converter_to_stix.create_incident(
+                    alert=alert, alert_intelligence=alert_intelligence
+                )
+                stix_objects.append(stix_incident)
 
-        # Get entities from external sources
-        entities = self.client.get_entities()
+                stix_indicator = self.converter_to_stix.create_indicator(
+                    alert=alert, alert_intelligence=alert_intelligence
+                )
+                stix_objects.append(stix_indicator)
 
-        # Convert into STIX2 object and add it on a list
-        for entity in entities:
-            entity_to_stix = self.converter_to_stix.create_obs(entity["value"])
-            stix_objects.append(entity_to_stix)
+                stix_sighting = self.converter_to_stix.create_sighting(
+                    alert=alert, sighted_ref=stix_indicator
+                )
+                stix_objects.append(stix_sighting)
 
+                stix_observables = self.converter_to_stix.create_observables(
+                    alert=alert, alert_intelligence=alert_intelligence
+                )
+                stix_objects.extend(stix_observables)
+
+                for stix_observable in stix_observables:
+                    based_on_observable_types = [
+                        "ipv4-addr",
+                        "ipv6-addr",
+                        "domain-name",
+                        "url",
+                    ]
+                    related_to_observable_types = [
+                        "file",
+                        "hostname",
+                        "directory",
+                        "user-account",
+                    ]
+
+                    if stix_observable.type in based_on_observable_types:
+                        stix_based_on_relationship = (
+                            self.converter_to_stix.create_relationship(
+                                relationship_type="based-on",
+                                source=stix_observable,
+                                target=stix_indicator,
+                            )
+                        )
+                        stix_objects.append(stix_based_on_relationship)
+                    if stix_observable.type in related_to_observable_types:
+                        stix_based_on_relationship = (
+                            self.converter_to_stix.create_relationship(
+                                relationship_type="related-to",
+                                source=stix_observable,
+                                target=stix_incident,
+                            )
+                        )
+                        stix_objects.append(stix_based_on_relationship)
+                if isinstance(alert_intelligence, YaraSignature):
+                    for technique_tag in alert_intelligence.rule_technique_tags:
+                        stix_attack_pattern = (
+                            self.converter_to_stix.create_attack_pattern(
+                                technique_tag=technique_tag
+                            )
+                        )
+                        stix_objects.append(stix_attack_pattern)
+
+                        stix_uses_relationship = (
+                            self.converter_to_stix.create_relationship(
+                                relationship_type="uses",
+                                source=stix_incident,
+                                target=stix_attack_pattern,
+                            )
+                        )
+                        stix_objects.append(stix_uses_relationship)
+
+            self.last_import_datetime_value = alert.created_at
+
+        self.helper.log_info("[INCIDENTS] Incidents creation completed")
         return stix_objects
 
-        # ===========================
-        # === Add your code above ===
-        # ===========================
+    def _collect_case_incident_intelligence(self) -> list[dict]:
+        """
+        Collect threats from Harfanglab and convert them into STIX objects.
+        Threats are filtered by creation date, according to connector's state.
+        :return: List of STIX objects
+        """
+        stix_objects = []
+
+        threats = self.api.generate_threats(since=self.last_import_datetime_value)
+        for threat in threats:
+            alert_stix_objects = self._collect_incident_intelligence(threat)
+            stix_objects.extend(alert_stix_objects)
+
+            stix_case_incident = self.converter_to_stix.create_case_incident(
+                threat=threat, object_refs=alert_stix_objects
+            )
+            stix_objects.append(stix_case_incident)
+
+            threat_note = self.api.get_threat_note(threat.id)
+            if threat_note:
+                stix_note = self.converter_to_stix.create_note(
+                    threat_note=threat_note, object_refs=[stix_case_incident]
+                )
+                stix_objects.append(stix_note)
+            self.last_import_datetime_value = threat.created_at
+
+        self.helper.log_info("[CASE-INCIDENTS] Case-Incidents creation completed")
+        return stix_objects
 
     def process_message(self) -> None:
         """
@@ -91,78 +267,27 @@ class HarfanglabIncidentsConnector:
         )
 
         try:
-            # Get the current state
-            now = datetime.now()
-            current_timestamp = int(datetime.timestamp(now))
-            current_state = self.helper.get_state()
+            self.helper.log_info("[CONNECTOR] Starting alerts gatherer")
 
-            if current_state is not None and "last_run" in current_state:
-                last_run = current_state["last_run"]
+            work_id = self._initiate_work()
 
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector last run",
-                    {"last_run_datetime": last_run},
-                )
+            if self.should_import_case_incidents:
+                stix_objects = self._collect_case_incident_intelligence()
             else:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector has never run..."
+                stix_objects = self._collect_incident_intelligence()
+
+            if stix_objects:
+                stix_bundle = self.helper.stix2_create_bundle(stix_objects)
+                self.helper.send_stix2_bundle(
+                    stix_bundle,
+                    work_id=work_id,
+                    cleanup_inconsistent_bundle=True,
                 )
+                self.helper.log_info("[CONNECTOR] STIX bundle sent successfully")
 
-            # Friendly name will be displayed on OpenCTI platform
-            friendly_name = "Connector template feed"
+                self._set_state_last_datetime(self.last_import_datetime_value)
 
-            # Initiate a new work
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
-
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Running connector...",
-                {"connector_name": self.helper.connect_name},
-            )
-
-            # Performing the collection of intelligence
-            # ===========================
-            # === Add your code below ===
-            # ===========================
-            stix_objects = self._collect_intelligence()
-
-            if stix_objects is not None and len(stix_objects) is not None:
-                stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
-                bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
-
-                self.helper.connector_logger.info(
-                    "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": {str(len(bundles_sent))}},
-                )
-            # ===========================
-            # === Add your code above ===
-            # ===========================
-
-            # Store the current timestamp as a last run of the connector
-            self.helper.connector_logger.debug(
-                "Getting current state and update it with last run of the connector",
-                {"current_timestamp": current_timestamp},
-            )
-            current_state = self.helper.get_state()
-            current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
-            last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
-            if current_state:
-                current_state["last_run"] = current_state_datetime
-            else:
-                current_state = {"last_run": current_state_datetime}
-            self.helper.set_state(current_state)
-
-            message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(last_run_datetime)
-            )
-
-            self.helper.api.work.to_processed(work_id, message)
-            self.helper.connector_logger.info(message)
-
+            self._terminate_work(work_id)
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",
