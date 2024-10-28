@@ -3,7 +3,8 @@ from pathlib import Path
 
 import yaml
 from pycti import get_config_variable
-from dateutil.parser import parse
+from dateutil import parser, tz
+from .constants import EPOCH_DATETIME
 
 
 class ConfigConnector:
@@ -59,71 +60,40 @@ class ConfigConnector:
         self.harfanglab_token = get_config_variable(
             "HARFANGLAB_INCIDENTS_TOKEN", ["harfanglab_incidents", "token"], self.load
         )
-        self.harfanglab_login = get_config_variable(
-            "HARFANGLAB_INCIDENTS_LOGIN", ["harfanglab_incidents", "login"], self.load
-        )
-        self.harfanglab_password = get_config_variable(
-            "HARFANGLAB_INCIDENTS_PASSWORD",
-            ["harfanglab_incidents", "password"],
-            self.load,
-        )
 
-        self.harfanglab_source_list_name = get_config_variable(
-            "HARFANGLAB_INCIDENTS_SOURCE_LIST_NAME",
-            ["harfanglab_incidents", "source_list_name"],
+        self.harfanglab_import_threats = get_config_variable(
+            "HARFANGLAB_INCIDENTS_IMPORT_THREATS",
+            ["harfanglab_incidents", "import_threats"],
             self.load,
         )
-        self.harfanglab_remove_indicator = get_config_variable(
-            "HARFANGLAB_INCIDENTS_REMOVE_INDICATOR",
-            ["harfanglab_incidents", "remove_indicator"],
+        self.harfanglab_alert_statuses = get_config_variable(
+            "HARFANGLAB_INCIDENTS_ALERT_STATUSES",
+            ["harfanglab_incidents", "alert_statuses"],
             self.load,
         )
-        self.harfanglab_rule_maturity = get_config_variable(
-            "HARFANGLAB_INCIDENTS_RULE_MATURITY",
-            ["harfanglab_incidents", "rule_maturity"],
+        self.harfanglab_alert_types = get_config_variable(
+            "HARFANGLAB_INCIDENTS_ALERT_TYPES",
+            ["harfanglab_incidents", "alert_types"],
             self.load,
         )
-        self.harfanglab_import_security_events_as_incidents = get_config_variable(
-            "HARFANGLAB_INCIDENTS_IMPORT_SECURITY_EVENTS_AS_INCIDENTS",
-            ["harfanglab_incidents", "import_security_events_as_incidents"],
+        self.harfanglab_default_marking = get_config_variable(
+            "HARFANGLAB_INCIDENTS_DEFAULT_MARKING",
+            ["harfanglab_incidents", "default_marking"],
             self.load,
+            False,
+            "TLP:CLEAR",
         )
-        self.harfanglab_import_threats_as_case_incidents = get_config_variable(
-            "HARFANGLAB_INCIDENTS_IMPORT_THREATS_AS_CASE_INCIDENTS",
-            ["harfanglab_incidents", "import_threats_as_case_incidents"],
-            self.load,
-        )
-        self.harfanglab_import_security_events_filters_by_status = get_config_variable(
-            "HARFANGLAB_INCIDENTS_IMPORT_SECURITY_EVENTS_FILTERS_BY_STATUS",
-            ["harfanglab_incidents", "import_security_events_filters_by_status"],
-            self.load,
-        )
-        self.harfanglab_import_filters_by_alert_type = get_config_variable(
-            "HARFANGLAB_INCIDENTS_IMPORT_FILTERS_BY_ALERT_TYPE",
-            ["harfanglab_incidents", "import_filters_by_alert_type"],
-            self.load,
-        )
-        self.harfanglab_default_markings = get_config_variable(
-            "HARFANGLAB_INCIDENTS_DEFAULT_MARKINGS",
-            ["harfanglab_incidents", "default_markings"],
-            self.load,
-        )
-        self.harfanglab_source_list = {
-            "name": self.harfanglab_source_list_name,
-            "description": "Cyber Threat Intelligence knowledge imported from OpenCTI, and any changes must be made only to it.",
-            "enabled": True,
-        }
         self.harfanglab_default_score = get_config_variable(
             "HARFANGLAB_INCIDENTS_DEFAULT_SCORE",
             ["harfanglab_incidents", "default_score"],
         )
         harfanglab_import_start_date_var = get_config_variable(
-            "SENTINEL_INCIDENTS_IMPORT_START_DATE",
-            ["sentinel_incidents", "import_start_date"],
+            "HARFANGLAB_INCIDENTS_IMPORT_START_DATE",
+            ["harfanglab_incidents", "import_start_date"],
             self.load,
         )
-        self.harfanglab_import_start_date = (
-            parse(harfanglab_import_start_date_var)
+        self.harfanglab_import_start_datetime = (
+            parser.parse(harfanglab_import_start_date_var).replace(tzinfo=tz.UTC)
             if harfanglab_import_start_date_var
-            else None
+            else EPOCH_DATETIME
         )
