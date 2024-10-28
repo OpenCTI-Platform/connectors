@@ -72,25 +72,6 @@ class ImportFileStix:
                 return True
         return False
 
-    def _add_containers_entities_to_entity_container(
-        self, bundle: List, entity_id: int
-    ) -> List:
-        container = self.helper.api.stix_domain_object.read(id=entity_id)
-        container_stix_bundle = (
-            self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
-                entity_type=container["entity_type"], entity_id=container["id"]
-            )
-        )
-        if len(container_stix_bundle["objects"]) > 0:
-            container_stix = [
-                object
-                for object in container_stix_bundle["objects"]
-                if "x_opencti_id" in object
-                and object["x_opencti_id"] == container["id"]
-            ][0]
-            bundle.append(container_stix)
-        return bundle
-
     def _update_container(self, bundle: List, entity_id: int) -> List:
         container = self.helper.api.stix_domain_object.read(id=entity_id)
         container_stix_bundle = (

@@ -2053,13 +2053,7 @@ class MispImportFile:
             if entity_id:
                 self.helper.log_info("Contextual import.")
                 bundle = json.loads(bundle_json)["objects"]
-                if self._contains_container(bundle):
-                    self.helper.log_info("Bundle contains container.")
-                else:
-                    self.helper.log_info(
-                        "No container in Stix file. Updating current container"
-                    )
-                    bundle = self._update_container(bundle, entity_id)
+                bundle = self._update_container(bundle, entity_id)
                 bundle_json = self.helper.stix2_create_bundle(bundle)
             bundles_sent_event = self.helper.send_stix2_bundle(
                 bundle_json,
