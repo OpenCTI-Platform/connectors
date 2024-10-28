@@ -4,6 +4,7 @@
 
 import json
 import os
+import traceback
 
 import yaml
 from import_manager import IntelManager
@@ -178,5 +179,9 @@ class TaniumConnector:
 
 
 if __name__ == "__main__":
-    TaniumInstance = TaniumConnector()
-    TaniumInstance.start()
+    try:
+        TaniumInstance = TaniumConnector()
+        TaniumInstance.start()
+    except Exception as err:
+        traceback.print_exc()
+        exit(1)
