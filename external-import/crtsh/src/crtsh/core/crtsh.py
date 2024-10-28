@@ -1,5 +1,6 @@
 # crt_sh/api.py
 import requests
+from pycti import StixCoreRelationship
 from stix2 import (
     DomainName,
     EmailAddress,
@@ -215,7 +216,9 @@ class CrtSHClient:
             return None
         else:
             return Relationship(
-                type="relationship",
+                id=StixCoreRelationship.generate_id(
+                    "related-to", source_ref, target_ref
+                ),
                 relationship_type="related-to",
                 source_ref=source_ref,
                 target_ref=target_ref,
