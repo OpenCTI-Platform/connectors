@@ -18,6 +18,8 @@ services:
       - RST_REPORT_HUB_IMPORT_START_DATE=${RST_REPORT_HUB_STARTDATE}
       - RST_REPORT_HUB_FETCH_INTERVAL=300
       - RST_REPORT_HUB_LANGUAGE=eng
+      - RST_REPORT_HUB_CREATE_OBSERVABLES=false
+      - RST_REPORT_HUB_CREATE_RELATED_TO=true
     restart: always
     depends_on:
       - opencti
