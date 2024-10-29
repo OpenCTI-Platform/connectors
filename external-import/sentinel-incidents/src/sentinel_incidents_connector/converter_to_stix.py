@@ -183,16 +183,17 @@ class ConverterToStix:
         )
         return stix_url
 
-    def create_evidence_file(self, evidence: dict) -> tuple | None:
+    def create_evidence_file(
+        self, evidence: dict, stix_directory: stix2.Directory
+    ) -> stix2.File | None:
         """
         Create a STIX 2.1 File object based on the provided evidence.
         Evidence type: processEvidence, fileEvidence and fileHashEvidence
 
         :param evidence: A dictionary containing evidence related to the File.
-        :return: A tuple containing:
-                - A STIX `File` object representing the file described in the evidence (if valid hashes are found).
-                - A STIX `Directory` object representing the file's directory (if applicable).
-                Returns `(None, None)` if no valid hash information is present.
+        :param stix_directory: A STIX `Directory` object representing the file's directory.
+        :return: A STIX `File` object representing the file described in the evidence (if valid hashes are found)
+        or None
         """
         hashes_mapping = {
             "md5": "MD5",
@@ -223,12 +224,9 @@ class ConverterToStix:
                 hashes[algorithm] = file
                 self.all_hashes.add(file)
             else:
-                return None, None
+                return None
 
         if hashes:
-            stix_directory = (
-                self.create_evidence_directory(file) if isinstance(file, dict) else None
-            )
             stix_file = stix2.File(
                 hashes=hashes,
                 name=file.get("fileName") if isinstance(file, dict) else None,
@@ -239,9 +237,9 @@ class ConverterToStix:
                     "created_by_ref": self.author["id"],
                 },
             )
-            return stix_file, stix_directory
+            return stix_file
         else:
-            return None, None
+            return None
 
     def create_evidence_custom_observable_hostname(
         self, evidence: dict

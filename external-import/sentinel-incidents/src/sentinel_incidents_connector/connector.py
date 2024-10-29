@@ -6,7 +6,7 @@ from pycti import OpenCTIConnectorHelper
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
-from .utils import find_matching_file_id, format_incident, validate_incident
+from .utils import find_matching_file_ids, format_incident, validate_incident
 
 
 class SentinelIncidentsConnector:
@@ -92,11 +92,12 @@ class SentinelIncidentsConnector:
         stix_objects = []
 
         for alert in incident.get("alerts", []):
-
+            # Create Stix Incident
             stix_incident = self.converter_to_stix.create_incident(alert)
             stix_objects.append(stix_incident)
 
             for technique in alert.get("mitreTechniques", []):
+                # Create Stix AttackPattern
                 stix_attack_pattern = (
                     self.converter_to_stix.create_mitre_attack_pattern(technique)
                 )
@@ -133,6 +134,7 @@ class SentinelIncidentsConnector:
                 match evidence_type:
                     # userEvidence
                     case "#microsoft.graph.security.userEvidence":
+                        # Create Stix UserAccount
                         stix_account = (
                             self.converter_to_stix.create_evidence_user_account(
                                 evidence
@@ -150,6 +152,7 @@ class SentinelIncidentsConnector:
 
                     # ipEvidence
                     case "#microsoft.graph.security.ipEvidence":
+                        # Create Stix IPv4Address
                         stix_ip = self.converter_to_stix.create_evidence_ipv4(evidence)
                         stix_objects.append(stix_ip)
                         stix_relationship_ip = (
@@ -163,6 +166,7 @@ class SentinelIncidentsConnector:
 
                     # urlEvidence
                     case "#microsoft.graph.security.urlEvidence":
+                        # Create Stix Url
                         stix_url = self.converter_to_stix.create_evidence_url(evidence)
                         stix_objects.append(stix_url)
                         stix_relationship_url = (
@@ -176,6 +180,7 @@ class SentinelIncidentsConnector:
 
                     # deviceEvidence
                     case "#microsoft.graph.security.deviceEvidence":
+                        # Create CustomObservableHostname
                         stix_hostname = self.converter_to_stix.create_evidence_custom_observable_hostname(
                             evidence
                         )
@@ -196,8 +201,15 @@ class SentinelIncidentsConnector:
                             or evidence.get("fileDetails")
                             or evidence.get("value")
                         )
-                        stix_file, stix_directory = (
-                            self.converter_to_stix.create_evidence_file(evidence)
+                        # Create Stix Directory
+                        stix_directory = (
+                            self.converter_to_stix.create_evidence_directory(file)
+                            if isinstance(file, dict)
+                            else None
+                        )
+                        # Create Stix File
+                        stix_file = self.converter_to_stix.create_evidence_file(
+                            evidence, stix_directory
                         )
                         if stix_file:
                             # Add Stix File in stix_objects and relationship with incident
@@ -242,11 +254,11 @@ class SentinelIncidentsConnector:
                                     list_files_names.append(
                                         file_details.get("fileName")
                                     )
-                                    stix_files_objects = find_matching_file_id(
+                                    stix_files_objects = find_matching_file_ids(
                                         file_details.get("fileName"), stix_objects
                                     )
 
-                        # Create stix malware
+                        # Create stix Malware
                         stix_malware = self.converter_to_stix.create_evidence_malware(
                             evidence, stix_files_objects
                         )
@@ -299,7 +311,8 @@ class SentinelIncidentsConnector:
                 {"connector_name": self.helper.connect_name},
             )
 
-            incidents = self.client.get_incidents()
+            incidents = self.client.get_incidents(last_incident_timestamp)
+            # Incidents are listed from oldest to most recent.
             for incident in reversed(incidents):
                 incident = format_incident(incident)
                 if validate_incident(incident, last_incident_timestamp):

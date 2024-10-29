@@ -51,7 +51,7 @@ def is_ipv4(value: str) -> bool:
         return False
 
 
-def find_matching_file_id(malware_name: str, stix_objects: list) -> list | None:
+def find_matching_file_ids(malware_name: str, stix_objects: list) -> list | None:
     """
     Find and return the list of STIX 2.1 File objects that match the given malware name.
     :param malware_name: The name of the malware to search for. This is compared to the 'name' field

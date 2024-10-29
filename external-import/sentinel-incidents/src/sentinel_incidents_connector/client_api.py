@@ -1,7 +1,10 @@
 import json
-import time
+from datetime import datetime
 
 import requests
+from requests.adapters import HTTPAdapter
+from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
+from urllib3.util.retry import Retry
 
 
 class ConnectorClient:
@@ -36,76 +39,118 @@ class ConnectorClient:
         except Exception as e:
             raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
 
-    def pagination_incidents(self, initial_url: str) -> list:
+    def retries_builder(self) -> None:
         """
-        This method sends GET requests to the starting URL `initial_url` and uses the key ‘@odata.nextLink’ to retrieve
-        subsequent incident pages, as long as there is additional data to be retrieved. The results are collected in a
-        list which is then returned.
+        Configures the session's retry strategy for API requests.
 
-        In the event of a 429 error (rate limit reached), the method waits a certain amount of time before retrying,
-        with an exponential waiting mechanism to avoid exceeding the rate limit. A maximum number of retries is defined
-        to avoid infinite loops in the case of persistent errors.
+        Sets up the session to retry requests upon encountering specific HTTP status codes (429) using
+        exponential backoff. The retry mechanism will be applied for both HTTP and HTTPS requests.
+        This function uses the `Retry` and `HTTPAdapter` classes from the `requests.adapters` module.
 
-        :param initial_url: The starting URL for retrieving incidents.
-        :return: A list of all incidents
+        - Retries up to 5 times with an increasing delay between attempts.
+        """
+        retry_strategy = Retry(
+            total=5, backoff_factor=2, status_forcelist=[429], raise_on_status=True
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("https://", adapter)
+
+    def query_builder(self, date_str: str) -> requests:
+        """
+        Constructs the API URL with the necessary query parameters.
+
+        Builds a URL with query parameters to retrieve incidents and associated alerts.
+        Filters results according to state, or if the connector is running for the first time, uses `import_start_date`
+        from configuration to include only incidents created after that date.
+
+        :param date_str: date in iso 8601 format as a character string.
+        :return: A fully constructed URL string for querying incidents.
+        """
+        base_url = self.config.api_base_url
+        incident_path = self.config.incident_path
+        params = {"$expand": "alerts", "$filter": f"lastUpdateDateTime ge {date_str}"}
+        return requests.Request(
+            "GET", f"{base_url}{incident_path}", params=params
+        ).prepare()
+
+    def pagination_incidents(self, initial_url: str) -> list[dict]:
+        """
+        Retrieves all incidents from the API with pagination.
+
+        Iteratively fetches incidents from the initial URL, following pagination links until all incidents have been
+        collected. If any request results in an error (retry error, HTTP error, timeout, or connection error), it will
+        log the issue and halt further pagination.
+
+        :param initial_url: The initial URL for retrieving incidents.
+        :return: A list of all incidents as dictionaries containing mixed data types.
         """
         all_incidents = []
         next_page_url = initial_url
-        max_retries = 5
 
         while next_page_url:
-            retries = 0
-            retry_delay = 30
-            while retries < max_retries:
-                try:
-                    response = self.session.get(next_page_url)
-
-                    if response.status_code == 429:
-                        retries += 1
-                        self.helper.connector_logger.debug(
-                            "Rate limit hit, retrying...",
-                            {
-                                "max_retries": 5,
-                                "current_retries": retries,
-                                "delay": retry_delay,
-                            },
-                        )
-                        time.sleep(retry_delay)
-                        retry_delay *= 2
-                        continue
-                    response.raise_for_status()
-
-                    data = response.json()
-                    all_incidents.extend(data.get("value", []))
-                    next_page_url = data.get("@odata.nextLink")
+            try:
+                response = self.session.get(next_page_url)
+                response.raise_for_status()
+                data = response.json()
+                all_incidents.extend(data.get("value", []))
+                next_page_url = data.get("@odata.nextLink")
+                if next_page_url:
+                    continue
+                else:
                     break
 
-                except Exception as err:
-                    self.helper.connector_logger.error(str(err))
-                    break
-            if retries == max_retries:
+            except RetryError as err:
                 self.helper.connector_logger.error(
-                    "Max retries reached. Stopping pagination."
+                    "A retry error occurred during incident recovery, maximum retries exceeded for url",
+                    {"url": next_page_url, "retry_error": str(err)},
                 )
                 break
-
+            except HTTPError as err:
+                self.helper.connector_logger.error(
+                    "A http error occurred during incident recovery",
+                    {"url": next_page_url, "http_error": str(err)},
+                )
+                break
+            except Timeout as err:
+                self.helper.connector_logger.error(
+                    "A timeout error has occurred during incident recovery",
+                    {"url": next_page_url, "timeout_error": str(err)},
+                )
+                break
+            except ConnectionError as err:
+                self.helper.connector_logger.error(
+                    "A connection error occurred during incident recovery",
+                    {"url": next_page_url, "connection_error": str(err)},
+                )
+                break
+            except Exception as err:
+                self.helper.connector_logger.error(
+                    "An unexpected error occurred during the recovery of all incidents",
+                    {"url": next_page_url, "error": str(err)},
+                )
+                break
         return all_incidents
 
-    def get_incidents(self) -> list[dict]:
+    def get_incidents(self, last_incident_timestamp: int) -> list[dict]:
         """
-        Retrieve incidents along with their associated alerts from the Microsoft Sentinel API.
+        Retrieves incidents and manages the API request lifecycle.
 
-        This method constructs the API URL to fetch incidents created on or after a specified date.
-        It handles pagination to ensure that all incidents are retrieved in case of multiple pages of results.
+        Initializes the retry configuration, builds the API query URL, and retrieves all incidents using pagination.
+        Logs any unexpected errors encountered during the retrieval process.
 
-        :return: A list of all incidents
+        :return: A list of all incidents as dictionaries containing mixed data types.
         """
         try:
-            url = (
-                f"{self.config.api_base_url}{self.config.incident_path}?$expand=alerts&$filter=createdDateTime ge "
-                f"{self.config.import_start_date}"
+            self.retries_builder()
+            convert_date_str = datetime.fromtimestamp(last_incident_timestamp).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
             )
-            all_incidents = self.pagination_incidents(url)
+            request = self.query_builder(convert_date_str)
+            all_incidents = self.pagination_incidents(request.url)
             return all_incidents
+
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            self.helper.connector_logger.error(
+                "An unknown error occurred during the recovery of all incidents",
+                {"error": str(err)},
+            )

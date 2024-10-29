@@ -17,14 +17,14 @@ class ConfigConnector:
         self._initialize_configurations()
 
     @staticmethod
-    def prepare_iso_format(date: str) -> str | datetime:
+    def prepare_iso_format(date: str) -> str:
         try:
             if len(date) == 10:
-                prepared_date = datetime.strptime(date, "%Y-%m-%d").strftime(
+                prepared_date = datetime.fromisoformat(date).strftime(
                     "%Y-%m-%dT%H:%M:%SZ"
                 )
             elif len(date) == 20:
-                prepared_date = datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ").strftime(
+                prepared_date = datetime.fromisoformat(date).strftime(
                     "%Y-%m-%dT%H:%M:%SZ"
                 )
             else:
