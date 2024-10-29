@@ -71,7 +71,7 @@ class ReportHub:
         hashes = {}
         # Regular expression to match hash types and values
         hash_pattern = re.compile(
-            r"\[file:hashes\.'?(MD5|SHA-1|SHA-256)'? ?= ?'([a-fA-F0-9]{32,64})'\]"
+            r"file:hashes\.'?(MD5|SHA-1|SHA-256)'? ?= ?'([a-fA-F0-9]{32,64})'"
         )
         # Find all hash occurrences in the pattern
         matches = hash_pattern.findall(pattern)
