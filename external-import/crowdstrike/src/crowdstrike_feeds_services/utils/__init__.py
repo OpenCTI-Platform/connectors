@@ -812,7 +812,6 @@ def create_report(
         object_marking_refs=object_markings,
         custom_properties={
             X_OPENCTI_REPORT_STATUS: x_opencti_report_status,
-            X_OPENCTI_FILES: x_opencti_files,
         },
         allow_custom=True,
     )
