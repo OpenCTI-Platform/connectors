@@ -1,9 +1,18 @@
-# OpenCTI Sentinel Connector
-This OpenCTI connector allows the ability to create or delete data from your OpenCTI platform to either the Microsoft Sentinel or Microsoft Defender for Endpoint platform utitlizing the [Microsofot Graph API Threat Intelligence Indicator](https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta). Microsoft has a detailed guide on how to get started with connecting your threat intelligence platform to Sentinel found [here](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/data/sentinel-threat-intelligence#import-threat-indicators-with-the-platforms-data-connector).
+# OpenCTI Sentinel Connector [Deprecated]
+
+*This connector is depecrated since 6.4, please prefer to use Sentinel Intel as stream connector and/or Sentinel
+Incidents for external import.*
+
+This OpenCTI connector allows the ability to create or delete data from your OpenCTI platform to either the Microsoft
+Sentinel or Microsoft Defender for Endpoint platform utitlizing
+the [Microsofot Graph API Threat Intelligence Indicator](https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta).
+Microsoft has a detailed guide on how to get started with connecting your threat intelligence platform to Sentinel
+found [here](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/data/sentinel-threat-intelligence#import-threat-indicators-with-the-platforms-data-connector).
 
 ## Installation
 
-If you don't know how to get the `tenant_id`, `client_id`, and `client_secret` information, here's a screenshot to help !
+If you don't know how to get the `tenant_id`, `client_id`, and `client_secret` information, here's a screenshot to
+help !
 ![Sentinel_variables](./doc/sentinel_info_variables.png)
 
 It's also important to define the necessary permissions in Sentinel for the connector to work.
@@ -15,11 +24,13 @@ and prioritize the "ThreatIndicators.ReadWrite.OwnedBy" permissions.
 You will then be able to view the data (indicators) in :
 Home > Microsoft Sentinel > OpenCTI (Your Name) > Threat Indicators
 
-For more information, visit: 
+For more information, visit:
+
 - [Microsoft Security-Authorization](https://learn.microsoft.com/en-us/graph/security-authorization)
 - [Microsoft Connect-Threat-Intelligence-Tip](https://learn.microsoft.com/en-us/azure/sentinel/connect-threat-intelligence-tip)
 
 Another interesting link:
+
 - [Microsoft Sentinel-Threat-Intelligence](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/data/sentinel-threat-intelligence#import-threat-indicators-with-the-platforms-data-connector)
 
 ### Requirements
@@ -30,10 +41,10 @@ Another interesting link:
 
 Below are the parameters you'll need to set for OpenCTI:
 
-| Parameter `OpenCTI` | config.yml  | Docker environment variable | Mandatory | Description                                          |
-|---------------------|-------------|-----------------------------|-----------|------------------------------------------------------|
-| URL                 | `url`       | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| Token               | `token`     | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+| Parameter `OpenCTI` | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| URL                 | `url`      | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| Token               | `token`    | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
 Below are the parameters you'll need to set for running the connector properly:
 

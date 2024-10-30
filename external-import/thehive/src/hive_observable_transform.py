@@ -1,3 +1,4 @@
+import pycti
 from pycti import CustomObservableText, CustomObservableUserAgent
 from stix2 import (
     URL,
@@ -117,6 +118,7 @@ class HiveObservableTransform:
 
     def create_vulnerability(self):
         return Vulnerability(
+            id=pycti.Vulnerability.generate_id(self.observable.get("data")),
             type="vulnerability",
             name=self.observable.get("data").lower(),
             object_marking_refs=self.markings,
@@ -170,6 +172,7 @@ class HiveObservableTransform:
 
     def create_identity(self):
         return Identity(
+            id=pycti.Identity.generate_id(self.observable.get("data"), "individual"),
             type="identity",
             name=self.observable.get("data").lower(),
             object_marking_refs=self.markings,
@@ -187,6 +190,7 @@ class HiveObservableTransform:
 
     def create_identity_system(self):
         return Identity(
+            id=pycti.Identity.generate_id(self.observable.get("data"), "system"),
             type="identity",
             name=self.observable.get("data").lower(),
             object_marking_refs=self.markings,
@@ -234,6 +238,9 @@ class HiveObservableTransform:
 
     def create_organization(self):
         return Identity(
+            id=pycti.Identity.generate_id(
+                self.observable.get("data").title(), "organization"
+            ),
             type="identity",
             name=self.observable.get("data").title(),
             object_marking_refs=self.markings,

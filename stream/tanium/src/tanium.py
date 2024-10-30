@@ -4,12 +4,13 @@
 
 import json
 import os
+import traceback
 
 import yaml
 from import_manager import IntelManager
 from intel_cache import IntelCache
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from sightings import Sightings
+from sightings import TaniumSightings
 from tanium_api_handler import TaniumApiHandler
 
 
@@ -167,7 +168,7 @@ class TaniumConnector:
         return
 
     def start(self):
-        self.sightings = Sightings(
+        self.sightings = TaniumSightings(
             self.helper,
             self.tanium_api_handler,
             self.tanium_import_alerts,
@@ -178,5 +179,9 @@ class TaniumConnector:
 
 
 if __name__ == "__main__":
-    TaniumInstance = TaniumConnector()
-    TaniumInstance.start()
+    try:
+        TaniumInstance = TaniumConnector()
+        TaniumInstance.start()
+    except Exception:
+        traceback.print_exc()
+        exit(1)

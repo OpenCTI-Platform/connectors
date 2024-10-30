@@ -20,9 +20,9 @@ ZEROFOX = "ZeroFox"
 
 
 class ZeroFoxConnector:
-    def __init__(self):
+    def __init__(self, helper: OpenCTIConnectorHelper = None):
         """ZeroFox connector for OpenCTI."""
-        self.helper = OpenCTIConnectorHelper({})
+        self.helper = helper if helper else OpenCTIConnectorHelper({})
 
         # Specific connector attributes for external import connectors
         self.interval = os.environ.get("CONNECTOR_RUN_EVERY", "1d").lower()
