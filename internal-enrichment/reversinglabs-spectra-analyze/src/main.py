@@ -69,7 +69,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         )
 
         self.reversinglabs_spectra_user_agent = (
-            "ReversingLabs Spectra Analyze OpenCTI v1.0.0"
+            "ReversingLabs Spectra Analyze OpenCTI v1.1.0"
         )
 
     """
