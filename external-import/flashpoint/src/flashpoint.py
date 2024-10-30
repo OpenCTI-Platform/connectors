@@ -13,7 +13,6 @@ import requests
 import stix2
 import yaml
 from dateutil.parser import parse
-from mispfeed import MispFeed
 from pycti import (
     AttackPattern,
     Channel,
@@ -32,6 +31,8 @@ from pycti import (
     Tool,
     get_config_variable,
 )
+
+from mispfeed import MispFeed
 
 
 class Flashpoint:
@@ -351,8 +352,10 @@ class Flashpoint:
 
     def _import_apt(self, work_id):
         # Query params
-        msg = "/document/malware/wiki has been deprecated by Flashpoint Ignite, the option import malware does not " \
-                  "work anymore and will be removed in a future version."
+        msg = (
+            "/document/malware/wiki has been deprecated by Flashpoint Ignite, the option import malware does not "
+            "work anymore and will be removed in a future version."
+        )
         warnings.warn(
             message=msg,
             category=DeprecationWarning,
@@ -362,8 +365,10 @@ class Flashpoint:
         self.helper.api.work.to_processed(work_id, msg)  # warns OpenCTI user
 
     def _import_malware(self, work_id):
-        msg = "/document/apt/wiki has been deprecated by Flashpoint Ignite, the option import apt does not " \
-              "work anymore and will be removed in a future version."
+        msg = (
+            "/document/apt/wiki has been deprecated by Flashpoint Ignite, the option import apt does not "
+            "work anymore and will be removed in a future version."
+        )
         warnings.warn(
             message=msg,
             category=DeprecationWarning,
@@ -371,7 +376,6 @@ class Flashpoint:
         )
         self.helper.connector_logger.warning(msg)  # warns connector user
         self.helper.api.work.to_processed(work_id, msg)  # warns OpenCTI user
-
 
     def _import_reports(self, work_id, start_date):
         # Query params
