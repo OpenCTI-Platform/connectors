@@ -13,6 +13,7 @@ import requests
 import stix2
 import yaml
 from dateutil.parser import parse
+from mispfeed import MispFeed
 from pycti import (
     AttackPattern,
     Channel,
@@ -31,8 +32,6 @@ from pycti import (
     Tool,
     get_config_variable,
 )
-
-from mispfeed import MispFeed
 
 
 class Flashpoint:
