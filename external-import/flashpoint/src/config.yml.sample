@@ -15,7 +15,6 @@ flashpoint:
   import_start_date: '2024-01-01'
   import_reports: true
   import_indicators: true
-  import_vulnerabilities: true
   import_communities: false
   communities_queries: 'cybersecurity,cyberattack'
   import_alerts: true

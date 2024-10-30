@@ -85,12 +85,6 @@ class Flashpoint:
             config,
             default=True,
         )
-        self.flashpoint_import_vulnerabilities = get_config_variable(
-            "FLASHPOINT_IMPORT_VULNERABILITIES",
-            ["flashpoint", "import_vulnerabilities"],
-            config,
-            default=True,
-        )
         self.flashpoint_import_communities = get_config_variable(
             "FLASHPOINT_IMPORT_COMMUNITIES",
             ["flashpoint", "import_communities"],
