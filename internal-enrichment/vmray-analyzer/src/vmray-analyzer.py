@@ -13,7 +13,12 @@ from zipfile import ZipFile
 
 import stix2
 import yaml
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
+from pycti import (
+    Note,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
 from vmray.rest_api import VMRayRESTAPI
 
 
@@ -246,9 +251,11 @@ class VmrayAnalyzerConnector:
                 ):
                     with zipfile_obj.open(file_name) as config:
                         config_dict = json.load(config)
+                        note_content = f"```\n{json.dumps(config_dict, indent=2)}\n```"
                         note = stix2.Note(
+                            id=Note.generate_id(None, note_content),
                             abstract=f"Malware Configuration ({os.path.basename(file_name)})",
-                            content=f"```\n{json.dumps(config_dict, indent=2)}\n```",
+                            content=note_content,
                             created_by_ref=self.identity,
                             object_marking_refs=[self.default_tlp],
                             object_refs=[observable["standard_id"]],

@@ -162,6 +162,14 @@ class Mandiant:
         )
         self.mandiant_campaigns_interval = timedelta(hours=mandiant_campaigns_interval)
 
+        # When import indicators, import full campaigns (campaign details his related entities)
+        self.import_indicators_with_full_campaigns = get_config_variable(
+            "MANDIANT_IMPORT_INDICATORS_WITH_FULL_CAMPAIGNS",
+            ["mandiant", "import_indicators_with_full_campaigns"],
+            config,
+            default=False,
+        )
+
         if get_config_variable(
             "MANDIANT_IMPORT_INDICATORS",
             ["mandiant", "import_indicators"],

@@ -291,6 +291,7 @@ class Misp:
             cert=self.misp_client_cert,
             ssl=self.misp_ssl_verify,
             debug=False,
+            tool="OpenCTI MISP connector",
         )
 
     def get_interval(self):
@@ -1741,6 +1742,10 @@ class Misp:
                 or (
                     galaxy["namespace"] == "misp"
                     and galaxy["name"] == "Microsoft Activity Group actor"
+                )
+                or (
+                    galaxy["namespace"] == "misp"
+                    and galaxy["name"] == "ESET Threat Actor"
                 )
             ):
                 for galaxy_entity in galaxy["GalaxyCluster"]:

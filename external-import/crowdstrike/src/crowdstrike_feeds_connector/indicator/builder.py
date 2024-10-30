@@ -150,8 +150,6 @@ class IndicatorBundleBuilder:
 
         self.observation_factory = self._get_observation_factory(self.indicator["type"])
 
-        self.first_seen = timestamp_to_datetime(self.indicator["published_date"])
-
     @classmethod
     def _get_observation_factory(cls, indicator_type: str) -> ObservationFactory:
         factory = cls._INDICATOR_TYPE_TO_OBSERVATION_FACTORY.get(indicator_type)
@@ -227,7 +225,6 @@ class IndicatorBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            start_time=self.first_seen,
         )
 
     def _create_targeted_sectors(self) -> List[Identity]:
@@ -246,7 +243,6 @@ class IndicatorBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            start_time=self.first_seen,
         )
 
     def _create_vulnerability(self, name: str):
@@ -383,6 +379,7 @@ class IndicatorBundleBuilder:
             created_by=self.author,
             name=indicator_value,
             valid_from=indicator_published,
+            created=indicator_published,
             kill_chain_phases=kill_chain_phases,
             labels=labels,
             confidence=self.confidence_level,
@@ -411,7 +408,6 @@ class IndicatorBundleBuilder:
             targets,
             self.confidence_level,
             self.object_markings,
-            start_time=self.first_seen,
         )
 
     def _create_report(
