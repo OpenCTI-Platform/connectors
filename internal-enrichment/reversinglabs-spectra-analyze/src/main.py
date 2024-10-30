@@ -668,8 +668,8 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         resp_json = response.json()
 
         now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        tp_statistics = resp_json.get("third_party_reputations").get("statistics")
-        dl_files_statistics = resp_json.get("downloaded_files_statistics")
+        tp_statistics = resp_json.get("third_party_reputations", {}).get("statistics", {})
+        dl_files_statistics = resp_json.get("downloaded_files_statistics", {})
         abstract = "ReversingLabs Spectra Analyze IP address report"
 
         content = textwrap.dedent(
@@ -738,8 +738,8 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             resp_json = response.json()
 
             top_threats = resp_json.get("top_threats")
-            dl_files_stats = resp_json.get("downloaded_files_statistics")
-            tp_stats = resp_json.get("third_party_reputations").get("statistics")
+            dl_files_stats = resp_json.get("downloaded_files_statistics", {})
+            tp_stats = resp_json.get("third_party_reputations", {}).get("statistics", {})
 
             if top_threats or dl_files_stats.get("malicious") >= 3 or tp_stats.get("malicious") >= 3:
                 malicious_domains.append(resp_json)
@@ -841,8 +841,8 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
             for one_domain in selected_domains:
                 domain_name = one_domain.get("requested_domain")
-                tp_stats = one_domain.get("third_party_reputations").get("statistics")
-                dl_stats = one_domain.get("downloaded_files_statistics")
+                tp_stats = one_domain.get("third_party_reputations", {}).get("statistics", {})
+                dl_stats = one_domain.get("downloaded_files_statistics", {})
 
                 accumulated_content = accumulated_content + textwrap.dedent(f"| {domain_name} | {tp_stats['malicious']}/{tp_stats['total']} | {dl_stats['malicious']}/{dl_stats['total']} |\n")
 
@@ -861,12 +861,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             )
             self.stix_objects.append(note)
 
-    def _url_reports(self):
-        url_list = self.a1000client.network_urls_from_ip_aggregated(
-            ip_addr=self.ip_sample,
-            max_results=100
-        )
-
+    def _url_reports(self, url_list):
         self.helper.log_info(
             f"{self.helper.connect_name}: Getting URL reports"
         )
@@ -984,8 +979,8 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
             for one_url in selected_urls:
                 url_name = one_url.get("requested_url")
-                tp_stats = one_url.get("third_party_reputations").get("statistics")
-                analysis_stats = one_url.get("analysis").get("statistics")
+                tp_stats = one_url.get("third_party_reputations", {}).get("statistics", {})
+                analysis_stats = one_url.get("analysis", {}).get("statistics", {})
 
                 accumulated_content = accumulated_content + textwrap.dedent(f"| `{url_name}` | {tp_stats['malicious']}/{tp_stats['total']} | {analysis_stats['malicious']}/{analysis_stats['total']} |\n")
 
@@ -1019,7 +1014,12 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
         self._domain_reports(domain_list=domain_list)
 
-        self._url_reports()
+        url_list = self.a1000client.network_urls_from_ip_aggregated(
+            ip_addr=self.ip_sample,
+            max_results=100
+        )
+
+        self._url_reports(url_list=url_list)
 
         self.helper.log_info(
             f"{self.helper.connect_name}: Creating bundle for IP"
@@ -1029,7 +1029,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         bundles_sent = self.helper.send_stix2_bundle(bundle)
 
         self.helper.log_info(
-            f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
+            f"{self.helper.connect_name}: Number of stix bundles sent to workers: {str(len(bundles_sent))}"
         )
 
     def _domain_report(self):
@@ -1096,8 +1096,8 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
         abstract = "ReversingLabs Spectra Analyze domain report"
 
-        tp_statistics = resp_json.get("third_party_reputations").get("statistics")
-        dl_files_statistics = resp_json.get("downloaded_files_statistics")
+        tp_statistics = resp_json.get("third_party_reputations", {}).get("statistics", {})
+        dl_files_statistics = resp_json.get("downloaded_files_statistics", {})
 
         content = textwrap.dedent(
             f"""
@@ -1160,7 +1160,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         bundles_sent = self.helper.send_stix2_bundle(bundle)
 
         self.helper.log_info(
-            f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
+            f"{self.helper.connect_name}: Number of stix bundles sent to workers: {str(len(bundles_sent))}"
         )
 
     def _url_report(self):
@@ -1171,7 +1171,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         response = self.a1000client.network_url_report(requested_url=self.url_sample)
         resp_json = response.json()
 
-        top_threats = resp_json.get("analysis").get("top_threats")
+        top_threats = resp_json.get("analysis", {}).get("top_threats")
         now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         malware_list = []
         labels = []
@@ -1227,8 +1227,8 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
         abstract = "ReversingLabs Spectra Analyze URL report"
 
-        analysis_stats = resp_json.get("analysis").get("statistics")
-        tp_stats = resp_json.get("third_party_reputations").get("statistics")
+        analysis_stats = resp_json.get("analysis", {}).get("statistics", {})
+        tp_stats = resp_json.get("third_party_reputations", {}).get("statistics", {})
 
         content = textwrap.dedent(
             f"""
@@ -1277,14 +1277,14 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         self._url_report()
 
         self.helper.log_info(
-            f"{self.helper.connect_name}: Creating additional bundle for URL"
+            f"{self.helper.connect_name}: Creating bundle for URL"
         )
 
         bundle = self._generate_stix_bundle(stix_objects=self.stix_objects, stix_entity=self.stix_entity)
         bundles_sent = self.helper.send_stix2_bundle(bundle)
 
         self.helper.log_info(
-            f"{self.helper.connect_name}: Number of additional stix bundles sent for workers: {str(len(bundles_sent))}"
+            f"{self.helper.connect_name}: Number of stix bundles sent to workers round 1: {str(len(bundles_sent))}"
         )
 
     def _process_message(self, data: Dict):
@@ -1356,6 +1356,13 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             self.helper.log_info(
                 f"{self.helper.connect_name}: Submit URL sample for analysis on Spectra Analyze!"
             )
+
+            self._url_report_flow(
+                stix_entity=stix_entity,
+                opencti_entity=opencti_entity,
+                url_sample=url_sample
+            )
+
             # Submit URL sample for analysis on Spectra Analyze
             analysis_result = self._submit_url_for_analysis(
                 stix_entity,
@@ -1388,14 +1395,8 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 bundles_sent = self.helper.send_stix2_bundle(bundle)
 
                 self.helper.log_info(
-                    f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
+                    f"{self.helper.connect_name}: Number of stix bundles sent to workers round 1: {str(len(bundles_sent))}"
                 )
-
-            self._url_report_flow(
-                stix_entity=stix_entity,
-                opencti_entity=opencti_entity,
-                url_sample=url_sample
-            )
 
         elif opencti_type == "IPv4-Addr":
             ip_sample = stix_entity["value"]
