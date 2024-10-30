@@ -195,7 +195,7 @@ class SentinelIncidentsConnector:
                         stix_objects.append(stix_relationship_hostname)
 
                     # processEvidence, fileEvidence and fileHashEvidence
-                    case evidence_file if evidence_file in priority_evidence_files:
+                    case evidence_file if evidence_file in priority_evidence_files.keys():
                         file = (
                             evidence.get("imageFile")
                             or evidence.get("fileDetails")
