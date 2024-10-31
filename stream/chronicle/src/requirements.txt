@@ -1,4 +1,4 @@
-pycti==6.3.8
+pycti==6.3.9
 google==3.0.0
 google-auth==2.35.0
 google-api-core==2.22.0
