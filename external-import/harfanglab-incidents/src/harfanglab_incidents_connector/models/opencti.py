@@ -1,27 +1,21 @@
-from datetime import datetime
 from abc import abstractmethod
+from datetime import datetime
 from typing import Any
 
-from ..utils import (
-    is_domain,
-    is_ipv4,
-    is_ipv6,
-)  # TODO: relaplace relative import
-
 import stix2
-from pycti import (
-    AttackPattern as PyCTIAttackPattern,
-    CaseIncident as PyCTICaseIncident,
-    CustomObjectCaseIncident as PyCTICustomCaseIncident,
-    CustomObservableHostname as PyCTICustomObservableHostname,
-    Identity as PyCTIIdentity,
-    Incident as PyCTIIncident,
-    Indicator as PyCTIIndicator,
-    Note as PyCTINote,
-    StixCoreRelationship as PyCTIRelationship,
-    StixSightingRelationship as PyCTISighting,
-)
+from pycti import AttackPattern as PyCTIAttackPattern
+from pycti import CaseIncident as PyCTICaseIncident
+from pycti import CustomObjectCaseIncident as PyCTICustomCaseIncident
+from pycti import CustomObservableHostname as PyCTICustomObservableHostname
+from pycti import Identity as PyCTIIdentity
+from pycti import Incident as PyCTIIncident
+from pycti import Indicator as PyCTIIndicator
+from pycti import Note as PyCTINote
+from pycti import StixCoreRelationship as PyCTIRelationship
+from pycti import StixSightingRelationship as PyCTISighting
+
 from ..constants import MARKING_DEFINITIONS_BY_NAME
+from ..utils import is_domain, is_ipv4, is_ipv6
 
 DEFAULT_MARKING_DEFINITIONS = (
     MARKING_DEFINITIONS_BY_NAME["TLP:CLEAR"],

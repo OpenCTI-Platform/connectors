@@ -2,8 +2,9 @@ import os
 from pathlib import Path
 
 import yaml
-from pycti import get_config_variable
 from dateutil import parser, tz
+from pycti import get_config_variable
+
 from .constants import EPOCH_DATETIME
 
 

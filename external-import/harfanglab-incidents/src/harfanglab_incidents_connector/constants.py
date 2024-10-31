@@ -1,5 +1,5 @@
 from dateutil.parser import parse
-from stix2 import TLP_WHITE, TLP_GREEN, TLP_AMBER, TLP_RED
+from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 EPOCH_DATETIME = parse("1970-01-01T00:00:00Z")
 

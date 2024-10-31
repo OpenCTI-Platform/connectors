@@ -1,15 +1,16 @@
 import sys
-from dateutil.parser import parse
 from datetime import datetime
 
+from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import HarfanglabClient
 from .config_variables import ConfigConnector
-from .converter_to_stix import ConverterToStix
-from .models.harfanglab import Threat as HarfanglabThreat, YaraSignature
-from .models.opencti import BaseModel as OCTIObject
 from .constants import EPOCH_DATETIME
+from .converter_to_stix import ConverterToStix
+from .models.harfanglab import Threat as HarfanglabThreat
+from .models.harfanglab import YaraSignature
+from .models.opencti import BaseModel as OCTIObject
 
 
 class HarfanglabIncidentsConnector:

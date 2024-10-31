@@ -1,15 +1,14 @@
-import requests
 import urllib.parse
 from datetime import datetime
 
-from .models.harfanglab import (
-    Alert as HarfanglabAlert,
-    IocRule as HarfanglabIocRule,
-    SigmaRule as HarfanglabSigmaRule,
-    YaraSignature as HarfanglabYaraSignature,
-    Threat as HarfanglabThreat,
-    ThreatNote as HarfanglabThreatNote,
-)
+import requests
+
+from .models.harfanglab import Alert as HarfanglabAlert
+from .models.harfanglab import IocRule as HarfanglabIocRule
+from .models.harfanglab import SigmaRule as HarfanglabSigmaRule
+from .models.harfanglab import Threat as HarfanglabThreat
+from .models.harfanglab import ThreatNote as HarfanglabThreatNote
+from .models.harfanglab import YaraSignature as HarfanglabYaraSignature
 
 
 class HarfanglabClient:

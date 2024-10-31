@@ -1,4 +1,4 @@
-from validators import ip_address, hashes, domain
+from validators import domain, hashes, ip_address
 
 
 def is_ipv4(value: str) -> bool:

@@ -1,45 +1,37 @@
 import re
 
-from .models.harfanglab import (
-    Agent as HarfanglabAgent,
-    Alert as HarfanglabAlert,
-    IocRule as HarfanglabIocRule,
-    Process as HarfanglabProcess,
-    Threat as HarfanglabThreat,
-    ThreatNote as HarfanglabThreatNote,
-    SigmaRule as HarfanglabSigmaRule,
-    YaraSignature as HarfanglabYaraSignature,
-)
-from .models.opencti import (
-    BaseModel as OCTIObject,
-    AttackPattern as OCTIAttackPattern,
-    Author as OCTIAuthor,
-    CaseIncident as OCTICaseIncident,
-    Directory as OCTIDirectory,
-    DomainName as OCTIDomainName,
-    File as OCTIFile,
-    Hostname as OCTIHostname,
-    IPv4 as OCTIIPv4,
-    IPv6 as OCTIIPv6,
-    Incident as OCTIIncident,
-    Indicator as OCTIIndicator,
-    Note as OCTINote,
-    Relationship as OCTIRelationship,
-    Sighting as OCTISighting,
-    Url as OCTIUrl,
-    UserAccount as OCTIUserAccount,
-)
-from .utils import (
-    is_domain,
-    is_ipv4,
-    is_ipv6,
-)
 from .constants import (
-    INCIDENT_PRIORITIES_BY_LEVEL,
     FILE_INDICATOR_TYPES,
+    INCIDENT_PRIORITIES_BY_LEVEL,
     IP_INDICATOR_TYPES,
     MARKING_DEFINITIONS_BY_NAME,
 )
+from .models.harfanglab import Agent as HarfanglabAgent
+from .models.harfanglab import Alert as HarfanglabAlert
+from .models.harfanglab import IocRule as HarfanglabIocRule
+from .models.harfanglab import Process as HarfanglabProcess
+from .models.harfanglab import SigmaRule as HarfanglabSigmaRule
+from .models.harfanglab import Threat as HarfanglabThreat
+from .models.harfanglab import ThreatNote as HarfanglabThreatNote
+from .models.harfanglab import YaraSignature as HarfanglabYaraSignature
+from .models.opencti import AttackPattern as OCTIAttackPattern
+from .models.opencti import Author as OCTIAuthor
+from .models.opencti import BaseModel as OCTIObject
+from .models.opencti import CaseIncident as OCTICaseIncident
+from .models.opencti import Directory as OCTIDirectory
+from .models.opencti import DomainName as OCTIDomainName
+from .models.opencti import File as OCTIFile
+from .models.opencti import Hostname as OCTIHostname
+from .models.opencti import Incident as OCTIIncident
+from .models.opencti import Indicator as OCTIIndicator
+from .models.opencti import IPv4 as OCTIIPv4
+from .models.opencti import IPv6 as OCTIIPv6
+from .models.opencti import Note as OCTINote
+from .models.opencti import Relationship as OCTIRelationship
+from .models.opencti import Sighting as OCTISighting
+from .models.opencti import Url as OCTIUrl
+from .models.opencti import UserAccount as OCTIUserAccount
+from .utils import is_domain, is_ipv4, is_ipv6
 
 
 class ConverterToStix:
