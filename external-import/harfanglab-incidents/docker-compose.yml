@@ -25,11 +25,12 @@ services:
       - HARFANGLAB_INCIDENTS_URL=https://console.changeme.com
       - HARFANGLAB_INCIDENTS_SSL_VERIFY=true
       - HARFANGLAB_INCIDENTS_TOKEN=ChangeMe
-      - HARFANGLAB_INCIDENTS_IMPORT_THREATS=true # If true then threats will be imported too (as Case Incidents), otherwise only alerts will be imported (as Incidents)
+      - HARFANGLAB_INCIDENTS_IMPORT_THREATS=false # If true then threats will be imported too (as Case Incidents), otherwise only alerts will be imported (as Incidents)
       - HARFANGLAB_INCIDENTS_ALERT_STATUSES=ChangeMe # Filters available : new, investigating, false_positive, closed
       - HARFANGLAB_INCIDENTS_ALERT_TYPES=ChangeMe # Filters available : yara, sigma, ioc
       - HARFANGLAB_INCIDENTS_DEFAULT_MARKING=ChangeMe # Markings available : TLP:CLEAR - TLP:GREEN - TLP:AMBER - TLP:RED (default: TLP:CLEAR)
       - HARFANGLAB_INCIDENTS_DEFAULT_SCORE=50 # Former confidence_level deprecated in OpenCTI version >= 6.0
+      - HARFANGLAB_INCIDENTS_IMPORT_START_DATE=1970-01-01
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME

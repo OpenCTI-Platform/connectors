@@ -66,6 +66,8 @@ class ConfigConnector:
             "HARFANGLAB_INCIDENTS_IMPORT_THREATS",
             ["harfanglab_incidents", "import_threats"],
             self.load,
+            False,
+            False,
         )
         self.harfanglab_alert_statuses = get_config_variable(
             "HARFANGLAB_INCIDENTS_ALERT_STATUSES",

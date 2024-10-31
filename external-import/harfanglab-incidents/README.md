@@ -14,21 +14,81 @@ Table of Contents
         - [Docker Deployment](#docker-deployment)
         - [Manual Deployment](#manual-deployment)
     - [Usage](#usage)
-    - [Behavior](#behavior)
     - [Debugging](#debugging)
     - [Additional information](#additional-information)
 
 ## Introduction
 
-This connector allows organizations to feed the HarfangLab EDR using OpenCTI knowledge.
+This connector allows organizations to feed OpenCTI using **Harfanglab EDR** knowledge.
 
-This connector leverages the OpenCTI events stream, so it consumes knowledge in real time and, depending on its
-settings, create detection and hunting intel pieces in the HarfangLab platform.
+The graph below describes all the different entities that can be created and/or updated by the connector in OpenCTI from
+Harfanglab's alert and threats.
 
-## General overview
+```mermaid
+graph LR
+    subgraph Harfanglab
+        direction TB
+        HarfanglabThreat[Threat]
+        HarfanglabAlert[Alert]
+    end
 
-OpenCTI data is coming from import connectors. Once this data is ingested in OpenCTI, it is pushed to a Redis event
-stream. This stream is consumed by the HarfangLab connector to insert intel in the HarfangLab platform.
+    subgraph OpenCTI
+        direction TB
+        subgraph Events
+            direction TB
+            OpenCTIIncident[Incident]
+            OpenCTISighting[Sighting]
+        end
+        subgraph Observations
+            direction TB
+            OpenCTIIndicator[Indicator]
+            OpenCTIObservable[Observable]
+        end
+        subgraph Cases
+            direction TB
+            OpenCTICaseIncident[CaseIncident]
+        end
+        subgraph Analyses
+            direction TB
+            OpenCTINote[Note]
+        end
+        subgraph Techniques
+            direction TB
+            OpenCTIAttackPattern[AttackPattern]
+        end
+    end
+
+%% Threat includes Alert
+    HarfanglabThreat -.->|has many| HarfanglabAlert
+%% Threat generates Case Incident and Note
+    HarfanglabThreat ==> OpenCTICaseIncident & OpenCTINote
+%% Alert generates Incident and Observables
+    HarfanglabAlert ==>|looping over found IOCs| OpenCTISighting & OpenCTIIncident
+%% Relationships between Incident and Observable
+    OpenCTIIncident -.->|related to| OpenCTIObservable
+%% Relationships between Indicator and Observable
+    OpenCTIIndicator <-.-|based on| OpenCTIObservable
+%% Relationships between Incident and AttackPattern
+    OpenCTIIncident -.->|uses| OpenCTIAttackPattern
+%% References
+    OpenCTINote -.->|references| OpenCTICaseIncident
+    OpenCTICaseIncident -.->|references| OpenCTIIncident
+    OpenCTISighting -.->|references| OpenCTIIndicator
+```
+
+This connector leverages OpenCTI connector *scheduler*, so it imports Harfanglab alerts and/or threats and create
+corresponding entities
+in OpenCTI at a defined periodicity.
+
+```mermaid
+flowchart LR
+    A[Harfanglab] -->|get data periodically| B(Connector)
+    B --> C{Process STIX bundle}
+    C -->|dispatch| D1[worker]
+    C -->|dispatch| D2[worker]
+    C -->|dispatch| D3[worker]
+    D1 & D2 & D3 -->|ingest| E(OpenCTI)
+```
 
 ## Installation
 
@@ -47,10 +107,10 @@ in `config.yml` (for manual deployment).
 
 Below are the parameters you'll need to set for OpenCTI:
 
-| Parameter     | config.yml `opencti` | Docker environment variable | Mandatory | Description                                          |
-|---------------|----------------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url                  | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token                | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+| Parameter     | config.yml `opencti` | Docker environment variable | Default | Mandatory | Description                                          |
+|---------------|----------------------|-----------------------------|---------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url                  | `OPENCTI_URL`               | /       | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token                | `OPENCTI_TOKEN`             | /       | Yes       | The default admin token set in the OpenCTI platform. |
 
 ### Base connector environment variables
 
@@ -61,24 +121,32 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector ID    | id                     | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
 | Connector Type  | type                   | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
 | Connector Name  | name                   | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope                  | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Connector Scope | scope                  | `CONNECTOR_SCOPE`           | harfanglab      | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
 | Log Level       | log_level              | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Duration Period | duration_period        | `CONNECTOR_DURATION_PERIOD` | /               | Yes       | The period of time to wait between two connector's runs (in ISO-8601 format).            |
 
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter    | config.yml `harfanglab_incidents` | Docker environment variable | Default | Mandatory | Description |
-|--------------|-----------------------------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url                      |                             |         | Yes       |             |
-| API key      | api_key                           |                             |         | Yes       |             |
+| Parameter                                    | config.yml `harfanglab_incidents` | Docker environment variable    | Default    | Mandatory | Description                                                                                                                        |
+|----------------------------------------------|-----------------------------------|--------------------------------|------------|-----------|------------------------------------------------------------------------------------------------------------------------------------|
+| HarfangLab url                               | `url`                             | `HARFANGLAB_URL`               | /          | Yes       | The HarfangLab instance URL                                                                                                        |
+| HarfangLab SSL verify                        | `ssl_verify`                      | `HARFANGLAB_SSL_VERIFY`        | /          | Yes       | Enable the SSL certificate check                                                                                                   |
+| HarfangLab Token                             | `token`                           | `HARFANGLAB_TOKEN`             | /          | Yes       | The token of the HarfangLab user                                                                                                   |
+| HarfangLab Import threats as case incidents  | `import_threats`                  | `HARFANGLAB_IMPORT_THREATS`    | False      | No        | Import threats as case incidents, from HarfangLab to openCTI.                                                                      |
+| HarfangLab Security events filters by status | `alert_statuses`                  | `HARFANGLAB_ALERT_STATUSES`    | /          | Yes       | Filters available : `new`, `investigating`, `false_positive`, `closed` - example : 'new, investigating'                            |
+| HarfangLab Import filters by alert type      | `alert_types`                     | `HARFANGLAB_ALERT_TYPES`       | /          | Yes       | Filters available : `yara`, `sigma`, `ioc` - example : 'sigma, ioc'                                                                |
+| HarfangLab Default marking                   | `default_marking`                 | `HARFANGLAB_DEFAULT_MARKING`   | TLP:CLEAR  | No        | Choose one marking by default. Markings available : `TLP:CLEAR` - `TLP:GREEN` - `TLP:AMBER` - `TLP:RED`                            |
+| HarfangLab Default score                     | `default_score`                   | `HARFANGLAB_DEFAULT_SCORE`     | /          | No        | Default_score allows you to add a default score for an indicator and its observable (a number between 1 and 100)                   |
+| HarfangLab Import start date                 | `import_start_date`               | `HARFANGLAB_IMPORT_START_DATE` | 1970-01-01 | No        | Date to start import from (in ISO-8601 format) if connector's state doesn't contain last imported incident/case incident datetime. |
 
 ## Deployment
 
 ### Docker Deployment
 
 Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
+version of OpenCTI you're running. Example, `pycti==6.4.0`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
