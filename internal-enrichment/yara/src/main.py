@@ -4,7 +4,12 @@ import time
 
 import yaml
 import yara
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable, OpenCTIApiClient
+from pycti import (
+    OpenCTIApiClient,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
 from stix2 import Bundle, Relationship
 
 
@@ -33,7 +38,9 @@ class YaraConnector:
             if artifact.get("importFiles"):
                 artifact_files_contents = artifact.get("importFiles")
             else:
-                artifact_entity = self.client.stix_cyber_observable.read(id=artifact.get("standard_id"))
+                artifact_entity = self.client.stix_cyber_observable.read(
+                    id=artifact.get("standard_id")
+                )
                 artifact_files_contents = artifact_entity.get("importFiles")
 
             files_contents = []
@@ -41,7 +48,9 @@ class YaraConnector:
                 for artifact_file_content in artifact_files_contents:
                     file_id = artifact_file_content.get("id")
                     file_url = self.octi_api_url + "/storage/get/" + file_id
-                    file_content = self.helper.api.fetch_opencti_file(file_url, binary=True)
+                    file_content = self.helper.api.fetch_opencti_file(
+                        file_url, binary=True
+                    )
                     files_contents.append(file_content)
                 return files_contents
 
@@ -103,7 +112,9 @@ class YaraConnector:
                 if results:
                     relationship = Relationship(
                         id=StixCoreRelationship.generate_id(
-                            "related-to", artifact["standard_id"], indicator["standard_id"]
+                            "related-to",
+                            artifact["standard_id"],
+                            indicator["standard_id"],
                         ),
                         relationship_type="related-to",
                         source_ref=artifact["standard_id"],
