@@ -80,6 +80,7 @@ class AttackPattern(BaseModel):
         return stix2.AttackPattern(
             id=PyCTIAttackPattern.generate_id(self.name, self.x_mitre_id),
             name=self.name,
+            object_marking_refs=self.object_marking_refs,
             custom_properties={
                 "x_mitre_id": self.x_mitre_id,
                 "created_by_ref": self.author.id,
@@ -92,12 +93,20 @@ class Author(BaseModel):
     Represent an Author organization in OpenCTI.
     """
 
-    def __init__(self, name: str = None, description: str = None):
+    def __init__(
+        self,
+        name: str = None,
+        description: str = None,
+        object_marking_refs: list[
+            stix2.MarkingDefinition
+        ] = DEFAULT_MARKING_DEFINITIONS,
+    ):
         identity_class = "organization"
 
         self.name = name
         self.description = description
         self.identity_class = identity_class
+        self.object_marking_refs = object_marking_refs
         self.__post_init__()
 
     def to_stix2_object(self) -> stix2.Identity:
@@ -106,6 +115,7 @@ class Author(BaseModel):
             name=self.name,
             identity_class=self.identity_class,
             description=self.description,
+            object_marking_refs=self.object_marking_refs,
         )
 
 
@@ -206,23 +216,6 @@ class DomainName(BaseModel):
             custom_properties={
                 "created_by_ref": self.author.id,
             },
-        )
-
-
-class ExternalReference(BaseModel):
-    def __init__(
-        self, url: str = None, description: str = None, source_name: str = None
-    ):
-        self.url = url
-        self.description = description
-        self.source_name = source_name
-        self.__post_init__()
-
-    def to_stix2_object(self) -> stix2.ExternalReference:
-        return stix2.ExternalReference(
-            url=self.url,
-            description=self.description,
-            source_name=self.source_name,
         )
 
 
@@ -383,9 +376,9 @@ class Incident(BaseModel):
             id=PyCTIIncident.generate_id(self.name, self.created_at),
             name=self.name,
             description=self.description,
-            object_marking_refs=self.object_marking_refs,
             created=self.created_at,
             created_by_ref=self.author.id,
+            object_marking_refs=self.object_marking_refs,
             external_references=self.external_references,
             custom_properties={
                 "source": self.source,
@@ -506,8 +499,8 @@ class Relationship(BaseModel):
         return stix2.Relationship(
             id=PyCTIRelationship.generate_id(self.type, self.source.id, self.target.id),
             relationship_type=self.type,
-            source_ref=self.source,
-            target_ref=self.target,
+            source_ref=self.source.id,
+            target_ref=self.target.id,
             created_by_ref=self.author.id,
             object_marking_refs=self.object_marking_refs,
         )
