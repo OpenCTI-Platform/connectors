@@ -54,6 +54,38 @@ class RecordedFutureAlertConnector(threading.Thread):
             }
         )
 
+    def _generate_stix_relationship(
+        self,
+        source_ref: str,
+        stix_core_relationship_type: str,
+        target_ref: str,
+        start_time: str | None = None,
+        stop_time: str | None = None,
+    ) -> StixCoreRelationship:
+        """
+        This method allows you to create a relationship in Stix2 format.
+
+        :param source_ref: This parameter is the "from" of the relationship.
+        :param stix_core_relationship_type: This parameter defines the type of relationship between the two entities.
+        :param target_ref: This parameter is the "to" of the relationship.
+        :param start_time: This parameter is the start of the relationship. Value not required, None by default.
+        :param stop_time: This parameter is the stop of the relationship. Value not required, None by default.
+        :return: StixCoreRelationship
+        """
+
+        return stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                stix_core_relationship_type, source_ref, target_ref
+            ),
+            relationship_type=stix_core_relationship_type,
+            source_ref=source_ref,
+            start_time=start_time,
+            stop_time=stop_time,
+            target_ref=target_ref,
+            created_by_ref=self.author,
+            object_marking_refs=self.tlp,
+        )
+
     @staticmethod
     def _create_author():
         """Creates Recorded Future Author"""
@@ -118,7 +150,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     except Exception as err:
                         self.helper.connector_logger.error(
                             "Incident cannot be created",
-                            {"alert_id": alert["id"], "error_msg": err},
+                            {"alert_id": alert.alert_id, "error_msg": str(err)},
                         )
                     timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
                     self.helper.set_state(
@@ -148,7 +180,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     except Exception as err:
                         self.helper.connector_logger.error(
                             "Incident cannot be created",
-                            {"alert_id": alert["id"], "error_msg": err},
+                            {"alert_id": alert.alert_id, "error_msg": str(err)},
                         )
                     timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
                     self.helper.set_state(
@@ -166,7 +198,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                 except Exception as err:
                     self.helper.connector_logger.error(
                         "Incident cannot be created",
-                        {"alert_id": alert["id"], "error_msg": err},
+                        {"alert_id": alert.alert_id, "error_msg": str(err)},
                     )
                 timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
                 self.helper.set_state(
@@ -257,15 +289,8 @@ class RecordedFutureAlertConnector(threading.Thread):
                             "x_opencti_created_by_ref": self.author["id"],
                         },
                     )
-                    stix_relationship = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "related-to", stix_incident.id, stix_url.id
-                        ),
-                        relationship_type="related-to",
-                        source_ref=stix_incident.id,
-                        target_ref=stix_url.id,
-                        created_by_ref=self.author,
-                        object_marking_refs=self.tlp,
+                    stix_relationship = self._generate_stix_relationship(
+                        stix_incident.id, "related-to", stix_url.id
                     )
                     bundle_objects.append(stix_url)
                     bundle_objects.append(stix_relationship)
@@ -278,15 +303,8 @@ class RecordedFutureAlertConnector(threading.Thread):
                             "x_opencti_created_by_ref": self.author["id"],
                         },
                     )
-                    stix_relationship = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "related-to", stix_incident.id, stix_ipv4address.id
-                        ),
-                        relationship_type="related-to",
-                        source_ref=stix_incident.id,
-                        target_ref=stix_ipv4address.id,
-                        created_by_ref=self.author,
-                        object_marking_refs=self.tlp,
+                    stix_relationship = self._generate_stix_relationship(
+                        stix_incident.id, "related-to", stix_ipv4address.id
                     )
                     bundle_objects.append(stix_ipv4address)
                     bundle_objects.append(stix_relationship)
@@ -298,15 +316,8 @@ class RecordedFutureAlertConnector(threading.Thread):
                             "x_opencti_created_by_ref": self.author["id"],
                         },
                     )
-                    stix_relationship = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "related-to", stix_incident.id, stix_emailaddress.id
-                        ),
-                        relationship_type="related-to",
-                        source_ref=stix_incident.id,
-                        target_ref=stix_emailaddress.id,
-                        created_by_ref=self.author,
-                        object_marking_refs=self.tlp,
+                    stix_relationship = self._generate_stix_relationship(
+                        stix_incident.id, "related-to", stix_emailaddress.id
                     )
                     bundle_objects.append(stix_emailaddress)
                     bundle_objects.append(stix_relationship)
@@ -318,15 +329,8 @@ class RecordedFutureAlertConnector(threading.Thread):
                             "x_opencti_created_by_ref": self.author["id"],
                         },
                     )
-                    stix_relationship = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "related-to", stix_incident.id, stix_domain.id
-                        ),
-                        relationship_type="related-to",
-                        source_ref=stix_incident.id,
-                        target_ref=stix_domain.id,
-                        created_by_ref=self.author,
-                        object_marking_refs=self.tlp,
+                    stix_relationship = self._generate_stix_relationship(
+                        stix_incident.id, "related-to", stix_domain.id
                     )
                     bundle_objects.append(stix_domain)
                     bundle_objects.append(stix_relationship)
@@ -349,17 +353,8 @@ class RecordedFutureAlertConnector(threading.Thread):
                     )
                     if len(octi_malware) > 0:
                         octi_malware = octi_malware[0]
-                        stix_relationship = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to",
-                                stix_incident.id,
-                                octi_malware["standard_id"],
-                            ),
-                            relationship_type="related-to",
-                            source_ref=stix_incident.id,
-                            target_ref=octi_malware["standard_id"],
-                            created_by_ref=self.author,
-                            object_marking_refs=self.tlp,
+                        stix_relationship = self._generate_stix_relationship(
+                            stix_incident.id, "related-to", octi_malware["standard_id"]
                         )
                         bundle_objects.append(stix_relationship)
                 elif entity["type"] == "MitreAttackIdentifier":
@@ -376,17 +371,10 @@ class RecordedFutureAlertConnector(threading.Thread):
                     )
                     if len(octi_technique_mitre) > 0:
                         octi_technique_mitre = octi_technique_mitre[0]
-                        stix_relationship = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "related-to",
-                                stix_incident.id,
-                                octi_technique_mitre["standard_id"],
-                            ),
-                            relationship_type="related-to",
-                            source_ref=stix_incident.id,
-                            target_ref=octi_technique_mitre["standard_id"],
-                            created_by_ref=self.author,
-                            object_marking_refs=self.tlp,
+                        stix_relationship = self._generate_stix_relationship(
+                            stix_incident.id,
+                            "related-to",
+                            octi_technique_mitre["standard_id"],
                         )
                         bundle_objects.append(stix_relationship)
 
@@ -423,15 +411,8 @@ class RecordedFutureAlertConnector(threading.Thread):
                                     "x_opencti_created_by_ref": self.author["id"],
                                 },
                             )
-                            stix_relationship = stix2.Relationship(
-                                id=StixCoreRelationship.generate_id(
-                                    "related-to", stix_incident.id, stix_channel.id
-                                ),
-                                relationship_type="related-to",
-                                source_ref=stix_incident.id,
-                                target_ref=stix_channel.id,
-                                created_by_ref=self.author,
-                                object_marking_refs=self.tlp,
+                            stix_relationship = self._generate_stix_relationship(
+                                stix_incident.id, "related-to", stix_channel.id
                             )
                             bundle_objects.append(stix_channel)
                             bundle_objects.append(stix_relationship)
@@ -442,15 +423,8 @@ class RecordedFutureAlertConnector(threading.Thread):
                         "x_opencti_created_by_ref": self.author["id"],
                     },
                 )
-                stix_relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", stix_incident.id, stix_text.id
-                    ),
-                    relationship_type="related-to",
-                    source_ref=stix_incident.id,
-                    target_ref=stix_text.id,
-                    created_by_ref=self.author,
-                    object_marking_refs=self.tlp,
+                stix_relationship = self._generate_stix_relationship(
+                    stix_incident.id, "related-to", stix_text.id
                 )
                 bundle_objects.append(stix_text)
                 bundle_objects.append(stix_relationship)
@@ -461,39 +435,18 @@ class RecordedFutureAlertConnector(threading.Thread):
                         "x_opencti_created_by_ref": self.author["id"],
                     },
                 )
-                stix_relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", stix_incident.id, stix_url_doc.id
-                    ),
-                    relationship_type="related-to",
-                    source_ref=stix_incident.id,
-                    target_ref=stix_url_doc.id,
-                    created_by_ref=self.author,
-                    object_marking_refs=self.tlp,
+                stix_relationship = self._generate_stix_relationship(
+                    stix_incident.id, "related-to", stix_url_doc.id
                 )
                 bundle_objects.append(stix_url_doc)
                 bundle_objects.append(stix_relationship)
-                stix_relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", stix_url_doc.id, stix_text.id
-                    ),
-                    relationship_type="related-to",
-                    source_ref=stix_url_doc.id,
-                    target_ref=stix_text.id,
-                    created_by_ref=self.author,
-                    object_marking_refs=self.tlp,
+                stix_relationship = self._generate_stix_relationship(
+                    stix_url_doc.id, "related-to", stix_text.id
                 )
                 bundle_objects.append(stix_relationship)
                 if stix_channel is not None:
-                    stix_relationship = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "publishes", stix_channel.id, stix_url_doc.id
-                        ),
-                        relationship_type="publishes",
-                        source_ref=stix_channel.id,
-                        target_ref=stix_url_doc.id,
-                        created_by_ref=self.author,
-                        object_marking_refs=self.tlp,
+                    stix_relationship = self._generate_stix_relationship(
+                        stix_channel.id, "publishes", stix_url_doc.id
                     )
                     bundle_objects.append(stix_relationship)
             for author in hit["document"]["authors"]:
@@ -511,51 +464,24 @@ class RecordedFutureAlertConnector(threading.Thread):
                         "x_opencti_created_by_ref": self.author["id"],
                     },
                 )
-                stix_relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", stix_incident.id, stix_user.id
-                    ),
-                    relationship_type="related-to",
-                    source_ref=stix_incident.id,
-                    target_ref=stix_user.id,
-                    created_by_ref=self.author,
-                    object_marking_refs=self.tlp,
+                stix_relationship = self._generate_stix_relationship(
+                    stix_incident.id, "related-to", stix_user.id
                 )
                 bundle_objects.append(stix_user)
                 bundle_objects.append(stix_relationship)
-                stix_relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", stix_user.id, stix_text.id
-                    ),
-                    relationship_type="related-to",
-                    source_ref=stix_user.id,
-                    target_ref=stix_text.id,
-                    created_by_ref=self.author,
-                    object_marking_refs=self.tlp,
-                )
-                bundle_objects.append(stix_relationship)
+                if stix_text is not None:
+                    stix_relationship = self._generate_stix_relationship(
+                        stix_user.id, "related-to", stix_text.id
+                    )
+                    bundle_objects.append(stix_relationship)
                 if stix_url_doc is not None:
-                    stix_relationship = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "related-to", stix_url_doc.id, stix_user.id
-                        ),
-                        relationship_type="related-to",
-                        target_ref=stix_url_doc.id,
-                        source_ref=stix_user.id,
-                        created_by_ref=self.author,
-                        object_marking_refs=self.tlp,
+                    stix_relationship = self._generate_stix_relationship(
+                        stix_url_doc.id, "related-to", stix_user.id
                     )
                     bundle_objects.append(stix_relationship)
                 if stix_channel is not None:
-                    stix_relationship = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "related-to", stix_channel.id, stix_user.id
-                        ),
-                        relationship_type="related-to",
-                        target_ref=stix_channel.id,
-                        source_ref=stix_user.id,
-                        created_by_ref=self.author,
-                        object_marking_refs=self.tlp,
+                    stix_relationship = self._generate_stix_relationship(
+                        stix_channel.id, "related-to", stix_user.id
                     )
                     bundle_objects.append(stix_relationship)
             stix_note = stix2.Note(
