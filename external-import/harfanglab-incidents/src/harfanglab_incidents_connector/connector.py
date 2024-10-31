@@ -8,6 +8,7 @@ from .client_api import HarfanglabClient
 from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
 from .models.harfanglab import Threat as HarfanglabThreat, YaraSignature
+from .models.opencti import BaseModel as OCTIObject
 from .constants import EPOCH_DATETIME
 
 
@@ -128,7 +129,7 @@ class HarfanglabIncidentsConnector:
 
     def _collect_incident_intelligence(
         self, threat: HarfanglabThreat = None
-    ) -> list[dict]:
+    ) -> list[OCTIObject]:
         """
         Collect intelligence from Harfanglab and convert into STIX object
         If `threat` is provided, all the alerts related to the threat are collected,
@@ -186,7 +187,8 @@ class HarfanglabIncidentsConnector:
                         "user-account",
                     ]
 
-                    if stix_observable.type in based_on_observable_types:
+                    observable_type = stix_observable.stix2_representation.type
+                    if observable_type in based_on_observable_types:
                         stix_based_on_relationship = (
                             self.converter_to_stix.create_relationship(
                                 relationship_type="based-on",
@@ -195,7 +197,7 @@ class HarfanglabIncidentsConnector:
                             )
                         )
                         stix_objects.append(stix_based_on_relationship)
-                    if stix_observable.type in related_to_observable_types:
+                    if observable_type in related_to_observable_types:
                         stix_based_on_relationship = (
                             self.converter_to_stix.create_relationship(
                                 relationship_type="related-to",
@@ -221,13 +223,12 @@ class HarfanglabIncidentsConnector:
                             )
                         )
                         stix_objects.append(stix_uses_relationship)
-
             self.last_import_datetime_value = alert.created_at
 
         self.helper.log_info("[INCIDENTS] Incidents creation completed")
         return stix_objects
 
-    def _collect_case_incident_intelligence(self) -> list[dict]:
+    def _collect_case_incident_intelligence(self) -> list[OCTIObject]:
         """
         Collect threats from Harfanglab and convert them into STIX objects.
         Threats are filtered by creation date, according to connector's state.
@@ -256,6 +257,28 @@ class HarfanglabIncidentsConnector:
         self.helper.log_info("[CASE-INCIDENTS] Case-Incidents creation completed")
         return stix_objects
 
+    def create_stix_bundle(self) -> str | None:
+        """
+        Create a STIX 2.1 bundle containing intelligence from Harfanglab.
+        :return: A bundle of STIX 2.1 objects
+        """
+        if self.should_import_case_incidents:
+            stix_objects = self._collect_case_incident_intelligence()
+        else:
+            stix_objects = self._collect_incident_intelligence()
+
+        if stix_objects:
+            # Convert to STIX 2.1 ordered dicts
+            stix_objects = [
+                stix_object.stix2_representation for stix_object in stix_objects
+            ]
+            # Ensure consistent bundle
+            stix_objects.append(self.converter_to_stix.author.stix2_representation)
+            stix_objects.append(self.converter_to_stix.marking_definition)
+            # Create and return bundle
+            stix_bundle = self.helper.stix2_create_bundle(stix_objects)
+            return stix_bundle
+
     def process_message(self) -> None:
         """
         Connector main process to collect intelligence
@@ -271,13 +294,8 @@ class HarfanglabIncidentsConnector:
 
             work_id = self._initiate_work()
 
-            if self.should_import_case_incidents:
-                stix_objects = self._collect_case_incident_intelligence()
-            else:
-                stix_objects = self._collect_incident_intelligence()
-
-            if stix_objects:
-                stix_bundle = self.helper.stix2_create_bundle(stix_objects)
+            stix_bundle = self.create_stix_bundle()
+            if stix_bundle:
                 self.helper.send_stix2_bundle(
                     stix_bundle,
                     work_id=work_id,
@@ -295,7 +313,7 @@ class HarfanglabIncidentsConnector:
             )
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            self.helper.connector_logger.error(err)
 
     def run(self) -> None:
         """
