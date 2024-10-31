@@ -6,17 +6,11 @@ from datetime import datetime
 from typing import Dict
 
 import stix2
-from lib.internal_enrichment import InternalEnrichmentConnector
-from pycti import (
-    STIX_EXT_OCTI_SCO,
-    Identity,
-    Indicator,
-    Malware,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    Note
-)
+from pycti import (STIX_EXT_OCTI_SCO, Identity, Indicator, Malware, Note,
+                   OpenCTIConnectorHelper, StixCoreRelationship)
 from ReversingLabs.SDK.a1000 import A1000
+
+from lib.internal_enrichment import InternalEnrichmentConnector
 
 ZIP_MIME_TYPES = (
     "application/x-bzip",
@@ -832,7 +826,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             abstract = "ReversingLabs Spectra Analyze domain statistics"
 
             accumulated_content = textwrap.dedent(
-                f"""
+                """
             ## ReversingLabs Spectra Analyze domain statistics
             | Domain        |  Third party statistics Malicious/Total | Downloaded files statistics Malicious/Total |
             | ------------- | --------------- | --------------- |
@@ -937,7 +931,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             indicator_url = stix2.Indicator(
                 id=Indicator.generate_id(one_url.get("requested_url")),
                 name=one_url.get("requested_url"),
-                description=f"Created from Spectra Analyze URL report.",
+                description="Created from Spectra Analyze URL report.",
                 labels=labels,
                 valid_from=now,
                 pattern=f"[url:value = '{one_url.get('requested_url')}']",
@@ -970,7 +964,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             abstract = "ReversingLabs Spectra Analyze URL statistics"
 
             accumulated_content = textwrap.dedent(
-                f"""
+                """
             ## ReversingLabs Spectra Analyze URL statistics
             | URL        |  Third party statistics Malicious/Total | Analysis statistics Malicious/Total |
             | ------------- | --------------- | --------------- |
@@ -1065,7 +1059,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         indicator_domain = stix2.Indicator(
             id=Indicator.generate_id(self.domain_sample),
             name=self.domain_sample,
-            description=f"Created from Spectra Analyze Domain report.",
+            description="Created from Spectra Analyze Domain report.",
             labels=labels,
             valid_from=now,
             pattern=f"[domain-name:value = '{self.domain_sample}']",
@@ -1196,7 +1190,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         indicator_url = stix2.Indicator(
             id=Indicator.generate_id(self.url_sample),
             name=self.url_sample,
-            description=f"Created from Spectra Analyze URL report.",
+            description="Created from Spectra Analyze URL report.",
             labels=labels,
             valid_from=now,
             pattern=f"[url:value = '{self.url_sample}']",
