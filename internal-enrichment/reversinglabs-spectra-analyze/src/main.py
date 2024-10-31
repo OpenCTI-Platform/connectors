@@ -6,8 +6,15 @@ from datetime import datetime
 from typing import Dict
 
 import stix2
-from pycti import (STIX_EXT_OCTI_SCO, Identity, Indicator, Malware, Note,
-                   OpenCTIConnectorHelper, StixCoreRelationship)
+from pycti import (
+    STIX_EXT_OCTI_SCO,
+    Identity,
+    Indicator,
+    Malware,
+    Note,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+)
 from ReversingLabs.SDK.a1000 import A1000
 
 from lib.internal_enrichment import InternalEnrichmentConnector
@@ -793,7 +800,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             indicator_domain = stix2.Indicator(
                 id=Indicator.generate_id(one_domain.get("requested_domain")),
                 name=one_domain.get("requested_domain"),
-                description=f"Created from Spectra Analyze Domain report.",
+                description="Created from Spectra Analyze Domain report.",
                 labels=labels,
                 valid_from=now,
                 pattern=f"[domain-name:value = '{one_domain.get('requested_domain')}']",
