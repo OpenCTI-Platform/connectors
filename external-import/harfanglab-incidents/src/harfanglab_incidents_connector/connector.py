@@ -8,9 +8,7 @@ from .client_api import HarfanglabClient
 from .config_variables import ConfigConnector
 from .constants import EPOCH_DATETIME
 from .converter_to_stix import ConverterToStix
-from .models.harfanglab import Threat as HarfanglabThreat
-from .models.harfanglab import YaraSignature
-from .models.opencti import BaseModel as OCTIObject
+from .models import harfanglab, opencti
 
 
 class HarfanglabIncidentsConnector:
@@ -129,8 +127,8 @@ class HarfanglabIncidentsConnector:
         self.helper.set_state(state)
 
     def _collect_incident_intelligence(
-        self, threat: HarfanglabThreat = None
-    ) -> list[OCTIObject]:
+        self, threat: harfanglab.Threat = None
+    ) -> list[opencti.BaseModel]:
         """
         Collect intelligence from Harfanglab and convert into STIX object
         If `threat` is provided, all the alerts related to the threat are collected,
@@ -207,7 +205,7 @@ class HarfanglabIncidentsConnector:
                             )
                         )
                         stix_objects.append(stix_based_on_relationship)
-                if isinstance(alert_intelligence, YaraSignature):
+                if isinstance(alert_intelligence, harfanglab.YaraSignature):
                     for technique_tag in alert_intelligence.rule_technique_tags:
                         stix_attack_pattern = (
                             self.converter_to_stix.create_attack_pattern(
@@ -229,7 +227,7 @@ class HarfanglabIncidentsConnector:
         self.helper.log_info("[INCIDENTS] Incidents creation completed")
         return stix_objects
 
-    def _collect_case_incident_intelligence(self) -> list[OCTIObject]:
+    def _collect_case_incident_intelligence(self) -> list[opencti.BaseModel]:
         """
         Collect threats from Harfanglab and convert them into STIX objects.
         Threats are filtered by creation date, according to connector's state.

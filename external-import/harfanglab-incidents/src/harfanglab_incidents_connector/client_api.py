@@ -3,12 +3,7 @@ from datetime import datetime
 
 import requests
 
-from .models.harfanglab import Alert as HarfanglabAlert
-from .models.harfanglab import IocRule as HarfanglabIocRule
-from .models.harfanglab import SigmaRule as HarfanglabSigmaRule
-from .models.harfanglab import Threat as HarfanglabThreat
-from .models.harfanglab import ThreatNote as HarfanglabThreatNote
-from .models.harfanglab import YaraSignature as HarfanglabYaraSignature
+from .models import harfanglab
 
 
 class HarfanglabClient:
@@ -86,7 +81,7 @@ class HarfanglabClient:
             )
 
             results = data["results"] if data else []
-            alerts = [HarfanglabAlert(result) for result in results]
+            alerts = [harfanglab.Alert(result) for result in results]
             for alert in alerts:
                 yield alert
 
@@ -121,7 +116,7 @@ class HarfanglabClient:
             )
 
             results = data["results"] if data else []
-            threats = [HarfanglabThreat(result) for result in results]
+            threats = [harfanglab.Threat(result) for result in results]
             for threat in threats:
                 yield threat
 
@@ -131,7 +126,7 @@ class HarfanglabClient:
             else:
                 url = None
 
-    def get_alert_ioc_rule(self, alert: HarfanglabAlert) -> HarfanglabIocRule | None:
+    def get_alert_ioc_rule(self, alert: harfanglab.Alert) -> harfanglab.IocRule | None:
         """
         Get an IOC rule for a given alert.
         :param alert: Alerts to get IOC for
@@ -156,11 +151,11 @@ class HarfanglabClient:
         )
         if data and len(data["results"]):
             result = data["results"][0]
-            return HarfanglabIocRule(result)
+            return harfanglab.IocRule(result)
 
     def get_alert_sigma_rule(
-        self, alert: HarfanglabAlert
-    ) -> HarfanglabSigmaRule | None:
+        self, alert: harfanglab.Alert
+    ) -> harfanglab.SigmaRule | None:
         """
         Get a Sigma rule for a given alert.
         :param alert: Alerts to get Sigma rule for
@@ -180,11 +175,11 @@ class HarfanglabClient:
         )
         if data and len(data["results"]):
             result = data["results"][0]
-            return HarfanglabSigmaRule(result)
+            return harfanglab.SigmaRule(result)
 
     def get_alert_yara_signature(
-        self, alert: HarfanglabAlert
-    ) -> HarfanglabYaraSignature | None:
+        self, alert: harfanglab.Alert
+    ) -> harfanglab.YaraSignature | None:
         """
         Get a YARA signature for a given alert.
         :param alert: Alerts to get YARA signature for
@@ -209,9 +204,9 @@ class HarfanglabClient:
         )
         if data and len(data["results"]):
             result = data["results"][0]
-            return HarfanglabYaraSignature(result)
+            return harfanglab.YaraSignature(result)
 
-    def get_threat_note(self, threat_id=None) -> HarfanglabThreatNote:
+    def get_threat_note(self, threat_id=None) -> harfanglab.ThreatNote:
         path = f"/api/data/alert/alert/Threat/{threat_id}/note"
         url = f"{self.api_base_url}{path}"
 
@@ -220,4 +215,4 @@ class HarfanglabClient:
             url=url,
         )
         if data:
-            return HarfanglabThreatNote(data)
+            return harfanglab.ThreatNote(data)

@@ -6,31 +6,7 @@ from .constants import (
     IP_INDICATOR_TYPES,
     MARKING_DEFINITIONS_BY_NAME,
 )
-from .models.harfanglab import Agent as HarfanglabAgent
-from .models.harfanglab import Alert as HarfanglabAlert
-from .models.harfanglab import IocRule as HarfanglabIocRule
-from .models.harfanglab import Process as HarfanglabProcess
-from .models.harfanglab import SigmaRule as HarfanglabSigmaRule
-from .models.harfanglab import Threat as HarfanglabThreat
-from .models.harfanglab import ThreatNote as HarfanglabThreatNote
-from .models.harfanglab import YaraSignature as HarfanglabYaraSignature
-from .models.opencti import AttackPattern as OCTIAttackPattern
-from .models.opencti import Author as OCTIAuthor
-from .models.opencti import BaseModel as OCTIObject
-from .models.opencti import CaseIncident as OCTICaseIncident
-from .models.opencti import Directory as OCTIDirectory
-from .models.opencti import DomainName as OCTIDomainName
-from .models.opencti import File as OCTIFile
-from .models.opencti import Hostname as OCTIHostname
-from .models.opencti import Incident as OCTIIncident
-from .models.opencti import Indicator as OCTIIndicator
-from .models.opencti import IPv4 as OCTIIPv4
-from .models.opencti import IPv6 as OCTIIPv6
-from .models.opencti import Note as OCTINote
-from .models.opencti import Relationship as OCTIRelationship
-from .models.opencti import Sighting as OCTISighting
-from .models.opencti import Url as OCTIUrl
-from .models.opencti import UserAccount as OCTIUserAccount
+from .models import harfanglab, opencti
 from .utils import is_domain, is_ipv4, is_ipv6
 
 
@@ -52,40 +28,42 @@ class ConverterToStix:
             MARKING_DEFINITIONS_BY_NAME["TLP:CLEAR"],
         )
 
-    def _create_directory(self, process: HarfanglabProcess = None) -> OCTIDirectory:
+    def _create_directory(
+        self, process: harfanglab.Process = None
+    ) -> opencti.Directory:
         """
         Create a Directory (STIX2.1 observable, aka SCO) for a given alert's process.
         :param process: Process found in a Harfanglab alert
         :return: STIX 2.1 Directory observable
         """
-        octi_directory = OCTIDirectory(
+        octi_directory = opencti.Directory(
             path=process.current_directory,
             author=self.author,
             object_marking_refs=[self.marking_definition.id],
         )
         return octi_directory
 
-    def _create_domain_name(self, ioc: HarfanglabIocRule = None) -> OCTIDomainName:
+    def _create_domain_name(self, ioc: harfanglab.IocRule = None) -> opencti.DomainName:
         """
         Create a DomainName (STIX2.1 observable, aka SCO) for a given ioc.
         :param ioc: Indicator from Harfanglab
         :return: STIX 2.1 DomainName observable
         """
-        octi_domain_name = OCTIDomainName(
+        octi_domain_name = opencti.DomainName(
             value=ioc.value,
             author=self.author,
             object_marking_refs=[self.marking_definition.id],
         )
         return octi_domain_name
 
-    def _create_file(self, process: HarfanglabProcess = None) -> OCTIFile:
+    def _create_file(self, process: harfanglab.Process = None) -> opencti.File:
         """
         Create a File (STIX2.1 observable, aka SCO) for a given ioc.
         :param process: Process found in a Harfanglab alert
         :return: STIX 2.1 File observable
         """
 
-        octi_file = OCTIFile(
+        octi_file = opencti.File(
             name=process.name,
             hashes=process.hashes,
             author=self.author,
@@ -93,52 +71,52 @@ class ConverterToStix:
         )
         return octi_file
 
-    def _create_hostname(self, agent: HarfanglabAgent = None) -> OCTIHostname:
+    def _create_hostname(self, agent: harfanglab.Agent = None) -> opencti.Hostname:
         """
         Create a Hostname (custom observable, extension of STIX 2.1 observables) for a given alert's agent.
         :param agent: Agent found in a Harfanglab alert
         :return: Custom Hostname observable
         """
-        octi_hostname = OCTIHostname(
+        octi_hostname = opencti.Hostname(
             value=agent.hostname,
             author=self.author,
             object_marking_refs=[self.marking_definition.id],
         )
         return octi_hostname
 
-    def _create_ipv4(self, ioc: HarfanglabIocRule = None) -> OCTIIPv4:
+    def _create_ipv4(self, ioc: harfanglab.IocRule = None) -> opencti.IPv4:
         """
         Create an IPv4Address (STIX2.1 observable, aka SCO) for a given ioc.
         :param ioc: Indicator from Harfanglab
         :return: STIX 2.1 IPv4Address observable
         """
-        octi_ipv4 = OCTIIPv4(
+        octi_ipv4 = opencti.IPv4(
             value=ioc.value,
             author=self.author,
             object_marking_refs=[self.marking_definition.id],
         )
         return octi_ipv4
 
-    def _create_ipv6(self, ioc: HarfanglabIocRule = None) -> OCTIIPv6:
+    def _create_ipv6(self, ioc: harfanglab.IocRule = None) -> opencti.IPv6:
         """
         Create an IPv6Address (STIX2.1 observable, aka SCO) for a given ioc.
         :param ioc: Indicator from Harfanglab
         :return: STIX 2.1 IPv6Address observable
         """
-        octi_ipv6 = OCTIIPv6(
+        octi_ipv6 = opencti.IPv6(
             value=ioc.value,
             author=self.author,
             object_marking_refs=[self.marking_definition.id],
         )
         return octi_ipv6
 
-    def _create_url(self, ioc: HarfanglabIocRule = None) -> OCTIUrl:
+    def _create_url(self, ioc: harfanglab.IocRule = None) -> opencti.Url:
         """
         Create a URL (STIX2.1 observable, aka SCO) for a given ioc.
         :param ioc: Indicator from Harfanglab
         :return: STIX 2.1 URL observable
         """
-        octi_url = OCTIUrl(
+        octi_url = opencti.Url(
             value=ioc.value,
             author=self.author,
             object_marking_refs=[self.marking_definition.id],
@@ -146,32 +124,32 @@ class ConverterToStix:
         return octi_url
 
     def _create_user_account(
-        self, process: HarfanglabProcess = None
-    ) -> OCTIUserAccount:
+        self, process: harfanglab.Process = None
+    ) -> opencti.UserAccount:
         """
         Create a UserAccount (STIX2.1 observable, aka SCO) for a given alert's process.
         :param process: Process found in a Harfanglab alert
         :return: STIX 2.1 UserAccount observable
         """
-        octi_user_account = OCTIUserAccount(
+        octi_user_account = opencti.UserAccount(
             account_login=process.username,
             author=self.author,
             object_marking_refs=[self.marking_definition.id],
         )
         return octi_user_account
 
-    def create_author(self) -> OCTIAuthor:
+    def create_author(self) -> opencti.Author:
         """
         Create an Author (STIX 2.1 Identity domain object, aka SDO) representing connector's impersonated user.
         :return: STIX 2.1 Identity domain object
         """
-        octi_author = OCTIAuthor(
+        octi_author = opencti.Author(
             name=self.helper.connect_name,
             description="Harfanglab external import connector",
         )
         return octi_author
 
-    def create_attack_pattern(self, technique_tag: str = None) -> OCTIAttackPattern:
+    def create_attack_pattern(self, technique_tag: str = None) -> opencti.AttackPattern:
         """
         Create an AttackPattern (STIX 2.1 domain object, aka SDO) for a given technique.
         :param technique_tag: A Yara signature's technique tag
@@ -180,7 +158,7 @@ class ConverterToStix:
         technique_match = re.search(r"t\d+\.?\d+$", technique_tag)
         technique_name = technique_match.group().upper() if technique_match else None
 
-        octi_attack_pattern = OCTIAttackPattern(
+        octi_attack_pattern = opencti.AttackPattern(
             name=technique_name,
             x_mitre_id=technique_name,
             author=self.author,
@@ -189,12 +167,14 @@ class ConverterToStix:
         return octi_attack_pattern
 
     def create_case_incident(
-        self, threat: HarfanglabThreat = None, object_refs: list[OCTIObject] = None
-    ) -> OCTICaseIncident:
+        self,
+        threat: harfanglab.Threat = None,
+        object_refs: list[opencti.BaseModel] = None,
+    ) -> opencti.CaseIncident:
         incident_priority = INCIDENT_PRIORITIES_BY_LEVEL[threat.level]
         incident_top_agent = threat.top_agents[0]
 
-        octi_case_incident = OCTICaseIncident(
+        octi_case_incident = opencti.CaseIncident(
             name=f"{threat.slug} on {incident_top_agent.hostname}",
             description=f"Incident from {self.helper.connect_name}",
             severity=threat.level,
@@ -215,11 +195,11 @@ class ConverterToStix:
 
     def create_incident(
         self,
-        alert: HarfanglabAlert = None,
+        alert: harfanglab.Alert = None,
         alert_intelligence: (
-            HarfanglabIocRule | HarfanglabSigmaRule | HarfanglabYaraSignature
+            harfanglab.IocRule | harfanglab.SigmaRule | harfanglab.YaraSignature
         ) = None,
-    ) -> OCTIIncident:
+    ) -> opencti.Incident:
         """
         Create an Incident (STIX 2.1 domain object, aka SDO) for a given Harfanglab alert and its corresponding ioc.
         :param alert: Alert from Harfanglab
@@ -227,7 +207,7 @@ class ConverterToStix:
         :return: STIX 2.1 Incident domain object
         """
         incident_name = None
-        if isinstance(alert_intelligence, HarfanglabIocRule):
+        if isinstance(alert_intelligence, harfanglab.IocRule):
             if alert_intelligence.type == "hash":
                 incident_name = f"{alert_intelligence.value} on {alert.agent.hostname}"
             elif alert_intelligence.type == "filename":
@@ -235,11 +215,11 @@ class ConverterToStix:
                     f"{alert.process.hashes['sha256']} on {alert.agent.hostname}"
                 )
         if isinstance(
-            alert_intelligence, (HarfanglabSigmaRule, HarfanglabYaraSignature)
+            alert_intelligence, (harfanglab.SigmaRule, harfanglab.YaraSignature)
         ):
             incident_name = alert.name
 
-        octi_incident = OCTIIncident(
+        octi_incident = opencti.Incident(
             name=incident_name,
             description=alert.message,
             source=self.helper.connect_name,
@@ -260,11 +240,11 @@ class ConverterToStix:
 
     def create_indicator(
         self,
-        alert: HarfanglabAlert = None,
+        alert: harfanglab.Alert = None,
         alert_intelligence: (
-            HarfanglabIocRule | HarfanglabSigmaRule | HarfanglabYaraSignature
+            harfanglab.IocRule | harfanglab.SigmaRule | harfanglab.YaraSignature
         ) = None,
-    ) -> OCTIIndicator:
+    ) -> opencti.Indicator:
         """
         Create an Indicator (STIX 2.1 domain object, aka SDO) from a Harfanglab alert and its corresponding IOC, Sigma rule or Yara signature.
         :param alert: Alert from Harfanglab
@@ -274,7 +254,7 @@ class ConverterToStix:
         indicator_name = None
         indicator_pattern = None
         indicator_pattern_type = None
-        if isinstance(alert_intelligence, HarfanglabIocRule):
+        if isinstance(alert_intelligence, harfanglab.IocRule):
             indicator_name = alert_intelligence.value
             indicator_pattern = alert_intelligence.pattern
             indicator_pattern_type = "stix"
@@ -286,17 +266,17 @@ class ConverterToStix:
                     f"file:hashes.'MD5' = '{alert.process.hashes['MD5']}' AND "
                     f"file:hashes.'SHA-1' = '{alert.process.hashes['SHA-1']}']"
                 )
-        if isinstance(alert_intelligence, HarfanglabSigmaRule):
+        if isinstance(alert_intelligence, harfanglab.SigmaRule):
             # extract only file name from complete rule name
             indicator_name = alert_intelligence.rule_name.split(" ")[0]
             indicator_pattern = alert_intelligence.content
             indicator_pattern_type = "sigma"
-        if isinstance(alert_intelligence, HarfanglabYaraSignature):
+        if isinstance(alert_intelligence, harfanglab.YaraSignature):
             indicator_name = alert_intelligence.name
             indicator_pattern = alert_intelligence.content
             indicator_pattern_type = "yara"
 
-        octi_indicator = OCTIIndicator(
+        octi_indicator = opencti.Indicator(
             name=indicator_name,
             pattern=indicator_pattern,
             pattern_type=indicator_pattern_type,
@@ -310,12 +290,12 @@ class ConverterToStix:
 
     def create_note(
         self,
-        threat_note: HarfanglabThreatNote = None,
-        object_refs: list[OCTIObject] = None,
-    ) -> OCTINote:
+        threat_note: harfanglab.ThreatNote = None,
+        object_refs: list[opencti.BaseModel] = None,
+    ) -> opencti.Note:
         case_incident = object_refs[0]
 
-        octi_note = OCTINote(
+        octi_note = opencti.Note(
             abstract=threat_note.title,
             content=threat_note.content,
             object_refs=[object_ref.id for object_ref in object_refs],
@@ -329,9 +309,9 @@ class ConverterToStix:
 
     def create_observables(
         self,
-        alert: HarfanglabAlert = None,
+        alert: harfanglab.Alert = None,
         alert_intelligence: (
-            HarfanglabIocRule | HarfanglabSigmaRule | HarfanglabYaraSignature
+            harfanglab.IocRule | harfanglab.SigmaRule | harfanglab.YaraSignature
         ) = None,
     ):
         """
@@ -343,7 +323,7 @@ class ConverterToStix:
         observables = []
 
         observable = None
-        if isinstance(alert_intelligence, HarfanglabIocRule):
+        if isinstance(alert_intelligence, harfanglab.IocRule):
             match alert_intelligence.type:
                 case _ if alert_intelligence.type in FILE_INDICATOR_TYPES:
                     observable = self._create_file(alert.process)
@@ -358,7 +338,7 @@ class ConverterToStix:
                 case "url":
                     observable = self._create_url(alert_intelligence)
         if isinstance(
-            alert_intelligence, (HarfanglabSigmaRule, HarfanglabYaraSignature)
+            alert_intelligence, (harfanglab.SigmaRule, harfanglab.YaraSignature)
         ):
             observable = self._create_file(alert.process)
 
@@ -375,16 +355,16 @@ class ConverterToStix:
 
     def create_sighting(
         self,
-        alert: HarfanglabAlert = None,
-        sighted_ref: OCTIObject = None,
-    ) -> OCTISighting:
+        alert: harfanglab.Alert = None,
+        sighted_ref: opencti.BaseModel = None,
+    ) -> opencti.Sighting:
         """
         Create a Sighting (STIX 2.1 relationship object, aka SRO) for an indicator sighted in a Harfanglab alert.
         :param alert: Alert from Harfanglab
         :param sighted_ref: Sighted indicator STIX object
         :return: STIX 2.1 Sighting relationship object
         """
-        octi_sighting = OCTISighting(
+        octi_sighting = opencti.Sighting(
             source=self.author,
             target=sighted_ref,
             first_seen_at=alert.created_at,
@@ -404,9 +384,9 @@ class ConverterToStix:
     def create_relationship(
         self,
         relationship_type: str = None,
-        source: OCTIObject = None,
-        target: OCTIObject = None,
-    ) -> OCTIRelationship:
+        source: opencti.BaseModel = None,
+        target: opencti.BaseModel = None,
+    ) -> opencti.Relationship:
         """
         Create a Relationship (STIX 2.1 relationship object, aka SRO).
         :param relationship_type: Relationship's type
@@ -414,7 +394,7 @@ class ConverterToStix:
         :param target: Relationship target STIX object
         :return: STIX 2.1 relationship object
         """
-        octi_relationship = OCTIRelationship(
+        octi_relationship = opencti.Relationship(
             type=relationship_type,
             source=source,
             target=target,
