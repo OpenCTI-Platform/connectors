@@ -1547,7 +1547,7 @@ jobs:
           working_directory: ~/opencti/external-import/urlscan
           name: Build Docker image opencti/connector-urlscan
           command: docker build -t opencti/connector-urlscan:rolling .
-      - run:crowdstrike
+      - run:
           working_directory: ~/opencti/external-import/maltiverse
           name: Build Docker image opencti/connector-maltiverse
           command: docker build -t opencti/connector-maltiverse:rolling .
