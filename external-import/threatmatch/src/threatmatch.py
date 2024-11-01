@@ -82,22 +82,7 @@ class ThreatMatch:
     def next_run(self, seconds):
         return
 
-    def remove_html_tags(self, text):
-        class HTMLTagRemover(HTMLParser):
-            def __init__(self):
-                super().__init__()
-                self.fed = []
-
-            def handle_data(self, data):
-                self.fed.append(data)
-
-            def get_data(self):
-                return "".join(self.fed)
-
-        parser = HTMLTagRemover()
-        parser.feed(text)
-        return parser.get_data()
-
+                    
     def _get_token(self):
         r = requests.post(
             self.threatmatch_url + "/api/developers-platform/token",
