@@ -195,14 +195,14 @@ external-import
     │   ├── connector.py
     │   ├── converter_to_stix.py
     │   └── utils.py
-    ├── external_import_tests
-    │   ├── __init__.py
-    │   ├── common_fixtures.py
-    │   ├── fixtures
-    │   └── test_template_connector.py
     ├── config.yml.sample
     ├── main.py
     ├── requirements.txt
+├── tests
+│   ├── __init__.py
+│   ├── common_fixtures.py
+│   ├── fixtures
+│   └── test_template_connector.py
     └── test-requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
