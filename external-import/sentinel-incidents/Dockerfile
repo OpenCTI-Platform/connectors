@@ -9,7 +9,7 @@ COPY src /opt/opencti-connector-sentinel-incidents
 RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
-RUN cd /opt/opencti-sentinel-incidents && \
+RUN cd /opt/opencti-connector-sentinel-incidents && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
