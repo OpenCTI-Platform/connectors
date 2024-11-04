@@ -2,7 +2,7 @@ FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy the connector
-COPY src /opt/opencti-sentinel-incidents
+COPY src /opt/opencti-connector-sentinel-incidents
 
 # Install Python modules
 # hadolint ignore=DL3003
