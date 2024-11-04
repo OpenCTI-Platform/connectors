@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -17,16 +17,19 @@ class ConfigConnector:
         self._initialize_configurations()
 
     @staticmethod
-    def prepare_iso_format(date: str) -> str:
+    def prepare_iso_format(date: str | None) -> str:
+        """
+        Converts a date string to ISO 8601 format with UTC timezone. If the input date is empty, `None`,
+        or invalid, a default date of "2020-01-01T00:00:00Z" is returned.
+
+        :param date: The date string to be formatted, expected in ISO 8601 format. Can be empty or `None`.
+        :return: The formatted date string in ISO 8601 format with 'Z' as the timezone indicator if valid.
+                 Returns "2020-01-01T00:00:00Z" if `date` is invalid, empty, or `None`.
+        """
         try:
-            if len(date) == 10:
-                prepared_date = datetime.fromisoformat(date).strftime(
-                    "%Y-%m-%dT%H:%M:%SZ"
-                )
-            elif len(date) == 20:
-                prepared_date = datetime.fromisoformat(date).strftime(
-                    "%Y-%m-%dT%H:%M:%SZ"
-                )
+            if date is not None and date.strip():
+                iso_datetime = datetime.fromisoformat(date).replace(tzinfo=timezone.utc)
+                prepared_date = iso_datetime.isoformat()
             else:
                 default_date = "2020-01-01T00:00:00Z"
                 return default_date

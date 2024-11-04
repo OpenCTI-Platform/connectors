@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -142,9 +142,10 @@ class ConnectorClient:
         """
         try:
             self.retries_builder()
-            convert_date_str = datetime.fromtimestamp(last_incident_timestamp).strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-            )
+            convert_date_str = datetime.fromtimestamp(
+                last_incident_timestamp, tz=timezone.utc
+            ).isoformat()
+
             request = self.query_builder(convert_date_str)
             all_incidents = self.pagination_incidents(request.url)
             return all_incidents

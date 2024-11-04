@@ -69,9 +69,7 @@ class SentinelIncidentsConnector:
             return last_timestamp
 
         if self.config.import_start_date:
-            datetime_obj = datetime.strptime(
-                self.config.import_start_date, "%Y-%m-%dT%H:%M:%SZ"
-            )
+            datetime_obj = datetime.fromisoformat(self.config.import_start_date)
             last_timestamp = int(round(datetime_obj.timestamp()))
             return last_timestamp
 

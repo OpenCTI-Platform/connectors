@@ -1,4 +1,5 @@
 import ipaddress
+from datetime import datetime
 
 import stix2
 from dateutil.parser import parse
@@ -11,6 +12,26 @@ CASE_INCIDENT_PRIORITIES = {
     "high": "P1",
     "unknownFutureValue": "P3",
 }
+
+
+def format_datetime(date_str: str | None) -> str:
+    """
+    Formats a date string in ISO 8601 format to ensure compatibility with STIX format by removing microseconds and
+    replacing the '+00:00' timezone suffix with 'Z'. If `date_str` is `None` or empty, returns the current UTC time
+    in ISO 8601 format with 'Z' as the timezone indicator.
+
+    :param date_str: The date string to be formatted, expected in ISO 8601 format.
+    :return: The formatted date string in ISO 8601 format with 'Z' as the timezone indicator.
+    """
+    if date_str is not None and date_str.strip():
+        from_iso_format = datetime.fromisoformat(date_str)
+        iso_date_str = (
+            from_iso_format.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        )
+        return iso_date_str
+    else:
+        now = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+        return now
 
 
 def format_incident(incident: dict) -> dict:

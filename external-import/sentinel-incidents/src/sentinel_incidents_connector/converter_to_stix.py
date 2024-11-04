@@ -1,5 +1,4 @@
 import stix2
-from dateutil.parser import parse
 from pycti import (
     AttackPattern,
     CaseIncident,
@@ -11,7 +10,7 @@ from pycti import (
     StixCoreRelationship,
 )
 
-from .utils import CASE_INCIDENT_PRIORITIES, is_ipv4
+from .utils import CASE_INCIDENT_PRIORITIES, format_datetime, is_ipv4
 
 
 class ConverterToStix:
@@ -54,10 +53,8 @@ class ConverterToStix:
 
     def create_incident(self, alert) -> stix2.Incident:
 
-        alert_created = parse(alert["createdDateTime"]).strftime("%Y-%m-%dT%H:%M:%SZ")
-        alert_modified = parse(alert["lastUpdateDateTime"]).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        )
+        alert_created = format_datetime(alert.get("createdDateTime"))
+        alert_modified = format_datetime(alert.get("lastUpdateDateTime"))
 
         description = (
             alert.get("description", "")
@@ -100,9 +97,7 @@ class ConverterToStix:
         :param bundle_objects: List of all the STIX 2.1 objects refering to the incident
         :return: Case Incident in STIX 2.1 format
         """
-        incident_date = parse(incident["createdDateTime"]).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        )
+        incident_date = format_datetime(incident.get("createdDateTime"))
 
         stix_case = CustomObjectCaseIncident(
             id=CaseIncident.generate_id(incident["displayName"], incident_date),
@@ -291,9 +286,7 @@ class ConverterToStix:
         """
 
         malware_name = evidence.get("name")
-        malware_created = parse(evidence["createdDateTime"]).strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        )
+        malware_created = format_datetime(evidence.get("createdDateTime"))
 
         stix_malware = stix2.Malware(
             id=Malware.generate_id(malware_name),
