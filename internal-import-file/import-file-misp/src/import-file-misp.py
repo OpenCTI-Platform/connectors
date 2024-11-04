@@ -2109,8 +2109,9 @@ class MispImportFile:
                 for elem in bundle:
                     if self._is_container(elem.get("type")):
                         container_stix["object_refs"].append(elem["id"])
-                        for object_id in elem.get("object_refs"):
-                            container_stix["object_refs"].append(object_id)
+                        if "object_refs" in elem:
+                            for object_id in elem.get("object_refs"):
+                                container_stix["object_refs"].append(object_id)
             else:
                 self.helper.log_info(
                     "No container in Stix file. Updating current container"
