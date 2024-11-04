@@ -1,6 +1,7 @@
 import sys
 from datetime import datetime
 
+import stix2
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
@@ -52,7 +53,10 @@ class SentinelIncidentsConnector:
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
         self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper, self.config)
+        self.tlp_marking = stix2.TLP_RED
+        self.converter_to_stix = ConverterToStix(
+            self.helper, self.config, self.tlp_marking
+        )
 
     def _get_last_incident_date(self) -> int:
         """
@@ -279,6 +283,9 @@ class SentinelIncidentsConnector:
             incident, stix_objects
         )
         stix_objects.append(stix_case)
+
+        # TLP marking added to stix_objects
+        stix_objects.append(self.tlp_marking)
         return stix_objects
 
     def process_message(self):

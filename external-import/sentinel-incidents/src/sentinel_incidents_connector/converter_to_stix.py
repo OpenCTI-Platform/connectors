@@ -22,9 +22,10 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper, config):
+    def __init__(self, helper, config, tlp_marking):
         self.helper = helper
         self.config = config
+        self.tlp_marking = tlp_marking
         self.author = self.create_author_identity(
             name=helper.connect_name,
             identity_class="organization",
@@ -71,7 +72,7 @@ class ConverterToStix:
             name=alert["title"],
             labels=[alert.get("category")] if alert.get("category") else None,
             description=description,
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[self.tlp_marking],
             created_by_ref=self.author["id"],
             external_references=[
                 {
@@ -125,7 +126,7 @@ class ConverterToStix:
                 }
             ],
             created_by_ref=self.author["id"],
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[self.tlp_marking],
             object_refs=bundle_objects,
         )
         return stix_case
@@ -139,7 +140,7 @@ class ConverterToStix:
         user_account = stix2.UserAccount(
             account_login=evidence["userAccount"]["accountName"],
             display_name=evidence["userAccount"]["displayName"],
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[self.tlp_marking],
             custom_properties={
                 "created_by_ref": self.author["id"],
             },
@@ -161,7 +162,7 @@ class ConverterToStix:
 
         ipv4 = stix2.IPv4Address(
             value=ip_address,
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[self.tlp_marking],
             custom_properties={
                 "created_by_ref": self.author["id"],
             },
@@ -176,7 +177,7 @@ class ConverterToStix:
         """
         stix_url = stix2.URL(
             value=evidence["url"],
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[self.tlp_marking],
             custom_properties={
                 "created_by_ref": self.author["id"],
             },
@@ -232,7 +233,7 @@ class ConverterToStix:
                 name=file.get("fileName") if isinstance(file, dict) else None,
                 size=file.get("fileSize") if isinstance(file, dict) else None,
                 parent_directory_ref=stix_directory,
-                object_marking_refs=[stix2.TLP_RED],
+                object_marking_refs=[self.tlp_marking],
                 custom_properties={
                     "created_by_ref": self.author["id"],
                 },
@@ -251,7 +252,7 @@ class ConverterToStix:
         """
         stix_hostname = CustomObservableHostname(
             value=evidence["deviceDnsName"],
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[self.tlp_marking],
             custom_properties={
                 "created_by_ref": self.author["id"],
             },
@@ -268,7 +269,7 @@ class ConverterToStix:
             id=AttackPattern.generate_id(technique, technique),
             name=technique,
             allow_custom=True,
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[self.tlp_marking],
             custom_properties={
                 "x_mitre_id": technique,
                 "created_by_ref": self.author["id"],
@@ -301,7 +302,7 @@ class ConverterToStix:
             malware_types=evidence.get("category"),
             sample_refs=sample_refs if len(sample_refs) != 0 else None,
             created=malware_created,
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[self.tlp_marking],
             custom_properties={
                 "created_by_ref": self.author["id"],
             },
@@ -318,7 +319,7 @@ class ConverterToStix:
         """
         stix_directory = stix2.Directory(
             path=evidence.get("filePath"),
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[self.tlp_marking],
             custom_properties={
                 "created_by_ref": self.author["id"],
             },
@@ -342,7 +343,7 @@ class ConverterToStix:
             relationship_type=relationship_type,
             source_ref=source_id,
             target_ref=target_id,
-            object_marking_refs=[stix2.TLP_RED],
+            object_marking_refs=[self.tlp_marking],
             created_by_ref=self.author["id"],
         )
         return relationship
