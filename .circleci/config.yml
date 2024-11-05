@@ -63,7 +63,8 @@ jobs:
       - image: cimg/base:stable-20.04
     steps:
       - checkout
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           working_directory: ~/opencti/internal-import-file/import-file-stix
@@ -362,6 +363,10 @@ jobs:
           name: Build Docker image opencti/connector-tenable-vuln-management
           command: docker build -t opencti/connector-tenable-vuln-management:latest . && docker tag opencti/connector-tenable-vuln-management:latest opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/attribution-tools
+          name: Build Docker image opencti/connector-attribution-tools
+          command: docker build -t opencti/connector-attribution-tools:latest . && docker tag opencti/connector-attribution-tools:latest opencti/connector-attribution-tools:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -513,6 +518,8 @@ jobs:
             docker push opencti/connector-greynoise-vuln:${CIRCLE_TAG}
             docker push opencti/connector-tenable-vuln-management:latest 
             docker push opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
+            docker push opencti/connector-attribution-tools:latest
+            docker push opencti/connector-attribution-tools:${CIRCLE_TAG}
 
       - slack/notify:
           event: fail
@@ -526,7 +533,8 @@ jobs:
       - image: cimg/base:stable-20.04
     steps:
       - checkout
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           working_directory: ~/opencti/external-import/sekoia
@@ -785,6 +793,10 @@ jobs:
           name: Build Docker image opencti/connector-tanium-intel
           command: docker build -t opencti/connector-tanium-intel:latest . && docker tag opencti/connector-tanium-intel:latest opencti/connector-tanium-intel:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/stream/webhook
+          name: Build Docker image opencti/connector-webhook
+          command: docker build -t opencti/connector-webhook:latest . && docker tag opencti/connector-webhook:latest opencti/connector-webhook:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -916,6 +928,8 @@ jobs:
             docker push opencti/connector-tanium-incidents:${CIRCLE_TAG}
             docker push opencti/connector-tanium-intel:latest
             docker push opencti/connector-tanium-intel:${CIRCLE_TAG}
+            docker push opencti/connector-webhook:latest
+            docker push opencti/connector-webhook:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -928,7 +942,8 @@ jobs:
       - image: cimg/base:stable-20.04
     steps:
       - checkout
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           working_directory: ~/opencti/external-import/sentinel-incidents
@@ -946,14 +961,6 @@ jobs:
           working_directory: ~/opencti/stream/harfanglab
           name: Build Docker image opencti/connector-harfanglab
           command: docker build -t opencti/connector-harfanglab:latest . && docker tag opencti/connector-harfanglab:latest opencti/connector-harfanglab:${CIRCLE_TAG}
-      - run:
-          working_directory: ~/opencti/stream/webhook
-          name: Build Docker image opencti/connector-webhook
-          command: docker build -t opencti/connector-webhook:latest . && docker tag opencti/connector-webhook:latest opencti/connector-webhook:${CIRCLE_TAG}
-      - run:
-          working_directory: ~/opencti/internal-enrichment/attribution-tools
-          name: Build Docker image opencti/connector-attribution-tools
-          command: docker build -t opencti/connector-attribution-tools:latest . && docker tag opencti/connector-attribution-tools:latest opencti/connector-attribution-tools:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/stream/qradar
           name: Build Docker image opencti/connector-qradar
@@ -974,10 +981,6 @@ jobs:
             docker push opencti/connector-sentinel:${CIRCLE_TAG}
             docker push opencti/connector-harfanglab:latest
             docker push opencti/connector-harfanglab:${CIRCLE_TAG}
-            docker push opencti/connector-webhook:latest
-            docker push opencti/connector-webhook:${CIRCLE_TAG}
-            docker push opencti/connector-attribution-tools:latest
-            docker push opencti/connector-attribution-tools:${CIRCLE_TAG}
             docker push opencti/connector-qradar:latest
             docker push opencti/connector-qradar:${CIRCLE_TAG}
             docker push opencti/connector-splunk:latest
@@ -988,7 +991,8 @@ jobs:
       - image: cimg/base:stable-20.04
     steps:
       - checkout
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           working_directory: ~/opencti/internal-import-file/import-file-stix
@@ -1036,7 +1040,8 @@ jobs:
       - image: cimg/base:stable-20.04
     steps:
       - checkout
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           working_directory: ~/opencti
@@ -1331,6 +1336,10 @@ jobs:
           name: Build Docker image opencti/connector-tenable-vuln-management
           command: docker build -t opencti/connector-tenable-vuln-management:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/attribution-tools
+          name: Build Docker image opencti/connector-attribution-tools
+          command: docker build -t opencti/connector-attribution-tools:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1406,6 +1415,7 @@ jobs:
             docker push opencti/connector-shadowtrackr:rolling
             docker push opencti/connector-greynoise-vuln:rolling
             docker push opencti/connector-tenable-vuln-management:rolling
+            docker push opencti/connector-attribution-tools:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1418,7 +1428,8 @@ jobs:
       - image: cimg/base:stable-20.04
     steps:
       - checkout
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           working_directory: ~/opencti
@@ -1685,6 +1696,10 @@ jobs:
           name: Build Docker image opencti/connector-tanium-intel
           command: docker build -t opencti/connector-tanium-intel:rolling .
       - run:
+          working_directory: ~/opencti/stream/webhook
+          name: Build Docker image opencti/connector-webhook
+          command: docker build -t opencti/connector-webhook:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1753,6 +1768,7 @@ jobs:
             docker push opencti/connector-import-file-misp:rolling
             docker push opencti/connector-tanium-incidents:rolling
             docker push opencti/connector-tanium-intel:rolling
+            docker push opencti/connector-webhook:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1765,7 +1781,8 @@ jobs:
       - image: cimg/base:stable-20.04
     steps:
       - checkout
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           working_directory: ~/opencti
@@ -1788,14 +1805,6 @@ jobs:
           name: Build Docker image opencti/connector-harfanglab
           command: docker build -t opencti/connector-harfanglab:rolling .
       - run:
-          working_directory: ~/opencti/stream/webhook
-          name: Build Docker image opencti/connector-webhook
-          command: docker build -t opencti/connector-webhook:rolling .
-      - run:
-          working_directory: ~/opencti/internal-enrichment/attribution-tools
-          name: Build Docker image opencti/connector-attribution-tools
-          command: docker build -t opencti/connector-attribution-tools:rolling .
-      - run:
           working_directory: ~/opencti/stream/qradar
           name: Build Docker image opencti/connector-qradar
           command: docker build -t opencti/connector-qradar:rolling .
@@ -1811,8 +1820,6 @@ jobs:
             docker push opencti/connector-sentinel-incidents:rolling
             docker push opencti/connector-sentinel-intel:rolling
             docker push opencti/connector-harfanglab:rolling
-            docker push opencti/connector-webhook:rolling
-            docker push opencti/connector-attribution-tools:rolling
             docker push opencti/connector-qradar:rolling
             docker push opencti/connector-splunk:rolling
 
@@ -1822,7 +1829,8 @@ jobs:
       - image: cimg/base:stable-20.04
     steps:
       - checkout
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           working_directory: ~/opencti
