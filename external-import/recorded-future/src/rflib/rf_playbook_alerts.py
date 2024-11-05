@@ -4,6 +4,7 @@ import threading
 import pycti
 import pytz
 import stix2
+from pycti import StixCoreRelationship
 
 from .constants import TLP_MAP
 from .make_markdown_table import make_markdown_table
@@ -452,6 +453,9 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                             custom_properties={"x_opencti_created_by_ref": self.author},
                         )
                         stix_relationship = stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", stix_incident.id, stix_ipv4address.id
+                            ),
                             relationship_type="related-to",
                             source_ref=stix_incident.id,
                             target_ref=stix_ipv4address.id,
@@ -553,6 +557,9 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             object_marking_refs=self.tlp,
         )
         stix_relationship = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                "related-to", stix_incident.id, stix_url.id
+            ),
             relationship_type="related-to",
             source_ref=stix_incident.id,
             target_ref=stix_url.id,
@@ -607,6 +614,9 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                     object_marking_refs=self.tlp,
                 )
                 stix_relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", stix_incident.id, stix_ipv4address.id
+                    ),
                     relationship_type="related-to",
                     source_ref=stix_incident.id,
                     target_ref=stix_ipv4address.id,
@@ -638,6 +648,9 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                     object_marking_refs=self.tlp,
                 )
                 stix_relationship = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", stix_incident.id, stix_domain.id
+                    ),
                     relationship_type="related-to",
                     source_ref=stix_incident.id,
                     target_ref=stix_domain.id,

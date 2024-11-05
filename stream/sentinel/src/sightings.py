@@ -28,7 +28,7 @@ priorities = {
 }
 
 
-class Sightings(threading.Thread):
+class SentinelSightings(threading.Thread):
     def __init__(
         self,
         helper,

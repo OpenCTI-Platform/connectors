@@ -90,16 +90,16 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter         | config.yml `sentinel_incidents` | Docker environment variable            | Default | Mandatory | Description                                                                             |
-|-------------------|---------------------------------|----------------------------------------|---------|-----------|-----------------------------------------------------------------------------------------|
-| Tenant ID         | `tenant_id`                     | `SENTINEL_INCIDENTS_TENANT_ID`         |         | Yes       | Your Azure App Tenant ID, see the screenshot to help you find this information.         |
-| Client ID         | `client_id`                     | `SENTINEL_INCIDENTS_CLIENT_ID`         |         | Yes       | Your Azure App Client ID, see the screenshot to help you find this information.         |
-| Client Secret     | `client_secret`                 | `SENTINEL_INCIDENTS_CLIENT_SECRET`     |         | Yes       | Your Azure App Client secret, See the screenshot to help you find this information.     |
-| Login URL         | `login_url`                     | `SENTINEL_INCIDENTS_LOGIN_URL`         |         | Yes       | Login URL for Microsoft which is `https://login.microsoft.com`                          |
-| API Base URL      | `api_base_url`                  | `SENTINEL_INCIDENTS_API_BASE_URL`      |         | Yes       | The resource the API will use which is `https://graph.microsoft.com`                    |
-| Incident URL Path | `incident_path`                 | `SENTINEL_INCIDENTS_INCIDENT_PATH`     |         | Yes       | The incident URL that will be used which is `/v1.0/security/incidents`                  |
-| Target Product    | `target_product`                | `SENTINEL_INCIDENTS_TARGET_PRODUCT`    |         | Yes       | `Azure Sentinel` or `Microsoft Defender` ATP                                            |
-| Import start date | `import_start_date`             | `SENTINEL_INCIDENTS_IMPORT_START_DATE` |         | Yes       | Import starting date (in YYYY-MM-DD format) - used only if connector's state is not set |
+| Parameter         | config.yml `sentinel_incidents` | Docker environment variable            | Default                | Mandatory | Description                                                                                                              |
+|-------------------|---------------------------------|----------------------------------------|------------------------|-----------|--------------------------------------------------------------------------------------------------------------------------|
+| Tenant ID         | `tenant_id`                     | `SENTINEL_INCIDENTS_TENANT_ID`         |                        | Yes       | Your Azure App Tenant ID, see the screenshot to help you find this information.                                          |
+| Client ID         | `client_id`                     | `SENTINEL_INCIDENTS_CLIENT_ID`         |                        | Yes       | Your Azure App Client ID, see the screenshot to help you find this information.                                          |
+| Client Secret     | `client_secret`                 | `SENTINEL_INCIDENTS_CLIENT_SECRET`     |                        | Yes       | Your Azure App Client secret, See the screenshot to help you find this information.                                      |
+| Login URL         | `login_url`                     | `SENTINEL_INCIDENTS_LOGIN_URL`         |                        | Yes       | Login URL for Microsoft which is `https://login.microsoft.com`                                                           |
+| API Base URL      | `api_base_url`                  | `SENTINEL_INCIDENTS_API_BASE_URL`      |                        | Yes       | The resource the API will use which is `https://graph.microsoft.com`                                                     |
+| Incident URL Path | `incident_path`                 | `SENTINEL_INCIDENTS_INCIDENT_PATH`     |                        | Yes       | The incident URL that will be used which is `/v1.0/security/incidents`                                                   |
+| Target Product    | `target_product`                | `SENTINEL_INCIDENTS_TARGET_PRODUCT`    |                        | Yes       | `Azure Sentinel` or `Microsoft Defender` ATP                                                                             |
+| Import start date | `import_start_date`             | `SENTINEL_INCIDENTS_IMPORT_START_DATE` | `2020-01-01T00:00:00Z` | No        | Import starting date (in YYYY-MM-DD format or YYYY-MM-DDTHH:MM:SSZ format) - used only if connector's state is not set   |
 
 ## Deployment
 

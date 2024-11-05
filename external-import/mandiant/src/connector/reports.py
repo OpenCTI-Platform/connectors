@@ -39,7 +39,7 @@ def process(connector, report):
         report_bundle["objects"] = list(
             filter(lambda item: not item["id"].startswith("x-"), bundle_objects)
         )
-        report = Report(
+        report = MandiantReport(
             bundle=report_bundle,
             details=report_details,
             pdf=report_pdf,
@@ -56,7 +56,7 @@ def process(connector, report):
     return bundle
 
 
-class Report:
+class MandiantReport:
     def __init__(
         self,
         bundle,
@@ -283,16 +283,14 @@ class Report:
         if text == "":
             return
 
-        note = utils.generate_note(
-            {
-                "id": Note.generate_id(report["created"], text),
-                "abstract": "Analysis",
-                "content": text,
-                "created_by_ref": self.identity["standard_id"],
-                "object_refs": [report.get("id")],
-                "object_marking_refs": report["object_marking_refs"],
-                "note_types": ["analysis", "external"],
-            }
+        note = stix2.Note(
+            id=Note.generate_id(report["created"], text),
+            abstract="Analysis",
+            content=text,
+            created_by_ref=self.identity["standard_id"],
+            object_refs=[report.get("id")],
+            object_marking_refs=report["object_marking_refs"],
+            note_types=["analysis", "external"],
         )
 
         self.bundle["objects"].append(note)

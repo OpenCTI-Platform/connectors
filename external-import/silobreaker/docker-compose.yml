@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-silobreaker:
-    image: opencti/connector-silobreaker:6.3.6
+    image: opencti/connector-silobreaker:6.3.9
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -13,6 +13,7 @@ services:
       - SILOBREAKER_API_URL=https://api.silobreaker.com
       - SILOBREAKER_API_KEY=ChangeMe
       - SILOBREAKER_API_SHARED=ChangeMe
-      - SILOBREAKER_IMPORT_START_DATE=2022-04-01
+      - SILOBREAKER_LISTS=138809,96910,36592,55112,50774 # Infostealers and Keyloggers, RAT Malware, Ransomware, APTs, Threat Publications
+      - SILOBREAKER_IMPORT_START_DATE=2024-09-01
       - SILOBREAKER_INTERVAL=60 # Required, in minutes
     restart: always
