@@ -6,10 +6,10 @@ import time
 from datetime import datetime
 from html.parser import HTMLParser
 
+import bs4
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-import bs4
 
 
 class ThreatMatch:
@@ -83,7 +83,6 @@ class ThreatMatch:
     def next_run(self, seconds):
         return
 
-                    
     def _get_token(self):
         r = requests.post(
             self.threatmatch_url + "/api/developers-platform/token",
@@ -114,7 +113,9 @@ class ThreatMatch:
             data = r.json()["objects"]
             for object in data:
                 if "description" in object:
-                    object["description"] =  bs4.BeautifulSoup(object["description"], "html.parser").get_text()
+                    object["description"] = bs4.BeautifulSoup(
+                        object["description"], "html.parser"
+                    ).get_text()
                     self.helper.log_info(f"Cleaned data : {object['description']}")
             return data
 
