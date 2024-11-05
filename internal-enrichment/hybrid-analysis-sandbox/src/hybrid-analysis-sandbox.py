@@ -248,7 +248,7 @@ class HybridAnalysis:
             )
         )
         malware_analysis = stix2.MalwareAnalysis(
-            id=MalwareAnalysis.generate_id(result_name, "HybridAnalysis", None),
+            id=MalwareAnalysis.generate_id(result_name),
             product="HybridAnalysis",
             result_name=result_name,
             analysis_started=analysis_started,
