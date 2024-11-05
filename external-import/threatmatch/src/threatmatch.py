@@ -9,6 +9,7 @@ from html.parser import HTMLParser
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+import bs4
 
 
 class ThreatMatch:
@@ -113,7 +114,7 @@ class ThreatMatch:
             data = r.json()["objects"]
             for object in data:
                 if "description" in object:
-                    object["description"] = self.remove_html_tags(object["description"])
+                    object["description"] =  bs4.BeautifulSoup(object["description"], "html.parser").get_text()
                     self.helper.log_info(f"Cleaned data : {object['description']}")
             return data
 
