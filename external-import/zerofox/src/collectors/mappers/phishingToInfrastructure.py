@@ -9,10 +9,10 @@ from stix2 import (
     Relationship,
     X509Certificate,
 )
-from zerofox.domain.phishing import Phishing
+from zerofox.domain.phishing import FoxPhishing
 
 
-def phishing_to_infrastructure(created_by, now: str, entry: Phishing) -> List[
+def phishing_to_infrastructure(created_by, now: str, entry: FoxPhishing) -> List[
     Union[
         Infrastructure,
         Relationship,
@@ -90,7 +90,7 @@ def phishing_to_infrastructure(created_by, now: str, entry: Phishing) -> List[
     ] + certificate_objects
 
 
-def build_certificate_objects(created_by, entry: Phishing, stix_phishing):
+def build_certificate_objects(created_by, entry: FoxPhishing, stix_phishing):
     if not entry.cert or not entry.cert.authority:
         return []
     certificate = observable(
