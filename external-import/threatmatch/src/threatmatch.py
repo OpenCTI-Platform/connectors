@@ -4,7 +4,6 @@ import os
 import sys
 import time
 from datetime import datetime
-from html.parser import HTMLParser
 
 import bs4
 import requests
