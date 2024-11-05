@@ -6,12 +6,8 @@ import pycountry
 import requests
 import stix2
 import yaml
-from pycti import (
-    Location,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    get_config_variable,
-)
+from pycti import (Location, OpenCTIConnectorHelper, StixCoreRelationship,
+                   get_config_variable)
 
 
 class IpInfoConnector:
@@ -173,11 +169,15 @@ class IpInfoConnector:
         asn = {}
         privacy = {}
         if "asn" in json_data:
-            asn["name"] = json_data["asn"]["name"] if self.use_asn_name else json_data["asn"]["asn"]
+            asn["name"] = (
+                json_data["asn"]["name"]
+                if self.use_asn_name
+                else json_data["asn"]["asn"]
+            )
             if match := re.search(r"\d+", json_data["asn"]["asn"]):
                 asn["asn"] = int(match.group())
         elif "org" in json_data:
-            asn_data, name_data = json_data["org"].split(' ', 1)
+            asn_data, name_data = json_data["org"].split(" ", 1)
             asn["name"] = name_data if self.use_asn_name else asn_data
             if match := re.search(r"\d+", asn_data):
                 asn["asn"] = int(match.group())
