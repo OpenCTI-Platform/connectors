@@ -19,6 +19,7 @@ from ReversingLabs.SDK.a1000 import A1000
 
 from lib.internal_enrichment import InternalEnrichmentConnector
 
+
 ZIP_MIME_TYPES = (
     "application/x-bzip",
     "application/x-bzip2",
