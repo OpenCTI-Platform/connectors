@@ -104,7 +104,7 @@ class ThreatMatch:
         )
         if r.status_code != 200:
             self.helper.log_error(
-                f"Could not fetch item: {item_id}, Error: {str(r.text)}"
+                f"Could not fetch item: {str(item_id)}, Error: {r.text}"
             )
             return []
         # if 'error' in r.json():
