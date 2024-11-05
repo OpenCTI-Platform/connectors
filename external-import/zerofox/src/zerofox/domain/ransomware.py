@@ -5,7 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-class Ransomware(BaseModel):
+class FoxRansomware(BaseModel):
     created_at: datetime
     md5: str | None
     sha1: str | None
