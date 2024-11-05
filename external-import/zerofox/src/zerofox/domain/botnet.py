@@ -5,7 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-class Botnet(BaseModel):
+class FoxBotnet(BaseModel):
     bot_name: str
     c2_domain: str | None
     c2_ip_address: str | None
