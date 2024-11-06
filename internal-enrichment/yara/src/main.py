@@ -10,7 +10,7 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-from stix2 import Bundle, Relationship
+from stix2 import Bundle, Relationship, TLP_WHITE
 
 
 class YaraConnector:
@@ -30,37 +30,35 @@ class YaraConnector:
         )
 
     def _get_artifact_contents(self, artifact) -> list[bytes]:
+        """
+        Retrieves the content associated with the artefact from OpenCTI, extracts the files and downloads their
+        contents in binary format for further processing.
+
+        :param artifact: Dictionary containing all the information in the OpenCTI artefact, potentially with an
+                         ‘importFiles’ key and a list of files to be retrieved.
+        :return: List of the binary contents of the files associated with the artefact, returns an empty list `[]`
+                 if no files are associated.
+        """
         self.helper.log_debug("Getting Artifact contents (bytes) from OpenCTI")
 
-        max_retry = 3
-        retry_delay = 2
-        for nbr_retrie in range(max_retry):
-            if artifact.get("importFiles"):
-                artifact_files_contents = artifact.get("importFiles")
-            else:
-                artifact_entity = self.client.stix_cyber_observable.read(
-                    id=artifact.get("standard_id")
+        artifact_files_contents = artifact.get("importFiles") if artifact.get("importFiles") else []
+
+        files_contents = []
+        if artifact_files_contents:
+            for artifact_file_content in artifact_files_contents:
+                file_name = artifact_file_content.get("name")
+                file_id = artifact_file_content.get("id")
+                file_url = self.octi_api_url + "/storage/get/" + file_id
+                file_content = self.helper.api.fetch_opencti_file(
+                    file_url, binary=True
                 )
-                artifact_files_contents = artifact_entity.get("importFiles")
-
-            files_contents = []
-            if artifact_files_contents:
-                for artifact_file_content in artifact_files_contents:
-                    file_id = artifact_file_content.get("id")
-                    file_url = self.octi_api_url + "/storage/get/" + file_id
-                    file_content = self.helper.api.fetch_opencti_file(
-                        file_url, binary=True
-                    )
-                    files_contents.append(file_content)
-                return files_contents
-
-            elif nbr_retrie == max_retry:
-                return files_contents
-
-            else:
-                time.sleep(retry_delay)
-                retry_delay *= 2
-                continue
+                files_contents.append(file_content)
+                self.helper.log_debug(
+                    f"Associated file found in Artifact with file_name :{file_name}"
+                )
+        else:
+            self.helper.log_debug("No associated files found in Artifact")
+        return files_contents
 
     def _get_yara_indicators(self) -> list:
         self.helper.log_debug("Getting all YARA Indicators in OpenCTI")
@@ -96,7 +94,6 @@ class YaraConnector:
         artifact_contents = self._get_artifact_contents(artifact)
 
         bundle_objects = []
-
         for artifact_content in artifact_contents:
             for indicator in yara_indicators:
                 try:
@@ -117,6 +114,7 @@ class YaraConnector:
                             indicator["standard_id"],
                         ),
                         relationship_type="related-to",
+                        object_marking_refs=[TLP_WHITE],
                         source_ref=artifact["standard_id"],
                         target_ref=indicator["standard_id"],
                         description="YARA rule matched for this Artifact",
