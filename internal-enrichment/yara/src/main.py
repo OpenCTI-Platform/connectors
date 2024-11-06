@@ -41,7 +41,9 @@ class YaraConnector:
         """
         self.helper.log_debug("Getting Artifact contents (bytes) from OpenCTI")
 
-        artifact_files_contents = artifact.get("importFiles") if artifact.get("importFiles") else []
+        artifact_files_contents = (
+            artifact.get("importFiles") if artifact.get("importFiles") else []
+        )
 
         files_contents = []
         if artifact_files_contents:
@@ -49,9 +51,7 @@ class YaraConnector:
                 file_name = artifact_file_content.get("name")
                 file_id = artifact_file_content.get("id")
                 file_url = self.octi_api_url + "/storage/get/" + file_id
-                file_content = self.helper.api.fetch_opencti_file(
-                    file_url, binary=True
-                )
+                file_content = self.helper.api.fetch_opencti_file(file_url, binary=True)
                 files_contents.append(file_content)
                 self.helper.log_debug(
                     f"Associated file found in Artifact with file_name :{file_name}"
