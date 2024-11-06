@@ -10,7 +10,7 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-from stix2 import Bundle, Relationship, TLP_WHITE
+from stix2 import TLP_WHITE, Bundle, Relationship
 
 
 class YaraConnector:
