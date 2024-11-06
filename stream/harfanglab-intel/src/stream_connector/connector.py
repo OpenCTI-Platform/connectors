@@ -2,7 +2,11 @@ import json
 
 from pycti import OpenCTIConnectorHelper
 
+from .api_client import HarfanglabClient
 from .config_variables import ConfigConnector
+from .cti_converter import CTIConverter
+from .models import opencti
+from .utils import build_observable_query_filters
 
 
 class StreamConnector:
@@ -40,6 +44,89 @@ class StreamConnector:
         # Load configuration file and connection helper
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.stix_converter = CTIConverter(self.config)
+        self.api_client = HarfanglabClient(self.helper, self.config)
+
+    def _get_indicator(self, indicator_id: str) -> opencti.Indicator:
+        indicator_data = self.helper.api.indicator.read(id=indicator_id)
+        indicator = opencti.Indicator(indicator_data)
+
+        indicator_observables = indicator.observables.copy()
+        if indicator.pattern_type == "stix":
+            observables_filters = build_observable_query_filters(indicator.pattern)
+            # TODO: remove duplicates
+            observables_from_pattern = self.helper.api.stix_cyber_observable.list(
+                filters={
+                    "mode": "or",
+                    "filters": observables_filters,
+                    "filterGroups": [],
+                }
+            )
+            observables_from_pattern = [
+                opencti.Observable(observable)
+                for observable in observables_from_pattern
+            ]
+            indicator_observables.extend(observables_from_pattern)
+        indicator.observables = indicator_observables
+        return indicator
+
+    def _handle_upsert(self, indicator_id: str) -> None:
+        indicator = self._get_indicator(indicator_id)
+        for observable in indicator.observables:
+            if indicator.pattern_type == "stix":
+                ioc_rule = self.stix_converter.create_ioc_rule(indicator, observable)
+                existing_ioc_rule = self.api_client.get_ioc_rule(ioc_rule.value)
+                if existing_ioc_rule:
+                    ioc_rule.id = existing_ioc_rule.id
+                    self.api_client.patch_ioc_rule(ioc_rule)
+                else:
+                    self.api_client.post_ioc_rule(ioc_rule)
+
+        if indicator.pattern_type == "sigma":
+            sigma_rule = self.stix_converter.create_sigma_rule(indicator)
+            existing_sigma_rule = self.api_client.get_sigma_rule(sigma_rule.content)
+            if existing_sigma_rule:
+                sigma_rule.id = existing_sigma_rule.id
+                self.api_client.patch_sigma_rule(sigma_rule)
+            else:
+                self.api_client.post_sigma_rule(sigma_rule)
+        if indicator.pattern_type == "yara":
+            yara_file = self.stix_converter.create_yara_file(indicator)
+            existing_yara_file = self.api_client.get_yara_file(yara_file.content)
+            if existing_yara_file:
+                yara_file.id = existing_yara_file.id
+                self.api_client.patch_yara_file(yara_file)
+            else:
+                self.api_client.post_yara_file(yara_file)
+
+    def _handle_delete(self, indicator_id: str) -> None:
+        indicator = self._get_indicator(indicator_id)
+        for observable in indicator.observables:
+            if indicator.pattern_type == "stix":
+                ioc_rule = self.stix_converter.create_ioc_rule(indicator, observable)
+                existing_ioc_rule = self.api_client.get_ioc_rule(ioc_rule.value)
+                if existing_ioc_rule:
+                    if self.config.harfanglab_remove_indicator:
+                        self.api_client.delete_ioc_rule(existing_ioc_rule)
+                    else:
+                        existing_ioc_rule.enabled = False
+                        self.api_client.patch_ioc_rule(existing_ioc_rule)
+        if indicator.pattern_type == "sigma":
+            existing_sigma_rule = self.api_client.get_sigma_rule(indicator.pattern)
+            if existing_sigma_rule:
+                if self.config.harfanglab_remove_indicator:
+                    self.api_client.delete_sigma_rule(existing_sigma_rule)
+                else:
+                    existing_sigma_rule.enabled = False
+                    self.api_client.patch_sigma_rule(existing_sigma_rule)
+        if indicator.pattern_type == "yara":
+            existing_yara_file = self.api_client.get_yara_file(indicator.pattern)
+            if existing_yara_file:
+                if self.config.harfanglab_remove_indicator:
+                    self.api_client.delete_yara_file(existing_yara_file)
+                else:
+                    existing_yara_file.enabled = False
+                    self.api_client.patch_yara_file(existing_yara_file)
 
     def process_message(self, msg) -> None:
         """
@@ -57,65 +144,29 @@ class StreamConnector:
             )
             return
 
-        if msg.event == "create":
-            if data["type"] == "indicator":
-                if data["type"] == "indicator":
-                    if data["pattern_type"] == "yara":
-                        self.create_indicator(
-                            msg, "yara", "YaraFile", self.yara_list_id
-                        )
-                    elif data["pattern_type"] == "sigma":
-                        self.create_indicator(
-                            msg, "sigma", "SigmaRule", self.sigma_list_id
-                        )
-                    elif data["pattern_type"] == "stix":
-                        self.create_indicator(msg, "stix", "IOCRule", self.stix_list_id)
-                    else:
-                        self.helper.connector_logger.error(
-                            "[ERROR] Unsupported Pattern Type",
-                            {"pattern_type": data["pattern_type"]},
-                        )
-            if data["type"] == "relationship":
-                self.helper.connector_logger.info("[CREATE]")
-                if data["relationship_type"] == "based-on":
-                    self.create_observable(data, "stix", "IOCRule", self.stix_list_id)
+        if data["type"] == "indicator":
+            match msg.event:
+                case "create":
+                    self.helper.connector_logger.info("[CREATE]")
+                    self._handle_upsert(data["id"])
+                case "update":
+                    self.helper.connector_logger.info("[UPDATE]")
+                    self._handle_upsert(data["id"])
+                case "delete":
+                    self.helper.connector_logger.info("[DELETE]")
+                    self._handle_delete(data["id"])
 
-        if msg.event == "update":
-            if data["type"] == "indicator":
-                self.helper.connector_logger.info("[UPDATE]")
-                if data["pattern_type"] == "yara":
-                    self.update_indicator(msg, "yara", "YaraFile", self.yara_list_id)
-                elif data["pattern_type"] == "sigma":
-                    self.update_indicator(msg, "sigma", "SigmaRule", self.sigma_list_id)
-                elif data["pattern_type"] == "stix":
-                    self.update_indicator(msg, "stix", "IOCRule", self.stix_list_id)
-                else:
-                    self.helper.connector_logger.error(
-                        "[ERROR] Unsupported Pattern Type",
-                        {"pattern_type": data["pattern_type"]},
-                    )
-            if data["type"] == "relationship":
-                self.helper.connector_logger.info("[UPDATE]")
-                # Do something
-                raise NotImplementedError
-
-        if msg.event == "delete":
-            if data["type"] == "indicator":
-                self.helper.connector_logger.info("[DELETE]")
-                if data["pattern_type"] == "yara":
-                    self.delete_indicator(msg, "yara", "YaraFile", self.yara_list_id)
-                elif data["pattern_type"] == "sigma":
-                    self.delete_indicator(msg, "sigma", "SigmaRule", self.sigma_list_id)
-                elif data["pattern_type"] == "stix":
-                    self.delete_indicator(msg, "stix", "IOCRule", self.stix_list_id)
-                else:
-                    self.helper.connector_logger.error(
-                        "[ERROR] Unsupported Pattern Type",
-                        {"pattern_type": data["pattern_type"]},
-                    )
-            if data["type"] == "relationship":
-                if data["relationship_type"] == "based-on":
-                    self.delete_observable(data, "stix", "IOCRule", self.stix_list_id)
+        if data["type"] == "relationship" and data["relationship_type"] == "based-on":
+            match msg.event:
+                case "create":
+                    self.helper.connector_logger.info("[CREATE]")
+                    self._handle_upsert(data["source_ref"])
+                case "update":
+                    self.helper.connector_logger.info("[UPDATE]")
+                    self._handle_upsert(data["source_ref"])
+                case "delete":
+                    self.helper.connector_logger.info("[DELETE]")
+                    self._handle_delete(data["source_ref"])
 
     def run(self) -> None:
         """
