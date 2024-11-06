@@ -1,6 +1,6 @@
 import traceback
 
-from stream_connector import StreamConnector
+from harfanglab_intel_connector import HarfanglabIntelConnector
 
 if __name__ == "__main__":
     """
@@ -13,7 +13,7 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        connector = StreamConnector()
+        connector = HarfanglabIntelConnector()
         connector.run()
     except Exception:
         traceback.print_exc()

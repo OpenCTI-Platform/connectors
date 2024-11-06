@@ -9,7 +9,7 @@ from .models import opencti
 from .utils import build_observable_query_filters
 
 
-class StreamConnector:
+class HarfanglabIntelConnector:
     """
     Specifications of the Stream connector
 
