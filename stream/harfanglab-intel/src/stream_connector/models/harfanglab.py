@@ -1,0 +1,71 @@
+class IOCRule:
+    """
+    Represent an IOC rule on Harfanglab.
+    """
+
+    def __init__(
+        self,
+        id: str = None,
+        type: str = None,
+        value: str = None,
+        description: str = None,
+        comment: dict = None,
+        hl_status: str = None,
+        enabled: bool = True,
+        **kwargs  # TODO remove **kwargs
+    ):
+        self.id = id
+        self.type = type
+        self.value = value
+        self.description = description  # or "No description"
+        self.comment = comment
+        self.hl_status = hl_status
+        self.enabled = enabled
+
+
+class SigmaRule:
+    """
+    Represent a Sigma rule on Harfanglab.
+    """
+
+    def __init__(
+        self,
+        id: str = None,
+        name: str = None,
+        content: str = None,
+        pattern_type: str = None,
+        hl_status: str = None,
+        enabled: bool = None,
+        **kwargs  # TODO remove **kwargs
+    ):
+        self.id = id
+        self.name = name
+        self.content = content
+        self.pattern_type = pattern_type
+        self.hl_status = hl_status
+        self.hl_local_testing_status = "in_progress"
+        self.enabled = enabled
+
+
+class YaraFile:
+    """
+    Represent a Yara file on Harfanglab.
+    """
+
+    def __init__(
+        self,
+        id: str = None,
+        name: str = None,
+        content: str = None,
+        pattern_type: str = None,
+        hl_status: str = None,
+        enabled: bool = None,
+        **kwargs  # TODO remove **kwargs
+    ):
+        self.id = id
+        self.name = name
+        self.content = content
+        self.pattern_type = pattern_type
+        self.hl_status = hl_status
+        self.hl_local_testing_status = "in_progress"
+        self.enabled = enabled
