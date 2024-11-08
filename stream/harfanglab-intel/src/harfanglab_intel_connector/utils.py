@@ -10,35 +10,38 @@ def parse_stix_pattern(stix_pattern: str) -> list[dict]:
     :param stix_pattern: STIX pattern to parse
     :return: List of parsed observation expressions
     """
-    translation_result = stix_translater.translate(
-        "splunk",
-        "parse",
-        None,
-        stix_pattern,
-    )
-    if translation_result:
-        parsed_patterns = translation_result["parsed_stix"]
-        return parsed_patterns
+    try:
+        translation_result = stix_translater.translate(
+            "splunk",
+            "parse",
+            None,
+            stix_pattern,
+        )
+        if translation_result:
+            parsed_patterns = translation_result["parsed_stix"]
+            return parsed_patterns
+    except:
+        raise RuntimeError(f"Cannot parse STIX pattern {stix_pattern}")
 
 
-def build_observable_query_filters(stix_pattern: str) -> list[dict]:
+def get_context_former_value(context: dict, key: str):
     """
-    Build GraphQL query filters based on STIX pattern to get observables.
-    :param stix_pattern: STIX pattern to build filters from
-    :return: List of observables filters
+    Get former value of given key in event context.
+    :param context: Event context (e.g. operations occured during an update)
+    :param key: Key to get value for
+    :return: Previous value found in context
     """
-    parsed_patterns = parse_stix_pattern(stix_pattern)
-    if parsed_patterns:
-        observables_filters = []
-        for parsed_pattern in parsed_patterns:
-            filter_key = parsed_pattern["attribute"].split(":")[1]
-            filter_value = parsed_pattern["value"]
-            observables_filter = {
-                "key": filter_key.replace("'", ""),
-                "operator": "eq",
-                "values": [filter_value],
-            }
-            observables_filters.append(observables_filter)
+    if context and "reverse_patch" in context:
+        value = next(
+            (
+                patch["value"]
+                for patch in context["reverse_patch"]
+                if patch["path"] == f"/{key}"
+            ),
+            None,
+        )
+        return value
+
 
 def is_file_hash(string: str) -> bool:
     return (
