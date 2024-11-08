@@ -81,7 +81,7 @@ class HarfanglabClient:
         :param source_type: Type of source to create (either `IOCSource`, `SigmaSource` or `YaraSource`)
         :return: Created source data
         """
-        url = self.api_base_url + f"/api/data/threat_intelligence/{source_type}"
+        url = f"{self.api_base_url}/api/data/threat_intelligence/{source_type}"
         body = {
             "name": self.config.harfanglab_source_list_name,
             "description": "Cyber Threat Intelligence knowledge imported from OpenCTI, and any changes must be made only to it.",
@@ -102,7 +102,7 @@ class HarfanglabClient:
         :param source_type: Type of source to create (either `IOCSource`, `SigmaSource` or `YaraSource`)
         :return: Found source data
         """
-        url = self.api_base_url + f"/api/data/threat_intelligence/{source_type}"
+        url = f"{self.api_base_url}/api/data/threat_intelligence/{source_type}"
         params = {"name__exact": self.config.harfanglab_source_list_name}
 
         data = self._send_request(
@@ -119,7 +119,7 @@ class HarfanglabClient:
         Create an IOC rule on Harfanglab.
         :param ioc_rule: IOC rule to create
         """
-        url = self.api_base_url + f"/api/data/threat_intelligence/IOCRule"
+        url = f"{self.api_base_url}/api/data/threat_intelligence/IOCRule"
         body = {
             "source_id": self.ioc_list_id,
             "type": ioc_rule.type,
@@ -149,7 +149,7 @@ class HarfanglabClient:
         :param ioc_value: Value of the IOC to get
         :return Found IOC rule
         """
-        url = self.api_base_url + f"/api/data/threat_intelligence/IOCRule"
+        url = f"{self.api_base_url}/api/data/threat_intelligence/IOCRule"
         params = {"source_id": self.ioc_list_id, "value__exact": ioc_value}
 
         data = self._send_request(
@@ -175,7 +175,7 @@ class HarfanglabClient:
         Update an IOC rule on Harfanglab.
         :param ioc_rule: IOC rule to update
         """
-        url = self.api_base_url + f"/api/data/threat_intelligence/IOCRule/{ioc_rule.id}"
+        url = f"{self.api_base_url}/api/data/threat_intelligence/IOCRule/{ioc_rule.id}"
         body = {
             "source_id": self.ioc_list_id,
             "type": ioc_rule.type,
@@ -203,7 +203,7 @@ class HarfanglabClient:
         Delete an IOC rule on Harfanglab.
         :param ioc_rule: IOC rule to delete
         """
-        url = self.api_base_url + f"/api/data/threat_intelligence/IOCRule/{ioc_rule.id}"
+        url = f"{self.api_base_url}/api/data/threat_intelligence/IOCRule/{ioc_rule.id}"
 
         self._send_request(method="delete", url=url)
 
@@ -212,7 +212,7 @@ class HarfanglabClient:
         Create a Sigma rule on Harfanglab.
         :param sigma_rule: Sigma rule to create
         """
-        url = self.api_base_url + f"/api/data/threat_intelligence/SigmaRule"
+        url = f"{self.api_base_url}/api/data/threat_intelligence/SigmaRule"
         body = {
             "source_id": self.sigma_list_id,
             "name": sigma_rule.name,
@@ -238,7 +238,7 @@ class HarfanglabClient:
         :param sigma_rule_name: Name of the Sigma rule to get
         :return Found Sigma rule
         """
-        url = self.api_base_url + f"/api/data/threat_intelligence/SigmaRule"
+        url = f"{self.api_base_url}/api/data/threat_intelligence/SigmaRule"
         params = {"source_id": self.sigma_list_id, "name__exact": sigma_rule_name}
 
         data = self._send_request(
@@ -264,10 +264,7 @@ class HarfanglabClient:
         Update a Sigma rule on Harfanglab.
         :param sigma_rule: Sigma rule to update
         """
-        url = (
-            self.api_base_url
-            + f"/api/data/threat_intelligence/SigmaRule/{sigma_rule.id}"
-        )
+        url = f"{self.api_base_url}/api/data/threat_intelligence/SigmaRule/{sigma_rule.id}"
         body = {
             "source_id": self.sigma_list_id,
             "name": sigma_rule.name,
@@ -291,10 +288,7 @@ class HarfanglabClient:
         Delete a Sigma rule on Harfanglab.
         :param sigma_rule: Sigma rule to delete
         """
-        url = (
-            self.api_base_url
-            + f"/api/data/threat_intelligence/SigmaRule/{sigma_rule.id}"
-        )
+        url = f"{self.api_base_url}/api/data/threat_intelligence/SigmaRule/{sigma_rule.id}"
 
         self._send_request(method="delete", url=url)
 
@@ -303,7 +297,7 @@ class HarfanglabClient:
         Create a Yara file on Harfanglab.
         :param yara_file: Yara file to create
         """
-        url = self.api_base_url + f"/api/data/threat_intelligence/YaraFile"
+        url = f"{self.api_base_url}/api/data/threat_intelligence/YaraFile"
         body = {
             "source_id": self.yara_list_id,
             "name": yara_file.name,
@@ -329,7 +323,7 @@ class HarfanglabClient:
         :param yara_file_name: Name of the Yara file to get
         :return Found Yara file
         """
-        url = self.api_base_url + f"/api/data/threat_intelligence/YaraFile"
+        url = f"{self.api_base_url}/api/data/threat_intelligence/YaraFile"
         params = {"source_id": self.yara_list_id, "name__exact": yara_file_name}
 
         data = self._send_request(
@@ -354,9 +348,8 @@ class HarfanglabClient:
         :param yara_file: Yara file to update
         """
         url = (
-            self.api_base_url + f"/api/data/threat_intelligence/YaraFile/{yara_file.id}"
+            f"{self.api_base_url}/api/data/threat_intelligence/YaraFile/{yara_file.id}"
         )
-        body = {"source_id": self.yara_list_id}
         body = {
             "source_id": self.yara_list_id,
             "name": yara_file.name,
@@ -381,7 +374,7 @@ class HarfanglabClient:
         :param yara_file: Yara file to delete
         """
         url = (
-            self.api_base_url + f"/api/data/threat_intelligence/YaraFile/{yara_file.id}"
+            f"{self.api_base_url}/api/data/threat_intelligence/YaraFile/{yara_file.id}"
         )
 
         self._send_request(method="delete", url=url)
