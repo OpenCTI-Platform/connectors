@@ -40,9 +40,9 @@ class ConnectorClient:
 
     def get_entities(self, params=None) -> dict:
         """
-        If params is None, retrieve all CVEs in National Vulnerability Database
-        :param params: Optional Params to filter what list to return
-        :return: A list of dicts of the complete collection of CVE from NVD
+        If params is None, retrieve all bundles
+        :param params: Optional Params to pass to requests
+        :return: A list of stix objects from Wiz threats
         TOOD: Add filter
         """
         try:
@@ -51,8 +51,6 @@ class ConnectorClient:
             # ===========================
 
             response = self._request_data(WIZ_STIX_URL, params=params)
-
-            # response = self._request_data(self.config.api_base_url, params=params)
 
             return response.json()
             # ===========================
