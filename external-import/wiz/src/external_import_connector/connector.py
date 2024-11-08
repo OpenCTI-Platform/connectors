@@ -1,5 +1,4 @@
 import sys
-import uuid
 from datetime import datetime
 
 from pycti import OpenCTIConnectorHelper
