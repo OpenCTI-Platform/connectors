@@ -365,7 +365,7 @@ class Flashpoint:
 
     def _import_malware(self, work_id):
         msg = (
-            "/document/apt/wiki has been deprecated by Flashpoint Ignite, the option import apt does not "
+            "/document/malware/wiki has been deprecated by Flashpoint Ignite, the option import malware does not "
             "work anymore and will be removed in a future version."
         )
         warnings.warn(
