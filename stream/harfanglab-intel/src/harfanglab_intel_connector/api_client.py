@@ -1,3 +1,5 @@
+import json
+
 import requests
 
 from .models import harfanglab
@@ -14,7 +16,11 @@ class HarfanglabClient:
         self.config = config
 
         # Define headers in session and update when needed
-        headers = {"Authorization": "Token " + self.config.harfanglab_token}
+        headers = {
+            "Authorization": "Token " + self.config.harfanglab_token,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
         self.session = requests.Session()
         self.session.headers.update(headers)
 
@@ -108,21 +114,24 @@ class HarfanglabClient:
         if len(results):
             return results[0]
 
-    def post_ioc_rule(self, ioc_rule: harfanglab.IOCRule) -> None:
+    def post_ioc_rule(self, ioc_rule: harfanglab.IOCRule) -> harfanglab.IOCRule:
         """
         Create an IOC rule on Harfanglab.
         :param ioc_rule: IOC rule to create
         """
         url = self.api_base_url + f"/api/data/threat_intelligence/IOCRule"
-        body = {"source_id": self.ioc_list_id}
-        body.update(vars(ioc_rule))
+        body = {
+            "source_id": self.ioc_list_id,
+            "type": ioc_rule.type,
+            "value": ioc_rule.value,
+            "description": ioc_rule.description or "",
+            "hl_status": ioc_rule.hl_status,
+            "hl_local_testing_status": "in_progess",
+            "enabled": ioc_rule.enabled,
+            "comment": json.dumps(ioc_rule.comment) if ioc_rule.comment else "",
+        }
 
-        self._send_request(
-            method="post",
-            url=url,
-            json=body,
-        )
-
+        data = self._send_request(method="post", url=url, json=body)
     def get_ioc_rule(self, ioc_value: str) -> harfanglab.IOCRule:
         """
         Get an IOC rule from Harfanglab.
@@ -142,19 +151,24 @@ class HarfanglabClient:
             result = results[0]
             return harfanglab.IOCRule(**result)
 
-    def patch_ioc_rule(self, ioc_rule: harfanglab.IOCRule) -> None:
+    def patch_ioc_rule(self, ioc_rule: harfanglab.IOCRule) -> harfanglab.IOCRule:
         """
         Update an IOC rule on Harfanglab.
         :param ioc_rule: IOC rule to update
         """
         url = self.api_base_url + f"/api/data/threat_intelligence/IOCRule/{ioc_rule.id}"
-        body = {"source_id": self.ioc_list_id}
-        body.update(vars(ioc_rule))
+        body = {
+            "source_id": self.ioc_list_id,
+            "type": ioc_rule.type,
+            "value": ioc_rule.value,
+            "description": ioc_rule.description or "",
+            "hl_status": ioc_rule.hl_status,
+            "hl_local_testing_status": "in_progess",
+            "enabled": ioc_rule.enabled,
+            "comment": json.dumps(ioc_rule.comment) if ioc_rule.comment else "",
+        }
 
-        self._send_request(
-            method="patch",
-            url=url,
-            json=body,
+        data = self._send_request(method="patch", url=url, json=body)
         )
 
     def delete_ioc_rule(self, ioc_rule: harfanglab.IOCRule) -> None:
@@ -166,21 +180,22 @@ class HarfanglabClient:
 
         self._send_request(method="delete", url=url)
 
-    def post_sigma_rule(self, sigma_rule: harfanglab.SigmaRule) -> None:
+    def post_sigma_rule(self, sigma_rule: harfanglab.SigmaRule) -> harfanglab.SigmaRule:
         """
         Create a Sigma rule on Harfanglab.
         :param sigma_rule: Sigma rule to create
         """
         url = self.api_base_url + f"/api/data/threat_intelligence/SigmaRule"
-        body = {"source_id": self.sigma_list_id}
-        body.update(vars(sigma_rule))
+        body = {
+            "source_id": self.sigma_list_id,
+            "name": sigma_rule.name,
+            "content": sigma_rule.content,
+            "hl_status": sigma_rule.hl_status,
+            "hl_local_testing_status": "in_progress",
+            "enabled": sigma_rule.enabled,
+        }
 
-        self._send_request(
-            method="post",
-            url=url,
-            json=body,
-        )
-
+        data = self._send_request(method="post", url=url, json=body)
     def get_sigma_rule(self, sigma_rule_name: str) -> harfanglab.SigmaRule:
         """
         Get a Sigma rule from Harfanglab.
@@ -200,7 +215,9 @@ class HarfanglabClient:
             result = results[0]
             return harfanglab.SigmaRule(**result)
 
-    def patch_sigma_rule(self, sigma_rule: harfanglab.SigmaRule) -> None:
+    def patch_sigma_rule(
+        self, sigma_rule: harfanglab.SigmaRule
+    ) -> harfanglab.SigmaRule:
         """
         Update a Sigma rule on Harfanglab.
         :param sigma_rule: Sigma rule to update
@@ -209,13 +226,16 @@ class HarfanglabClient:
             self.api_base_url
             + f"/api/data/threat_intelligence/SigmaRule/{sigma_rule.id}"
         )
-        body = {"source_id": self.sigma_list_id}
-        body.update(vars(sigma_rule))
+        body = {
+            "source_id": self.sigma_list_id,
+            "name": sigma_rule.name,
+            "content": sigma_rule.content,
+            "hl_status": sigma_rule.hl_status,
+            "hl_local_testing_status": "in_progress",
+            "enabled": sigma_rule.enabled,
+        }
 
-        self._send_request(
-            method="patch",
-            url=url,
-            json=body,
+        data = self._send_request(method="patch", url=url, json=body)
         )
 
     def delete_sigma_rule(self, sigma_rule: harfanglab.SigmaRule) -> None:
@@ -230,21 +250,22 @@ class HarfanglabClient:
 
         self._send_request(method="delete", url=url)
 
-    def post_yara_file(self, yara_file: harfanglab.YaraFile) -> None:
+    def post_yara_file(self, yara_file: harfanglab.YaraFile) -> harfanglab.YaraFile:
         """
         Create a Yara file on Harfanglab.
         :param yara_file: Yara file to create
         """
         url = self.api_base_url + f"/api/data/threat_intelligence/YaraFile"
-        body = {"source_id": self.yara_list_id}
-        body.update(vars(yara_file))
+        body = {
+            "source_id": self.yara_list_id,
+            "name": yara_file.name,
+            "content": yara_file.content,
+            "hl_status": yara_file.hl_status,
+            "hl_local_testing_status": "in_progress",
+            "enabled": yara_file.enabled,
+        }
 
-        self._send_request(
-            method="post",
-            url=url,
-            json=body,
-        )
-
+        data = self._send_request(method="post", url=url, json=body)
     def get_yara_file(self, yara_file_name: str) -> harfanglab.YaraFile:
         """
         Get a Yara file from Harfanglab.
@@ -264,7 +285,7 @@ class HarfanglabClient:
             result = results[0]
             return harfanglab.YaraFile(**result)
 
-    def patch_yara_file(self, yara_file: harfanglab.YaraFile) -> None:
+    def patch_yara_file(self, yara_file: harfanglab.YaraFile) -> harfanglab.YaraFile:
         """
         Update a Yara file on Harfanglab.
         :param yara_file: Yara file to update
@@ -273,12 +294,16 @@ class HarfanglabClient:
             self.api_base_url + f"/api/data/threat_intelligence/YaraFile/{yara_file.id}"
         )
         body = {"source_id": self.yara_list_id}
-        body.update(vars(yara_file))
+        body = {
+            "source_id": self.yara_list_id,
+            "name": yara_file.name,
+            "content": yara_file.content,
+            "hl_status": yara_file.hl_status,
+            "hl_local_testing_status": "in_progress",
+            "enabled": yara_file.enabled,
+        }
 
-        self._send_request(
-            method="patch",
-            url=url,
-            json=body,
+        data = self._send_request(method="patch", url=url, json=body)
         )
 
     def delete_yara_file(self, yara_file: harfanglab.YaraFile) -> None:
