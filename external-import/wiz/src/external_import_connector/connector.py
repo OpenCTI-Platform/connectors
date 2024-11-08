@@ -78,21 +78,6 @@ class ConnectorTemplate:
                 if entity["modified"] < state["last_run"]:
                     del entities[i]
                     continue
-
-            # External References must be a list and at plural
-            if entity["type"] == "campaign" and "external_reference" in entity:
-                external_refs = [
-                    {
-                        "source_name": entity["external_reference"]["source_name"],
-                        "url": entity["external_reference"]["url"],
-                    }
-                ]
-                del entities[i]["external_reference"]
-                entities[i]["external_references"] = external_refs
-
-            # ID of relationships not well structured https://github.com/oasis-open/cti-python-stix2/issues/188
-            if entity["type"] == "relationship":
-                entities[i]["id"] = f"relationship--{uuid.uuid4()}"
             i += 1
 
         return entities
