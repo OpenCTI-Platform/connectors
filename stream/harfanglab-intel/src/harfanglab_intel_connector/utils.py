@@ -1,4 +1,5 @@
 from stix_shifter.stix_translation import stix_translation
+from validators import hashes
 
 stix_translater = stix_translation.StixTranslation()
 
@@ -38,4 +39,11 @@ def build_observable_query_filters(stix_pattern: str) -> list[dict]:
                 "values": [filter_value],
             }
             observables_filters.append(observables_filter)
-        return observables_filters
+
+def is_file_hash(string: str) -> bool:
+    return (
+        hashes.md5(string) is True
+        or hashes.sha1(string) is True
+        or hashes.sha256(string) is True
+        or hashes.sha512(string) is True
+    )

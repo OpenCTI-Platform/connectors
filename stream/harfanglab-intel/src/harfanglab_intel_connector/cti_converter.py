@@ -1,5 +1,5 @@
 from .models import harfanglab, opencti
-from .utils import parse_stix_pattern
+from .utils import is_file_hash
 
 IOC_TYPES_BY_OBJECT_PATH = {
     "domain-name:value": "domain_name",
@@ -8,6 +8,14 @@ IOC_TYPES_BY_OBJECT_PATH = {
     "ipv6-addr:value": "ip_both",
     "file:name": "filename",
     "file:hashes": "hash",
+}
+
+IOC_TYPES_BY_ENTITY_TYPE = {
+    "domain-name": "domain_name",
+    "hostname": "domain_name",
+    "ipv4-addr": "ip_both",
+    "ipv6-addr": "ip_both",
+    "stixfile": ["filename", "hash"],
 }
 
 
@@ -29,9 +37,7 @@ class CTIConverter:
         :param observable: OpenCTI Observable to create IOC rule for
         :return: Harfanglab IOC rule
         """
-        ioc_type = CTIConverter._get_ioc_type_from_stix_pattern(
-            indicator.pattern, observable
-        )
+        ioc_type = CTIConverter._get_ioc_type(indicator, observable)
 
         ioc_rule = harfanglab.IOCRule(
             type=ioc_type,
@@ -40,7 +46,7 @@ class CTIConverter:
             comment={
                 "indicator_id": indicator.standard_id,
                 "indicator_score": indicator.x_opencti_score,
-                "indicator_platforms": indicator.x_opencti_platforms,
+                "indicator_platforms": indicator.x_mitre_platforms,
             },
             hl_status=self.config.harfanglab_rule_maturity,
             enabled=True,
@@ -49,7 +55,7 @@ class CTIConverter:
 
     def create_sigma_rule(self, indicator: opencti.Indicator) -> harfanglab.SigmaRule:
         """
-        Create a Harfanglab Sigma rule based on an observable and the indicator referencing it.
+        Create a Harfanglab Sigma rule based on an indicator.
         :param indicator: OpenCTI Indicator referencing observable
         :return: Harfanglab IOC rule
         """
@@ -63,7 +69,7 @@ class CTIConverter:
 
     def create_yara_file(self, indicator: opencti.Indicator) -> harfanglab.YaraFile:
         """
-        Create a Harfanglab Yara file based on an observable and the indicator referencing it.
+        Create a Harfanglab Yara file based on an indicator.
         :param indicator: OpenCTI Indicator referencing observable
         :return: Harfanglab IOC rule
         """
@@ -76,22 +82,29 @@ class CTIConverter:
         return yara
 
     @staticmethod
-    def _get_ioc_type_from_stix_pattern(
-        stix_pattern: str, observable: opencti.Observable
+    def _get_ioc_type(
+        indicator: opencti.Indicator, observable: opencti.Observable
     ) -> str:
         """
-        Get IOC rule type based on an OpenCTI observable referenced in STIX pattern.
-        :param stix_pattern: STIX pattern referencing observable
-        :param observable: OpenCTI observable referenced in STIX pattern
+        Get IOC rule type based on an OpenCTI observable referenced in indicator's STIX pattern.
+        :param indicator: OpenCTI indicator referencing observable
+        :param observable: OpenCTI observable referenced in indicator's STIX pattern
         :return: IOC rule type
         """
         ioc_type = None
-        parsed_patterns = parse_stix_pattern(stix_pattern)
-        if parsed_patterns:
-            object_path = next(
-                parsed_pattern["attribute"].split(".")[0]
-                for parsed_pattern in parsed_patterns
-                if parsed_pattern["value"] == observable.value
-            )
-            ioc_type = IOC_TYPES_BY_OBJECT_PATH[object_path]
+        for observable_tuple in indicator.observables:
+            object_path, indicator_observable = observable_tuple
+            if indicator_observable.value == observable.value:
+                if object_path:
+                    ioc_type = IOC_TYPES_BY_OBJECT_PATH.get(object_path.lower())
+                else:
+                    if observable.entity_type.lower() == "stixfile":
+                        ioc_type = (
+                            "hash" if is_file_hash(observable.value) else "filename"
+                        )
+                    else:
+                        ioc_type = IOC_TYPES_BY_ENTITY_TYPE.get(
+                            observable.entity_type.lower()
+                        )
+                break
         return ioc_type
