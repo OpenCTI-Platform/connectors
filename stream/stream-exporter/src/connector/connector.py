@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from json.decoder import JSONDecodeError
 from pathlib import Path
 from queue import Queue
 
@@ -159,7 +160,12 @@ class StreamExporterConnector:
             # (ref: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events)
             msg = self.queue.get()
 
-            payload = json.loads(msg.data)
+            try:
+                payload = json.loads(msg.data)
+            except JSONDecodeError as e:
+                self.helper.log_error(f"Invalid json {msg.data}: {e}")
+                continue
+
             payload["id"] = msg.id
             payload["type"] = msg.event
 
