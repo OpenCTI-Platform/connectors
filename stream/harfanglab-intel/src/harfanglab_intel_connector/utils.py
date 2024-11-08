@@ -24,7 +24,7 @@ def parse_stix_pattern(stix_pattern: str) -> list[dict]:
         raise RuntimeError(f"Cannot parse STIX pattern {stix_pattern}")
 
 
-def get_context_former_value(context: dict, key: str):
+def get_context_former_value(context: dict, key: str) -> str:
     """
     Get former value of given key in event context.
     :param context: Event context (e.g. operations occured during an update)
@@ -44,6 +44,11 @@ def get_context_former_value(context: dict, key: str):
 
 
 def is_file_hash(string: str) -> bool:
+    """
+    Check if a string is a valid hash. Checked hash algorithms are MD5, SHA-1, SHA-256 and SHA-512.
+    :param string: String to validate
+    :return: `True` if string is a valid hash, otherwise `False`
+    """
     return (
         hashes.md5(string) is True
         or hashes.sha1(string) is True
