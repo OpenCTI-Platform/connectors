@@ -47,6 +47,17 @@ class HarfanglabIntelConnector:
         self.stix_converter = CTIConverter(self.config)
         self.api_client = HarfanglabClient(self.helper, self.config)
 
+    def check_stream_id(self) -> None:
+        """
+        In case of stream_id configuration is missing, raise ValueError
+        :return: None
+        """
+        if (
+            not self.helper.connect_live_stream_id
+            or self.helper.connect_live_stream_id.lower() == "changeme"
+        ):
+            raise ValueError("Missing stream ID, please check your configurations.")
+
     def _instantiate_indicator(self, data: dict) -> opencti.Indicator | None:
         indicator_id = None
         if data["type"] == "indicator":
@@ -170,6 +181,8 @@ class HarfanglabIntelConnector:
         :param msg: Message event from stream
         :return: string
         """
+        self.check_stream_id()
+
         try:
             parsed_msg = json.loads(msg.data)
         except json.JSONDecodeError:

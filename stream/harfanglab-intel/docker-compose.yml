@@ -21,8 +21,6 @@ services:
       - HARFANGLAB_INTEL_SOURCE_LIST_NAME=from_OpenCTI
       - HARFANGLAB_INTEL_REMOVE_INDICATOR=true # Removed or disabled rule in HarfangLab
       - HARFANGLAB_INTEL_RULE_MATURITY=stable # Available : stable or testing
-      - HARFANGLAB_INTEL_DEFAULT_MARKINGS=ChangeMe # Markings available : TLP:CLEAR - TLP:GREEN - TLP:AMBER - TLP:RED
-      - HARFANGLAB_INTEL_DEFAULT_SCORE=50 # Former confidence_level deprecated in OpenCTI version >= 6.0
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME

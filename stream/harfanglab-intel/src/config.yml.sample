@@ -19,5 +19,3 @@ harfanglab:
   source_list_name: 'from_OpenCTI'
   remove_indicator: true
   rule_maturity: 'stable' # Available : stable or testing
-  default_markings: 'TLP:GREEN' # Markings available : TLP:CLEAR - TLP:GREEN - TLP:AMBER - TLP:RED
-  default_score: 50
