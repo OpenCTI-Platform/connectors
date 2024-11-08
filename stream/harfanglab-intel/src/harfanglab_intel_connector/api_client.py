@@ -132,6 +132,17 @@ class HarfanglabClient:
         }
 
         data = self._send_request(method="post", url=url, json=body)
+        return data  # TODO: remove - to facilitate debug only
+        # return harfanglab.IOCRule(
+        #             id=data["id"],
+        #             type=data["type"],
+        #             value=data["value"],
+        #             description=data["description"],
+        #             comment=data["comment"],
+        #             hl_status=data["hl_status"],
+        #             enabled=data["enabled"],
+        #         )
+
     def get_ioc_rule(self, ioc_value: str) -> harfanglab.IOCRule:
         """
         Get an IOC rule from Harfanglab.
@@ -149,7 +160,15 @@ class HarfanglabClient:
         results = data["results"]
         if len(results):
             result = results[0]
-            return harfanglab.IOCRule(**result)
+            return harfanglab.IOCRule(
+                id=result["id"],
+                type=result["type"],
+                value=result["value"],
+                description=result["description"],
+                comment=result["comment"],
+                hl_status=result["hl_status"],
+                enabled=result["enabled"],
+            )
 
     def patch_ioc_rule(self, ioc_rule: harfanglab.IOCRule) -> harfanglab.IOCRule:
         """
@@ -169,6 +188,14 @@ class HarfanglabClient:
         }
 
         data = self._send_request(method="patch", url=url, json=body)
+        return harfanglab.IOCRule(
+            id=data["id"],
+            type=data["type"],
+            value=data["value"],
+            description=data["description"],
+            comment=data["comment"],
+            hl_status=data["hl_status"],
+            enabled=data["enabled"],
         )
 
     def delete_ioc_rule(self, ioc_rule: harfanglab.IOCRule) -> None:
@@ -196,6 +223,15 @@ class HarfanglabClient:
         }
 
         data = self._send_request(method="post", url=url, json=body)
+        return data  # TODO: remove - to facilitate debug only
+        # return harfanglab.SigmaRule(
+        #             id=data["id"],
+        #             name=data["name"],
+        #             content=data["content"],
+        #             hl_status=data["hl_status"],
+        #             enabled=data["enabled"],
+        #         )
+
     def get_sigma_rule(self, sigma_rule_name: str) -> harfanglab.SigmaRule:
         """
         Get a Sigma rule from Harfanglab.
@@ -213,7 +249,13 @@ class HarfanglabClient:
         results = data["results"]
         if len(results):
             result = results[0]
-            return harfanglab.SigmaRule(**result)
+            return harfanglab.SigmaRule(
+                id=result["id"],
+                name=result["name"],
+                content=result["content"],
+                hl_status=result["hl_status"],
+                enabled=result["enabled"],
+            )
 
     def patch_sigma_rule(
         self, sigma_rule: harfanglab.SigmaRule
@@ -236,6 +278,12 @@ class HarfanglabClient:
         }
 
         data = self._send_request(method="patch", url=url, json=body)
+        return harfanglab.SigmaRule(
+            id=data["id"],
+            name=data["name"],
+            content=data["content"],
+            hl_status=data["hl_status"],
+            enabled=data["enabled"],
         )
 
     def delete_sigma_rule(self, sigma_rule: harfanglab.SigmaRule) -> None:
@@ -266,6 +314,15 @@ class HarfanglabClient:
         }
 
         data = self._send_request(method="post", url=url, json=body)
+        return data  # TODO: remove - to facilitate debug only
+        # return harfanglab.YaraFile(
+        #             id=data["id"],
+        #             name=data["name"],
+        #             content=data["content"],
+        #             hl_status=data["hl_status"],
+        #             enabled=data["enabled"],
+        #         )
+
     def get_yara_file(self, yara_file_name: str) -> harfanglab.YaraFile:
         """
         Get a Yara file from Harfanglab.
@@ -283,7 +340,13 @@ class HarfanglabClient:
         results = data["results"]
         if len(results):
             result = results[0]
-            return harfanglab.YaraFile(**result)
+            return harfanglab.YaraFile(
+                id=result["id"],
+                name=result["name"],
+                content=result["content"],
+                hl_status=result["hl_status"],
+                enabled=result["enabled"],
+            )
 
     def patch_yara_file(self, yara_file: harfanglab.YaraFile) -> harfanglab.YaraFile:
         """
@@ -304,6 +367,12 @@ class HarfanglabClient:
         }
 
         data = self._send_request(method="patch", url=url, json=body)
+        return harfanglab.YaraFile(
+            id=data["id"],
+            name=data["name"],
+            content=data["content"],
+            hl_status=data["hl_status"],
+            enabled=data["enabled"],
         )
 
     def delete_yara_file(self, yara_file: harfanglab.YaraFile) -> None:

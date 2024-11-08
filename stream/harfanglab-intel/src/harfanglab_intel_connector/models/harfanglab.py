@@ -12,12 +12,11 @@ class IOCRule:
         comment: dict = None,
         hl_status: str = None,
         enabled: bool = True,
-        **kwargs  # TODO remove **kwargs
     ):
         self.id = id
         self.type = type
         self.value = value
-        self.description = description  # or "No description"
+        self.description = description
         self.comment = comment
         self.hl_status = hl_status
         self.enabled = enabled
@@ -35,7 +34,6 @@ class SigmaRule:
         content: str = None,
         hl_status: str = None,
         enabled: bool = None,
-        **kwargs  # TODO remove **kwargs
     ):
         self.id = id
         self.name = name
@@ -57,7 +55,6 @@ class YaraFile:
         content: str = None,
         hl_status: str = None,
         enabled: bool = None,
-        **kwargs  # TODO remove **kwargs
     ):
         self.id = id
         self.name = name

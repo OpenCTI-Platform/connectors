@@ -42,7 +42,7 @@ class CTIConverter:
         ioc_rule = harfanglab.IOCRule(
             type=ioc_type,
             value=observable.value,
-            description=indicator.description,  # or "No description",
+            description=indicator.description,
             comment={
                 "indicator_id": indicator.standard_id,
                 "indicator_score": indicator.x_opencti_score,
