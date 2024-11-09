@@ -5,7 +5,7 @@ idna==3.10
 pycti==6.3.11
 python-dateutil==2.9.0.post0
 pytz==2024.2
-regex==2024.9.11
+regex==2024.11.6
 simplejson==3.19.3
 six==1.16.0
 stix2-patterns==2.0.0
