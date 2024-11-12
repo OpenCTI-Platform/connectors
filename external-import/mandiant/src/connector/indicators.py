@@ -50,7 +50,7 @@ def create_indicator(connector, indicator):
     indicator_value = indicator["value"].replace("'", "%27")
     indicator_type = indicator["type"]
 
-    confidence = indicator.get("mscore", None)
+    indicator_score = indicator.get("mscore", None)
 
     mapping = MAPPING.get(indicator_type, None)
 
@@ -74,6 +74,7 @@ def create_indicator(connector, indicator):
     custom_properties = {
         "x_opencti_main_observable_type": observable_type,
         "x_opencti_create_observables": True,
+        "x_opencti_score": indicator_score,
     }
 
     return stix2.Indicator(
@@ -85,7 +86,6 @@ def create_indicator(connector, indicator):
         description=description,
         created=created,
         modified=modified,
-        confidence=confidence,
         created_by_ref=connector.identity["standard_id"],
         object_marking_refs=markings,
         custom_properties=custom_properties,
