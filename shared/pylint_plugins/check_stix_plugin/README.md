@@ -25,6 +25,12 @@ This class extends `pylint`'s `BaseChecker` and is responsible for visiting AST 
 
 ## Usage
 
+Install necessary dependencies:
+```shell
+cd shared/pylint_plugins/check_stix_plugin
+pip install -r requirements.txt
+```
+
 To use this checker in your project, add this module to your `pylint` configuration.
 
 You can also directly run it in CLI to lint a dedicated directory or python module : 
@@ -35,7 +41,7 @@ PYTHONPATH=. python -m pylint <path_to_my_code> --load-plugins linter_stix_id_ge
 If you only want to test the custom module :
 ```shell
 cd shared/pylint_plugins/check_stix_plugin
-PYTHONPATH=. python -m pylint <path_to_my_code> --disable=all --enable=no_generated_id_stix --load-plugins linter_stix_id_generator
+PYTHONPATH=. python -m pylint <path_to_my_code> --disable=all --enable=no_generated_id_stix,no-value-for-parameter,unused-import --load-plugins linter_stix_id_generator
 ```
 
 To make the linter easier to read :
