@@ -30,14 +30,17 @@ jobs:
           webhook_url: $MS_TEAMS_WEBHOOK_URL
   linter:
     docker:
-      - image: alpine/flake8
-    working_directory: ~/repo
+      - image: cimg/python:3.12
+    working_directory: ~/repo/shared/pylint_plugins/check_stix_plugin
     steps:
       - checkout
-      - run: apk update && apk upgrade && apk --no-cache add curl gettext
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
-          name: flake8
-          command: flake8 --ignore=E,W ~/repo
+          name: install dependencies
+          command: pip install -r requirements.txt
+      - run:
+          name: pylint
+          command: PYTHONPATH=. python -m pylint ../../../ --disable=all --enable=no_generated_id_stix,no-value-for-parameter,unused-import --load-plugins linter_stix_id_generator
       - slack/notify:
           event: fail
           template: basic_fail_1
