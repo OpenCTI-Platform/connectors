@@ -40,7 +40,7 @@ jobs:
           command: pip install -r ./shared/pylint_plugins/check_stix_plugin/requirements.txt
       - run:
           name: pylint
-          command: ./shared/pylint_plugins/check_stix_plugin && PYTHONPATH=. python -m pylint ../../../ --disable=all --enable=no_generated_id_stix,no-value-for-parameter,unused-import --load-plugins linter_stix_id_generator
+          command: cd ./shared/pylint_plugins/check_stix_plugin && PYTHONPATH=. python -m pylint ../../../ --disable=all --enable=no_generated_id_stix,no-value-for-parameter,unused-import --load-plugins linter_stix_id_generator
       - slack/notify:
           event: fail
           template: basic_fail_1
