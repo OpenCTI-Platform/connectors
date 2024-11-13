@@ -83,7 +83,7 @@ The Crowdstrike connector offers multiple scopes for data ingestion:
 - **indicator**
 - **yara_master**
 
-When the `yara_master` scope is enabled simultaneously with other scopes (i.e., `actor`, `report`, and `indicator`), ingestion speed can significantly slow down. Additionally, due to the large volume of data in `yara_master` and lack of pagination, the connector state may not update accurately.
+When the `yara_master` scope is enabled simultaneously with other scopes (i.e., `actor`, `report`, and `indicator`), ingestion speed can significantly slow down. Additionally, due to the large volume of data (about 13GB) in `yara_master` and lack of pagination, the connector state may not update accurately.
 
 ### Root Cause
 The `yara_master` scope imports a high volume of data. Since pagination is not available, this overwhelms the connector when combined with other scopes, leading to:
