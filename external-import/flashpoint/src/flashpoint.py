@@ -511,9 +511,6 @@ class Flashpoint:
                                 )
 
                                 # Channel
-                                channel_external_reference = stix2.ExternalReference(
-                                    source_name="URL", url=item["site_source_uri"]
-                                )
                                 channel = CustomObjectChannel(
                                     id=Channel.generate_id(
                                         (
@@ -532,7 +529,16 @@ class Flashpoint:
                                     .replace("<x-fp-highlight>", "")
                                     .replace("</x-fp-highlight>", ""),
                                     channel_types=[item["site"]],
-                                    external_references=[channel_external_reference],
+                                    external_references=(
+                                        [
+                                            stix2.ExternalReference(
+                                                source_name="URL",
+                                                url=item["site_source_uri"],
+                                            )
+                                        ]
+                                        if item.get("site_source_uri")
+                                        else []
+                                    ),
                                 )
                                 media_content = CustomObservableMediaContent(
                                     title=title,
@@ -785,14 +791,6 @@ class Flashpoint:
                                                             ],
                                                         )
                                                         # Channel
-                                                        channel_external_reference = (
-                                                            stix2.ExternalReference(
-                                                                source_name="URL",
-                                                                url=item[
-                                                                    "site_source_uri"
-                                                                ],
-                                                            )
-                                                        )
                                                         channel = CustomObjectChannel(
                                                             name=(
                                                                 item["container_name"]
@@ -817,9 +815,20 @@ class Flashpoint:
                                                                     "",
                                                                 )
                                                             ],
-                                                            external_references=[
-                                                                channel_external_reference
-                                                            ],
+                                                            external_references=(
+                                                                [
+                                                                    stix2.ExternalReference(
+                                                                        source_name="URL",
+                                                                        url=item[
+                                                                            "site_source_uri"
+                                                                        ],
+                                                                    )
+                                                                ]
+                                                                if item.get(
+                                                                    "site_source_uri"
+                                                                )
+                                                                else []
+                                                            ),
                                                         )
                                                         relationship_uses = stix2.Relationship(
                                                             id=StixCoreRelationship.generate_id(
