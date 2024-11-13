@@ -72,3 +72,35 @@ Below are the parameters you'll need to set for CrowdStrike Connector:
 | Indicator Unwanted Labels     | `indicator_unwanted_labels`     | `CROWDSTRIKE_INDICATOR_UNWANTED_LABELS`     | /                             | No         | /                                                          | Indicators to be excluded from import based on the labels affixed to them.                                |
 
 **Note**: It is not recommended to use the default value `0` for configuration parameters `report_start_timestamp` and `indicator_start_timestamp` because of the large data volumes.
+
+## Known Issues and Workarounds for Crowdstrike Connector Scopes
+
+### Issue
+
+The Crowdstrike connector offers multiple scopes for data ingestion: 
+- **actor**
+- **report**
+- **indicator**
+- **yara_master**
+
+When the `yara_master` scope is enabled simultaneously with other scopes (i.e., `actor`, `report`, and `indicator`), ingestion speed can significantly slow down. Additionally, due to the large volume of data in `yara_master` and lack of pagination, the connector state may not update accurately.
+
+### Root Cause
+The `yara_master` scope imports a high volume of data. Since pagination is not available, this overwhelms the connector when combined with other scopes, leading to:
+- Slow ingestion performance.
+- Incomplete or inaccurate updates to the connector state.
+
+### Workaround
+To address this issue, set up two separate Crowdstrike connectors, each dedicated to specific scopes:
+
+1. **Primary Connector**:
+   - Scopes: `actor`, `report`, and `indicator`
+   - This connector will handle the main threat intelligence data without `yara_master` data, ensuring timely ingestion and accurate updates.
+
+2. **Secondary Connector**:
+   - Scope: `yara_master` only
+   - This connector will handle `yara_master` data independently, which allows it to manage the high data volume without interfering with the ingestion of other scope data.
+
+### Summary
+
+By isolating the `yara_master` scope in a dedicated connector, you avoid slow ingestion rates and inaccurate state updates, ensuring efficient and stable data processing across all scopes.
