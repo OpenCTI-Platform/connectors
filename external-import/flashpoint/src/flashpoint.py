@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import time
+import warnings
 
 import html2text
 import pytz
@@ -81,12 +82,6 @@ class Flashpoint:
         self.flashpoint_import_indicators = get_config_variable(
             "FLASHPOINT_IMPORT_INDICATORS",
             ["flashpoint", "import_indicators"],
-            config,
-            default=True,
-        )
-        self.flashpoint_import_vulnerabilities = get_config_variable(
-            "FLASHPOINT_IMPORT_VULNERABILITIES",
-            ["flashpoint", "import_vulnerabilities"],
             config,
             default=True,
         )
@@ -356,68 +351,30 @@ class Flashpoint:
 
     def _import_apt(self, work_id):
         # Query params
-        url = self.flashpoint_api_app_url + "/documents/apt/wiki"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + self.flashpoint_api_key,
-        }
-        response = requests.get(url, headers=headers)
-        data = json.loads(response.content)
-        objects = []
-        try:
-            if "data" in data:
-                for apt in data["data"]:
-                    intrusion_set_stix = stix2.IntrusionSet(
-                        id=IntrusionSet.generate_id(apt["apt_group"]),
-                        name=apt["apt_group"],
-                        aliases=apt["aliases"],
-                        description=self._convert_to_markdown(apt["body"]["raw"]),
-                        created_by_ref=self.identity["standard_id"],
-                        object_marking_refs=[stix2.TLP_GREEN.get("id")],
-                    )
-                    objects.append(intrusion_set_stix)
-            self.helper.send_stix2_bundle(
-                stix2.Bundle(
-                    objects=objects,
-                    allow_custom=True,
-                ).serialize(),
-                work_id=work_id,
-            )
-        except Exception as e:
-            self.helper.log_error(str(e))
+        msg = (
+            "/document/apt/wiki has been deprecated by Flashpoint Ignite, the option import apt does not "
+            "work anymore and will be removed in a future version."
+        )
+        warnings.warn(
+            message=msg,
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        self.helper.connector_logger.warning(msg)  # warns connector user
+        self.helper.api.work.to_processed(work_id, msg)  # warns OpenCTI user
 
     def _import_malware(self, work_id):
-        # Query params
-        url = self.flashpoint_api_app_url + "/documents/malware/wiki"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + self.flashpoint_api_key,
-        }
-        response = requests.get(url, headers=headers)
-        data = json.loads(response.content)
-        objects = []
-        try:
-            if "data" in data:
-                for malware in data["data"]:
-                    malware_stix = stix2.Malware(
-                        id=Malware.generate_id(malware["malware_family_name"]),
-                        name=malware["malware_family_name"],
-                        is_family=True,
-                        aliases=malware["aliases"],
-                        description=self._convert_to_markdown(malware["body"]["raw"]),
-                        created_by_ref=self.identity["standard_id"],
-                        object_marking_refs=[stix2.TLP_AMBER.get("id")],
-                    )
-                    objects.append(malware_stix)
-            self.helper.send_stix2_bundle(
-                stix2.Bundle(
-                    objects=objects,
-                    allow_custom=True,
-                ).serialize(),
-                work_id=work_id,
-            )
-        except Exception as e:
-            self.helper.log_error(str(e))
+        msg = (
+            "/document/malware/wiki has been deprecated by Flashpoint Ignite, the option import malware does not "
+            "work anymore and will be removed in a future version."
+        )
+        warnings.warn(
+            message=msg,
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        self.helper.connector_logger.warning(msg)  # warns connector user
+        self.helper.api.work.to_processed(work_id, msg)  # warns OpenCTI user
 
     def _import_reports(self, work_id, start_date):
         # Query params
