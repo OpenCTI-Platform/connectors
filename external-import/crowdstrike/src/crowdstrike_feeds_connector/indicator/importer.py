@@ -119,7 +119,7 @@ class IndicatorImporter(BaseImporter):
         self.report_fetcher.clear_cache()
 
     def _fetch_indicators(self, fetch_timestamp: int) -> [List, None, None]:
-        limit = 10000
+        limit = 1000
         sort = "last_updated|asc"
         fql_filter = f"last_updated:>{fetch_timestamp}"
 
