@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
-  name: 'External Import Connector IBM X-Force PTI'
+  name: 'External Import Connector IBM X-Force Premier Threat Intelligence Services'
   scope: 'ChangeMe'
   log_level: 'info'
   duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
@@ -19,6 +19,8 @@ connector:
   #send_to_directory_path: 'ChangeMe'
   #send_to_directory_retention: 7
 
-connector_ibm_xforce_pti:
-  api_base_url: 'ChangeMe'
-  api_key: 'ChangeMe'
+connector_ibm_xti:
+  taxii_server_url: 'ChangeMe'
+  taxii_user: 'ChangeMe'
+  taxii_pass: 'ChangeMe'
+  #taxii_collections: 'ChangeMe, ChangeMe'

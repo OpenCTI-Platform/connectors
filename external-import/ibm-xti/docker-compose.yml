@@ -1,16 +1,17 @@
 version: '3'
 services:
-  connector-ibm-xforce-pti:
-    image: opencti/connector-ibm-xforce-pti:6.2.4
+  connector-ibm-xti:
+    image: opencti/connector-ibm-xti:6.2.4
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=CHANGEME
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=CHANGEME
       - CONNECTOR_SCOPE=CHANGEME
-      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=CHANGEME # ISO8601 format in String, start with 'P...' for Period
 
       # Connector's definition parameters OPTIONAL
@@ -22,8 +23,10 @@ services:
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
       # Connector's custom execution parameters
-      - CONNECTOR_IBM_XFORCE_PTI_API_BASE_URL=CHANGEME
-      - CONNECTOR_IBM_XFORCE_PTI_API_KEY=CHANGEME
+      - CONNECTOR_IBM_XTI_TAXII_SERVER_URL=CHANGEME
+      - CONNECTOR_IBM_XTI_TAXII_USER=CHANGEME
+      - CONNECTOR_IBM_XTI_TAXII_PASS=CHANGEME
+      # - CONNECTOR_IBM_XTI_TAXII_COLLECTIONS="CHANGEME, CHANGEME"
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME
