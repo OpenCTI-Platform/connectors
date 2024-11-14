@@ -132,16 +132,15 @@ class HarfanglabClient:
         }
 
         data = self._send_request(method="post", url=url, json=body)
-        return data  # TODO: remove - to facilitate debug only
-        # return harfanglab.IOCRule(
-        #             id=data["id"],
-        #             type=data["type"],
-        #             value=data["value"],
-        #             description=data["description"],
-        #             comment=data["comment"],
-        #             hl_status=data["hl_status"],
-        #             enabled=data["enabled"],
-        #         )
+        return harfanglab.IOCRule(
+            id=data["id"],
+            type=data["type"],
+            value=data["value"],
+            description=data["description"],
+            comment=data["comment"],
+            hl_status=data["hl_status"],
+            enabled=data["enabled"],
+        )
 
     def get_ioc_rule(self, ioc_value: str) -> harfanglab.IOCRule:
         """
@@ -222,15 +221,15 @@ class HarfanglabClient:
             "enabled": sigma_rule.enabled,
         }
 
-        data = self._send_request(method="post", url=url, json=body)
-        return data  # TODO: remove - to facilitate debug only
-        # return harfanglab.SigmaRule(
-        #             id=data["id"],
-        #             name=data["name"],
-        #             content=data["content"],
-        #             hl_status=data["hl_status"],
-        #             enabled=data["enabled"],
-        #         )
+        response_data = self._send_request(method="post", url=url, json=body)
+        data = response_data["status"][0]
+        return harfanglab.SigmaRule(
+            id=data["id"],
+            name=data["filename"],
+            content=data["content"],
+            hl_status=body["hl_status"],
+            enabled=body["enabled"],
+        )
 
     def get_sigma_rule(self, sigma_rule_name: str) -> harfanglab.SigmaRule:
         """
@@ -307,15 +306,15 @@ class HarfanglabClient:
             "enabled": yara_file.enabled,
         }
 
-        data = self._send_request(method="post", url=url, json=body)
-        return data  # TODO: remove - to facilitate debug only
-        # return harfanglab.YaraFile(
-        #             id=data["id"],
-        #             name=data["name"],
-        #             content=data["content"],
-        #             hl_status=data["hl_status"],
-        #             enabled=data["enabled"],
-        #         )
+        response_data = self._send_request(method="post", url=url, json=body)
+        data = response_data["status"][0]
+        return harfanglab.YaraFile(
+            id=data["id"],
+            name=data["filename"],
+            content=data["content"],
+            hl_status=body["hl_status"],
+            enabled=body["enabled"],
+        )
 
     def get_yara_file(self, yara_file_name: str) -> harfanglab.YaraFile:
         """
