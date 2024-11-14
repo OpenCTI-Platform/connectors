@@ -6,6 +6,7 @@ IOC_TYPES_BY_OBJECT_PATH = {
     "hostname:value": "domain_name",
     "ipv4-addr:value": "ip_both",
     "ipv6-addr:value": "ip_both",
+    "url:value": "url",
     "file:name": "filename",
     "file:hashes": "hash",
 }
@@ -15,6 +16,7 @@ IOC_TYPES_BY_ENTITY_TYPE = {
     "hostname": "domain_name",
     "ipv4-addr": "ip_both",
     "ipv6-addr": "ip_both",
+    "url": "url",
     "stixfile": ["filename", "hash"],
 }
 
