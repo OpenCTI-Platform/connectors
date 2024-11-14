@@ -1,16 +1,5 @@
 # OpenCTI RISKIQ Passive Total enrichment connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
-* Please find an example of expected documentation below
-* REQUIRED CHANGES => Check https://docs.opencti.io/latest/development/connectors/
--->
-
 Table of Contents
 - [Introduction](#introduction)
 - [Installation](#installation)
@@ -133,13 +122,6 @@ download of data by re-running the connector.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
-
 ### Here's how each record type is handled:
 
 `A Record`: `Resolves to an IPv4 address` and generates an IPv4-Addr observable with the STIX relationship `resolves-to` (Entity -> resolves-to -> IPv4).
@@ -168,12 +150,5 @@ e., `self.helper.connector_logger.error("An error message")`.
 <!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 
 ## Additional information
-
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
 
 The `RISKIQ_IMPORT_LAST_SEEN_TIME_WINDOW` environment variable specifies the time range used to filter imported data based on when it was last observed. This variable typically uses an ISO 8601 duration format (e.g., "P30D" for a 30-day window), allowing the connector to retrieve only records that have been observed within the specified period. This helps limit data to recent observations, optimizing performance and focusing on relevant, current information.

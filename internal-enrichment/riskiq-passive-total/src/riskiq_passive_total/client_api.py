@@ -1,10 +1,9 @@
+from datetime import datetime
 import requests
 from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
-
-from .utils import ConnectorUtils
 
 
 class ConnectorClient:
@@ -14,7 +13,6 @@ class ConnectorClient:
         """
         self.helper = helper
         self.config = config
-        self.utils = ConnectorUtils(self.helper, self.config)
         self.base_url = "https://api.riskiq.net/pt"
 
         # Define auth in session and config retries
@@ -55,9 +53,10 @@ class ConnectorClient:
                  that can be sent using `requests.Session`.
         """
         try:
+
             request = requests.Request("GET", f"{self.base_url}{path}", params=params)
-            request_prepared = self.session.prepare_request(request)
-            return request_prepared
+            return self.session.prepare_request(request)
+
         except Exception as e:
             self.helper.connector_logger.error(
                 "Error occurred while building the query request.", {"error": str(e)}
@@ -135,7 +134,7 @@ class ConnectorClient:
             )
             return None
 
-    def _check_license_status(self):
+    def _check_quota_reached(self) -> bool:
         """
         Checks the user's current quota status based on the provided query and compares it against the license limits.
 
@@ -203,7 +202,7 @@ class ConnectorClient:
         This method first checks if the user's quota for the `searchApi` has been reached.
         If the quota has been reached, it returns `None` and does not proceed with the query.
         If the quota has not been reached, it constructs a request to the PassiveTotal API endpoint, incorporating
-        "date_str" configured to filter the results based on the calculated duration specified in the
+        "formatted_date_iso_format" configured to filter the results based on the calculated duration specified in the
         "convert_to_duration_period" method.
 
         The method sends a GET request to the PassiveTotal API with the constructed parameters and returns the data.
@@ -217,19 +216,17 @@ class ConnectorClient:
             - `None` if the user's quota has been reached or if there is an issue with the request.
         """
 
-        is_quota_reached = self._check_license_status()
+        is_quota_reached = self._check_quota_reached()
         if is_quota_reached:
             return None
 
-        date_str = self.utils.convert_to_duration_period()
-        if date_str is None:
-            return None
+        new_date = datetime.now() - self.config.import_last_seen_time_window
+        formatted_date_iso_format = new_date.isoformat(timespec='seconds').replace("T", " ")
 
         params = {
             "query": stix_entity_value,
-            "start": date_str,
+            "start": formatted_date_iso_format,
         }
-        url_prepared = self.build_query_request("/v2/dns/passive", params)
-        results = self.fetch_data(url_prepared)
 
-        return results
+        url_prepared = self.build_query_request("/v2/dns/passive", params)
+        return self.fetch_data(url_prepared)

@@ -16,7 +16,7 @@ services:
       # Connector's custom execution parameters
       - RISKIQ_USERNAME=CHANGEME
       - RISKIQ_API_KEY=CHANGEME
-      - RISKIQ_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+      - RISKIQ_MAX_TLP=CHANGEME # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
       - RISKIQ_IMPORT_LAST_SEEN_TIME_WINDOW=CHANGEME # Default P30D
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME

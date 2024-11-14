@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 
 from pycti import OpenCTIConnectorHelper
 from stix2 import TLP_WHITE
@@ -99,14 +99,12 @@ class RiskIQPassiveTotalConnector:
             return []
 
         for result in enrichment_observable.get("results", []):
-            first_seen_date = datetime.datetime.strptime(
-                result.get("firstSeen"), "%Y-%m-%d %H:%M:%S"
-            )
-            last_seen_date = datetime.datetime.strptime(
-                result.get("lastSeen"), "%Y-%m-%d %H:%M:%S"
-            )
+
+            first_seen_date = datetime.fromisoformat(result.get("firstSeen").replace(" ", "T"))
+            last_seen_date = datetime.fromisoformat(result.get("lastSeen").replace(" ", "T"))
+
             if first_seen_date == last_seen_date:
-                last_seen_date = last_seen_date + datetime.timedelta(seconds=1)
+                last_seen_date = last_seen_date + timedelta(seconds=1)
 
             record_type = result.get("recordType")
             resolve_type = result.get("resolveType")
@@ -128,6 +126,17 @@ class RiskIQPassiveTotalConnector:
                 )
                 stix_objects.append(ipv4_observable_relationship)
 
+                self.helper.connector_logger.debug(
+                    "The generation of the observable stix of type IPv4-Addr as well as its relation with the entity "
+                    "has been carried out well",
+                    {
+                        "record_type": record_type,
+                        "resolve_type": resolve_type,
+                        "ipv4_id": ipv4_observable.get("id"),
+                        "relationship_id": ipv4_observable_relationship.get("id"),
+                     },
+                )
+
             # Create stix observable with relationship -> IPv6Address
             elif record_type == "AAAA" and resolve_type == "ip":
                 ipv6_observable = self.converter_to_stix.create_ipv6_observable(result)
@@ -144,6 +153,17 @@ class RiskIQPassiveTotalConnector:
                     )
                 )
                 stix_objects.append(ipv6_observable_relationship)
+
+                self.helper.connector_logger.debug(
+                    "The generation of the observable stix of type IPv6-Addr as well as its relation with the entity "
+                    "has been carried out well",
+                    {
+                        "record_type": record_type,
+                        "resolve_type": resolve_type,
+                        "ipv4_id": ipv6_observable.get("id"),
+                        "relationship_id": ipv6_observable_relationship.get("id"),
+                    },
+                )
 
             # Create stix observable with relationship -> EmailAddress
             elif record_type == "SOA" and resolve_type == "email":
@@ -163,6 +183,17 @@ class RiskIQPassiveTotalConnector:
                     )
                 )
                 stix_objects.append(email_observable_relationship)
+
+                self.helper.connector_logger.debug(
+                    "The generation of the observable stix of type Email-Addr as well as its relation with the entity "
+                    "has been carried out well",
+                    {
+                        "record_type": record_type,
+                        "resolve_type": resolve_type,
+                        "ipv4_id": email_observable.get("id"),
+                        "relationship_id": email_observable_relationship.get("id"),
+                    },
+                )
 
             # Create stix observable with relationship -> DomainName
             elif (
@@ -196,6 +227,17 @@ class RiskIQPassiveTotalConnector:
                     )
                 )
                 stix_objects.append(domain_observable_relationship)
+
+                self.helper.connector_logger.debug(
+                    "The generation of the observable stix of type Domain-Name as well as its relation with the entity "
+                    "has been carried out well",
+                    {
+                        "record_type": record_type,
+                        "resolve_type": resolve_type,
+                        "ipv4_id": domain_observable.get("id"),
+                        "relationship_id": domain_observable_relationship.get("id"),
+                    },
+                )
 
             else:
                 continue
@@ -243,7 +285,7 @@ class RiskIQPassiveTotalConnector:
         or equal to the markings access of the entity from OpenCTI
         If this is true, we can send the data to connector for enrichment.
         :param opencti_entity: observable to enrich
-        :return: Boolean
+        :return: None
         """
 
         if len(opencti_entity["objectMarking"]) != 0:
@@ -306,9 +348,10 @@ class RiskIQPassiveTotalConnector:
             return info_msg
 
         except Exception as err:
-            return self.helper.connector_logger.error(
+            self.helper.connector_logger.error(
                 "[CONNECTOR] Unexpected Error occurred", {"error_message": str(err)}
             )
+            raise
 
     def run(self) -> None:
         """

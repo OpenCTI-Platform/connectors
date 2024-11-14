@@ -2,7 +2,9 @@ import os
 from pathlib import Path
 
 import yaml
+from datetime import timedelta
 from pycti import get_config_variable
+from pydantic import TypeAdapter
 
 
 class ConfigConnector:
@@ -60,12 +62,17 @@ class ConfigConnector:
             ["riskiq", "max_tlp"],
             self.load,
             default=None,
-            required=False,
         )
 
-        self.import_last_seen_time_window = get_config_variable(
+        config_last_seen_time_window = get_config_variable(
             "RISKIQ_IMPORT_LAST_SEEN_TIME_WINDOW",
             ["riskiq", "import_last_seen_time_window"],
             self.load,
             default="P30D",
         )
+        self.import_last_seen_time_window = TypeAdapter(timedelta).validate_python(
+            config_last_seen_time_window
+        )
+
+
+

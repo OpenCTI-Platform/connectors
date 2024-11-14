@@ -19,8 +19,9 @@ class ConverterToStix:
     @staticmethod
     def create_author() -> stix2.Identity:
         """
-        Create Author
-        :return: Author in Stix2 object
+        Create an Identity Stix object
+
+        :return: An Identity STIX object
         """
         author = stix2.Identity(
             id=Identity.generate_id("RiskIQ PassiveTotal", "organization"),
@@ -34,9 +35,10 @@ class ConverterToStix:
 
     def create_ipv4_observable(self, data: dict) -> stix2.IPv4Address:
         """
-        Create observable according to value given
+        Create an IPv4Address observable object based on the provided PassiveTotal DNS data.
+
         :param data: Dictionary of PassiveDNS properties
-        :return: IPV4 observable object
+        :return: An IPv4Address STIX object
         """
         stix_ip_v4_observable = stix2.IPv4Address(
             value=data["resolve"],
@@ -50,9 +52,10 @@ class ConverterToStix:
 
     def create_ipv6_observable(self, data: dict) -> stix2.IPv6Address:
         """
-        Create observable according to value given
+        Create an IPv6Address observable object based on the provided PassiveTotal DNS data.
+
         :param data: Dictionary of PassiveDNS properties
-        :return: IPV4 observable object
+        :return: An IPv6Address STIX object
         """
         stix_ip_v6_observable = stix2.IPv6Address(
             value=data["resolve"],
@@ -66,9 +69,10 @@ class ConverterToStix:
 
     def create_domain_observable(self, data: dict) -> stix2.DomainName:
         """
-        Create observable according to value given
+        Create an DomainName observable object based on the provided PassiveTotal DNS data.
+
         :param data: Dictionary of PassiveDNS properties
-        :return: Domain observable object
+        :return: An DomainName STIX object
         """
         stix_domain_observable = stix2.DomainName(
             value=data["resolve"],
@@ -82,9 +86,10 @@ class ConverterToStix:
 
     def create_email_observable(self, data: dict) -> stix2.EmailAddress:
         """
-        Create observable according to value given
+        Create an EmailAddress observable object based on the provided PassiveTotal DNS data.
+
         :param data: Dictionary of PassiveDNS properties
-        :return: Email-address observable object
+        :return: An EmailAddress STIX object
         """
         stix_email_observable = stix2.EmailAddress(
             value=data["resolve"],
@@ -114,7 +119,7 @@ class ConverterToStix:
         :param start_time: This parameter is the start of the relationship. Value not required, None by default.
         :param stop_time: This parameter is the stop of the relationship. Value not required, None by default.
         :param description: This parameter allows to add a description, used here to add the associated DNS record type.
-        :return: StixCoreRelationship
+        :return: An StixCoreRelationship STIX object
         """
 
         return stix2.Relationship(
