@@ -71,6 +71,7 @@ flowchart LR
 
 ### Requirements
 
+- Python = 3.11.X (not compatible with 3.12 and above for now)
 - OpenCTI Platform >= 6.4.X
 - HarfangLab Threat Response >= 2.X.X
 - pycti >= 6.4.X
@@ -131,7 +132,7 @@ Example:
 
 ```shell
 # Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+docker build . -t [IMAGE NAME]:6.3.11
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
