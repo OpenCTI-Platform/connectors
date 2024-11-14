@@ -1,8 +1,8 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import yaml
-from datetime import timedelta
 from pycti import get_config_variable
 from pydantic import TypeAdapter
 
@@ -73,6 +73,3 @@ class ConfigConnector:
         self.import_last_seen_time_window = TypeAdapter(timedelta).validate_python(
             config_last_seen_time_window
         )
-
-
-

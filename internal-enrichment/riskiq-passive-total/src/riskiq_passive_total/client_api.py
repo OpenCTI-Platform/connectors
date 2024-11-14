@@ -1,4 +1,5 @@
 from datetime import datetime
+
 import requests
 from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
@@ -221,7 +222,9 @@ class ConnectorClient:
             return None
 
         new_date = datetime.now() - self.config.import_last_seen_time_window
-        formatted_date_iso_format = new_date.isoformat(timespec='seconds').replace("T", " ")
+        formatted_date_iso_format = new_date.isoformat(timespec="seconds").replace(
+            "T", " "
+        )
 
         params = {
             "query": stix_entity_value,

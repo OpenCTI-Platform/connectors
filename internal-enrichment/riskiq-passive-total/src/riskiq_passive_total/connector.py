@@ -100,8 +100,12 @@ class RiskIQPassiveTotalConnector:
 
         for result in enrichment_observable.get("results", []):
 
-            first_seen_date = datetime.fromisoformat(result.get("firstSeen").replace(" ", "T"))
-            last_seen_date = datetime.fromisoformat(result.get("lastSeen").replace(" ", "T"))
+            first_seen_date = datetime.fromisoformat(
+                result.get("firstSeen").replace(" ", "T")
+            )
+            last_seen_date = datetime.fromisoformat(
+                result.get("lastSeen").replace(" ", "T")
+            )
 
             if first_seen_date == last_seen_date:
                 last_seen_date = last_seen_date + timedelta(seconds=1)
@@ -134,7 +138,7 @@ class RiskIQPassiveTotalConnector:
                         "resolve_type": resolve_type,
                         "ipv4_id": ipv4_observable.get("id"),
                         "relationship_id": ipv4_observable_relationship.get("id"),
-                     },
+                    },
                 )
 
             # Create stix observable with relationship -> IPv6Address
