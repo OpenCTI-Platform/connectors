@@ -1,5 +1,4 @@
 import logging
-
 from stream_connector import ZscalerConnector
 
 if __name__ == "__main__":
