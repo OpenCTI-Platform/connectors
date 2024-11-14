@@ -1,4 +1,8 @@
 import sys
+<<<<<<< HEAD
+=======
+
+>>>>>>> c1d077800 (Create IBM XTI OpenCTI Connector)
 from datetime import datetime
 from threading import Lock, Thread
 from typing import NotRequired, Optional, TypedDict, cast
