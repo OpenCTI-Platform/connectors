@@ -119,7 +119,7 @@ class HarfanglabClient:
         Create an IOC rule on Harfanglab.
         :param ioc_rule: IOC rule to create
         """
-        url = f"{self.api_base_url}/api/data/threat_intelligence/IOCRule"
+        url = f"{self.api_base_url}/api/data/threat_intelligence/IOCRule/"  # trailing '/' is required
         body = {
             "source_id": self.ioc_list_id,
             "type": ioc_rule.type,
@@ -212,7 +212,7 @@ class HarfanglabClient:
         Create a Sigma rule on Harfanglab.
         :param sigma_rule: Sigma rule to create
         """
-        url = f"{self.api_base_url}/api/data/threat_intelligence/SigmaRule"
+        url = f"{self.api_base_url}/api/data/threat_intelligence/SigmaRule/"  # trailing '/' is required
         body = {
             "source_id": self.sigma_list_id,
             "name": sigma_rule.name,
@@ -297,7 +297,7 @@ class HarfanglabClient:
         Create a Yara file on Harfanglab.
         :param yara_file: Yara file to create
         """
-        url = f"{self.api_base_url}/api/data/threat_intelligence/YaraFile"
+        url = f"{self.api_base_url}/api/data/threat_intelligence/YaraFile/"  # trailing '/' is required
         body = {
             "source_id": self.yara_list_id,
             "name": yara_file.name,
