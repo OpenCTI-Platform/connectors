@@ -116,7 +116,7 @@ class ZscalerConnector:
                 )
                 return None
 
-        # If all attempts fail
+        
         logging.error(f"Max retries reached. Failed to complete the request.")
         return None
 
