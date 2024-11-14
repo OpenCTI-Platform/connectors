@@ -10,7 +10,7 @@ import validators
 import yaml
 from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
 
-from stream_connector.utils import obfuscate_api_key
+from utils import obfuscate_api_key
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
