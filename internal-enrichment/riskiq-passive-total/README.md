@@ -29,7 +29,8 @@ Table of Contents
 
 ## Introduction
 
-The OpenCTI RiskIQ Passive Total enrichment connector can be used to enrich ipv4-address and domain-name observables with Passive DNS information provided by the [RiskIQ PassiveTotal](https://community.riskiq.com). 
+The RiskIQ PassiveTotal enrichment connector can be used to enrich `IPv4-Addr` and `Domain-Name` observables with passive DNS data by creating STIX relationships based on different DNS record types.
+[See RiskIQ PassiveTotal](https://community.riskiq.com).
 
 ## Installation
 
@@ -55,24 +56,25 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter           | config.yml | Docker environment variable  | Default                   | Mandatory | Description                                                                              |
-|---------------------|------------|------------------------------|---------------------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID        | id         | `CONNECTOR_ID`               | /                         | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type      | type       | `CONNECTOR_TYPE`             | EXTERNAL_IMPORT           | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
-| Connector Name      | name       | `CONNECTOR_NAME`             | /                         | Yes       | Name of the connector.                                                                   |
-| Connector Scope     | scope      | `CONNECTOR_SCOPE`            | `IPv4-Addr,Domain-Name`   | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Connector Log Level | log_level  | `CONNECTOR_LOG_LEVEL`        | info                      | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Connector Auto      | auto 	     | `CONNECTOR_AUTO`             | False                     | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
-
+| Parameter           | config.yml | Docker environment variable | Default                 | Mandatory | Description                                                                              |
+|---------------------|------------|-----------------------------|-------------------------|-----------|------------------------------------------------------------------------------------------|
+| Connector ID        | id         | `CONNECTOR_ID`              | /                       | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
+| Connector Type      | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT         | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
+| Connector Name      | name       | `CONNECTOR_NAME`            | /                       | Yes       | Name of the connector.                                                                   |
+| Connector Scope     | scope      | `CONNECTOR_SCOPE`           | `IPv4-Addr,Domain-Name` | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Connector Log Level | log_level  | `CONNECTOR_LOG_LEVEL`       | info                    | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Connector Auto      | auto 	     | `CONNECTOR_AUTO`            | False                   | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
+ 
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter       | config.yml | Docker environment variable | Default | Mandatory | Description |
-|-----------------|------------|-----------------------------|---------|-----------|-------------|
-| RiskIQ username | username   | RISKIQ_USERNAME             | /       | Yes       |             |
-| RiskIQ API Key  | key        | RISKIQ_KEY                  | /       | Yes       |             |
-| Max TLP         | max_tlp    | RISKIQ_MAX_TLP              | /       | No        |             |
+| Parameter                    | config.yml                    | Docker environment variable          | Default | Mandatory | Description                                                                                                           |
+|------------------------------|-------------------------------|--------------------------------------|---------|-----------|-----------------------------------------------------------------------------------------------------------------------|
+| RiskIQ username              | username                      | RISKIQ_USERNAME                      | /       | Yes       | The username for authenticating RiskIQ API requests.                                                                  |
+| RiskIQ API Key               | api_key                       | RISKIQ_API_KEY                       | /       | Yes       | The API key for RiskIQ account access.                                                                                |
+| Max TLP                      | max_tlp                       | RISKIQ_MAX_TLP                       | /       | No        | The maximal TLP of the observable being enriched.                                                                     |
+| Import last seen time window | import_last_seen_time_window  | RISKIQ_IMPORT_LAST_SEEN_TIME_WINDOW  | `P30D`  | No        | Time window for importing data based on last-seen observations, using ISO duration format (e.g., 'P30D' for 30 days). |
 
 ## Deployment
 
@@ -120,7 +122,7 @@ python3 main.py
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml`.
 
 However, if you would like to force an immediate download of a new batch of entities, navigate to:
 
@@ -137,6 +139,24 @@ Describe how the connector functions:
 * Important considerations for users when utilizing this connector
 * Additional relevant details
 -->
+
+### Here's how each record type is handled:
+
+`A Record`: `Resolves to an IPv4 address` and generates an IPv4-Addr observable with the STIX relationship `resolves-to` (Entity -> resolves-to -> IPv4).
+
+`AAAA Record`: `Resolves to an IPv6 address` and generates an IPv6-Addr observable with the STIX relationship `resolves-to` (Entity -> resolves-to -> IPv6).
+
+`SOA Record`: Resolves to an email address, generating an Email-Addr observable with the STIX relationship `related-to` (Entity -> related-to -> Email).
+
+`SOA, MX, CNAME, NS Records`: `Resolve to domain names`, generating a Domain-Name observable with the STIX relationship `resolves-to` (Entity -> resolves-to -> Domain-Name).
+
+`A Record (for domains)`: In specific cases as defined by RiskIQ, this `resolves to a domain`, creating a Domain-Name observable with a reversed STIX relationship `resolves-to` (Domain-Name -> resolves-to -> Entity).
+
+### RiskIQ PassiveTotal API Endpoints used:
+
+`/v2/account/quota`: This endpoint provides information about the user's current quota for the searchApi resource. It includes details about the user's current usage and the quota limits. This helps monitor whether the API usage is approaching or exceeding the allowed limits and includes information about the next reset time.
+
+`/v2/dns/passive`: This endpoint allows querying the Passive DNS data for a specific entity, such as an IPv4 address or domain name. The response includes DNS records (such as A, AAAA, MX, SOA, etc.) associated with the provided entity, which can be used for enrichment in security and threat intelligence operations.
 
 
 ## Debugging
@@ -155,3 +175,5 @@ Any additional information about this connector
 * What should the user take into account when using this connector
 * ...
 -->
+
+The `RISKIQ_IMPORT_LAST_SEEN_TIME_WINDOW` environment variable specifies the time range used to filter imported data based on when it was last observed. This variable typically uses an ISO 8601 duration format (e.g., "P30D" for a 30-day window), allowing the connector to retrieve only records that have been observed within the specified period. This helps limit data to recent observations, optimizing performance and focusing on relevant, current information.

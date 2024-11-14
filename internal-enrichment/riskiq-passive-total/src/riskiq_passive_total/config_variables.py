@@ -44,26 +44,28 @@ class ConfigConnector:
             "RISKIQ_USERNAME",
             ["riskiq", "username"],
             self.load,
-            False,
-            "",
-            True,
+            required=True,
         )
 
         # Connector extra parameters
         self.riskiq_key = get_config_variable(
-            "RISKIQ_KEY",
-            ["riskiq", "key"],
+            "RISKIQ_API_KEY",
+            ["riskiq", "api_key"],
             self.load,
-            False,
-            "",
-            True,
+            required=True,
         )
 
         self.max_tlp = get_config_variable(
             "RISKIQ_MAX_TLP",
-            ["first_epss", "max_tlp"],
+            ["riskiq", "max_tlp"],
             self.load,
-            False,
-            None,
-            False,
+            default=None,
+            required=False,
+        )
+
+        self.import_last_seen_time_window = get_config_variable(
+            "RISKIQ_IMPORT_LAST_SEEN_TIME_WINDOW",
+            ["riskiq", "import_last_seen_time_window"],
+            self.load,
+            default="P30D",
         )

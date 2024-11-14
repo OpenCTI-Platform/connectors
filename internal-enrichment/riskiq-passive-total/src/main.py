@@ -1,6 +1,6 @@
 import traceback
 
-from internal_enrichment_connector import RiskIQPassiveTotalConnector
+from riskiq_passive_total import RiskIQPassiveTotalConnector
 
 if __name__ == "__main__":
     """

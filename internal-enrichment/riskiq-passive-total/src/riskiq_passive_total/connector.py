@@ -1,7 +1,7 @@
 import datetime
 
-import stix2
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship
+from pycti import OpenCTIConnectorHelper
+from stix2 import TLP_WHITE
 
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
@@ -65,110 +65,144 @@ class RiskIQPassiveTotalConnector:
 
     def _collect_intelligence(self, stix_entity) -> list:
         """
-        Collect intelligence from the source and convert into STIX object
-        :param stix_entity: observable to enrich
-        :return: List of STIX objects
+        Collects intelligence data from a specified source and converts it into STIX objects.
+
+        This method interacts with an external API to retrieve enrichment data based on the
+        provided STIX entity (observable). It processes the data and generates various
+        STIX observables (e.g., IPv4Address, IPv6Address, EmailAddress, DomainName) along
+        with relationships between them. The method appends these observables to a list which
+        is returned for further processing.
+
+        The method handles multiple types of DNS records (A, AAAA, SOA, MX, CNAME, NS) and
+        creates corresponding STIX observables and relationships for each record type.
+        The results are appended to the list and returned.
+
+        :param stix_entity: A dictionary representing a STIX entity (observable) to be enriched.
+                            Typically contains fields like 'id', 'value', etc.
+        :return: A list of STIX objects, including observables and relationships between them.
+                 If no enrichment data is found, an empty list is returned.
+
         """
 
         self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
+        stix_objects = []
 
+        # Create stix Identity
         self.author = self.converter_to_stix.create_author()
 
-        enrichment_response = self.api.passivetotal_get(stix_entity.get("value"))
-        stix_objects = []
-        for result in enrichment_response.get("results", []):
-            first_seen_date = datetime.datetime.strptime(result.get("firstSeen"), "%Y-%m-%d %H:%M:%S")
-            last_seen_date = datetime.datetime.strptime(result.get("lastSeen"), "%Y-%m-%d %H:%M:%S")
+        # Collection of enrichment data associated with the entity's STIX value
+        enrichment_observable = self.api.passivetotal_get_observables(
+            stix_entity.get("value")
+        )
+
+        if enrichment_observable is None:
+            return []
+
+        for result in enrichment_observable.get("results", []):
+            first_seen_date = datetime.datetime.strptime(
+                result.get("firstSeen"), "%Y-%m-%d %H:%M:%S"
+            )
+            last_seen_date = datetime.datetime.strptime(
+                result.get("lastSeen"), "%Y-%m-%d %H:%M:%S"
+            )
             if first_seen_date == last_seen_date:
                 last_seen_date = last_seen_date + datetime.timedelta(seconds=1)
 
-            if result.get("recordType") == "A" and result.get("resolveType") == "ip":
+            record_type = result.get("recordType")
+            resolve_type = result.get("resolveType")
+
+            # Create stix observable with relationship -> IPv4Address
+            if record_type == "A" and resolve_type == "ip":
                 ipv4_observable = self.converter_to_stix.create_ipv4_observable(result)
-                relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "resolves-to",
-                        stix_entity.get("id"),
-                        ipv4_observable.get("id"),
-                        start_time=first_seen_date
-                    ),
-                    description="A record",
-                    relationship_type="resolves-to",
-                    created_by_ref=self.author.get("id"),
-                    source_ref=stix_entity.get("id"),
-                    target_ref=ipv4_observable.get("id"),
-                    start_time=first_seen_date,
-                    stop_time=last_seen_date,
-                    object_marking_refs=[stix2.TLP_WHITE]
-                )
                 stix_objects.append(ipv4_observable)
-                stix_objects.append(relationship)
 
-            elif result.get("recordType") == "AAAA" and result.get("resolveType") == "ip":
-                ipv6_observable = self.converter_to_stix.create_ipv6_observable(result)
-                relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
+                ipv4_observable_relationship = (
+                    self.converter_to_stix.create_stix_relationship(
+                        stix_entity.get("id"),
                         "resolves-to",
-                        stix_entity.get("id"),
-                        ipv6_observable.get("id"),
-                        start_time=first_seen_date
-                    ),
-                    description="AAAA record",
-                    relationship_type="resolves-to",
-                    created_by_ref=self.author.get("id"),
-                    source_ref=stix_entity.get("id"),
-                    target_ref=ipv6_observable.get("id"),
-                    start_time=first_seen_date,
-                    stop_time=last_seen_date,
-                    object_marking_refs=[stix2.TLP_WHITE]
+                        ipv4_observable.get("id"),
+                        first_seen_date,
+                        last_seen_date,
+                        "A record",
+                    )
                 )
-                stix_objects.append(ipv6_observable)
-                stix_objects.append(relationship)
+                stix_objects.append(ipv4_observable_relationship)
 
-            elif result.get("recordType") == "SOA" and result.get("resolveType") == "email":
-                email_observable = self.converter_to_stix.create_email_observable(result)
-                relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to",
+            # Create stix observable with relationship -> IPv6Address
+            elif record_type == "AAAA" and resolve_type == "ip":
+                ipv6_observable = self.converter_to_stix.create_ipv6_observable(result)
+                stix_objects.append(ipv6_observable)
+
+                ipv6_observable_relationship = (
+                    self.converter_to_stix.create_stix_relationship(
                         stix_entity.get("id"),
-                        email_observable.get("id"),
-                        start_time=first_seen_date
-                    ),
-                    description="SOA record",
-                    relationship_type="related-to",
-                    created_by_ref=self.author.get("id"),
-                    source_ref=stix_entity.get("id"),
-                    target_ref=email_observable.get("id"),
-                    start_time=first_seen_date,
-                    stop_time=last_seen_date,
-                    object_marking_refs=[stix2.TLP_WHITE]
+                        "resolves-to",
+                        ipv6_observable.get("id"),
+                        first_seen_date,
+                        last_seen_date,
+                        "AAAA record",
+                    )
+                )
+                stix_objects.append(ipv6_observable_relationship)
+
+            # Create stix observable with relationship -> EmailAddress
+            elif record_type == "SOA" and resolve_type == "email":
+                email_observable = self.converter_to_stix.create_email_observable(
+                    result
                 )
                 stix_objects.append(email_observable)
-                stix_objects.append(relationship)
 
-            elif (result.get("recordType") in ["SOA", "MX", "CNAME", "A", "NS"]
-                  and result.get("resolveType") == "domain"):
-                domain_observable = self.converter_to_stix.create_domain_observable(result)
-                relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "resolves-to",
+                email_observable_relationship = (
+                    self.converter_to_stix.create_stix_relationship(
                         stix_entity.get("id"),
-                        domain_observable.get("id"),
-                        start_time=first_seen_date
-                    ),
-                    description=f"{result.get("recordType")} record",
-                    relationship_type="resolves-to",
-                    created_by_ref=self.author.get("id"),
-                    source_ref=stix_entity.get("id"),
-                    target_ref=domain_observable.get("id"),
-                    start_time=first_seen_date,
-                    stop_time=last_seen_date,
-                    object_marking_refs=[stix2.TLP_WHITE]
+                        "related-to",
+                        email_observable.get("id"),
+                        first_seen_date,
+                        last_seen_date,
+                        "SOA record",
+                    )
+                )
+                stix_objects.append(email_observable_relationship)
+
+            # Create stix observable with relationship -> DomainName
+            elif (
+                record_type in ["SOA", "MX", "CNAME", "A", "NS"]
+                and resolve_type == "domain"
+            ):
+                domain_observable = self.converter_to_stix.create_domain_observable(
+                    result
                 )
                 stix_objects.append(domain_observable)
-                stix_objects.append(relationship)
+
+                target_relationship = (
+                    stix_entity.get("id")
+                    if record_type != "A"
+                    else domain_observable.get("id")
+                )
+                source_relationship = (
+                    domain_observable.get("id")
+                    if record_type != "A"
+                    else stix_entity.get("id")
+                )
+
+                domain_observable_relationship = (
+                    self.converter_to_stix.create_stix_relationship(
+                        target_relationship,
+                        "resolves-to",
+                        source_relationship,
+                        first_seen_date,
+                        last_seen_date,
+                        f"""{record_type} record""",
+                    )
+                )
+                stix_objects.append(domain_observable_relationship)
+
+            else:
+                continue
 
         if stix_objects:
             stix_objects.append(self.author)
+            stix_objects.append(TLP_WHITE)
 
         return stix_objects
 
@@ -180,15 +214,15 @@ class RiskIQPassiveTotalConnector:
         """
 
         stix_objects = self._collect_intelligence(stix_entity)
-
         if stix_objects:
             self.stix_objects_list.extend(stix_objects)
 
             stix_objects_bundle = self.helper.stix2_create_bundle(
                 self.stix_objects_list
             )
-            bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
-
+            bundles_sent = self.helper.send_stix2_bundle(
+                bundle=stix_objects_bundle, cleanup_inconsistent_bundle=True
+            )
             return bundles_sent
 
     def is_entity_in_scope(self, data) -> bool:
@@ -242,7 +276,9 @@ class RiskIQPassiveTotalConnector:
 
             self.extract_and_check_markings(opencti_entity)
 
-            info_msg = f"[CONNECTOR] Processing observable/indicator: {stix_entity['value']}"
+            info_msg = (
+                f"[CONNECTOR] Processing observable/indicator: {stix_entity['value']}"
+            )
             self.helper.connector_logger.info(info_msg)
 
             if self.is_entity_in_scope(stix_entity):
