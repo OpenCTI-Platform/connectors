@@ -12,6 +12,7 @@ from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
 
 from utils import obfuscate_api_key
 
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class ZscalerConnector:
     def __init__(self, conf_path):
