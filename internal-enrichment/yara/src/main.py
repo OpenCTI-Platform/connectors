@@ -42,7 +42,7 @@ class YaraConnector:
         self.helper.log_debug("Getting Artifact contents (bytes) from OpenCTI")
 
         artifact_files_contents = (
-            artifact.get("importFiles") if artifact.get("importFiles") else []
+            artifact.get("importFiles", [])
         )
 
         files_contents = []
