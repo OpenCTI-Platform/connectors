@@ -144,14 +144,19 @@ class HarfanglabClient:
             enabled=data["enabled"],
         )
 
-    def get_ioc_rule(self, ioc_value: str) -> harfanglab.IOCRule:
+    def get_ioc_rule(self, ioc_type: str, ioc_value: str) -> harfanglab.IOCRule:
         """
         Get an IOC rule from Harfanglab.
+        :param ioc_type: Type of the IOC to get
         :param ioc_value: Value of the IOC to get
         :return Found IOC rule
         """
         url = f"{self.api_base_url}/api/data/threat_intelligence/IOCRule"
-        params = {"source_id": self.ioc_list_id, "value__exact": ioc_value}
+        params = {
+            "source_id": self.ioc_list_id,
+            "type": ioc_type,
+            "value__exact": ioc_value,
+        }
 
         data = self._send_request(
             method="get",

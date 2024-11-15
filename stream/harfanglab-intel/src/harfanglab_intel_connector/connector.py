@@ -105,7 +105,9 @@ class HarfanglabIntelConnector:
         """
         for _, observable in indicator.observables:
             ioc_rule = self.stix_converter.create_ioc_rule(indicator, observable)
-            existing_ioc_rule = self.api_client.get_ioc_rule(ioc_rule.value)
+            existing_ioc_rule = self.api_client.get_ioc_rule(
+                ioc_rule.type, ioc_rule.value
+            )
             if existing_ioc_rule:
                 ioc_rule.id = existing_ioc_rule.id
                 self.api_client.patch_ioc_rule(ioc_rule)
