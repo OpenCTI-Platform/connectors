@@ -41,9 +41,7 @@ class YaraConnector:
         """
         self.helper.log_debug("Getting Artifact contents (bytes) from OpenCTI")
 
-        artifact_files_contents = (
-            artifact.get("importFiles", [])
-        )
+        artifact_files_contents = artifact.get("importFiles", [])
 
         files_contents = []
         if artifact_files_contents:
@@ -100,7 +98,7 @@ class YaraConnector:
                     rule_content = indicator["pattern"]
                     rule = yara.compile(source=rule_content)
                 except yara.SyntaxError:
-                    self.helper.log_debug(
+                    self.helper.log_error(
                         f"Encountered YARA syntax error {indicator['name']}"
                     )
                     continue
