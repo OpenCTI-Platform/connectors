@@ -179,7 +179,9 @@ class HarfanglabIntelConnector:
         """
         for _, observable in indicator.observables:
             ioc_rule = self.stix_converter.create_ioc_rule(indicator, observable)
-            existing_ioc_rule = self.api_client.get_ioc_rule(ioc_rule.value)
+            existing_ioc_rule = self.api_client.get_ioc_rule(
+                ioc_rule.type, ioc_rule.value
+            )
             if existing_ioc_rule:
                 if self.config.harfanglab_remove_indicator:
                     self.api_client.delete_ioc_rule(existing_ioc_rule)
