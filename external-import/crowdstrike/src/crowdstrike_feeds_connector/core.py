@@ -184,6 +184,20 @@ class CrowdStrike:
             importers.append(actor_importer)
 
         if self._CONFIG_SCOPE_REPORT in scopes:
+            indicator_config = {
+                "default_latest_timestamp": indicator_start_timestamp,
+                "create_observables": create_observables,
+                "create_indicators": create_indicators,
+                "exclude_types": indicator_exclude_types,
+                "default_x_opencti_score": default_x_opencti_score,
+                "indicator_low_score": indicator_low_score,
+                "indicator_low_score_labels": set(indicator_low_score_labels),
+                "indicator_medium_score": indicator_medium_score,
+                "indicator_medium_score_labels": set(indicator_medium_score_labels),
+                "indicator_high_score": indicator_high_score,
+                "indicator_high_score_labels": set(indicator_high_score_labels),
+                "indicator_unwanted_labels": set(indicator_unwanted_labels),
+            }
             report_importer = ReportImporter(
                 self.helper,
                 author,
@@ -193,6 +207,7 @@ class CrowdStrike:
                 report_status,
                 report_type,
                 report_guess_malware,
+                indicator_config,
             )
 
             importers.append(report_importer)

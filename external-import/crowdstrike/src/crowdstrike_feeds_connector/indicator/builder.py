@@ -2,7 +2,7 @@
 """OpenCTI CrowdStrike indicator builder module."""
 
 import logging
-from typing import List, Mapping, NamedTuple, Optional, Set
+from typing import Dict, List, NamedTuple, Optional, Set
 
 from crowdstrike_feeds_services.utils import (
     OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
@@ -27,19 +27,22 @@ from crowdstrike_feeds_services.utils import (
     create_malware,
     create_object_refs,
     create_sector,
-    create_stix2_report_from_report,
     create_targets_relationships,
     create_uses_relationships,
     create_vulnerability,
     create_vulnerability_external_references,
     timestamp_to_datetime,
 )
-from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport
 from stix2 import Bundle, Identity
 from stix2 import Indicator as STIXIndicator  # type: ignore
-from stix2 import IntrusionSet, KillChainPhase, Malware, MarkingDefinition, Relationship
-from stix2 import Report as STIXReport
-from stix2 import Vulnerability
+from stix2 import (
+    IntrusionSet,
+    KillChainPhase,
+    Malware,
+    MarkingDefinition,
+    Relationship,
+    Vulnerability,
+)
 from stix2.v21 import _DomainObject, _Observable  # type: ignore
 
 logger = logging.getLogger(__name__)
@@ -64,9 +67,6 @@ class IndicatorBundleBuilderConfig(NamedTuple):
     create_observables: bool
     create_indicators: bool
     default_x_opencti_score: int
-    indicator_report_status: int
-    indicator_report_type: str
-    indicator_reports: List[FetchedReport]
     indicator_low_score: int
     indicator_low_score_labels: Set[str]
     indicator_medium_score: int
@@ -137,9 +137,6 @@ class IndicatorBundleBuilder:
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
         self.default_x_opencti_score = config.default_x_opencti_score
-        self.indicator_reports = config.indicator_reports
-        self.indicator_report_status = config.indicator_report_status
-        self.indicator_report_type = config.indicator_report_type
         self.indicator_low_score = config.indicator_low_score
         self.indicator_low_score_labels = config.indicator_low_score_labels
         self.indicator_medium_score = config.indicator_medium_score
@@ -410,36 +407,7 @@ class IndicatorBundleBuilder:
             self.object_markings,
         )
 
-    def _create_report(
-        self,
-        report: dict,
-        report_files: List[Mapping[str, str]],
-        objects: List[_DomainObject],
-    ) -> STIXReport:
-        return create_stix2_report_from_report(
-            report,
-            self.source_name,
-            self.author,
-            objects,
-            [self.indicator_report_type],
-            self.confidence_level,
-            self.object_markings,
-            self.indicator_report_status,
-            report_files,
-        )
-
-    def _create_reports(self, objects: List[_DomainObject]) -> List[STIXReport]:
-        reports = []
-
-        for indicator_report in self.indicator_reports:
-            report = self._create_report(
-                indicator_report.report, indicator_report.files, objects
-            )
-            reports.append(report)
-
-        return reports
-
-    def build(self) -> Optional[Bundle]:
+    def build(self) -> Optional[Dict]:
         """Build indicator bundle."""
         # Create bundle with author.
         bundle_objects = [self.author]
@@ -545,10 +513,11 @@ class IndicatorBundleBuilder:
             indicator_indicates_entities,
         )
 
-        # Create reports and add to bundle.
-        reports = self._create_reports(object_refs)
-        bundle_objects.extend(reports)
-
         # XXX: Without allow_custom=True the observable with the custom property
         # will cause an unexpected property (x_opencti_score) error.
-        return Bundle(objects=bundle_objects, allow_custom=True)
+        objects = {
+            "indicator_bundle": Bundle(objects=bundle_objects, allow_custom=True),
+            "object_refs": object_refs,
+        }
+
+        return objects

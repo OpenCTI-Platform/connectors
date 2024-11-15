@@ -201,9 +201,7 @@ class IndicatorImporter(BaseImporter):
     def _process_indicator(self, indicator: dict) -> bool:
         self._info("Processing indicator {0}...", indicator["id"])
 
-        indicator_reports = self._get_reports_by_code(indicator["reports"])
-
-        indicator_bundle = self._create_indicator_bundle(indicator, indicator_reports)
+        indicator_bundle = self._create_indicator_bundle(indicator)
         if indicator_bundle is None:
             self._error("Discarding indicator {0} bundle", indicator["id"])
             return False
@@ -218,9 +216,7 @@ class IndicatorImporter(BaseImporter):
     def _get_reports_by_code(self, codes: List[str]) -> List[FetchedReport]:
         return self.report_fetcher.get_by_codes(codes)
 
-    def _create_indicator_bundle(
-        self, indicator: dict, indicator_reports: List[FetchedReport]
-    ) -> Optional[Bundle]:
+    def _create_indicator_bundle(self, indicator: dict) -> Optional[Bundle]:
         bundle_builder_config = IndicatorBundleBuilderConfig(
             indicator=indicator,
             author=self.author,
@@ -229,9 +225,6 @@ class IndicatorImporter(BaseImporter):
             confidence_level=self._confidence_level(),
             create_observables=self.create_observables,
             create_indicators=self.create_indicators,
-            indicator_report_status=self.report_status,
-            indicator_report_type=self.report_type,
-            indicator_reports=indicator_reports,
             default_x_opencti_score=self.default_x_opencti_score,
             indicator_low_score=self.indicator_low_score,
             indicator_low_score_labels=self.indicator_low_score_labels,
@@ -244,7 +237,8 @@ class IndicatorImporter(BaseImporter):
 
         try:
             bundle_builder = IndicatorBundleBuilder(bundle_builder_config)
-            return bundle_builder.build()
+            indicator_bundle_built = bundle_builder.build()
+            return indicator_bundle_built["indicator_bundle"]
         except TypeError as te:
             self._error(
                 "Failed to build indicator bundle for '{0}': {1}",
