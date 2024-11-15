@@ -75,7 +75,7 @@ class HarfanglabClient:
                 "[API] Error while requesting : ",
                 {"url_path": f"{method.upper()} {url}", "error": str(err)},
             )
-            return None
+            raise err
 
     def _post_source(self, source_type: SourceType) -> dict[str, Any]:
         """
