@@ -196,35 +196,18 @@ class ReportImporter(BaseImporter):
         else:
             return create_file_from_download(download, report_name)
 
-    def _create_report_bundle(
-        self, report, report_file: Optional[Mapping[str, str]] = None
-    ) -> Bundle:
-        author = self.author
-        source_name = self._source_name()
-        object_marking_refs = [self.tlp_marking]
-        report_status = self.report_status
-        report_type = self.report_type
-        confidence_level = self._confidence_level()
-        guessed_malwares: Mapping[str, str] = {}
+    def _get_related_iocs(self, report_name):
         related_indicators = []
         related_indicators_with_related_entities = []
+        _limit = 1000
+        _sort = "last_updated|asc"
+        _fql_filter = f"reports:['{report_name}']"
 
-        tags = report["tags"]
-        if tags is not None:
-            guessed_malwares = self._guess_malwares_from_tags(tags)
-
-        report_slug = report["slug"]
-        if report_slug is not None:
-            report_slug = report_slug.upper()
-            _limit = 1000
-            _sort = "last_updated|asc"
-            _fql_filter = f"reports:['{report_slug}']"
-
-            # Getting IOCs linked and based on report name
-            response = self.indicators_api_cs.get_combined_indicator_entities(
-                limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
-            )
-            related_indicators.extend(response["resources"])
+        # Getting IOCs linked and based on report name
+        response = self.indicators_api_cs.get_combined_indicator_entities(
+            limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
+        )
+        related_indicators.extend(response["resources"])
 
         if related_indicators is not None:
             for indicator in related_indicators:
@@ -263,6 +246,31 @@ class ReportImporter(BaseImporter):
                 related_indicators_with_related_entities.extend(
                     indicator_with_related_entities
                 )
+
+        return related_indicators_with_related_entities
+
+    def _create_report_bundle(
+        self, report, report_file: Optional[Mapping[str, str]] = None
+    ) -> Bundle:
+        author = self.author
+        source_name = self._source_name()
+        object_marking_refs = [self.tlp_marking]
+        report_status = self.report_status
+        report_type = self.report_type
+        confidence_level = self._confidence_level()
+        guessed_malwares: Mapping[str, str] = {}
+        related_indicators_with_related_entities = []
+
+        tags = report["tags"]
+        if tags is not None:
+            guessed_malwares = self._guess_malwares_from_tags(tags)
+
+        report_slug = report["slug"]
+        if report_slug is not None:
+            report_name = report_slug.upper()
+            related_indicators_with_related_entities = self._get_related_iocs(
+                report_name
+            )
 
         bundle_builder = ReportBundleBuilder(
             report,
