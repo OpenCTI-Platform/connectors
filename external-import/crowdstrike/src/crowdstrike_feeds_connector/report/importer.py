@@ -199,7 +199,7 @@ class ReportImporter(BaseImporter):
     def _get_related_iocs(self, report_name):
         related_indicators = []
         related_indicators_with_related_entities = []
-        _limit = 1000
+        _limit = 10000
         _sort = "last_updated|asc"
         _fql_filter = f"reports:['{report_name}']"
 
