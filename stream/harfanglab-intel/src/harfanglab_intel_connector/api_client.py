@@ -129,7 +129,6 @@ class HarfanglabClient:
             "value": ioc_rule.value,
             "description": ioc_rule.description or "",
             "hl_status": ioc_rule.hl_status,
-            "hl_local_testing_status": "in_progess",
             "enabled": ioc_rule.enabled,
             "comment": json.dumps(ioc_rule.comment) if ioc_rule.comment else "",
         }
@@ -184,7 +183,6 @@ class HarfanglabClient:
             "value": ioc_rule.value,
             "description": ioc_rule.description or "",
             "hl_status": ioc_rule.hl_status,
-            "hl_local_testing_status": "in_progess",
             "enabled": ioc_rule.enabled,
             "comment": json.dumps(ioc_rule.comment) if ioc_rule.comment else "",
         }
@@ -220,7 +218,6 @@ class HarfanglabClient:
             "name": sigma_rule.name,
             "content": sigma_rule.content,
             "hl_status": sigma_rule.hl_status,
-            "hl_local_testing_status": "in_progress",
             "enabled": sigma_rule.enabled,
         }
 
@@ -272,7 +269,6 @@ class HarfanglabClient:
             "name": sigma_rule.name,
             "content": sigma_rule.content,
             "hl_status": sigma_rule.hl_status,
-            "hl_local_testing_status": "in_progress",
             "enabled": sigma_rule.enabled,
         }
 
@@ -305,7 +301,6 @@ class HarfanglabClient:
             "name": yara_file.name,
             "content": yara_file.content,
             "hl_status": yara_file.hl_status,
-            "hl_local_testing_status": "in_progress",
             "enabled": yara_file.enabled,
         }
 
@@ -357,7 +352,6 @@ class HarfanglabClient:
             "name": yara_file.name,
             "content": yara_file.content,
             "hl_status": yara_file.hl_status,
-            "hl_local_testing_status": "in_progress",
             "enabled": yara_file.enabled,
         }
 

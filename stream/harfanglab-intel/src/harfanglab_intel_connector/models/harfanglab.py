@@ -39,7 +39,6 @@ class SigmaRule:
         self.name = name
         self.content = content
         self.hl_status = hl_status
-        self.hl_local_testing_status = "in_progress"
         self.enabled = enabled
 
 
@@ -60,5 +59,4 @@ class YaraFile:
         self.name = name
         self.content = content
         self.hl_status = hl_status
-        self.hl_local_testing_status = "in_progress"
         self.enabled = enabled
