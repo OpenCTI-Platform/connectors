@@ -111,4 +111,4 @@ def _get_last_article_published_date(bundle: dict) -> Optional[str]:
     return max(
         (o["published"] for o in bundle["objects"] if o["type"] == "report"),
         default=None,
-   )
+    )

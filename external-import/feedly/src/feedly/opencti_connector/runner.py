@@ -9,6 +9,7 @@ from pytz import utc
 
 STATE_VERSION = 1
 
+
 class FeedlyRunner:
     def __init__(self, helper: OpenCTIConnectorHelper):
         self.helper = helper
@@ -85,9 +86,12 @@ class FeedlyRunner:
             return datetime.fromisoformat(saved_date)
         return datetime.now(tz=utc) - timedelta(days=self.days_to_back_fill)
 
-    def _update_state(self, state: dict, stream_id: str, last_article_publish_date: str,now: datetime) ->None:
+    def _update_state(
+        self, state: dict, stream_id: str, last_article_publish_date: str, now: datetime
+    ) -> None:
         state["streams"][stream_id] = {
             "last_run": now.isoformat(),
-            "last_article_publish_date": last_article_publish_date or state.get("last_article_publish_date"),
+            "last_article_publish_date": last_article_publish_date
+            or state.get("last_article_publish_date"),
         }
         self.helper.set_state(state)
