@@ -103,7 +103,7 @@ Install the required python dependencies (preferably in a virtual environment):
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+Then, start the connector from riskiq-passive-total/src:
 
 ```shell
 python3 main.py
@@ -146,8 +146,6 @@ download of data by re-running the connector.
 The connector can be debugged by setting the appropriate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
-
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 
 ## Additional information
 

@@ -986,6 +986,10 @@ jobs:
           name: Build Docker image opencti/connector-splunk
           command: docker build -t opencti/connector-splunk:latest . && docker tag opencti/connector-splunk:latest opencti/connector-splunk:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/internal-enrichment/riskiq-passive-total
+          name: Build Docker image opencti/connector-riskiq-passive-total
+          command: docker build -t opencti/connector-riskiq-passive-total:latest . && docker tag opencti/connector-riskiq-passive-total:latest opencti/connector-riskiq-passive-total:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1001,6 +1005,9 @@ jobs:
             docker push opencti/connector-qradar:${CIRCLE_TAG}
             docker push opencti/connector-splunk:latest
             docker push opencti/connector-splunk:${CIRCLE_TAG}
+            docker push opencti/connector-riskiq-passive-total:latest
+            docker push opencti/connector-riskiq-passive-total:${CIRCLE_TAG}
+
   build_fips_1:
     working_directory: ~/opencti
     docker:
@@ -1825,6 +1832,10 @@ jobs:
           name: Build Docker image opencti/connector-splunk
           command: docker build -t opencti/connector-splunk:rolling .
       - run:
+          working_directory: ~/opencti/internal-enrichment/riskiq-passive-total
+          name: Build Docker image opencti/connector-riskiq-passive-total
+          command: docker build -t opencti/connector-riskiq-passive-total:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1834,6 +1845,7 @@ jobs:
             docker push opencti/connector-harfanglab:rolling
             docker push opencti/connector-qradar:rolling
             docker push opencti/connector-splunk:rolling
+            docker push opencti/connector-riskiq-passive-total:rolling
 
   build_fips_rolling_1:
     working_directory: ~/opencti
