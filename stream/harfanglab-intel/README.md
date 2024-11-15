@@ -14,6 +14,7 @@ Table of Contents
         - [Docker Deployment](#docker-deployment)
         - [Manual Deployment](#manual-deployment)
     - [Usage](#usage)
+    - [Limitations](#limitations)
     - [Debugging](#debugging)
 
 ## Introduction
@@ -173,6 +174,25 @@ However, if you would like to force an immediate download of a new batch of enti
 
 Find the connector, and click on the refresh button to reset the connector's state and force a new
 download of data by re-running the connector.
+
+## Limitations
+
+- Indicator's pattern changes:  
+  When an indicator is updated on OpenCTI, the connector handles this event _but_ only name changes are managed
+  correctly for now.  
+  If an indicator's pattern is changed, _it will not_ be reflected to Harfanglab and can lead to unexpected behavior.  
+  Patterns changes will be managed in a future release.
+
+- IOCs deletion:  
+  When an indicator of type "stix" is deleted on OpenCTI, all its corresponding IOCs on Harfanglab will be
+  deleted/disabled too, even
+  though they are still referenced by other indicators on OpenCTI.
+
+- Sigma rules and Yara files:  
+  The connector is currently able to parse STIX patterns only. Indicators of type "sigma" or "yara" are sent as they
+  are on Harfanglab without any further verification/modification.  
+  Since sigma/yara patterns are not parsed, the connector relies on indicator's name to reflect changes on Harfanglab.
+  Harfanglab API may then return some errors due to duplicated data (e.g. "Yara file with this Id already exists.")
 
 ## Debugging
 
