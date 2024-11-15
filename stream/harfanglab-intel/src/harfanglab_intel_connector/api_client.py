@@ -1,8 +1,11 @@
 import json
+from typing import Any, Literal
 
 import requests
 
 from .models import harfanglab
+
+SourceType = Literal["IOCSource", "SigmaSource", "YaraSource"]
 
 
 class HarfanglabClient:
@@ -74,11 +77,11 @@ class HarfanglabClient:
             )
             return None
 
-    def _post_source(self, source_type: str) -> dict:
+    def _post_source(self, source_type: SourceType) -> dict[str, Any]:
         """
         Create a source list of specified type on Harfanglab.
         Source list name equals to HARFANGLAB_INTEL_SOURCE_LIST_NAME environment variable.
-        :param source_type: Type of source to create (either `IOCSource`, `SigmaSource` or `YaraSource`)
+        :param source_type: Type of source to create
         :return: Created source data
         """
         url = f"{self.api_base_url}/api/data/threat_intelligence/{source_type}"
@@ -95,11 +98,11 @@ class HarfanglabClient:
         )
         return data
 
-    def _get_source(self, source_type: str) -> dict:
+    def _get_source(self, source_type: SourceType) -> dict[str, Any]:
         """
         Get a source list of specified type from Harfanglab.
         Source list is returned according to HARFANGLAB_INTEL_SOURCE_LIST_NAME environment variable.
-        :param source_type: Type of source to create (either `IOCSource`, `SigmaSource` or `YaraSource`)
+        :param source_type: Type of source to create
         :return: Found source data
         """
         url = f"{self.api_base_url}/api/data/threat_intelligence/{source_type}"
