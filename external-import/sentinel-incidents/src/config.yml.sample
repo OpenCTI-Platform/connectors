@@ -27,6 +27,5 @@ sentinel_incidents:
   login_url: 'https://login.microsoft.com'
   api_base_url: 'https://graph.microsoft.com'
   incident_path : '/v1.0/security/incidents'
-  confidence_level: 50
   target_product: 'Azure Sentinel'
   import_start_date: ''
