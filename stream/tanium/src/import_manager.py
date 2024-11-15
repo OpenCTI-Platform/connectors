@@ -76,7 +76,7 @@ class IntelManager:
                 # if intel_document is not None:
                 #     self.cache.set("intel", data["id"], str(intel_document["id"]))
                 #     return intel_document["id"]
-                if len(data["labels"]) > 0:
+                if "labels" in data and len(data["labels"]) > 0:
                     labels = self.tanium_api_handler.get_labels(data["labels"])
                     for label in labels:
                         if label is not None:
@@ -103,7 +103,7 @@ class IntelManager:
             self._add_external_reference(data, str(intel_document["id"]))
             self.tanium_api_handler.deploy_intel()
             self.tanium_api_handler.trigger_quickscan(intel_document["id"])
-            if len(data["labels"]) > 0:
+            if "labels" in data and len(data["labels"]) > 0:
                 labels = self.tanium_api_handler.get_labels(data["labels"])
                 for label in labels:
                     if label is not None:
