@@ -1,5 +1,6 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
+ENV CONNECTOR_DURATION_PERIOD=PT1D
 
 # Copy the connector
 COPY src /opt/opencti-connector-wiz
