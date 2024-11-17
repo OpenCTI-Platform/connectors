@@ -41,16 +41,3 @@ class ConfigConnector:
             ["connector", "duration_period"],
             self.load,
         )
-
-        # Connector extra parameters
-        self.api_base_url = get_config_variable(
-            "CONNECTOR_TEMPLATE_API_BASE_URL",
-            ["connector_template", "api_base_url"],
-            self.load,
-        )
-
-        self.api_key = get_config_variable(
-            "CONNECTOR_TEMPLATE_API_KEY",
-            ["connector_template", "api_key"],
-            self.load,
-        )

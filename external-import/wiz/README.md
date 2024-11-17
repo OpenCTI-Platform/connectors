@@ -1,10 +1,8 @@
-# OpenCTI External Ingestion Connector Template
-
-This connector import public data exposed by Wiz at https://threats.wiz.io/
+# OpenCTI External Ingestion Connector Wiz
 
 Table of Contents
 
-- [OpenCTI External Ingestion Connector Template](#opencti-external-ingestion-connector-template)
+- [OpenCTI External Ingestion Connector Wiz](#opencti-external-ingestion-connector-wiz)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -19,6 +17,25 @@ Table of Contents
   - [Behavior](#behavior)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
+
+## Introduction
+
+This connector imports data made publicly available by Wiz exposed at https://threats.wiz.io/.
+The list of imported entities (with their relationships) :
+
+- **Incidents** : A historical collection of past cloud security incidents and campaigns, offering insights into targeting patterns, initial access methods, and effective impact.
+
+- **Actors** : Profiles of threat actors involved in cloud security incidents, shedding light on their potential motivations and victimology, to aid in risk assessment and threat modeling.
+
+- **Techniques** : An overview of attack techniques used by threat actors in cloud security incidents, aligned with the MITRE ATT&CK matrix framework for additional context.
+
+- **Tools** : Details on software utilized by threat actors in their activities targeting cloud environments, ranging from penetration testing utilities to bespoke malware.
+
+- **Targeted Technologies** : Analysis of frequently targeted software found in cloud environments, noting their prevalence and any related incidents and techniques.
+
+- **Defenses** : A corpus of cloud security measures that can serve to mitigate risks and prevent or detect attack techniques. Each mechanism is mapped to the MITRE D3FEND matrix.
+
+
 
 ## Installation
 
@@ -44,13 +61,14 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Parameter       | config.yml      | Docker environment variable | Default         | Mandatory | Description                                                                              |
+|-----------------|-----------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
+| Connector ID    | id              | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
+| Connector Type  | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
+| Connector Name  | name            | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | PT1D            | No        | Determines how often the connector should run.                                           |
 
 ## Deployment
 

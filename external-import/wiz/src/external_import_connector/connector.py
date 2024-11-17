@@ -8,7 +8,7 @@ from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
 
 
-class ConnectorTemplate:
+class ConnectorWiz:
     """
     Specifications of the external import connector
 
@@ -143,6 +143,7 @@ class ConnectorTemplate:
                     "Sending STIX objects to OpenCTI...",
                     {"bundles_sent": {str(len(bundles_sent))}},
                 )
+
             # ===========================
             # === Add your code above ===
             # ===========================

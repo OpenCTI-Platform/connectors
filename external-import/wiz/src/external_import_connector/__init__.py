@@ -1,3 +1,3 @@
-from .connector import ConnectorTemplate
+from .connector import ConnectorWiz
 
-__all__ = ["ConnectorTemplate"]
+__all__ = ["ConnectorWiz"]
