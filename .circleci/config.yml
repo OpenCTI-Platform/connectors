@@ -974,6 +974,14 @@ jobs:
           name: Build Docker image opencti/connector-sentinel
           command: docker build -t opencti/connector-sentinel:latest . && docker tag opencti/connector-sentinel:latest opencti/connector-sentinel:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/harfanglab-incidents
+          name: Build Docker image opencti/connector-harfanglab-incidents
+          command: docker build -t opencti/connector-harfanglab-incidents:latest . && docker tag opencti/connector-harfanglab-incidents:latest opencti/connector-harfanglab-incidents:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/harfanglab-intel
+          name: Build Docker image opencti/connector-harfanglab-intel
+          command: docker build -t opencti/connector-harfanglab-intel:latest . && docker tag opencti/connector-harfanglab-intel:latest opencti/connector-harfanglab-intel:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/stream/harfanglab
           name: Build Docker image opencti/connector-harfanglab
           command: docker build -t opencti/connector-harfanglab:latest . && docker tag opencti/connector-harfanglab:latest opencti/connector-harfanglab:${CIRCLE_TAG}
@@ -1823,6 +1831,14 @@ jobs:
           working_directory: ~/opencti/stream/harfanglab
           name: Build Docker image opencti/connector-harfanglab
           command: docker build -t opencti/connector-harfanglab:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/harfanglab-incidents
+          name: Build Docker image opencti/connector-harfanglab-incidents
+          command: docker build -t opencti/connector-harfanglab-incidents:rolling .
+      - run:
+          working_directory: ~/opencti/stream/harfanglab-intel
+          name: Build Docker image opencti/connector-harfanglab-intel
+          command: docker build -t opencti/connector-harfanglab-intel:rolling .
       - run:
           working_directory: ~/opencti/stream/qradar
           name: Build Docker image opencti/connector-qradar
