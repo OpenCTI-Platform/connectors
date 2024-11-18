@@ -1,12 +1,17 @@
-# OpenCTI HarfangLab Connector
+# OpenCTI HarfangLab Connector [Deprecated]
+
+*This connector is depecrated since 6.4, please prefer to use Harfanglab Intel as stream connector and/or Harfanglab
+Incidents for external import.*
 
 This connector allows organizations to feed the HarfangLab EDR using OpenCTI knowledge.
 
-This connector leverages the OpenCTI events stream, so it consumes knowledge in real time and, depending on its settings, create detection and hunting intel pieces in the HarfangLab platform.
+This connector leverages the OpenCTI events stream, so it consumes knowledge in real time and, depending on its
+settings, create detection and hunting intel pieces in the HarfangLab platform.
 
 ## General overview
 
-OpenCTI data is coming from import connectors. Once this data is ingested in OpenCTI, it is pushed to a Redis event stream. This stream is consumed by the HarfangLab connector to insert intel in the HarfangLab platform.
+OpenCTI data is coming from import connectors. Once this data is ingested in OpenCTI, it is pushed to a Redis event
+stream. This stream is consumed by the HarfangLab connector to insert intel in the HarfangLab platform.
 
 ## Requirements
 
@@ -19,12 +24,12 @@ OpenCTI data is coming from import connectors. Once this data is ingested in Ope
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in
+`config.yml` (for manual deployment).
 
 ## OpenCTI environment variables
 
 Below are the parameters you'll need to set for OpenCTI:
-
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                                                                                                |
 |---------------|------------|-----------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------|
@@ -70,7 +75,9 @@ Below are the parameters you'll need to set for HarfangLab connector:
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever version of OpenCTI you're running. Example, `pycti==6.1.3`. If you don't, it will take the latest version, but sometimes the OpenCTI SDK fails to initialize.
+Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
+version of OpenCTI you're running. Example, `pycti==6.1.3`. If you don't, it will take the latest version, but sometimes
+the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
 
@@ -110,26 +117,30 @@ python3 main.py
 
 ## Usage
 
-After installation, the connector should require minimal interaction to use, and some configurations should be specified in your `docker-compose.yml` or `config.yml`.
+After installation, the connector should require minimal interaction to use, and some configurations should be specified
+in your `docker-compose.yml` or `config.yml`.
 
 ## Launch the connector and test it
 
-After launching the connector, you should see a new source list for Yara / Sigma / IoC within the HarfangLab platform under "Threat Intelligence" :
+After launching the connector, you should see a new source list for Yara / Sigma / IoC within the HarfangLab platform
+under "Threat Intelligence" :
 
 ![source.png](doc/source.png)
 
 ## Warnings
 
-
 - Creation and Configuration of a Custom Data Stream:
-    In OpenCTI - Data / Data sharing / Live streams:
+  In OpenCTI - Data / Data sharing / Live streams:
     - Create a new live stream using the "+" button.
     - Define the name and add these filters:
     - Revoked = No (this filter ensures that only active indicators are considered).
-    - Is detected = Yes (if you want to control the indicators sent to HarfangLab, by default when creating an indicator, the detection is set to false).
+    - Is detected = Yes (if you want to control the indicators sent to HarfangLab, by default when creating an
+      indicator, the detection is set to false).
     - Entity type = Indicator (only events on indicators are considered).
     - Pattern type = stix or sigma or yara (it is important to specify these 3 types of patterns).
     - Once the live stream is created and configured, you will have a unique identifier for the connector.
-    - You will need to place this unique identifier in the environment variable named "LIVE_STREAM_ID". This procedure is crucial to properly link the connector to the custom Stream with the correct filters.
+    - You will need to place this unique identifier in the environment variable named "LIVE_STREAM_ID". This procedure
+      is crucial to properly link the connector to the custom Stream with the correct filters.
     - Then, you just have to start it and have the status "started".
-- For more details, read the article that talks about the Harfanglab connector. https://blog.filigran.io/opencti-harfanglab-a-connector-to-enrich-cti-data-and-optimize-incident-response-0784b5c0717e
+- For more details, read the article that talks about the Harfanglab
+  connector. https://blog.filigran.io/opencti-harfanglab-a-connector-to-enrich-cti-data-and-optimize-incident-response-0784b5c0717e
