@@ -114,6 +114,7 @@ class HarfanglabClient:
             params=params,
         )
         results = data["results"]
+        # sources' name are unique so only zero or one result can be returned
         if len(results):
             return results[0]
 
@@ -164,7 +165,7 @@ class HarfanglabClient:
             params=params,
         )
         results = data["results"]
-        # only zero or one result can be returned
+        # combination type + value is unique so only zero or one result can be returned
         if len(results):
             result = results[0]
             return harfanglab.IOCRule(
