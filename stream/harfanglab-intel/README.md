@@ -110,14 +110,14 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter                   | config.yml `harfanglab_intel` | Docker environment variable   | Default | Mandatory | Description                                                                                |
-|-----------------------------|-------------------------------|-------------------------------|---------|-----------|--------------------------------------------------------------------------------------------|
-| HarfangLab url              | `url`                         | `HARFANGLAB_URL`              | /       | Yes       | The HarfangLab instance URL                                                                |
-| HarfangLab SSL verify       | `ssl_verify`                  | `HARFANGLAB_SSL_VERIFY`       | true    | No        | Enable the SSL certificate check                                                           |
-| HarfangLab Token            | `token`                       | `HARFANGLAB_TOKEN`            | /       | Yes       | The token of the HarfangLab user                                                           |
-| HarfangLab Source list name | `source_list_name`            | `HARFANGLAB_SOURCE_LIST_NAME` | /       | Yes       | Must be `from_OpenCTI`                                                                     |
-| HarfangLab Remove indicator | `remove_indicator`            | `HARFANGLAB_REMOVE_INDICATOR` | false   | No        | Choose between permanent deletion or deactivation of indicators in the HarfangLab platform |
-| HarfangLab Rule maturity    | `rule_maturity`               | `HARFANGLAB_RULE_MATURITY`    | /       | Yes       | Allows you to create rules with the `stable` or `testing` status in HarfangLab platform    |
+| Parameter                   | config.yml `harfanglab_intel` | Docker environment variable         | Default | Mandatory | Description                                                                                |
+|-----------------------------|-------------------------------|-------------------------------------|---------|-----------|--------------------------------------------------------------------------------------------|
+| HarfangLab url              | `url`                         | `HARFANGLAB_INTEL_URL`              | /       | Yes       | The HarfangLab instance URL                                                                |
+| HarfangLab SSL verify       | `ssl_verify`                  | `HARFANGLAB_INTEL_SSL_VERIFY`       | true    | No        | Enable the SSL certificate check                                                           |
+| HarfangLab Token            | `token`                       | `HARFANGLAB_INTEL_TOKEN`            | /       | Yes       | The token of the HarfangLab user                                                           |
+| HarfangLab Source list name | `source_list_name`            | `HARFANGLAB_INTEL_SOURCE_LIST_NAME` | /       | Yes       | Must be `from_OpenCTI`                                                                     |
+| HarfangLab Remove indicator | `remove_indicator`            | `HARFANGLAB_INTEL_REMOVE_INDICATOR` | false   | No        | Choose between permanent deletion or deactivation of indicators in the HarfangLab platform |
+| HarfangLab Rule maturity    | `rule_maturity`               | `HARFANGLAB_INTEL_RULE_MATURITY`    | /       | Yes       | Allows you to create rules with the `stable` or `testing` status in HarfangLab platform    |
 
 ## Deployment
 
