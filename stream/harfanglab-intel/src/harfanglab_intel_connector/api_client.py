@@ -164,6 +164,7 @@ class HarfanglabClient:
             params=params,
         )
         results = data["results"]
+        # only zero or one result can be returned
         if len(results):
             result = results[0]
             return harfanglab.IOCRule(
@@ -251,6 +252,8 @@ class HarfanglabClient:
             params=params,
         )
         results = data["results"]
+        # no better solution but to rely on first result for now even though name can be duplicated in Harfanglab
+        # an improvement would be to be able to rely on `rule_name` filter instead of `name`
         if len(results):
             result = results[0]
             return harfanglab.SigmaRule(
@@ -334,6 +337,8 @@ class HarfanglabClient:
             params=params,
         )
         results = data["results"]
+        # no better solution but to rely on first result for now even though name can be duplicated in Harfanglab
+        # an improvement would be to be able to rely on `rule_name` filter instead of `name`
         if len(results):
             result = results[0]
             return harfanglab.YaraFile(
