@@ -290,7 +290,7 @@ class MandiantReport:
             created_by_ref=self.identity["standard_id"],
             object_refs=[report.get("id")],
             object_marking_refs=report["object_marking_refs"],
-            note_types=["analysis", "external"],
+            custom_properties={"note_types": ["analysis", "external"]},
         )
 
         self.bundle["objects"].append(note)
