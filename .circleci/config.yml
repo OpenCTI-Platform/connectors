@@ -65,7 +65,7 @@ jobs:
           webhook_url: $MS_TEAMS_WEBHOOK_URL
   test:
     docker:
-      - image: cimg/python:3.12
+      - image: cimg/python:3.11
     working_directory: ~/repo
     steps:
       - checkout
