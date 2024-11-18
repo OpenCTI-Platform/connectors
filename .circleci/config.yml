@@ -986,13 +986,13 @@ jobs:
           name: Build Docker image opencti/connector-harfanglab
           command: docker build -t opencti/connector-harfanglab:latest . && docker tag opencti/connector-harfanglab:latest opencti/connector-harfanglab:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/stream/qradar
-          name: Build Docker image opencti/connector-qradar
-          command: docker build -t opencti/connector-qradar:latest . && docker tag opencti/connector-qradar:latest opencti/connector-qradar:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/stream/splunk
           name: Build Docker image opencti/connector-splunk
           command: docker build -t opencti/connector-splunk:latest . && docker tag opencti/connector-splunk:latest opencti/connector-splunk:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/qradar
+          name: Build Docker image opencti/connector-qradar
+          command: docker build -t opencti/connector-qradar:latest . && docker tag opencti/connector-qradar:latest opencti/connector-qradar:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/internal-enrichment/riskiq-passive-total
           name: Build Docker image opencti/connector-riskiq-passive-total
@@ -1009,10 +1009,10 @@ jobs:
             docker push opencti/connector-sentinel:${CIRCLE_TAG}
             docker push opencti/connector-harfanglab:latest
             docker push opencti/connector-harfanglab:${CIRCLE_TAG}
-            docker push opencti/connector-qradar:latest
-            docker push opencti/connector-qradar:${CIRCLE_TAG}
             docker push opencti/connector-splunk:latest
             docker push opencti/connector-splunk:${CIRCLE_TAG}
+            docker push opencti/connector-qradar:latest
+            docker push opencti/connector-qradar:${CIRCLE_TAG}
             docker push opencti/connector-riskiq-passive-total:latest
             docker push opencti/connector-riskiq-passive-total:${CIRCLE_TAG}
 
@@ -1840,13 +1840,13 @@ jobs:
           name: Build Docker image opencti/connector-harfanglab-intel
           command: docker build -t opencti/connector-harfanglab-intel:rolling .
       - run:
-          working_directory: ~/opencti/stream/qradar
-          name: Build Docker image opencti/connector-qradar
-          command: docker build -t opencti/connector-qradar:rolling .
-      - run:
           working_directory: ~/opencti/stream/splunk
           name: Build Docker image opencti/connector-splunk
           command: docker build -t opencti/connector-splunk:rolling .
+      - run:
+          working_directory: ~/opencti/stream/qradar
+          name: Build Docker image opencti/connector-qradar
+          command: docker build -t opencti/connector-qradar:rolling .
       - run:
           working_directory: ~/opencti/internal-enrichment/riskiq-passive-total
           name: Build Docker image opencti/connector-riskiq-passive-total
@@ -1859,8 +1859,8 @@ jobs:
             docker push opencti/connector-sentinel-incidents:rolling
             docker push opencti/connector-sentinel-intel:rolling
             docker push opencti/connector-harfanglab:rolling
-            docker push opencti/connector-qradar:rolling
             docker push opencti/connector-splunk:rolling
+            docker push opencti/connector-qradar:rolling
             docker push opencti/connector-riskiq-passive-total:rolling
 
   build_fips_rolling_1:
