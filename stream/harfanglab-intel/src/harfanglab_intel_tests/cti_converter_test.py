@@ -122,6 +122,28 @@ def test_cti_converter_create_ioc_rule(mock_config, fake_stix_indicator):
     assert ioc_rule.value == observable.value
 
 
+def test_cti_converter_create_ioc_rule_should_have_none_type(mock_config):
+    # Given an instance of CTI converter
+    # and invalid STIX pattern
+    cti_converter = CTIConverter(config=mock_config)
+    indicator = opencti.Indicator(
+        {
+            "entity_type": "Indicator",
+            "id": "opencti-uuid",
+            "standard_id": "stix-uuid",
+            "name": "fake_stix_indicator",
+            "description": "a fake stix indicator",
+            "pattern_type": "stix",
+            "pattern": "[fake-type:value = '172.86.102.98']",
+        }
+    )
+    _, observable = indicator.observables[0]
+    # when calling create_ioc_rule
+    ioc_rule = cti_converter.create_ioc_rule(indicator, observable)
+    # then ioc_rule type should be None
+    assert ioc_rule.type is None
+
+
 def test_cti_converter_create_sigma_rule(mock_config, fake_sigma_indicator):
     # Given an instance of CTI converter
     # and a valid Sigma indicator
