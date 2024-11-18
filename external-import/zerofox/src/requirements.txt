@@ -1,4 +1,8 @@
+requests==2.31.0
 pydantic==2.8.2
 pytest==8.3.3
 pycti==6.4.3
 urllib3==2.2.2
+stix2[semantic]==3.0.1
+responses==0.25.3
+pycountry==24.6.1
