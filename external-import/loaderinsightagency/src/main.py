@@ -9,6 +9,7 @@ import stix2
 import yaml
 from dateutil.parser import parse
 from pycti import (
+    Indicator,
     Malware,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -140,9 +141,11 @@ class LIAFileFeed:
                 mime_type=filetype,
             )
 
+            pattern=f"[file:hashes.'SHA-256'='{sha256}']"
             file_indicator = stix2.Indicator(
-                pattern=f"[file:hashes.'SHA-256'='{sha256}']",
+                pattern=pattern,
                 pattern_type="stix",
+                id=Indicator.generate_id(pattern),
                 valid_from=valid_from,
                 name=f"{detected_as} malware downloaded by {source_family}",
                 description=f"This indicator represents a file hash observed from downloaded by {source_family}. The payload is detected as {detected_as}",
@@ -157,9 +160,11 @@ class LIAFileFeed:
                 ],
             )
 
+            pattern=f"[url:value='{source_url}']"
             url_indicator = stix2.Indicator(
-                pattern=f"[url:value='{source_url}']",
+                pattern=pattern,
                 pattern_type="stix",
+                id=Indicator.generate_id(pattern),
                 valid_from=valid_from,
                 name=f"Malicious source URL indicator: {source_url}",
                 description=f"This indicator represents a source URL distributed by a threat actor to the {source_family} malware",
