@@ -7,6 +7,7 @@ import sys
 import time
 
 import cairosvg
+import markdown
 import yaml
 from jinja2 import Environment, FileSystemLoader
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -724,6 +725,8 @@ class ExportReportPdf:
 
         # Extract values for inclusion in output pdf
         case_name = case_dict["name"]
+        case_description = case_dict.get("description") or "No description available."
+        case_description = markdown.markdown(case_description, output_format="html")
         case_content = case_dict["content"]
         case_marking = case_dict.get("objectMarking", None)
         if case_marking:
@@ -743,9 +746,7 @@ class ExportReportPdf:
         # Store context for usage in html template
         context = {
             "case_name": case_name,
-            "case_description": case_dict.get(
-                "description", "No description available."
-            ),
+            "case_description": case_description,
             "case_content": case_content,
             "case_marking": case_marking,
             "case_confidence": case_confidence,
