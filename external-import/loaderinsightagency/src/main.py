@@ -68,7 +68,7 @@ class LIAFileFeed:
         response = requests.get(self.api_url, headers=headers)
 
         if response.status_code != 200:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Failed to fetch data, status code: {response.status_code}"
             )
             return None
@@ -76,7 +76,7 @@ class LIAFileFeed:
         try:
             return response.json()
         except ValueError as e:
-            self.helper.log_error(f"Error parsing JSON response: {e}")
+            self.helper.connector_logger.error(f"Error parsing JSON response: {e}")
             return None
 
     def process_data(self, data):
@@ -215,7 +215,7 @@ class LIAFileFeed:
         if stix_objects or relationships:
             bundle = stix2.Bundle(objects=stix_objects + relationships)
             self.helper.send_stix2_bundle(bundle.serialize(), work_id=self.work_id)
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"Sent bundle with {len(stix_objects)} observables and {len(relationships)} relationships."
             )
 
@@ -228,7 +228,7 @@ class LIAFileFeed:
                 current_state = self.helper.get_state()
                 if current_state is not None and "last_run" in current_state:
                     last_run = current_state["last_run"]
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "Connector last run: "
                         + datetime.fromtimestamp(timestamp, dt.UTC).strftime(
                             "%Y-%m-%d %H:%M:%S %Z"
@@ -236,7 +236,7 @@ class LIAFileFeed:
                     )
                 else:
                     last_run = None
-                    self.helper.log_info("Connector has never run")
+                    self.helper.connector_logger.info("Connector has never run")
 
                 if last_run is None or (
                     (timestamp - last_run) > (int(self.interval) * 60)
@@ -253,32 +253,32 @@ class LIAFileFeed:
                         self.helper.connect_id, friendly_name
                     )
 
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"Starting data fetch @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
                     )
 
-                    self.helper.log_debug("Fetching external data...")
+                    self.helper.connector_logger.debug("Fetching external data...")
                     data = self.get_feed_data()
                     if "results" in data.keys():
                         self.process_data(data)
                     else:
-                        self.helper.log_info(
+                        self.helper.connector_logger.info(
                             f"No data retrieved or invalid response: {data}"
                         )
 
                     message = "Connector successfully run, storing last_run as " + str(
                         timestamp
                     )
-                    self.helper.log_info(message)
+                    self.helper.connector_logger.info(message)
                     self.helper.set_state({"last_run": timestamp})
                     self.helper.api.work.to_processed(self.work_id, message)
 
-                    self.helper.log_info("Last_run stored")
+                    self.helper.connector_logger.info("Last_run stored")
                 else:
 
                     # wait for next run
                     new_interval = self.get_interval() - (timestamp - last_run)
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "Connector will not run, next run in: "
                         + str(round(new_interval / 60, 2))
                         + " minutes"
@@ -286,7 +286,7 @@ class LIAFileFeed:
                     time.sleep(60)
 
             except Exception as e:
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     f"Error in connector run: {str(e)}, traceback: {traceback.format_exc()}"
                 )
 
