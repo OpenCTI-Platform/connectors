@@ -21,6 +21,7 @@ STATEMENT_MARKINGS = [
     "marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168",
     "marking-definition--17d82bb2-eeeb-4898-bda5-3ddbcd2b799d",
 ]
+MITRE_INTERVAL = 7
 
 
 def time_from_unixtime(timestamp):
@@ -73,7 +74,11 @@ class Mitre:
             default=False,
         )
         self.mitre_interval = get_config_variable(
-            "MITRE_INTERVAL", ["mitre", "interval"], config, isNumber=True
+            "MITRE_INTERVAL",
+            ["mitre", "interval"],
+            config,
+            isNumber=True,
+            default=MITRE_INTERVAL,
         )
         urls = [
             get_config_variable(
