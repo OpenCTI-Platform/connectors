@@ -316,7 +316,7 @@ class UrlscanConverter:
             )
             stix_asn_with_relationship.append(ip_to_asn)
 
-            return stix_asn_with_relationship
+        return stix_asn_with_relationship
 
     def generate_stix_hostname_with_relationship(
         self,

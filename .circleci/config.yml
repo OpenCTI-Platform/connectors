@@ -65,7 +65,7 @@ jobs:
           webhook_url: $MS_TEAMS_WEBHOOK_URL
   test:
     docker:
-      - image: cimg/python:3.12
+      - image: cimg/python:3.11
     working_directory: ~/repo
     steps:
       - checkout
@@ -974,17 +974,29 @@ jobs:
           name: Build Docker image opencti/connector-sentinel
           command: docker build -t opencti/connector-sentinel:latest . && docker tag opencti/connector-sentinel:latest opencti/connector-sentinel:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/harfanglab-incidents
+          name: Build Docker image opencti/connector-harfanglab-incidents
+          command: docker build -t opencti/connector-harfanglab-incidents:latest . && docker tag opencti/connector-harfanglab-incidents:latest opencti/connector-harfanglab-incidents:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/harfanglab-intel
+          name: Build Docker image opencti/connector-harfanglab-intel
+          command: docker build -t opencti/connector-harfanglab-intel:latest . && docker tag opencti/connector-harfanglab-intel:latest opencti/connector-harfanglab-intel:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/stream/harfanglab
           name: Build Docker image opencti/connector-harfanglab
           command: docker build -t opencti/connector-harfanglab:latest . && docker tag opencti/connector-harfanglab:latest opencti/connector-harfanglab:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/splunk
+          name: Build Docker image opencti/connector-splunk
+          command: docker build -t opencti/connector-splunk:latest . && docker tag opencti/connector-splunk:latest opencti/connector-splunk:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/stream/qradar
           name: Build Docker image opencti/connector-qradar
           command: docker build -t opencti/connector-qradar:latest . && docker tag opencti/connector-qradar:latest opencti/connector-qradar:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/stream/splunk
-          name: Build Docker image opencti/connector-splunk
-          command: docker build -t opencti/connector-splunk:latest . && docker tag opencti/connector-splunk:latest opencti/connector-splunk:${CIRCLE_TAG}
+          working_directory: ~/opencti/internal-enrichment/riskiq-passive-total
+          name: Build Docker image opencti/connector-riskiq-passive-total
+          command: docker build -t opencti/connector-riskiq-passive-total:latest . && docker tag opencti/connector-riskiq-passive-total:latest opencti/connector-riskiq-passive-total:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -997,10 +1009,13 @@ jobs:
             docker push opencti/connector-sentinel:${CIRCLE_TAG}
             docker push opencti/connector-harfanglab:latest
             docker push opencti/connector-harfanglab:${CIRCLE_TAG}
-            docker push opencti/connector-qradar:latest
-            docker push opencti/connector-qradar:${CIRCLE_TAG}
             docker push opencti/connector-splunk:latest
             docker push opencti/connector-splunk:${CIRCLE_TAG}
+            docker push opencti/connector-qradar:latest
+            docker push opencti/connector-qradar:${CIRCLE_TAG}
+            docker push opencti/connector-riskiq-passive-total:latest
+            docker push opencti/connector-riskiq-passive-total:${CIRCLE_TAG}
+
   build_fips_1:
     working_directory: ~/opencti
     docker:
@@ -1817,13 +1832,25 @@ jobs:
           name: Build Docker image opencti/connector-harfanglab
           command: docker build -t opencti/connector-harfanglab:rolling .
       - run:
-          working_directory: ~/opencti/stream/qradar
-          name: Build Docker image opencti/connector-qradar
-          command: docker build -t opencti/connector-qradar:rolling .
+          working_directory: ~/opencti/external-import/harfanglab-incidents
+          name: Build Docker image opencti/connector-harfanglab-incidents
+          command: docker build -t opencti/connector-harfanglab-incidents:rolling .
+      - run:
+          working_directory: ~/opencti/stream/harfanglab-intel
+          name: Build Docker image opencti/connector-harfanglab-intel
+          command: docker build -t opencti/connector-harfanglab-intel:rolling .
       - run:
           working_directory: ~/opencti/stream/splunk
           name: Build Docker image opencti/connector-splunk
           command: docker build -t opencti/connector-splunk:rolling .
+      - run:
+          working_directory: ~/opencti/stream/qradar
+          name: Build Docker image opencti/connector-qradar
+          command: docker build -t opencti/connector-qradar:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/riskiq-passive-total
+          name: Build Docker image opencti/connector-riskiq-passive-total
+          command: docker build -t opencti/connector-riskiq-passive-total:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -1832,8 +1859,9 @@ jobs:
             docker push opencti/connector-sentinel-incidents:rolling
             docker push opencti/connector-sentinel-intel:rolling
             docker push opencti/connector-harfanglab:rolling
-            docker push opencti/connector-qradar:rolling
             docker push opencti/connector-splunk:rolling
+            docker push opencti/connector-qradar:rolling
+            docker push opencti/connector-riskiq-passive-total:rolling
 
   build_fips_rolling_1:
     working_directory: ~/opencti
@@ -1909,6 +1937,7 @@ workflows:
   opencti:
     jobs:
       - ensure_formatting
+      - base_linter
       - linter
       - test
       - build_1:
@@ -1938,6 +1967,7 @@ workflows:
       - build_rolling_1:
           requires:
             - ensure_formatting
+            - base_linter
             - linter
           filters:
             branches:
@@ -1946,6 +1976,7 @@ workflows:
       - build_rolling_2:
           requires:
             - ensure_formatting
+            - base_linter
             - linter
           filters:
             branches:
@@ -1954,6 +1985,7 @@ workflows:
       - build_rolling_3:
           requires:
             - ensure_formatting
+            - base_linter
             - linter
           filters:
             branches:
@@ -1962,6 +1994,7 @@ workflows:
       - build_fips_rolling_1:
           requires:
             - ensure_formatting
+            - base_linter
             - linter
           filters:
             branches:
