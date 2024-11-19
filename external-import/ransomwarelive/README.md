@@ -26,7 +26,7 @@ Expected environment variables to be set in the  `docker-compose.yml` that descr
 Most of the times, these values are NOT expected to be changed.
 
 | Parameter                            | Docker envvar                       | Mandatory    | Description                                                                                                                                                |
-| ------------------------------------ | ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |                                                                                                   |
+| ------------------------------------ | ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |                                               
 | `connector_name`                     | `CONNECTOR_NAME`                    | Yes          | A connector name to be shown in OpenCTI.                                                                                                                   |
 | `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported scope. E. g., `text/html`.                                                                                                                       |
 
