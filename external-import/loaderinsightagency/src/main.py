@@ -295,5 +295,9 @@ class LIAFileFeed:
 
 
 if __name__ == "__main__":
-    connector = LIAFileFeed()
-    connector.run()
+    try:
+        connector = LIAFileFeed()
+        connector.run()
+    except:
+        traceback.print_exc()
+        exit(1)
