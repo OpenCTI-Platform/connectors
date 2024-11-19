@@ -13,4 +13,3 @@ connector:
 liafilefeed:
   api_base_url: 'https://loaderinsight.agency/api/?ep=filefeed'
   api_key: 'ChangeMe'
-  interval: 15

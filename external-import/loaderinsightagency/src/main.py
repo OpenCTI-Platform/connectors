@@ -36,11 +36,8 @@ class LIAFileFeed:
             "LIA_API_KEY", ["liafilefeed", "api_key"], config
         )
 
-        self.interval = get_config_variable(
-            "LIA_INTERVAL",
-            ["liafilefeed", "interval"],
-            config,
-            True,
+        self.duration_period = get_config_variable(
+            "CONNECTOR_DURATION_PERIOD", ["connector", "duration_period"], config
         )
 
         self.identity = self.helper.api.identity.create(
@@ -48,9 +45,6 @@ class LIAFileFeed:
             name="Loader Insight Agency",
             description="The Loader Insight Agency is a platform that tracks activities of malware loaders through C2 traffic emulation",
         )
-
-    def get_interval(self):
-        return int(self.interval) * 60
 
     def generate_relationship(self, source_id, target_id, relation_type="based-on"):
         return stix2.Relationship(
@@ -141,7 +135,7 @@ class LIAFileFeed:
                 mime_type=filetype,
             )
 
-            pattern=f"[file:hashes.'SHA-256'='{sha256}']"
+            pattern = f"[file:hashes.'SHA-256'='{sha256}']"
             file_indicator = stix2.Indicator(
                 pattern=pattern,
                 pattern_type="stix",
@@ -160,7 +154,7 @@ class LIAFileFeed:
                 ],
             )
 
-            pattern=f"[url:value='{source_url}']"
+            pattern = f"[url:value='{source_url}']"
             url_indicator = stix2.Indicator(
                 pattern=pattern,
                 pattern_type="stix",
@@ -219,79 +213,65 @@ class LIAFileFeed:
                 f"Sent bundle with {len(stix_objects)} observables and {len(relationships)} relationships."
             )
 
-    def run(self):
-        while True:
-            try:
+    def run_collection(self):
 
-                # Get the current timestamp and check
-                timestamp = int(time.time())
-                current_state = self.helper.get_state()
-                if current_state is not None and "last_run" in current_state:
-                    last_run = current_state["last_run"]
-                    self.helper.connector_logger.info(
-                        "Connector last run: "
-                        + datetime.fromtimestamp(timestamp, dt.UTC).strftime(
-                            "%Y-%m-%d %H:%M:%S %Z"
-                        )
+        try:
+
+            # Get the current timestamp and check
+            timestamp = int(time.time())
+            current_state = self.helper.get_state()
+            if current_state is not None and "last_run" in current_state:
+                self.helper.connector_logger.info(
+                    "Connector last run: "
+                    + datetime.fromtimestamp(timestamp, dt.UTC).strftime(
+                        "%Y-%m-%d %H:%M:%S %Z"
                     )
-                else:
-                    last_run = None
-                    self.helper.connector_logger.info("Connector has never run")
+                )
+            else:
+                self.helper.connector_logger.info("Connector has never run")
 
-                if last_run is None or (
-                    (timestamp - last_run) > (int(self.interval) * 60)
-                ):
+            timestamp = int(time.time())
+            now = datetime.fromtimestamp(timestamp, dt.UTC)
+            friendly_name = "Loader Insight Agency File Feed run @ " + now.strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
 
-                    timestamp = int(time.time())
-                    now = datetime.fromtimestamp(timestamp, dt.UTC)
-                    friendly_name = (
-                        "Loader Insight Agency File Feed run @ "
-                        + now.strftime("%Y-%m-%d %H:%M:%S")
-                    )
+            self.work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
 
-                    self.work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
+            self.helper.connector_logger.info(
+                f"Starting data fetch @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
 
-                    self.helper.connector_logger.info(
-                        f"Starting data fetch @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
-                    )
-
-                    self.helper.connector_logger.debug("Fetching external data...")
-                    data = self.get_feed_data()
-                    if "results" in data.keys():
-                        self.process_data(data)
-                    else:
-                        self.helper.connector_logger.info(
-                            f"No data retrieved or invalid response: {data}"
-                        )
-
-                    message = "Connector successfully run, storing last_run as " + str(
-                        timestamp
-                    )
-                    self.helper.connector_logger.info(message)
-                    self.helper.set_state({"last_run": timestamp})
-                    self.helper.api.work.to_processed(self.work_id, message)
-
-                    self.helper.connector_logger.info("Last_run stored")
-                else:
-
-                    # wait for next run
-                    new_interval = self.get_interval() - (timestamp - last_run)
-                    self.helper.connector_logger.info(
-                        "Connector will not run, next run in: "
-                        + str(round(new_interval / 60, 2))
-                        + " minutes"
-                    )
-                    time.sleep(60)
-
-            except Exception as e:
-                self.helper.connector_logger.error(
-                    f"Error in connector run: {str(e)}, traceback: {traceback.format_exc()}"
+            self.helper.connector_logger.debug("Fetching external data...")
+            data = self.get_feed_data()
+            if "results" in data.keys():
+                self.process_data(data)
+            else:
+                self.helper.connector_logger.info(
+                    f"No data retrieved or invalid response: {data}"
                 )
 
-            # Sleep for the configured interval
-            time.sleep(self.interval)
+            message = "Connector successfully run, storing last_run as " + str(
+                timestamp
+            )
+            self.helper.connector_logger.info(message)
+            self.helper.set_state({"last_run": timestamp})
+            self.helper.api.work.to_processed(self.work_id, message)
+
+            self.helper.connector_logger.info("Last_run stored")
+
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"Error in connector run: {str(e)}, traceback: {traceback.format_exc()}"
+            )
+
+    def run(self):
+        self.helper.schedule_iso(
+            message_callback=self.run_collection,
+            duration_period=self.duration_period,
+        )
 
 
 if __name__ == "__main__":
