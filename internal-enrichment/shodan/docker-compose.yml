@@ -15,4 +15,5 @@ services:
       - SHODAN_DEFAULT_SCORE=50
       - SHODAN_IMPORT_SEARCH_RESULTS=true
       - SHODAN_CREATE_NOTE=true # Add results to note rather than description
+      - SHODAN_USE_ISP_NAME_FOR_ASN=false
     restart: always
