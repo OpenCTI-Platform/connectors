@@ -1,5 +1,13 @@
 import requests
-from .utils import is_cidr, is_full_network, is_private_ip, networkcidr_to_list, is_private_cidr
+from .utils import (
+    is_cidr,
+    is_full_network,
+    is_private_ip,
+    networkcidr_to_list,
+    is_private_cidr,
+)
+
+
 class ConnectorClient:
     def __init__(self, helper, config):
         """

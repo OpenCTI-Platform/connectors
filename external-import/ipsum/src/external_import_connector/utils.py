@@ -1,6 +1,7 @@
 #  Utilities: helper functions, classes, or modules that provide common, reusable functionality across a codebase
 import ipaddress
 
+
 def is_private_ip(ip: str) -> bool:
     """
     Check if the IP is a private IP
@@ -22,6 +23,7 @@ def is_private_cidr(cidr: str) -> bool:
     except ValueError:
         return False
 
+
 def is_full_network(ip):
     """
     Check if the IP is a full network
@@ -29,8 +31,8 @@ def is_full_network(ip):
     :return: A boolean
     """
     return ip in ["0.0.0.0/0", "::/0"]
-      
-  
+
+
 def is_cidr(value):
     """
     Check if the value is a CIDR
@@ -42,6 +44,7 @@ def is_cidr(value):
         return True
     except ValueError:
         return False
+
 
 def networkcidr_to_list(cidr):
     """
