@@ -1,4 +1,4 @@
-pydantic==2.8.2
+pydantic==2.10.0
 pytest==8.3.3
 pycti==6.4.0
 urllib3==2.2.2
