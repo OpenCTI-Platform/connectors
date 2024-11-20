@@ -7,14 +7,19 @@ import sys
 import time
 
 import cairosvg
-import markdown
+import cmarkgfm
 import yaml
+from cmarkgfm.cmark import Options as cmarkgfmOptions
 from jinja2 import Environment, FileSystemLoader
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from pycti.utils.constants import StixCyberObservableTypes
 from pygal_maps_world.i18n import COUNTRIES
 from pygal_maps_world.maps import World
 from weasyprint import HTML
+
+CMARKGFM_OPTIONS = (
+    cmarkgfmOptions.CMARK_OPT_GITHUB_PRE_LANG | cmarkgfmOptions.CMARK_OPT_FOOTNOTES
+)
 
 
 class ExportReportPdf:
@@ -726,7 +731,9 @@ class ExportReportPdf:
         # Extract values for inclusion in output pdf
         case_name = case_dict["name"]
         case_description = case_dict.get("description") or "No description available."
-        case_description = markdown.markdown(case_description, output_format="html")
+        case_description = cmarkgfm.github_flavored_markdown_to_html(
+            case_description, CMARKGFM_OPTIONS
+        )
         case_content = case_dict["content"]
         case_marking = case_dict.get("objectMarking", None)
         if case_marking:
