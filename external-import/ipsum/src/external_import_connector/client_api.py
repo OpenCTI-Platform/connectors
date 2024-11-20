@@ -1,7 +1,12 @@
 import requests
 
-from .utils import (is_cidr, is_full_network, is_private_cidr, is_private_ip,
-                    networkcidr_to_list)
+from .utils import (
+    is_cidr,
+    is_full_network,
+    is_private_cidr,
+    is_private_ip,
+    networkcidr_to_list,
+)
 
 
 class ConnectorClient:
