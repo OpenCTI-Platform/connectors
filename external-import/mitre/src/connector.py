@@ -73,7 +73,11 @@ class Mitre:
             default=False,
         )
         self.mitre_interval = get_config_variable(
-            "MITRE_INTERVAL", ["mitre", "interval"], config, isNumber=True
+            "MITRE_INTERVAL",
+            ["mitre", "interval"],
+            config,
+            isNumber=True,
+            default=7,
         )
         urls = [
             get_config_variable(
