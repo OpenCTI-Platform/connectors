@@ -1,6 +1,7 @@
 import requests
 
-from external_import_connector import utils
+from .utils import (is_cidr, is_full_network, is_private_cidr, is_private_ip,
+                    networkcidr_to_list)
 
 
 class ConnectorClient:
@@ -54,13 +55,13 @@ class ConnectorClient:
                 for line in response.text.splitlines():
                     if not line.startswith("#"):
                         ip = line.strip()
-                        if utils.is_cidr(ip):
-                            if utils.is_full_network(ip) or utils.is_private_cidr(ip):
+                        if is_cidr(ip):
+                            if is_full_network(ip) or is_private_cidr(ip):
                                 continue
-                            network_ips = utils.networkcidr_to_list(ip)
+                            network_ips = networkcidr_to_list(ip)
                             ips.extend(network_ips)
                         else:
-                            if not utils.is_private_ip(ip):
+                            if not is_private_ip(ip):
                                 ips.append(ip)
             return ips
             # ==========================
