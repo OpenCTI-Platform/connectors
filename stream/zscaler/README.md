@@ -1,156 +1,59 @@
-# OpenCTI Stream Connector Template
+# OpenCTI Zscaler Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
-
-Table of Contents
-
-- [OpenCTI Stream Connector Template](#opencti-stream-connector-template)
-    - [Introduction](#introduction)
-    - [Installation](#installation)
-        - [Requirements](#requirements)
-    - [Configuration variables](#configuration-variables)
-        - [OpenCTI environment variables](#opencti-environment-variables)
-        - [Base connector environment variables](#base-connector-environment-variables)
-        - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-    - [Deployment](#deployment)
-        - [Docker Deployment](#docker-deployment)
-        - [Manual Deployment](#manual-deployment)
-    - [Usage](#usage)
-    - [Behavior](#behavior)
-    - [Debugging](#debugging)
-    - [Additional information](#additional-information)
-
-## Introduction
+This connector enables organizations to integrate **OpenCTI** intelligence into their **Zscaler** environment.
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >=
+- OpenCTI Platform >= 6.0.0
 
-## Configuration variables
+### Configuration
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+| Parameter                               | Docker Env Variable                             | Mandatory  | Description                                                                                     |
+|-----------------------------------------|-------------------------------------------------|------------|------------------------------------------------------------------------------------------------ |
+| `OPENCTI_URL`                           | `OPENCTI_URL`                                   | Yes        | The URL of the OpenCTI platform.                                                                |
+| `OPENCTI_TOKEN`                         | `OPENCTI_TOKEN`                                 | Yes        | The API token of the OpenCTI platform.                                                          |
+| `CONNECTOR_ID`                          | `CONNECTOR_ID`                                  | Yes        | A unique `UUIDv4` for this connector.                                                           |
+| `CONNECTOR_TYPE`                        | `CONNECTOR_TYPE`                                | Yes        | The type of the connector. Must be `STREAM`.                                                    |
+| `CONNECTOR_NAME`                        | `CONNECTOR_NAME`                                | Yes        | A name for the connector, e.g., `ZscalerConnector`.                                             |
+| `CONNECTOR_SCOPE`                       | `CONNECTOR_SCOPE`                               | Yes        | The data scope for the connector. Use `domain-name` for this connector.                         |
+| `CONNECTOR_LOG_LEVEL`                   | `CONNECTOR_LOG_LEVEL`                           | No         | The log level for this connector (`debug`, `info`, `warn`, or `error`).                         |
+| `CONNECTOR_LIVE_STREAM_ID`              | `CONNECTOR_LIVE_STREAM_ID`                      | Yes        | The Live Stream ID of the OpenCTI stream.                                                       |
+| `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`           | Yes        | Whether the connector should listen for deleted items (`true` or `false`).                      |
+| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`         |Yes (Default)| Whether the connector should avoid dependency processing (`true` or `false`).                  |
+| `CONNECTOR_DURATION_PERIOD`             | `CONNECTOR_DURATION_PERIOD`                     |Yes (Default)| The interval at which the connector will process data, e.g., `PT5M` (5 minutes).               |
+| `ZSCALER_API_BASE_URL`                  | `ZSCALER_API_BASE_URL`                          | Yes        | The base URL of the Zscaler API.                                                                |
+| `ZSCALER_API_KEY`                       | `ZSCALER_API_KEY`                               | Yes        | The API key for Zscaler authentication.                                                         |
+| `ZSCALER_USERNAME`                      | `ZSCALER_USERNAME`                              | Yes        | The username for Zscaler authentication.                                                        |
+| `ZSCALER_PASSWORD`                      | `ZSCALER_PASSWORD`                              | Yes        | The password for Zscaler authentication.                                                        |
 
-### OpenCTI environment variables
 
-Below are the parameters you'll need to set for OpenCTI:
+### Usage
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+- This connector will connect to the Zscaler API using the specified credentials (`zscaler_username`, `zscaler_password`, and `zscaler_api_key`).
+- To use the connector, create an API token in Zscaler with appropriate permissions to access the necessary data.
 
-### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
+### Configuration Example
 
-| Parameter                             | config.yml                  | Docker environment variable             | Default         | Mandatory | Description                                                                                                                                            |
-|---------------------------------------|-----------------------------|-----------------------------------------|-----------------|-----------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Connector ID                          | id                          | `CONNECTOR_ID`                          | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                              |
-| Connector Type                        | type                        | `CONNECTOR_TYPE`                        | EXTERNAL_IMPORT | Yes       | Should always be set to `STREAM` for this connector.                                                                                                   |
-| Connector Name                        | name                        | `CONNECTOR_NAME`                        |                 | Yes       | Name of the connector.                                                                                                                                 |
-| Connector Scope                       | scope                       | `CONNECTOR_SCOPE`                       |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                               |
-| Log Level                             | log_level                   | `CONNECTOR_LOG_LEVEL`                   | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                                 |
-| Connector Live Stream ID              | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              | /               | Yes       | ID of the live stream created in the OpenCTI UI                                                                                                        |
-| Connector Live Stream Listen Delete   | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true            | Yes       | Listen to all delete events concerning the entity, depending on the filter set for the OpenCTI stream.                                                 |
-| Connector Live Stream No dependencies | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | true            | Yes       | Always set to `True` unless you are synchronizing 2 OpenCTI platforms and you want to get an entity and all context (relationships and related entity) |
+Here's an example Docker-compose.yml configuration for this connector, which you can adapt based on your environment:
 
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the connector:
-
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
-
-## Deployment
-
-### Docker Deployment
-
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
-
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
-```
-
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
-
-```shell
-docker compose up -d
-# -d for detached
-```
-
-### Manual Deployment
-
-Create a file `config.yml` based on the provided `config.yml.sample`.
-
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
-
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
-pip3 install -r requirements.txt
-```
-
-Then, start the connector from recorded-future/src:
-
-```shell
-python3 main.py
-```
-
-## Usage
-
-After Installation, the connector should require minimal interaction to use, and should update automatically at a
-regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
-
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
-
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
-
-## Behavior
-
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
-
-## Debugging
-
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
-
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
-
-## Additional information
-
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+Docker-compose.yml
+{
+  "opencti_url": "https://your-opencti-instance.com",
+  "opencti_token": "YOUR_OPENCTI_TOKEN",
+  "connector_id": "YOUR_CONNECTOR_UUID",
+  "connector_name": "Zscaler Connector",
+  "connector_scope": "zscaler",
+  "connector_confidence_level": 3,
+  "connector_log_level": "info",
+  "connector_consumer_count": 1,
+  "connector_live_stream_id": "YOUR_LIVE_STREAM_ID",
+  "connector_live_stream_start_timestamp": "2022-01-01T00:00:00Z",
+  "zscaler_url": "https://zsapi.zscalertwo.net/api",
+  "zscaler_username": "YOUR_ZSCALER_USERNAME",
+  "zscaler_password": "YOUR_ZSCALER_PASSWORD",
+  "zscaler_api_key": "YOUR_ZSCALER_API_KEY",
+  "zscaler_ssl_verify": true,
+}
