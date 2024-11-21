@@ -1,0 +1,5 @@
+pycti==6.3.8
+requests
+python-dotenv
+pyyaml
+validators
