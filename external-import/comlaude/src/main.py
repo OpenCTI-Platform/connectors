@@ -26,6 +26,7 @@ import comlaude
 CONFIG_FILE_PATH = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
 X_OPENCTI_PREFIX = "x_opencti_"
 
+
 def _format_time(utc_time):
     """
     Format the given UTC time to a specific string format.
@@ -35,9 +36,11 @@ def _format_time(utc_time):
     """
     return utc_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
 
+
 # Defines a time delta of 5 minutes.
 TIME_DELTA = datetime.timedelta(minutes=5)
 COMLAUDE_END_TIME = _format_time(datetime.datetime.utcnow() - TIME_DELTA)
+
 
 def _convert_timestamp_to_zero_millisecond_format(timestamp: str) -> str:
     """
@@ -55,6 +58,7 @@ def _convert_timestamp_to_zero_millisecond_format(timestamp: str) -> str:
     except ValueError:
         return None
 
+
 def _is_empty(value):
     """
     Check if a given value is empty or None.
@@ -67,6 +71,7 @@ def _is_empty(value):
     if isinstance(value, (str, list, dict)) and not value:
         return True
     return False
+
 
 def _deserialize_json_string(value):
     """
@@ -82,6 +87,7 @@ def _deserialize_json_string(value):
             return value
     return value
 
+
 def _validate_required_fields(domain_object, required_fields):
     """
     Validate that all required fields are present and not empty.
@@ -90,11 +96,16 @@ def _validate_required_fields(domain_object, required_fields):
     :param required_fields: List of required fields to validate.
     :return: Boolean indicating whether all required fields are present and non-empty.
     """
-    missing_fields = [field for field in required_fields if field not in domain_object or _is_empty(domain_object[field])]
+    missing_fields = [
+        field
+        for field in required_fields
+        if field not in domain_object or _is_empty(domain_object[field])
+    ]
     if missing_fields:
         print(f"Skipping domain due to missing fields: {missing_fields}")
         return False
     return True
+
 
 def _generate_dynamic_custom_properties(helper, domain_object, score, author_identity):
     """
@@ -109,9 +120,9 @@ def _generate_dynamic_custom_properties(helper, domain_object, score, author_ide
     custom_properties = {
         "x_opencti_score": score,
         "x_opencti_description": "This domain is known infrastructure managed by Comlaude.",
-        "created_by_ref": author_identity.id,  
+        "created_by_ref": author_identity.id,
     }
-    required_fields = ["id", "name", "created_at", "updated_at"] 
+    required_fields = ["id", "name", "created_at", "updated_at"]
     for key, value in domain_object.items():
         if not _is_empty(value) and key in required_fields:
             # Deserialize JSON values if necessary
@@ -130,6 +141,7 @@ def _generate_dynamic_custom_properties(helper, domain_object, score, author_ide
     domain_name = custom_properties.pop(f"{X_OPENCTI_PREFIX}name", None)
     helper.log_debug(f"Pop domain_name: {domain_name}")
     return domain_name, custom_properties
+
 
 def _create_stix_create_bundle(helper, domain_object, labels, score, author_identity):
     """
@@ -191,12 +203,13 @@ def _create_stix_create_bundle(helper, domain_object, labels, score, author_iden
         source_ref=sdo_indicator.id,
         target_ref=sco_domain_name.id,
         start_time=start_time,
-        created_by_ref=author_identity.id,  
+        created_by_ref=author_identity.id,
     )
 
     helper.log_debug(f"Create relationships: {domain_name}")
     helper.log_debug(f"Bundle Objects: {domain_name}")
     return domain_name, [sco_domain_name, sdo_indicator, sro_object]
+
 
 class ComlaudeConnector:
     """
@@ -346,14 +359,16 @@ class ComlaudeConnector:
                     )
                 except Exception as e:
                     self.helper.log_error(f"Error sending STIX bundle: {str(e)}")
-                stix_objects = [self.identity]  
-            
+                stix_objects = [self.identity]
+
             if last_event_time:
                 try:
                     # Update the state with the current timestamp
                     current_timestamp = _format_time(datetime.datetime.utcnow())
                     self.helper.set_state({"last_run": current_timestamp})
-                    self.helper.log_info(f"State updated with last_run: {current_timestamp}")
+                    self.helper.log_info(
+                        f"State updated with last_run: {current_timestamp}"
+                    )
                 except Exception as e:
                     self.helper.log_error(f"Error updating last_run state: {str(e)}")
 
@@ -367,7 +382,7 @@ class ComlaudeConnector:
                 self.helper.log_info("Connector ping successful.")
             except Exception as e:
                 self.helper.log_error(f"Error during connector ping: {str(e)}")
-            time.sleep(300)  
+            time.sleep(300)
 
     def run(self):
         """
@@ -389,7 +404,7 @@ class ComlaudeConnector:
                 self._process_events()
             except Exception as e:
                 self.helper.log_error(f"Error during event processing: {str(e)}")
-            time.sleep(300)  
+            time.sleep(300)
 
     def _process_events(self):
         """
@@ -406,6 +421,7 @@ class ComlaudeConnector:
             self.comlaude_search.get_next_page()
             self._iterate_events()
         return True
+
 
 if __name__ == "__main__":
     """
