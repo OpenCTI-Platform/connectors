@@ -504,24 +504,23 @@ class RecordedFutureApiClient:
                 # If there is an unexpected content type, log the error
                 rf_alert_rule_content_type = response.headers.get("Content-Type")
 
-                if (
-                    rf_alert_rule_content_type
-                    and rf_alert_rule_content_type != "application/json"
-                ):
+                if rf_alert_rule_content_type != "application/json":
                     self.helper.log_error(
                         "Unexpected Content-Type from ApiRecordedFuture: ",
                         {"content-type": rf_alert_rule_content_type},
                     )
 
-                data = response.json()
+                data = {}
 
                 # If the response doesn't contain data, log the error
-                if not data:
+                if not data or data.get("data"):
                     self.helper.log_error("No data returned from Recorded Future API")
+                    return
 
                 # If the response is not a dictionary, log the error
                 if not isinstance(data, dict):
                     self.helper.log_error("Response data is not a dictionary")
+                    return
 
                 # If the response contains data and contains the counts field, extract priority rules
                 if data and data.get("counts"):
