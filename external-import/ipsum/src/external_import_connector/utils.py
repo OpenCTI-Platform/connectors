@@ -1,6 +1,7 @@
 #  Utilities: helper functions, classes, or modules that provide common, reusable functionality across a codebase
 import ipaddress
 
+
 @staticmethod
 def is_private_ip(ip: str) -> bool:
     """
