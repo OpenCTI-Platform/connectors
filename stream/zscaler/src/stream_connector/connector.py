@@ -13,6 +13,7 @@ from utils import obfuscate_api_key
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+
 class ZscalerConnector:
     def __init__(self, conf_path):
         logging.info("Initializing connector...")
@@ -113,7 +114,6 @@ class ZscalerConnector:
                 )
                 return None
 
-        
         logging.error("Max retries reached. Failed to complete the request.")
         return None
 
