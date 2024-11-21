@@ -75,7 +75,6 @@ class ZscalerConnector:
         logging.debug(f"Raw response from Zscaler: {response.text}")
 
         if response and response.status_code == 200:
-            auth_data = response.json()
             # Store the JSESSIONID cookie from the response
             self.session_cookie = response.cookies.get("JSESSIONID")
             logging.info(
@@ -115,7 +114,7 @@ class ZscalerConnector:
                 return None
 
         
-        logging.error(f"Max retries reached. Failed to complete the request.")
+        logging.error("Max retries reached. Failed to complete the request.")
         return None
 
     def get_zscaler_session_cookie(self):
