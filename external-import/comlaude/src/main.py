@@ -7,6 +7,8 @@ import datetime
 import os
 import sys
 import time
+import threading
+import json
 
 import stix2
 import yaml
@@ -24,7 +26,6 @@ import comlaude
 CONFIG_FILE_PATH = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
 X_OPENCTI_PREFIX = "x_opencti_"
 
-
 def _format_time(utc_time):
     """
     Format the given UTC time to a specific string format.
@@ -34,11 +35,9 @@ def _format_time(utc_time):
     """
     return utc_time.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
 
-
 # Defines a time delta of 5 minutes.
 TIME_DELTA = datetime.timedelta(minutes=5)
 COMLAUDE_END_TIME = _format_time(datetime.datetime.utcnow() - TIME_DELTA)
-
 
 def _convert_timestamp_to_zero_millisecond_format(timestamp: str) -> str:
     """
@@ -56,7 +55,6 @@ def _convert_timestamp_to_zero_millisecond_format(timestamp: str) -> str:
     except ValueError:
         return None
 
-
 def _is_empty(value):
     """
     Check if a given value is empty or None.
@@ -70,6 +68,33 @@ def _is_empty(value):
         return True
     return False
 
+def _deserialize_json_string(value):
+    """
+    Attempt to deserialize a JSON string into a Python object.
+
+    :param value: Potentially serialized JSON string.
+    :return: Deserialized Python object or the original value if deserialization fails.
+    """
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return value
+    return value
+
+def _validate_required_fields(domain_object, required_fields):
+    """
+    Validate that all required fields are present and not empty.
+
+    :param domain_object: Dictionary representing the domain object.
+    :param required_fields: List of required fields to validate.
+    :return: Boolean indicating whether all required fields are present and non-empty.
+    """
+    missing_fields = [field for field in required_fields if field not in domain_object or _is_empty(domain_object[field])]
+    if missing_fields:
+        print(f"Skipping domain due to missing fields: {missing_fields}")
+        return False
+    return True
 
 def _generate_dynamic_custom_properties(helper, domain_object, score, author_identity):
     """
@@ -84,17 +109,27 @@ def _generate_dynamic_custom_properties(helper, domain_object, score, author_ide
     custom_properties = {
         "x_opencti_score": score,
         "x_opencti_description": "This domain is known infrastructure managed by Comlaude.",
-        "created_by_ref": author_identity.id,  # Add the created_by_ref to custom properties
+        "created_by_ref": author_identity.id,  
     }
+    required_fields = ["id", "name", "created_at", "updated_at"] 
     for key, value in domain_object.items():
-        if not _is_empty(value):
-            custom_key = X_OPENCTI_PREFIX + key
-            custom_properties[custom_key] = value
-            helper.log_debug(f"Custom Key: {custom_key}")
+        if not _is_empty(value) and key in required_fields:
+            # Deserialize JSON values if necessary
+            value = _deserialize_json_string(value)
+
+            # Serialize complex values as JSON
+            if isinstance(value, (dict, list)):
+                try:
+                    custom_properties[X_OPENCTI_PREFIX + key] = json.dumps(value)
+                    helper.log_debug(f"Serialized Custom Key: {X_OPENCTI_PREFIX + key}")
+                except Exception as e:
+                    helper.log_error(f"Error serializing value for key {key}: {str(e)}")
+            else:
+                custom_properties[X_OPENCTI_PREFIX + key] = value
+                helper.log_debug(f"Custom Key: {X_OPENCTI_PREFIX + key}")
     domain_name = custom_properties.pop(f"{X_OPENCTI_PREFIX}name", None)
     helper.log_debug(f"Pop domain_name: {domain_name}")
     return domain_name, custom_properties
-
 
 def _create_stix_create_bundle(helper, domain_object, labels, score, author_identity):
     """
@@ -156,13 +191,12 @@ def _create_stix_create_bundle(helper, domain_object, labels, score, author_iden
         source_ref=sdo_indicator.id,
         target_ref=sco_domain_name.id,
         start_time=start_time,
-        created_by_ref=author_identity.id,  # Remplace author_identity.id par self.identity.id
+        created_by_ref=author_identity.id,  
     )
 
     helper.log_debug(f"Create relationships: {domain_name}")
     helper.log_debug(f"Bundle Objects: {domain_name}")
     return domain_name, [sco_domain_name, sdo_indicator, sro_object]
-
 
 class ComlaudeConnector:
     """
@@ -255,7 +289,7 @@ class ComlaudeConnector:
             )
             return config
         except Exception as e:
-            print(f"Error loading configuration: {str(e)}")
+            self.helper.log_error(f"Error loading configuration: {str(e)}")
             raise
 
     def _get_interval(self):
@@ -284,23 +318,56 @@ class ComlaudeConnector:
         """
         Iterate through events from Comlaude, generate STIX bundles, and send them to OpenCTI.
         """
+        required_fields = ["name", "created_at", "updated_at"]
         self.helper.log_info(
             "Process ({}) events.".format(len(self.comlaude_search.results["data"]))
         )
         if len(self.comlaude_search.results["data"]) > 0:
             self._refresh_work_id()
             stix_objects = [self.identity]
+            last_event_time = None
             for event in self.comlaude_search.results["data"]:
+                # Deserialize JSON fields before validating
+                for key in event.keys():
+                    event[key] = _deserialize_json_string(event[key])
+                if not _validate_required_fields(event, required_fields):
+                    continue
                 domain_name, objects = _create_stix_create_bundle(
                     self.helper, event, self.labels, self.score, self.identity
                 )
                 stix_objects.extend(objects)
-            bundle = Bundle(objects=stix_objects, allow_custom=True)
-            self.helper.send_stix2_bundle(
-                bundle.serialize(),
-                update=self.update_existing_data,
-                work_id=self.work_id,
-            )
+                last_event_time = event.get("updated_at", None)
+                bundle = Bundle(objects=stix_objects, allow_custom=True)
+                try:
+                    self.helper.send_stix2_bundle(
+                        bundle.serialize(),
+                        update=self.update_existing_data,
+                        work_id=self.work_id,
+                    )
+                except Exception as e:
+                    self.helper.log_error(f"Error sending STIX bundle: {str(e)}")
+                stix_objects = [self.identity]  
+            
+            if last_event_time:
+                try:
+                    # Update the state with the current timestamp
+                    current_timestamp = _format_time(datetime.datetime.utcnow())
+                    self.helper.set_state({"last_run": current_timestamp})
+                    self.helper.log_info(f"State updated with last_run: {current_timestamp}")
+                except Exception as e:
+                    self.helper.log_error(f"Error updating last_run state: {str(e)}")
+
+    def _ping_connector(self):
+        """
+        Continuously ping OpenCTI to keep the connector alive.
+        """
+        while True:
+            try:
+                self.helper.force_ping()
+                self.helper.log_info("Connector ping successful.")
+            except Exception as e:
+                self.helper.log_error(f"Error during connector ping: {str(e)}")
+            time.sleep(300)  
 
     def run(self):
         """
@@ -312,16 +379,17 @@ class ComlaudeConnector:
             )
         )
 
+        # Start the ping thread to keep the connector alive
+        ping_thread = threading.Thread(target=self._ping_connector)
+        ping_thread.daemon = True
+        ping_thread.start()
+
         while True:
-            if self._process_events():
-                self.helper.log_info(
-                    "Connector stop: ({})".format(
-                        _format_time(datetime.datetime.utcnow())
-                    )
-                )
-                self.helper.force_ping()
-                # Sleep for interval specified in Hours.
-            time.sleep(self._get_interval())
+            try:
+                self._process_events()
+            except Exception as e:
+                self.helper.log_error(f"Error during event processing: {str(e)}")
+            time.sleep(300)  
 
     def _process_events(self):
         """
@@ -339,7 +407,6 @@ class ComlaudeConnector:
             self._iterate_events()
         return True
 
-
 if __name__ == "__main__":
     """
     Entry point of the script.
@@ -348,6 +415,6 @@ if __name__ == "__main__":
         connector = ComlaudeConnector()
         connector.run()
     except Exception as e:
-        print(e)
+        OpenCTIConnectorHelper.log_error(f"Fatal error: {str(e)}")
         time.sleep(10)
         sys.exit(0)
