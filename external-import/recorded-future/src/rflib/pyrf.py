@@ -523,7 +523,8 @@ class RecordedFutureApiClient:
                 if not isinstance(data, dict):
                     self.helper.log_error("Response data is not a dictionary")
 
-                if data.get("counts"):
+                # If the response contains data and contains the counts field, extract priority rules
+                if data and data.get("counts"):
                     self.alert_count = data["counts"]["total"]
                     from_api = from_api + data["counts"]["returned"]
                     for each_rule in data["data"]["results"]:
