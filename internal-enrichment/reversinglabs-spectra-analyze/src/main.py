@@ -1431,4 +1431,3 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 if __name__ == "__main__":
     connector = ReversingLabsSpectraAnalyzeConnector()
     connector.start()
-
