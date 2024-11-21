@@ -506,7 +506,7 @@ class RecordedFutureApiClient:
 
                 if (
                     rf_alert_rule_content_type
-                    and rf_alert_rule_content_type is not "application/json"
+                    and rf_alert_rule_content_type != "application/json"
                 ):
                     self.helper.log_error(
                         "Unexpected Content-Type from ApiRecordedFuture: ",
