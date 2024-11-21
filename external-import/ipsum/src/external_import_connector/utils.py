@@ -11,6 +11,7 @@ def is_private_ip(ip: str) -> bool:
     """
     return ipaddress.ip_address(ip).is_private
 
+
 @staticmethod
 def is_private_cidr(cidr: str) -> bool:
     """
@@ -24,6 +25,7 @@ def is_private_cidr(cidr: str) -> bool:
     except ValueError:
         return False
 
+
 @staticmethod
 def is_full_network(ip):
     """
@@ -32,6 +34,7 @@ def is_full_network(ip):
     :return: A boolean
     """
     return ip in ["0.0.0.0/0", "::/0"]
+
 
 @staticmethod
 def is_cidr(value):
@@ -45,6 +48,7 @@ def is_cidr(value):
         return True
     except ValueError:
         return False
+
 
 @staticmethod
 def networkcidr_to_list(cidr):
