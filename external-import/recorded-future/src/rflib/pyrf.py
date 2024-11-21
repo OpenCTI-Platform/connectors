@@ -497,40 +497,56 @@ class RecordedFutureApiClient:
                     },
                     params={"from": str(from_api), "limit": str(limit)},
                 )
-                assert (
-                    response.status_code == 200
-                ), "Unexpected status code from ApiRecordedFuture: " + str(
-                    response.status_code
-                )
-                assert (
-                    response.headers.get("Content-Type")
-                    == "application/json;charset=utf-8"
-                ), (
-                    "Unexpected Content-Type from ApiRecordedFuture: "
-                    + response.headers.get("Content-Type")
-                )
-                data = response.json()
-                assert isinstance(data, dict), "Response data is not a dictionary"
-                assert "data" in data, "Response does not contain mandatory data field"
-                assert (
-                    "counts" in data
-                ), "Response does not contain mandatory counts field"
-                self.alert_count = data["counts"]["total"]
-                from_api = from_api + data["counts"]["returned"]
-                for each_rule in data["data"]["results"]:
-                    if self.priority_alerts_only and each_rule["priority"]:
-                        self.extract_priority_rules(each_rule)
-                    elif not self.priority_alerts_only:
-                        self.extract_priority_rules(each_rule)
-            self.priorited_rules.append(
-                PrioritiedRule(
-                    "Fake-Id-Playbook-Alert", "Domain Abuse", "TYPOSQUATTING DETECTION"
-                )
-            )
+
+                # If there is an error during the request, the method raise the error
+                response.raise_for_status()
+
+                # If there is an unexpected content type, log the error
+                rf_alert_rule_content_type = response.headers.get("Content-Type")
+
+                if rf_alert_rule_content_type != "application/json":
+                    self.helper.log_error(
+                        "Unexpected Content-Type from ApiRecordedFuture: ",
+                        {"content-type": rf_alert_rule_content_type},
+                    )
+
+                data = {}
+
+                # If the response doesn't contain data, log the error
+                if not data or data.get("data"):
+                    self.helper.log_error("No data returned from Recorded Future API")
+                    return
+
+                # If the response is not a dictionary, log the error
+                if not isinstance(data, dict):
+                    self.helper.log_error("Response data is not a dictionary")
+                    return
+
+                # If the response contains data and contains the counts field, extract priority rules
+                if data and data.get("counts"):
+                    self.alert_count = data["counts"]["total"]
+                    from_api = from_api + data["counts"]["returned"]
+                    for each_rule in data["data"]["results"]:
+                        if self.priority_alerts_only and each_rule["priority"]:
+                            self.extract_priority_rules(each_rule)
+                        elif not self.priority_alerts_only:
+                            self.extract_priority_rules(each_rule)
+                    self.priorited_rules.append(
+                        PrioritiedRule(
+                            "Fake-Id-Playbook-Alert",
+                            "Domain Abuse",
+                            "TYPOSQUATTING DETECTION",
+                        )
+                    )
+                else:
+                    # If data does not contain mandatory counts field, log the error
+                    self.helper.log_error(
+                        "Response does not contain mandatory <counts> field"
+                    )
         except requests.exceptions.RequestException as e:
-            raise RuntimeError(
-                "Exception occured when trying to reach RecordedFuture's API : "
-                + str(e)
+            self.helper.log_error(
+                "Exception occured when trying to reach RecordedFuture's API : ",
+                {"error": str(e)},
             )
-        except:
-            raise RuntimeError("Unexpected error")
+        except Exception as err:
+            self.helper.log_error(err)
