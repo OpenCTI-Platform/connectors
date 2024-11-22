@@ -198,11 +198,11 @@ class MispFeed:
         # Initialize MISP
         if self.source_type == "s3":
             bucket_name = get_config_variable(
-                "MISP_BUCKET_NAME", ["misp", "bucket_name"], config, False
+                "MISP_BUCKET_NAME", ["misp_feed", "bucket_name"], config, False
             )
 
             self.bucket_prefix = get_config_variable(
-                "MISP_BUCKET_PREFIX", ["misp", "bucket_prefix"], config, False
+                "MISP_BUCKET_PREFIX", ["misp_feed", "bucket_prefix"], config, False
             )
 
             self.s3 = boto3.resource("s3").Bucket(bucket_name)
