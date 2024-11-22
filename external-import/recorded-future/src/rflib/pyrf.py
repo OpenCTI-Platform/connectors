@@ -393,7 +393,7 @@ class RecordedFutureApiClient:
                     data = response.json()
 
                     # If the response doesn't contain data, log the error
-                    if not data or not data.get("data"):
+                    if not data.get("data"):
                         self.helper.log_error(
                             "No data returned from Recorded Future API"
                         )
@@ -405,7 +405,7 @@ class RecordedFutureApiClient:
                         return
 
                     # If the response contains data and contains the counts field, extract priority rules
-                    if data and data.get("counts"):
+                    if data.get("counts"):
                         if data["counts"]["total"] == 0:
                             self.alert_count = 0
                             from_api = 1
@@ -528,7 +528,7 @@ class RecordedFutureApiClient:
                 data = response.json()
 
                 # If the response doesn't contain data, log the error
-                if not data or not data.get("data"):
+                if not data.get("data"):
                     self.helper.log_error("No data returned from Recorded Future API")
                     return
 
@@ -538,7 +538,7 @@ class RecordedFutureApiClient:
                     return
 
                 # If the response contains data and contains the counts field, extract priority rules
-                if data and data.get("counts"):
+                if data.get("counts"):
                     self.alert_count = data["counts"]["total"]
                     from_api = from_api + data["counts"]["returned"]
                     for each_rule in data["data"]["results"]:
