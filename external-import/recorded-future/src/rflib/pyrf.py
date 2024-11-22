@@ -377,42 +377,65 @@ class RecordedFutureApiClient:
                             "from": str(from_api),
                         },
                     )
-                    assert (
-                        response.status_code == 200
-                    ), "Unexpected status code from ApiRecordedFuture: " + str(
-                        response.status_code
-                    )
-                    assert (
-                        response.headers.get("Content-Type")
-                        == "application/json;charset=utf-8"
-                    ), (
-                        "Unexpected Content-Type from ApiRecordedFuture: "
-                        + response.headers.get("Content-Type")
-                    )
+
+                    # If there is an error during the request, the method raise the error
+                    response.raise_for_status()
+
+                    # If there is an unexpected content type, log the error
+                    rf_alert_rule_content_type = response.headers.get("Content-Type")
+
+                    if rf_alert_rule_content_type != "application/json":
+                        self.helper.log_error(
+                            "Unexpected Content-Type from ApiRecordedFuture: ",
+                            {"content-type": rf_alert_rule_content_type},
+                        )
+
                     data = response.json()
-                    assert isinstance(data, dict), "Response data is not a dictionary"
-                    assert (
-                        "data" in data
-                    ), "Response does not contain mandatory data field"
-                    assert (
-                        "counts" in data
-                    ), "Response does not contain mandatory counts field"
-                    if data["counts"]["total"] == 0:
-                        self.alert_count = 0
-                        from_api = 1
-                    else:
-                        self.alert_count = data["counts"]["total"]
-                    from_api = from_api + data["counts"]["returned"]
-                    for alert in data["data"]:
-                        if after is not None:
-                            triggered = alert["log"]["triggered"]
-                            triggered = datetime.datetime.strptime(
-                                triggered, "%Y-%m-%dT%H:%M:%S.%fZ"
-                            )
-                            after_date = datetime.datetime.strptime(
-                                after, "%Y-%m-%dT%H:%M:%S"
-                            )
-                            if triggered >= after_date:
+
+                    # If the response doesn't contain data, log the error
+                    if not data or not data.get("data"):
+                        self.helper.log_error(
+                            "No data returned from Recorded Future API"
+                        )
+                        return
+
+                    # If the response is not a dictionary, log the error
+                    if not isinstance(data, dict):
+                        self.helper.log_error("Response data is not a dictionary")
+                        return
+
+                    # If the response contains data and contains the counts field, extract priority rules
+                    if data and data.get("counts"):
+                        if data["counts"]["total"] == 0:
+                            self.alert_count = 0
+                            from_api = 1
+                        else:
+                            self.alert_count = data["counts"]["total"]
+                        from_api = from_api + data["counts"]["returned"]
+                        for alert in data["data"]:
+                            if after is not None:
+                                triggered = alert["log"]["triggered"]
+                                triggered = datetime.datetime.strptime(
+                                    triggered, "%Y-%m-%dT%H:%M:%S.%fZ"
+                                )
+                                after_date = datetime.datetime.strptime(
+                                    after, "%Y-%m-%dT%H:%M:%S"
+                                )
+                                if triggered >= after_date:
+                                    self.alerts.append(
+                                        Alert(
+                                            alert["id"],
+                                            alert["url"]["portal"],
+                                            alert["log"]["triggered"],
+                                            alert["title"],
+                                            alert["ai_insights"]["comment"],
+                                            priorited_rule,
+                                            alert["hits"],
+                                        )
+                                    )
+                                else:
+                                    alert_filtered = alert_filtered + 1
+                            else:
                                 self.alerts.append(
                                     Alert(
                                         alert["id"],
@@ -424,27 +447,19 @@ class RecordedFutureApiClient:
                                         alert["hits"],
                                     )
                                 )
-                            else:
-                                alert_filtered = alert_filtered + 1
-                        else:
-                            self.alerts.append(
-                                Alert(
-                                    alert["id"],
-                                    alert["url"]["portal"],
-                                    alert["log"]["triggered"],
-                                    alert["title"],
-                                    alert["ai_insights"]["comment"],
-                                    priorited_rule,
-                                    alert["hits"],
-                                )
-                            )
+                    else:
+                        # If data does not contain mandatory counts field, log the error
+                        self.helper.log_error(
+                            "Response does not contain mandatory <counts> field"
+                        )
             except requests.exceptions.RequestException as e:
-                raise RuntimeError(
-                    "Exception occured when trying to reach RecordedFuture's API : "
-                    + str(e)
+                self.helper.log_error(
+                    "Exception occured when trying to reach RecordedFuture's API : ",
+                    {"error": str(e)},
                 )
-            except:
-                raise RuntimeError("Unexpected error")
+            except Exception as err:
+                self.helper.log_error(err)
+
         self.helper.log_info(
             "Queried alerts : "
             + str(date)
