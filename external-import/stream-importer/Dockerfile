@@ -9,7 +9,7 @@ COPY src /opt/connector
 RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
-RUN cd /opt/connector && \
+RUN cd /opt/connector-stream-importer && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
