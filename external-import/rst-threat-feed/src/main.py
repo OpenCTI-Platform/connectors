@@ -73,11 +73,13 @@ class RSTThreatFeed:
         }
         self._only_new = bool(self.get_config("only_new", config, True))
         self._only_attributed = bool(self.get_config("only_attributed", config, True))
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-            True,
+        self.update_existing_data = bool(
+            get_config_variable(
+                "CONNECTOR_UPDATE_EXISTING_DATA",
+                ["connector", "update_existing_data"],
+                config,
+                default=True,
+            )
         )
 
     @staticmethod
