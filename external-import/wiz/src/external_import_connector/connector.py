@@ -79,9 +79,13 @@ class ConnectorWiz:
                     continue
 
             if entity["type"] == "malware":
-                if "malware_types" in entity and len(entity["malware_types"]) == 1 and entity["malware_types"][0] == "":
+                if (
+                    "malware_types" in entity
+                    and len(entity["malware_types"]) == 1
+                    and entity["malware_types"][0] == ""
+                ):
                     del entities[i]["malware_types"]
-                    
+
             i += 1
 
         return entities
@@ -141,9 +145,7 @@ class ConnectorWiz:
             if stix_objects is not None and len(stix_objects) is not None:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
-                    stix_objects_bundle,
-                    work_id=work_id,
-                    update=True
+                    stix_objects_bundle, work_id=work_id, update=True
                 )
 
                 self.helper.connector_logger.info(
