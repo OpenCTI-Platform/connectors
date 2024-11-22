@@ -2,7 +2,7 @@ FROM python:3.11-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy the connector
-COPY src /opt/connector
+COPY src /opt/connector-stream-importer
 
 # Install Python modules
 # hadolint ignore=DL3003
