@@ -77,6 +77,11 @@ class ConnectorWiz:
                 if entity["modified"] < state["last_run"]:
                     del entities[i]
                     continue
+
+            if entity["type"] == "malware":
+                if "malware_types" in entity and len(entity["malware_types"]) == 1 and entity["malware_types"][0] == "":
+                    del entities[i]["malware_types"]
+                    
             i += 1
 
         return entities
