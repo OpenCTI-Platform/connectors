@@ -510,7 +510,7 @@ class RecordedFutureApiClient:
                         {"content-type": rf_alert_rule_content_type},
                     )
 
-                data = {}
+                data = response.json()
 
                 # If the response doesn't contain data, log the error
                 if not data or data.get("data"):
