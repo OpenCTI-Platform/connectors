@@ -513,7 +513,7 @@ class RecordedFutureApiClient:
                 data = response.json()
 
                 # If the response doesn't contain data, log the error
-                if not data or data.get("data"):
+                if not data or not data.get("data"):
                     self.helper.log_error("No data returned from Recorded Future API")
                     return
 
