@@ -275,6 +275,7 @@ class Eset:
                                 object["x_opencti_create_observables"] = (
                                     self.eset_create_observables
                                 )
+                        object["where_sighted_refs"] = []
                         objects.append(object)
                     parsed_content["objects"] = objects
                     self.helper.send_stix2_bundle(
