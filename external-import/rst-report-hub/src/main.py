@@ -51,11 +51,13 @@ class ReportHub:
                 self.get_config("create_related_to", config, True)
             ),
         }
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-            True,
+        self.update_existing_data = bool(
+            get_config_variable(
+                "CONNECTOR_UPDATE_EXISTING_DATA",
+                ["connector", "update_existing_data"],
+                config,
+                default=True,
+            )
         )
 
     @staticmethod
