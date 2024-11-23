@@ -145,6 +145,7 @@ class LIAFileFeed:
                 description=f"This indicator represents a file hash observed from downloaded by {source_family}. The payload is detected as {detected_as}",
                 labels=["malicious", "file", source_family, source_botnet, detected_as],
                 created_by_ref=self.identity["standard_id"],
+                custom_properties={"x_opencti_main_observable_type": "File"},
                 external_references=[
                     {
                         "source_name": "Loader Insight Agency",
@@ -165,6 +166,7 @@ class LIAFileFeed:
                 labels=["malicious", "url", source_family, source_botnet, detected_as],
                 created_by_ref=self.identity["standard_id"],
                 external_references=[lia_external_reference],
+                custom_properties={"x_opencti_main_observable_type": "URL"},
             )
 
             url_object = stix2.URL(value=source_url)
@@ -207,7 +209,9 @@ class LIAFileFeed:
                 )
 
         if stix_objects or relationships:
-            bundle = stix2.Bundle(objects=stix_objects + relationships)
+            bundle = stix2.Bundle(
+                objects=stix_objects + relationships, allow_custom=True
+            )
             self.helper.send_stix2_bundle(bundle.serialize(), work_id=self.work_id)
             self.helper.connector_logger.info(
                 f"Sent bundle with {len(stix_objects)} observables and {len(relationships)} relationships."
