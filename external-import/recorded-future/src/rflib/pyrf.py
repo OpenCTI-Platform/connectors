@@ -531,7 +531,7 @@ class RecordedFutureApiClient:
 
                 # If the response doesn't contain data, log the error
                 if not "data" in data or len(data["data"]) == 0:
-                    self.helper.log_error("No data returned from Recorded Future API")
+                    self.helper.log_error("No rules returned from Recorded Future API")
 
                 # If the response is not a dictionary, log the error
                 if not isinstance(data, dict):
