@@ -22,7 +22,6 @@ class PulseImporterConfig(NamedTuple):
     tlp_marking: stix2.MarkingDefinition
     create_observables: bool
     create_indicators: bool
-    update_existing_data: bool
     default_latest_timestamp: str
     report_status: int
     report_type: str
@@ -32,6 +31,15 @@ class PulseImporterConfig(NamedTuple):
     filter_indicators: bool
     enable_relationships: bool
     enable_attack_patterns_indicates: bool
+    default_x_opencti_score: int
+    x_opencti_score_ip: int
+    x_opencti_score_domain: int
+    x_opencti_score_hostname: int
+    x_opencti_score_email: int
+    x_opencti_score_file: int
+    x_opencti_score_url: int
+    x_opencti_score_mutex: int
+    x_opencti_score_cryptocurrency_wallet: int
 
 
 class PulseImporter:
@@ -57,7 +65,6 @@ class PulseImporter:
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
         self.filter_indicators = config.filter_indicators
-        self.update_existing_data = config.update_existing_data
         self.default_latest_timestamp = config.default_latest_timestamp
         self.report_status = config.report_status
         self.report_type = config.report_type
@@ -66,7 +73,17 @@ class PulseImporter:
         self.excluded_pulse_indicator_types = config.excluded_pulse_indicator_types
         self.enable_relationships = config.enable_relationships
         self.enable_attack_patterns_indicates = config.enable_attack_patterns_indicates
-
+        self.default_x_opencti_score = config.default_x_opencti_score
+        self.x_opencti_score_ip = config.x_opencti_score_ip
+        self.x_opencti_score_domain = config.x_opencti_score_domain
+        self.x_opencti_score_hostname = config.x_opencti_score_hostname
+        self.x_opencti_score_email = config.x_opencti_score_email
+        self.x_opencti_score_file = config.x_opencti_score_file
+        self.x_opencti_score_url = config.x_opencti_score_url
+        self.x_opencti_score_mutex = config.x_opencti_score_mutex
+        self.x_opencti_score_cryptocurrency_wallet = (
+            config.x_opencti_score_cryptocurrency_wallet
+        )
         self.malware_guess_cache: Dict[str, str] = {}
         self.guess_cve_pattern = re.compile(self._GUESS_CVE_PATTERN, re.IGNORECASE)
         self.work_id: Optional[str] = None
@@ -77,14 +94,12 @@ class PulseImporter:
 
         self._info(
             "Running pulse importer ("
-            "update data: {0}, "
-            "guess malware: {1}, "
-            "guess cve: {2}, "
-            "relationships: {3}, "
-            "patterns_indicates: {4}, "
-            "filter_indicators: {5}"
+            "guess malware: {0}, "
+            "guess cve: {1}, "
+            "relationships: {2}, "
+            "patterns_indicates: {3}, "
+            "filter_indicators: {4}"
             ")...",
-            self.update_existing_data,
             self.guess_malware,
             self.guess_cve,
             self.enable_relationships,
@@ -230,6 +245,15 @@ class PulseImporter:
             excluded_pulse_indicator_types=self.excluded_pulse_indicator_types,
             enable_relationships=self.enable_relationships,
             enable_attack_patterns_indicates=self.enable_attack_patterns_indicates,
+            x_opencti_score=self.default_x_opencti_score,
+            x_opencti_score_ip=self.x_opencti_score_ip,
+            x_opencti_score_domain=self.x_opencti_score_domain,
+            x_opencti_score_hostname=self.x_opencti_score_hostname,
+            x_opencti_score_email=self.x_opencti_score_email,
+            x_opencti_score_file=self.x_opencti_score_file,
+            x_opencti_score_url=self.x_opencti_score_url,
+            x_opencti_score_mutex=self.x_opencti_score_mutex,
+            x_opencti_score_cryptocurrency_wallet=self.x_opencti_score_cryptocurrency_wallet,
         )
 
         bundle_builder = PulseBundleBuilder(config)
@@ -326,6 +350,4 @@ class PulseImporter:
 
     def _send_bundle(self, bundle: stix2.Bundle) -> None:
         serialized_bundle = bundle.serialize()
-        self.helper.send_stix2_bundle(
-            serialized_bundle, update=self.update_existing_data, work_id=self.work_id
-        )
+        self.helper.send_stix2_bundle(serialized_bundle, work_id=self.work_id)

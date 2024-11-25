@@ -1,24 +1,33 @@
 version: '3'
 services:
-  connector:
-    build: .
-    container_name: ${CONTAINER_NAME}
+  connector-template:
+    image: opencti/connector-template:6.4.0
     environment:
-      # Connector's definition parameters:
-      - CONNECTOR_NAME=EnrichmentConnectorTemplate
-      - CONNECTOR_SCOPE=IPv4-Addr,Threat-Actor,Artifact,Domain-Name,Url
-      # Connector's generic execution parameters:
-      - OPENCTI_URL=${OPENCTI_URL}
-      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_ID}
-      - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_CONFIDENCE_LEVEL} # From 0 (Unknown) to 100 (Fully trusted).
-      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL}
-      - CONNECTOR_RUN_EVERY=${CONNECTOR_RUN_EVERY}
-      # Connector's custom execution parameters:
-      - EXTRA_PARAMETER=${EXTRA_PARAMETER}
-    restart: always
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=CHANGEME
+      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_AUTO=true
 
-networks:
-  default:
-    external: true
-    name: docker_default
+      # Connector's custom execution parameters
+      - CONNECTOR_TEMPLATE_API_BASE_URL=CHANGEME
+      - CONNECTOR_TEMPLATE_API_KEY=CHANGEME
+      - CONNECTOR_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+
+      # Add proxy parameters below if needed
+      # - HTTP_PROXY=CHANGEME
+      # - HTTPS_PROXY=CHANGEME
+      # - NO_PROXY=CHANGEME
+    restart: always
+    # networks:
+    #   - docker_default
+
+# networks:
+#   default:
+#     external: true
+#     name: docker_default
+

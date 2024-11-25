@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-urlhaus:
-    image: opencti/connector-urlhaus:6.2.15
+    image: opencti/connector-urlhaus:6.4.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -11,6 +11,7 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=40 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - URLHAUS_CSV_URL=https://urlhaus.abuse.ch/downloads/csv_recent/
+      - URLHAUS_DEFAULT_X_OPENCTI_SCORE=80  # Optional: Defaults to 80.
       - URLHAUS_IMPORT_OFFLINE=true
       - URLHAUS_THREATS_FROM_LABELS=true
       - URLHAUS_INTERVAL=3 # In days, must be strictly greater than 1

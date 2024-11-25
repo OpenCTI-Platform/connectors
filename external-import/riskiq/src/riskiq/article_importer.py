@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """OpenCTI RiskIQ's article importer module."""
 import datetime
+import re
 from typing import Any, Mapping, Optional
 
 import stix2
@@ -80,6 +81,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "StixFile",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -113,6 +117,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "StixFile",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -147,6 +154,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "StixFile",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -181,6 +191,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "Domain-Name",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -215,6 +228,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "Email-Addr",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -248,6 +264,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "StixFile",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -282,6 +301,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "IPv4-Addr",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -316,6 +338,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "Mutex",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -350,6 +375,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "Url",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -385,6 +413,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "X509-Certificate",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -422,6 +453,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "X509-Certificate",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -460,6 +494,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "X509-Certificate",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -497,6 +534,9 @@ class ArticleImporter:
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
+                        custom_properties={
+                            "x_opencti_main_observable_type": "X509-Certificate",
+                        },
                     )
                     objects["indicators"].append(indicator)
                     if self.create_observables:
@@ -567,6 +607,18 @@ class ArticleImporter:
         relationships = []
         # Resolve objects
         for tag in self.article["tags"]:
+            filter_value = tag
+            # match attack patterns tag, e.g. 'T1204.002 - Malicious File'
+            if re.match(
+                r"^T\d{4}(.\d{3})? - .*$",
+                tag,
+            ):
+                parts = tag.split(" - ")
+                filter_value = parts[0].strip()
+                self.helper.log_debug(
+                    f"Tag is an Attack-Pattern. Filtering with Mitre ID: {filter_value}"
+                )
+
             entities = self.helper.api.stix_domain_object.list(
                 types=[
                     "Threat-Actor",
@@ -582,7 +634,9 @@ class ArticleImporter:
                 ],
                 filters={
                     "mode": "and",
-                    "filters": [{"key": ["name", "x_mitre_id"], "values": [tag]}],
+                    "filters": [
+                        {"key": ["name", "x_mitre_id"], "values": [filter_value]}
+                    ],
                     "filterGroups": [],
                 },
             )
@@ -648,7 +702,9 @@ class ArticleImporter:
                 if entity["entity_type"] == "Attack-Pattern":
                     elements["attack_patterns"].append(
                         stix2.AttackPattern(
-                            id=AttackPattern.generate_id(entity["name"]),
+                            id=AttackPattern.generate_id(
+                                name=entity["name"], x_mitre_id=entity["x_mitre_id"]
+                            ),
                             name=entity["name"],
                             confidence=self.helper.connect_confidence_level,
                             created_by_ref=self.author,

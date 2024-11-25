@@ -11,19 +11,18 @@ from pycti import OpenCTIConnectorHelper  # type: ignore
 class BaseImporter(ABC):
     """CrowdStrike importer module."""
 
+    _NAME = None
+
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
         author: stix2.Identity,
         tlp_marking: stix2.MarkingDefinition,
-        update_existing_data: bool,
     ) -> None:
         """Initialize CrowdStrike importer module."""
         self.helper = helper
         self.author = author
         self.tlp_marking = tlp_marking
-        self.update_existing_data = update_existing_data
-
         self.work_id: Optional[str] = None
 
     def start(self, work_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -75,6 +74,9 @@ class BaseImporter(ABC):
         self.helper.send_stix2_bundle(
             serialized_bundle,
             work_id=self.work_id,
-            update=self.update_existing_data,
             bypass_split=True,
         )
+
+    @property
+    def name(self):
+        return self._NAME

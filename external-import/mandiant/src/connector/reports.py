@@ -23,7 +23,7 @@ def process(connector, report):
                     "report_title": report_title,
                 },
             )
-            return
+            return None
         connector.helper.connector_logger.info(
             "Processing report",
             {
@@ -39,7 +39,7 @@ def process(connector, report):
         report_bundle["objects"] = list(
             filter(lambda item: not item["id"].startswith("x-"), bundle_objects)
         )
-        report = Report(
+        report = MandiantReport(
             bundle=report_bundle,
             details=report_details,
             pdf=report_pdf,
@@ -56,7 +56,7 @@ def process(connector, report):
     return bundle
 
 
-class Report:
+class MandiantReport:
     def __init__(
         self,
         bundle,
@@ -70,7 +70,6 @@ class Report:
         self.connector = connector
         self.details = details
         self.pdf = pdf
-        self.confidence = connector.helper.connect_confidence_level
         self.identity = connector.identity
         self.report_id = details.get("report_id", details.get("reportId", None))
         self.report_type = connector.mandiant_report_types[report_type]
@@ -171,7 +170,6 @@ class Report:
 
     def update_report(self):
         report = utils.retrieve(self.bundle, "type", "report")
-        report["confidence"] = self.confidence
         report["created_by_ref"] = self.identity["standard_id"]
         report["report_types"] = [self.report_type]
         report["object_refs"] = list(
@@ -285,17 +283,14 @@ class Report:
         if text == "":
             return
 
-        note = utils.generate_note(
-            {
-                "id": Note.generate_id(report["created"], text),
-                "abstract": "Analysis",
-                "content": text,
-                "confidence": self.confidence,
-                "created_by_ref": self.identity["standard_id"],
-                "object_refs": [report.get("id")],
-                "object_marking_refs": report["object_marking_refs"],
-                "note_types": ["analysis", "external"],
-            }
+        note = stix2.Note(
+            id=Note.generate_id(report["created"], text),
+            abstract="Analysis",
+            content=text,
+            created_by_ref=self.identity["standard_id"],
+            object_refs=[report.get("id")],
+            object_marking_refs=report["object_marking_refs"],
+            custom_properties={"note_types": ["analysis", "external"]},
         )
 
         self.bundle["objects"].append(note)

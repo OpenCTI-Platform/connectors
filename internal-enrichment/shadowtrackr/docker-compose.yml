@@ -1,0 +1,18 @@
+version: "1"
+services:
+  connector-shadowtrackr:
+    image: opencti/connector-shadowtrackr:6.4.0
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=ShadowTrackr
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Indicator
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_CONFIDENCE_LEVEL=70 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=error
+      - SHADOWTRACKR_MAX_TLP=TLP:AMBER
+      - SHADOWTRACKR_REPLACE_WITH_LOWER_SCORE=true  # lower the score based on the ShadowTrackr false positive estimate
+      - SHADOWTRACKR_REPLACE_VALID_TO_DATE=true  # set the valid until date to tomorrow for short lived attack sources like VPNs, CDNs and Clouds
+    restart: always

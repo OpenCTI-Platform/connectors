@@ -4,8 +4,7 @@ import os
 import sys
 import time
 from datetime import datetime
-from bs4 import BeautifulSoup
-
+import bs4
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -81,10 +80,6 @@ class ThreatMatch:
 
     def next_run(self, seconds):
         return
-
-    def remove_html_tags(self, text):
-        return BeautifulSoup(text, 'html.parser').get_text
-
     
     def _get_token(self):
         r = requests.post(
@@ -106,7 +101,9 @@ class ThreatMatch:
             headers=headers,
         )
         if r.status_code != 200:
-            self.helper.log_error(f"Could not fetch item: {item_id}, Error: {str(r.text)}")
+            self.helper.log_error(
+                f"Could not fetch item: {str(item_id)}, Error: {r.text}"
+            )
             return []
         # if 'error' in r.json():
         #    return []
@@ -114,7 +111,9 @@ class ThreatMatch:
             data = r.json()["objects"]
             for object in data:
                 if "description" in object:
-                    object['description'] = self.remove_html_tags(object['description'])
+                    object["description"] = bs4.BeautifulSoup(
+                        object["description"], "html.parser"
+                    ).get_text()
                     self.helper.log_info(f"Cleaned data : {object['description']}")
             return data
 

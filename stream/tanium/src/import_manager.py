@@ -31,6 +31,26 @@ class IntelManager:
                 external_reference_id=external_reference["id"],
             )
 
+    def _delete_external_reference(self, intel_document_id):
+        external_reference = self.helper.api.external_reference.read(
+            filters={
+                "mode": "and",
+                "filters": [
+                    {
+                        "key": "source_name",
+                        "values": ["Tanium"],
+                    },
+                    {
+                        "key": "external_id",
+                        "values": [intel_document_id],
+                    },
+                ],
+                "filterGroups": [],
+            }
+        )
+        if external_reference:
+            self.helper.api.external_reference.delete(external_reference["id"])
+
     def import_intel_from_indicator(self, data, is_update=False):
         intel_id = self.cache.get(
             "intel", OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
@@ -56,7 +76,7 @@ class IntelManager:
                 # if intel_document is not None:
                 #     self.cache.set("intel", data["id"], str(intel_document["id"]))
                 #     return intel_document["id"]
-                if len(data["labels"]) > 0:
+                if "labels" in data and len(data["labels"]) > 0:
                     labels = self.tanium_api_handler.get_labels(data["labels"])
                     for label in labels:
                         if label is not None:
@@ -83,7 +103,7 @@ class IntelManager:
             self._add_external_reference(data, str(intel_document["id"]))
             self.tanium_api_handler.deploy_intel()
             self.tanium_api_handler.trigger_quickscan(intel_document["id"])
-            if len(data["labels"]) > 0:
+            if "labels" in data and len(data["labels"]) > 0:
                 labels = self.tanium_api_handler.get_labels(data["labels"])
                 for label in labels:
                     if label is not None:
@@ -172,27 +192,12 @@ class IntelManager:
         )
         if intel_id is None:
             return
+
         self.cache.delete(
             "intel", OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         )
         self.tanium_api_handler.delete_intel(intel_id)
-        if data["type"] == "indicator":
-            entity = self.helper.api.indicator.read(
-                id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-            )
-        else:
-            entity = self.helper.api.stix_cyber_observable.read(
-                id=OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-            )
-        if (
-            entity
-            and "externalReferences" in entity
-            and len(entity["externalReferences"]) > 0
-        ):
-            for external_reference in entity["externalReferences"]:
-                if external_reference["source_name"] == "Tanium":
-                    self.helper.api.external_reference.delete(external_reference["id"])
-        return
+        self._delete_external_reference(intel_id)
 
     def delete_reputation(self, data):
         reputation_id = self.cache.get(

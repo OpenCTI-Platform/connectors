@@ -12,11 +12,17 @@ import stix2
 import yaml
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
-from pycti import Malware, OpenCTIConnectorHelper, get_config_variable
+from pycti import (
+    Indicator,
+    Malware,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
 from stix2 import URL, Bundle, File, IPv4Address, Relationship
 from stix2.v21.vocab import HASHING_ALGORITHM_SHA_256
 
-__version__ = "6.2.15"
+__version__ = "6.4.0"
 BANNER = f"""
 
  ██████   ██████ █████   ███   █████ ██████████   ███████████
@@ -210,10 +216,11 @@ class MWDB:
 
         if str(self.create_indicators).capitalize() == "True":
             indicatorc2 = stix2.Indicator(
+                id=Indicator.generate_id(pattern),
                 name=value,
                 description=description,
                 # confidence=self.helper.connect_confidence_level,
-                pattern_type="stix2",
+                pattern_type="stix",
                 pattern=pattern,
                 valid_from=parser.parse(virus["malware"]["upload_time"]),
                 labels=[x for x in virus["mal_tag"]["yara"] if x],
@@ -253,6 +260,9 @@ class MWDB:
 
         if indicatorc2 and observablec2:
             relationc2 = Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to", indicatorc2["id"], observablec2["id"]
+                ),
                 source_ref=indicatorc2["id"],
                 target_ref=observablec2["id"],
                 relationship_type="related-to",
@@ -265,6 +275,9 @@ class MWDB:
 
         if virus["indicator"] and indicatorc2:
             relationc2c = Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to", virus["indicator"]["id"], indicatorc2["id"]
+                ),
                 source_ref=virus["indicator"]["id"],
                 target_ref=indicatorc2["id"],
                 relationship_type="related-to",
@@ -276,8 +289,11 @@ class MWDB:
 
         if virus["observable"] and observablec2:
             relation2c2 = Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to", virus["observable"]["id"], observablec2["id"]
+                ),
                 source_ref=virus["observable"]["id"],
-                target_ref=virus["observable"]["id"],
+                target_ref=observablec2["id"],
                 relationship_type="related-to",
                 created_by_ref=self.identity["standard_id"],
                 description=relation_description,
@@ -342,6 +358,9 @@ class MWDB:
                     }
                 )
                 relationship = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", sample["observable"]["id"], cve["id"]
+                    ),
                     source_ref=sample["observable"]["id"],
                     target_ref=cve["id"],
                     relationship_type="related-to",
@@ -366,6 +385,11 @@ class MWDB:
                     ):
                         ### create relation and continue indicates
                         relationship = Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to",
+                                sample["observable"]["id"],
+                                malwsearc["id"],
+                            ),
                             source_ref=sample["observable"]["id"],
                             target_ref=malwsearc["id"],
                             relationship_type="related-to",
@@ -391,6 +415,11 @@ class MWDB:
                         " ", ""
                     ):
                         relationship = Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to",
+                                sample["observable"]["id"],
+                                intrusion["id"],
+                            ),
                             source_ref=sample["observable"]["id"],
                             target_ref=intrusion["id"],
                             relationship_type="related-to",
@@ -442,10 +471,11 @@ class MWDB:
 
             if str(self.create_indicators).capitalize() == "True":
                 virus["indicator"] = stix2.Indicator(
+                    id=Indicator.generate_id(pattern),
                     name=str(malware.file_name).replace("-" + malware.sha256, ""),
                     description=description,
                     confidence=self.helper.connect_confidence_level,
-                    pattern_type="stix2",
+                    pattern_type="stix",
                     pattern=pattern,
                     valid_from=malware.upload_time,
                     labels=[x for x in virus["mal_tag"]["yara"] if x],
@@ -479,6 +509,11 @@ class MWDB:
 
             if virus["observable"] and virus["indicator"]:
                 relationship = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to",
+                        virus["indicator"]["id"],
+                        virus["observable"]["id"],
+                    ),
                     source_ref=virus["indicator"]["id"],
                     target_ref=virus["observable"]["id"],
                     relationship_type="based-on",
@@ -492,6 +527,11 @@ class MWDB:
                 and len(virus["mal_tag"]["family"]) > 0
             ):
                 relationshipmal = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to",
+                        virus["indicator"]["id"],
+                        virus["malware_entity"]["id"],
+                    ),
                     source_ref=virus["indicator"]["id"],
                     target_ref=virus["malware_entity"]["id"],
                     description="An hash associatated with a malware "
@@ -507,23 +547,40 @@ class MWDB:
                 if malware.config and self.import_config:
                     bundle_objects.extend(self.process_config(malware.config, virus))
 
-            if (
-                len(virus["mal_tag"]["extra"]) > 0
-                and str(self.create_observables).capitalize() == "True"
-            ):
-                extra_tag = self.process_extratag(virus["mal_tag"]["extra"], virus)
-                if extra_tag:
-                    for relationextra in extra_tag:
-                        if relationextra:
-                            bundle_objects.append(relationextra)
+            try:
+                # Check if "mal_tag" and "extra" exist and process extra tags
+                if (
+                    "mal_tag" in virus
+                    and "extra" in virus["mal_tag"]
+                    and len(virus["mal_tag"]["extra"]) > 0
+                    and str(self.create_observables).capitalize() == "True"
+                ):
+                    extra_tag = self.process_extratag(virus["mal_tag"]["extra"], virus)
+                    if extra_tag:
+                        for relationextra in extra_tag:
+                            if relationextra:
+                                bundle_objects.append(relationextra)
 
-            updateopencti = str(self.update_existing_data).capitalize() == "True"
-            bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
-            self.helper.send_stix2_bundle(
-                bundle,
-                update=updateopencti,
-                work_id=self.workid,
-            )
+                # Determine whether to update existing data
+                updateopencti = str(self.update_existing_data).capitalize() == "True"
+
+                # Create and send the STIX2 bundle
+                bundle = Bundle(objects=bundle_objects, allow_custom=True).serialize()
+                self.helper.send_stix2_bundle(
+                    bundle,
+                    update=updateopencti,
+                    work_id=self.workid,
+                )
+            except KeyError as e:
+                print(f"KeyError encountered: {e}. Skipping this virus entry.")
+                self.helper.log_error(
+                    f"KeyError encountered: {e}. Skipping this virus entry."
+                )
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}. Skipping this virus entry.")
+                self.helper.log_error(
+                    f"KeyError encountered: {e}. Skipping this virus entry."
+                )
 
     def start_up(self):
         while True:

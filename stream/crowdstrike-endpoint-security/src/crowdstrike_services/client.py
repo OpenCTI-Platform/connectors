@@ -270,7 +270,7 @@ class CrowdstrikeClient:
         ioc_cs = self._search_indicator(ioc_value)
 
         # If IOC exists, update the IOC into Crowdstrike
-        if len(ioc_cs) != 0:
+        if ioc_cs is not None and len(ioc_cs) != 0:
 
             # In case of permanent_delete is False
             # Update data with label TO_DELETE for Crowdstrike

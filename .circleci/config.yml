@@ -1,6 +1,6 @@
 version: 2.1
 orbs:
-  slack: circleci/slack@4.13.3
+  slack: circleci/slack@4.15.0
   ms-teams: cloudradar-monitoring/ms-teams@0.0.1
 jobs:
   ensure_formatting:
@@ -28,7 +28,7 @@ jobs:
       - ms-teams/report:
           only_on_fail: true
           webhook_url: $MS_TEAMS_WEBHOOK_URL
-  linter:
+  base_linter:
     docker:
       - image: alpine/flake8
     working_directory: ~/repo
@@ -44,9 +44,28 @@ jobs:
       - ms-teams/report:
           only_on_fail: true
           webhook_url: $MS_TEAMS_WEBHOOK_URL
-  test:
+  linter:
     docker:
       - image: cimg/python:3.12
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
+      - run:
+          name: install dependencies
+          command: pip install -r ./shared/pylint_plugins/check_stix_plugin/requirements.txt
+      - run:
+          name: pylint
+          command: cd ./shared/pylint_plugins/check_stix_plugin && PYTHONPATH=. python -m pylint ../../../ --disable=all --enable=no_generated_id_stix,no-value-for-parameter,unused-import --load-plugins linter_stix_id_generator
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
+  test:
+    docker:
+      - image: cimg/python:3.11
     working_directory: ~/repo
     steps:
       - checkout
@@ -226,10 +245,6 @@ jobs:
           name: Build Docker image opencti/connector-silobreaker
           command: docker build -t opencti/connector-silobreaker:latest . && docker tag opencti/connector-silobreaker:latest opencti/connector-silobreaker:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/stream/sentinel
-          name: Build Docker image opencti/connector-sentinel
-          command: docker build -t opencti/connector-sentinel:latest . && docker tag opencti/connector-sentinel:latest opencti/connector-sentinel:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/external-import/cybersixgill
           name: Build Docker image opencti/connector-cybersixgill
           command: docker build -t opencti/connector-cybersixgill:latest . && docker tag opencti/connector-cybersixgill:latest opencti/connector-cybersixgill:${CIRCLE_TAG}
@@ -269,10 +284,6 @@ jobs:
           working_directory: ~/opencti/external-import/comlaude
           name: Build Docker image opencti/connector-comlaude
           command: docker build -t opencti/connector-comlaude:latest . && docker tag opencti/connector-comlaude:latest opencti/connector-comlaude:${CIRCLE_TAG}
-      - run:
-          working_directory: ~/opencti/stream/harfanglab
-          name: Build Docker image opencti/connector-harfanglab
-          command: docker build -t opencti/connector-harfanglab:latest . && docker tag opencti/connector-harfanglab:latest opencti/connector-harfanglab:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/crtsh
           name: Build Docker image opencti/connector-crtsh
@@ -341,6 +352,38 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/safebrowsing
           name: Build Docker image opencti/connector-google-safebrowsing
           command: docker build -t opencti/connector-google-safebrowsing:latest . && docker tag opencti/connector-google-safebrowsing:latest opencti/connector-google-safebrowsing:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/cofense
+          name: Build Docker image opencti/connector-cofense
+          command: docker build -t opencti/connector-cofense:latest . && docker tag opencti/connector-cofense:latest opencti/connector-cofense:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/group-ib
+          name: Build Docker image opencti/connector-group-ib
+          command: docker build -t opencti/connector-group-ib:latest . && docker tag opencti/connector-group-ib:latest opencti/connector-group-ib:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/first-epss
+          name: Build Docker image opencti/connector-first-epss
+          command: docker build -t opencti/connector-first-epss:latest . && docker tag opencti/connector-first-epss:latest opencti/connector-first-epss:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/reversinglabs-spectra-analyze
+          name: Build Docker image opencti/connector-reversinglabs-spectra-analyze
+          command: docker build -t opencti/connector-reversinglabs-spectra-analyze:latest . && docker tag opencti/connector-reversinglabs-spectra-analyze:latest opencti/connector-reversinglabs-spectra-analyze:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/shadowtrackr
+          name: Build Docker image opencti/connector-shadowtrackr
+          command: docker build -t opencti/connector-shadowtrackr:latest . && docker tag opencti/connector-shadowtrackr:latest opencti/connector-shadowtrackr:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/greynoise-vuln
+          name: Build Docker image opencti/connector-greynoise-vuln
+          command: docker build -t opencti/connector-greynoise-vuln:latest . && docker tag opencti/connector-greynoise-vuln:latest opencti/connector-greynoise-vuln:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/tenable-vuln-management
+          name: Build Docker image opencti/connector-tenable-vuln-management
+          command: docker build -t opencti/connector-tenable-vuln-management:latest . && docker tag opencti/connector-tenable-vuln-management:latest opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/attribution-tools
+          name: Build Docker image opencti/connector-attribution-tools
+          command: docker build -t opencti/connector-attribution-tools:latest . && docker tag opencti/connector-attribution-tools:latest opencti/connector-attribution-tools:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -425,8 +468,6 @@ jobs:
             docker push opencti/connector-eset:${CIRCLE_TAG}
             docker push opencti/connector-silobreaker:latest
             docker push opencti/connector-silobreaker:${CIRCLE_TAG}
-            docker push opencti/connector-sentinel:latest
-            docker push opencti/connector-sentinel:${CIRCLE_TAG}
             docker push opencti/connector-cybersixgill:latest
             docker push opencti/connector-cybersixgill:${CIRCLE_TAG}
             docker push opencti/connector-tweetfeed:latest
@@ -447,8 +488,6 @@ jobs:
             docker push opencti/connector-orion-malware:${CIRCLE_TAG}
             docker push opencti/connector-comlaude:latest
             docker push opencti/connector-comlaude:${CIRCLE_TAG}
-            docker push opencti/connector-harfanglab:latest
-            docker push opencti/connector-harfanglab:${CIRCLE_TAG}
             docker push opencti/connector-crtsh:latest
             docker push opencti/connector-crtsh:${CIRCLE_TAG}
             docker push opencti/connector-rst-report-hub:latest
@@ -483,6 +522,23 @@ jobs:
             docker push opencti/connector-fortinet-ti:${CIRCLE_TAG}
             docker push opencti/connector-google-safebrowsing:latest
             docker push opencti/connector-google-safebrowsing:${CIRCLE_TAG}
+            docker push opencti/connector-cofense:latest
+            docker push opencti/connector-cofense:${CIRCLE_TAG}
+            docker push opencti/connector-group-ib:latest
+            docker push opencti/connector-group-ib:${CIRCLE_TAG}
+            docker push opencti/connector-first-epss:latest
+            docker push opencti/connector-first-epss:${CIRCLE_TAG}
+            docker push opencti/connector-reversinglabs-spectra-analyze:latest
+            docker push opencti/connector-reversinglabs-spectra-analyze:${CIRCLE_TAG}
+            docker push opencti/connector-shadowtrackr:latest
+            docker push opencti/connector-shadowtrackr:${CIRCLE_TAG}
+            docker push opencti/connector-greynoise-vuln:latest
+            docker push opencti/connector-greynoise-vuln:${CIRCLE_TAG}
+            docker push opencti/connector-tenable-vuln-management:latest 
+            docker push opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
+            docker push opencti/connector-attribution-tools:latest
+            docker push opencti/connector-attribution-tools:${CIRCLE_TAG}
+
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -505,10 +561,6 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/hybrid-analysis-sandbox
           name: Build Docker image opencti/connector-hybrid-analysis-sandbox
           command: docker build -t opencti/connector-hybrid-analysis-sandbox:latest . && docker tag opencti/connector-hybrid-analysis-sandbox:latest opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG}
-      - run:
-          working_directory: ~/opencti/stream/splunk
-          name: Build Docker image opencti/connector-splunk
-          command: docker build -t opencti/connector-splunk:latest . && docker tag opencti/connector-splunk:latest opencti/connector-splunk:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/stream/elastic
           name: Build Docker image opencti/connector-elastic
@@ -678,10 +730,6 @@ jobs:
           name: Build Docker image opencti/connector-google-dns
           command: docker build -t opencti/connector-google-dns:latest . && docker tag opencti/connector-google-dns:latest opencti/connector-google-dns:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/stream/qradar
-          name: Build Docker image opencti/connector-qradar
-          command: docker build -t opencti/connector-qradar:latest . && docker tag opencti/connector-qradar:latest opencti/connector-qradar:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/stream/chronicle
           name: Build Docker image opencti/connector-chronicle
           command: docker build -t opencti/connector-chronicle:latest . && docker tag opencti/connector-chronicle:latest opencti/connector-chronicle:${CIRCLE_TAG}
@@ -705,10 +753,6 @@ jobs:
           working_directory: ~/opencti/external-import/phishunt
           name: Build Docker image opencti/connector-phishunt
           command: docker build -t opencti/connector-phishunt:latest . && docker tag opencti/connector-phishunt:latest opencti/connector-phishunt:${CIRCLE_TAG}
-      - run:
-          working_directory: ~/opencti/internal-enrichment/attribution-tools
-          name: Build Docker image opencti/connector-attribution-tools
-          command: docker build -t opencti/connector-attribution-tools:latest . && docker tag opencti/connector-attribution-tools:latest opencti/connector-attribution-tools:${CIRCLE_TAG}
       - run:
           working_directory: ~/opencti/external-import/cluster25
           name: Build Docker image opencti/connector-cluster25
@@ -750,13 +794,25 @@ jobs:
           name: Build Docker image opencti/connector-jira
           command: docker build -t opencti/connector-jira:latest . && docker tag opencti/connector-jira:latest opencti/connector-jira:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/stream/webhook
-          name: Build Docker image opencti/connector-webhook
-          command: docker build -t opencti/connector-webhook:latest . && docker tag opencti/connector-webhook:latest opencti/connector-webhook:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/internal-enrichment/reversinglabs-spectra-intel-submission
           name: Build Docker image opencti/connector-reversinglabs-spectra-intel-submission
           command: docker build -t opencti/connector-reversinglabs-spectra-intel-submission:latest . && docker tag opencti/connector-reversinglabs-spectra-intel-submission:latest opencti/connector-reversinglabs-spectra-intel-submission:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-import-file/import-file-misp
+          name: Build Docker image opencti/connector-import-file-misp
+          command: docker build -t opencti/connector-import-file-misp:latest . && docker tag opencti/connector-import-file-misp:latest opencti/connector-import-file-misp:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/tanium-incidents
+          name: Build Docker image opencti/connector-tanium-incidents
+          command: docker build -t opencti/connector-tanium-incidents:latest . && docker tag opencti/connector-tanium-incidents:latest opencti/connector-tanium-incidents:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/tanium-intel
+          name: Build Docker image opencti/connector-tanium-intel
+          command: docker build -t opencti/connector-tanium-intel:latest . && docker tag opencti/connector-tanium-intel:latest opencti/connector-tanium-intel:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/webhook
+          name: Build Docker image opencti/connector-webhook
+          command: docker build -t opencti/connector-webhook:latest . && docker tag opencti/connector-webhook:latest opencti/connector-webhook:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -765,8 +821,6 @@ jobs:
             docker push opencti/connector-sekoia:${CIRCLE_TAG}
             docker push opencti/connector-hybrid-analysis-sandbox:latest
             docker push opencti/connector-hybrid-analysis-sandbox:${CIRCLE_TAG}
-            docker push opencti/connector-splunk:latest
-            docker push opencti/connector-splunk:${CIRCLE_TAG}
             docker push opencti/connector-elastic:latest
             docker push opencti/connector-elastic:${CIRCLE_TAG}
             docker push opencti/connector-vxvault:latest
@@ -851,8 +905,6 @@ jobs:
             docker push opencti/connector-ipqs:${CIRCLE_TAG}
             docker push opencti/connector-google-dns:latest
             docker push opencti/connector-google-dns:${CIRCLE_TAG}
-            docker push opencti/connector-qradar:latest
-            docker push opencti/connector-qradar:${CIRCLE_TAG}
             docker push opencti/connector-chronicle:latest
             docker push opencti/connector-chronicle:${CIRCLE_TAG}
             docker push opencti/connector-zerofox:latest
@@ -865,8 +917,6 @@ jobs:
             docker push opencti/connector-stopforumspam:${CIRCLE_TAG}
             docker push opencti/connector-phishunt:latest
             docker push opencti/connector-phishunt:${CIRCLE_TAG}
-            docker push opencti/connector-attribution-tools:latest
-            docker push opencti/connector-attribution-tools:${CIRCLE_TAG}
             docker push opencti/connector-cluster25:latest
             docker push opencti/connector-cluster25:${CIRCLE_TAG}
             docker push opencti/connector-ransomwarelive:latest
@@ -887,16 +937,85 @@ jobs:
             docker push opencti/connector-reversinglabs-malware-presence:${CIRCLE_TAG}
             docker push opencti/connector-jira:latest
             docker push opencti/connector-jira:${CIRCLE_TAG}
-            docker push opencti/connector-webhook:latest
-            docker push opencti/connector-webhook:${CIRCLE_TAG}
             docker push opencti/connector-reversinglabs-spectra-intel-submission:latest
             docker push opencti/connector-reversinglabs-spectra-intel-submission:${CIRCLE_TAG}
+            docker push opencti/connector-import-file-misp:latest
+            docker push opencti/connector-import-file-misp:${CIRCLE_TAG}
+            docker push opencti/connector-tanium-incidents:latest
+            docker push opencti/connector-tanium-incidents:${CIRCLE_TAG}
+            docker push opencti/connector-tanium-intel:latest
+            docker push opencti/connector-tanium-intel:${CIRCLE_TAG}
+            docker push opencti/connector-webhook:latest
+            docker push opencti/connector-webhook:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
       - ms-teams/report:
           only_on_fail: true
           webhook_url: $MS_TEAMS_WEBHOOK_URL
+  build_3:
+    working_directory: ~/opencti
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
+      - run:
+          working_directory: ~/opencti/external-import/sentinel-incidents
+          name: Build Docker image opencti/connector-sentinel-incidents
+          command: docker build -t opencti/connector-sentinel-incidents:latest . && docker tag opencti/connector-sentinel-incidents:latest opencti/connector-sentinel-incidents:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/sentinel-intel
+          name: Build Docker image opencti/connector-sentinel-intel
+          command: docker build -t opencti/connector-sentinel-intel:latest . && docker tag opencti/connector-sentinel-intel:latest opencti/connector-sentinel-intel:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/sentinel
+          name: Build Docker image opencti/connector-sentinel
+          command: docker build -t opencti/connector-sentinel:latest . && docker tag opencti/connector-sentinel:latest opencti/connector-sentinel:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/harfanglab-incidents
+          name: Build Docker image opencti/connector-harfanglab-incidents
+          command: docker build -t opencti/connector-harfanglab-incidents:latest . && docker tag opencti/connector-harfanglab-incidents:latest opencti/connector-harfanglab-incidents:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/harfanglab-intel
+          name: Build Docker image opencti/connector-harfanglab-intel
+          command: docker build -t opencti/connector-harfanglab-intel:latest . && docker tag opencti/connector-harfanglab-intel:latest opencti/connector-harfanglab-intel:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/harfanglab
+          name: Build Docker image opencti/connector-harfanglab
+          command: docker build -t opencti/connector-harfanglab:latest . && docker tag opencti/connector-harfanglab:latest opencti/connector-harfanglab:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/splunk
+          name: Build Docker image opencti/connector-splunk
+          command: docker build -t opencti/connector-splunk:latest . && docker tag opencti/connector-splunk:latest opencti/connector-splunk:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/qradar
+          name: Build Docker image opencti/connector-qradar
+          command: docker build -t opencti/connector-qradar:latest . && docker tag opencti/connector-qradar:latest opencti/connector-qradar:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/internal-enrichment/riskiq-passive-total
+          name: Build Docker image opencti/connector-riskiq-passive-total
+          command: docker build -t opencti/connector-riskiq-passive-total:latest . && docker tag opencti/connector-riskiq-passive-total:latest opencti/connector-riskiq-passive-total:${CIRCLE_TAG}
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push opencti/connector-sentinel-incidents:latest
+            docker push opencti/connector-sentinel-incidents:${CIRCLE_TAG}
+            docker push opencti/connector-sentinel-intel:latest
+            docker push opencti/connector-sentinel-intel:${CIRCLE_TAG}
+            docker push opencti/connector-sentinel:latest
+            docker push opencti/connector-sentinel:${CIRCLE_TAG}
+            docker push opencti/connector-harfanglab:latest
+            docker push opencti/connector-harfanglab:${CIRCLE_TAG}
+            docker push opencti/connector-splunk:latest
+            docker push opencti/connector-splunk:${CIRCLE_TAG}
+            docker push opencti/connector-qradar:latest
+            docker push opencti/connector-qradar:${CIRCLE_TAG}
+            docker push opencti/connector-riskiq-passive-total:latest
+            docker push opencti/connector-riskiq-passive-total:${CIRCLE_TAG}
+
   build_fips_1:
     working_directory: ~/opencti
     docker:
@@ -1110,10 +1229,6 @@ jobs:
           name: Build Docker image opencti/connector-silobreaker
           command: docker build -t opencti/connector-silobreaker:rolling .
       - run:
-          working_directory: ~/opencti/stream/sentinel
-          name: Build Docker image opencti/connector-sentinel
-          command: docker build -t opencti/connector-sentinel:rolling .
-      - run:
           working_directory: ~/opencti/external-import/cybersixgill
           name: Build Docker image opencti/connector-cybersixgill
           command: docker build -t opencti/connector-cybersixgill:rolling .
@@ -1153,10 +1268,6 @@ jobs:
           working_directory: ~/opencti/external-import/comlaude
           name: Build Docker image opencti/connector-comlaude
           command: docker build -t opencti/connector-comlaude:rolling .
-      - run:
-          working_directory: ~/opencti/stream/harfanglab
-          name: Build Docker image opencti/connector-harfanglab
-          command: docker build -t opencti/connector-harfanglab:rolling .
       - run:
           working_directory: ~/opencti/external-import/crtsh
           name: Build Docker image opencti/connector-crtsh
@@ -1226,6 +1337,38 @@ jobs:
           name: Build Docker image opencti/connector-google-safebrowsing
           command: docker build -t opencti/connector-google-safebrowsing:rolling .
       - run:
+          working_directory: ~/opencti/external-import/cofense
+          name: Build Docker image opencti/connector-cofense
+          command: docker build -t opencti/connector-cofense:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/group-ib
+          name: Build Docker image opencti/connector-group-ib
+          command: docker build -t opencti/connector-group-ib:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/first-epss
+          name: Build Docker image opencti/connector-first-epss
+          command: docker build -t opencti/connector-first-epss:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/reversinglabs-spectra-analyze
+          name: Build Docker image opencti/connector-reversinglabs-spectra-analyze
+          command: docker build -t opencti/connector-reversinglabs-spectra-analyze:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/shadowtrackr
+          name: Build Docker image opencti/connector-shadowtrackr
+          command: docker build -t opencti/connector-shadowtrackr:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/greynoise-vuln
+          name: Build Docker image opencti/connector-greynoise-vuln
+          command: docker build -t opencti/connector-greynoise-vuln:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/tenable-vuln-management
+          name: Build Docker image opencti/connector-tenable-vuln-management
+          command: docker build -t opencti/connector-tenable-vuln-management:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/attribution-tools
+          name: Build Docker image opencti/connector-attribution-tools
+          command: docker build -t opencti/connector-attribution-tools:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1267,7 +1410,6 @@ jobs:
             docker push opencti/connector-tagger:rolling
             docker push opencti/connector-eset:rolling
             docker push opencti/connector-silobreaker:rolling
-            docker push opencti/connector-sentinel:rolling
             docker push opencti/connector-cybersixgill:rolling
             docker push opencti/connector-tweetfeed:rolling
             docker push opencti/connector-threatfox:rolling
@@ -1278,7 +1420,6 @@ jobs:
             docker push opencti/connector-logrhythm:rolling
             docker push opencti/connector-orion-malware:rolling
             docker push opencti/connector-comlaude:rolling
-            docker push opencti/connector-harfanglab:rolling
             docker push opencti/connector-crtsh:rolling
             docker push opencti/connector-rst-report-hub:rolling
             docker push opencti/connector-rst-threat-feed:rolling
@@ -1296,6 +1437,14 @@ jobs:
             docker push opencti/connector-cisco-sma:rolling
             docker push opencti/connector-fortinet-ti:rolling
             docker push opencti/connector-google-safebrowsing:rolling
+            docker push opencti/connector-cofense:rolling
+            docker push opencti/connector-group-ib:rolling
+            docker push opencti/connector-first-epss:rolling
+            docker push opencti/connector-reversinglabs-spectra-analyze:rolling
+            docker push opencti/connector-shadowtrackr:rolling
+            docker push opencti/connector-greynoise-vuln:rolling
+            docker push opencti/connector-tenable-vuln-management:rolling
+            docker push opencti/connector-attribution-tools:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1322,10 +1471,6 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/hybrid-analysis-sandbox
           name: Build Docker image opencti/connector-hybrid-analysis-sandbox
           command: docker build -t opencti/connector-hybrid-analysis-sandbox:rolling .
-      - run:
-          working_directory: ~/opencti/stream/splunk
-          name: Build Docker image opencti/connector-splunk
-          command: docker build -t opencti/connector-splunk:rolling .
       - run:
           working_directory: ~/opencti/stream/elastic
           name: Build Docker image opencti/connector-elastic
@@ -1499,10 +1644,6 @@ jobs:
           name: Build Docker image opencti/connector-google-dns
           command: docker build -t opencti/connector-google-dns:rolling .
       - run:
-          working_directory: ~/opencti/stream/qradar
-          name: Build Docker image opencti/connector-qradar
-          command: docker build -t opencti/connector-qradar:rolling .
-      - run:
           working_directory: ~/opencti/stream/chronicle
           name: Build Docker image opencti/connector-chronicle
           command: docker build -t opencti/connector-chronicle:rolling .
@@ -1526,10 +1667,6 @@ jobs:
           working_directory: ~/opencti/external-import/phishunt
           name: Build Docker image opencti/connector-phishunt
           command: docker build -t opencti/connector-phishunt:rolling .
-      - run:
-          working_directory: ~/opencti/internal-enrichment/attribution-tools
-          name: Build Docker image opencti/connector-attribution-tools
-          command: docker build -t opencti/connector-attribution-tools:rolling .
       - run:
           working_directory: ~/opencti/external-import/cluster25
           name: Build Docker image opencti/connector-cluster25
@@ -1571,20 +1708,31 @@ jobs:
           name: Build Docker image opencti/connector-jira
           command: docker build -t opencti/connector-jira:rolling .
       - run:
-          working_directory: ~/opencti/stream/webhook
-          name: Build Docker image opencti/connector-webhook
-          command: docker build -t opencti/connector-webhook:rolling .
-      - run:
           working_directory: ~/opencti/internal-enrichment/reversinglabs-spectra-intel-submission
           name: Build Docker image opencti/connector-reversinglabs-spectra-intel-submission
           command: docker build -t opencti/connector-reversinglabs-spectra-intel-submission:rolling .
+      - run:
+          working_directory: ~/opencti/internal-import-file/import-file-misp
+          name: Build Docker image opencti/connector-import-file-misp
+          command: docker build -t opencti/connector-import-file-misp:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/tanium-incidents
+          name: Build Docker image opencti/connector-tanium-incidents
+          command: docker build -t opencti/connector-tanium-incidents:rolling .
+      - run:
+          working_directory: ~/opencti/stream/tanium-intel
+          name: Build Docker image opencti/connector-tanium-intel
+          command: docker build -t opencti/connector-tanium-intel:rolling .
+      - run:
+          working_directory: ~/opencti/stream/webhook
+          name: Build Docker image opencti/connector-webhook
+          command: docker build -t opencti/connector-webhook:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push opencti/connector-sekoia:rolling
             docker push opencti/connector-hybrid-analysis-sandbox:rolling
-            docker push opencti/connector-splunk:rolling
             docker push opencti/connector-elastic:rolling
             docker push opencti/connector-vxvault:rolling
             docker push opencti/connector-shodan:rolling
@@ -1628,14 +1776,12 @@ jobs:
             docker push opencti/connector-yara:rolling
             docker push opencti/connector-ipqs:rolling
             docker push opencti/connector-google-dns:rolling
-            docker push opencti/connector-qradar:rolling
             docker push opencti/connector-chronicle:rolling
             docker push opencti/connector-zerofox:rolling
             docker push opencti/connector-recordedfuture-enrichment:rolling
             docker push opencti/connector-lastinfosec-enrichment:rolling
             docker push opencti/connector-stopforumspam:rolling
             docker push opencti/connector-phishunt:rolling
-            docker push opencti/connector-attribution-tools:rolling
             docker push opencti/connector-cluster25:rolling
             docker push opencti/connector-ransomwarelive:rolling
             docker push opencti/connector-anyrun-feed:rolling
@@ -1646,14 +1792,77 @@ jobs:
             docker push opencti/connector-shadowserver:rolling
             docker push opencti/connector-reversinglabs-malware-presence:rolling
             docker push opencti/connector-jira:rolling
-            docker push opencti/connector-webhook:rolling
             docker push opencti/connector-reversinglabs-spectra-intel-submission:rolling
+            docker push opencti/connector-import-file-misp:rolling
+            docker push opencti/connector-tanium-incidents:rolling
+            docker push opencti/connector-tanium-intel:rolling
+            docker push opencti/connector-webhook:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
       - ms-teams/report:
           only_on_fail: true
           webhook_url: $MS_TEAMS_WEBHOOK_URL
+  build_rolling_3:
+    working_directory: ~/opencti
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
+      - run:
+          working_directory: ~/opencti
+          name: Replace pycti requirement of stable version with latest master branch code
+          command: find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|' -i {} \;
+      - run:
+          working_directory: ~/opencti/stream/sentinel
+          name: Build Docker image opencti/connector-sentinel
+          command: docker build -t opencti/connector-sentinel:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/sentinel-incidents
+          name: Build Docker image opencti/connector-sentinel-incidents
+          command: docker build -t opencti/connector-sentinel-incidents:rolling .
+      - run:
+          working_directory: ~/opencti/stream/sentinel-intel
+          name: Build Docker image opencti/connector-sentinel-intel
+          command: docker build -t opencti/connector-sentinel-intel:rolling .
+      - run:
+          working_directory: ~/opencti/stream/harfanglab
+          name: Build Docker image opencti/connector-harfanglab
+          command: docker build -t opencti/connector-harfanglab:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/harfanglab-incidents
+          name: Build Docker image opencti/connector-harfanglab-incidents
+          command: docker build -t opencti/connector-harfanglab-incidents:rolling .
+      - run:
+          working_directory: ~/opencti/stream/harfanglab-intel
+          name: Build Docker image opencti/connector-harfanglab-intel
+          command: docker build -t opencti/connector-harfanglab-intel:rolling .
+      - run:
+          working_directory: ~/opencti/stream/splunk
+          name: Build Docker image opencti/connector-splunk
+          command: docker build -t opencti/connector-splunk:rolling .
+      - run:
+          working_directory: ~/opencti/stream/qradar
+          name: Build Docker image opencti/connector-qradar
+          command: docker build -t opencti/connector-qradar:rolling .
+      - run:
+          working_directory: ~/opencti/internal-enrichment/riskiq-passive-total
+          name: Build Docker image opencti/connector-riskiq-passive-total
+          command: docker build -t opencti/connector-riskiq-passive-total:rolling .
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push opencti/connector-sentinel:rolling
+            docker push opencti/connector-sentinel-incidents:rolling
+            docker push opencti/connector-sentinel-intel:rolling
+            docker push opencti/connector-harfanglab:rolling
+            docker push opencti/connector-splunk:rolling
+            docker push opencti/connector-qradar:rolling
+            docker push opencti/connector-riskiq-passive-total:rolling
+
   build_fips_rolling_1:
     working_directory: ~/opencti
     docker:
@@ -1728,6 +1937,7 @@ workflows:
   opencti:
     jobs:
       - ensure_formatting
+      - base_linter
       - linter
       - test
       - build_1:
@@ -1742,6 +1952,12 @@ workflows:
               only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
             branches:
               ignore: /.*/
+      - build_3:
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
       - build_fips_1:
           filters:
             tags:
@@ -1751,6 +1967,7 @@ workflows:
       - build_rolling_1:
           requires:
             - ensure_formatting
+            - base_linter
             - linter
           filters:
             branches:
@@ -1759,6 +1976,16 @@ workflows:
       - build_rolling_2:
           requires:
             - ensure_formatting
+            - base_linter
+            - linter
+          filters:
+            branches:
+              only:
+                - master
+      - build_rolling_3:
+          requires:
+            - ensure_formatting
+            - base_linter
             - linter
           filters:
             branches:
@@ -1767,6 +1994,7 @@ workflows:
       - build_fips_rolling_1:
           requires:
             - ensure_formatting
+            - base_linter
             - linter
           filters:
             branches:
@@ -1776,11 +2004,13 @@ workflows:
           requires:
             - build_rolling_1
             - build_rolling_2
+            - build_rolling_3
             - build_fips_rolling_1
       - notify:
           requires:
             - build_1
             - build_2
+            - build_3
             - build_fips_1
           filters:
             tags:

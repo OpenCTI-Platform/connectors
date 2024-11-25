@@ -38,13 +38,7 @@ class MalpediaConnector:
         then if we run without API key we can assume all data is TLP:WHITE 
         else we default to TLP:AMBER to be safe.
         """
-        TLP_MAPPING = {
-            "TLP:CLEAR": stix2.TLP_WHITE,
-            "TLP:WHITE": stix2.TLP_WHITE,
-            "TLP:GREEN": stix2.TLP_GREEN,
-            "TLP:AMBER": stix2.TLP_AMBER,
-            "TLP:RED": stix2.TLP_RED,
-        }
+
         self.default_marking = getattr(self.config, "default_marking", None)
 
         if self.default_marking is not None:
@@ -574,10 +568,20 @@ class MalpediaConnector:
                 )
                 continue
 
-            if "detail" in actor_json and actor_json["detail"] == "Not found":
+            if (
+                "detail" in actor_json
+                and actor_json["detail"] == "No Actor matches the given query."
+            ):
+                self.helper.connector_logger.info(
+                    "[API] No Actor matches the given query", {"actor": actor}
+                )
                 continue
 
             if actor_json["value"] == "" or actor_json["value"] is None:
+                self.helper.connector_logger.info(
+                    "[API] No value returned for the actor for the given query",
+                    {"actor": actor},
+                )
                 continue
 
             if self.config.import_intrusion_sets:
@@ -612,7 +616,7 @@ class MalpediaConnector:
                         secondary_motivations = []
 
                     # List of external references
-                    actor_external_references = actor_json["meta"]["refs"]
+                    actor_external_references = actor_json["meta"].get("refs", [])
                     actor_main_url = URLS_MAPPING["base_url_actor"] + actor_json[
                         "value"
                     ].lower().replace(" ", "_")

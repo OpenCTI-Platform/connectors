@@ -40,18 +40,58 @@ class JiraConnector:
         self.jira_issue_type_name = get_config_variable(
             "JIRA_ISSUE_TYPE_NAME", ["jira", "issue_type_name"], config
         )
-        self.jira_custom_fields_keys = get_config_variable(
+        jira_custom_fields_keys_var = get_config_variable(
             "JIRA_CUSTOM_FIELDS_KEYS",
             ["jira", "custom_fields_keys"],
             config,
             default="",
-        ).split(",")
-        self.jira_custom_fields_values = get_config_variable(
+        )
+        self.jira_custom_fields_keys = (
+            [key.strip() for key in jira_custom_fields_keys_var.split(",")]
+            if jira_custom_fields_keys_var
+            else []
+        )
+
+        jira_custom_fields_values_var = get_config_variable(
             "JIRA_CUSTOM_FIELDS_VALUES",
             ["jira", "custom_fields_values"],
             config,
             default="",
-        ).split(",")
+        )
+        self.jira_custom_fields_values = (
+            [key.strip() for key in jira_custom_fields_values_var.split(",")]
+            if jira_custom_fields_values_var
+            else []
+        )
+
+        if not self.jira_custom_fields_keys or not self.jira_custom_fields_values:
+            self.helper.connector_logger.info(
+                "The `jira_custom_fields_keys` or `jira_custom_fields_values` strings are empty. "
+                "Lists are initialised with empty defaults. Custom fields will be ignored",
+            )
+            self.is_custom_fields_ignored = True
+        else:
+            # List length validation
+            if len(self.jira_custom_fields_keys) != len(self.jira_custom_fields_values):
+                self.helper.connector_logger.error(
+                    "The lengths between the `jira_custom_fields_keys` and `jira_custom_fields_values` lists "
+                    "do not match. Make sure that each key has a corresponding value. "
+                    "Custom fields will be ignored",
+                    {
+                        "len_jira_custom_fields_keys": len(
+                            self.jira_custom_fields_keys
+                        ),
+                        "jira_custom_fields_keys": self.jira_custom_fields_keys,
+                        "len_jira_custom_fields_values": len(
+                            self.jira_custom_fields_values
+                        ),
+                        "jira_custom_fields_values": self.jira_custom_fields_values,
+                    },
+                )
+                self.is_custom_fields_ignored = True
+            else:
+                self.is_custom_fields_ignored = False
+
         self.jira_client = JIRA(
             server=self.jira_url,
             basic_auth=(self.jira_login_email, self.jira_api_token),
@@ -80,8 +120,11 @@ class JiraConnector:
                         "labels": data.get("labels", []),
                         "issuetype": {"name": self.jira_issue_type_name},
                     }
-                    for idx, key in enumerate(self.jira_custom_fields_keys):
-                        issue[key] = self.jira_custom_fields_values[idx]
+
+                    if not self.is_custom_fields_ignored:
+                        for idx, key in enumerate(self.jira_custom_fields_keys):
+                            issue[key] = self.jira_custom_fields_values[idx]
+
                     self.jira_client.create_issue(fields=issue)
                 return
             # Handle update

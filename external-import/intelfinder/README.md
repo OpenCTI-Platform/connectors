@@ -6,7 +6,7 @@ This connector is designed for integration with the OpenCTI platform and [Intelf
 
 ### Requirements
 
-- OpenCTI Platform >= 6.2.15
+- OpenCTI Platform >= 6.4.0
 - Intelfinder Subscription and [API Token](https://dash.intelfinder.io/integrations.php?i=api)
 - Intelfinder API enabled
 

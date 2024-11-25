@@ -320,7 +320,7 @@ class Identity(RFStixEntity):
         return self.type_to_class[self.type]
 
 
-class ThreatActor(RFStixEntity):
+class RfThreatActor(RFStixEntity):
     """Converts various RF Threat Actor Organization to a STIX2 Threat Actor"""
 
     type_to_class = {
@@ -390,7 +390,10 @@ class DetectionRule(RFStixEntity):
     def __init__(self, name, opencti_helper, type_, content):
         # TODO: possibly need to accomodate multi-rule. Right now just shoving everything in one
         super().__init__(
-            name=name.split(".")[0], type=type_, opencti_helper=opencti_helper
+            name=name.split(".")[0],
+            author=None,
+            opencti_helper=opencti_helper,
+            type_=type_,
         )
         self.content = content
 
@@ -481,6 +484,7 @@ class EnrichedIndicator:
         if risk:
             self.notes.append(
                 stix2.Note(
+                    id=pycti.Note.generate_id(None, "{}/99".format(risk)),
                     abstract="Recorded Future Risk Score",
                     content="{}/99".format(risk),
                     created_by_ref=self.author.id,
@@ -491,6 +495,7 @@ class EnrichedIndicator:
             if rule.get("rule"):
                 self.notes.append(
                     stix2.Note(
+                        id=pycti.Note.generate_id(None, f"{rule['evidenceString']}"),
                         abstract=f"{rule['rule']}",
                         content=f"{rule['evidenceString']}",
                         created_by_ref=self.author.id,
@@ -530,9 +535,9 @@ class EnrichedIndicator:
                     if any(
                         attr.get("id") == "threat_actor" for attr in link["attributes"]
                     ):
-                        link_object = ThreatActor(
-                            link["name"],
-                            self.author,
+                        link_object = RfThreatActor(
+                            name=link["name"],
+                            author=self.author,
                             type_=type_,
                             opencti_helper=self.helper,
                         )
