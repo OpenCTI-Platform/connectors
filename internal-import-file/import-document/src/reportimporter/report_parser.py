@@ -7,7 +7,7 @@ import chardet
 import ioc_finder
 from bs4 import BeautifulSoup
 from pdfminer.high_level import extract_pages
-from pdfminer.layout import LTTextContainer, LAParams
+from pdfminer.layout import LAParams, LTTextContainer
 from pycti import OpenCTIConnectorHelper
 from reportimporter.constants import (
     ENTITY_CLASS,
