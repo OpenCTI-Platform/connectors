@@ -393,16 +393,18 @@ class RecordedFutureApiClient:
                     data = response.json()
 
                     # If the response doesn't contain data, log the error
-                    if not data.get("data"):
+                    if not "data" in data or len(data["data"]) == 0:
                         self.helper.log_error(
-                            "No data returned from Recorded Future API"
+                            "No data returned from Recorded Future API",
+                            {
+                                "rule_id": priorited_rule.rule_id,
+                                "rule_name": priorited_rule.rule_name,
+                            },
                         )
-                        return
 
                     # If the response is not a dictionary, log the error
                     if not isinstance(data, dict):
                         self.helper.log_error("Response data is not a dictionary")
-                        return
 
                     # If the response contains data and contains the counts field, extract priority rules
                     if data.get("counts"):
@@ -528,14 +530,14 @@ class RecordedFutureApiClient:
                 data = response.json()
 
                 # If the response doesn't contain data, log the error
-                if not data.get("data"):
+                if not "data" in data or len(data["data"]) == 0:
                     self.helper.log_error("No data returned from Recorded Future API")
-                    return
+                    continue
 
                 # If the response is not a dictionary, log the error
                 if not isinstance(data, dict):
                     self.helper.log_error("Response data is not a dictionary")
-                    return
+                    continue
 
                 # If the response contains data and contains the counts field, extract priority rules
                 if data.get("counts"):
