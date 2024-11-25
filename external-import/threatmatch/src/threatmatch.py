@@ -4,7 +4,7 @@ import os
 import sys
 import time
 from datetime import datetime
-from html.parser import HTMLParser
+from bs4 import BeautifulSoup
 
 import requests
 import yaml
@@ -83,20 +83,7 @@ class ThreatMatch:
         return
 
     def remove_html_tags(self, text):
-        class HTMLTagRemover(HTMLParser):
-            def __init__(self):
-                    super().__init__()
-                    self.fed = []
-
-            def handle_data(self, data):
-                    self.fed.append(data)
-
-            def get_data(self):
-                    return ''.join(self.fed)
-
-        parser = HTMLTagRemover()
-        parser.feed(text)
-        return parser.get_data()
+        return BeautifulSoup(text, 'html.parser').get_text
 
     
     def _get_token(self):
