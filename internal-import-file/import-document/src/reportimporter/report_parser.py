@@ -7,7 +7,7 @@ import chardet
 import ioc_finder
 from bs4 import BeautifulSoup
 from pdfminer.high_level import extract_pages
-from pdfminer.layout import LTTextContainer
+from pdfminer.layout import LTTextContainer, LAParams
 from pycti import OpenCTIConnectorHelper
 from reportimporter.constants import (
     ENTITY_CLASS,
@@ -95,17 +95,33 @@ class ReportParser(object):
 
     def _parse_pdf(self, file_data: IO) -> Dict[str, Dict]:
         parse_info = {}
-        try:
-            for page_layout in extract_pages(file_data):
-                for element in page_layout:
-                    if isinstance(element, LTTextContainer):
-                        text = element.get_text()
-                        # Parsing with newlines has been deprecated
-                        no_newline_text = text.replace("\n", "")
-                        parse_info.update(self.parse(no_newline_text))
+        parsed_texts = []
 
-                # TODO also extract information from images/figures using OCR
-                # https://pdfminersix.readthedocs.io/en/latest/topic/converting_pdf_to_text.html#topic-pdf-to-text-layout
+        def append_text_recursively(page_element):
+            for sub_element in page_element:
+                try:
+                    if isinstance(sub_element, LTTextContainer):
+                        parsed_texts.append(sub_element.get_text())
+                    else:
+                        append_text_recursively(sub_element)
+                except TypeError as error:
+                    if str(error).endswith("is not iterable"):
+                        return
+                    else:
+                        raise error
+
+        try:
+            pages_layouts = extract_pages(file_data, laparams=LAParams(all_texts=True))
+            # TODO also extract information from images using OCR
+            # https://pdfminersix.readthedocs.io/en/latest/topic/converting_pdf_to_text.html#topic-pdf-to-text-layout
+
+            for page_layout in pages_layouts:
+                append_text_recursively(page_layout)
+
+            for parsed_text in parsed_texts:
+                # Parsing with newlines has been deprecated
+                no_newline_text = parsed_text.replace("\n", "")
+                parse_info.update(self.parse(no_newline_text))
 
         except Exception as e:
             logging.exception(f"Pdf Parsing Error: {e}")
