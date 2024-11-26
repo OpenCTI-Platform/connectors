@@ -2,7 +2,7 @@
 """Provides the use case classes for the Tenable Security Center integration."""
 
 import ipaddress
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Iterable, Optional
 
 import validators
 
@@ -21,9 +21,8 @@ from tenable_security_center.domain.entities import (
 )
 
 if TYPE_CHECKING:
-    from pycti.connector.opencti_connector_helper import (  # type: ignore[import-untyped]
-        OpenCTIConnectorHelper,
-    )
+    import datetime
+
     from stix2 import TLPMarking  # type: ignore[import-untyped]
     from stix2.v21 import (  # type: ignore[import-untyped]
         _STIXBase21,  # stix2 does not provide stubs
@@ -36,6 +35,7 @@ if TYPE_CHECKING:
         CVEPort,
         FindingPort,
     )
+    from tenable_security_center.utils import AppLogger
 
 
 class ConverterToStix:
@@ -43,11 +43,11 @@ class ConverterToStix:
 
     def __init__(
         self,
-        helper: "OpenCTIConnectorHelper",
+        logger: "AppLogger",
         tlp_marking: "TLPMarking",
     ):
         """Initialize the converter."""
-        self._helper = helper
+        self.logger = logger
         self._author = Author(
             name="Tenable Security Center",
             description="Tenable Security Center is a vulnerability management solution that provides real-time visibility into"
@@ -130,78 +130,15 @@ class ConverterToStix:
 
         return system, observables
 
-    def _vulnerabilities_from_cve(
-        self, cve: "CVEPort", severity_fallback: Optional[str] = None
-    ) -> tuple[Vulnerability, list[Software]]:
-
-        cvss = (
-            Vulnerability.parse_cvss3_vector(cve.cvss_v3_vector)
-            if cve.cvss_v3_vector
-            else None
-        )
-        vulnerability = Vulnerability(
-            author=self._author,
-            created=cve.publication_datetime,
-            modified=cve.last_modified_datetime,
-            name=cve.name,
-            description=cve.description,
-            object_marking_refs=self._object_marking_refs,
-            cvss3_score=cve.cvss_v3_score,
-            cvss3_severity=(
-                Vulnerability.cvss3_severity_from_score(cve.cvss_v3_score)  # type: ignore[arg-type]
-                if cve.cvss_v3_score
-                else severity_fallback
-            ),
-            cvss3_attack_vector=cvss.metrics["AV"] if cvss else None,
-            cvss3_integrity_impact=cvss.metrics["I"] if cvss else None,
-            cvss3_availability_impact=cvss.metrics["A"] if cvss else None,
-            cvss3_confidentiality_impact=cvss.metrics["C"] if cvss else None,
-            confidence=None,
-        )
+    def _make_targeted_softwares(
+        self, cpe_uris: Optional[Iterable[str]]
+    ) -> list[Software]:
+        """Parse CPE URIs into a list of Software objects, skipping p-cpe URIs."""
         software_s = []
-        for cpe_uri in cve.cpes if cve.cpes else []:
-            details = Software.parse_cpe_uri(cpe_uri)
-            software_s.append(
-                Software(
-                    name=f"{details['product']}-{details['part']}",
-                    vendor=details["vendor"],
-                    cpe=cpe_uri,
-                    author=self._author,
-                    object_marking_refs=self._object_marking_refs,
-                )
-            )
-        return (vulnerability, software_s)
-
-    def _vulnerability_from_finding(
-        self, finding: "FindingPort"
-    ) -> tuple[Vulnerability, list[Software]]:
-        cvss = (
-            Vulnerability.parse_cvss3_vector(finding.cvss_v3_vector)
-            if finding.cvss_v3_vector
-            else None
-        )
-        vulnerability = Vulnerability(
-            author=self._author,
-            created=finding.first_seen,
-            modified=finding.last_seen,
-            name=finding.plugin_name,
-            description=finding.description,
-            object_marking_refs=self._object_marking_refs,
-            cvss3_score=finding.cvss_v3_base_score,
-            cvss3_severity=(
-                Vulnerability.cvss3_severity_from_score(finding.cvss_v3_base_score)  # type: ignore[arg-type]
-                if finding.cvss_v3_base_score
-                else finding.tenable_severity
-            ),
-            cvss3_attack_vector=cvss.metrics["AV"] if cvss else None,
-            cvss3_integrity_impact=cvss.metrics["I"] if cvss else None,
-            cvss3_availability_impact=cvss.metrics["A"] if cvss else None,
-            cvss3_confidentiality_impact=cvss.metrics["C"] if cvss else None,
-            confidence=None,
-        )
-
-        software_s = []
-        for cpe_uri in finding.cpes if finding.cpes else []:
+        for cpe_uri in cpe_uris or []:
+            if cpe_uri.startswith("p-cpe"):
+                self.logger.debug("skipping p-cpe uri", meta={"cpe_uri": cpe_uri})
+                continue
             details = Software.parse_cpe_uri(cpe_uri)
             software_s.append(
                 Software(
@@ -212,7 +149,73 @@ class ConverterToStix:
                     object_marking_refs=self._object_marking_refs,
                 )
             )
+        return software_s
 
+    def _make_vulnerability(
+        self,
+        name: str,
+        description: Optional[str],
+        created: "datetime.datetime",
+        modified: "datetime.datetime",
+        cvss_vector: Optional[str],
+        cvss_score: Optional[float],
+        severity_fallback: Optional[str],
+    ) -> Vulnerability:
+        """Build a Vulnerability object from common fields."""
+        cvss = Vulnerability.parse_cvss3_vector(cvss_vector) if cvss_vector else None
+        return Vulnerability(
+            author=self._author,
+            created=created,
+            modified=modified,
+            name=name,
+            description=description,
+            object_marking_refs=self._object_marking_refs,
+            cvss3_score=cvss_score,
+            cvss3_severity=(
+                Vulnerability.cvss3_severity_from_score(cvss_score)  # type: ignore[arg-type]
+                if cvss_score
+                else severity_fallback
+            ),
+            cvss3_attack_vector=cvss.metrics["AV"] if cvss else None,
+            cvss3_integrity_impact=cvss.metrics["I"] if cvss else None,
+            cvss3_availability_impact=cvss.metrics["A"] if cvss else None,
+            cvss3_confidentiality_impact=cvss.metrics["C"] if cvss else None,
+            confidence=None,
+        )
+
+    def _vulnerabilities_from_cve(
+        self, cve: "CVEPort", severity_fallback: Optional[str] = None
+    ) -> tuple[Vulnerability, list[Software]]:
+
+        vulnerability = self._make_vulnerability(
+            name=cve.name,
+            description=cve.description,
+            created=cve.publication_datetime,
+            modified=cve.last_modified_datetime,
+            cvss_vector=cve.cvss_v3_vector,
+            cvss_score=cve.cvss_v3_score,
+            severity_fallback=severity_fallback,
+        )
+
+        software_s = self._make_targeted_softwares(
+            cpe_uris=cve.cpes if cve.cpes else []
+        )
+        return (vulnerability, software_s)
+
+    def _vulnerability_from_finding(
+        self, finding: "FindingPort"
+    ) -> tuple[Vulnerability, list[Software]]:
+        vulnerability = self._make_vulnerability(
+            name=finding.plugin_name,
+            description=finding.description,
+            created=finding.plugin_pub_date,  # type: ignore[arg-type]
+            modified=finding.plugin_mod_date,  # type: ignore[arg-type]
+            cvss_vector=finding.cvss_v3_vector,
+            cvss_score=finding.cvss_v3_base_score,
+            severity_fallback=finding.tenable_severity,
+        )
+
+        software_s = self._make_targeted_softwares(cpe_uris=finding.cpes)
         return vulnerability, software_s
 
     def process_assets_chunk(
@@ -233,16 +236,20 @@ class ConverterToStix:
         bundle: list["BaseEntity"] = [self._author]  # results holder
         findings: list["FindingPort"] = []
         for asset in assets_chunk.assets:
-            self._helper.connector_logger.info(f"Processing asset {asset.name}")
+            self.logger.info(f"Processing asset {asset.name}")
             if not process_systems_without_vulnerabilities:
                 findings = list(
                     asset.findings
                 )  # Note: this breaks the possible lazy execution
                 if len(findings) == 0:
-                    self._helper.connector_logger.info(
+                    self.logger.info(
                         f"Skipping system {asset.name} because it has no vulnerabilities"
                     )
                     continue
+                else:
+                    self.logger.info(
+                        f"Processing system {asset.name} with {len(findings)} vulnerabilities"
+                    )
 
             external_references = [
                 ExternalReference(

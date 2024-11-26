@@ -49,7 +49,7 @@ class Connector:
         self.logger = helper.connector_logger
         self.assets = assets
         self.converter_to_stix = ConverterToStix(
-            self.helper, self.config.tenable_security_center.marking_definition
+            self.logger, self.config.tenable_security_center.marking_definition
         )
         self.work_id = None
         self._lock = Lock()
@@ -157,20 +157,14 @@ class Connector:
            None
 
         """
-        with self._lock:
-            bundles_sent = self.helper.send_stix2_bundle(
-                bundle=bundle_json,
-                work_id=self.work_id,
-            )
-            self.logger.info(
-                "STIX objects sent to OpenCTI.",
-                {"bundles_sent": str(len(bundles_sent))},
-            )
-            # We manually update the expectations as send_stix bundle overwrite with the current bundle length only
-            self._expected_stix_objects += len(bundles_sent)
-            self.helper.api.work.add_expectations(
-                work_id=self.work_id, expectations=self._expected_stix_objects
-            )
+        bundles_sent = self.helper.send_stix2_bundle(
+            bundle=bundle_json,
+            work_id=self.work_id,
+        )
+        self.logger.info(
+            "STIX objects sent to OpenCTI.",
+            {"bundles_sent": str(len(bundles_sent))},
+        )
 
     def _process(self, chunk: "AssetsChunkPort") -> bool:
         """Fetch data, transform and send bundle."""
@@ -209,7 +203,7 @@ class Connector:
         """Define the main process of the connector."""
         error_flag = True
         try:
-            self.helper.connector_logger.info(
+            self.logger.info(
                 "[CONNECTOR] Starting connector work...",
                 {"connector_name": self.helper.connect_name},
             )
@@ -265,7 +259,9 @@ if __name__ == "__main__":
     import traceback
 
     from tenable_security_center.adapters.config.env import ConfigLoaderEnv
-    from tenable_security_center.adapters.tenable_security_center.v5_13 import AssetsAPI
+    from tenable_security_center.adapters.tenable_security_center.v5_13_from_asset import (
+        AssetsAPI,
+    )
 
     # Configuration
     try:
