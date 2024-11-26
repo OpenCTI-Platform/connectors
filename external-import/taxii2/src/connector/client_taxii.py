@@ -155,7 +155,11 @@ class Taxii2:
         objects = []
         self.helper.log_info(f"Polling Collection {collection.title}")
         response = self.get_objects(collection)
-        if response is not None and "objects" in response and len(response["objects"]) > 0:
+        if (
+            response is not None
+            and "objects" in response
+            and len(response["objects"]) > 0
+        ):
             first_object = response["objects"][0]
             if "spec_version" in response:
                 self.version = response["spec_version"]

@@ -44,8 +44,7 @@ class Connector:
                     coll = self.taxii2._get_collection(root, coll_title)
                     obj = self.taxii2.poll(coll)
                     if len(obj) > 0:
-                        for data in obj:
-                            stix_objects.append(data)
+                        stix_objects.extend(iter(obj))
             except (TAXIIServiceException, HTTPError) as err:
                 self.helper.log_error("Error connecting to TAXII server")
                 self.helper.log_error(err)
