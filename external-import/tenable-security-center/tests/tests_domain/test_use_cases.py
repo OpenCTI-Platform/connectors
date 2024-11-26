@@ -11,7 +11,12 @@ from datetime import datetime
 from stix2 import TLP_WHITE
 
 from tenable_security_center.domain.use_case import ConverterToStix
-from tenable_security_center.ports.asset import AssetsChunkPort, AssetPort, FindingPort, CVEPort
+from tenable_security_center.ports.asset import (
+    AssetsChunkPort,
+    AssetPort,
+    FindingPort,
+    CVEPort,
+)
 
 
 def _mock_helper():
@@ -27,15 +32,15 @@ class MockCVE(CVEPort):
     @property
     def name(self):
         return "CVE-2021-1234"
-    
+
     @property
     def description(self):
         return "Description"
-    
+
     @property
     def publication_datetime(self):
         return datetime.fromisoformat("2021-01-01T00:00:00Z")
-    
+
     @property
     def last_modified_datetime(self):
         return datetime.fromisoformat("2021-01-02T00:00:00Z")
@@ -59,14 +64,15 @@ class MockCVE(CVEPort):
     @property
     def epss_score(self):
         return None
-    
+
+
 class MockVulnerability(FindingPort):
     def __init__(self, has_cves=False):
         if has_cves:
             self._cves = [MockCVE()]
         else:
             self._cves = None
-    
+
     @property
     def cves(self):
         return self._cves
@@ -130,7 +136,7 @@ class MockVulnerability(FindingPort):
     @property
     def uniqueness(self):
         return []
-    
+
     @property
     def accept_risk_rule_comment(self):
         return None
@@ -282,11 +288,10 @@ class MockVulnerability(FindingPort):
     @property
     def xref(self):
         return None
-    
-    
+
 
 class MockAsset(AssetPort):
-    def __init__(self, findings: bool, with_cves:bool) -> None:
+    def __init__(self, findings: bool, with_cves: bool) -> None:
         self._findings = []
         if findings:
             self._findings.append(MockVulnerability(has_cves=with_cves))
@@ -348,6 +353,7 @@ class MockAssetsChunk(AssetsChunkPort):
     def __init__(self, findings=False, with_cves=False) -> None:
         self._findings = findings
         self._with_cves = with_cves
+
     @property
     def assets(self):
         return [MockAsset(findings=self._findings, with_cves=self._with_cves)]
@@ -377,7 +383,9 @@ def test_constructor(mock_helper):
     assert converter._author is not None
 
 
-def test_converter_should_process_an_asset_chunk(mock_helper, mock_assets_chunk_without_finding):
+def test_converter_should_process_an_asset_chunk(
+    mock_helper, mock_assets_chunk_without_finding
+):
     # Given a mock helper and a mock config
     helper = mock_helper
 
@@ -406,8 +414,10 @@ def test_converter_should_process_an_asset_chunk(mock_helper, mock_assets_chunk_
     )
 
 
-def test_converter_should_process_an_asset_with_finding(mock_helper, mock_assets_chunk_with_finding):
-    # Given a mock helper 
+def test_converter_should_process_an_asset_with_finding(
+    mock_helper, mock_assets_chunk_with_finding
+):
+    # Given a mock helper
     helper = mock_helper
     # a ConverterToStix Instance
     converter = ConverterToStix(helper=helper, tlp_marking=TLP_WHITE)
@@ -430,9 +440,11 @@ def test_converter_should_process_an_asset_with_finding(mock_helper, mock_assets
         )
         for _, value in results.items()
     )
-        
 
-def test_converter_should_process_an_asset_with_finding_and_cves(mock_helper, mock_assets_chunk_with_finding_and_cves):
+
+def test_converter_should_process_an_asset_with_finding_and_cves(
+    mock_helper, mock_assets_chunk_with_finding_and_cves
+):
     # Given a mock helper
     helper = mock_helper
     # a ConverterToStix Instance
@@ -446,7 +458,10 @@ def test_converter_should_process_an_asset_with_finding_and_cves(mock_helper, mo
     )
     # Then the results should contain at least a system and a vulnerability as a CVE pointing to the system
     assert any(value.get("identity_class") == "system" for _, value in results.items())
-    assert any(value["type"] == "vulnerability" and value["name"].startswith("CVE") for _, value in results.items())
+    assert any(
+        value["type"] == "vulnerability" and value["name"].startswith("CVE")
+        for _, value in results.items()
+    )
     assert any(
         (
             value["type"] == "relationship"
