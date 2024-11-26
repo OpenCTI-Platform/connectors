@@ -470,10 +470,6 @@ class Software(Observable):
             "p-cpe:/": r"^p-cpe:/(?P<part>[a-z]):(?P<vendor>[a-zA-Z0-9_\-]+):(?P<product>[a-zA-Z0-9_\-]+)",
             "p-cpe:2.3": r"^p-cpe:2\.3:(?P<part>[a-z]+):(?P<vendor>[^:]+):(?P<product>[^:]+)",
         }
-        # excluded_patterns = ["p-cpe:/"]
-        # if any(cpe_str.startswith(excluded_pattern) for excluded_pattern in excluded_patterns):
-        #     warnings.warn(f"Pattern '{cpe_str}' is valid but not supported and will be ignored.")
-        #     return {}
 
         for key, supported_pattern in supported_patterns.items():
             if cpe_str.startswith(key):
