@@ -297,7 +297,6 @@ class ProcessObjects:
                 obj["x_opencti_workflow_id"] = (
                     self.config.change_report_status_x_opencti_workflow_id
                 )
-                self.helper.log_info("DEBUG")
         return stix_objects
 
     def objects(self, stix_objects: list) -> list:
