@@ -11,7 +11,7 @@ import pytest
 
 
 def pytest_sessionstart(session):
-    """Hook to set the working directory, run pre-test commands, and restore the original directory."""
+    """Hook to run pre-test commands."""
     repo_root = Path(__file__).resolve().parent.parent
     # Find and switch to the repository root (where pyproject.toml is located)
 
@@ -37,4 +37,4 @@ def pytest_sessionstart(session):
             check=True,
         )
     except subprocess.CalledProcessError as e:
-        pytest.exit(f"Pre-check failed: {e}")
+        pytest.exit(f"Pre-check failed: {e}", returncode=1)
