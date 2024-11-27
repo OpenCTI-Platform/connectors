@@ -234,13 +234,13 @@ class ConfigLoaderTSCPort(ABC):
 
     @property
     @abstractmethod
-    def _num_threads(self) -> int: ...
+    def _num_threads(self) -> Optional[int]: ...
 
     @property
     @_make_error_handler("Unable to retrieve number of threads in config")
     def num_threads(self) -> int:
         """Number of threads to use for exporting data from Tenable Security Center."""
-        return self._num_threads
+        return self._num_threads or 1
 
     @property
     @abstractmethod

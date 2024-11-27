@@ -161,12 +161,12 @@ class _ConfigLoaderTSCEnv(ConfigLoaderTSCPort, _BaseLoaderEnv):
         ConfigLoaderTSCPort.__init__(self)
 
     @property
-    def _num_threads(self) -> int:
-        return int(
+    def _num_threads(self) -> Optional[int]:
+        return _int_none(
             _get_config_variable_env(
                 env_var="TSC_NUMBER_THREADS",
                 isNumber=True,
-                required=True,
+                required=False,
             )
         )
 

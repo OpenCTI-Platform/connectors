@@ -65,7 +65,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector ID    | `CONNECTOR_ID`              |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
 | Connector Name  | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
 | Connector Scope | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Log Level       | `CONNECTOR_LOG_LEVEL`       | warn            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
 | Duration Period | `CONNECTOR_DURATION_PERIOD` | PT12H | Yes | The interval at which the connector runs, in ISO8601 format. Example: PT30M for 30 minutes. |
 | Queue Threshold | `CONNECTOR_QUEUE_THRESHOLD` | 500 | No | The maximum size of the queue in MBytes. Default is 500MBytes. |
 | Run and Terminate | `CONNECTOR_RUN_AND_TERMINATE` | False | No | If set to True, the connector will run once and then terminate. Default is False. |
@@ -84,7 +84,7 @@ Below are the parameters you'll need to set for the connector:
 | API base URL                           | `TSC_API_BASE_URL`                |         | Yes       | Base URL for Tenable Security Center API                                                        |
 | API access key                         | `TSC_API_ACCESS_KEY`              |         | Yes       | Access key for Tenable Security Center API                                                      |
 | API secret key                         | `TSC_API_SECRET_KEY`              |         | Yes       | Secret key for Tenable Security Center API                                                      |
-| Number of threads                      | `TSC_NUMBER_THREADS`              |         | Yes       | Number of threads to use for processing                                                         |
+| Number of threads                      | `TSC_NUMBER_THREADS`              | 1       | No        | Number of threads to use for processing                                                         |
 | API timeout                            | `TSC_API_TIMEOUT`                 | 30      | No        | Timeout for API requests in seconds                                                             |
 | API backoff                            | `TSC_API_BACKOFF`                 | 5       | No        | Backoff time in seconds for API retries                                                         |
 | API retries                            | `TSC_API_RETRIES`                 | 3       | No        | Number of retries for API requests                                                              |
