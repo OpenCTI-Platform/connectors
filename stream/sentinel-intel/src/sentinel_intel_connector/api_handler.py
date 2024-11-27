@@ -51,7 +51,9 @@ class SentinelApiHandler:
             oauth_token = response_json["access_token"]
             oauth_expired = response_json["expires_in"]  # time in seconds
             self.session.headers.update({"Authorization": oauth_token})
-            self._expiration_token_date = datetime.now() + timedelta(seconds=int(oauth_expired * 0.9))
+            self._expiration_token_date = datetime.now() + timedelta(
+                seconds=int(oauth_expired * 0.9)
+            )
 
         except Exception as e:
             raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
@@ -66,9 +68,7 @@ class SentinelApiHandler:
 
         - Retries up to 5 times with an increasing delay between attempts.
         """
-        retry_strategy = Retry(
-            total=5, backoff_factor=2, status_forcelist=[429]
-        )
+        retry_strategy = Retry(total=5, backoff_factor=2, status_forcelist=[429])
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("https://", adapter)
 
@@ -81,7 +81,10 @@ class SentinelApiHandler:
         :return: Any data returned by the API
         """
         try:
-            if self._expiration_token_date is None or datetime.now() > self._expiration_token_date:
+            if (
+                self._expiration_token_date is None
+                or datetime.now() > self._expiration_token_date
+            ):
                 self._get_authorization_header()
 
             response = self.session.request(method, url, **kwargs)
