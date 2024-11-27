@@ -738,11 +738,15 @@ class Mandiant:
                 sys.exit(0)
 
             except StateError as err:
-                self.helper.connector_logger.error(str(err))
+                self.helper.connector_logger.error(
+                    "Failed du to connector state error", {"error": str(err)}
+                )
                 if work_id is not None:
                     self.helper.api.work.to_processed(
-                        work_id, "Failed du to connector state error", in_error=True
+                        work_id, "Failed due to connector state error", in_error=True
                     )
+                    work_id = None
+                    break
 
             except Exception as e:
                 self.helper.connector_logger.error(str(e))
