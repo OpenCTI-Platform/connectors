@@ -208,8 +208,8 @@ class ConverterToStix:
         vulnerability = self._make_vulnerability(
             name=finding.plugin_name,
             description=finding.description,
-            created=finding.plugin_pub_date,  # type: ignore[arg-type]
-            modified=finding.plugin_mod_date,  # type: ignore[arg-type]
+            created=finding.plugin_pub_date,
+            modified=finding.plugin_mod_date,
             cvss_vector=finding.cvss_v3_vector,
             cvss_score=finding.cvss_v3_base_score,
             severity_fallback=finding.tenable_severity,
