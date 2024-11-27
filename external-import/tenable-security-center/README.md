@@ -208,7 +208,7 @@ pip install -e .[all]
 To format, lint and validate the source code, you can use the isort, black, ruff and mypy configurations:
 
 ```shell
-python -m isort . ; python -m black . ; python -m ruff check . ; python -m mypy .
+python -m isort . ; python -m black . --check ; python -m ruff check . ; python -m mypy . ; python -m pip_audit .
 ```
 
 ### Testing
