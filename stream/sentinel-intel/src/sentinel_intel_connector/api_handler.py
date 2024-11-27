@@ -1,5 +1,6 @@
-import requests
 from datetime import datetime, timedelta
+
+import requests
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
