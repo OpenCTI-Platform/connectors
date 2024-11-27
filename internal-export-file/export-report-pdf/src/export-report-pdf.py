@@ -197,9 +197,15 @@ class ExportReportPdf:
                 list_marking = file_markings[-1]["definition"]
             list_report_date = datetime.datetime.now().strftime("%b %d %Y")
             # Store context for usage in html template
+
+            if list_params is not None:
+                list_search = list_params.get("search", "No search keyword")
+            else:
+                list_search = "No search keyword"
+
             context = {
                 "list_name": "Export of " + entity_type,
-                "list_search": list_params.get("search", "No search keyword"),
+                "list_search": list_search,
                 "list_filters": str(main_filter),
                 "list_marking": list_marking,
                 "list_report_date": list_report_date,
