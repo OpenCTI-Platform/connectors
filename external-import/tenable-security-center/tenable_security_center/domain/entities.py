@@ -510,11 +510,11 @@ class Vulnerability(BaseEntity):
     """Represents a vulnerability entity."""
 
     author: Author = Field(..., description="The Author reporting this Vulnerability.")
-    created: datetime = Field(
-        ..., description="Creation datetime of the vulnerability."
+    created: Optional[datetime] = Field(
+        None, description="Creation datetime of the vulnerability."
     )
-    modified: datetime = Field(
-        ..., description="Last modification datetime of the vulnerability."
+    modified: Optional[datetime] = Field(
+        None, description="Last modification datetime of the vulnerability."
     )
     name: str = Field(..., description="Name of the vulnerability.", min_length=1)
     description: Optional[str] = Field(
