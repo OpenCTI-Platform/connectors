@@ -1429,26 +1429,35 @@ class Misp:
                         allow_custom=True,
                     )
                 )
-            ### Create relationship between MISP attribute (indicator or observable) and MISP object (observable)
-            if object_observable is not None and (
-                indicator is not None or observable is not None
-            ):
-                relationships.append(
-                    stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "related-to",
-                            object_observable.id,
-                            observable.id if observable is not None else indicator.id,
-                        ),
-                        relationship_type="related-to",
-                        created_by_ref=author["id"],
-                        source_ref=object_observable.id,
-                        target_ref=(
-                            observable.id if (observable is not None) else indicator.id
-                        ),
-                        allow_custom=True,
-                    )
+
+            # Create relationship between MISP attribute (indicator or observable) and MISP object (observable)
+            if object_observable is not None:
+
+                indicator_id = indicator.get("id") if indicator else None
+                observable_id = observable.get("id") if observable else None
+                source_id = object_observable.get("id")
+                target_id = (
+                    observable_id
+                    if observable_id is not None and observable_id != source_id
+                    else indicator_id
                 )
+
+                if target_id is not None:
+                    relationships.append(
+                        stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to",
+                                source_id,
+                                target_id,
+                            ),
+                            relationship_type="related-to",
+                            created_by_ref=author["id"],
+                            source_ref=source_id,
+                            target_ref=target_id,
+                            allow_custom=True,
+                        )
+                    )
+
             # Event threats
             threat_names = {}
             for threat in (
