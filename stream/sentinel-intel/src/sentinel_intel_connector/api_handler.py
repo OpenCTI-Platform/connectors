@@ -1,5 +1,10 @@
+from datetime import datetime, timedelta
+
 import requests
 from pycti import OpenCTIConnectorHelper
+from requests.adapters import HTTPAdapter
+from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
+from urllib3.util.retry import Retry
 
 from .utils import (
     get_action,
@@ -25,10 +30,8 @@ class SentinelApiHandler:
         self.config = config
 
         # Define headers in session and update when needed
-        oauth_token = self._get_authorization_header()
-        headers = {"Authorization": oauth_token}
         self.session = requests.Session()
-        self.session.headers.update(headers)
+        self._expiration_token_date = None
 
     def _get_authorization_header(self):
         """
@@ -46,9 +49,28 @@ class SentinelApiHandler:
             response_json = response.json()
 
             oauth_token = response_json["access_token"]
-            return oauth_token
+            oauth_expired = response_json["expires_in"]  # time in seconds
+            self.session.headers.update({"Authorization": oauth_token})
+            self._expiration_token_date = datetime.now() + timedelta(
+                seconds=int(oauth_expired * 0.9)
+            )
+
         except Exception as e:
             raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
+
+    def retries_builder(self) -> None:
+        """
+        Configures the session's retry strategy for API requests.
+
+        Sets up the session to retry requests upon encountering specific HTTP status codes (429) using
+        exponential backoff. The retry mechanism will be applied for both HTTP and HTTPS requests.
+        This function uses the `Retry` and `HTTPAdapter` classes from the `requests.adapters` module.
+
+        - Retries up to 5 times with an increasing delay between attempts.
+        """
+        retry_strategy = Retry(total=5, backoff_factor=2, status_forcelist=[429])
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("https://", adapter)
 
     def _send_request(self, method: str, url: str, **kwargs) -> dict | None:
         """
@@ -59,19 +81,54 @@ class SentinelApiHandler:
         :return: Any data returned by the API
         """
         try:
+            if (
+                self._expiration_token_date is None
+                or datetime.now() > self._expiration_token_date
+            ):
+                self._get_authorization_header()
+
             response = self.session.request(method, url, **kwargs)
             response.raise_for_status()
 
             self.helper.connector_logger.info(
-                f"[API] HTTP {method.upper()} Request to endpoint",
-                {"url_path": url},
+                "[API] HTTP Request to endpoint",
+                {"url_path": f"{method.upper()} {url}"},
             )
 
             if response.content:
                 return response.json()
-        except requests.RequestException as err:
+
+        except RetryError as err:
             self.helper.connector_logger.error(
-                "[API] Error while requesting : ",
+                "A retry error occurred, maximum retries exceeded for url",
+                {"url_path": f"{method.upper()} {url}", "error": str(err)},
+            )
+            return None
+
+        except HTTPError as err:
+            self.helper.connector_logger.error(
+                "[API] A HTTP error occurred",
+                {"url_path": f"{method.upper()} {url}", "error": str(err)},
+            )
+            return None
+
+        except Timeout as err:
+            self.helper.connector_logger.error(
+                "[API] A timeout error occurred",
+                {"url_path": f"{method.upper()} {url}", "error": str(err)},
+            )
+            return None
+
+        except ConnectionError as err:
+            self.helper.connector_logger.error(
+                "[API] A connection error occurred",
+                {"url_path": f"{method.upper()} {url}", "error": str(err)},
+            )
+            return None
+
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "[API] An unexpected error occurred",
                 {"url_path": f"{method.upper()} {url}", "error": str(err)},
             )
             return None
