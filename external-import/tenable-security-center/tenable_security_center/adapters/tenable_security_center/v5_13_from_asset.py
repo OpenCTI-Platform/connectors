@@ -70,11 +70,15 @@ class _CVEsAPI:  # pylint: disable=too-few-public-methods
         """Fetch a CVE from the API."""
         try:
             self.logger.debug(f"Fetching CVE {cve_id} from Tenable Security Center.")
-            cve_response: dict[str, Any] = self.client.get(
-                f"cve/{cve_id}", stream=True
-            ).json()
+            # we need to work around the client.get as it expects a error key in the response
+            # see _resp_error_check in tenable.sc source code.
+            raw_response: "Response" = self.client._session.get(
+                f"{self.client._url}/rest/{self._build_url(cve_id)}"
+            )
+            raw_response.raise_for_status()
+            cve_response: dict[str, Any] = raw_response.json()
             return cve_response
-        except APIError as e:
+        except HTTPError as e:
             self.logger.error(
                 f"Error while fetching data from Tenable Security Center: {e}"
             )
