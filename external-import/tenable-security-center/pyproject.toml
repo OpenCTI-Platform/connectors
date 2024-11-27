@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tenable-security-center"
 dynamic = ["version"]
-requires-python = ">= 3.11"
+requires-python = ">= 3.11, <3.13"
 readme = "README.md"
 classifiers = [
     #   4 - Beta
@@ -17,7 +17,7 @@ classifiers = [
     ]
 dependencies = [
     "stix2~=3.0.1",
-    "pycti==6.3.8",
+    "pycti==6.4.1",
     "validators~=0.33.0",
     "pydantic~=2.8.2",
     "pytenable~=1.5.3", # for now we handle API from 5.13 to 6.4
@@ -38,6 +38,7 @@ dev = [
     "mypy>=1.13.0,<2",  # type validator
     "types-requests",  # stubs for requests lib
     "python-dotenv~=1.0.1",
+    "pip-audit~=2.7.3"
 ]
 all = [
     "tenable_security_center[test,dev]"
@@ -45,6 +46,10 @@ all = [
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["tenable_security_center"]
+
+[tool.setuptools.dynamic]
+version = {attr = "tenable_security_center.__version__"}
 
 [tool.isort]
 profile = "black"
@@ -86,7 +91,6 @@ target-version = "py311"
 
 [tool.ruff.lint]
 # Never enforce `E501` (line length violations). Already handle with black
-# Never enforce `E999` (SyntaxError: invalid syntax). can report false positive
 # Never enforce `F821` (Undefined name `null`). incorrect issue with notebook
 # Never enforce `D213` (Multi-line docstring summary should start at the second line) conflict with our docstring convention
 # Never enforce `D211` (NoBlankLinesBeforeClass)`
@@ -96,8 +100,18 @@ target-version = "py311"
 # Never enforce `D407` (Missing dashed underline after section) => Guidelines of data team is Google convention which has no dashed underline
 # Never enforce `D408` (Section underline should be in the line following the section’s name) => Guidelines of data team is Google convention which has no dashed underline
 # Never enforce `D409` (Section underline should match the length of its name) => Guidelines of data team is Google convention which has no dashed underline
-ignore = ["D203", "E501", "E999", "F821", "D205", "D213" , "D211", "G004", "TRY003", "D104", "D407", "D408", "D409"]
+ignore = ["D203", "E501", "F821", "D205", "D213" , "D211", "G004", "TRY003", "D104", "D407", "D408", "D409"]
 select = ["E", "F", "W", "D", "G", "T", "B", "C", "N", "I", "S"]
 
 [tool.mypy]
 strict = true
+exclude = [
+    '^tests', 
+    '^docs',
+    '^build',
+    '^dist',
+    '^venv',
+    '^site-packages',
+    '^__pypackages__',
+    '^.venv',
+]
