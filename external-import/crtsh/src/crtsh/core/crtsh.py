@@ -2,6 +2,7 @@
 import requests
 from pycti import StixCoreRelationship
 from stix2 import (
+    Identity,
     DomainName,
     EmailAddress,
     Relationship,
@@ -40,6 +41,11 @@ class CrtSHClient:
         if is_expired:
             self.url += "&exclude=expired"
         self._response = self._request_data()
+        self.author = Identity(
+            name="crtsh",
+            description="CRTSH external import connector",
+            identity_class="organization",
+        )
 
     def _transform_domain(self, domain, is_wildcard):
         try:
@@ -93,6 +99,7 @@ class CrtSHClient:
                 x509_v3_extensions=x509_v3_extensions,
                 custom_properties={
                     "labels": self.labels,
+                    "x_opencti_created_by_ref": self.author.id,
                 },
             )
             stix_objects.append(cert)
@@ -125,6 +132,7 @@ class CrtSHClient:
                     object_marking_refs=self.marking_refs,
                     custom_properties={
                         "labels": self.labels,
+                        "x_opencti_created_by_ref": self.author.id,
                     },
                 )
             elif isinstance(domain, str) and domain.startswith("*."):
@@ -186,6 +194,7 @@ class CrtSHClient:
                     object_marking_refs=self.marking_refs,
                     custom_properties={
                         "labels": self.labels,
+                        "x_opencti_created_by_ref": self.author.id,
                     },
                 )
             else:
@@ -223,6 +232,7 @@ class CrtSHClient:
                 source_ref=source_ref,
                 target_ref=target_ref,
                 object_marking_refs=self.marking_refs,
+                created_by_ref=self.author.id,
                 custom_properties={
                     "labels": self.labels,
                 },
