@@ -1,3 +1,4 @@
+# isort: skip_file # Skipping this file to prevent isort from removing type ignore comments for untyped imports
 """Provide interfaces for loading configuration settings."""
 
 from abc import ABC, abstractmethod
