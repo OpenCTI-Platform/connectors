@@ -19,13 +19,13 @@ from tenable_security_center.ports.asset import (
 )
 
 
-def _mock_helper():
+def _mock_logger():
     return Mock()
 
 
 @pytest.fixture()
-def mock_helper():
-    return _mock_helper()
+def mock_logger():
+    return _mock_logger()
 
 
 class MockCVE(CVEPort):
@@ -374,23 +374,23 @@ def mock_assets_chunk_with_finding_and_cves():
     return MockAssetsChunk(findings=True, with_cves=True)
 
 
-def test_constructor(mock_helper):
-    # Given a mock helper and a mock config
-    helper = mock_helper
+def test_constructor(mock_logger):
+    # Given a mock logger
+    logger = mock_logger
     # When creating a new ConverterToStix
-    converter = ConverterToStix(helper=helper, tlp_marking=TLP_WHITE)
+    converter = ConverterToStix(logger=logger, tlp_marking=TLP_WHITE)
     # Then the converter should be correctly initialized with an Author
     assert converter._author is not None
 
 
 def test_converter_should_process_an_asset_chunk(
-    mock_helper, mock_assets_chunk_without_finding
+    mock_logger, mock_assets_chunk_without_finding
 ):
-    # Given a mock helper and a mock config
-    helper = mock_helper
+    # Given a mock logger
+    logger = mock_logger
 
     # a ConverterToStix Instance
-    converter = ConverterToStix(helper=helper, tlp_marking=TLP_WHITE)
+    converter = ConverterToStix(logger=logger, tlp_marking=TLP_WHITE)
     # an assets_chunk
     assets_chunk = mock_assets_chunk_without_finding
 
@@ -415,12 +415,12 @@ def test_converter_should_process_an_asset_chunk(
 
 
 def test_converter_should_process_an_asset_with_finding(
-    mock_helper, mock_assets_chunk_with_finding
+    mock_logger, mock_assets_chunk_with_finding
 ):
-    # Given a mock helper
-    helper = mock_helper
+    # Given a mock logger
+    logger = mock_logger
     # a ConverterToStix Instance
-    converter = ConverterToStix(helper=helper, tlp_marking=TLP_WHITE)
+    converter = ConverterToStix(logger=logger, tlp_marking=TLP_WHITE)
     # an assets_chunk containing an asset with a finding
     assets_chunk = mock_assets_chunk_with_finding
 
@@ -443,12 +443,12 @@ def test_converter_should_process_an_asset_with_finding(
 
 
 def test_converter_should_process_an_asset_with_finding_and_cves(
-    mock_helper, mock_assets_chunk_with_finding_and_cves
+    mock_logger, mock_assets_chunk_with_finding_and_cves
 ):
-    # Given a mock helper
-    helper = mock_helper
+    # Given a mock logger
+    logger = mock_logger
     # a ConverterToStix Instance
-    converter = ConverterToStix(helper=helper, tlp_marking=TLP_WHITE)
+    converter = ConverterToStix(logger=logger, tlp_marking=TLP_WHITE)
     # an assets_chunk containing an asset with a finding
     assets_chunk = mock_assets_chunk_with_finding_and_cves
 
