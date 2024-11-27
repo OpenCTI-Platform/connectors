@@ -4,11 +4,13 @@ import os
 import sys
 import time
 from datetime import timedelta
+from typing import Any
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 from .api import OFFSET_PAGINATION, MandiantAPI
+from .errors import StateError
 from .utils import Timestamp
 
 STATE_START = "start_epoch"
@@ -496,25 +498,7 @@ class Mandiant:
             self.mandiant_api_v4_key_secret,
         )
 
-        if not self.helper.get_state():
-            # Create period of 1 day starting from the configuration
-            # Mandiant API only paginate in reverse time ordering
-            base_structure = self.compute_start_structure(
-                self.mandiant_import_start_date
-            )
-            indicator_structure = self.compute_start_structure(
-                self.mandiant_indicator_import_start_date
-            )
-            self.helper.set_state(
-                {
-                    "vulnerabilities": base_structure,
-                    "indicators": indicator_structure,
-                    "campaigns": base_structure,
-                    "malwares": base_structure,
-                    "reports": base_structure,
-                    "actors": base_structure,
-                }
-            )
+        self._init_state()
 
     def compute_start_structure(self, start_date):
         now = Timestamp.now()
@@ -529,112 +513,219 @@ class Mandiant:
             STATE_OFFSET: 0,
         }
 
-    def process_message(self):
+    @staticmethod
+    def _is_state_set(state: dict[str, Any] | None) -> bool:
+        """Check if the state is set."""
+        return not (
+            state is None
+            or state == {}
+            or any(
+                state.get(expected_key) is None
+                for expected_key in [
+                    "vulnerabilities",
+                    "indicators",
+                    "campaigns",
+                    "malwares",
+                    "reports",
+                    "actors",
+                ]
+            )
+        )
+
+    def _init_state(self) -> dict[str, Any]:
+        """Get State or reinitialize it if it is None.
+
+        State is a Critical part of the connector, it is used to keep track of the last import for each collection and to paginate the API.
+
+        """
         state = self.helper.get_state()
-        for collection in self.mandiant_collections:
-            # Handle interval config
-            date_now_value = Timestamp.now().value
-            collection_interval = getattr(self, f"mandiant_{collection}_interval")
-            last_run_value = Timestamp.from_iso(state[collection][STATE_LAST_RUN]).value
+        if not Mandiant._is_state_set(state):
+            # Create period of 1 day starting from the configuration
+            # Mandiant API only paginate in reverse time ordering
 
-            # API types related to simple offset
-            collection_with_offset = ["malwares", "actors", "campaigns"]
-            # Start and End, Offset
-            start_offset = state[collection][STATE_OFFSET]
-            end_offset = start_offset + OFFSET_PAGINATION
-
-            # API types related to start_epoch
-            collection_with_start_epoch = ["reports", "vulnerabilities", "indicators"]
-            # Start and End, Timestamp short format
-            start_date = Timestamp.from_iso(state[collection][STATE_START])
-            start_short_format = start_date.short_format
-
-            # If no end date, put the proper period using delta
-            if state[collection][STATE_END] is None:
-                next_end = start_date.delta(days=self.mandiant_import_period)
-                # If delta is in the future, limit to today
-                if next_end.value > Timestamp.now().value:
-                    next_end = Timestamp.now()
-                end_short_format = next_end.short_format
-            else:
-                # Fix problem when end state is in the future
-                if (
-                    Timestamp.from_iso(state[collection][STATE_END]).value
-                    > Timestamp.now().value
-                ):
-                    state[collection][STATE_END] = None
-                end_short_format = Timestamp.from_iso(
-                    state[collection][STATE_END]
-                ).short_format
-
-            # Additional information for the "work" depending on the collection (offset, epoch)
-            start_work = (
-                start_short_format
-                if collection in collection_with_start_epoch
-                else start_offset
-            )
-            end_work = (
-                end_short_format
-                if collection in collection_with_start_epoch
-                else end_offset
+            self.helper.connector_logger.warning(
+                "State is None or incomplete, reinitializing it"
             )
 
-            import_start_date = (
+            base_structure = self.compute_start_structure(
+                self.mandiant_import_start_date
+            )
+            indicator_structure = self.compute_start_structure(
                 self.mandiant_indicator_import_start_date
-                if collection == "indicators"
-                else self.mandiant_import_start_date
             )
+            state = {
+                "vulnerabilities": base_structure,
+                "indicators": indicator_structure,
+                "campaigns": base_structure,
+                "malwares": base_structure,
+                "reports": base_structure,
+                "actors": base_structure,
+            }
+        self.helper.set_state(state)
 
-            if collection in collection_with_start_epoch:
-                first_run = (
-                    True
-                    if state[collection][STATE_START]
-                    == Timestamp.from_iso(import_start_date).iso_format
-                    else False
+    def get_state_value(self, collection_name: str, state_key: str) -> Any:
+        """Using this method to get the value of a specific key in the state collection.
+
+        It allows an external user to reset the state. The error is then handle gracefully to exit the current job.
+
+        """
+        try:
+            return self.helper.get_state()[collection_name][state_key]
+        except (KeyError, TypeError) as err:
+            raise StateError(
+                f"State key {state_key} not found in {collection_name} collection"
+            ) from err
+
+    def set_state_value(self, collection_name: str, state_key: str, value: Any):
+        """Using this method to set the value of a specific key in the state collection.
+
+        See Also:
+            get_state_value
+        """
+        try:
+            state = self.helper.get_state()
+            state[collection_name][state_key] = value
+            self.helper.set_state(state)
+        except (KeyError, TypeError) as err:
+            raise StateError(
+                f"State key {state_key} not found in {collection_name} collection"
+            ) from err
+
+    def process_message(self):
+        self._init_state()
+        for collection in self.mandiant_collections:
+            try:
+                # Handle interval config
+                work_id = None
+                date_now_value = Timestamp.now().value
+                collection_interval = getattr(self, f"mandiant_{collection}_interval")
+
+                last_run_value = Timestamp.from_iso(
+                    self.get_state_value(
+                        collection_name=collection, state_key=STATE_LAST_RUN
+                    )
+                ).value
+
+                # API types related to simple offset
+                collection_with_offset = ["malwares", "actors", "campaigns"]
+                # Start and End, Offset
+                start_offset = self.get_state_value(
+                    collection_name=collection, state_key=STATE_OFFSET
                 )
-            else:
-                first_run = True if start_offset == 0 else False
+                end_offset = start_offset + OFFSET_PAGINATION
 
-            """
-            We check that after each API call the collection respects the interval, 
-            either the default or the one specified in the config.
-            If it does not, we terminate the job and move on to the next collection.
-            """
-
-            if (
-                first_run is False
-                and date_now_value - collection_interval < last_run_value
-            ):
-                diff_time = round(
-                    ((date_now_value - last_run_value).total_seconds()) / 60
-                )
-                remaining_time = round(
-                    (
-                        (
-                            (
-                                collection_interval - timedelta(minutes=diff_time)
-                            ).total_seconds()
-                        )
-                        / 60
+                # API types related to start_epoch
+                collection_with_start_epoch = [
+                    "reports",
+                    "vulnerabilities",
+                    "indicators",
+                ]
+                # Start and End, Timestamp short format
+                start_date = Timestamp.from_iso(
+                    self.get_state_value(
+                        collection_name=collection, state_key=STATE_START
                     )
                 )
-                self.helper.connector_logger.info(
-                    f"Ignore the '{collection}' collection because the collection interval in the config is '{collection_interval}', the remaining time until the next collection pull: {remaining_time} min"
-                )
-                continue
+                start_short_format = start_date.short_format
 
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id,
-                f"{collection.title()} {start_work} - {end_work}",
-            )
-            try:
+                # If no end date, put the proper period using delta
+                if (
+                    self.get_state_value(
+                        collection_name=collection, state_key=STATE_END
+                    )
+                    is None
+                ):
+                    next_end = start_date.delta(days=self.mandiant_import_period)
+                    # If delta is in the future, limit to today
+                    if next_end.value > Timestamp.now().value:
+                        next_end = Timestamp.now()
+                    end_short_format = next_end.short_format
+                else:
+                    # Fix problem when end state is in the future
+                    if (
+                        Timestamp.from_iso(
+                            self.get_state_value(
+                                collection_name=collection, state_key=STATE_END
+                            )
+                        ).value
+                        > Timestamp.now().value
+                    ):
+                        self.set_state_value(
+                            collection_name=collection, state_key=STATE_END, value=None
+                        )
+                    end_short_format = Timestamp.from_iso(
+                        self.get_state_value(
+                            collection_name=collection, state_key=STATE_END
+                        )
+                    ).short_format
+
+                # Additional information for the "work" depending on the collection (offset, epoch)
+                start_work = (
+                    start_short_format
+                    if collection in collection_with_start_epoch
+                    else start_offset
+                )
+                end_work = (
+                    end_short_format
+                    if collection in collection_with_start_epoch
+                    else end_offset
+                )
+
+                import_start_date = (
+                    self.mandiant_indicator_import_start_date
+                    if collection == "indicators"
+                    else self.mandiant_import_start_date
+                )
+
+                if collection in collection_with_start_epoch:
+                    first_run = (
+                        self.get_state_value(
+                            collection_name=collection, state_key=STATE_START
+                        )
+                        == Timestamp.from_iso(import_start_date).iso_format
+                    )
+                else:
+                    first_run = start_offset == 0
+
+                """
+                We check that after each API call the collection respects the interval, 
+                either the default or the one specified in the config.
+                If it does not, we terminate the job and move on to the next collection.
+                """
+
+                if (
+                    first_run is False
+                    and date_now_value - collection_interval < last_run_value
+                ):
+                    diff_time = round(
+                        ((date_now_value - last_run_value).total_seconds()) / 60
+                    )
+                    remaining_time = round(
+                        (
+                            (
+                                (
+                                    collection_interval - timedelta(minutes=diff_time)
+                                ).total_seconds()
+                            )
+                            / 60
+                        )
+                    )
+                    self.helper.connector_logger.info(
+                        f"Ignore the '{collection}' collection because the collection interval in the config is '{collection_interval}', the remaining time until the next collection pull: {remaining_time} min"
+                    )
+                    continue
+
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id,
+                    f"{collection.title()} {start_work} - {end_work}",
+                )
+
                 self.helper.connector_logger.info(
                     "Start collecting", {"collection": collection}
                 )
                 self._run(
                     work_id,
                     collection,
-                    state,
                     collection_with_offset,
                     collection_with_start_epoch,
                 )
@@ -646,13 +737,25 @@ class Mandiant:
                 self.helper.connector_logger.info("Connector stop")
                 sys.exit(0)
 
+            except StateError as err:
+                self.helper.connector_logger.error(
+                    "Failed du to connector state error", {"error": str(err)}
+                )
+                if work_id is not None:
+                    self.helper.api.work.to_processed(
+                        work_id, "Failed due to connector state error", in_error=True
+                    )
+                    work_id = None
+                    break
+
             except Exception as e:
                 self.helper.connector_logger.error(str(e))
                 time.sleep(360)
                 continue
 
             finally:
-                self.helper.api.work.to_processed(work_id, "Finished")
+                if work_id is not None:
+                    self.helper.api.work.to_processed(work_id, "Finished")
 
     def run(self):
         self.helper.schedule_iso(
@@ -675,7 +778,6 @@ class Mandiant:
         self,
         work_id,
         collection,
-        state,
         collection_with_offset,
         collection_with_start_epoch,
     ):
@@ -689,10 +791,15 @@ class Mandiant:
         """
         before_process_now = Timestamp.now()
 
-        start = Timestamp.from_iso(state[collection][STATE_START])
+        start = Timestamp.from_iso(
+            self.get_state_value(collection_name=collection, state_key=STATE_START)
+        )
 
         # If no end date, put the proper period using delta
-        if state[collection][STATE_END] is None:
+        if (
+            self.get_state_value(collection_name=collection, state_key=STATE_END)
+            is None
+        ):
             end = start.delta(days=self.mandiant_import_period)
             # If delta is in the future, limit to today
             if end.value > Timestamp.now().value:
@@ -700,13 +807,23 @@ class Mandiant:
         else:
             # Fix problem when end state is in the future
             if (
-                Timestamp.from_iso(state[collection][STATE_END]).value
+                Timestamp.from_iso(
+                    self.get_state_value(
+                        collection_name=collection, state_key=STATE_END
+                    )
+                ).value
                 > Timestamp.now().value
             ):
-                state[collection][STATE_END] = None
-            end = Timestamp.from_iso(state[collection][STATE_END])
+                self.set_state_value(
+                    collection_name=collection, state_key=STATE_END, value=None
+                )
+            end = Timestamp.from_iso(
+                self.get_state_value(collection_name=collection, state_key=STATE_END)
+            )
 
-        offset = state[collection][STATE_OFFSET]
+        offset = self.get_state_value(
+            collection_name=collection, state_key=STATE_OFFSET
+        )
 
         parameters = {}
 
@@ -784,7 +901,9 @@ class Mandiant:
                     work_id=work_id,
                 )
                 if collection in collection_with_offset:
-                    state[collection][STATE_OFFSET] = offset
+                    self.set_state_value(
+                        collection_name=collection, state_key=STATE_OFFSET, value=offset
+                    )
             else:
                 self.helper.connector_logger.info(
                     f"No data has been imported for the '{collection}' collection since the last run"
@@ -798,9 +917,19 @@ class Mandiant:
             next_end = next_start.delta(days=self.mandiant_import_period)
             if next_end.value > after_process_now.value:
                 next_end = None
-            state[collection][STATE_START] = next_start.iso_format
-            state[collection][STATE_END] = (
-                next_end.iso_format if next_end is not None else None
+            self.set_state_value(
+                collection_name=collection,
+                state_key=STATE_START,
+                value=next_start.iso_format,
             )
-        state[collection][STATE_LAST_RUN] = before_process_now.iso_format
-        self.helper.set_state(state)
+            self.set_state_value(
+                collection_name=collection,
+                state_key=STATE_END,
+                value=next_end.iso_format if next_end is not None else None,
+            )
+
+        self.set_state_value(
+            collection_name=collection,
+            state_key=STATE_LAST_RUN,
+            value=before_process_now.iso_format,
+        )
