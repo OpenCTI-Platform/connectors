@@ -90,7 +90,12 @@ class _CVEsAPI:  # pylint: disable=too-few-public-methods
 
     def _fetch_data_chunk(self, cve_ids: list[str]) -> Iterable[dict[str, Any]]:
         """Fetch a chunk of data from the API."""
-        self.logger.debug(f"CVE Cache stats {self.__fetch.cache_info()}")
+        # we must disable pylint which thinks we are calling the self.__fetch method
+        cache_stats = (
+            self.__fetch.cache_info()  # pylint: disable=no-value-for-parameter
+        )
+        self.logger.debug(f"CVE Cache stats {cache_stats}")
+
         with ThreadPoolExecutor() as executor:
             return list(executor.map(self._fetch, cve_ids))
 

@@ -2,7 +2,6 @@
 # isort: skip_file
 # type: ignore
 
-import os
 import subprocess
 import sys
 from pathlib import Path

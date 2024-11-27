@@ -1,17 +1,20 @@
 """Provide interfaces for loading configuration settings."""
 
-import datetime
 from abc import ABC, abstractmethod
 from functools import wraps
 from logging import getLogger
-from typing import Any, Callable, Literal, Optional
+from typing import TYPE_CHECKING, Any, Callable, Literal, Optional
 
 import validators
-from stix2 import (  # type: ignore[import-untyped] # stix2 does not provide stubs
-    TLPMarking,
-)
 
 from tenable_security_center.ports.errors import ConfigLoaderError
+
+if TYPE_CHECKING:
+    import datetime
+
+    from stix2 import (  # type: ignore[import-untyped] # stix2 does not provide stubs
+        TLPMarking,
+    )
 
 # we do not have access to OpenCTI Connector logger as it needs a config to be initialized
 _logger = getLogger(__name__)
@@ -136,11 +139,11 @@ class ConfigLoaderConnectorPort(ABC):
 
     @property
     @abstractmethod
-    def _duration_period(self) -> datetime.timedelta: ...
+    def _duration_period(self) -> "datetime.timedelta": ...
 
     @property
     @_make_error_handler("Unable to retrieve connector duration period in config")
-    def duration_period(self) -> datetime.timedelta:
+    def duration_period(self) -> "datetime.timedelta":
         """Connector scheduler settings."""
         return self._duration_period
 
@@ -226,7 +229,7 @@ class ConfigLoaderTSCPort(ABC):
 
     def __init__(self: "ConfigLoaderTSCPort"):
         """Initialize the configuration loader."""
-        self._es: Optional[datetime.datetime] = None
+        self._es: Optional["datetime.datetime"] = None
 
     @property
     @abstractmethod
@@ -300,11 +303,11 @@ class ConfigLoaderTSCPort(ABC):
 
     @property
     @abstractmethod
-    def _export_since(self) -> datetime.datetime: ...
+    def _export_since(self) -> "datetime.datetime": ...
 
     @property
     @_make_error_handler("Unable to retrieve export since datetime in config")
-    def export_since(self) -> datetime.datetime:
+    def export_since(self) -> "datetime.datetime":
         """Datetime to use as the starting point for exporting data from Tenable Security Center."""
         output = self._es or self._export_since
         if output is None:
@@ -312,7 +315,7 @@ class ConfigLoaderTSCPort(ABC):
         return output
 
     @export_since.setter
-    def export_since(self, value: datetime.datetime) -> None:
+    def export_since(self, value: "datetime.datetime") -> None:
         self._es = value
 
     @property
@@ -331,11 +334,11 @@ class ConfigLoaderTSCPort(ABC):
 
     @property
     @abstractmethod
-    def _marking_definition(self) -> TLPMarking: ...
+    def _marking_definition(self) -> "TLPMarking": ...
 
     @property
     @_make_error_handler("Unable to retrieve marking definition in config")
-    def marking_definition(self) -> TLPMarking:
+    def marking_definition(self) -> "TLPMarking":
         """Marking definition to apply to exported data."""
         return self._marking_definition
 

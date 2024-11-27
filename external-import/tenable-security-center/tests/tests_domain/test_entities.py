@@ -182,7 +182,7 @@ def test_minimal_constructor(constructor, min_params):
     constructor = constructor
     correct_params = min_params
     # When object is created
-    entity = constructor[0](**min_params)
+    entity = constructor[0](**correct_params)
     # Then object is created correctly
     assert entity.id is not None
 
@@ -248,4 +248,4 @@ def test_entity_should_not_accept_extra_args(constructor, min_params):
     constructor = constructor
     # When extra args are given
     with pytest.raises(ValidationError):
-        entity = constructor(**min_params, extra_arg="extra")
+        _ = constructor(**min_params, extra_arg="extra")
