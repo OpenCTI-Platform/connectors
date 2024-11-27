@@ -40,7 +40,6 @@ class CrtSHClient:
         self.url = DEFAULT_URL.format(search=domain)
         if is_expired:
             self.url += "&exclude=expired"
-        self._response = self._request_data()
         self.author = Identity(
             name="crtsh",
             description="CRTSH external import connector",
@@ -75,10 +74,6 @@ class CrtSHClient:
         except requests.RequestException as e:
             LOGGER.error(f"Error while fetching data from {self.url}: {str(e)}")
             return None
-
-    def get_response(self):
-        """Return the response from the API."""
-        return self._response
 
     def process_certificate(self, item, stix_objects):
         """Return a STIX X509Certificate object."""
@@ -241,7 +236,12 @@ class CrtSHClient:
     def get_stix_objects(self):
         """Return a list of STIX objects."""
         stix_objects = []
-        for item in self._response:
+
+        data = self._request_data()
+        if data is None:
+            return stix_objects
+
+        for item in data:
             LOGGER.debug(f"Processing item: {item}")
             certificate_id = self.process_certificate(item, stix_objects)
             if "common_name" in item:
@@ -250,8 +250,10 @@ class CrtSHClient:
             if "name_value" in item:
                 LOGGER.debug(f"Processing name_value: {item.get('name_value')}")
                 self.process_name_value(item, stix_objects, certificate_id)
+
         uniq_stix_objects = []
         for item in stix_objects:
             if item not in uniq_stix_objects:
                 uniq_stix_objects.append(item)
+
         return uniq_stix_objects
