@@ -385,6 +385,10 @@ jobs:
           name: Build Docker image opencti/connector-attribution-tools
           command: docker build -t opencti/connector-attribution-tools:latest . && docker tag opencti/connector-attribution-tools:latest opencti/connector-attribution-tools:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/tenable-security-center
+          name: Build Docker image opencti/connector-tenable-security-center
+            command: docker build -t opencti/connector-tenable-security-center:latest . && docker tag opencti/connector-tenable-security-center:latest opencti/connector-tenable-security-center:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -538,6 +542,8 @@ jobs:
             docker push opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
             docker push opencti/connector-attribution-tools:latest
             docker push opencti/connector-attribution-tools:${CIRCLE_TAG}
+            docker push opencti/connector-tenable-security-center:latest
+            docker push opencti/connector-tenable-security-center:${CIRCLE_TAG}
 
       - slack/notify:
           event: fail
@@ -1368,6 +1374,10 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/attribution-tools
           name: Build Docker image opencti/connector-attribution-tools
           command: docker build -t opencti/connector-attribution-tools:rolling .
+      -run:
+          working_directory: ~/opencti/external-import/tenable-security-center
+          name: Build Docker image opencti/connector-tenable-security-center
+          command: docker build -t opencti/connector-tenable-security-center:rolling .
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -1445,6 +1455,7 @@ jobs:
             docker push opencti/connector-greynoise-vuln:rolling
             docker push opencti/connector-tenable-vuln-management:rolling
             docker push opencti/connector-attribution-tools:rolling
+            docker push opencti/connector-tenable-security-center:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
