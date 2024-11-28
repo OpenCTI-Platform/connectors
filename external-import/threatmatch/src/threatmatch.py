@@ -5,6 +5,7 @@ import sys
 import time
 from datetime import datetime
 
+import bs4
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -107,6 +108,12 @@ class ThreatMatch:
         #    return []
         if r.status_code == 200:
             data = r.json()["objects"]
+            for object in data:
+                if "description" in object:
+                    object["description"] = bs4.BeautifulSoup(
+                        object["description"], "html.parser"
+                    ).get_text()
+                    self.helper.log_info(f"Cleaned data : {object['description']}")
             return data
 
     def _process_list(self, work_id, token, type, list):
