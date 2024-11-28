@@ -95,10 +95,10 @@ target-version = "py311"
 # Never enforce `D211` (NoBlankLinesBeforeClass)`
 # Never enforce `G004` (logging-f-string) Logging statement uses f-string
 # Never enforce `TRY003`() Avoid specifying long messages outside the exception class not useful
-# Never enforce `D104` (Missing docstring in public package) => Guidelines of data team is to not enforce this rule
-# Never enforce `D407` (Missing dashed underline after section) => Guidelines of data team is Google convention which has no dashed underline
-# Never enforce `D408` (Section underline should be in the line following the section’s name) => Guidelines of data team is Google convention which has no dashed underline
-# Never enforce `D409` (Section underline should match the length of its name) => Guidelines of data team is Google convention which has no dashed underline
+# Never enforce `D104` (Missing docstring in public package) 
+# Never enforce `D407` (Missing dashed underline after section) 
+# Never enforce `D408` (Section underline should be in the line following the section’s name) 
+# Never enforce `D409` (Section underline should match the length of its name)
 ignore = ["D203", "E501", "F821", "D205", "D213" , "D211", "G004", "TRY003", "D104", "D407", "D408", "D409"]
 select = ["E", "F", "W", "D", "G", "T", "B", "C", "N", "I", "S"]
 

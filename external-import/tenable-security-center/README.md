@@ -48,6 +48,17 @@ export $(grep -v '^#' .env | xargs -d '\n')
 
 or `docker-compose.yml` in the container `environment` section.
 
+### Credentials Deletion while running
+
+The connector will NOT delete the credentials from the environment variables.
+
+Once it is up and running, you can delete the credentials environment variables TSC_API_ACCESS_KEY and 
+TSC_API_SECRET_KEY from the system, and the connector will continue to run.
+
+Note : if set via the docker run command or docker-compose file, the credentials will stay in the container metadata.
+
+To secretly pass your credentials and remove them, you could, for example, use an entrypoint file in your docker-compose file overwriting the container app start to fetch the credentials from a secret manager, start the app, then delete the credentials from the environment variables.
+
 ### OpenCTI environment variables
 
 Below are the parameters you'll need to set for OpenCTI:
