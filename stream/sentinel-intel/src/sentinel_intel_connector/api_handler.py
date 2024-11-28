@@ -31,6 +31,7 @@ class SentinelApiHandler:
 
         # Define headers in session and update when needed
         self.session = requests.Session()
+        self.retries_builder()
         self._expiration_token_date = None
 
     def _get_authorization_header(self):
