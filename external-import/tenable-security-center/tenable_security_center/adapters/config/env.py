@@ -8,7 +8,6 @@ Classes:
 """
 import datetime
 from functools import partial
-from pathlib import Path
 from typing import Any, Literal, Optional
 
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
@@ -43,7 +42,7 @@ class _BaseLoaderEnv(ConfigBaseLoader):  # pylint: disable=too-few-public-method
 class _ConfigLoaderOCTIEnv(ConfigLoaderOCTIPort, _BaseLoaderEnv):
     """Implementation of the ConfigLoaderOCTIPort interface using environment variables."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         _BaseLoaderEnv.__init__(self)
 
     @property
@@ -59,7 +58,7 @@ class _ConfigLoaderOCTIEnv(ConfigLoaderOCTIPort, _BaseLoaderEnv):
 class _ConfigLoaderConnectorEnv(ConfigLoaderConnectorPort, _BaseLoaderEnv):
     """Implementation of the ConfigLoaderConnectorPort interface using environment variables."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         _BaseLoaderEnv.__init__(self)
 
     @property
@@ -156,7 +155,7 @@ class _ConfigLoaderConnectorEnv(ConfigLoaderConnectorPort, _BaseLoaderEnv):
 class _ConfigLoaderTSCEnv(ConfigLoaderTSCPort, _BaseLoaderEnv):
     """Implementation of the ConfigLoaderTSCPort interface using environment variables."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         _BaseLoaderEnv.__init__(self)
         ConfigLoaderTSCPort.__init__(self)
 
@@ -259,16 +258,14 @@ class ConfigLoaderEnv(
 ):  # pylint: disable=too-few-public-methods
     """Implementation of the ConfigLoaderPort interface using environment variables."""
 
-    def __init__(self, filepath: Optional[Path] = None):
+    def __init__(self) -> None:
         """Initialize the configuration loader."""
         _BaseLoaderEnv.__init__(self)
         ConfigLoaderPort.__init__(
             self,
-            config_loader_opencti=_ConfigLoaderOCTIEnv(filepath=filepath),
-            config_loader_connector=_ConfigLoaderConnectorEnv(filepath=filepath),
-            config_loader_tenable_security_center=_ConfigLoaderTSCEnv(
-                filepath=filepath
-            ),
+            config_loader_opencti=_ConfigLoaderOCTIEnv(),
+            config_loader_connector=_ConfigLoaderConnectorEnv(),
+            config_loader_tenable_security_center=_ConfigLoaderTSCEnv(),
         )
 
 

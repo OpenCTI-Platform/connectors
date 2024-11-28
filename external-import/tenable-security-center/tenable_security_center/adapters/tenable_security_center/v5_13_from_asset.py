@@ -17,7 +17,7 @@ from pycti import (  # type: ignore[import-untyped]
 from requests import HTTPError
 from semver import VersionInfo
 from tenable.errors import (  # type: ignore[import-untyped]
-    APIError,  #  tenable does not provide stubs
+    APIError,  # tenable does not provide stubs
 )
 from tenable.sc import (  # type: ignore[import-untyped]
     TenableSC,  # tenable does not provide stubs

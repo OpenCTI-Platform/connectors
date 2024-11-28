@@ -168,7 +168,7 @@ class Connector:
         """Fetch data, transform and send bundle."""
         try:
 
-            stix_objects: dict = self.converter_to_stix.process_assets_chunk(
+            stix_objects = self.converter_to_stix.process_assets_chunk(
                 chunk,
                 process_systems_without_vulnerabilities=self.config.tenable_security_center.process_systems_without_vulnerabilities,
             )
