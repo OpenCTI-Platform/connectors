@@ -387,7 +387,7 @@ jobs:
       - run:
           working_directory: ~/opencti/external-import/tenable-security-center
           name: Build Docker image opencti/connector-tenable-security-center
-            command: docker build -t opencti/connector-tenable-security-center:latest . && docker tag opencti/connector-tenable-security-center:latest opencti/connector-tenable-security-center:${CIRCLE_TAG}
+          command: docker build -t opencti/connector-tenable-security-center:latest . && docker tag opencti/connector-tenable-security-center:latest opencti/connector-tenable-security-center:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
