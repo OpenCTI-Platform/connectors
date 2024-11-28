@@ -307,7 +307,7 @@ class ConverterToStix:
                         start_time=vulnerability.created,
                         stop_time=(
                             finding.last_seen
-                            if not finding.has_been_mitigated
+                            if finding.has_been_mitigated
                             else None
                         ),
                         confidence=None,
