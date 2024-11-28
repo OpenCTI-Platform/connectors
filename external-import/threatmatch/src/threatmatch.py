@@ -4,7 +4,6 @@ import os
 import sys
 import time
 from datetime import datetime
-
 import bs4
 import requests
 import yaml
@@ -81,7 +80,7 @@ class ThreatMatch:
 
     def next_run(self, seconds):
         return
-
+    
     def _get_token(self):
         r = requests.post(
             self.threatmatch_url + "/api/developers-platform/token",
@@ -102,7 +101,9 @@ class ThreatMatch:
             headers=headers,
         )
         if r.status_code != 200:
-            self.helper.log_error(str(r.text))
+            self.helper.log_error(
+                f"Could not fetch item: {str(item_id)}, Error: {r.text}"
+            )
             return []
         # if 'error' in r.json():
         #    return []
