@@ -43,7 +43,7 @@ class _BaseLoaderEnv(ConfigBaseLoader):  # pylint: disable=too-few-public-method
 class _ConfigLoaderOCTIEnv(ConfigLoaderOCTIPort, _BaseLoaderEnv):
     """Implementation of the ConfigLoaderOCTIPort interface using environment variables."""
 
-    def __init__(self, filepath: Optional[Path] = None):
+    def __init__(self):
         _BaseLoaderEnv.__init__(self)
 
     @property
@@ -59,7 +59,7 @@ class _ConfigLoaderOCTIEnv(ConfigLoaderOCTIPort, _BaseLoaderEnv):
 class _ConfigLoaderConnectorEnv(ConfigLoaderConnectorPort, _BaseLoaderEnv):
     """Implementation of the ConfigLoaderConnectorPort interface using environment variables."""
 
-    def __init__(self, filepath: Optional[Path] = None):
+    def __init__(self):
         _BaseLoaderEnv.__init__(self)
 
     @property
@@ -156,7 +156,7 @@ class _ConfigLoaderConnectorEnv(ConfigLoaderConnectorPort, _BaseLoaderEnv):
 class _ConfigLoaderTSCEnv(ConfigLoaderTSCPort, _BaseLoaderEnv):
     """Implementation of the ConfigLoaderTSCPort interface using environment variables."""
 
-    def __init__(self, filepath: Optional[Path] = None):
+    def __init__(self):
         _BaseLoaderEnv.__init__(self)
         ConfigLoaderTSCPort.__init__(self)
 
