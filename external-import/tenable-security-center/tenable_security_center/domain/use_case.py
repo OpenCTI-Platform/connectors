@@ -233,7 +233,7 @@ class ConverterToStix:
             dict[str, "_STIXBase21"]: A dictionary containing the STIX 2.1 objects and their stix standard id as keys.
 
         """
-        bundle: list["BaseEntity"] = [self._author]  # results holder
+        bundle: list["BaseEntity"] = []  # results holder
         findings: list["FindingPort"] = []
         for asset in assets_chunk.assets:
             self.logger.info(f"Processing asset {asset.name}")
@@ -336,4 +336,8 @@ class ConverterToStix:
 
                     bundle.extend(software_has_vulnerability_rels)
 
+        if len(bundle) == 0:
+            return {} 
+
+        bundle.append(self._author)
         return {obj.id: obj.to_stix2_object() for obj in bundle}
