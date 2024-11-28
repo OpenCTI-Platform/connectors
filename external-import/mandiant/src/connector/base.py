@@ -10,17 +10,16 @@ import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 from .api import OFFSET_PAGINATION, MandiantAPI
+from .constants import (
+    BATCH_REPORT_SIZE,
+    STATE_END,
+    STATE_LAST_RUN,
+    STATE_OFFSET,
+    STATE_START,
+    STATEMENT_MARKINGS,
+)
 from .errors import StateError
 from .utils import Timestamp
-
-STATE_START = "start_epoch"
-STATE_OFFSET = "offset"
-STATE_END = "end_epoch"
-STATE_LAST_RUN = "last_run"
-
-STATEMENT_MARKINGS = [
-    "marking-definition--ad2caa47-58fd-5491-8f67-255377927369",
-]
 
 
 class Mandiant:
@@ -596,7 +595,7 @@ class Mandiant:
         for collection in self.mandiant_collections:
             try:
                 # Handle interval config
-                work_id = None
+                # work_id = None
                 date_now_value = Timestamp.now().value
                 collection_interval = getattr(self, f"mandiant_{collection}_interval")
 
@@ -711,23 +710,21 @@ class Mandiant:
                         )
                     )
                     self.helper.connector_logger.info(
-                        f"Ignore the '{collection}' collection because the collection interval in the config is '{collection_interval}', the remaining time until the next collection pull: {remaining_time} min"
+                        f"Ignore the '{collection}' collection because the collection interval "
+                        f"in the config is '{collection_interval}', the remaining time until the "
+                        f"next collection pull: {remaining_time} min"
                     )
                     continue
-
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id,
-                    f"{collection.title()} {start_work} - {end_work}",
-                )
 
                 self.helper.connector_logger.info(
                     "Start collecting", {"collection": collection}
                 )
                 self._run(
-                    work_id,
                     collection,
                     collection_with_offset,
                     collection_with_start_epoch,
+                    start_work,
+                    end_work,
                 )
                 self.helper.connector_logger.info(
                     "Collection", {"collection": collection}
@@ -741,28 +738,20 @@ class Mandiant:
                 self.helper.connector_logger.error(
                     "Failed du to connector state error", {"error": str(err)}
                 )
-                if work_id is not None:
-                    self.helper.api.work.to_processed(
-                        work_id, "Failed due to connector state error", in_error=True
-                    )
-                    work_id = None
-                    break
+                break
 
             except Exception as e:
                 self.helper.connector_logger.error(str(e))
                 time.sleep(360)
                 continue
 
-            finally:
-                if work_id is not None:
-                    self.helper.api.work.to_processed(work_id, "Finished")
-
     def run(self):
         self.helper.schedule_iso(
             message_callback=self.process_message, duration_period=self.duration_period
         )
 
-    def remove_statement_marking(self, stix_objects):
+    @staticmethod
+    def remove_statement_marking(stix_objects: list) -> None:
         for obj in stix_objects:
             if "object_marking_refs" in obj:
                 new_markings = []
@@ -774,162 +763,344 @@ class Mandiant:
                 else:
                     obj["object_marking_refs"] = new_markings
 
+    def _process_batch_reports(
+        self, new_batch_reports: list, info_reports: dict[str, Any]
+    ) -> None:
+        """
+          Process a batch of reports by deduplicating, cleaning, and submitting them.
+
+        Args:
+            new_batch_reports (list): The current batch of reports to process.
+            info_reports (dict): Metadata and tracking information about the reports.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If an error occurs during the deduplicate, clean the bundle and report submission process.
+            The error will be logged.
+        """
+        try:
+            bundles_objects_report = []
+
+            for bundles_report in new_batch_reports:
+                unique_bundles_report = self._deduplicate_and_clean_bundles(
+                    bundles_report
+                )
+                bundles_objects_report.extend(unique_bundles_report)
+
+            last_end_index = info_reports.get("start_batch_index_report") + len(
+                new_batch_reports
+            )
+            info_reports.update(
+                {
+                    "end_batch_index_report": last_end_index,
+                    "bundles_objects": bundles_objects_report,
+                }
+            )
+            self._process_submission_report(info_reports)
+            info_reports.update(
+                {
+                    "start_batch_index_report": last_end_index,
+                }
+            )
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "An error occurred during the report batch process",
+                {"error": str(err), "info_reports": info_reports},
+            )
+
+    def _deduplicate_and_clean_bundles(self, bundles_objects: list) -> list:
+        """
+        Deduplicates and cleans STIX bundles.
+
+        This method ensures that each object in the provided list of STIX bundles is unique based on its `id`.
+        It also converts each STIX object to a dictionary format and optionally removes statement markings
+        if the `mandiant_remove_statement_marking` variable environment is defined at true.
+
+        Args:
+            bundles_objects (list): A list of STIX objects to process.
+
+        Returns:
+            uniq_bundles_objects (list): A deduplicated and cleaned list of STIX objects in dictionary format.
+
+        Raises:
+            Exception: If an error occurs during the deduplicate and clean the bundle.
+            The error will be logged.
+        """
+        try:
+            uniq_bundles_objects = list(
+                {obj["id"]: obj for obj in bundles_objects}.values()
+            )
+            # Transform objects to dicts
+            uniq_bundles_objects = [
+                json.loads(obj.serialize()) for obj in uniq_bundles_objects
+            ]
+            if self.mandiant_remove_statement_marking:
+                uniq_bundles_objects = list(
+                    filter(
+                        lambda stix: stix["id"] not in STATEMENT_MARKINGS,
+                        uniq_bundles_objects,
+                    )
+                )
+                self.remove_statement_marking(uniq_bundles_objects)
+            return uniq_bundles_objects
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "An error occurred during the deduplicate and clean bundles",
+                {"error": str(err)},
+            )
+
+    def _process_submission_report(self, info_reports: dict[str, Any]) -> None:
+        """
+        Processes a submission report by creating a STIX bundle and marking the work as processed.
+
+        This method initiates a work process, creates a STIX2 bundle from the provided data,
+        sends the bundle, and marks the work as completed.
+
+        Example:
+            For an input dictionary like:
+
+            info_reports = {
+                "collection_title": "Reports",
+                "start_work": "2024-11-20",
+                "end_work": "2024-11-21",
+                "start_batch_index_report": 0,
+                "end_batch_index_report": 10,
+                "bundles_objects": [...],  # List of STIX objects
+            }
+
+            The work ID will be initiated with the friendly_name (visible from the front):
+            `"Reports 2024-11-20 - 2024-11-21 : 0 - 10"`.
+
+        Args:
+            info_reports (dict):
+                - collection_title (str): The title of the collection being processed.
+                - start_work (str): The start timestamp or identifier for the work.
+                - end_work (str): The end timestamp or identifier for the work.
+                - start_batch_index_report (int): The starting batch index of the report.
+                - end_batch_index_report (int): The ending batch index of the report.
+                - bundles_objects (list): A list of objects to include in the STIX2 bundle.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If an error occurs when initiating the job, creating the bundle or sending the data.
+            The error will be logged.
+        """
+        try:
+            report_work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id,
+                f"{info_reports.get('collection_title')} "
+                f"{info_reports.get('start_work')} - {info_reports.get('end_work')} : "
+                f"{info_reports.get('start_batch_index_report')} - {info_reports.get('end_batch_index_report')}",
+            )
+            bundle = self.helper.stix2_create_bundle(
+                info_reports.get("bundles_objects")
+            )
+            self.helper.send_stix2_bundle(
+                bundle=bundle,
+                work_id=report_work_id,
+            )
+            self.helper.api.work.to_processed(report_work_id, "Finished_report")
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "An error occurred during the report submission process",
+                {"error": str(err), "info_reports": info_reports},
+            )
+
     def _run(
         self,
-        work_id,
         collection,
         collection_with_offset,
         collection_with_start_epoch,
+        start_work,
+        end_work,
     ):
-        module = importlib.import_module(f".{collection}", package=__package__)
-        collection_api = getattr(self.api, collection)
+        try:
+            work_id = None
+            if collection != "reports":
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id,
+                    f"{collection.title()} {start_work} - {end_work}",
+                )
+            module = importlib.import_module(f".{collection}", package=__package__)
+            collection_api = getattr(self.api, collection)
 
-        """
-        If work in progress, then the new in progress will
-        be to start from the index until before_process_now. The current index
-        will also be updated to before_process_now to be used as a marker.
-        """
-        before_process_now = Timestamp.now()
+            """
+            If work in progress, then the new in progress will
+            be to start from the index until before_process_now. The current index
+            will also be updated to before_process_now to be used as a marker.
+            """
+            before_process_now = Timestamp.now()
 
-        start = Timestamp.from_iso(
-            self.get_state_value(collection_name=collection, state_key=STATE_START)
-        )
+            start = Timestamp.from_iso(
+                self.get_state_value(collection_name=collection, state_key=STATE_START)
+            )
 
-        # If no end date, put the proper period using delta
-        if (
-            self.get_state_value(collection_name=collection, state_key=STATE_END)
-            is None
-        ):
-            end = start.delta(days=self.mandiant_import_period)
-            # If delta is in the future, limit to today
-            if end.value > Timestamp.now().value:
-                end = Timestamp.now()
-        else:
-            # Fix problem when end state is in the future
+            # If no end date, put the proper period using delta
             if (
-                Timestamp.from_iso(
+                self.get_state_value(collection_name=collection, state_key=STATE_END)
+                is None
+            ):
+                end = start.delta(days=self.mandiant_import_period)
+                # If delta is in the future, limit to today
+                if end.value > Timestamp.now().value:
+                    end = Timestamp.now()
+            else:
+                # Fix problem when end state is in the future
+                if (
+                    Timestamp.from_iso(
+                        self.get_state_value(
+                            collection_name=collection, state_key=STATE_END
+                        )
+                    ).value
+                    > Timestamp.now().value
+                ):
+                    self.set_state_value(
+                        collection_name=collection, state_key=STATE_END, value=None
+                    )
+                end = Timestamp.from_iso(
                     self.get_state_value(
                         collection_name=collection, state_key=STATE_END
                     )
-                ).value
-                > Timestamp.now().value
-            ):
-                self.set_state_value(
-                    collection_name=collection, state_key=STATE_END, value=None
                 )
-            end = Timestamp.from_iso(
-                self.get_state_value(collection_name=collection, state_key=STATE_END)
+
+            offset = self.get_state_value(
+                collection_name=collection, state_key=STATE_OFFSET
             )
 
-        offset = self.get_state_value(
-            collection_name=collection, state_key=STATE_OFFSET
-        )
+            parameters = {}
 
-        parameters = {}
+            if collection in collection_with_offset:
+                parameters[STATE_OFFSET] = offset
 
-        if collection in collection_with_offset:
-            parameters[STATE_OFFSET] = offset
+            elif collection in collection_with_start_epoch:
+                parameters[STATE_START] = start.unix_format
+                if collection == "indicators":
+                    parameters["gte_mscore"] = self.mandiant_indicator_minimum_score
+                if end is not None:
+                    parameters[STATE_END] = end.unix_format
 
-        elif collection in collection_with_start_epoch:
-            parameters[STATE_START] = start.unix_format
-            if collection == "indicators":
-                parameters["gte_mscore"] = self.mandiant_indicator_minimum_score
-            if end is not None:
-                parameters[STATE_END] = end.unix_format
-
-        else:
-            self.helper.connector_logger.error(
-                f"The '{collection}' collection has not been correctly identified"
-            )
-
-        data = collection_api(**parameters)
-        bundles_objects = []
-
-        if "reports" in collection:
-            for item in data:
-                report_bundle = module.process(self, item)
-                if report_bundle:
-                    bundles_objects = report_bundle["objects"]
-                    if len(bundles_objects) > 0:
-                        uniq_bundles_objects = list(
-                            {obj["id"]: obj for obj in bundles_objects}.values()
-                        )
-                        # Transform objects to dicts
-                        uniq_bundles_objects = [
-                            json.loads(obj.serialize()) for obj in uniq_bundles_objects
-                        ]
-                        if self.mandiant_remove_statement_marking:
-                            uniq_bundles_objects = list(
-                                filter(
-                                    lambda stix: stix["id"] not in STATEMENT_MARKINGS,
-                                    uniq_bundles_objects,
-                                )
-                            )
-                            self.remove_statement_marking(uniq_bundles_objects)
-                        bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
-                        self.helper.send_stix2_bundle(
-                            bundle,
-                            work_id=work_id,
-                        )
-        else:
-            for item in data:
-                bundle = module.process(self, item)
-                if bundle:
-                    bundles_objects = bundles_objects + bundle["objects"]
-                offset += 1
-
-            if len(bundles_objects) > 0:
-                uniq_bundles_objects = list(
-                    {obj["id"]: obj for obj in bundles_objects}.values()
-                )
-                # Transform objects to dicts
-                uniq_bundles_objects = [
-                    json.loads(obj.serialize()) for obj in uniq_bundles_objects
-                ]
-                if self.mandiant_remove_statement_marking:
-                    uniq_bundles_objects = list(
-                        filter(
-                            lambda stix: stix["id"] not in STATEMENT_MARKINGS,
-                            uniq_bundles_objects,
-                        )
-                    )
-                    self.remove_statement_marking(uniq_bundles_objects)
-
-                bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
-                self.helper.send_stix2_bundle(
-                    bundle,
-                    work_id=work_id,
-                )
-                if collection in collection_with_offset:
-                    self.set_state_value(
-                        collection_name=collection, state_key=STATE_OFFSET, value=offset
-                    )
             else:
-                self.helper.connector_logger.info(
-                    f"No data has been imported for the '{collection}' collection since the last run"
+                self.helper.connector_logger.error(
+                    f"The '{collection}' collection has not been correctly identified"
                 )
 
-        if collection in collection_with_start_epoch:
-            after_process_now = Timestamp.now()
-            next_start = (
-                end if end is not None else before_process_now
-            )  # next start is the previous end
-            next_end = next_start.delta(days=self.mandiant_import_period)
-            if next_end.value > after_process_now.value:
-                next_end = None
+            data = collection_api(**parameters)
+            bundles_objects = []
+
+            if "reports" in collection:
+
+                new_batch_reports = []
+                batch_report_size = BATCH_REPORT_SIZE
+
+                info_reports = {
+                    "collection_title": collection.title(),
+                    "start_work": start_work,
+                    "end_work": end_work,
+                    "start_batch_index_report": 0,
+                    "end_batch_index_report": batch_report_size,
+                    "bundles_objects": [],
+                }
+
+                for item in data:
+                    report_bundle = module.process(self, item)
+                    if report_bundle:
+                        new_batch_reports.append(report_bundle["objects"])
+
+                    if len(new_batch_reports) == batch_report_size:
+                        self._process_batch_reports(new_batch_reports, info_reports)
+                        new_batch_reports = []
+
+                if new_batch_reports:
+                    # Handle the case where the last batch is incomplete based on batch_report_size
+                    # Example batch_report_size = 10 and there are 13 reports
+                    # The first batch contains 10 reports, and this part processes the remaining 3 reports
+                    self._process_batch_reports(new_batch_reports, info_reports)
+
+                else:
+                    # If no data is available (user is up-to-date or no report exists at the connector launch date)
+                    # Create a job with no operations to ensure consistent behavior with other collections
+                    self.helper.connector_logger.info(
+                        "No data has been imported for the report collection since the last run"
+                    )
+                    report_work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id,
+                        f"{collection.title()} {start_work} - {end_work} : No data found",
+                    )
+                    self.helper.api.work.to_processed(report_work_id, "Finished_report")
+
+            else:
+                # This is where we manage all the other collections, apart from the Reports collection.
+                for item in data:
+                    bundle = module.process(self, item)
+                    if bundle:
+                        bundles_objects = bundles_objects + bundle["objects"]
+                    offset += 1
+
+                if len(bundles_objects) > 0:
+                    unique_bundle_object = self._deduplicate_and_clean_bundles(
+                        bundles_objects
+                    )
+                    bundle = self.helper.stix2_create_bundle(unique_bundle_object)
+                    self.helper.send_stix2_bundle(
+                        bundle,
+                        work_id=work_id,
+                    )
+                    if collection in collection_with_offset:
+                        self.set_state_value(
+                            collection_name=collection,
+                            state_key=STATE_OFFSET,
+                            value=offset,
+                        )
+                else:
+                    self.helper.connector_logger.info(
+                        f"No data has been imported for the '{collection}' collection since the last run"
+                    )
+
+            if collection in collection_with_start_epoch:
+                after_process_now = Timestamp.now()
+                next_start = (
+                    end if end is not None else before_process_now
+                )  # next start is the previous end
+                next_end = next_start.delta(days=self.mandiant_import_period)
+                if next_end.value > after_process_now.value:
+                    next_end = None
+                self.set_state_value(
+                    collection_name=collection,
+                    state_key=STATE_START,
+                    value=next_start.iso_format,
+                )
+                self.set_state_value(
+                    collection_name=collection,
+                    state_key=STATE_END,
+                    value=next_end.iso_format if next_end is not None else None,
+                )
+
             self.set_state_value(
                 collection_name=collection,
-                state_key=STATE_START,
-                value=next_start.iso_format,
-            )
-            self.set_state_value(
-                collection_name=collection,
-                state_key=STATE_END,
-                value=next_end.iso_format if next_end is not None else None,
+                state_key=STATE_LAST_RUN,
+                value=before_process_now.iso_format,
             )
 
-        self.set_state_value(
-            collection_name=collection,
-            state_key=STATE_LAST_RUN,
-            value=before_process_now.iso_format,
-        )
+        except StateError as err:
+            self.helper.connector_logger.error(
+                "Failed du to connector state error", {"error": str(err)}
+            )
+            if work_id is not None:
+                self.helper.api.work.to_processed(
+                    work_id, "Failed due to connector state error", in_error=True
+                )
+                work_id = None
+
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "An error occurred while processing the collection",
+                {"collection": collection, "error": str(err)},
+            )
+
+        finally:
+            if work_id is not None and collection != "reports":
+                self.helper.api.work.to_processed(work_id, "Finished")
