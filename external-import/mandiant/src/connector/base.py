@@ -595,7 +595,6 @@ class Mandiant:
         for collection in self.mandiant_collections:
             try:
                 # Handle interval config
-                # work_id = None
                 date_now_value = Timestamp.now().value
                 collection_interval = getattr(self, f"mandiant_{collection}_interval")
 
@@ -889,6 +888,7 @@ class Mandiant:
             Exception: If an error occurs when initiating the job, creating the bundle or sending the data.
             The error will be logged.
         """
+        report_work_id = None
         try:
             report_work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id,
@@ -904,11 +904,16 @@ class Mandiant:
                 work_id=report_work_id,
             )
             self.helper.api.work.to_processed(report_work_id, "Finished_report")
+            report_work_id = None
+
         except Exception as err:
             self.helper.connector_logger.error(
                 "An error occurred during the report submission process",
                 {"error": str(err), "info_reports": info_reports},
             )
+        finally:
+            if report_work_id is not None:
+                self.helper.api.work.to_processed(report_work_id, "Finished")
 
     def _run(
         self,
@@ -918,8 +923,8 @@ class Mandiant:
         start_work,
         end_work,
     ):
+        work_id = None
         try:
-            work_id = None
             if collection != "reports":
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id,
