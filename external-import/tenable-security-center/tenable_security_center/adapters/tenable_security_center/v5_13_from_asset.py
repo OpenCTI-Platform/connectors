@@ -100,7 +100,7 @@ class _CVEsAPI:  # pylint: disable=too-few-public-methods
         )
         self.logger.debug(f"CVE Cache stats {cache_stats}")
 
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(self.num_threads) as executor:
             return list(executor.map(self._fetch, cve_ids))
 
     def fetch_cves(self, cve_ids: list[str]) -> Iterable[_CVEAPI]:
