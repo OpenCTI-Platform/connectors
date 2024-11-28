@@ -284,7 +284,7 @@ if __name__ == "__main__":
         Exception
     ):  # Start up issue exception, Otherwise shoud be handle gracefully by the connector
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)
 
     # Run the connector
     # Error will be handled in the connector

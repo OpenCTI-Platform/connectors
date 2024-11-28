@@ -306,9 +306,7 @@ class ConverterToStix:
                         target_ref=vulnerability,
                         start_time=vulnerability.created,
                         stop_time=(
-                            finding.last_seen
-                            if finding.has_been_mitigated
-                            else None
+                            finding.last_seen if finding.has_been_mitigated else None
                         ),
                         confidence=None,
                         object_marking_refs=self._object_marking_refs,
@@ -337,7 +335,7 @@ class ConverterToStix:
                     bundle.extend(software_has_vulnerability_rels)
 
         if len(bundle) == 0:
-            return {} 
+            return {}
 
         bundle.append(self._author)
         return {obj.id: obj.to_stix2_object() for obj in bundle}
