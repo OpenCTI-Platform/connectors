@@ -22,7 +22,7 @@ from .utils import (
 class SentinelApiHandler:
     def __init__(self, helper, config):
         """
-        Init Tanium API handler.
+        Init Sentinel Intel API handler.
         :param helper: PyCTI helper instance
         :param config: Connector config variables
         """
