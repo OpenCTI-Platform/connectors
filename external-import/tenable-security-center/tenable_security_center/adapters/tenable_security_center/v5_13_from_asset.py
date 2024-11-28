@@ -738,6 +738,7 @@ class _ScanResultsAPI:
         self.since_datetime = since_datetime
 
     def get_completed_scan_ids(self) -> list[str]:
+        """Get the IDs of the completed scans since the last run."""
         params = {
             "filters": "usable,completed,optimizeCompletedScans",
             "fields": "id",
@@ -759,6 +760,7 @@ class _ScanResultsAPI:
             ) from e
 
     def get_scanned_assets_info(self, scan_id: str) -> tuple[str, str]:
+        """Get the scanned IPs and the repository ID from a scan result."""
         fields = ["id", "name", "repository", "progress"]
         url = f"scanResult/{scan_id}?fields={','.join(fields)}"
         try:
@@ -954,7 +956,11 @@ class AssetsAPI(AssetsPort):
                     "repositoryAll",
                     "=",
                     ",".join(
-                        {repository_id for _, repository_id in assets_info if repository_id}
+                        {
+                            repository_id
+                            for _, repository_id in assets_info
+                            if repository_id
+                        }
                     ),
                 ),
             ]
@@ -978,7 +984,6 @@ class AssetsAPI(AssetsPort):
                 "No scan results found in Tenable Security Center since the provided datetime."
             )
             total_records = 0
-
 
         self.logger.info(
             f"Fetching {total_records} assets from Tenable Security Center."

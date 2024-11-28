@@ -9,7 +9,6 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 import sys
 
-from dateutil import parser
 
 from pycti import (  # type: ignore[import-untyped] # pycti does not provide stubs
     OpenCTIConnectorHelper,
@@ -63,10 +62,9 @@ class Connector:
             work_id=self.work_id, error={"error": error_message, "source": "CONNECTOR"}
         )
 
-    def _force_get_state(self) -> dict[str, str | int]:
+    def _force_get_state(self) -> dict[str, str]:
         self.helper.force_ping()
         return self.helper.get_state() or {}
-
 
     def _initiate_work(self) -> None:
         """Initiate a new work process in the OpenCTI platform.
@@ -103,7 +101,9 @@ class Connector:
             self.assets.since_datetime = datetime.fromisoformat(last_successful_run)
         else:
             self.logger.info("[CONNECTOR] Connector has never run successfully...")
-            self.assets.since_datetime = self.config.tenable_security_center.export_since
+            self.assets.since_datetime = (
+                self.config.tenable_security_center.export_since
+            )
 
         # Initiate a new work
         self.work_id = self.helper.api.work.initiate_work(

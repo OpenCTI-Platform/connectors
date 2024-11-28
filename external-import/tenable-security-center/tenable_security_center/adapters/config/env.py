@@ -218,9 +218,7 @@ class _ConfigLoaderTSCEnv(ConfigLoaderTSCPort, _BaseLoaderEnv):
         export_since_str: str = _get_config_variable_env(
             env_var="TSC_EXPORT_SINCE", required=True
         )
-        return TypeAdapter(datetime.datetime).validate_strings(
-            export_since_str
-        )
+        return TypeAdapter(datetime.datetime).validate_strings(export_since_str)
 
     @property
     def _severity_min_level(
