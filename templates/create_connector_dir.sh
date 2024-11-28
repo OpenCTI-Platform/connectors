@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Script to generate a new OpenCTI connector based on a template
 # Usage: ./create_connector_dir.sh -t <TYPE> -n <NAME>
@@ -93,6 +94,9 @@ if [[ ! "$NAME" =~ ^[a-zA-Z0-9-]+$ ]]; then
     exit 1
 fi
 
+# Enforce full lowercase name
+NAME="${NAME,,}"
+
 NEW_CONNECTOR_DIR="../$TYPE/$NAME"
 TEMPLATE_DIR="$TYPE"
 
@@ -117,10 +121,17 @@ cp -r "$TEMPLATE_DIR/"* "$NEW_CONNECTOR_DIR"
 
 # Update placeholders in the copied files
 echo "Customizing connector files..."
+
+PYTHON_NAME="$(echo "$NAME" | sed -E 's/-([a-z])/\U\1/g' | sed -E 's/^(.)/\U\1/')"
+CAPITALIZED_NAME=$(echo "$NAME" |  sed 's/.*/\U&/' | sed -E 's/-/_/g')
+
 find "$NEW_CONNECTOR_DIR" -type f -exec sed -i \
     -e "s/template/$NAME/g" \
-    -e "s/Template/${NAME^}/g" \
-    -e "s/TEMPLATE/${NAME^^}/g" {} +
+    -e "s/ConnectorTemplate/Connector${PYTHON_NAME}/g" \
+    -e "s/TEMPLATE/${CAPITALIZED_NAME}/g" {} +
+
+sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/config.yml.sample"
+sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/${TYPE}_connector/config_variables.py"
 
 echo "Connector '$NAME' of type '$TYPE' created successfully!"
 echo "Navigate to $NEW_CONNECTOR_DIR to start development."
