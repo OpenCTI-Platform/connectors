@@ -1374,7 +1374,7 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/attribution-tools
           name: Build Docker image opencti/connector-attribution-tools
           command: docker build -t opencti/connector-attribution-tools:rolling .
-      -run:
+      - run:
           working_directory: ~/opencti/external-import/tenable-security-center
           name: Build Docker image opencti/connector-tenable-security-center
           command: docker build -t opencti/connector-tenable-security-center:rolling .
