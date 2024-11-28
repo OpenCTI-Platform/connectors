@@ -22,7 +22,7 @@ from .utils import (
 class SentinelApiHandler:
     def __init__(self, helper, config):
         """
-        Init Tanium API handler.
+        Init Sentinel Intel API handler.
         :param helper: PyCTI helper instance
         :param config: Connector config variables
         """
@@ -31,6 +31,7 @@ class SentinelApiHandler:
 
         # Define headers in session and update when needed
         self.session = requests.Session()
+        self.retries_builder()
         self._expiration_token_date = None
 
     def _get_authorization_header(self):

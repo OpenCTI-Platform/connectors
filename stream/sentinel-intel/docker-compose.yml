@@ -13,7 +13,6 @@ services:
       - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
       - CONNECTOR_LOG_LEVEL=error
       - SENTINEL_INTEL_TENANT_ID=ChangeMe # Azure Tentant ID
-      - SENTINEL_INTEL_WORKSPACE_ID=ChangeMe # Sentinel Workspace ID (only for Azure Sentinel)
       - SENTINEL_INTEL_CLIENT_ID=ChangeMe # Azure App Client ID
       - SENTINEL_INTEL_CLIENT_SECRET=ChangeMe # Azure App Client Secret
       - "SENTINEL_INTEL_TARGET_PRODUCT=Azure Sentinel" # "Azure Sentinel" or "Microsoft Defender ATP"
