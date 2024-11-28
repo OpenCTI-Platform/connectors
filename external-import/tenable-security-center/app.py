@@ -63,6 +63,11 @@ class Connector:
             work_id=self.work_id, error={"error": error_message, "source": "CONNECTOR"}
         )
 
+    def _force_get_state(self) -> dict[str, str | int]:
+        self.helper.force_ping()
+        return self.helper.get_state() or {}
+
+
     def _initiate_work(self) -> None:
         """Initiate a new work process in the OpenCTI platform.
 
@@ -74,7 +79,7 @@ class Connector:
         """
         now_isodatetime = datetime.now(timezone.utc).isoformat()
 
-        state = self.helper.get_state() or {}
+        state = self._force_get_state()
         self.logger.debug("[CONNECTOR] Connector current state", {"state": state})
 
         last_run = state.get("last_run_start_datetime")
@@ -90,15 +95,15 @@ class Connector:
                 "[CONNECTOR] Connector last run", {"last_run_start_datetime": last_run}
             )
             previous_since = str(self.config.tenable_security_center.export_since)
-            self.config.tenable_security_center.export_since = parser.isoparse(
-                last_successful_run
-            )
+
             self.logger.warning(
                 "[CONNECTOR] Connector acquisition SINCE parameter overwritten",
                 {"previous": previous_since, "current": last_successful_run},
             )
+            self.assets.since_datetime = datetime.fromisoformat(last_successful_run)
         else:
             self.logger.info("[CONNECTOR] Connector has never run successfully...")
+            self.assets.since_datetime = self.config.tenable_security_center.export_since
 
         # Initiate a new work
         self.work_id = self.helper.api.work.initiate_work(

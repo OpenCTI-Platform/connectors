@@ -417,3 +417,17 @@ class AssetsPort(ABC):
     @abstractmethod
     def chunks(self) -> Iterable[AssetsChunkPort]:
         """Chunks of Asset."""
+
+    def __init__(self, since_datetime: datetime.datetime) -> None:
+        """Initialize the Time Range."""
+        self._since_datetime = since_datetime
+
+    @property
+    @abstractmethod
+    def since_datetime(self) -> datetime.datetime:
+        """Datetime since the time range."""
+
+    @since_datetime.setter
+    @abstractmethod
+    def since_datetime(self, since_datetime: datetime.datetime) -> None:
+        """Datetime since the time range."""

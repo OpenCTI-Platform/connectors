@@ -863,7 +863,7 @@ class _AssetsChunkAPI(AssetsChunkPort):
                 findings_api=self._findings_api,
                 **raw_asset,
             )
-            # Manual filtering because API filter does not work
+            # Manual filtering because no API filter
             if asset.last_seen.timestamp() >= self.since_datetime.timestamp():
                 yield asset
 
@@ -885,8 +885,8 @@ class AssetsAPI(AssetsPort):
         findings_min_severity: str,
     ):
         """Initialize the asset API."""
+        self._since_datetime = since_datetime
         self.logger = logger
-        self.since_datetime = since_datetime
         self.num_threads = num_threads
 
         self.client = TenableSC(
@@ -913,7 +913,7 @@ class AssetsAPI(AssetsPort):
         self._findings_api: _FindingsAPI = _FindingsAPI(
             tsc_client=self.client,
             logger=self.logger,
-            since_datetime=self.since_datetime,
+            since_datetime=self._since_datetime,
             min_severity=findings_min_severity,
             num_threads=self.num_threads,
             cves_api=self._cves_api,
@@ -924,6 +924,18 @@ class AssetsAPI(AssetsPort):
             since_datetime=self.since_datetime,
         )
 
+    @property
+    def since_datetime(self) -> datetime.datetime:
+        """Return the since datetime."""
+        return self._since_datetime
+
+    @since_datetime.setter
+    def since_datetime(self, value: datetime.datetime) -> None:
+        """Set the since datetime."""
+        self._since_datetime = value
+        self._findings_api.since_datetime = value
+        self._scan_results_api.since_datetime = value
+
     def _fetch_data_chunks(self) -> Iterable[_AssetsChunkAPI]:
         """Fetch all data chunks from the API."""
         # As we can't filter assets by last seen date, we use scan results endpoints to filter
@@ -931,35 +943,42 @@ class AssetsAPI(AssetsPort):
         # these information.
         self.logger.debug("Fetching scan results from Tenable Security Center.")
         scan_ids = self._scan_results_api.get_completed_scan_ids()
-        assets_info = [
-            self._scan_results_api.get_scanned_assets_info(scan_id)
-            for scan_id in scan_ids
-        ]
-        filters = [
-            ("ip", "=", ",".join({ip for ip, _ in assets_info if ip})),
-            (
-                "repositoryAll",
-                "=",
-                ",".join(
-                    {repository_id for _, repository_id in assets_info if repository_id}
+        if scan_ids:
+            assets_info = [
+                self._scan_results_api.get_scanned_assets_info(scan_id)
+                for scan_id in scan_ids
+            ]
+            filters = [
+                ("ip", "=", ",".join({ip for ip, _ in assets_info if ip})),
+                (
+                    "repositoryAll",
+                    "=",
+                    ",".join(
+                        {repository_id for _, repository_id in assets_info if repository_id}
+                    ),
                 ),
-            ),
-        ]
-        # Only get "id" field to get total_records
-        total_records = int(
-            _AssetsChunkAPI(  # pylint: disable=protected-access
-                tsc_client=self.client,
-                logger=self.logger,
-                offset=0,
-                limit=1,
-                fields=["id"],
-                filters=filters,
-                since_datetime=self.since_datetime,
-                findings_api=self._findings_api,
+            ]
+            # Only get "id" field to get total_records
+            total_records = int(
+                _AssetsChunkAPI(  # pylint: disable=protected-access
+                    tsc_client=self.client,
+                    logger=self.logger,
+                    offset=0,
+                    limit=1,
+                    fields=["id"],
+                    filters=filters,
+                    since_datetime=self.since_datetime,
+                    findings_api=self._findings_api,
+                )
+                ._fetch()
+                .get("totalRecords", 0)
             )
-            ._fetch()
-            .get("totalRecords", 0)
-        )
+        else:
+            self.logger.warning(
+                "No scan results found in Tenable Security Center since the provided datetime."
+            )
+            total_records = 0
+
 
         self.logger.info(
             f"Fetching {total_records} assets from Tenable Security Center."
