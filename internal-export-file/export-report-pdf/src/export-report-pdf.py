@@ -193,8 +193,8 @@ class ExportReportPdf:
 
         if entities_list is not None:
             list_marking = None
-            if file_markings:
-                list_marking = file_markings[-1]["definition"]
+            if len(file_markings) != 0:
+                list_marking = file_markings
             list_report_date = datetime.datetime.now().strftime("%b %d %Y")
             # Store context for usage in html template
 
