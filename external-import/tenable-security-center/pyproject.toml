@@ -46,7 +46,6 @@ all = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["tenable_security_center"]
 
 [tool.setuptools.dynamic]
 version = {attr = "tenable_security_center.__version__"}
