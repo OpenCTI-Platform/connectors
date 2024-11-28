@@ -228,10 +228,6 @@ class ConfigLoaderConnectorPort(ABC):
 class ConfigLoaderTSCPort(ABC):
     """Abstract base class for loading Tenable Security Center dedicated configuration."""
 
-    def __init__(self: "ConfigLoaderTSCPort"):
-        """Initialize the configuration loader."""
-        self._es: Optional["datetime.datetime"] = None
-
     @property
     @abstractmethod
     def _num_threads(self) -> Optional[int]: ...
@@ -310,14 +306,7 @@ class ConfigLoaderTSCPort(ABC):
     @_make_error_handler("Unable to retrieve export since datetime in config")
     def export_since(self) -> "datetime.datetime":
         """Datetime to use as the starting point for exporting data from Tenable Security Center."""
-        output = self._es or self._export_since
-        if output is None:
-            raise ValueError()
-        return output
-
-    @export_since.setter
-    def export_since(self, value: "datetime.datetime") -> None:
-        self._es = value
+        return self._export_since
 
     @property
     @abstractmethod
