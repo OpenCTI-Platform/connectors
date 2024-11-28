@@ -6,7 +6,6 @@ It handles the initialization, data retrieval, transformation to STIX format, an
 
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
-from threading import Lock
 from typing import TYPE_CHECKING
 import sys
 
@@ -52,7 +51,6 @@ class Connector:
             self.logger, self.config.tenable_security_center.marking_definition
         )
         self.work_id = None
-        self._lock = Lock()
         self._expected_stix_objects = 0
         self._stix_objects_cache = IdsCache(210000)
         # stix id ~100 bytes, 210000 ~ 20 MB
@@ -170,7 +168,7 @@ class Connector:
         """Fetch data, transform and send bundle."""
         try:
 
-            stix_objects = self.converter_to_stix.process_assets_chunk(
+            stix_objects: dict = self.converter_to_stix.process_assets_chunk(
                 chunk,
                 process_systems_without_vulnerabilities=self.config.tenable_security_center.process_systems_without_vulnerabilities,
             )
@@ -178,6 +176,9 @@ class Connector:
                 "STIX objects incoming.",
                 {"number_stix_objects": str(len(stix_objects))},
             )
+
+            if len(stix_objects) == 0:
+                return True
 
             # deduplicate thanks to current work cache
             new_stix_ids = self._stix_objects_cache.add(list(stix_objects.keys()))
