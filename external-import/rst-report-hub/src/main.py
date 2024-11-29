@@ -195,10 +195,16 @@ class ReportHub:
         # cleanup after deletion of objects
         if len(removed_ids) > 0:
             stix_bundle_main = [
-                entry for entry in stix_bundle_main
-                if not (entry.get("type") == "relationship" and (
-                    entry.get("source_ref") in removed_ids or entry.get("target_ref") in removed_ids
-                )) and not (entry.get("id") in removed_ids)
+                entry
+                for entry in stix_bundle_main
+                if not (
+                    entry.get("type") == "relationship"
+                    and (
+                        entry.get("source_ref") in removed_ids
+                        or entry.get("target_ref") in removed_ids
+                    )
+                )
+                and not (entry.get("id") in removed_ids)
             ]
         work_id = self.helper.api.work.initiate_work(self.helper.connect_id, message)
         self._send_stix_data(work_id, stix_bundle_main)
