@@ -21,3 +21,4 @@ rst-report-hub:
   language: 'eng'
   create_observables: false
   create_related_to: true
+  create_custom_ttps: true

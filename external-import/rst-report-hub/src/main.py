@@ -50,6 +50,9 @@ class ReportHub:
             "create_related_to": bool(
                 self.get_config("create_related_to", config, True)
             ),
+            "create_custom_ttps": bool(
+                self.get_config("create_custom_ttps", config, True)
+            ),
         }
         self.update_existing_data = bool(
             get_config_variable(
@@ -131,6 +134,7 @@ class ReportHub:
         observ_ids = []
         observ_rel_ids = []
         rel_to_ids = []
+        removed_ids = []
         for entry in parsed_bundle.get("objects", []):
             # create an observable for every indicator
             # if user selects that option
@@ -153,6 +157,16 @@ class ReportHub:
             ):
                 rel_to_ids.append(entry["id"])
                 continue
+            # remove custom TTPs that are not yet present in MITRE ATT&CK®
+            # if user selects that option
+            elif (
+                entry.get("type", "") == "attack-pattern"
+                and "x_mitre_id" not in entry
+                and not self._downloader_config["create_custom_ttps"]
+            ):
+                rel_to_ids.append(entry["id"])
+                removed_ids.append(entry["id"])
+                continue
             # attach a pdf
             elif entry.get("type", "") == "report":
                 if x_opencti_file:
@@ -161,9 +175,11 @@ class ReportHub:
                     message = f"{message}. No PDF found."
             stix_bundle_main.append(entry)
         # add observables and based_on rels to the report
+        # fix report references
         if (
             self._downloader_config["create_observables"]
             or not self._downloader_config["create_related_to"]
+            or not self._downloader_config["create_custom_ttps"]
         ):
             new_object_refs = []
             for entry in stix_bundle_main:
@@ -176,11 +192,18 @@ class ReportHub:
                         if obj_id not in rel_to_ids:
                             new_object_refs.append(obj_id)
                     entry["object_refs"] = new_object_refs
-
+        # cleanup after deletion of objects
+        if len(removed_ids) > 0:
+            stix_bundle_main = [
+                entry for entry in stix_bundle_main
+                if not (entry.get("type") == "relationship" and (
+                    entry.get("source_ref") in removed_ids or entry.get("target_ref") in removed_ids
+                )) and not (entry.get("id") in removed_ids)
+            ]
         work_id = self.helper.api.work.initiate_work(self.helper.connect_id, message)
         self._send_stix_data(work_id, stix_bundle_main)
-        message = f"Processed {len(stix_bundle_main)} objects from RST Report Hub for {report_id}"
         self.helper.api.work.to_processed(work_id, message)
+        message = f"Processed {len(stix_bundle_main)} objects from RST Report Hub for {report_id}"
         self.helper.log_info(message)
         return True
 

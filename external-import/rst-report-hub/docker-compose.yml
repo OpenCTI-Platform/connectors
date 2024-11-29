@@ -20,6 +20,7 @@ services:
       - RST_REPORT_HUB_LANGUAGE=eng
       - RST_REPORT_HUB_CREATE_OBSERVABLES=false
       - RST_REPORT_HUB_CREATE_RELATED_TO=true
+      - RST_REPORT_HUB_CREATE_CUSTOM_TTPS=true
     restart: always
     depends_on:
       - opencti
