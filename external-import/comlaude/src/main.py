@@ -1,20 +1,20 @@
 import datetime
+import json
 import os
 import sys
-import time
 import threading
-import json
+import time
 
 import stix2
 import yaml
 from pycti import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
     Identity,
     Indicator,
+    OpenCTIConnectorHelper,
     StixCoreRelationship,
+    get_config_variable,
 )
-from stix2 import Bundle, DomainName, TLP_AMBER
+from stix2 import TLP_AMBER, Bundle, DomainName
 
 import comlaude
 
