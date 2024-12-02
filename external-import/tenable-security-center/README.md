@@ -48,17 +48,6 @@ export $(grep -v '^#' .env | xargs -d '\n')
 
 or `docker-compose.yml` in the container `environment` section.
 
-### Credentials Deletion while running
-
-The connector will NOT delete the credentials from the environment variables.
-
-Once it is up and running, you can delete the credentials environment variables TSC_API_ACCESS_KEY and 
-TSC_API_SECRET_KEY from the system, and the connector will continue to run.
-
-Note : if set via the docker run command or docker-compose file, the credentials will stay in the container metadata.
-
-To secretly pass your credentials and remove them, you could, for example, use an entrypoint file in your docker-compose file overwriting the container app start to fetch the credentials from a secret manager, start the app, then delete the credentials from the environment variables.
-
 ### OpenCTI environment variables
 
 Below are the parameters you'll need to set for OpenCTI:
@@ -95,13 +84,13 @@ Below are the parameters you'll need to set for the connector:
 | API base URL                           | `TSC_API_BASE_URL`                |         | Yes       | Base URL for Tenable Security Center API                                                        |
 | API access key                         | `TSC_API_ACCESS_KEY`              |         | Yes       | Access key for Tenable Security Center API                                                      |
 | API secret key                         | `TSC_API_SECRET_KEY`              |         | Yes       | Secret key for Tenable Security Center API                                                      |
-| Number of threads                      | `TSC_NUMBER_THREADS`              | 1       | No        | Number of threads to use for processing                                                         |
+| Number of threads                      | `TSC_NUMBER_THREADS`              | 1       | No        | Number of threads to use for processing. Monitor server capacity and API throttle rate when increasing this.|
 | API timeout                            | `TSC_API_TIMEOUT`                 | 30      | No        | Timeout for API requests in seconds                                                             |
 | API backoff                            | `TSC_API_BACKOFF`                 | 5       | No        | Backoff time in seconds for API retries                                                         |
 | API retries                            | `TSC_API_RETRIES`                 | 3       | No        | Number of retries for API requests                                                              |
 | Export since                           | `TSC_EXPORT_SINCE`                |         | Yes       | Export data since this date, in ISO8601 format. This will be overwritten after the first successful run. |
 | Minimum severity level                 | `TSC_SEVERITY_MIN_LEVEL`          |         | Yes       | Minimum severity level to export. Should be one of "info", "low", "medium", "high", "critical"  |
-| Process Systems Without Vulnerabilities | `TSC_PROCESS_SYSTEMS_WITHOUT_VULNERABILITIES` |         | Yes       | Process systems without vulnerabilities (True/False)                                                        |
+| Process Systems Without Vulnerabilities | `TSC_PROCESS_SYSTEMS_WITHOUT_VULNERABILITIES` |         | Yes       | Process systems without vulnerabilities (True/False). Activating this option might significantly increase the amount of ingested data.|
 | Marking definition                     | `TSC_MARKING_DEFINITION`          |         | No        | Marking definition for exported data (Should be TLP:WHITE, TLP:AMBER, etc)                                                           |
 
 
@@ -155,6 +144,8 @@ However, if you would like to force an immediate download of a new batch of enti
 
 Find the connector, and click on the refresh button to reset the connector's state and force a new
 download of data by re-running the connector.
+
+Note: Once the connector run successfully, the `TSC_ACCES_KEY`and `TSC_SECRET_KEY` are not requireed anymore and can be removed from the environment variables.
 
 ## Behavior
 ### Mapping details
