@@ -4,9 +4,9 @@ from datetime import datetime
 import requests
 from pycti import StixCoreRelationship
 from stix2 import (
-    Identity,
     DomainName,
     EmailAddress,
+    Identity,
     Relationship,
     X509Certificate,
     X509V3ExtensionsType,
@@ -20,8 +20,8 @@ from .crtsh_utils import (
     TLP_MAP,
     configure_logger,
     convert_to_datetime,
-    is_valid_stix_id,
     is_valid_entry_timestamp,
+    is_valid_stix_id,
 )
 
 LOGGER = configure_logger(__name__)

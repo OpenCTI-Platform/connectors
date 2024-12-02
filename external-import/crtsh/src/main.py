@@ -4,10 +4,9 @@ import time
 from datetime import datetime
 from os import environ
 
-from validators import domain as domain_validator
-
 from crtsh import CrtSHClient
 from lib.external_import import ExternalImportConnector
+from validators import domain as domain_validator
 
 MARKING_REFS = ["TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"]
 
