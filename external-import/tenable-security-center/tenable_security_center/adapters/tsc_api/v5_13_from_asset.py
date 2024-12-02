@@ -37,7 +37,7 @@ from tenable_security_center.ports.errors import (
     FindingRetrievalError,
 )
 
-from tenable_security_center.adapters.tenable_security_center.v5_13_common import (
+from tenable_security_center.adapters.tsc_api.v5_13_common import (
     FindingPydanticModel,
     AssetPydanticModel,
     FlattenRawResponseInSnakeCase,

@@ -265,7 +265,7 @@ if __name__ == "__main__":
     import traceback
 
     from tenable_security_center.adapters.config.env import ConfigLoaderEnv
-    from tenable_security_center.adapters.tenable_security_center.v5_13_from_asset import (
+    from tenable_security_center.adapters.tsc_api.v5_13_from_asset import (
         AssetsAPI,
     )
 

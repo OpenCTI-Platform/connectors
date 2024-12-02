@@ -176,6 +176,9 @@ class FlattenRawResponseInSnakeCase:
         Returns:
             dict[str, Any]: The flatten dictionary.
 
+        Exmaples:
+            {a:{b:{c:1}}} => {"a.b.c": 1}
+
         """
         items: list[tuple[str, Any]] = []
         _parent_key_snake = (
