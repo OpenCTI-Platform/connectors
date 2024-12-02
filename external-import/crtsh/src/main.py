@@ -4,9 +4,10 @@ import time
 from datetime import datetime
 from os import environ
 
+from validators import domain as domain_validator
+
 from crtsh import CrtSHClient
 from lib.external_import import ExternalImportConnector
-from validators import domain as domain_validator
 
 MARKING_REFS = ["TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"]
 
@@ -62,6 +63,8 @@ class crtshConnector(ExternalImportConnector):
         )
 
         stix_objects = self.api.get_stix_objects(since=since)
+        if stix_objects:
+            stix_objects.append(self.api.author)
 
         self.helper.log_info(
             f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "

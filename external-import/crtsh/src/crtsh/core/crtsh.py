@@ -2,15 +2,8 @@
 from datetime import datetime
 
 import requests
-from pycti import StixCoreRelationship
-from stix2 import (
-    DomainName,
-    EmailAddress,
-    Identity,
-    Relationship,
-    X509Certificate,
-    X509V3ExtensionsType,
-)
+import stix2
+from pycti import StixCoreRelationship, Identity
 from stix2.exceptions import AtLeastOnePropertyError
 from validators import ValidationError
 from validators import domain as domain_validator
@@ -43,11 +36,7 @@ class CrtSHClient:
         self.url = DEFAULT_URL.format(search=domain)
         if is_expired:
             self.url += "&exclude=expired"
-        self.author = Identity(
-            name="crtsh",
-            description="CRTSH external import connector",
-            identity_class="organization",
-        )
+        self.author = CrtSHClient._create_author("crtsh")
 
     def _transform_domain(self, domain, is_wildcard):
         try:
@@ -82,11 +71,11 @@ class CrtSHClient:
         """Return a STIX X509Certificate object."""
         x509_v3_extensions = None
         if hasattr(item, "name_value") and item.get("name_value"):
-            x509_v3_extensions = X509V3ExtensionsType(
+            x509_v3_extensions = stix2.X509V3ExtensionsType(
                 subject_alternative_name=item.get("name_value"),
             )
         try:
-            cert = X509Certificate(
+            cert = stix2.X509Certificate(
                 type="x509-certificate",
                 issuer=item.get("issuer_name"),
                 validity_not_before=convert_to_datetime(item.get("not_before")),
@@ -124,7 +113,7 @@ class CrtSHClient:
         """Return a STIX DomainName object."""
         try:
             if domain_validator(domain):
-                return DomainName(
+                return stix2.DomainName(
                     type="domain-name",
                     value=domain.lower(),
                     object_marking_refs=self.marking_refs,
@@ -186,7 +175,7 @@ class CrtSHClient:
         """Return a STIX EmailAddress object."""
         try:
             if email_validator(email):
-                return EmailAddress(
+                return stix2.EmailAddress(
                     type="email-addr",
                     value=email.lower(),
                     object_marking_refs=self.marking_refs,
@@ -222,7 +211,7 @@ class CrtSHClient:
         elif len(source_ref) == 0 or len(target_ref) == 0:
             return None
         else:
-            return Relationship(
+            return stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
                     "related-to", source_ref, target_ref
                 ),
@@ -261,3 +250,14 @@ class CrtSHClient:
                 uniq_stix_objects.append(item)
 
         return uniq_stix_objects
+
+    @staticmethod
+    def _create_author(name: str = None):
+        identity_class = "organization"
+
+        return stix2.Identity(
+            id=Identity.generate_id(name, identity_class),
+            name=name,
+            description="CRTSH external import connector",
+            identity_class=identity_class,
+        )
