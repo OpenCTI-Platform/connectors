@@ -3,7 +3,7 @@ from datetime import datetime
 
 import requests
 import stix2
-from pycti import StixCoreRelationship, Identity
+from pycti import Identity, StixCoreRelationship
 from stix2.exceptions import AtLeastOnePropertyError
 from validators import ValidationError
 from validators import domain as domain_validator
