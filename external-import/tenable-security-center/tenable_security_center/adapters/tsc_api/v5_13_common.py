@@ -8,10 +8,7 @@ import re
 
 from typing import Any, Callable, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, AwareDatetime, ValidationError
-
-from tenable_security_center.ports.asset import CVEPort
-from tenable_security_center.ports.errors import CVERetrievalError
+from pydantic import BaseModel, ConfigDict, Field, AwareDatetime
 
 
 ASSETS_CHUNK_SIZE = 10
@@ -354,88 +351,3 @@ class AssetPydanticModel(_BaseModelWithoutExtra):
     modified_time: datetime.datetime = Field(...)
     ip_address: str = Field(...)
     repository_id: str = Field(...)
-
-
-class _CVEAPI(CVEPort):
-    """Represent a CVE from the Tenable Security Center API."""
-
-    def __init__(self, **data: dict[str, Any]):
-        try:
-            self._pydantic_model = CVEPydanticModel.model_validate(data)
-        except ValidationError as e:
-            raise CVERetrievalError(
-                f"Error while validating the CVE data: {data}"
-            ) from e
-
-    @property
-    def name(self) -> str:
-        return self._pydantic_model.name
-
-    @property
-    def description(self) -> str:
-        return self._pydantic_model.description
-
-    @property
-    def publication_datetime(self) -> datetime.datetime:
-        return self._pydantic_model.publication_datetime
-
-    @property
-    def last_modified_datetime(self) -> datetime.datetime:
-        return self._pydantic_model.last_modified_datetime
-
-    @property
-    def cpes(self) -> Optional[list[str]]:
-        return self._pydantic_model.cpes
-
-    @property
-    def cvss_v3_score(self) -> Optional[float]:
-        return self._pydantic_model.cvss_v3_score
-
-    @property
-    def cvss_v3_vector(self) -> Optional[str]:
-        return self._pydantic_model.cvss_v3_vector
-
-    @property
-    def epss_score(self) -> Optional[float]:
-        return self._pydantic_model.epss_score
-
-    @property
-    def epss_percentile(self) -> Optional[float]:
-        return self._pydantic_model.epss_percentile
-
-    @classmethod
-    def from_raw_response(cls, raw_response: dict[str, Any]) -> "_CVEAPI":
-        """Create a CVE from a raw response."""
-        # Note: The values might be None, specific validations will be performed by pydantic.
-        name = raw_response.get("primary_vuln_id")
-        description = raw_response.get("descriptions", [{}])[0].get("description_text")
-        publication_datetime = raw_response.get("descriptions", [{}])[0].get(
-            "publication_date"
-        )
-        last_modified_datetime = raw_response.get("descriptions", [{}])[-1].get(
-            "publication_date"
-        )
-        cpes = [
-            str(uri)  # explicit cast for mypy linter
-            for uri in raw_response.get("cpe_metrics", [])
-            if str(uri).startswith("cpe:") or str(uri).startswith("p-cpe:")
-        ]
-        cvss_v3_score = raw_response.get("cvss_metrics", [{}])[0].get(
-            "cvss3_base_score"
-        )
-        cvss_v3_vector = raw_response.get("cvss_metrics", [{}])[0].get(
-            "cvss3_base_vector"
-        )
-        epss_score = raw_response.get("epss_metrics", [{}])[0].get("epss")
-        epss_percentile = raw_response.get("epss_metrics", [{}])[0].get("percentile")
-        return cls(
-            name=name,  # type: ignore[arg-type]
-            description=description,
-            publication_datetime=publication_datetime,
-            last_modified_datetime=last_modified_datetime,
-            cpes=cpes,  # type: ignore[arg-type]
-            cvss_v3_score=cvss_v3_score,
-            cvss_v3_vector=cvss_v3_vector,
-            epss_score=epss_score,
-            epss_percentile=epss_percentile,
-        )
