@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
@@ -71,3 +71,16 @@ def is_valid_stix_id(stix_id):
         if is_valid_uuid(stix_id_list[1]) and len(stix_id_list) == 2:
             return True
     return False
+
+
+def is_valid_entry_timestamp(entry_timestamp: str, min_datetime: datetime = None):
+    """Check to see if entry timestamp is an accepted datetime"""
+    if not entry_timestamp:
+        return False
+    if entry_timestamp and min_datetime is None:
+        return True
+
+    entry_datetime = datetime.fromisoformat(entry_timestamp).replace(
+        tzinfo=timezone.utc
+    )
+    return entry_datetime > min_datetime

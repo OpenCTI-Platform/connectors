@@ -1,4 +1,6 @@
 # crt_sh/api.py
+from datetime import datetime
+
 import requests
 from pycti import StixCoreRelationship
 from stix2 import (
@@ -19,6 +21,7 @@ from .crtsh_utils import (
     configure_logger,
     convert_to_datetime,
     is_valid_stix_id,
+    is_valid_entry_timestamp,
 )
 
 LOGGER = configure_logger(__name__)
@@ -233,7 +236,7 @@ class CrtSHClient:
                 },
             )
 
-    def get_stix_objects(self):
+    def get_stix_objects(self, since: datetime = None):
         """Return a list of STIX objects."""
         stix_objects = []
 
@@ -242,14 +245,15 @@ class CrtSHClient:
             return stix_objects
 
         for item in data:
-            LOGGER.debug(f"Processing item: {item}")
-            certificate_id = self.process_certificate(item, stix_objects)
-            if "common_name" in item:
-                LOGGER.debug(f"Processing common_name: {item.get('common_name')}")
-                self.process_common_name(item, stix_objects, certificate_id)
-            if "name_value" in item:
-                LOGGER.debug(f"Processing name_value: {item.get('name_value')}")
-                self.process_name_value(item, stix_objects, certificate_id)
+            if is_valid_entry_timestamp(item["entry_timestamp"], since):
+                LOGGER.debug(f"Processing item: {item}")
+                certificate_id = self.process_certificate(item, stix_objects)
+                if "common_name" in item:
+                    LOGGER.debug(f"Processing common_name: {item.get('common_name')}")
+                    self.process_common_name(item, stix_objects, certificate_id)
+                if "name_value" in item:
+                    LOGGER.debug(f"Processing name_value: {item.get('name_value')}")
+                    self.process_name_value(item, stix_objects, certificate_id)
 
         uniq_stix_objects = []
         for item in stix_objects:
