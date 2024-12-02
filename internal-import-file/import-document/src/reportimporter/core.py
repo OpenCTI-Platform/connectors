@@ -193,7 +193,7 @@ class ReportImporter:
         entity_id = data.get("entity_id", None)
         bypass_validation = data.get("bypass_validation", False)
         entity = (
-            self.helper.api.stix_domain_object.read(id=entity_id)
+            self.helper.api.stix_core_object.read(id=entity_id)
             if entity_id is not None
             else None
         )
