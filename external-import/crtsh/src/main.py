@@ -1,11 +1,13 @@
 # import os
 import sys
 import time
+from datetime import datetime
 from os import environ
+
+from validators import domain as domain_validator
 
 from crtsh import CrtSHClient
 from lib.external_import import ExternalImportConnector
-from validators import domain as domain_validator
 
 MARKING_REFS = ["TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"]
 
@@ -51,7 +53,7 @@ class crtshConnector(ExternalImportConnector):
             self.helper.log_warning(msg)
             self.is_wildcard = False
 
-    def _collect_intelligence(self) -> []:
+    def _collect_intelligence(self, since: datetime = None) -> []:
         """Collects intelligence from channels and transforms it into STIX2 objects.
 
         Returns:
@@ -59,15 +61,8 @@ class crtshConnector(ExternalImportConnector):
         self.helper.log_debug(
             f"{self.helper.connect_name} connector is starting the collection of objects..."
         )
-        stix_objects = []
 
-        # ===========================
-        # === Add your code below ===
-        # ===========================
-        stix_objects.extend(self.api.get_stix_objects())
-        # ===========================
-        # === Add your code above ===
-        # ===========================
+        stix_objects = self.api.get_stix_objects(since=since)
 
         self.helper.log_info(
             f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
