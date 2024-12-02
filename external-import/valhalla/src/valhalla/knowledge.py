@@ -126,10 +126,10 @@ class KnowledgeImporter:
 
                     ap_rel = Relationship(
                         id=StixCoreRelationship.generate_id(
-                            "indicates", indicator, attack_pattern_id
+                            "indicates", indicator.id, attack_pattern_id
                         ),
                         relationship_type="indicates",
-                        source_ref=indicator,
+                        source_ref=indicator.id,
                         target_ref=attack_pattern_id,
                         description="Yara Rule from Valhalla API",
                         created_by_ref=self.organization,
@@ -147,10 +147,10 @@ class KnowledgeImporter:
 
                     is_rel = Relationship(
                         id=StixCoreRelationship.generate_id(
-                            "indicates", indicator, intrusion_set_id
+                            "indicates", indicator.id, intrusion_set_id
                         ),
                         relationship_type="indicates",
-                        source_ref=indicator,
+                        source_ref=indicator.id,
                         target_ref=intrusion_set_id,
                         description="Yara Rule from Valhalla API",
                         created_by_ref=self.organization,

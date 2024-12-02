@@ -333,7 +333,7 @@ class RfThreatActor(RFStixEntity):
         """Creates STIX objects from object attributes"""
         self.helper.log_debug("Add Threat Actor.")
         self.stix_obj = stix2.ThreatActor(
-            id=pycti.ThreatActor.generate_id(self.name, "Threat-Actor-Group"),
+            id=pycti.ThreatActorGroup.generate_id(self.name),
             name=self.name,
             created_by_ref=self.author.id,
         )

@@ -4,11 +4,11 @@ from open_cti import infrastructure, location, relationship
 from open_cti.observables import ip_address
 from stix2 import Infrastructure, Location, Relationship
 from stix2.v21.vocab import INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL
-from zerofox.domain.botnet import Botnet
+from zerofox.domain.botnet import FoxBotnet
 
 
 def botnet_to_infrastructure(
-    created_by, now: str, entry: Botnet
+    created_by, now: str, entry: FoxBotnet
 ) -> List[Union[Infrastructure, Location, Relationship]]:
     """
     Creates a STIX Infrastructure/botnet object from a ZeroFOX Botnet object,
@@ -53,7 +53,7 @@ def botnet_to_infrastructure(
     return objects
 
 
-def get_location_objects(now, created_by, entry: Botnet, ip_address):
+def get_location_objects(now, created_by, entry: FoxBotnet, ip_address):
     postal_code = entry.zip_code if entry.zip_code else ""
     country = location(
         created_by=created_by,
@@ -69,7 +69,7 @@ def get_location_objects(now, created_by, entry: Botnet, ip_address):
     return [country, rel]
 
 
-def get_c2_objects(created_by, entry: Botnet, botnet):
+def get_c2_objects(created_by, entry: FoxBotnet, botnet):
     c2_domain = infrastructure(
         created_by=created_by,
         name=entry.c2_domain,

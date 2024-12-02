@@ -127,9 +127,11 @@ class ConnectorTemplate:
             # ===========================
             stix_objects = self._collect_intelligence()
 
-            if stix_objects is not None and len(stix_objects) is not None:
+            if stix_objects is not None and len(stix_objects) != 0:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
-                bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
+                bundles_sent = self.helper.send_stix2_bundle(
+                    stix_objects_bundle, work_id=work_id
+                )
 
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",

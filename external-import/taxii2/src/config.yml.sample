@@ -1,33 +1,63 @@
 opencti:
   url: 'http://opencti:8080'
-  token: 'CHANGEME'
+  token: 'ChangeMe'
 
 connector:
-  id: 'CHANGEME'
+  id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
-  name: 'TAXII2_Import' # Required
-  scope:'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
-  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: false
+  name: 'TAXII2_Import'
+  scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
   log_level: 'info'
+  duration_period: 'PT60M'
 
 taxii2:
-  discovery_url: 'ChangeMe' # Required
-  cert_path: 'ChangeMe' # Optional (.pem)
-  username: ChangeMe # Required
+  discovery_url: 'ChangeMe'
+  cert_path: ''
+  username: ChangeMe
   password: ChangeMe
   use_token: false
   token: ChangeMe
+  use_apikey: false
+  apikey_key: ChangeMe
+  apikey_value: ChangeMe
   v2.1: true
   collections: '*.*'
-  initial_history: 24 # Required, in hours
-  interval: 1000 # Required, in hours
+  initial_history: 24
   verify_ssl: true
-  create_indicators: true # Generate indicators for ingested observables
-  create_observables: true # Generate observables for ingested indicators
+  create_indicators: true
+  create_observables: true
   add_custom_label: false
-  custom_label: ChangeMe
+  custom_label: ''
   force_pattern_as_name: false
   force_multiple_pattern_name: 'Multiple Indicators'
   stix_custom_property_to_label: false
-  stix_custom_property: 'x_foo'
+  stix_custom_property: 'ChangeMe'
+  enable_url_query_limit: false
+  url_query_limit: 100
+  determine_x_opencti_score_by_label: false
+  default_x_opencti_score: 50
+  indicator_high_score_labels: 'high'
+  indicator_high_score: 80
+  indicator_medium_score_labels: 'medium'
+  indicator_medium_score: 60
+  indicator_low_score_labels: 'low'
+  indicator_low_score: 40
+  set_indicator_as_detection: false
+  create_author: false
+  author_name: 'ChangeMe'
+  author_description: 'ChangeMe'
+  author_reliability: 'A - Completely reliable'
+  exclude_specific_labels: false
+  labels_to_exclude: 'ChangeMe'
+  replace_characters_in_label: 'false'
+  characters_to_replace_in_label: 'ChangeMe'
+  ignore_pattern_types: false
+  pattern_types_to_ignore: 'ChangeMe'
+  ignore_object_types: false
+  object_types_to_ignore: 'ChangeMe'
+  ignore_specific_patterns: false
+  patterns_to_ignore: 'ChangeMe'
+  ignore_specific_notes: false
+  notes_to_ignore: 'ChangeMe'
+  save_original_indicator_id_to_note: false
+  save_original_indicator_id_abstract:

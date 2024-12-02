@@ -380,7 +380,7 @@ class RansomwareAPIConnector:
         # Creating Threat Actor object
         threat_actor_name = item.get("group_name")
         threat_actor = ThreatActor(
-            id=pycti.ThreatActor.generate_id(threat_actor_name, "Threat-Actor-Group"),
+            id=pycti.ThreatActorGroup.generate_id(threat_actor_name),
             name=threat_actor_name,
             labels=["ransomware"],
             created_by_ref=self.author.get("id"),

@@ -16,7 +16,7 @@ from pycti import (
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     StixSightingRelationship,
-    ThreatActor,
+    ThreatActorGroup,
     Tool,
     Vulnerability,
     get_config_variable,
@@ -624,7 +624,7 @@ class GreyNoiseConnector:
         ):
             # Generate Threat Actor
             stix_threat_actor = stix2.ThreatActor(
-                id=ThreatActor.generate_id(data["actor"], "Threat-Actor-Group"),
+                id=ThreatActorGroup.generate_id(data["actor"]),
                 name=data["actor"],
                 created_by_ref=self.greynoise_identity["id"],
             )

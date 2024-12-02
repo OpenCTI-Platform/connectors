@@ -16,3 +16,4 @@ shodan:
   default_score: 50
   import_search_results: true
   create_note: true
+  use_isp_name_for_asn: false

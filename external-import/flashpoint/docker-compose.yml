@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-flashpoint:
-    image: opencti/connector-flashpoint:6.3.9
+    image: opencti/connector-flashpoint:6.4.2
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -12,11 +12,8 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - FLASHPOINT_API_KEY=ChangeMe
       - FLASHPOINT_IMPORT_START_DATE=2024-01-01
-      - FLASHPOINT_IMPORT_APT=false
-      - FLASHPOINT_IMPORT_MALWARE=false
       - FLASHPOINT_IMPORT_REPORTS=true
       - FLASHPOINT_IMPORT_INDICATORS=true
-      - FLASHPOINT_IMPORT_VULNERABILITIES=true
       - FLASHPOINT_IMPORT_COMMUNITIES=false
       - FLASHPOINT_IMPORT_ALERTS=true
       - FLASHPOINT_COMMUNITIES_QUERIES=cybersecurity,cyberattack
