@@ -1,7 +1,7 @@
 import io
 import logging
 import os
-from typing import IO, Dict, List, Pattern, Tuple
+from typing import IO, Dict, Iterable, List, Pattern, Tuple
 
 import chardet
 import ioc_finder
@@ -98,17 +98,12 @@ class ReportParser(object):
         parsed_texts = []
 
         def append_text_recursively(page_element):
-            for sub_element in page_element:
-                try:
+            if isinstance(page_element, Iterable):
+                for sub_element in page_element:
                     if isinstance(sub_element, LTTextContainer):
                         parsed_texts.append(sub_element.get_text())
                     else:
                         append_text_recursively(sub_element)
-                except TypeError as error:
-                    if str(error).endswith("is not iterable"):
-                        return
-                    else:
-                        raise error
 
         try:
             pages_layouts = extract_pages(file_data, laparams=LAParams(all_texts=True))
