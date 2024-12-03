@@ -685,11 +685,9 @@ class Mandiant:
                 else:
                     first_run = start_offset == 0
 
-                """
-                We check that after each API call the collection respects the interval, 
-                either the default or the one specified in the config.
-                If it does not, we terminate the job and move on to the next collection.
-                """
+                # We check that after each API call the collection respects the interval,
+                # either the default or the one specified in the config.
+                # If it does not, we terminate the job and move on to the next collection.
 
                 if (
                     first_run is False
@@ -763,7 +761,7 @@ class Mandiant:
                     obj["object_marking_refs"] = new_markings
 
     def _process_batch_reports(
-        self, new_batch_reports: list, info_reports: dict[str, Any]
+        self, new_batch_reports: list[Any], info_reports: dict[str, Any]
     ) -> None:
         """
           Process a batch of reports by deduplicating, cleaning, and submitting them.
@@ -774,10 +772,6 @@ class Mandiant:
 
         Returns:
             None
-
-        Raises:
-            Exception: If an error occurs during the deduplicate, clean the bundle and report submission process.
-            The error will be logged.
         """
         try:
             bundles_objects_report = []
@@ -809,7 +803,7 @@ class Mandiant:
                 {"error": str(err), "info_reports": info_reports},
             )
 
-    def _deduplicate_and_clean_bundles(self, bundles_objects: list) -> list:
+    def _deduplicate_and_clean_bundles(self, bundles_objects: list[Any]) -> list:
         """
         Deduplicates and cleans STIX bundles.
 
@@ -822,10 +816,6 @@ class Mandiant:
 
         Returns:
             uniq_bundles_objects (list): A deduplicated and cleaned list of STIX objects in dictionary format.
-
-        Raises:
-            Exception: If an error occurs during the deduplicate and clean the bundle.
-            The error will be logged.
         """
         try:
             uniq_bundles_objects = list(
@@ -883,10 +873,6 @@ class Mandiant:
 
         Returns:
             None
-
-        Raises:
-            Exception: If an error occurs when initiating the job, creating the bundle or sending the data.
-            The error will be logged.
         """
         report_work_id = None
         try:
@@ -932,7 +918,6 @@ class Mandiant:
                 )
             module = importlib.import_module(f".{collection}", package=__package__)
             collection_api = getattr(self.api, collection)
-
 
             # If work in progress, then the new in progress will
             # be to start from the index until before_process_now. The current index
