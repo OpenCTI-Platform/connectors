@@ -4,6 +4,7 @@ from typing import Dict
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
+CONTAINER_TYPE_LIST = ["report", "grouping", "case-incident", "case-rfi", "case-rft"]
 
 def load_re_flags(rule):
     """Load the regular expression flags from a rule definition."""
@@ -45,10 +46,11 @@ class TaggerConnector:
                         if attr is None:
                             continue
 
+                        # Handles the case where the attribute is the list of labels
                         if attribute.lower() == "objectlabel":
                             for el in attr:
                                 if not re.search(
-                                    rule["search"], el["value"], flags=flags
+                                        rule["search"], el["value"], flags=flags
                                 ):
                                     continue
 
@@ -59,6 +61,25 @@ class TaggerConnector:
                                 break
 
                             continue
+
+                        # Checks that the entity is a container
+                        if enrichment_entity["entity_type"].lower() in CONTAINER_TYPE_LIST:
+
+                            # Handles the case where the attribute is the list of objects
+                            if attribute.lower() == "objects":
+                                for obj in attr:
+                                    if not re.search(
+                                            rule["search"], obj["entity_type"], flags=flags
+                                    ):
+                                        continue
+
+                                    self.helper.api.stix_domain_object.add_label(
+                                        id=enrichment_entity["standard_id"],
+                                        label_name=rule["label"],
+                                    )
+                                    break
+
+                                continue
 
                         if not re.search(rule["search"], attr, flags=flags):
                             continue
@@ -71,5 +92,7 @@ class TaggerConnector:
 
 
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
     connector = TaggerConnector()
     connector.start()
