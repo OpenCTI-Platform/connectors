@@ -38,6 +38,7 @@ class ReportImporter(BaseImporter):
         default_latest_timestamp: int,
         tlp_marking: MarkingDefinition,
         include_types: List[str],
+        target_industries: List[str],
         report_status: int,
         report_type: str,
         guess_malware: bool,
@@ -49,6 +50,7 @@ class ReportImporter(BaseImporter):
         self.reports_api_cs = ReportsAPI(helper)
         self.default_latest_timestamp = default_latest_timestamp
         self.include_types = include_types
+        self.target_industries = target_industries
         self.report_status = report_status
         self.report_type = report_type
         self.guess_malware = guess_malware
@@ -112,6 +114,9 @@ class ReportImporter(BaseImporter):
 
         if self.include_types:
             fql_filter = f"{fql_filter}+type:{self.include_types}"
+
+        if self.target_industries:
+            fql_filter = f"{fql_filter}+target_industries:{self.target_industries}"
 
         paginated_query = paginate(self._query_report_entities)
 
