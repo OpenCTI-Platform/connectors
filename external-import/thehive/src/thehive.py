@@ -6,12 +6,7 @@ from datetime import datetime
 
 import stix2
 import yaml
-from constants import DEFAULT_DATETIME, DEFAULT_UTC_DATETIME, PAP_MAPPINGS, TLP_MAPPINGS
 from dateutil.parser import parse
-from hive_observable_transform import (
-    HiveObservableTransform,
-    UnsupportedIndicatorTypeError,
-)
 from pycti import (
     CaseIncident,
     CustomObjectCaseIncident,
@@ -27,6 +22,14 @@ from thehive4py import TheHiveApi
 from thehive4py.query import Gt
 from thehive4py.query.page import Paginate
 from thehive4py.query.sort import Asc
+from thehive4py.types.alert import OutputAlert
+from thehive4py.types.case import OutputCase
+
+from constants import DEFAULT_DATETIME, DEFAULT_UTC_DATETIME, PAP_MAPPINGS, TLP_MAPPINGS
+from hive_observable_transform import (
+    HiveObservableTransform,
+    UnsupportedIndicatorTypeError,
+)
 
 from utils import format_datetime  # isort: skip
 
@@ -122,17 +125,17 @@ class TheHive:
 
         self.thehive_api = TheHiveApi(self.thehive_url, self.thehive_api_key)
 
-    def construct_query(self, type, last_date):
+    def construct_query(self, _type, last_date):
         """Construct query for alert or cases based on the last_date."""
         self.helper.log_info(
             f"Constructing query with last date: {format_datetime(last_date, DEFAULT_UTC_DATETIME)}"
         )
-        if type == "case":
+        if _type == "case":
             return Gt("_updatedAt", int(last_date * 1000)) | Gt(
                 "_createdAt", int(last_date * 1000)
             )
 
-        elif type == "alert":
+        elif _type == "alert":
             return Gt("_updatedAt", int(last_date * 1000)) | Gt(
                 "_createdAt", int(last_date * 1000)
             )
@@ -377,22 +380,21 @@ class TheHive:
 
         # check if type is case or alert, run search based on provided type.
         if type == "case":
-            items = self.thehive_api.case.find(
+            items: list["OutputCase"] = self.thehive_api.case.find(
                 filters=query,
                 sortby=Asc("_updatedAt"),
                 paginate=Paginate(start=0, end=100),
             )
-            if items.__class__ != list:
+            if not isinstance(items, list):
                 self.not_found_items(items, type)
 
         elif type == "alert":
-            items = self.thehive_api.alert.find(
+            items: list["OutputAlert"] = self.thehive_api.alert.find(
                 filters=query,
                 sortby=Asc("_updatedAt"),
                 paginate=Paginate(start=0, end=100),
             )
-
-            if items.__class__ != list:
+            if not isinstance(items, list):
                 self.not_found_items(items, type)
         else:
             raise ValueError(f"Unsupported type in process_logic: {type}")
@@ -468,7 +470,7 @@ class TheHive:
             self.helper.log_error(f"!!! here the value of case_id : {case_id}")
             response = self.thehive_api.case.find_observables(case_id=case.get("_id"))
 
-            if len(response) > 0:
+            if response and len(response) > 0:
                 observables = response
 
                 self.helper.log_info(
@@ -479,7 +481,7 @@ class TheHive:
                 object_refs = []
                 i = 1
                 for observable in observables:
-                    self.helper.log_error(f"!!! !!! observale n° {i}")
+                    self.helper.log_info(f"!!! !!! observale n° {i}")
                     i = i + 1
                     stix_observable = self.convert_observable(observable, markings)
                     if stix_observable:
