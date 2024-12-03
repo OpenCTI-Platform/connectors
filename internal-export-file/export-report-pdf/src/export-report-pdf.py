@@ -311,7 +311,12 @@ class ExportReportPdf:
         if report_marking:
             report_marking = report_marking[-1]["definition"]
         report_name = report_dict["name"]
-        report_description = report_dict.get("description", "No description available.")
+        report_description = (
+            report_dict.get("description") or "No description available."
+        )
+        report_description = cmarkgfm.github_flavored_markdown_to_html(
+            report_description, CMARKGFM_OPTIONS
+        )
         report_content = report_dict["content"]
         report_confidence = report_dict["confidence"]
         report_id = report_dict["id"]
