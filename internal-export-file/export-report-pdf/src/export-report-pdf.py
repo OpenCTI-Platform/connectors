@@ -18,7 +18,9 @@ from pygal_maps_world.maps import World
 from weasyprint import HTML
 
 CMARKGFM_OPTIONS = (
-    cmarkgfmOptions.CMARK_OPT_GITHUB_PRE_LANG | cmarkgfmOptions.CMARK_OPT_FOOTNOTES
+    cmarkgfmOptions.CMARK_OPT_GITHUB_PRE_LANG  # Use GitHub-style tags for code blocks
+    | cmarkgfmOptions.CMARK_OPT_FOOTNOTES  # Parse footnotes
+    | cmarkgfmOptions.CMARK_OPT_TABLE_PREFER_STYLE_ATTRIBUTES  # Use style attributes to align table cells
 )
 
 
