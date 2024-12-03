@@ -933,11 +933,11 @@ class Mandiant:
             module = importlib.import_module(f".{collection}", package=__package__)
             collection_api = getattr(self.api, collection)
 
-            """
-            If work in progress, then the new in progress will
-            be to start from the index until before_process_now. The current index
-            will also be updated to before_process_now to be used as a marker.
-            """
+
+            # If work in progress, then the new in progress will
+            # be to start from the index until before_process_now. The current index
+            # will also be updated to before_process_now to be used as a marker.
+
             before_process_now = Timestamp.now()
 
             start = Timestamp.from_iso(
