@@ -17,3 +17,13 @@ MAPPING = {
     "Financial Theft": MOTIVATION_ORGANIZATIONAL_GAIN,
     "Disruption": MOTIVATION_ORGANIZATIONAL_GAIN,
 }
+
+STATE_START = "start_epoch"
+STATE_OFFSET = "offset"
+STATE_END = "end_epoch"
+STATE_LAST_RUN = "last_run"
+
+STATEMENT_MARKINGS = [
+    "marking-definition--ad2caa47-58fd-5491-8f67-255377927369",
+]
+BATCH_REPORT_SIZE = 10
