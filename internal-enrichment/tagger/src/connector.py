@@ -51,7 +51,7 @@ class TaggerConnector:
                         if attribute.lower() == "objectlabel":
                             for obj in attr:
                                 if not re.search(
-                                        rule["search"], obj["value"], flags=flags
+                                    rule["search"], obj["value"], flags=flags
                                 ):
                                     continue
 
@@ -64,13 +64,16 @@ class TaggerConnector:
                             continue
 
                         # Checks that the entity is a container
-                        if enrichment_entity["entity_type"].lower() in CONTAINER_TYPE_LIST:
+                        if (
+                            enrichment_entity["entity_type"].lower()
+                            in CONTAINER_TYPE_LIST
+                        ):
 
                             # Handles the case where the attribute is the list of objects
                             if attribute.lower() == "objects-type":
                                 for obj in attr:
                                     if not re.search(
-                                            rule["search"], obj["entity_type"], flags=flags
+                                        rule["search"], obj["entity_type"], flags=flags
                                     ):
                                         continue
 
@@ -85,13 +88,13 @@ class TaggerConnector:
                             elif attribute.lower() == "objects-name":
                                 for obj in attr:
 
-                                    name = obj.get("name", obj.get("observable_value", None))
+                                    name = obj.get(
+                                        "name", obj.get("observable_value", None)
+                                    )
                                     if name is None:
                                         continue
 
-                                    if not re.search(
-                                            rule["search"], name, flags=flags
-                                    ):
+                                    if not re.search(rule["search"], name, flags=flags):
                                         continue
 
                                     self.helper.api.stix_domain_object.add_label(
