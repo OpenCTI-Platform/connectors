@@ -60,9 +60,8 @@ class TaggerConnector:
                                 ):
                                     continue
 
-                                self.helper.api.stix_domain_object.add_label(
-                                    id=enrichment_entity["standard_id"],
-                                    label_name=rule["label"],
+                                self.add_label(
+                                    enrichment_entity["standard_id"], rule["label"]
                                 )
                                 break
 
@@ -82,9 +81,8 @@ class TaggerConnector:
                                     ):
                                         continue
 
-                                    self.helper.api.stix_domain_object.add_label(
-                                        id=enrichment_entity["standard_id"],
-                                        label_name=rule["label"],
+                                    self.add_label(
+                                        enrichment_entity["standard_id"], rule["label"]
                                     )
                                     break
 
@@ -102,9 +100,8 @@ class TaggerConnector:
                                     if not re.search(rule["search"], name, flags=flags):
                                         continue
 
-                                    self.helper.api.stix_domain_object.add_label(
-                                        id=enrichment_entity["standard_id"],
-                                        label_name=rule["label"],
+                                    self.add_label(
+                                        enrichment_entity["standard_id"], rule["label"]
                                     )
                                     break
 
@@ -113,11 +110,16 @@ class TaggerConnector:
                         if not re.search(rule["search"], attr, flags=flags):
                             continue
 
-                        self.helper.api.stix_domain_object.add_label(
-                            id=enrichment_entity["standard_id"],
-                            label_name=rule["label"],
-                        )
+                        self.add_label(enrichment_entity["standard_id"], rule["label"])
                         break
+
+    def add_label(self, entity, label):
+        """Send the API call to apply the label on the entity."""
+
+        self.helper.api.stix_domain_object.add_label(
+            id=entity,
+            label_name=label,
+        )
 
 
 if __name__ == "__main__":
