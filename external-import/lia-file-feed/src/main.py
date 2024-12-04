@@ -30,10 +30,10 @@ class LIAFileFeed:
         self.helper = OpenCTIConnectorHelper(config)
 
         self.api_url = get_config_variable(
-            "LIA_BASE_API_URL", ["liafilefeed", "api_base_url"], config
+            "LIA_BASE_API_URL", ["lia_file_feed", "api_base_url"], config
         )
         self.api_key = get_config_variable(
-            "LIA_API_KEY", ["liafilefeed", "api_key"], config
+            "LIA_API_KEY", ["lia_file_feed", "api_key"], config
         )
 
         self.duration_period = get_config_variable(

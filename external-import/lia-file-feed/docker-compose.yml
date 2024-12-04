@@ -1,7 +1,7 @@
 version: '3'
 services:
-  liafilefeed:
-    image: opencti/liafilefeed:6.4.1
+  lia-file-feed:
+    image: opencti/lia-file-feed:6.4.1
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
