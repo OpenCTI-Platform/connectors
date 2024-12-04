@@ -6,6 +6,7 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 
 CONTAINER_TYPE_LIST = ["report", "grouping", "case-incident", "case-rfi", "case-rft"]
 
+
 def load_re_flags(rule):
     """Load the regular expression flags from a rule definition."""
 
@@ -48,9 +49,9 @@ class TaggerConnector:
 
                         # Handles the case where the attribute is the list of labels
                         if attribute.lower() == "objectlabel":
-                            for el in attr:
+                            for obj in attr:
                                 if not re.search(
-                                        rule["search"], el["value"], flags=flags
+                                        rule["search"], obj["value"], flags=flags
                                 ):
                                     continue
 
@@ -66,10 +67,30 @@ class TaggerConnector:
                         if enrichment_entity["entity_type"].lower() in CONTAINER_TYPE_LIST:
 
                             # Handles the case where the attribute is the list of objects
-                            if attribute.lower() == "objects":
+                            if attribute.lower() == "objects-type":
                                 for obj in attr:
                                     if not re.search(
                                             rule["search"], obj["entity_type"], flags=flags
+                                    ):
+                                        continue
+
+                                    self.helper.api.stix_domain_object.add_label(
+                                        id=enrichment_entity["standard_id"],
+                                        label_name=rule["label"],
+                                    )
+                                    break
+
+                                continue
+
+                            elif attribute.lower() == "objects-name":
+                                for obj in attr:
+
+                                    name = obj.get("name", obj.get("observable_value", None))
+                                    if name is None:
+                                        continue
+
+                                    if not re.search(
+                                            rule["search"], name, flags=flags
                                     ):
                                         continue
 
@@ -92,7 +113,5 @@ class TaggerConnector:
 
 
 if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv()
     connector = TaggerConnector()
     connector.start()
