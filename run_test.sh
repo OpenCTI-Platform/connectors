@@ -14,10 +14,10 @@ test_requirements_files=$(find . -name "test-requirements.txt")
 
 echo 'Found test-requirements.txt files:' "$test_requirements_files"
 
-for requirement_file in $test_requirements_files
+for requirements_file in $test_requirements_files
 do
-  project=$(dirname $(dirname $requirement_file))
-  echo 'Running tests for project' $project
+  project=$(echo "$requirements_file" | cut -d'/' -f1-3)
+  echo 'Running tests pipeline for project' $project
 
   echo 'Creating isolated virtual environment'
   python -m venv "$venv_name"
@@ -26,8 +26,9 @@ do
   elif [ -f "$venv_name/Scripts/activate" ]; then
     source "$venv_name/Scripts/activate"  # Windows
   fi
+
   echo 'Installing requirements'
-  python -m pip install -r "$requirement_file"
+  python -m pip install -q -r "$requirements_file"
 
   
   echo 'Running tests'
