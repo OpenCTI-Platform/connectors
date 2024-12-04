@@ -43,7 +43,10 @@ class TaggerConnector:
                     flags = load_re_flags(rule)
 
                     for attribute in rule["attributes"]:
-                        attr = enrichment_entity.get(attribute)
+                        if (attribute.lower() == "objects-type") or (attribute.lower() == "objects-name"):
+                            attr = enrichment_entity.get("objects")
+                        else:
+                            attr = enrichment_entity.get(attribute)
                         if attr is None:
                             continue
 
