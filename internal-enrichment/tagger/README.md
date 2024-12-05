@@ -27,7 +27,7 @@ In order to configure the tagger logic, use the file `definitions.json` knowing 
 In the context of containers (i.e. if the scope is a report, grouping, or case entity), it is possible to search among the contained entities. Two options are available:
 
 * Search if a type of entity is contained in the container, in this case specify the attribute `objects-type` in the attribute list. E.g Report is labeled if it contains System objects : `[{"scopes":["Report"],"rules":[{"label":"with_systems","search":"[Ss]ystem","attributes":["objects-type"]]}]`
-* Search if a specific entity is contained in the container, in this case specify the attribute `objects-name` in the attribute list.
+* Search if a specific entity is contained in the container, in this case specify the attribute `objects-name` in the attribute list. E.g. Report is labeled if it contains CVE from 2016 : `[{"scopes":["Report"],"rules":[{"label":"with_vuln_2016","search":"CVE-2016","attributes":["objects-name"]]}]`
 
 ## Set up
 
