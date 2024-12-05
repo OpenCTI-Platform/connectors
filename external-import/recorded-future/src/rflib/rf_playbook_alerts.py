@@ -138,6 +138,11 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         for playbook_type in playbook_types:
             self.update_state(playbook_type)
 
+        message = (
+            f"{self.helper.connect_name} connector successfully run for Playbook Alerts"
+        )
+        self.helper.api.work.to_processed(self.work_id, message)
+
     def debug(self, text):
         if self.debug_var:
             self.helper.log_error(text)

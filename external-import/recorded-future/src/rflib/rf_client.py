@@ -192,11 +192,19 @@ class RFClient:
         return threat_map_data
 
     def get_entities_links(self, entities_id: list):
-        entities_params = {"entities": entities_id}
+        try:
+            entities_params = {"entities": entities_id}
 
-        res = self.session.post(LINKS_PATH, json=entities_params)
-        res.raise_for_status()
+            res = self.session.post(LINKS_PATH, json=entities_params)
+            res.raise_for_status()
 
-        entity_links = res.json()["data"]
+            entity_links = res.json()["data"]
 
-        return entity_links
+            return entity_links
+        except requests.RequestException as err:
+            error_msg = f"[API] Error while fetching data from {LINKS_PATH}: {str(err)}"
+            error_response = err.response.json()
+            self.helper.log_error(
+                error_msg, {"error_response": str(error_response["message"])}
+            )
+            return None
