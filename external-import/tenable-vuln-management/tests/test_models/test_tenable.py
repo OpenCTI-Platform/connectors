@@ -14,12 +14,11 @@ import pytest
 
 sys.path.append(str((Path(__file__).resolve().parent.parent.parent / "src")))
 
+from tenable_vuln_management.models.common import ValidationWarning
 from tenable_vuln_management.models.tenable import (
     VulnerabilityFinding,
     _convert_empty_dicts_and_lists_to_none,
 )
-
-from tenable_vuln_management.models.common import ValidationWarning
 
 BASE_DIR = Path(__file__).parent
 RESPONSE_FILE = BASE_DIR / "resources" / "tenable_api_response.json"
@@ -56,6 +55,7 @@ def test__convert_empty_dicts_and_lists_to_none_should_clean_nested_empty_dicts(
     # Then it should be cleaned
     assert cleaned == {"a": {"b": None, "c": [1, {"e": None, "f": None}]}}
 
+
 @pytest.mark.parametrize(
     "tenable_api_response_1_report",
     [
@@ -71,6 +71,6 @@ def test_extra_field_in_resposnse_should_warn_with_ValidationWarning(
     # Then A ValidationWarning is raised
 
     tenable_api_response_1_report["extra"] = "extra_value"
-    
+
     with pytest.warns(ValidationWarning):
         _ = VulnerabilityFinding.model_validate(tenable_api_response_1_report)
