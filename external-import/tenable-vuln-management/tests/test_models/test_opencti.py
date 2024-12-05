@@ -12,6 +12,7 @@ sys.path.append(str((Path(__file__).resolve().parent.parent.parent / "src")))
 
 import pytest
 from pydantic import ValidationError
+
 from tenable_vuln_management.models.opencti import (
     Author,
     DomainName,
