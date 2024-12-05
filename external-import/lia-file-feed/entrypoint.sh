@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Go to the right directory
-cd /opt/liafilefeed
+cd /opt/lia-file-feed
 
 # Launch the worker
 python3 main.py
