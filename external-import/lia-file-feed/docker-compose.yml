@@ -11,5 +11,7 @@ services:
       - CONNECTOR_SCOPE=indicator,file,malware,url
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT60M
+      - LIA_API_BASE_URL=ChangeMe
+      - LIA_API_KEY=ChangeMe
 
     restart: always
