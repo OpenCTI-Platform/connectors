@@ -47,45 +47,53 @@ class ThreatMap(threading.Thread):
                 entities_mapped_ids
             )
 
-            total_mapped_entities = len(entities_mapped_ids)
+            if entities_mapped_with_links is not None:
 
-            for entity_with_links in entities_mapped_with_links:
-                for key, threat_map_type in THREAT_MAP_TYPE_MAPPER.items():
-                    if threat_map["type"] == key:
-                        # Convert into stix object
-                        _name = entity_with_links["entity"]["name"]
-                        _type = entity_with_links["entity"]["type"].replace("type:", "")
-                        entity_to_stix2 = threat_map_type["class"](
-                            _name, _type, tlp=self.tlp
-                        )
+                total_mapped_entities = len(entities_mapped_ids)
 
-                        # Map data with related entities
-                        entity_to_stix2.map_data(entity_with_links, self.tlp)
+                for entity_with_links in entities_mapped_with_links:
+                    for key, threat_map_type in THREAT_MAP_TYPE_MAPPER.items():
+                        if threat_map["type"] == key:
+                            # Convert into stix object
+                            _name = entity_with_links["entity"]["name"]
+                            _type = entity_with_links["entity"]["type"].replace(
+                                "type:", ""
+                            )
+                            entity_to_stix2 = threat_map_type["class"](
+                                _name, _type, tlp=self.tlp
+                            )
 
-                        # Create bundle
-                        entity_to_stix2.build_bundle(entity_to_stix2)
-                        bundle = entity_to_stix2.to_stix_bundle()
+                            # Map data with related entities
+                            entity_to_stix2.map_data(entity_with_links, self.tlp)
 
-                        self.helper.log_info(
-                            "[THREAT MAPS] Sending Bundle to server with "
-                            + str(len(bundle.objects))
-                            + " objects"
-                        )
+                            # Create bundle
+                            entity_to_stix2.build_bundle(entity_to_stix2)
+                            bundle = entity_to_stix2.to_stix_bundle()
 
-                        total_mapped_entities -= 1
+                            self.helper.log_info(
+                                "[THREAT MAPS] Sending Bundle to server with "
+                                + str(len(bundle.objects))
+                                + " objects"
+                            )
 
-                        self.helper.log_info(
-                            "[THREAT MAPS] Remaining "
-                            + str(total_mapped_entities)
-                            + " entities with their links to import for "
-                            + threat_map["type"]
-                            + " threat map"
-                        )
+                            total_mapped_entities -= 1
 
-                        # Send stix bundle for ingestion
-                        self.helper.send_stix2_bundle(
-                            bundle.serialize(),
-                            work_id=work_id,
-                        )
+                            self.helper.log_info(
+                                "[THREAT MAPS] Remaining "
+                                + str(total_mapped_entities)
+                                + " entities with their links to import for "
+                                + threat_map["type"]
+                                + " threat map"
+                            )
+
+                            # Send stix bundle for ingestion
+                            self.helper.send_stix2_bundle(
+                                bundle.serialize(),
+                                work_id=work_id,
+                            )
 
         self.helper.set_state({"last_threat_map_run": timestamp})
+        message = (
+            f"{self.helper.connect_name} connector successfully run for Threat Maps"
+        )
+        self.helper.api.work.to_processed(work_id, message)
