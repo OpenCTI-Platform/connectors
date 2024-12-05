@@ -1104,6 +1104,14 @@ class StixNote:
         return list(ret)
 
     def to_stix_objects(self):
+        report_object_refs = [obj.id for obj in self.objects]
+        # Report in STIX lib must have at least one object_refs even if there is no object_refs
+        if len(report_object_refs) == 0:
+            # Put a fake ID in the report
+            report_object_refs.append(
+                "intrusion-set--fc5ee88d-7987-4c00-991e-a863e9aa8a0e"
+            )
+
         """Returns a list of STIX objects"""
         report = stix2.Report(
             id=pycti.Report.generate_id(self.name, self.published),
@@ -1113,7 +1121,7 @@ class StixNote:
             created_by_ref=self.author.id,
             labels=self.labels,
             report_types=self.report_types,
-            object_refs=[obj.id for obj in self.objects],
+            object_refs=report_object_refs,
             external_references=self.external_references,
             object_marking_refs=self.tlp,
         )
