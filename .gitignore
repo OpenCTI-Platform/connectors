@@ -1,6 +1,5 @@
 .vscode
 .idea
-.vscode
 __pycache__
 *.log
 *.iml
@@ -10,6 +9,9 @@ docker-compose-test.yml
 Pipfile*
 .DS_Store
 .venv
+venv
+.temp_venv
+black
 *.key
 *.crt
 .env
