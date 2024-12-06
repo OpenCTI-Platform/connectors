@@ -136,8 +136,6 @@ class ExternalReference(BaseModelWithoutExtra):  # type: ignore[type-arg]
     # See https://docs.pydantic.dev/2.8/concepts/models/#generic-models
     """Represents an external reference to a source of information."""
 
-    _stix2_representation: Optional[Any] = PrivateAttr(None)
-
     source_name: str = Field(
         ..., description="The name of the source of the external reference."
     )
