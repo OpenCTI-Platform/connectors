@@ -1,3 +1,3 @@
 plyara~=2.1.1
-pycti==6.4.2
+pycti==6.4.3
 vt-py==0.19.0
