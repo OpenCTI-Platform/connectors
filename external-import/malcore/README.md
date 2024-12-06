@@ -12,7 +12,7 @@ The connector creates the following OpenCTI entity types:
 
 ### Requirements
 
-- OpenCTI Platform >= 6.3.13
+- OpenCTI Platform >= 6.3.14
 
 ### Configuration
 
