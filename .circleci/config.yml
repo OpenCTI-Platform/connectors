@@ -113,6 +113,10 @@ jobs:
           name: Build Docker image opencti/connector-diode-import
           command: docker build -t opencti/connector-diode-import:latest . && docker tag opencti/connector-diode-import:latest opencti/connector-diode-import:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/wiz
+          name: Build Docker image opencti/connector-wiz
+          command: docker build -t opencti/connector-wiz:latest . && docker tag opencti/connector-wiz:latest opencti/connector-wiz:${CIRCLE_TAG}          
+      - run:
           working_directory: ~/opencti/external-import/crowdstrike
           name: Build Docker image opencti/connector-crowdstrike
           command: docker build -t opencti/connector-crowdstrike:latest . && docker tag opencti/connector-crowdstrike:latest opencti/connector-crowdstrike:${CIRCLE_TAG}
@@ -404,6 +408,8 @@ jobs:
             docker push opencti/connector-diode-import:${CIRCLE_TAG}
             docker push opencti/connector-alienvault:latest
             docker push opencti/connector-alienvault:${CIRCLE_TAG}
+            docker push opencti/connector-wiz:latest
+            docker push opencti/connector-wiz:${CIRCLE_TAG}
             docker push opencti/connector-crowdstrike:latest
             docker push opencti/connector-crowdstrike:${CIRCLE_TAG}
             docker push opencti/connector-cuckoo:latest
@@ -1111,6 +1117,10 @@ jobs:
           name: Build Docker image opencti/connector-diode-import
           command: docker build -t opencti/connector-diode-import:rolling .
       - run:
+          working_directory: ~/opencti/external-import/wiz
+          name: Build Docker image opencti/connector-wiz
+          command: docker build -t opencti/connector-wiz:rolling .
+      - run:
           working_directory: ~/opencti/external-import/crowdstrike
           name: Build Docker image opencti/connector-crowdstrike
           command: docker build -t opencti/connector-crowdstrike:rolling .
@@ -1386,6 +1396,7 @@ jobs:
             docker push opencti/connector-hygiene:rolling
             docker push opencti/connector-alienvault:rolling
             docker push opencti/connector-diode-import:rolling
+            docker push opencti/connector-wiz:rolling
             docker push opencti/connector-crowdstrike:rolling
             docker push opencti/connector-cuckoo:rolling
             docker push opencti/connector-cape:rolling
