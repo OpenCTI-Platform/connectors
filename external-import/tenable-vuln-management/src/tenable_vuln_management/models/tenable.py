@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from pydantic import Field
 
-from .common import FrozenBaseModelWithoutExtra
+from .common import FrozenBaseModelWithWarnedExtra
 
 
 def _convert_empty_dicts_and_lists_to_none(value: Any) -> Any:
@@ -36,7 +36,7 @@ def _convert_empty_dicts_and_lists_to_none(value: Any) -> Any:
             for k, v in value.items()
         }
     # If the value is a list, apply the conversion to each item
-    elif isinstance(value, list):
+    if isinstance(value, list):
         return (
             [_convert_empty_dicts_and_lists_to_none(item) for item in value]
             if value
@@ -45,7 +45,7 @@ def _convert_empty_dicts_and_lists_to_none(value: Any) -> Any:
     return value
 
 
-class CvssVector(FrozenBaseModelWithoutExtra):
+class CvssVector(FrozenBaseModelWithWarnedExtra):
     """
     Represents a CVSS vector that includes impact and access details for vulnerability scoring.
     """
@@ -71,7 +71,7 @@ class CvssVector(FrozenBaseModelWithoutExtra):
     raw: str = Field(..., description="Raw CVSS vector string.")
 
 
-class CvssTemporalVector(FrozenBaseModelWithoutExtra):
+class CvssTemporalVector(FrozenBaseModelWithWarnedExtra):
     """
     Represents the temporal CVSS vector, which includes factors that change over time, like exploitability.
     """
@@ -88,7 +88,7 @@ class CvssTemporalVector(FrozenBaseModelWithoutExtra):
     raw: str = Field(..., description="Raw CVSS temporal vector string.")
 
 
-class VprDrivers(FrozenBaseModelWithoutExtra):
+class VprDrivers(FrozenBaseModelWithWarnedExtra):
     """
     VPR score drivers providing insight into factors like age, threat intensity, and product coverage.
     """
@@ -112,7 +112,7 @@ class VprDrivers(FrozenBaseModelWithoutExtra):
     )
 
 
-class Vpr(FrozenBaseModelWithoutExtra):
+class Vpr(FrozenBaseModelWithWarnedExtra):
     """
     Vulnerability Priority Rating (VPR) score details, which reflect the threat level of a vulnerability.
     """
@@ -126,7 +126,7 @@ class Vpr(FrozenBaseModelWithoutExtra):
     )
 
 
-class Xref(FrozenBaseModelWithoutExtra):
+class Xref(FrozenBaseModelWithWarnedExtra):
     """
     Cross-references (Xrefs) for the vulnerability, including external references like CVEs.
     """
@@ -135,7 +135,7 @@ class Xref(FrozenBaseModelWithoutExtra):
     id: str = Field(..., description="The identifier of the reference.")
 
 
-class Plugin(FrozenBaseModelWithoutExtra):
+class Plugin(FrozenBaseModelWithWarnedExtra):
     """
     Represents plugin details that provide information about the detected vulnerability.
     """
@@ -251,9 +251,10 @@ class Plugin(FrozenBaseModelWithoutExtra):
         None, description="CVE identifiers associated with the vulnerability."
     )
     type: str = Field(..., description="The type of vulnerability (local or remote).")
+    has_workaround: bool = Field(..., description="")
 
 
-class Asset(FrozenBaseModelWithoutExtra):
+class Asset(FrozenBaseModelWithWarnedExtra):
     """
     Represents an asset's key properties, including network, hardware, and operating system details.
     """
@@ -285,9 +286,14 @@ class Asset(FrozenBaseModelWithoutExtra):
         ..., description="The ID of the network the asset belongs to."
     )
     tracked: bool = Field(..., description="Indicates if the asset is being tracked.")
+    last_scan_target: str = Field(
+        ...,
+        description="The IP address or fully qualified domain name \
+                                  (FQDN) of the asset targeted in the last scan.",
+    )
 
 
-class Port(FrozenBaseModelWithoutExtra):
+class Port(FrozenBaseModelWithWarnedExtra):
     """
     Represents details of the port associated with the detected vulnerability.
     """
@@ -301,7 +307,7 @@ class Port(FrozenBaseModelWithoutExtra):
     )
 
 
-class Scan(FrozenBaseModelWithoutExtra):
+class Scan(FrozenBaseModelWithWarnedExtra):
     """
     Represents details about the scan that detected the vulnerability.
     """
@@ -311,9 +317,13 @@ class Scan(FrozenBaseModelWithoutExtra):
         ..., description="The timestamp when the scan started."
     )
     uuid: str = Field(..., description="The UUID of the scan.")
+    target: str = Field(
+        ...,
+        description="The IP address or fully qualified domain name of the asset targeted in the scan.",
+    )
 
 
-class VulnerabilityFinding(FrozenBaseModelWithoutExtra):
+class VulnerabilityFinding(FrozenBaseModelWithWarnedExtra):
     """
     Represents the full report of an asset's vulnerability detection, including its plugin, port, scan, and metadata.
     """
