@@ -139,7 +139,7 @@ def feed_converter(
             for line in raw_file:
                 ioc_raw = json.loads(line, object_hook=OrderedDict)
 
-                if only_new and (ioc_raw["lseen"] != ioc_raw["collect"]):
+                if only_new and (ioc_raw["lseen"] < ioc_raw["collect"] - 86400):
                     continue
 
                 # Skip IOCs w/o attribution
@@ -192,16 +192,12 @@ def feed_converter(
                     if ioc_raw.get("geo").get("region"):
                         description = f'{description}\nRegion: {ioc_raw.get("geo").get("region")}.'
                 if ioc_raw.get("asn"):
-                    description = f'{description}\n\nASN: {ioc_raw.get("asn").get("num")}. Number of domains: {ioc_raw.get("asn").get("domains")}.'
-                    description = (
-                        f'{description}\nOrg: {ioc_raw.get("asn").get("org")}.'
-                    )
-                    description = (
-                        f'{description}\nISP: {ioc_raw.get("asn").get("isp")}.'
-                    )
+                    description = f'{description}\n\nASN: {ioc_raw.get("asn").get("num")}. Number of domains: {ioc_raw.get("asn").get("domains")}'
+                    description = f'{description}\nOrg: {ioc_raw.get("asn").get("org")}'
+                    description = f'{description}\nISP: {ioc_raw.get("asn").get("isp")}'
                     if ioc_raw.get("asn").get("cloud"):
                         description = (
-                            f'{description} Cloud: {ioc_raw.get("asn").get("cloud")}.'
+                            f'{description} Cloud: {ioc_raw.get("asn").get("cloud")}'
                         )
                 if ioc_raw.get("filename"):
                     description = (
@@ -226,6 +222,7 @@ def feed_converter(
 
                 ioc["descr"] = description
                 ioc["score"] = int(ioc_raw["score"]["total"])
+                ioc["confidence"] = int(ioc_raw["score"]["src"])
                 if ioc["score"] < min_score:
                     continue
 
@@ -244,11 +241,13 @@ def feed_converter(
                 main_observable_type = None
                 if feed_type == FeedType.IP:
                     indicator_name = ioc_raw["ip"]["v4"]
-                    indicator_pattern = "[ipv4-addr:value='{}']".format(indicator_name)
+                    indicator_pattern = "[ipv4-addr:value = '{}']".format(
+                        indicator_name
+                    )
                     main_observable_type = "IPv4-Addr"
                 elif feed_type == FeedType.DOMAIN:
                     indicator_name = ioc_raw["domain"]
-                    indicator_pattern = "[domain-name:value='{}']".format(
+                    indicator_pattern = "[domain-name:value = '{}']".format(
                         indicator_name
                     )
                     main_observable_type = "Domain-Name"
@@ -256,7 +255,7 @@ def feed_converter(
                     # encode apostrophe to avoid escaping as it is required
                     # in "9.2 Constants", STIX v2.1 OASIS Standard
                     indicator_name = ioc_raw["url"].replace("'", "%27")
-                    indicator_pattern = "[url:value='{}']".format(indicator_name)
+                    indicator_pattern = "[url:value = '{}']".format(indicator_name)
                     main_observable_type = "Url"
                 elif feed_type == FeedType.HASH:
                     hashes = list()
@@ -334,7 +333,7 @@ def feed_converter(
                 # find threat mappings
                 threats_keys = list()
                 for t in threats:
-                    if t.endswith("_group"):
+                    if t.endswith("_group") or t.endswith("_actor"):
                         threat_name = t[:-6]
                         threat_type = ThreatTypes.GROUP
                         threat_key = IntrusionSet.generate_id(threat_name)
