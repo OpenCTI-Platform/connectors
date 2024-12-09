@@ -24,6 +24,7 @@ dependencies = [
     "cvss~=3.3",
     "semver>=3,<4",
     "requests~=2.32.2",
+    "PyYAML~=6.0.0"
 ]
 
 [project.optional-dependencies]
@@ -37,6 +38,7 @@ dev = [
     "ruff>=0.7.2,<1",  # linter
     "mypy>=1.13.0,<2",  # type validator
     "types-requests",  # stubs for requests lib
+    "types-PyYAML",  # stubs for PyYAML lib
     "python-dotenv~=1.0.1",
     "pip-audit~=2.7.3"
 ]

@@ -48,6 +48,21 @@ export $(grep -v '^#' .env | xargs -d '\n')
 
 or `docker-compose.yml` in the container `environment` section.
 
+with a config.yaml file (dev purposes):
+
+config.yaml should be composed of 2 levels keys/value such as
+```yaml
+connector: 
+  id: "..."
+```
+you can then alter the `app.py` file to load the config.yaml using the dedicated adapterr:
+
+```python 
+from tenable_security_center.adapters.config import ConfigLoaderYaml
+
+config = ConfigLoaderYaml("path/to/config.yaml")
+```
+
 ### OpenCTI environment variables
 
 Below are the parameters you'll need to set for OpenCTI:
