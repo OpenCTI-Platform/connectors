@@ -1,19 +1,7 @@
-from datetime import datetime
-
-from stix_shifter.stix_translation import stix_translation
+from datetime import datetime, timezone
 
 PRODUCT_NAME = "OPENCTI"
 VENDOR_NAME = "FILIGRAN"
-
-
-def now():
-    # Get the current time
-    current_time = datetime.utcnow()
-
-    # Format the current time
-    formatted_time = current_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-
-    return formatted_time
 
 
 class CTIConverter:
@@ -26,6 +14,16 @@ class CTIConverter:
         """
         self.config = config
         self.helper = helper
+
+    @staticmethod
+    def current_date() -> str:
+        # Get the current time
+        current_time = datetime.now(timezone.utc)
+
+        # Format the current time
+        formatted_time = current_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+        return formatted_time
 
     def create_udm_entity(self, data):
         """
@@ -46,7 +44,7 @@ class CTIConverter:
                 metadata = {
                     "vendor_name": VENDOR_NAME,
                     "product_name": PRODUCT_NAME,
-                    "collected_timestamp": str(now()),
+                    "collected_timestamp": self.current_date(),
                     "product_entity_id": data["id"],
                     "interval": {
                         "start_time": data["valid_from"],
