@@ -48,7 +48,16 @@ class ChronicleSIEMConnector:
 
     def check_stream_id(self) -> None:
         """
-        In case of stream_id configuration is missing, raise ValueError
+        Validates the presence of a stream ID in the configuration.
+
+        This method ensures that the `connect_live_stream_id` is properly set and
+        does not contain a placeholder value (e.g., "changeme").
+
+        :raises ValueError:
+            Raised if the `connect_live_stream_id` is missing or contains an invalid placeholder value.
+
+        Example Usage:
+            self.check_stream_id()  # Ensures the stream ID is properly configured.
         """
         if (
             not self.helper.connect_live_stream_id
@@ -58,10 +67,32 @@ class ChronicleSIEMConnector:
 
     def handle_logger_info(self, data: dict, event_context: dict = None) -> None:
         """
-        On action, update connector logger info
-        :param event_context: Additional context for `update` event (optional)
-        :param data: Data streamed by OpenCTI in dict
-        :return: None
+        Updates the connector logger with information about the current action being processed.
+
+        Depending on whether an event context is provided, this method distinguishes between
+        an "UPDATE" action or a "CREATE" action and logs the respective indicator details.
+
+        :param data:
+            A dictionary containing the data streamed by OpenCTI. This must include an "id" key
+            corresponding to the indicator being processed.
+
+        :param event_context:
+            An optional dictionary providing additional context for an "UPDATE" event. If not provided,
+            the action is assumed to be a "CREATE" event.
+
+        :return:
+            None
+
+        Logging:
+            Logs the action type ("CREATE" or "UPDATE") and the ID of the indicator being processed
+            using `self.helper.connector_logger.info`.
+
+        Example Usage:
+            self.handle_logger_info(data={"id": "indicator--bf32b2a0-3830-4769-ae0f-9fe50c04d02f"})
+            # Logs: [CREATE] Processing Indicator with ID indicator--bf32b2a0-3830-4769-ae0f-9fe50c04d02f
+
+            self.handle_logger_info(data={"id": "indicator--bf32b2a0-3830-4769-ae0f-9fe50c04d05b"}, event_context={"type": "update"})
+            # Logs: [UPDATE] Processing Indicator with ID indicator--bf32b2a0-3830-4769-ae0f-9fe50c04d05b
         """
 
         self.helper.connector_logger.info(
@@ -84,21 +115,54 @@ class ChronicleSIEMConnector:
             )
             raise JSONDecodeError("Data cannot be parsed to JSON", msg.data, 0)
 
-    def _upsert_ioc_rule(self, indicator):
+    def _upsert_ioc_rule(self, indicator: dict) -> None:
         """
         Convert each indicator's observable to a UDM entity and upsert it in Chronicle.
         :param indicator: Indicator to upsert
         """
-        udm_entities = self.converter.create_udm_entity(indicator)
-        self.api_client.ingest(udm_entities)
+        udm_entities = self.converter.create_udm_entities_from_indicator(indicator)
+        entities_ingested = self.api_client.ingest(udm_entities)
+
+        if entities_ingested:
+            self.helper.connector_logger.info(
+                "[API] Entities have been successfully ingested",
+            )
+        else:
+            self.helper.connector_logger.error("[API] Error while ingesting indicator")
 
     def process_message(self, msg) -> None:
         """
-        Main process if connector successfully works
-        The data passed in the data parameter is a dictionary with the following structure as shown in
+        Processes a message event received from the OpenCTI stream.
+
+        This is the main method responsible for handling messages streamed by OpenCTI. It validates the incoming
+        data, checks the stream ID, and processes the event based on its type ("create" or "update" or "delete").
+
+        The method is specifically designed to handle entities of type 'Indicator' with a pattern type of 'stix'.
+
+        The msg passed in the data parameter is a dictionary with the following structure as shown in
         https://docs.opencti.io/latest/development/connectors/#additional-implementations
-        :param msg: Message event from stream
-        :return: None
+
+        :param msg:
+            The message event received from the OpenCTI stream. This is expected to contain the event type
+            ("create" or "update") and the associated data.
+
+        :return:
+            None
+
+        Example Usage:
+            self.process_message(msg)
+
+        Workflow:
+            1. Validates the stream ID.
+            2. Parses and validates the message as JSON.
+            3. Extracts the data and processes it if the entity type is 'Indicator'.
+            4. Handles 'create' and 'update' events differently:
+               - Logs the action.
+               - Calls `_upsert_ioc_rule` to process the IOC (Indicator of Compromise).
+
+        Error Handling:
+            - Gracefully handles keyboard interrupts and system exits, logging an appropriate message.
+            - Logs any unexpected exceptions as errors.
         """
         try:
             self.check_stream_id()

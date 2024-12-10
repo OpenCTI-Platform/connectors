@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+from .utils import ENTITY_TYPE_MAPPER, HASH_TYPES
+
 PRODUCT_NAME = "OPENCTI"
 VENDOR_NAME = "FILIGRAN"
 
@@ -25,101 +27,133 @@ class CTIConverter:
 
         return formatted_time
 
-    def create_udm_entity(self, data):
+    def extract_octi_ioc_url(self, data: dict) -> str | None:
         """
-        Create a UDM chronicle entity based on an openCTI stream indicator.
-        :param data: OpenCTI Indicator
+        Extract the OpenCTI URL for an IOC from the data.
+        :param data: Data of OpenCTI Indicator in dict
+        :return: OpenCTI URL for the IOC
+        """
+        x_opencti_ioc_id = self.helper.get_attribute_in_extension("id", data)
+        ioc_opencti_url = (
+            self.helper.opencti_url
+            + "/dashboard/observations/indicators/"
+            + x_opencti_ioc_id
+        )
+
+        if x_opencti_ioc_id:
+            return ioc_opencti_url
+        else:
+            return None
+
+    def generate_entity_metadata(self, data: dict) -> dict:
+        """
+        Generate metadata for Chronicle entity UDM format
+        :param data: Data of OpenCTI Indicator in dict
+        :return: Entity metadata in dict
+        """
+        ioc_stix_id = data["id"]
+        ioc_start_time = data["valid_from"]
+        ioc_end_time = data["valid_until"]
+        ioc_confidence_level = data.get("confidence")
+        ioc_description = data.get("description")
+        ioc_score = int(self.helper.get_attribute_in_extension("score", data))
+        ioc_threat_labels = data.get("labels")
+        x_opencti_ioc_url = self.extract_octi_ioc_url(data)
+
+        metadata = {
+            "vendor_name": VENDOR_NAME,
+            "product_name": PRODUCT_NAME,
+            "collected_timestamp": self.current_date(),
+            "product_entity_id": ioc_stix_id,
+            "description": ioc_description,
+            "interval": {
+                "start_time": ioc_start_time,
+                "end_time": ioc_end_time,
+            },
+            "threat": {
+                "confidence_details": (
+                    str(ioc_confidence_level) if ioc_confidence_level else None
+                ),
+                "confidence_score": ioc_confidence_level,
+                "risk_score": ioc_score,
+                "category_details": ioc_threat_labels,
+                "url_back_to_product": x_opencti_ioc_url,
+            },
+        }
+
+        return metadata
+
+    @staticmethod
+    def generate_entity_details(observable: dict, entity_metadata: dict) -> dict:
+        """
+        Generate entity details for Chronicle entity UDM format and complete entity metadata with correct entity type.
+        :param observable:
+        :param entity_metadata:
         :return:
         """
-        events = []
-        # Use the new method to get parsed observables from STIX pattern
+        x_opencti_observable_type = observable.get("type").lower()
+
+        entity = {}
+
+        for observable_type in ENTITY_TYPE_MAPPER:
+            chronicle_entity_field = ENTITY_TYPE_MAPPER[observable_type][
+                "chronicle_entity_field"
+            ]
+            chronicle_entity_type = ENTITY_TYPE_MAPPER[observable_type][
+                "chronicle_entity_type"
+            ]
+
+            if (
+                x_opencti_observable_type == observable_type
+                and x_opencti_observable_type != "stixfile"
+            ):
+                entity[chronicle_entity_field] = observable.get("value")
+                entity_metadata["entity_type"] = chronicle_entity_type
+            elif x_opencti_observable_type == "stixfile":
+                file = {}
+                for key, value in observable.get("hashes").items():
+                    if key.lower() in HASH_TYPES:
+                        file[key.lower()] = value
+
+                entity["file"] = file
+                entity_metadata["entity_type"] = chronicle_entity_type
+
+        return entity
+
+    def create_udm_entities_from_indicator(self, indicator: dict) -> list:
+        """
+        Create a UDM chronicle entity based on an openCTI stream indicator.
+        :param indicator: Data of OpenCTI Indicator in dict
+        :return List of UDM entities in dict as Events
+        """
+        self.helper.connector_logger.info(
+            "Creating UDM entities from OpenCTI Indicator for Chronicle to be ingested..."
+        )
+
+        udm_entities = []
+
+        # Use the new method to get parsed observables from STIX pattern introduced in >= 6.4
         parsed_observables = self.helper.get_attribute_in_extension(
-            "observable_values", data
+            "observable_values", indicator
         )
 
         if parsed_observables:
+
+            # Iterate over the parsed observables
             for observable in parsed_observables:
-                print(f"going to parse observable: {observable}")
 
-                metadata = {
-                    "vendor_name": VENDOR_NAME,
-                    "product_name": PRODUCT_NAME,
-                    "collected_timestamp": self.current_date(),
-                    "product_entity_id": data["id"],
-                    "interval": {
-                        "start_time": data["valid_from"],
-                        "end_time": data["valid_until"],
-                    },
-                    "threat": {
-                        # "confidence_details": str(data["confidence"]),
-                        "confidence_score": data.get("confidence"),
-                        "risk_score": int(
-                            self.helper.get_attribute_in_extension("score", data)
-                        ),
-                        # "url_back_to_product": ""
-                    },
-                }
+                entity_metadata = self.generate_entity_metadata(indicator)
+                entity_details = self.generate_entity_details(
+                    observable, entity_metadata
+                )
 
-                if data.get("description", None):
-                    metadata["description"] = data.get("description")
-
-                if data.get("labels"):
-                    metadata["threat"]["category_details"] = ", ".join(
-                        data.get("labels")
-                    )
-
-                entity = {}
-                match observable.get("type").lower():
-                    case "domain-name":
-                        entity["hostname"] = observable.get("value")
-                        metadata["entity_type"] = "DOMAIN_NAME"
-                    case "hostname":
-                        entity["hostname"] = observable.get("value")
-                        metadata["entity_type"] = "DOMAIN_NAME"
-                    case "ipv4-addr":
-                        entity["ip"] = observable.get("value")
-                        metadata["entity_type"] = "IP_ADDRESS"
-                    case "ipv6-addr":
-                        entity["ip"] = observable.get("value")
-                        metadata["entity_type"] = "IP_ADDRESS"
-                    case "url":
-                        # remove the http or https protocol from URL if your log source doesn't record this
-                        # sanitized_url = fix_url(indicator['value'],"^http(s)?://")
-                        # entity['url'] = sanitized_url
-                        entity["url"] = observable.get("value")
-                        metadata["entity_type"] = "URL"
-                    case "stixfile":
-                        file = {}
-                        metadata["entity_type"] = "FILE"
-                        for key, value in observable.get("hashes").items():
-                            if key.lower() == "md5":
-                                file["md5"] = value
-                                entity["file"] = file
-                            if key.lower() == "sha-1":
-                                file["sha1"] = value
-                                entity["file"] = file
-                            if key.lower() == "sha-256":
-                                file["sha256"] = value
-                                entity["file"] = file
-                            if key.lower() == "sha-512":
-                                file["sha512"] = value
-                                entity["file"] = file
-                    case _:
-                        self.helper.connector_logger.info(
-                            f"Unable to map observable type: {observable.get('type')} "
-                            f"to Chronicle entity type, skipping indicator"
-                        )
-                        pass
                 # create the final UDM event
-                event = {}
-                event["metadata"] = metadata
-                event["entity"] = entity
-                event["additional"] = {}
-                events.append(event)
+                udm_entity = {"metadata": entity_metadata, "entity": entity_details}
+                udm_entities.append(udm_entity)
         else:
             self.helper.connector_logger.info(
                 "Indicator doesn't contains 'observable_values' key, unable to parse observables",
-                {"indicator_id": data["id"]},
+                {"indicator_id": indicator["id"]},
             )
-        print(events)
-        return events
+
+        return udm_entities
