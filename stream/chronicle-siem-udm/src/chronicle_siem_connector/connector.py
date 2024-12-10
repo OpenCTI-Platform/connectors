@@ -1,4 +1,6 @@
 import json
+import sys
+from json import JSONDecodeError
 
 from pycti import OpenCTIConnectorHelper
 
@@ -44,7 +46,7 @@ class ChronicleSIEMConnector:
         self.converter = CTIConverter(self.helper, self.config)
         self.api_client = ChronicleEntitiesClient(self.helper, self.config)
 
-    def check_stream_id(self):
+    def check_stream_id(self) -> None:
         """
         In case of stream_id configuration is missing, raise ValueError
         """
@@ -54,20 +56,33 @@ class ChronicleSIEMConnector:
         ):
             raise ValueError("Missing stream ID, please check your configurations.")
 
-    def _handle_upsert(self, data: dict, event_context: dict = None):
+    def handle_logger_info(self, data: dict, event_context: dict = None) -> None:
         """
-        Handle `create` or `update` event.
-        :param data: Data streamed by OpenCTI
+        On action, update connector logger info
         :param event_context: Additional context for `update` event (optional)
+        :param data: Data streamed by OpenCTI in dict
+        :return: None
         """
 
-        if data["type"] == "indicator" and data["pattern_type"].startswith("stix"):
+        self.helper.connector_logger.info(
+            f"{'[UPDATE]' if event_context else '[CREATE]'} Processing Indicator",
+            {"indicator_id": data["id"]},
+        )
 
-            self.helper.connector_logger.info(
-                f"{'[UPDATE]' if event_context else '[CREATE]'} Indicator",
-                {"indicator_id": data["id"]},
+    def validate_json(self, msg) -> dict | JSONDecodeError:
+        """
+        Validate the JSON data from the stream
+        :param msg: Message event from stream
+        :return: Parsed JSON data or raise JSONDecodeError if JSON data cannot be parsed
+        """
+        try:
+            parsed_msg = json.loads(msg.data)
+            return parsed_msg
+        except json.JSONDecodeError:
+            self.helper.connector_logger.error(
+                "[ERROR] Data cannot be parsed to JSON", {"msg_data": msg.data}
             )
-            self._upsert_ioc_rule(data)
+            raise JSONDecodeError("Data cannot be parsed to JSON", msg.data, 0)
 
     def _upsert_ioc_rule(self, indicator):
         """
@@ -77,32 +92,48 @@ class ChronicleSIEMConnector:
         udm_entities = self.converter.create_udm_entity(indicator)
         self.api_client.ingest(udm_entities)
 
-    def process_message(self, msg):
+    def process_message(self, msg) -> None:
         """
         Main process if connector successfully works
         The data passed in the data parameter is a dictionary with the following structure as shown in
         https://docs.opencti.io/latest/development/connectors/#additional-implementations
         :param msg: Message event from stream
+        :return: None
         """
-        self.check_stream_id()
-
         try:
-            parsed_msg = json.loads(msg.data)
-        except json.JSONDecodeError:
-            self.helper.connector_logger.error(
-                "[ERROR] Cannot parse message's data", {"msg_data": msg.data}
+            self.check_stream_id()
+
+            parsed_msg = self.validate_json(msg)
+            data = parsed_msg["data"]
+
+            # When an IOC is updated, get the context of the update event
+            event_context = parsed_msg["context"] if "context" in parsed_msg else None
+
+            # Extract data and handle only entity type 'Indicator' from stream
+            if data["type"] == "indicator" and data["pattern_type"] in ["stix"]:
+                self.helper.connector_logger.info(
+                    "Starting to extract data...",
+                    {"pattern_type": data["pattern_type"]},
+                )
+
+                # Handle creation
+                if msg.event == "create":
+                    self.handle_logger_info(data)
+                    self._upsert_ioc_rule(data)
+
+                # Handle update
+                if msg.event == "update":
+                    self.handle_logger_info(data, event_context)
+                    self._upsert_ioc_rule(data)
+
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Connector stopped...",
+                {"connector_name": self.helper.connect_name},
             )
-            return
-
-        data = parsed_msg["data"]
-
-        context = parsed_msg["context"] if "context" in parsed_msg else None
-
-        match msg.event:
-            case "create":
-                self._handle_upsert(data)
-            case "update":
-                self._handle_upsert(data, context)
+            sys.exit(0)
+        except Exception as err:
+            self.helper.connector_logger.error(str(err))
 
     def run(self):
         """

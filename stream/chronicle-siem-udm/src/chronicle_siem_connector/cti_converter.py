@@ -35,7 +35,9 @@ class CTIConverter:
         """
         events = []
         # Use the new method to get parsed observables from STIX pattern
-        parsed_observables = self.helper.get_attribute_in_extension("observable_values", data)
+        parsed_observables = self.helper.get_attribute_in_extension(
+            "observable_values", data
+        )
 
         if parsed_observables:
             for observable in parsed_observables:
@@ -51,69 +53,75 @@ class CTIConverter:
                         "end_time": data["valid_until"],
                     },
                     "threat": {
-                        #"confidence_details": str(data["confidence"]),
+                        # "confidence_details": str(data["confidence"]),
                         "confidence_score": data.get("confidence"),
-                        "risk_score": int(self.helper.get_attribute_in_extension("score", data))
-                        #"url_back_to_product": ""
-                    }
+                        "risk_score": int(
+                            self.helper.get_attribute_in_extension("score", data)
+                        ),
+                        # "url_back_to_product": ""
+                    },
                 }
 
                 if data.get("description", None):
                     metadata["description"] = data.get("description")
 
                 if data.get("labels"):
-                    metadata["threat"]["category_details"] = ", ".join(data.get("labels"))
+                    metadata["threat"]["category_details"] = ", ".join(
+                        data.get("labels")
+                    )
 
                 entity = {}
                 match observable.get("type").lower():
                     case "domain-name":
-                        entity['hostname'] = observable.get("value")
-                        metadata['entity_type'] = 'DOMAIN_NAME'
+                        entity["hostname"] = observable.get("value")
+                        metadata["entity_type"] = "DOMAIN_NAME"
                     case "hostname":
-                        entity['hostname'] = observable.get("value")
-                        metadata['entity_type'] = 'DOMAIN_NAME'
+                        entity["hostname"] = observable.get("value")
+                        metadata["entity_type"] = "DOMAIN_NAME"
                     case "ipv4-addr":
-                        entity['ip'] = observable.get("value")
-                        metadata['entity_type'] = 'IP_ADDRESS'
+                        entity["ip"] = observable.get("value")
+                        metadata["entity_type"] = "IP_ADDRESS"
                     case "ipv6-addr":
-                        entity['ip'] = observable.get("value")
-                        metadata['entity_type'] = 'IP_ADDRESS'
+                        entity["ip"] = observable.get("value")
+                        metadata["entity_type"] = "IP_ADDRESS"
                     case "url":
                         # remove the http or https protocol from URL if your log source doesn't record this
                         # sanitized_url = fix_url(indicator['value'],"^http(s)?://")
                         # entity['url'] = sanitized_url
-                        entity['url'] = observable.get("value")
-                        metadata['entity_type'] = 'URL'
+                        entity["url"] = observable.get("value")
+                        metadata["entity_type"] = "URL"
                     case "stixfile":
                         file = {}
-                        metadata['entity_type'] = 'FILE'
+                        metadata["entity_type"] = "FILE"
                         for key, value in observable.get("hashes").items():
                             if key.lower() == "md5":
-                                file['md5'] = value
-                                entity['file'] = file
+                                file["md5"] = value
+                                entity["file"] = file
                             if key.lower() == "sha-1":
-                                file['sha1'] = value
-                                entity['file'] = file
+                                file["sha1"] = value
+                                entity["file"] = file
                             if key.lower() == "sha-256":
-                                file['sha256'] = value
-                                entity['file'] = file
+                                file["sha256"] = value
+                                entity["file"] = file
                             if key.lower() == "sha-512":
-                                file['sha512'] = value
-                                entity['file'] = file
+                                file["sha512"] = value
+                                entity["file"] = file
                     case _:
-                        self.helper.connector_logger.info(f"Unable to map observable type: {observable.get('type')} "
-                                                          f"to Chronicle entity type, skipping indicator")
+                        self.helper.connector_logger.info(
+                            f"Unable to map observable type: {observable.get('type')} "
+                            f"to Chronicle entity type, skipping indicator"
+                        )
                         pass
                 # create the final UDM event
                 event = {}
-                event['metadata'] = metadata
-                event['entity'] = entity
-                event['additional'] = {}
+                event["metadata"] = metadata
+                event["entity"] = entity
+                event["additional"] = {}
                 events.append(event)
         else:
             self.helper.connector_logger.info(
                 "Indicator doesn't contains 'observable_values' key, unable to parse observables",
-                {"indicator_id": data["id"]})
+                {"indicator_id": data["id"]},
+            )
         print(events)
         return events
-

@@ -1,5 +1,6 @@
 from google.auth.transport import requests
 from google.oauth2 import service_account
+
 from .regions import url_always_prepend_region
 
 CHRONICLE_API_BASE_URL = "https://chronicle.googleapis.com"
@@ -19,12 +20,13 @@ class ChronicleEntitiesClient:
         self.http_session = self.init_session()
 
         self.base_url_with_region = url_always_prepend_region(
-            CHRONICLE_API_BASE_URL,
-            self.config.chronicle_project_region
+            CHRONICLE_API_BASE_URL, self.config.chronicle_project_region
         )
-        parent = (f"projects/{self.config.chronicle_project_id}/"
-                  f"locations/{self.config.chronicle_project_region}/"
-                  f"instances/{self.config.chronicle_project_instance}")
+        parent = (
+            f"projects/{self.config.chronicle_project_id}/"
+            f"locations/{self.config.chronicle_project_region}/"
+            f"instances/{self.config.chronicle_project_instance}"
+        )
         self.url = f"{self.base_url_with_region}/v1alpha/{parent}/entities:import"
 
     def init_session(self) -> requests.AuthorizedSession:
@@ -45,8 +47,7 @@ class ChronicleEntitiesClient:
         }
         try:
             credentials = service_account.Credentials.from_service_account_info(
-                info=service_account_info,
-                scopes=SCOPES
+                info=service_account_info, scopes=SCOPES
             )
             return requests.AuthorizedSession(credentials)
         except Exception as err:
@@ -61,12 +62,7 @@ class ChronicleEntitiesClient:
         :param entities:
         :return:
         """
-        body = {
-            "inline_source": {
-                "entities": entities,
-                "log_type": "CSV_CUSTOM_IOC"
-            }
-        }
+        body = {"inline_source": {"entities": entities, "log_type": "CSV_CUSTOM_IOC"}}
         response = self.http_session.request("POST", self.url, json=body)
         if response.status_code >= 400:
             print(response.text)
