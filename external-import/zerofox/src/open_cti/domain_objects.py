@@ -1,3 +1,4 @@
+import pycountry
 import pycti
 from stix2 import (
     TLP_AMBER,
@@ -10,6 +11,13 @@ from stix2 import (
     Tool,
     Vulnerability,
 )
+
+
+def _get_country_name(country_code: str) -> str:
+    try:
+        return pycountry.countries.get(alpha_2=country_code).name
+    except Exception:
+        return country_code
 
 
 def _additional_kwargs(created_by) -> dict:
@@ -26,6 +34,7 @@ def indicator(
     pattern: str,
     pattern_type: str,
     indicator_types: list,
+    observable_type: str,
 ):
     return Indicator(
         id=pycti.Indicator.generate_id(pattern=pattern),
@@ -35,6 +44,9 @@ def indicator(
         pattern_type=pattern_type,
         indicator_types=indicator_types,
         **_additional_kwargs(created_by),
+        custom_properties={
+            "x_opencti_main_observable_type": observable_type,
+        },
     )
 
 
@@ -65,7 +77,7 @@ def location(
     postal_code: str | None,
     created_by: str,
 ):
-    name = f"{country} - {postal_code}"
+    name = _get_country_name(country)
     return Location(
         id=pycti.Location.generate_id(name=name, x_opencti_location_type="Country"),
         name=name,
