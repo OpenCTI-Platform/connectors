@@ -368,7 +368,7 @@ class TheHive:
 
     def process_logic(self, type, last_date_key, bundle_func):
         """Process case or alert based on returned query. Update state once complete."""
-        self.helper.log_error(
+        self.helper.log_info(
             f"here the cureent state of the connector : {self.current_state}..."
         )
 
@@ -466,7 +466,7 @@ class TheHive:
         """Process all observables from a case."""
         try:
             case_id = case.get("_id")
-            self.helper.log_error(f"!!! here the value of case_id : {case_id}")
+            self.helper.log_info(f"!!! here the value of case_id : {case_id}")
             response = self.thehive_api.case.find_observables(case_id=case.get("_id"))
 
             if response and len(response) > 0:
