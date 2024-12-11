@@ -14,7 +14,6 @@ from pycti import (  # type: ignore[import-untyped] # pycti does not provide stu
     OpenCTIConnectorHelper,
 )
 
-from tenable_security_center.utils import IdsCache
 from tenable_security_center.domain.use_case import ConverterToStix
 
 from tenable_security_center.ports.errors import DataRetrievalError
@@ -51,8 +50,6 @@ class Connector:
         )
         self.work_id = None
         self._expected_stix_objects = 0
-        self._stix_objects_cache = IdsCache(210000)
-        # stix id ~100 bytes, 210000 ~ 20 MB
 
     def _log_error(self, error_message: str) -> None:
         # to connector logger
@@ -109,8 +106,7 @@ class Connector:
         self.work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, self.helper.connect_name
         )
-        # Reset cache
-        self._stix_objects_cache.reset()
+
         # Reset expectations
         self._expected_stix_objects = 0
         self.logger.info(
@@ -163,6 +159,7 @@ class Connector:
         bundles_sent = self.helper.send_stix2_bundle(
             bundle=bundle_json,
             work_id=self.work_id,
+            cleanup_inconsistent_bundle=True,
         )
         self.logger.info(
             "STIX objects sent to OpenCTI.",
@@ -185,19 +182,7 @@ class Connector:
             if len(stix_objects) == 0:
                 return True
 
-            # deduplicate thanks to current work cache
-            new_stix_ids = self._stix_objects_cache.add(list(stix_objects.keys()))
-            deduped_stix_objects = [stix_objects[stix_id] for stix_id in new_stix_ids]
-            self.logger.info(
-                "STIX objects deduplicated with cache.",
-                {"deduped_stix_objects": str(len(deduped_stix_objects))},
-            )
-
-            if len(deduped_stix_objects) == 0:
-                self.logger.info("No new STIX objects to send.")
-                return True
-
-            self._send_bundle(self.helper.stix2_create_bundle(deduped_stix_objects))
+            self._send_bundle(self.helper.stix2_create_bundle(stix_objects))
 
             return True
 
