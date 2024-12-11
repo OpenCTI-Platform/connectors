@@ -124,17 +124,17 @@ class TheHive:
 
         self.thehive_api = TheHiveApi(self.thehive_url, self.thehive_api_key)
 
-    def construct_query(self, _type, last_date):
+    def construct_query(self, type, last_date):
         """Construct query for alert or cases based on the last_date."""
         self.helper.log_info(
             f"Constructing query with last date: {format_datetime(last_date, DEFAULT_UTC_DATETIME)}"
         )
-        if _type == "case":
+        if type == "case":
             return Gt("_updatedAt", int(last_date * 1000)) | Gt(
                 "_createdAt", int(last_date * 1000)
             )
 
-        elif _type == "alert":
+        elif type == "alert":
             return Gt("_updatedAt", int(last_date * 1000)) | Gt(
                 "_createdAt", int(last_date * 1000)
             )
