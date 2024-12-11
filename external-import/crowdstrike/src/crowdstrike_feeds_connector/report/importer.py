@@ -38,6 +38,7 @@ class ReportImporter(BaseImporter):
         default_latest_timestamp: int,
         tlp_marking: MarkingDefinition,
         include_types: List[str],
+        target_industries: List[str],
         report_status: int,
         report_type: str,
         guess_malware: bool,
@@ -49,6 +50,7 @@ class ReportImporter(BaseImporter):
         self.reports_api_cs = ReportsAPI(helper)
         self.default_latest_timestamp = default_latest_timestamp
         self.include_types = include_types
+        self.target_industries = target_industries
         self.report_status = report_status
         self.report_type = report_type
         self.guess_malware = guess_malware
@@ -73,25 +75,25 @@ class ReportImporter(BaseImporter):
 
         new_state = state.copy()
 
-        latest_report_created_timestamp = None
+        latest_report_modified_timestamp = None
 
         for reports_batch in self._fetch_reports(fetch_timestamp):
             if not reports_batch:
                 break
 
-            latest_report_created_datetime = self._process_reports(reports_batch)
+            latest_report_modified_datetime = self._process_reports(reports_batch)
 
-            if latest_report_created_datetime is not None:
-                latest_report_created_timestamp = datetime_to_timestamp(
-                    latest_report_created_datetime
+            if latest_report_modified_datetime is not None:
+                latest_report_modified_timestamp = datetime_to_timestamp(
+                    latest_report_modified_datetime
                 )
 
                 new_state[self._LATEST_REPORT_TIMESTAMP] = (
-                    latest_report_created_timestamp
+                    latest_report_modified_timestamp
                 )
                 self._set_state(new_state)
 
-        latest_report_timestamp = latest_report_created_timestamp or fetch_timestamp
+        latest_report_timestamp = latest_report_modified_timestamp or fetch_timestamp
 
         self._info(
             "Report importer completed, latest fetch {0}.",
@@ -105,13 +107,16 @@ class ReportImporter(BaseImporter):
 
     def _fetch_reports(self, start_timestamp: int) -> Generator[List, None, None]:
         limit = 30
-        sort = "created_date|asc"
+        sort = "last_modified_date|asc"
         fields = ["__full__"]
 
-        fql_filter = f"created_date:>{start_timestamp}"
+        fql_filter = f"last_modified_date:>{start_timestamp}"
 
         if self.include_types:
             fql_filter = f"{fql_filter}+type:{self.include_types}"
+
+        if self.target_industries:
+            fql_filter = f"{fql_filter}+target_industries:{self.target_industries}"
 
         paginated_query = paginate(self._query_report_entities)
 
@@ -145,33 +150,33 @@ class ReportImporter(BaseImporter):
         report_count = len(reports)
         self._info("Processing {0} reports...", report_count)
 
-        latest_created_datetime = None
+        latest_modified_datetime = None
 
         for report in reports:
             self._process_report(report)
 
-            created_date = report["created_date"]
-            if created_date is None:
+            last_modified_date = report["last_modified_date"]
+            if last_modified_date is None:
                 self._error(
-                    "Missing created date for report {0} ({1})",
+                    "Missing last modified date for report {0} ({1})",
                     report["name"],
                     report["id"],
                 )
                 continue
 
             if (
-                latest_created_datetime is None
-                or created_date > latest_created_datetime
+                latest_modified_datetime is None
+                or last_modified_date > latest_modified_datetime
             ):
-                latest_created_datetime = created_date
+                latest_modified_datetime = last_modified_date
 
         self._info(
             "Processing reports completed (imported: {0}, latest: {1})",
             report_count,
-            latest_created_datetime,
+            latest_modified_datetime,
         )
 
-        return timestamp_to_datetime(latest_created_datetime)
+        return timestamp_to_datetime(latest_modified_datetime)
 
     def _process_report(self, report) -> None:
         self._info("Processing report {0} ({1})...", report["name"], report["id"])

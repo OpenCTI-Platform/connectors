@@ -1000,6 +1000,10 @@ jobs:
           name: Build Docker image opencti/connector-riskiq-passive-total
           command: docker build -t opencti/connector-riskiq-passive-total:latest . && docker tag opencti/connector-riskiq-passive-total:latest opencti/connector-riskiq-passive-total:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/lia-file-feed
+          name: Build Docker image opencti/connector-lia-file-feed
+          command: docker build -t opencti/connector-lia-file-feed:latest . && docker tag opencti/connector-lia-file-feed:latest opencti/connector-lia-file-feed:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1015,6 +1019,8 @@ jobs:
             docker push opencti/connector-splunk:${CIRCLE_TAG}
             docker push opencti/connector-riskiq-passive-total:latest
             docker push opencti/connector-riskiq-passive-total:${CIRCLE_TAG}
+            docker push opencti/connector-lia-file-feed:latest
+            docker push opencti/connector-lia-file-feed:${CIRCLE_TAG}
 
   build_fips_1:
     working_directory: ~/opencti
@@ -1853,6 +1859,10 @@ jobs:
           name: Build Docker image opencti/connector-riskiq-passive-total
           command: docker build -t opencti/connector-riskiq-passive-total:rolling .
       - run:
+          working_directory: ~/opencti/external-import/lia-file-feed
+          name: Build Docker image opencti/connector-lia-file-feed
+          command: docker build -t opencti/connector-lia-file-feed:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1862,7 +1872,7 @@ jobs:
             docker push opencti/connector-harfanglab:rolling
             docker push opencti/connector-splunk:rolling
             docker push opencti/connector-riskiq-passive-total:rolling
-
+            docker push opencti/connector-lia-file-feed:rolling
   build_fips_rolling_1:
     working_directory: ~/opencti
     docker:
