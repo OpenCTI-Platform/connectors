@@ -55,7 +55,7 @@ class Intel471Stream(ABC):
         initial_history: int = None,
         update_existing_data: bool = False,
         proxy_url: Union[str, None] = None,
-        ioc_score: Union[int, None] = None
+        ioc_score: Union[int, None] = None,
     ) -> None:
         self.helper = helper
         self.in_queue = in_queue
@@ -116,7 +116,7 @@ class Intel471Stream(ABC):
                             api_client,
                             ioc_opencti_score=self.ioc_score,
                             girs_names=True,
-                            report_full_content=True
+                            report_full_content=True,
                         )
                     )
                 except EmptyBundle:

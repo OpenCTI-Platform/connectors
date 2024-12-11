@@ -42,10 +42,14 @@ class Intel471Connector:
         api_key = get_config_variable(
             "INTEL471_API_KEY", ["intel471", "api_key"], config
         )
-        proxy_url = get_config_variable(
-            "INTEL471_PROXY", ["intel471", "proxy"], config)
+        proxy_url = get_config_variable("INTEL471_PROXY", ["intel471", "proxy"], config)
         ioc_score = get_config_variable(
-            "INTEL471_IOC_SCORE", ["intel471", "ioc_score"], config, isNumber=True, default=70)
+            "INTEL471_IOC_SCORE",
+            ["intel471", "ioc_score"],
+            config,
+            isNumber=True,
+            default=70,
+        )
 
         for stream_class in (
             Intel471IndicatorsStream,
@@ -54,7 +58,7 @@ class Intel471Connector:
             Intel471ReportsStream,
             Intel471BreachAlertsStream,
             Intel471SpotReportsStream,
-            Intel471MalwareReportsStream
+            Intel471MalwareReportsStream,
         ):
             if interval := get_config_variable(
                 f"INTEL471_INTERVAL_{stream_class.group_label}".upper(),
@@ -81,7 +85,7 @@ class Intel471Connector:
                         initial_history,
                         update_existing_data,
                         proxy_url,
-                        ioc_score
+                        ioc_score,
                     ),
                     interval,
                 )
