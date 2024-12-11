@@ -261,6 +261,11 @@ class RFNotes:
             self.helper.log_error(str(e))
 
         self.helper.set_state({"last_run": timestamp})
+        message = (
+            f"{self.helper.connect_name} connector successfully run, storing last_run for Analyst Notes as "
+            + str(timestamp)
+        )
+        self.helper.api.work.to_processed(work_id, message)
 
     def convert_and_send(self, published, tas, work_id):
         """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""

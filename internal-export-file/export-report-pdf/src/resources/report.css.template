@@ -235,7 +235,7 @@ table {
 }
 tr,
 td {
-  word-break: break-all;
+  word-break: break-word;
 }
 td {
   padding: 15px;

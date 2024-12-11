@@ -7,13 +7,21 @@ import sys
 import time
 
 import cairosvg
+import cmarkgfm
 import yaml
+from cmarkgfm.cmark import Options as cmarkgfmOptions
 from jinja2 import Environment, FileSystemLoader
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from pycti.utils.constants import StixCyberObservableTypes
 from pygal_maps_world.i18n import COUNTRIES
 from pygal_maps_world.maps import World
 from weasyprint import HTML
+
+CMARKGFM_OPTIONS = (
+    cmarkgfmOptions.CMARK_OPT_GITHUB_PRE_LANG  # Use GitHub-style tags for code blocks
+    | cmarkgfmOptions.CMARK_OPT_FOOTNOTES  # Parse footnotes
+    | cmarkgfmOptions.CMARK_OPT_TABLE_PREFER_STYLE_ATTRIBUTES  # Use style attributes to align table cells
+)
 
 
 class ExportReportPdf:
@@ -193,13 +201,19 @@ class ExportReportPdf:
 
         if entities_list is not None:
             list_marking = None
-            if file_markings:
-                list_marking = file_markings[-1]["definition"]
+            if len(file_markings) != 0:
+                list_marking = file_markings
             list_report_date = datetime.datetime.now().strftime("%b %d %Y")
             # Store context for usage in html template
+
+            if list_params is not None:
+                list_search = list_params.get("search", "No search keyword")
+            else:
+                list_search = "No search keyword"
+
             context = {
                 "list_name": "Export of " + entity_type,
-                "list_search": list_params.get("search", "No search keyword"),
+                "list_search": list_search,
                 "list_filters": str(main_filter),
                 "list_marking": list_marking,
                 "list_report_date": list_report_date,
@@ -303,7 +317,12 @@ class ExportReportPdf:
         if report_marking:
             report_marking = report_marking[-1]["definition"]
         report_name = report_dict["name"]
-        report_description = report_dict.get("description", "No description available.")
+        report_description = (
+            report_dict.get("description") or "No description available."
+        )
+        report_description = cmarkgfm.github_flavored_markdown_to_html(
+            report_description, CMARKGFM_OPTIONS
+        )
         report_content = report_dict["content"]
         report_confidence = report_dict["confidence"]
         report_id = report_dict["id"]
@@ -724,6 +743,10 @@ class ExportReportPdf:
 
         # Extract values for inclusion in output pdf
         case_name = case_dict["name"]
+        case_description = case_dict.get("description") or "No description available."
+        case_description = cmarkgfm.github_flavored_markdown_to_html(
+            case_description, CMARKGFM_OPTIONS
+        )
         case_content = case_dict["content"]
         case_marking = case_dict.get("objectMarking", None)
         if case_marking:
@@ -743,9 +766,7 @@ class ExportReportPdf:
         # Store context for usage in html template
         context = {
             "case_name": case_name,
-            "case_description": case_dict.get(
-                "description", "No description available."
-            ),
+            "case_description": case_description,
             "case_content": case_content,
             "case_marking": case_marking,
             "case_confidence": case_confidence,

@@ -160,3 +160,12 @@ omit_match_in =
 ```
 
 [1] https://github.com/OpenCTI-Platform/client-python/tree/master/pycti/entities
+
+### Know Issues:
+
+#### Saved webpage as PDF:
+
+The connector can have issues parsing a PDF created from a webpage.  
+Please select "Save as PDF" action
+and not "Microsoft Print to PDF" to mitigate parsing issues.  
+![img.png](doc/img.png)
