@@ -2,11 +2,12 @@ import json
 import sys
 from json import JSONDecodeError
 
+from chronicle_siem_services import (
+    ChronicleEntitiesClient,
+    ConfigConnector,
+    CTIConverter,
+)
 from pycti import OpenCTIConnectorHelper
-
-from .api_client import ChronicleEntitiesClient
-from .config_variables import ConfigConnector
-from .cti_converter import CTIConverter
 
 
 class ChronicleSIEMConnector:
