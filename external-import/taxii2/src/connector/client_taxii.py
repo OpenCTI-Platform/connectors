@@ -78,9 +78,12 @@ class Taxii2:
         Polls all API roots for the specified collections
         """
         self.helper.log_info("Polling all API Roots")
+        stix_objects = []
         for root in self.config.server.api_roots:
             if coll_title == "*":
-                return self.poll_entire_root(root)
+                obj = self.poll_entire_root(root)
+                if len(obj) > 0:
+                    stix_objects.extend(iter(obj))
             else:
                 try:
                     coll = self._get_collection(root, coll_title)
@@ -90,7 +93,9 @@ class Taxii2:
                     )
                     return
                 try:
-                    return self.poll(coll)
+                    obj2 = self.poll(coll)
+                    if len(obj2) > 0:
+                        stix_objects.extend(iter(obj2))
                 except TAXIIServiceException as err:
                     msg = (
                         f"Error trying to poll Collection {coll_title} "
@@ -98,16 +103,19 @@ class Taxii2:
                     )
                     self.helper.log_error(msg)
                     self.helper.log_error(err)
+        return stix_objects
 
     def poll_entire_root(self, root):
         """
         Polls all Collections in a given API Root
         """
         self.helper.log_info(f"Polling entire API root {root.title}")
-
+        stix_objects = []
         for coll in root.collections:
             try:
-                return self.poll(coll)
+                obj = self.poll(coll)
+                if len(obj) > 0:
+                    stix_objects.extend(iter(obj))
             except TAXIIServiceException as err:
                 msg = (
                     f"Error trying to poll Collection {coll.title} "
@@ -115,6 +123,7 @@ class Taxii2:
                 )
                 self.helper.log_error(msg)
                 self.helper.log_error(err)
+        return stix_objects
 
     def process_response(self, objects, response):
         # This function is required to concat the paginated responses
@@ -146,7 +155,11 @@ class Taxii2:
         objects = []
         self.helper.log_info(f"Polling Collection {collection.title}")
         response = self.get_objects(collection)
-        if "objects" in response and len(response["objects"]) > 0:
+        if (
+            response is not None
+            and "objects" in response
+            and len(response["objects"]) > 0
+        ):
             first_object = response["objects"][0]
             if "spec_version" in response:
                 self.version = response["spec_version"]

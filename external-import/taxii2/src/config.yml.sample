@@ -61,3 +61,5 @@ taxii2:
   notes_to_ignore: 'ChangeMe'
   save_original_indicator_id_to_note: false
   save_original_indicator_id_abstract:
+  change_report_status: false
+  change_report_status_x_opencti_workflow_id: 'ChangeMe'
