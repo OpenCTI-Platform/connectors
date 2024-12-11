@@ -10,14 +10,14 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 from yaml.parser import ParserError
 
 from . import HelperRequest
+from .streams.breach_alerts import Intel471BreachAlertsStream
 from .streams.common import Intel471Stream
 from .streams.cves import Intel471CVEsStream
 from .streams.indicators import Intel471IndicatorsStream
-from .streams.yara import Intel471YARAStream
-from .streams.reports import Intel471ReportsStream
-from .streams.breach_alerts import Intel471BreachAlertsStream
-from .streams.spot_reports import Intel471SpotReportsStream
 from .streams.malware_reports import Intel471MalwareReportsStream
+from .streams.reports import Intel471ReportsStream
+from .streams.spot_reports import Intel471SpotReportsStream
+from .streams.yara import Intel471YARAStream
 
 
 class Intel471Connector:
