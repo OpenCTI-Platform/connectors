@@ -4,7 +4,7 @@
 
 
 # @pytest.mark.usefixtures("setup_config")
-class TestIBMXForcePTIConnector(object):
+class TestIBMXTIConnector(object):
     def test_to_do(self) -> None:
         """
         Check if running test works

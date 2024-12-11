@@ -1,4 +1,4 @@
-# OpenCTI External Ingestion Connector IBM X-Force PTI
+# OpenCTI External Ingestion Connector IBM X-Force Premier Threat Intelligence Services
 
 <!--
 General description of the connector
@@ -11,7 +11,7 @@ General description of the connector
 
 Table of Contents
 
-- [OpenCTI External Ingestion Connector IBM X-Force PTI](#opencti-external-ingestion-connector-ibm-x-force-pti)
+- [OpenCTI External Ingestion Connector IBM X-Force Premier Threat Intelligence Services](#opencti-external-ingestion-connector-ibm-x-force-premier-threat-intelligence-services)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -28,6 +28,10 @@ Table of Contents
   - [Additional information](#additional-information)
 
 ## Introduction
+
+X-Force Threat Intelligence delivers insights to help clients improve their security posture. X-Force Threat Intelligence combines IBM security operations telemetry, research, incident response investigations, commercial data, and open sources to aid clients in understand emerging threats and quickly make informed security decisions.
+
+IBM X-Force offers a TAXII 2.1 Server to access IBM X-Force Premium Threat Intelligence (XTI) Reports and Indicators of Compromise.
 
 ## Installation
 
@@ -55,7 +59,7 @@ Below are the parameters you'll need to set for running the connector properly:
 
 | Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
 |-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
+| Connector ID    | id         | `CONNECTOR_ID`              |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
 | Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
 | Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
 | Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
@@ -65,10 +69,12 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
+| Parameter         | config.yml        | Docker environment variable | Default                    | Mandatory | Description                                                    |
+|-------------------|-------------------|-----------------------------|----------------------------|-----------|----------------------------------------------------------------|
+| TAXII Server URL  | taxii_server_url  | `TAXII_SERVER_URL`          |                            | Yes       | The base URL of the IBM X-Force PTI TAXII Server               |
+| TAXII User        | taxii_user        | `TAXII_USER`                |                            | Yes       | Your TAXII Server username                                     |
+| TAXII Password    | taxii_pass        | `TAXII_PASS`                |                            | Yes       | Your TAXII Server password                                     |
+| TAXII Collections | taxii_collections | `TAXII_COLLECTIONS`         | All authorized collections | No        | Optionally limit ingestion to specified TAXII collections only |
 
 ## Deployment
 
