@@ -2,7 +2,8 @@ import ipaddress
 
 import stix2
 import validators
-from pycti import Identity, StixCoreRelationship
+from pycti import OpenCTIConnectorHelper, Identity, StixCoreRelationship
+from .config_loader import ConfigLoader
 
 
 class ConverterToStix:
@@ -13,7 +14,9 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper, config):
+    def __init__(
+        self, helper: OpenCTIConnectorHelper = None, config: ConfigLoader = None
+    ):
         self.helper = helper
         self.config = config
         self.author = self.create_author()
