@@ -2,7 +2,7 @@ import ipaddress
 
 import stix2
 from dateutil.parser import parse
-from pycti import Identity, StixCoreRelationship, Indicator, Malware
+from pycti import Identity, Indicator, Malware, StixCoreRelationship
 
 
 class ConverterToStix:
