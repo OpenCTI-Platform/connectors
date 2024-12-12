@@ -1,8 +1,13 @@
 import requests
 
+from .config_loader import ConfigLoader
+from pycti import OpenCTIConnectorHelper
+
 
 class SpyCloudClient:
-    def __init__(self, helper, config):
+    def __init__(
+        self, helper: OpenCTIConnectorHelper = None, config: ConfigLoader = None
+    ):
         """
         Initialize the client with necessary configurations
         """
@@ -10,7 +15,7 @@ class SpyCloudClient:
         self.config = config
 
         # Define headers in session and update when needed
-        headers = {"Bearer": self.config.api_key}
+        headers = {"Bearer": self.config.spycloud.api_key}
         self.session = requests.Session()
         self.session.headers.update(headers)
 
