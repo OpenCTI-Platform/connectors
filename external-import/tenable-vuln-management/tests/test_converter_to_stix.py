@@ -56,7 +56,8 @@ def fake_asset():
             "Microsoft Windows Server 2016 Standard"
         ],
         "network_id": "00000000-0000-0000-0000-000000000000",
-        "tracked": true
+        "tracked": true,
+        "last_scan_target": "192.0.0.1"
         }
         """
     )
@@ -121,6 +122,7 @@ def fake_plugin():
           "family": "Windows : Microsoft Bulletins",
           "family_id": 41,
           "has_patch": true,
+          "has_workaround": false,
           "id": 156641,
           "in_the_news": false,
           "ms_bulletin": [
@@ -208,7 +210,8 @@ def fake_vuln_finding():
                 "VMware vCenter Server 8.0.0 build-20037386"
               ],
               "network_id": "00000000-0000-0000-0000-000000000000",
-              "tracked": true
+              "tracked": true,
+              "last_scan_target": "192.0.0.1"
             },
             "output": "The following pages do not set a Content-Security-Policy frame-ancestors response header or set a permissive policy:  - https://vcsa8.target.example.com/  - https://vcsa8.target.example.com/ui/",
             "plugin": {
@@ -230,6 +233,7 @@ def fake_vuln_finding():
               "family": "CGI abuses",
               "family_id": 3,
               "has_patch": false,
+              "has_workaround": false,
               "id": 50344,
               "in_the_news": false,
               "name": "Missing or Permissive Content-Security-Policy frame-ancestors HTTP Response Header",
@@ -257,7 +261,8 @@ def fake_vuln_finding():
             "scan": {
               "schedule_uuid": "16cf08d3-3f94-79f4-8038-996376eabd4f186741fe15533e70",
               "started_at": "2023-05-03T14:13:56.983Z",
-              "uuid": "e86252a3-8dc0-43b6-8ddd-afb219d040ed"
+              "uuid": "e86252a3-8dc0-43b6-8ddd-afb219d040ed",
+              "target": "192.0.0.1"
             },
             "severity": "info",
             "severity_id": 0,

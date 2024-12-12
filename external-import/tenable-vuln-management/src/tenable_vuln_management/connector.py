@@ -1,5 +1,6 @@
 import concurrent.futures
 import sys
+import warnings
 from datetime import datetime, timezone
 from typing import Any
 
@@ -9,6 +10,7 @@ from pydantic import ValidationError
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
+from .models.common import ValidationWarning
 from .models.tenable import VulnerabilityFinding
 
 
@@ -162,15 +164,24 @@ class Connector:
             try:
                 # even though we implemented the ability to bulk convert api response, we do it one by one to maximize
                 # the amount of ingested data in case of a corrupted line
-                vuln_findings.extend(
-                    VulnerabilityFinding.from_api_response_body(
-                        [item], metadata=self._metadata or []
+                with warnings.catch_warnings(
+                    action="error", category=ValidationWarning
+                ):
+                    vuln_findings.extend(
+                        VulnerabilityFinding.from_api_response_body(
+                            [item], metadata=self._metadata or []
+                        )
                     )
+            except ValidationWarning as e:
+                self.helper.connector_logger.warning(
+                    "Unexpected Tenable API response extra parameters",
+                    {"warning": str(e), "content": item},
                 )
             except ValidationError as e:
                 success_flag = False
                 self.helper.connector_logger.error(
-                    "Unexpected Tenable API response", {"error": str(e)}
+                    "Unexpected Tenable API response",
+                    {"error": str(e), "content": item},
                 )
             except Exception as e:
                 success_flag = False
