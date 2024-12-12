@@ -167,9 +167,6 @@ class Connector:
                 with warnings.catch_warnings(
                     action="error", category=ValidationWarning
                 ):
-                    # TODO REMOVE !!!!!!!!!
-                    # item["unexpected_extra"] = "unexpected extra value"
-                    ### END
                     vuln_findings.extend(
                         VulnerabilityFinding.from_api_response_body(
                             [item], metadata=self._metadata or []
