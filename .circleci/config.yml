@@ -1013,6 +1013,8 @@ jobs:
             docker push opencti/connector-sentinel-intel:${CIRCLE_TAG}
             docker push opencti/connector-sentinel:latest
             docker push opencti/connector-sentinel:${CIRCLE_TAG}
+            docker push opencti/connector-harfanglab-intel:latest
+            docker push opencti/connector-harfanglab-intel:${CIRCLE_TAG}
             docker push opencti/connector-harfanglab:latest
             docker push opencti/connector-harfanglab:${CIRCLE_TAG}
             docker push opencti/connector-splunk:latest
@@ -1869,6 +1871,7 @@ jobs:
             docker push opencti/connector-sentinel:rolling
             docker push opencti/connector-sentinel-incidents:rolling
             docker push opencti/connector-sentinel-intel:rolling
+            docker push opencti/connector-harfanglab-intel:rolling
             docker push opencti/connector-harfanglab:rolling
             docker push opencti/connector-splunk:rolling
             docker push opencti/connector-riskiq-passive-total:rolling
