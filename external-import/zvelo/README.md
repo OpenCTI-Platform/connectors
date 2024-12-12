@@ -2,7 +2,7 @@
 
 Table of Contents
 
-- [OpenCTI Zvelo CTI connector](#opencti-external-ingestion-connector-template)
+- [OpenCTI Zvelo CTI connector](#opencti-zvelo-connector)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
