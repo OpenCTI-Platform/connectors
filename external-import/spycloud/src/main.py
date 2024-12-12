@@ -1,6 +1,6 @@
 import traceback
 
-from spycloud_connector import SpyCloudConnector
+from connector import SpyCloudConnector
 
 if __name__ == "__main__":
     """

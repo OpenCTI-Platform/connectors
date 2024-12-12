@@ -3,9 +3,9 @@ from datetime import datetime
 
 from pycti import OpenCTIConnectorHelper
 
-from .client_api import SpyCloudClient
-from .config_variables import ConfigConnector
-from .converter_to_stix import ConverterToStix
+from .services.spycloud_client import SpyCloudClient
+from .services.config_loader import ConfigLoader
+from .services.converter_to_stix import ConverterToStix
 
 
 class SpyCloudConnector:
@@ -17,41 +17,14 @@ class SpyCloudConnector:
     This type of connector aim to fetch external data to create STIX bundle and send it in a RabbitMQ queue.
     The STIX bundle in the queue will be processed by the workers.
     This type of connector uses the basic methods of the helper.
-
-    ---
-
-    Attributes
-        - `config (ConfigConnector())`:
-            Initialize the connector with necessary configuration environment variables
-
-        - `helper (OpenCTIConnectorHelper(config))`:
-            This is the helper to use.
-            ALL connectors have to instantiate the connector helper with configurations.
-            Doing this will do a lot of operations behind the scene.
-
-        - `converter_to_stix (ConnectorConverter(helper))`:
-            Provide methods for converting various types of input data into STIX 2.1 objects.
-
-    ---
-
-    Best practices
-        - `self.helper.api.work.initiate_work(...)` is used to initiate a new work
-        - `self.helper.schedule_iso()` is used to encapsulate the main process in a scheduler
-        - `self.helper.connector_logger.[info/debug/warning/error]` is used when logging a message
-        - `self.helper.stix2_create_bundle(stix_objects)` is used when creating a bundle
-        - `self.helper.send_stix2_bundle(stix_objects_bundle)` is used to send the bundle to RabbitMQ
-        - `self.helper.set_state()` is used to set state
-
     """
 
     def __init__(self):
         """
         Initialize the Connector with necessary configurations
         """
-
-        # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.config = ConfigLoader()
+        self.helper = OpenCTIConnectorHelper(self.config.to_dict())
         self.client = SpyCloudClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
@@ -188,5 +161,5 @@ class SpyCloudConnector:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period,
         )
