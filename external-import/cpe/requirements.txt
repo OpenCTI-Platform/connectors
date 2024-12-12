@@ -1,2 +1,2 @@
-pycti==6.4.3
+pycti==6.4.4
 langcodes
