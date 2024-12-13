@@ -1,8 +1,6 @@
 import unittest
 from datetime import datetime
 
-from stix2 import DomainName, IPv4Address
-
 from shadowserver.utils import (
     check_ip_address,
     clean_dict,
@@ -17,6 +15,7 @@ from shadowserver.utils import (
     validate_date_format,
     validate_marking_refs,
 )
+from stix2 import DomainName, IPv4Address
 
 
 class TestValidateDateFormat(unittest.TestCase):
