@@ -1,8 +1,8 @@
-# OpenCTI Google SecOps Chronicle SIEM
+# OpenCTI Google SecOps SIEM connector
 
 Table of Contents
 
-- [OpenCTI Chronicle SIEM Intel Stream Connector](#opencti-stream-harfanglab-intel)
+- [OpenCTI Google SecOps SIEM Intel Stream Connector](#opencti-stream-google-secops-siem-intel)
     - [Introduction](#introduction)
     - [Installation](#installation)
         - [Requirements](#requirements)
@@ -13,20 +13,19 @@ Table of Contents
     - [Deployment](#deployment)
         - [Docker Deployment](#docker-deployment)
         - [Manual Deployment](#manual-deployment)
-    - [Usage](#usage)
-    - [Known Behavior](#known-behavior)
-    - [Limitations](#limitations)
+    - [Known Limitations and Issues](#known-limitations-and-issues)
+    - [Tests coverage](#tests-coverage)
     - [Debugging](#debugging)
 
 ## Introduction
 
-This connector enables the dissemination of OpenCTI STIX indicators into Google Chronicle SIEM.
-The connector consumes indicators from an OpenCTI stream, convert them as [UDM entities](https://cloud.google.com/chronicle/docs/reference/udm-field-list#securityresult) and push them into Google Chronicle using the ["entities.import"](https://cloud.google.com/chronicle/docs/reference/rest/v1alpha/projects.locations.instances.entities/import) API.
+This connector enables the dissemination of OpenCTI STIX indicators into Google SecOps SIEM (Chronicle SIEM).
+The connector consumes indicators from an OpenCTI stream, convert them as [UDM entities](https://cloud.google.com/chronicle/docs/reference/udm-field-list#securityresult) and push them into Google SecOps SIEM using the ["entities.import"](https://cloud.google.com/chronicle/docs/reference/rest/v1alpha/projects.locations.instances.entities/import) API.
 
 
 OpenCTI data is coming from import connectors. Once this data is ingested in OpenCTI, it is pushed to a Redis event
-stream. This stream is consumed by the Chronicle SIEM connector to insert intel (IOCs) in the
-Google SecOps Chronicle SIEM platform.
+stream. This stream is consumed by the connector to insert intel (IOCs) in the
+Google SecOps SIEM platform.
 
 ```mermaid
 flowchart LR
@@ -37,7 +36,7 @@ flowchart LR
     C -->|dispatches to| D1[Redis stream]
     C -->|dispatches to| D2[Redis stream]
     C -->|dispatches to| D3[Redis stream]
-    D2 -->|consumed by| E(Chronicle SIEM Stream connector)
+    D2 -->|consumed by| E(Google SecOps SIEM Stream connector)
 ```
 
 ## Installation
@@ -140,23 +139,39 @@ python3 main.py
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a
-regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+### OpenCTI Live Stream configuration
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+The connector only supports the ingestion of Indicator entities with a STIX pattern into Chronicle SIEM. The connector does not currently support the processing of observables or any other type of entity.
+It is therefore recommended to configure the OpenCTI stream so that it only exposes indicators with a STIX pattern.
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
+![Stream configuration](./__docs__/media/stream-configuration.png)
 
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
 
-## Known Behavior
+### Field Mappings
 
-## Limitations
+The following field mappings are implemented by default within the connector:
 
-Here's the rewritten section formatted for a README documentation:
+| Chronicle UDM Mapping                | Value                                            |
+|--------------------------------------|--------------------------------------------------|
+| metadata.vendor_name                 | `FILIGRAN`                                       |
+| metadata.product_name                | `OPENCTI`                                        |
+| metadata.collected_timestamp         | UTC Date and Time when indicator is submitted    |
+| metadata.product_entity_id           | 'identifier' value of an OpenCTI indicator       |
+| metadata.description                 | 'description' value of an OpenCTI indicator      |
+| metadata.interval.start_time         | 'valid_from' value of an OpenCTI indicator       |
+| metadata.interval.end_time           | 'valid_until' value of an OpenCTI indicator      |
+| metadata.entity_type                 | `IP_ADDRESS` or `DOMAIN_NAME` or `URL` or `FILE` |
+| metadata.threat.confidence_details   | 'confidence' value of an OpenCTI indicator       |
+| metadata.threat.confidence_score     | 'confidence' value of an OpenCTI indicator       |
+| metadata.threat.risk_score           | 'score' value of an OpenCTI indicator            |
+| metadata.threat.category_details     | 'labels' associated to the OpenCTI indicator     |
+| metadata.threat.url_back_to_product  | OpenCTI URL link to the indicator                |
 
----
+### Dashboard
+
+This repository also contains a simple dashboard that provides an overview of the OpenCTI indicators ingested into Chronicle SIEM. This file can be imported into the dashboard section of Chronicle.
+
+![Chronicle SIEM OpenCTI dashboard](./__docs__/media/dashboard.png)
 
 ## Known Limitations and Issues
 
