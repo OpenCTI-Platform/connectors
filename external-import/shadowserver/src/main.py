@@ -5,7 +5,6 @@ import time
 from datetime import UTC, datetime, timedelta
 
 from lib.external_import import ExternalImportConnector
-
 from shadowserver import ShadowserverAPI, get_tlp_keys, remove_duplicates
 
 # Lookback in days
