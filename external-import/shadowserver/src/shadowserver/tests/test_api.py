@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 import pytest
 import requests
 from pycti import OpenCTIConnectorHelper
-
 from shadowserver.api import ShadowserverAPI
 
 FIXTURES_DIR = "fixtures"

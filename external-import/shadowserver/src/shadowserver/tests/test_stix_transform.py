@@ -3,6 +3,8 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 from pycti import CustomObjectCaseIncident, OpenCTIConnectorHelper
+from shadowserver.stix_transform import ShadowserverStixTransformation
+from shadowserver.utils import datetime_to_string
 from stix2 import (
     Artifact,
     DomainName,
@@ -12,9 +14,6 @@ from stix2 import (
     MACAddress,
     MarkingDefinition,
 )
-
-from shadowserver.stix_transform import ShadowserverStixTransformation
-from shadowserver.utils import datetime_to_string
 
 
 class TestShadowserverStixTransformation(unittest.TestCase):
