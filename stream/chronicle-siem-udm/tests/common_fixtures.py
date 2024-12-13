@@ -21,10 +21,6 @@ def setup_config(request):
     yield
 
 
-def side_effect(*args, **kwargs):
-    return m.return_value
-
-
 def load_file(filename: str) -> dict:
     """
     Utility function to load a json file to a dict

@@ -1,6 +1,9 @@
 import pytest
 
-from .common_fixtures import event_data_samples, setup_config
+from .common_fixtures import (  # noqa: F401 pylint:disable=unused-import
+    event_data_samples,
+    setup_config,
+)
 
 
 @pytest.mark.usefixtures("setup_config", "event_data_samples")
