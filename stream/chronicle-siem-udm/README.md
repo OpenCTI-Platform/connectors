@@ -14,6 +14,7 @@ Table of Contents
         - [Docker Deployment](#docker-deployment)
         - [Manual Deployment](#manual-deployment)
     - [Usage](#usage)
+    - [Known Behavior](#known-behavior)
     - [Limitations](#limitations)
     - [Debugging](#debugging)
 
@@ -46,7 +47,6 @@ flowchart LR
 - Python = 3.11.X (not compatible with 3.12 and above for now)
 - OpenCTI Platform >= 6.4.X
 - pycti >= 6.4.X
-TO BE COMPLETED
 
 ## Configuration variables
 
@@ -150,7 +150,43 @@ However, if you would like to force an immediate download of a new batch of enti
 Find the connector, and click on the refresh button to reset the connector's state and force a new
 download of data by re-running the connector.
 
+## Known Behavior
+
 ## Limitations
+
+Here's the rewritten section formatted for a README documentation:
+
+---
+
+## Known Limitations and Issues
+
+This section outlines some current limitations and issues you may encounter while using this integration. Please consider these points during implementation and operation.
+
+### Quota and Rate Limits
+- **Quota Limits:** Refer to the official [service limits documentation](https://cloud.google.com/chronicle/docs/reference/service-limits) for detailed quota constraints.
+- **Rate-Limiting (429 Errors):** It is recommended to implement error-handling mechanisms with incremental backoff to manage rate-limit scenarios effectively.
+  ![Rate Limits](./__docs__/media/rate-limit.png)  
+  More details: [Burst Limits FAQ](https://cloud.google.com/chronicle/docs/ingestion/burst-limits#frequently_asked_questions)
+
+### OAuth Token Expiry
+- By default, OAuth access tokens expire after **1 hour (3,600 seconds)**. Ensure your token management system requests a new token upon expiration.  
+- To adjust token lifetimes:
+  - Use the [`serviceAccounts.generateAccessToken`](https://cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/generateAccessToken) method for custom token lifetimes (up to **12 hours**).
+  - Extend token lifetimes beyond default by enabling the [`iam.allowServiceAccountCredentialLifetimeExtension`](https://cloud.google.com/resource-manager/docs/organization-policy/restricting-service-accounts#extend_oauth_ttl) constraint through an organizational policy. For additional details, see [Create a Short-Lived Access Token](https://cloud.google.com/iam/docs/create-short-lived-credentials-direct#sa-credentials-oauth).
+
+### Update Latency
+- **Indicator of Compromise (IOC) Updates:** Changes to IOCs are reflected in Chronicle SIEM within **2 to 3 hours** on a custom dashboard and **5 minutes** on direct search.  
+- **Role Updates:** Role updates are processed within **30 minutes**.
+
+## Tests Coverage
+
+The tests cover in first place if the connector converter handle properly the UDM entity generation according to the following observables:
+- Domain
+- Hostname
+- IPV4
+- IPV6
+- URL
+- File
 
 ## Debugging
 
