@@ -498,7 +498,7 @@ class ShadowserverStixTransformation:
             A list of custom labels extracted from the element.
         """
         labels_list = []
-        if element.get("tag") and ";" in element.get("tag"):
+        if element.get("tag"):
             custom_labels = element.get("tag").split(";")
             for label in custom_labels:
                 if label.upper().startswith("CVE"):
@@ -538,7 +538,7 @@ class ShadowserverStixTransformation:
             self.object_refs.append(opencti_obj.get("id"))
             self.stix_objects.append(opencti_obj)
 
-        return opencti_obj.get('id')
+        return opencti_obj.get("id")
 
     def create_asn(self, value: int, labels: list = []):
         """Creates an autonomous system STIX object."""
@@ -716,7 +716,9 @@ class ShadowserverStixTransformation:
             self.extend_stix_object(kwargs, labels)
             if "custom_properties" not in kwargs:
                 kwargs["custom_properties"] = {}
-            kwargs["custom_properties"].update({"x_opencti_description": description_str})
+            kwargs["custom_properties"].update(
+                {"x_opencti_description": description_str}
+            )
 
             stix_object = NetworkTraffic(**kwargs)
 
@@ -724,7 +726,7 @@ class ShadowserverStixTransformation:
                 self.helper.connector_logger.debug(
                     f"Created network traffic STIX object: {stix_object.id}"
                 )
-                stix_object_id = stix_object.get('id', str())
+                stix_object_id = stix_object.get("id", str())
                 self.object_refs.append(stix_object.id)
                 self.stix_objects.append(stix_object)
             else:

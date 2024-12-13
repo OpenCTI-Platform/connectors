@@ -71,7 +71,7 @@
     "sector": "Communications, Service Provider, and Hosting Service",
     "severity": "low",
     "source": "random-source-5",
-    "tag": "cve-2024-38063",
+    "tag": "CVE-2024-38063",
     "timestamp": "2024-01-04 08:04:37Z"
   }
 ]
