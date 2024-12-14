@@ -11,10 +11,10 @@ import stix2
 import yaml
 from pycti import (
     Indicator,
+    MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     get_config_variable,
-    MarkingDefinition,
 )
 
 
