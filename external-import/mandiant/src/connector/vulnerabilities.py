@@ -33,7 +33,7 @@ def process(connector, vulnerability):
         description=utils.sanitizer("description", vulnerability),
         created=utils.sanitizer("publish_date", vulnerability),
         created_by_ref=connector.identity["standard_id"],
-        object_marking_refs=[stix2.TLP_AMBER.get("id")],
+        object_marking_refs=connector.mandiant_marking,
         allow_custom=True,
         custom_properties=custom_properties,
     )
