@@ -29,5 +29,5 @@ services:
       - CISCO_SMA_SINKHOLED_IP_DNS=true       # DNS entries for samples communicating with a known dns sinkhole
       - CISCO_SMA_STOLEN_CERT_DNS=true         # DNS Entries observed from samples signed with a stolen certificate
       - CISCO_SMA_INTERVAL=24                 # In hours
-      - CISCO_SMA_MARKING=TLP:AMBER
+      - CISCO_SMA_MARKING=TLP:AMBER+STRICT
     restart: always

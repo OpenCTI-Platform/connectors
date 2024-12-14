@@ -12,7 +12,7 @@ from pycti import (
     Indicator,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
-    get_config_variable,
+    get_config_variable, MarkingDefinition,
 )
 
 
@@ -167,7 +167,7 @@ class Cisco_SMA:
             "CISCO_SMA_MARKING",
             ["cisco_sma", "marking_definition"],
             config,
-            default="TLP:AMBER",
+            default="TLP:AMBER+STRICT",
         )
 
     def set_marking(self):
@@ -180,10 +180,26 @@ class Cisco_SMA:
             marking = stix2.TLP_GREEN
         elif self.cisco_sma_marking == "TLP:AMBER":
             marking = stix2.TLP_AMBER
+        elif self.cisco_sma_marking == "TLP:AMBER+STRICT":
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:AMBER+STRICT",
+            )
         elif self.cisco_sma_marking == "TLP:RED":
             marking = stix2.TLP_RED
         else:
-            marking = stix2.TLP_AMBER
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="TLP",
+                definition={"TLP": "AMBER+STRICT"},
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:AMBER+STRICT",
+            )
 
         self.cisco_sma_marking = marking
 
@@ -302,6 +318,7 @@ class Cisco_SMA:
 
         k = 0
         self.stix_domain.append(identity)
+        self.stix_domain.append(self.cisco_sma_marking)
         for i in data:
             if len(i) > 2:
                 json_data = json.loads(i)
