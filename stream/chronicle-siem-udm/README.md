@@ -19,7 +19,7 @@ Table of Contents
 
 ## Introduction
 
-This connector enables the dissemination of OpenCTI STIX indicators into Google SecOps SIEM (Chronicle SIEM).
+This connector enables the dissemination of OpenCTI STIX indicators into Google SecOps SIEM.
 The connector consumes indicators from an OpenCTI stream, convert them as [UDM entities](https://cloud.google.com/chronicle/docs/reference/udm-field-list#securityresult) and push them into Google SecOps SIEM using the ["entities.import"](https://cloud.google.com/chronicle/docs/reference/rest/v1alpha/projects.locations.instances.entities/import) API.
 
 
@@ -79,19 +79,19 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter                    | config.yml `chronicle`   | Docker environment variable    | Default | Mandatory   | Description                                                                |
-|------------------------------|--------------------------|--------------------------------|---------|-------------|----------------------------------------------------------------------------|
-| Chronicle Project Region     | `project_region`         | `CHRONICLE_PROJECT_REGION`     | /       | Yes         | The Region where the Chronicle instance is located                         |
-| Chronicle Project Id         | `project_id`             | `CHRONICLE_PROJECT_ID`         | /       | Yes         | The Chronicle project Id                                                   |
-| Chronicle Project Instance   | `project_instance`       | `CHRONICLE_PROJECT_INSTANCE`   | /       | Yes         | The Chronicle project instance                                             |
-| Chronicle Private Key Id     | `private_key_id`         | `CHRONICLE_PRIVATE_KEY_ID`     | /       | Yes         | Google service account private_key_id value (in account.json)              |
-| Chronicle Private Key        | `private_key`            | `CHRONICLE_PRIVATE_KEY`        | /       | Yes         | Google service account private_key value (in account.json)                 |
-| Chronicle Client Email       | `client_email`           | `CHRONICLE_CLIENT_EMAIL`       | /       | Yes         | Google service account client_email value(in account.json)                 |
-| Chronicle Client Id          | `client_id`              | `CHRONICLE_CLIENT_ID`          | /       | Yes         | Google service account client_id value (in account.json)                   |
-| Chronicle Auth URI           | `auth_uri`               | `CHRONICLE_AUTH_URI`           | /       | Yes         | Google service account auth_uri value (in account.json)                    |
-| Chronicle Token URI          | `token_uri`              | `CHRONICLE_TOKEN_URI`          | /       | Yes         | Google service account token_uri value (in account.json)                   |
-| Chronicle Auth Provider Cert | `auth_provider_cert`     | `CHRONICLE_AUTH_PROVIDER_CERT` | /       | Yes         | Google service account auth_provider_x509_cert_url value (in account.json) |
-| Chronicle Client Cert URL    | `client_cert_url`        | `CHRONICLE_CLIENT_CERT_URL`    | /       | Yes         | Google service account client_x509_cert_url value (in account.json)        |
+| Parameter                   | config.yml `chronicle`   | Docker environment variable    | Default | Mandatory   | Description                                                                |
+|-----------------------------|--------------------------|--------------------------------|---------|-------------|----------------------------------------------------------------------------|
+| Google Project Region       | `project_region`         | `CHRONICLE_PROJECT_REGION`     | /       | Yes         | Region where the Google SecOps instance is located                         |
+| Google Project Id           | `project_id`             | `CHRONICLE_PROJECT_ID`         | /       | Yes         | GCP Project Id                                                             |
+| Google Project Instance     | `project_instance`       | `CHRONICLE_PROJECT_INSTANCE`   | /       | Yes         | Google SecOps customer Id                                                  |
+| Google Private Key Id       | `private_key_id`         | `CHRONICLE_PRIVATE_KEY_ID`     | /       | Yes         | Google service account private_key_id value (in account.json)              |
+| Google Private Key          | `private_key`            | `CHRONICLE_PRIVATE_KEY`        | /       | Yes         | Google service account private_key value (in account.json)                 |
+| Google Client Email         | `client_email`           | `CHRONICLE_CLIENT_EMAIL`       | /       | Yes         | Google service account client_email value(in account.json)                 |
+| Google Client Id            | `client_id`              | `CHRONICLE_CLIENT_ID`          | /       | Yes         | Google service account client_id value (in account.json)                   |
+| Google Auth URI             | `auth_uri`               | `CHRONICLE_AUTH_URI`           | /       | Yes         | Google service account auth_uri value (in account.json)                    |
+| Google Token URI            | `token_uri`              | `CHRONICLE_TOKEN_URI`          | /       | Yes         | Google service account token_uri value (in account.json)                   |
+| Google Auth Provider Cert   | `auth_provider_cert`     | `CHRONICLE_AUTH_PROVIDER_CERT` | /       | Yes         | Google service account auth_provider_x509_cert_url value (in account.json) |
+| Google Client Cert URL      | `client_cert_url`        | `CHRONICLE_CLIENT_CERT_URL`    | /       | Yes         | Google service account client_x509_cert_url value (in account.json)        |
 
 ## Deployment
 
@@ -141,7 +141,7 @@ python3 main.py
 
 ### OpenCTI Live Stream configuration
 
-The connector only supports the ingestion of Indicator entities with a STIX pattern into Chronicle SIEM. The connector does not currently support the processing of observables or any other type of entity.
+The connector only supports the ingestion of Indicator entities with a STIX pattern into Google SecOps SIEM. The connector does not currently support the processing of observables or any other type of entity.
 It is therefore recommended to configure the OpenCTI stream so that it only exposes indicators with a STIX pattern.
 
 ![Stream configuration](./__docs__/media/stream-configuration.png)
@@ -151,27 +151,27 @@ It is therefore recommended to configure the OpenCTI stream so that it only expo
 
 The following field mappings are implemented by default within the connector:
 
-| Chronicle UDM Mapping                | Value                                            |
-|--------------------------------------|--------------------------------------------------|
-| metadata.vendor_name                 | `FILIGRAN`                                       |
-| metadata.product_name                | `OPENCTI`                                        |
-| metadata.collected_timestamp         | UTC Date and Time when indicator is submitted    |
-| metadata.product_entity_id           | 'identifier' value of an OpenCTI indicator       |
-| metadata.description                 | 'description' value of an OpenCTI indicator      |
-| metadata.interval.start_time         | 'valid_from' value of an OpenCTI indicator       |
-| metadata.interval.end_time           | 'valid_until' value of an OpenCTI indicator      |
-| metadata.entity_type                 | `IP_ADDRESS` or `DOMAIN_NAME` or `URL` or `FILE` |
-| metadata.threat.confidence_details   | 'confidence' value of an OpenCTI indicator       |
-| metadata.threat.confidence_score     | 'confidence' value of an OpenCTI indicator       |
-| metadata.threat.risk_score           | 'score' value of an OpenCTI indicator            |
-| metadata.threat.category_details     | 'labels' associated to the OpenCTI indicator     |
-| metadata.threat.url_back_to_product  | OpenCTI URL link to the indicator                |
+| Google SecOps UDM Mapping           | Value                                            |
+|-------------------------------------|--------------------------------------------------|
+| metadata.vendor_name                | `FILIGRAN`                                       |
+| metadata.product_name               | `OPENCTI`                                        |
+| metadata.collected_timestamp        | UTC Date and Time when indicator is submitted    |
+| metadata.product_entity_id          | 'identifier' value of an OpenCTI indicator       |
+| metadata.description                | 'description' value of an OpenCTI indicator      |
+| metadata.interval.start_time        | 'valid_from' value of an OpenCTI indicator       |
+| metadata.interval.end_time          | 'valid_until' value of an OpenCTI indicator      |
+| metadata.entity_type                | `IP_ADDRESS` or `DOMAIN_NAME` or `URL` or `FILE` |
+| metadata.threat.confidence_details  | 'confidence' value of an OpenCTI indicator       |
+| metadata.threat.confidence_score    | 'confidence' value of an OpenCTI indicator       |
+| metadata.threat.risk_score          | 'score' value of an OpenCTI indicator            |
+| metadata.threat.category_details    | 'labels' associated to the OpenCTI indicator     |
+| metadata.threat.url_back_to_product | OpenCTI URL link to the indicator                |
 
 ### Dashboard
 
-This repository also contains a simple dashboard that provides an overview of the OpenCTI indicators ingested into Chronicle SIEM. This file can be imported into the dashboard section of Chronicle.
+This repository also contains a simple dashboard that provides an overview of the OpenCTI indicators ingested into Google SecOps SIEM. This file can be imported into the SIEM dashboard section of Google SecOps.
 
-![Chronicle SIEM OpenCTI dashboard](./__docs__/media/dashboard.png)
+![Google SecOps SIEM OpenCTI dashboard](./__docs__/media/dashboard.png)
 
 ## Known Limitations and Issues
 
@@ -190,7 +190,7 @@ This section outlines some current limitations and issues you may encounter whil
   - Extend token lifetimes beyond default by enabling the [`iam.allowServiceAccountCredentialLifetimeExtension`](https://cloud.google.com/resource-manager/docs/organization-policy/restricting-service-accounts#extend_oauth_ttl) constraint through an organizational policy. For additional details, see [Create a Short-Lived Access Token](https://cloud.google.com/iam/docs/create-short-lived-credentials-direct#sa-credentials-oauth).
 
 ### Update Latency
-- **Indicator of Compromise (IOC) Updates:** Changes to IOCs are reflected in Chronicle SIEM within **2 to 3 hours** on a custom dashboard and **5 minutes** on direct search.  
+- **Indicator of Compromise (IOC) Updates:** Changes to IOCs are reflected in Google SecOps SIEM within **2 to 3 hours** on a custom dashboard and **5 minutes** on direct search.  
 - **Role Updates:** Role updates are processed within **30 minutes**.
 
 ## Tests Coverage
