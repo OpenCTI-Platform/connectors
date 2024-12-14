@@ -8,11 +8,12 @@ services:
       - OPENCTI_TOKEN=CHANGEME
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=CHANGEME
+      - "CONNECTOR_NAME=Google SecOps SIEM"
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+
       # Connector's custom execution parameters
       - CHRONICLE_PROJECT_REGION=us
       - CHRONICLE_PROJECT_ID=CHANGEME
