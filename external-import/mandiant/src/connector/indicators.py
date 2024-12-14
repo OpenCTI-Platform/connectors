@@ -69,7 +69,7 @@ def create_indicator(connector, indicator):
     value = utils.sanitizer("value", indicator)
     name = value if value else indicator_pattern
 
-    markings = [stix2.TLP_AMBER.get("id")]
+    markings = connector.mandiant_marking
 
     custom_properties = {
         "x_opencti_main_observable_type": observable_type,
