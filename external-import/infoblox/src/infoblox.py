@@ -11,7 +11,8 @@ from pycti import (
     Indicator,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
-    get_config_variable, MarkingDefinition,
+    get_config_variable,
+    MarkingDefinition,
 )
 
 
