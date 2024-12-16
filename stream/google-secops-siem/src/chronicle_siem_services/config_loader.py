@@ -34,79 +34,79 @@ class ConfigConnector:
         Connector configuration variables
         """
         self.chronicle_project_id = get_config_variable(
-            "CHRONICLE_PROJECT_ID",
-            ["chronicle", "project_id"],
+            "SECOPS_SIEM_PROJECT_ID",
+            ["secops_siem", "project_id"],
             self.load,
             False,
             None,
             True,
         )
         self.chronicle_project_instance = get_config_variable(
-            "CHRONICLE_PROJECT_INSTANCE",
-            ["chronicle", "project_instance"],
+            "SECOPS_SIEM_PROJECT_INSTANCE",
+            ["secops_siem", "project_instance"],
             self.load,
             False,
             True,
         )
         self.chronicle_project_region = get_config_variable(
-            "CHRONICLE_PROJECT_REGION",
-            ["chronicle", "project_region"],
+            "SECOPS_SIEM_PROJECT_REGION",
+            ["secops_siem", "project_region"],
             self.load,
             False,
             True,
         )
         self.chronicle_private_key_id = get_config_variable(
-            "CHRONICLE_PRIVATE_KEY_ID",
-            ["chronicle", "private_key_id"],
+            "SECOPS_SIEM_PRIVATE_KEY_ID",
+            ["secops_siem", "private_key_id"],
             self.load,
             False,
             True,
         )
         self.chronicle_private_key = get_config_variable(
-            "CHRONICLE_PRIVATE_KEY",
-            ["chronicle", "private_key"],
+            "SECOPS_SIEM_PRIVATE_KEY",
+            ["secops_siem", "private_key"],
             self.load,
             False,
             True,
         )
         self.chronicle_client_email = get_config_variable(
-            "CHRONICLE_CLIENT_EMAIL",
-            ["chronicle", "client_email"],
+            "SECOPS_SIEM_CLIENT_EMAIL",
+            ["secops_siem", "client_email"],
             self.load,
             False,
             True,
         )
         self.chronicle_client_id = get_config_variable(
-            "CHRONICLE_CLIENT_ID",
-            ["chronicle", "client_id"],
+            "SECOPS_SIEM_CLIENT_ID",
+            ["secops_siem", "client_id"],
             self.load,
             False,
             True,
         )
         self.chronicle_auth_uri = get_config_variable(
-            "CHRONICLE_AUTH_URI",
-            ["chronicle", "auth_uri"],
+            "SECOPS_SIEM_AUTH_URI",
+            ["secops_siem", "auth_uri"],
             self.load,
             False,
             True,
         )
         self.chronicle_token_uri = get_config_variable(
-            "CHRONICLE_TOKEN_URI",
-            ["chronicle", "token_uri"],
+            "SECOPS_SIEM_TOKEN_URI",
+            ["secops_siem", "token_uri"],
             self.load,
             False,
             True,
         )
         self.chronicle_auth_provider_cert = get_config_variable(
-            "CHRONICLE_AUTH_PROVIDER_CERT",
-            ["chronicle", "auth_provider_cert"],
+            "SECOPS_SIEM_AUTH_PROVIDER_CERT",
+            ["secops_siem", "auth_provider_cert"],
             self.load,
             False,
             True,
         )
         self.chronicle_client_cert_url = get_config_variable(
-            "CHRONICLE_CLIENT_CERT_URL",
-            ["chronicle", "client_cert_url"],
+            "SECOPS_SIEM_CLIENT_CERT_URL",
+            ["secops_siem", "client_cert_url"],
             self.load,
             False,
             True,

@@ -11,7 +11,7 @@ connector:
   live_stream_listen_delete: true
   live_stream_no_dependencies: true
 
-chronicle:
+secops_siem:
   project_region: 'us'
   project_id: 'ChangeMe'
   project_instance: 'ChangeMe'

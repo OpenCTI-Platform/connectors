@@ -79,19 +79,19 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter                   | config.yml `chronicle`   | Docker environment variable    | Default | Mandatory   | Description                                                                |
+| Parameter                   | config.yml `secops_siem` | Docker environment variable    | Default | Mandatory   | Description                                                                |
 |-----------------------------|--------------------------|--------------------------------|---------|-------------|----------------------------------------------------------------------------|
-| Google Project Region       | `project_region`         | `CHRONICLE_PROJECT_REGION`     | /       | Yes         | Region where the Google SecOps instance is located                         |
-| Google Project Id           | `project_id`             | `CHRONICLE_PROJECT_ID`         | /       | Yes         | GCP Project Id                                                             |
-| Google Project Instance     | `project_instance`       | `CHRONICLE_PROJECT_INSTANCE`   | /       | Yes         | Google SecOps customer Id                                                  |
-| Google Private Key Id       | `private_key_id`         | `CHRONICLE_PRIVATE_KEY_ID`     | /       | Yes         | Google service account private_key_id value (in account.json)              |
-| Google Private Key          | `private_key`            | `CHRONICLE_PRIVATE_KEY`        | /       | Yes         | Google service account private_key value (in account.json)                 |
-| Google Client Email         | `client_email`           | `CHRONICLE_CLIENT_EMAIL`       | /       | Yes         | Google service account client_email value(in account.json)                 |
-| Google Client Id            | `client_id`              | `CHRONICLE_CLIENT_ID`          | /       | Yes         | Google service account client_id value (in account.json)                   |
-| Google Auth URI             | `auth_uri`               | `CHRONICLE_AUTH_URI`           | /       | Yes         | Google service account auth_uri value (in account.json)                    |
-| Google Token URI            | `token_uri`              | `CHRONICLE_TOKEN_URI`          | /       | Yes         | Google service account token_uri value (in account.json)                   |
-| Google Auth Provider Cert   | `auth_provider_cert`     | `CHRONICLE_AUTH_PROVIDER_CERT` | /       | Yes         | Google service account auth_provider_x509_cert_url value (in account.json) |
-| Google Client Cert URL      | `client_cert_url`        | `CHRONICLE_CLIENT_CERT_URL`    | /       | Yes         | Google service account client_x509_cert_url value (in account.json)        |
+| Google Project Region       | `project_region`         | `SECOPS_SIEM_PROJECT_REGION`     | /       | Yes         | Region where the Google SecOps instance is located                         |
+| Google Project Id           | `project_id`             | `SECOPS_SIEM_PROJECT_ID`         | /       | Yes         | GCP Project Id                                                             |
+| Google Project Instance     | `project_instance`       | `SECOPS_SIEM_PROJECT_INSTANCE`   | /       | Yes         | Google SecOps customer Id                                                  |
+| Google Private Key Id       | `private_key_id`         | `SECOPS_SIEM_PRIVATE_KEY_ID`     | /       | Yes         | Google service account private_key_id value (in account.json)              |
+| Google Private Key          | `private_key`            | `SECOPS_SIEM_PRIVATE_KEY`        | /       | Yes         | Google service account private_key value (in account.json)                 |
+| Google Client Email         | `client_email`           | `SECOPS_SIEM_CLIENT_EMAIL`       | /       | Yes         | Google service account client_email value(in account.json)                 |
+| Google Client Id            | `client_id`              | `SECOPS_SIEM_CLIENT_ID`          | /       | Yes         | Google service account client_id value (in account.json)                   |
+| Google Auth URI             | `auth_uri`               | `SECOPS_SIEM_AUTH_URI`           | /       | Yes         | Google service account auth_uri value (in account.json)                    |
+| Google Token URI            | `token_uri`              | `SECOPS_SIEM_TOKEN_URI`          | /       | Yes         | Google service account token_uri value (in account.json)                   |
+| Google Auth Provider Cert   | `auth_provider_cert`     | `SECOPS_SIEM_AUTH_PROVIDER_CERT` | /       | Yes         | Google service account auth_provider_x509_cert_url value (in account.json) |
+| Google Client Cert URL      | `client_cert_url`        | `SECOPS_SIEM_CLIENT_CERT_URL`    | /       | Yes         | Google service account client_x509_cert_url value (in account.json)        |
 
 ## Deployment
 

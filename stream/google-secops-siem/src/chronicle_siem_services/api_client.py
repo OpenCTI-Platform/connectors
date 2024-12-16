@@ -2,7 +2,7 @@ from google.auth.transport import requests as ChronicleRequests
 from google.oauth2 import service_account
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 
-CHRONICLE_API_BASE_URL = "https://chronicle.googleapis.com"
+SECOPS_SIEM_API_BASE_URL = "https://chronicle.googleapis.com"
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 
 
@@ -20,7 +20,7 @@ class ChronicleEntitiesClient:
         self.chronicle_http_session = self.init_session()
 
         self.base_url_with_region = self.regionalized_url(
-            CHRONICLE_API_BASE_URL, self.config.chronicle_project_region
+            SECOPS_SIEM_API_BASE_URL, self.config.chronicle_project_region
         )
         parent = (
             f"projects/{self.config.chronicle_project_id}/"
