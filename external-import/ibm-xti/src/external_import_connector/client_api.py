@@ -2,9 +2,9 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from pycti import OpenCTIConnectorHelper
-from taxii2client.v21 import Server, as_pages
 from stix2 import TAXIICollectionSource
 from stix2.parsing import parse
+from taxii2client.v21 import Server, as_pages
 
 from external_import_connector.formatter import OpenCTISTIXFormatter
 
@@ -135,15 +135,16 @@ class ConnectorClient:
                         stix_objects,
                     )
 
-                    record_timestamp = obj.get("modified") or obj.get("created")
-                    if record_timestamp:
-                        record_secs = datetime.fromisoformat(
-                            record_timestamp
-                        ).timestamp()
-                    else:
-                        record_secs = datetime.now().timestamp()
+                    if obj["type"] == collection.custom_properties["type"]: # only evaluate primary objects
+                        record_timestamp = obj.get("modified") or obj.get("created")
+                        if record_timestamp:
+                            record_secs = datetime.fromisoformat(
+                                record_timestamp
+                            ).timestamp()
+                        else:
+                            record_secs = datetime.now().timestamp()
 
-                    max_new_added_after = max(max_new_added_after, record_secs)
+                        max_new_added_after = max(max_new_added_after, record_secs)
 
                 new_added_after = datetime.fromtimestamp(
                     max_new_added_after or datetime.now().timestamp(), timezone.utc

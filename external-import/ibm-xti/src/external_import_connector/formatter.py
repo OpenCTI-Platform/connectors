@@ -1,12 +1,10 @@
 import re
-
-from typing import Any
 from base64 import b64encode
+from typing import Any
 
+from cvss import CVSS3
 from markdown_it import MarkdownIt
 from pycti import OpenCTIConnectorHelper
-from cvss import CVSS3
-
 
 md = MarkdownIt(
     options_update={"options": {"html": True, "linkify": True, "typographer": True}}
