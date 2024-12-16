@@ -51,8 +51,8 @@ class BaseRFConnector:
 
         self.tlp = get_config_variable(
             "RECORDED_FUTURE_TLP", ["rf", "TLP"], config,
-            required=True, ,
-            default="Red"
+            required=True,
+            default="Red",
         ).lower()
 
         self.rf_pull_signatures = get_config_variable(
