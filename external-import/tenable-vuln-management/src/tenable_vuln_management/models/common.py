@@ -2,12 +2,101 @@
 Offer common tools for connector's model.
 """
 
+import warnings
 from typing import Any, Callable
 
 from pydantic import BaseModel, ConfigDict
 
 
-class FrozenBaseModelWithoutExtra(BaseModel):
+class FieldWarning(Warning):
+    """Base class for field warnings;"""
+
+    def __init__(
+        self,
+        type_: str,
+        loc: tuple[str],
+        msg: str,
+        input_: Any,
+    ) -> None:
+        self.type = type_
+        self.loc = loc
+        self.msg = msg
+        self.input = input_
+
+    def __str__(self) -> str:
+        return f"{'.'.join(self.loc)}\n  {self.msg} ['type':'{self.type}', 'input_value': {self.input}]"
+
+
+class ValidationWarning(Warning):
+    """Base class for validation warnings"""
+
+    def __init__(self, model: type[BaseModel], warnings: list[FieldWarning]) -> None:
+        self.model = model
+        self.warnings = warnings
+
+    @property
+    def warnings_count(self) -> int:
+        """Count sub warning.
+
+        Returns
+                (int): The number of warnings.
+        """
+        return len(self.warnings)
+
+    def __str__(self) -> str:
+        warnings_repr = "\n".join(str(warning) for warning in self.warnings)
+        return (
+            f"{self.warnings_count} validation warning{'s' if self.warnings_count>1 else ''} for {self.model.__name__}\n"
+            f"{warnings_repr}"
+        )
+
+
+class BaseModelExtraWarning(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    def model_post_init(self, __context: Any) -> None:
+        """Define the post initialization method, automatically called after __init__ in a pydantic model initialization.
+
+        Args:
+            context__(Any): The pydantic context used by pydantic framework.
+
+        References:
+            https://docs.pydantic.dev/latest/api/base_model/#pydantic.BaseModel.model_parametrized_name [consulted on
+                October 4th, 2024]
+
+        """
+        if self.model_extra is not None and len(self.model_extra) > 0:
+            field_warnings = [
+                FieldWarning(
+                    type_="extra_warn",
+                    loc=[key],
+                    msg="Unexpected extra field",
+                    input_=value,
+                )
+                for key, value in self.model_extra.items()
+            ]
+            warning = ValidationWarning(model=self.__class__, warnings=field_warnings)
+            warnings.warn(warning, stacklevel=2)
+
+
+class HashableBaseModel(BaseModel):
+    """
+    Represent a Pydantic BaseModel that can be hashed and compared.
+    """
+
+    def __hash__(self):
+        """Create a hash based on the model's json representation dynamically."""
+        return hash(self.model_dump_json())
+
+    def __eq__(self, other: "HashableBaseModel"):
+        """Implement comparison between similar object."""
+        if not isinstance(other, self.__class__):
+            raise NotImplementedError("Cannot compare objects from different type.")
+        # Compare the attributes by converting them to a dictionary
+        return self.model_dump_json() == other.model_dump_json()
+
+
+class FrozenBaseModelWithoutExtra(HashableBaseModel):
     """
     Represent a Pydantic BaseModel where non explicitly define fields are forbidden.
     """
@@ -17,16 +106,16 @@ class FrozenBaseModelWithoutExtra(BaseModel):
         frozen=True,
     )
 
-    def __hash__(self):
-        """Create a hash based on the model's json representation dynamically."""
-        return hash(self.model_dump_json())
 
-    def __eq__(self, other: "FrozenBaseModelWithoutExtra"):
-        """Implement comparison between similar object."""
-        if not isinstance(other, self.__class__):
-            raise NotImplementedError("Cannot compare objects from different type.")
-        # Compare the attributes by converting them to a dictionary
-        return self.model_dump_json() == other.model_dump_json()
+class FrozenBaseModelWithWarnedExtra(HashableBaseModel, BaseModelExtraWarning):
+    """
+    Represent a Pydantic BaseModel where non explicitly define fields are allowed with a warning.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+        frozen=True,
+    )
 
 
 def make_validator(field_name: str, validator: Callable[..., bool] | dict[str, Any]):
@@ -81,10 +170,9 @@ def make_validator(field_name: str, validator: Callable[..., bool] | dict[str, A
                     evaluate_validator(sub_validator, value)
                     for sub_validator in evaluated_validator["and"]
                 )
-            else:
-                raise ValueError(
-                    f"Unsupported logical operation in validator: {evaluated_validator}"
-                )
+            raise ValueError(
+                f"Unsupported logical operation in validator: {evaluated_validator}"
+            )
         else:
             # Regular callable validator
             return evaluated_validator(value)
