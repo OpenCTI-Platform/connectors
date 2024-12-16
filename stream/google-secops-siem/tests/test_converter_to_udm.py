@@ -129,45 +129,42 @@ class TestCTIConverterChronicle(object):
 
         assert entity == entity_expected_result
 
-    # TODO complete test for metadata and udm entities generation
-    # def test_correct_metadata_generation(self) -> None:
-    #     """
-    #     Check if metadata for UDM entity is generated correctly
-    #     :return: None
-    #     """
-    # Arrange
+    def test_correct_metadata_generation(self) -> None:
+        """
+        Check if metadata for UDM entity is generated correctly
+        :return: None
+        """
+        # Arrange
 
-    # Mock get_attribute_in_extension method to return a specific value for score
-    # self.mock_helper.get_attribute_in_extension.side_effect = [
-    #     35,
-    #     self.fake_opencti_ioc_id,
-    # ]
-    #
-    # # Mock helper method to return a specific value for opencti_url
-    # # self.CTIConverter.extract_octi_ioc_url(self.ioc_data).return_value = "/dashboard/observations/indicators/4d34fab3-24a6-4f80-a9bd-1f3e449d65fe"
-    # self.mock_helper.patch("CTIConverter.extract_octi_ioc_url",
-    #                 return_value="http://localhost:8080")
-    # metadata = self.CTIConverter.generate_entity_metadata(self.fake_ioc_data)
-    # print(metadata)
-    #
-    # expected_metadata_result = {
-    #     "vendor_name": "FILIGRAN",
-    #     "product_name": "OPENCTI",
-    #     "collected_timestamp": self.CTIConverter.current_date(),
-    #     "product_entity_id": "indicator--f2a0f638-a65b-5283-9c34-4e6140f51e15",
-    #     "description": "Fake description",
-    #     "interval": {
-    #         "start_time": "2024-12-10T09:19:46.528Z",
-    #         "end_time": "2025-07-13T09:14:20.754Z",
-    #     },
-    #     "threat": {
-    #         "confidence_details": "100",
-    #         "confidence_score": 100,
-    #         "risk_score": 35,
-    #         "category_details": ["chronicle"],
-    #         "url_back_to_product": "http://localhost:8080/dashboard/observations/indicators/52dfd627-a875-4c05-bb21-12302ed66220",
-    #     },
-    # }
-    #
-    # # Assert
-    # assert metadata == expected_metadata_result
+        # Mock get_attribute_in_extension method to return a specific value for score
+        self.mock_helper.get_attribute_in_extension.side_effect = [
+            35,
+            self.fake_opencti_ioc_id,
+        ]
+
+        # Mock helper method to return a specific value for opencti_url
+        self.mock_helper.opencti_url = "http://localhost:8080"
+
+        metadata = self.CTIConverter.generate_entity_metadata(self.fake_ioc_data)
+
+        expected_metadata_result = {
+            "vendor_name": "FILIGRAN",
+            "product_name": "OPENCTI",
+            "collected_timestamp": self.CTIConverter.current_date(),
+            "product_entity_id": "indicator--f2a0f638-a65b-5283-9c34-4e6140f51e15",
+            "description": "Fake description",
+            "interval": {
+                "start_time": "2024-12-10T09:19:46.528Z",
+                "end_time": "2025-07-13T09:14:20.754Z",
+            },
+            "threat": {
+                "confidence_details": "100",
+                "confidence_score": 100,
+                "risk_score": 35,
+                "category_details": ["chronicle"],
+                "url_back_to_product": "http://localhost:8080/dashboard/observations/indicators/52dfd627-a875-4c05-bb21-12302ed66220",
+            },
+        }
+
+        # Assert
+        assert metadata == expected_metadata_result

@@ -152,9 +152,7 @@ class ChronicleEntitiesClient:
             Errors are logged using `self.helper.connector_logger` with appropriate log levels and error details.
         """
         try:
-            body = {
-                "inline_source": {"entities": entities, "log_type": "CSV_CUSTOM_IOC"}
-            }
+            body = {"inline_source": {"entities": entities, "log_type": "OPENCTI"}}
             response = self.chronicle_http_session.request(
                 method="POST", url=self.url, json=body
             )
