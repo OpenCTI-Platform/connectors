@@ -1,7 +1,7 @@
 version: '3'
 services:
   chronicle-siem:
-    image: opencti/chronicle-siem-udm:6.3.11
+    image: opencti/google-secops-siem:6.3.11
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
