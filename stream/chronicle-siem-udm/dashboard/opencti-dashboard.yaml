@@ -3,10 +3,10 @@ lookml:
   description: ""
   elements:
   - body_text: '[{"type":"p","align":"left","id":"z7fjc","children":[{"text":""}]},{"type":"p","align":"left","id":"oxjq0","children":[{"text":"OpenCTI
-      (Open Cyber Threat Intelligence) is an open-source platform designed to mana"}]},{"type":"p","align":"left","children":[{"text":"This
-      dashboard shows all ingested OpenCTI IOCs into the Chronicle Entity Graph.ge
+      (Open Cyber Threat Intelligence) is an open-source platform designed to manage
       and share cyber threat intelligence. It provides a structured way to collect,
-      store, analyze, and disseminate data about cyber threats. "}],"id":"s61uv"}]'
+      store, analyze, and disseminate data about cyber threats. \n\nThis dashboard
+      shows all ingested OpenCTI IOCs into the Google SecOps SIEM''s Entity Graph"}]}]'
     col: 8
     height: 3
     name: ""
@@ -187,7 +187,7 @@ lookml:
   layout: newspaper
   title: '[IOC] OpenCTI Intelligence'
 metadata:
-  exported_at: "2024-12-13T08:49:17-08:00"
-  file_fingerprint: "1126855652115979262716131449366244421192"
+  exported_at: "2024-12-14T02:03:58-08:00"
+  file_fingerprint: "1026295915379339851810777221096552055963"
   looker_version: 24.18.128
   version: "1"
