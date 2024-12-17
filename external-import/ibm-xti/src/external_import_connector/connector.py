@@ -1,5 +1,4 @@
 import sys
-
 from datetime import datetime
 from threading import Lock, Thread
 from typing import NotRequired, Optional, TypedDict, cast
@@ -74,9 +73,10 @@ class ConnectorIBMXTI:
         source: TAXIICollectionSource,
         current_state: ConnectorIBMXTIState,
     ):
-        feed_states = current_state.get("feed_states")
-        if not feed_states:
-            feed_states = current_state["feed_states"] = {}
+        with self.__state_lock:
+            feed_states = current_state.get("feed_states")
+            if not feed_states:
+                feed_states = current_state["feed_states"] = {}
 
         feed_state = feed_states.get(source.collection.id)
         if not feed_state:
