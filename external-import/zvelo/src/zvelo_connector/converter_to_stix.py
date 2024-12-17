@@ -7,10 +7,7 @@ from pycti import Identity, Indicator, Malware, StixCoreRelationship
 
 class ConverterToStix:
     """
-    Provides methods for converting various types of input data into STIX 2.1 objects.
-
-    REQUIREMENTS:
-    - generate_id() for each entity from OpenCTI pycti library except observables to create
+    Provides methods for converting various zvelo IOCs format into STIX 2.1 objects.
     """
 
     def __init__(self, helper):
@@ -24,6 +21,7 @@ class ConverterToStix:
         Create Author
         :return: Author in Stix2 object
         """
+
         author = stix2.Identity(
             id=Identity.generate_id(name="Zvelo", identity_class="organization"),
             name="Zvelo",
@@ -38,6 +36,7 @@ class ConverterToStix:
         :param value: Value in string
         :return: A boolean
         """
+
         try:
             ipaddress.IPv6Address(value)
             return True
@@ -51,19 +50,21 @@ class ConverterToStix:
         :param value: Value in string
         :return: A boolean
         """
+
         try:
             ipaddress.IPv4Address(value)
             return True
         except ipaddress.AddressValueError:
             return False
 
-    def _convert_related_ips(self, ip_info, observable_id, labels):
+    def _convert_related_ips(self, ip_info, observable_id, labels) -> list:
         """
         :param ip_info:
         :param observable_id:
         :param labels:
         :return:
         """
+
         stix_objects = []
         for ip_address in ip_info:
             if self._is_ipv4(ip_address.get("ip")):
@@ -75,7 +76,7 @@ class ConverterToStix:
                         "labels": labels,
                     },
                 )
-            else:
+            elif self._is_ipv6(ip_address.get("ip")):
                 stix_related_ip_observable = stix2.IPv6Address(
                     value=ip_address.get("ip"),
                     object_marking_refs=[self.tlp],
@@ -84,29 +85,24 @@ class ConverterToStix:
                         "labels": labels,
                     },
                 )
-
-            stix_relationship = stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "related-to",
-                    observable_id,
-                    stix_related_ip_observable.id,
-                ),
-                relationship_type="related-to",
-                source_ref=observable_id,
-                target_ref=stix_related_ip_observable.id,
-                object_marking_refs=[self.tlp],
+            else:
+                self.helper.log_warning(f"Unable to convert ip_info, bad IP format for IP: {ip_address.get('ip')}")
+                continue
+            stix_relationship = self._create_relation(
+                observable_id, stix_related_ip_observable.id, "related-to"
             )
             stix_objects.append(stix_related_ip_observable)
             stix_objects.append(stix_relationship)
         return stix_objects
 
-    def _create_relation(self, source_id, target_id, relation):
+    def _create_relation(self, source_id, target_id, relation) -> dict:
         """
         :param source_id:
         :param target_id:
         :param relation:
         :return:
         """
+
         stix_relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
                 relation,
@@ -120,9 +116,15 @@ class ConverterToStix:
         )
         return stix_relationship
 
-    def convert_threat_to_stix(self, data):
+    def convert_threat_to_stix(self, data) -> list:
+        """
+        Convert threat ioc into stix entities (indicator and related observables)
+        :param data:
+        :return:
+        """
+
         bundle_objects = []
-        if data.get("ioc_type", None) == "url":
+        if data.get("ioc_type") == "url":
             # create URL observable
             stix_observable = stix2.URL(
                 value=data.get("ioc"),
@@ -130,14 +132,14 @@ class ConverterToStix:
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_score": data.get("confidence_level"),
-                    "labels": [data.get("threat_type", None)],
+                    "labels": [data.get("threat_type")],
                 },
             )
             # create STIX indicator
             pattern_value = "[url:value = '" + data.get("ioc") + "']"
             observable_type = "Url"
 
-        elif data.get("ioc_type", None) == "domain":
+        elif data.get("ioc_type") == "domain":
             # create domain observable
             stix_observable = stix2.DomainName(
                 value=data.get("ioc"),
@@ -145,17 +147,17 @@ class ConverterToStix:
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_score": data.get("confidence_level"),
-                    "labels": [data.get("threat_type", None)],
+                    "labels": [data.get("threat_type")],
                 },
             )
             # create STIX indicator
             pattern_value = "[domain-name:value = '" + data.get("ioc") + "']"
             observable_type = "Domain-Name"
 
-        elif data.get("ioc_type", None) == "ip":
+        elif data.get("ioc_type") == "ip":
             if ":" in data.get("ioc"):
                 ip_value = data.get("ioc").split(":")[0]
-                description = f"Traffic seen on port {data.get("ioc").split(":")[1]}"
+                description = f"Traffic seen on port {data.get('ioc').split(':')[1]}"
             else:
                 ip_value = data.get("ioc")
                 description = None
@@ -167,7 +169,7 @@ class ConverterToStix:
                     custom_properties={
                         "x_opencti_created_by_ref": self.author["id"],
                         "x_opencti_score": data.get("confidence_level"),
-                        "labels": [data.get("threat_type", None)],
+                        "labels": [data.get("threat_type")],
                         "x_opencti_description": description,
                     },
                 )
@@ -181,7 +183,7 @@ class ConverterToStix:
                     custom_properties={
                         "x_opencti_created_by_ref": self.author["id"],
                         "x_opencti_score": data.get("confidence_level"),
-                        "labels": [data.get("threat_type", None)],
+                        "labels": [data.get("threat_type")],
                     },
                 )
                 # create STIX indicator
@@ -190,9 +192,9 @@ class ConverterToStix:
 
         else:
             self.helper.log_warning(
-                f"Unrecognized ioc_type: {data.get("ioc_type", None)}"
+                f"Unrecognized ioc_type: {data.get('ioc_type')}"
             )
-            return None
+            return bundle_objects
 
         # create an indicator for the ioc
         stix_indicator = stix2.Indicator(
@@ -225,7 +227,7 @@ class ConverterToStix:
         bundle_objects.append(stix_relationship)
 
         # create relation between indicator and malware
-        if data.get("malware_family", None):
+        if data.get("malware_family"):
             # Create the malware object
             stix_malware = stix2.Malware(
                 id=Malware.generate_id(data.get("malware_family")),
@@ -249,13 +251,18 @@ class ConverterToStix:
                 self._convert_related_ips(
                     ip_info=data.get("ip_info"),
                     observable_id=stix_observable.id,
-                    labels=[data.get("threat_type", None)],
+                    labels=[data.get("threat_type")],
                 )
             )
 
         return bundle_objects
 
-    def convert_phish_to_stix(self, data):
+    def convert_phish_to_stix(self, data) -> list:
+        """
+        Convert phish ioc into stix entities (indicator and related observables)
+        :param data:
+        :return:
+        """
         bundle_objects = []
 
         # create URL observable
@@ -314,7 +321,12 @@ class ConverterToStix:
 
         return bundle_objects
 
-    def convert_malicious_to_stix(self, data):
+    def convert_malicious_to_stix(self, data) -> list:
+        """
+        Convert malicious ioc into stix entities (indicator and related observables)
+        :param data:
+        :return:
+        """
         bundle_objects = []
 
         # create URL observable

@@ -1,5 +1,5 @@
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pycti import OpenCTIConnectorHelper
 
@@ -10,40 +10,6 @@ from .utils import SUPPORTED_COLLECTIONS
 
 
 class ConnectorZvelo:
-    """
-    Specifications of the external import connector
-
-    This class encapsulates the main actions, expected to be run by any external import connector.
-    Note that the attributes defined below will be complemented per each connector type.
-    This type of connector aim to fetch external data to create STIX bundle and send it in a RabbitMQ queue.
-    The STIX bundle in the queue will be processed by the workers.
-    This type of connector uses the basic methods of the helper.
-
-    ---
-
-    Attributes
-        - `config (ConfigConnector())`:
-            Initialize the connector with necessary configuration environment variables
-
-        - `helper (OpenCTIConnectorHelper(config))`:
-            This is the helper to use.
-            ALL connectors have to instantiate the connector helper with configurations.
-            Doing this will do a lot of operations behind the scene.
-
-        - `converter_to_stix (ConnectorConverter(helper))`:
-            Provide methods for converting various types of input data into STIX 2.1 objects.
-
-    ---
-
-    Best practices
-        - `self.helper.api.work.initiate_work(...)` is used to initiate a new work
-        - `self.helper.schedule_iso()` is used to encapsulate the main process in a scheduler
-        - `self.helper.connector_logger.[info/debug/warning/error]` is used when logging a message
-        - `self.helper.stix2_create_bundle(stix_objects)` is used when creating a bundle
-        - `self.helper.send_stix2_bundle(stix_objects_bundle)` is used to send the bundle to RabbitMQ
-        - `self.helper.set_state()` is used to set state
-
-    """
 
     def __init__(self):
         """
@@ -62,27 +28,20 @@ class ConnectorZvelo:
         :return: List of STIX objects
         """
 
-        # check collections configured
-        collections_str = self.config.zvelo_collections
-        if "," in collections_str:
-            collections = [x.strip() for x in collections_str.split(",")]
-        else:
-            collections = [collections_str]
-
         # validate collection configured
-        for collection in collections:
+        for collection in self.config.zvelo_collections:
             if collection not in SUPPORTED_COLLECTIONS:
                 self.helper.connector_logger.error(
                     f"Unsupported configured: {collection}"
                 )
-                collections.remove(collection)
+                self.config.zvelo_collections.remove(collection)
 
-        self.helper.connector_logger.debug(f"Collections configured: {collections}")
+        self.helper.connector_logger.debug(f"Collections configured: {self.config.zvelo_collections}")
 
         # init list and add the author in the stix bundle
         stix_objects = [self.converter_to_stix.author]
 
-        for collection in collections:
+        for collection in self.config.zvelo_collections:
             self.helper.connector_logger.info(
                 f"[CONNECTOR] Going to process collection: {collection}"
             )
@@ -126,7 +85,7 @@ class ConnectorZvelo:
 
         try:
             # Get the current state
-            now_utc = datetime.utcnow()
+            now_utc = datetime.now(timezone.utc)
             current_timestamp = int(datetime.timestamp(now_utc))
             current_state = self.helper.get_state()
 
@@ -167,7 +126,7 @@ class ConnectorZvelo:
 
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": {str(len(bundles_sent))}},
+                    {"bundles_sent": str(len(bundles_sent))},
                 )
 
             # Store the current timestamp as a last run of the connector
@@ -176,10 +135,8 @@ class ConnectorZvelo:
                 {"current_timestamp": current_timestamp},
             )
             current_state = self.helper.get_state()
-            current_state_datetime = now_utc.strftime("%Y-%m-%dT%H:%M:%S")
-            last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
-                "%Y-%m-%dT%H:%M:%S"
-            )
+            current_state_datetime = now_utc.isoformat()
+
             if current_state:
                 current_state["last_run"] = current_state_datetime
             else:
@@ -188,7 +145,7 @@ class ConnectorZvelo:
 
             message = (
                 f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(last_run_datetime)
+                + str(current_state_datetime)
             )
 
             self.helper.api.work.to_processed(work_id, message)
