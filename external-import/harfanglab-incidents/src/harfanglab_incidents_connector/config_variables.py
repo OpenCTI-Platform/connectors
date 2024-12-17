@@ -60,7 +60,7 @@ class ConfigConnector:
             isNumber=False,
             required=True,
         )
-        
+
         self.harfanglab_token = get_config_variable(
             env_var="HARFANGLAB_INCIDENTS_TOKEN",
             yaml_path=["harfanglab_incidents", "token"],
