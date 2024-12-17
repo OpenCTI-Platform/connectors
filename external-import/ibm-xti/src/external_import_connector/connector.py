@@ -105,7 +105,9 @@ class ConnectorIBMXTI:
                     f"Sent {len(bundles_sent)} STIX bundles to OpenCTI"
                 )
 
-            if not self.__config.debug: # this would only happen if no STIX objects are found, but we still shouldn't update the state in debug mode
+            if (
+                not self.__config.debug
+            ):  # this would only happen if no STIX objects are found, but we still shouldn't update the state in debug mode
                 with self.__state_lock:
                     feed_state["added_after"] = new_added_after
                     self.__helper.set_state(current_state)

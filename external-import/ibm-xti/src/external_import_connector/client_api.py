@@ -31,7 +31,7 @@ class ConnectorClient:
             type="Organization",
             name="IBM X-Force",
             description="IBM X-Force Premier Threat Intelligence Services",
-            x_opencti_reliability="A - Completely reliable"
+            x_opencti_reliability="A - Completely reliable",
         )
 
     def get_collection_sources(self):
@@ -134,7 +134,9 @@ class ConnectorClient:
                         stix_objects,
                     )
 
-                    if obj["type"] == collection.custom_properties["type"]: # only evaluate primary objects
+                    if (
+                        obj["type"] == collection.custom_properties["type"]
+                    ):  # only evaluate primary objects
                         record_timestamp = obj.get("modified") or obj.get("created")
                         if record_timestamp:
                             record_secs = datetime.fromisoformat(
