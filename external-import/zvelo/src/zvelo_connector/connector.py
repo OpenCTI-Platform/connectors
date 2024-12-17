@@ -137,7 +137,7 @@ class ConnectorZvelo:
                 {"current_timestamp": current_timestamp},
             )
             current_state = self.helper.get_state()
-            current_state_datetime = now_utc.isoformat()
+            current_state_datetime = now_utc.strftime("%Y-%m-%dT%H:%M:%S")
 
             if current_state:
                 current_state["last_run"] = current_state_datetime
