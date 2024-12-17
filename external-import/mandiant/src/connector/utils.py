@@ -6,7 +6,7 @@ class Timestamp:
     format = "%Y-%m-%dT%H:%M:%S.%fZ"
 
     def __init__(self, value):
-        if type(value) == datetime:
+        if isinstance(value, datetime):
             self._value = value.replace(microsecond=0)
         else:
             raise TypeError("Value must be a datetime object")

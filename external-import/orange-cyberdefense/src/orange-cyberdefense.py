@@ -461,7 +461,7 @@ class OrangeCyberDefense:
                     for stix_object in data["objects"]:
                         label: str
                         for label in stix_object["labels"]:
-                            if tag.lower() in label.lower():
+                            if tag.lower() == label.lower():
                                 processed_object = self._process_object(stix_object)
                                 objects.append(processed_object)
                                 break
