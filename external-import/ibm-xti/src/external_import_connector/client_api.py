@@ -1,12 +1,11 @@
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from external_import_connector.formatter import OpenCTISTIXFormatter
 from pycti import OpenCTIConnectorHelper
 from stix2 import TAXIICollectionSource
 from stix2.parsing import parse
 from taxii2client.v21 import Server, as_pages
-
-from external_import_connector.formatter import OpenCTISTIXFormatter
 
 from .config_variables import ConfigConnector
 
