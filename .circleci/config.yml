@@ -1035,6 +1035,10 @@ jobs:
           name: Build Docker image opencti/connector-harfanglab
           command: docker build -t opencti/connector-harfanglab:latest . && docker tag opencti/connector-harfanglab:latest opencti/connector-harfanglab:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/intel471_v2
+          name: Build Docker image opencti/connector-intel471_v2
+          command: docker build -t opencti/connector-intel471_v2:latest . && docker tag opencti/connector-intel471_v2:latest opencti/connector-intel471_v2:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1042,6 +1046,8 @@ jobs:
             docker push opencti/connector-webhook:${CIRCLE_TAG}
             docker push opencti/connector-harfanglab:latest
             docker push opencti/connector-harfanglab:${CIRCLE_TAG}
+            docker push opencti/connector-intel471_v2:latest
+            docker push opencti/connector-intel471_v2:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1918,11 +1924,16 @@ jobs:
           name: Build Docker image opencti/connector-harfanglab
           command: docker build -t opencti/connector-harfanglab:rolling .
       - run:
+          working_directory: ~/opencti/external-import/intel471_v2
+          name: Build Docker image opencti/connector-intel471_v2
+          command: docker build -t opencti/connector-intel471_v2:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push opencti/connector-webhook:rolling
             docker push opencti/connector-harfanglab:rolling
+            docker push opencti/connector-intel471_v2:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
