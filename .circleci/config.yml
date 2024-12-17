@@ -542,6 +542,8 @@ jobs:
             docker push opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
             docker push opencti/connector-attribution-tools:latest
             docker push opencti/connector-attribution-tools:${CIRCLE_TAG}
+            docker push opencti/connector-tenable-security-center:latest
+            docker push opencti/connector-tenable-security-center:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
