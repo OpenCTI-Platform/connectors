@@ -36,7 +36,9 @@ class ConnectorZvelo:
                 )
                 self.config.zvelo_collections.remove(collection)
 
-        self.helper.connector_logger.debug(f"Collections configured: {self.config.zvelo_collections}")
+        self.helper.connector_logger.debug(
+            f"Collections configured: {self.config.zvelo_collections}"
+        )
 
         # init list and add the author in the stix bundle
         stix_objects = [self.converter_to_stix.author]

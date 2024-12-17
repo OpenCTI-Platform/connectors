@@ -86,7 +86,9 @@ class ConverterToStix:
                     },
                 )
             else:
-                self.helper.log_warning(f"Unable to convert ip_info, bad IP format for IP: {ip_address.get('ip')}")
+                self.helper.log_warning(
+                    f"Unable to convert ip_info, bad IP format for IP: {ip_address.get('ip')}"
+                )
                 continue
             stix_relationship = self._create_relation(
                 observable_id, stix_related_ip_observable.id, "related-to"
@@ -191,9 +193,7 @@ class ConverterToStix:
                 observable_type = "IPv6-Addr"
 
         else:
-            self.helper.log_warning(
-                f"Unrecognized ioc_type: {data.get('ioc_type')}"
-            )
+            self.helper.log_warning(f"Unrecognized ioc_type: {data.get('ioc_type')}")
             return bundle_objects
 
         # create an indicator for the ioc

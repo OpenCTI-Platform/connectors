@@ -62,6 +62,6 @@ class ConfigConnector:
             yaml_path=["zvelo", "collections"],
             config=self.load,
             required=True,
-            default="phish,malicious,threat"
+            default="phish,malicious,threat",
         )
         self.zvelo_collections = [x.strip() for x in zvelo_collections.split(",")]
