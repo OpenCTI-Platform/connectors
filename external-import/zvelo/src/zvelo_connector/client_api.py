@@ -28,6 +28,9 @@ class ConnectorClient:
         }
 
     def _get_authentication_token(self):
+        """
+        :return:
+        """
         token_headers = {"Content-Type": "application/json"}
         data = {
             "client_id": self.config.zvelo_client_id,
@@ -50,6 +53,11 @@ class ConnectorClient:
 
     @staticmethod
     def _extract_entities(response, collection):
+        """
+        :param response:
+        :param collection:
+        :return:
+        """
         if collection == "threat":
             return response.get("threat_info").get("threat")
         if collection == "malicious":

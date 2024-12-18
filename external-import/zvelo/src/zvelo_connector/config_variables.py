@@ -37,25 +37,31 @@ class ConfigConnector:
         """
         # OpenCTI configurations
         self.duration_period = get_config_variable(
-            "CONNECTOR_DURATION_PERIOD",
-            ["connector", "duration_period"],
-            self.load,
+            env_var="CONNECTOR_DURATION_PERIOD",
+            yaml_path=["connector", "duration_period"],
+            config=self.load,
+            required=True,
         )
 
         self.zvelo_client_id = get_config_variable(
-            "ZVELO_CLIENT_ID",
-            ["zvelo", "client_id"],
-            self.load,
+            env_var="ZVELO_CLIENT_ID",
+            yaml_path=["zvelo", "client_id"],
+            config=self.load,
+            required=True,
         )
 
         self.zvelo_client_secret = get_config_variable(
-            "ZVELO_CLIENT_SECRET",
-            ["zvelo", "client_secret"],
-            self.load,
+            env_var="ZVELO_CLIENT_SECRET",
+            yaml_path=["zvelo", "client_secret"],
+            config=self.load,
+            required=True,
         )
 
-        self.zvelo_collections = get_config_variable(
-            "ZVELO_COLLECTIONS",
-            ["zvelo", "collections"],
-            self.load,
+        zvelo_collections = get_config_variable(
+            env_var="ZVELO_COLLECTIONS",
+            yaml_path=["zvelo", "collections"],
+            config=self.load,
+            required=True,
+            default="phish,malicious,threat",
         )
+        self.zvelo_collections = [x.strip() for x in zvelo_collections.split(",")]

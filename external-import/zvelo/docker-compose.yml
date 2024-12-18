@@ -24,7 +24,7 @@ services:
       # Connector's custom execution parameters
       - ZVELO_CLIENT_ID=CHANGEME
       - ZVELO_CLIENT_SECRET=CHANGEME
-      - ZVELO_COLLECTIONS='phish,threat,malicious'
+      - ZVELO_COLLECTIONS=phish,threat,malicious
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME
