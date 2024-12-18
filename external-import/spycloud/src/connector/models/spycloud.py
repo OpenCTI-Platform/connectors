@@ -1,11 +1,13 @@
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
 
 
 class BreachCatalog(BaseModel):
     """
     Class for SpyCloud breach catalog.
+    Only required fields and those useful for OCTI entities are described explicitly and all extra fields provided by SpyCloud API are ignored.
+    See https://spycloud-external.readme.io/sc-data-schema/docs/getting-started#breach-catalog for fields reference.
     """
 
     model_config: ConfigDict = ConfigDict(extra="ignore", frozen=True)
@@ -22,7 +24,7 @@ class BreachCatalog(BaseModel):
     description: str = Field(
         description="Breach description. For each ingested breach our security research team documents a breach description. This is only available when we can disclose the breach details, otherwise it will have a generic description.",
     )
-    type: str = Field(
+    type: Literal["PRIVATE", "PUBLIC"] = Field(
         description="Denotes if a breach is considered public or private. A public breach is one that is easily found on the internet, while a private breach is often exclusive to SpyCloud.",
     )
     num_records: int = Field(
@@ -37,10 +39,10 @@ class BreachCatalog(BaseModel):
     assets: dict = Field(
         description="Dictionary field. A mapping of assets to count for this particular breach.",
     )
-    confidence: int = Field(
-        description="Numerical score representing the confidence in the source of the breach. See list of possible values available here.",
+    confidence: Literal[1, 2, 3] = Field(
+        description="Numerical score representing the confidence in the source of the breach.",
     )
-    breach_main_category: str = Field(
+    breach_main_category: Literal["combolist", "breach", "malware"] = Field(
         description="Categorizes breach into combolist, breach, or malware."
     )
     breach_category: str = Field(description="Categorizes how the data was breached.")
@@ -57,42 +59,11 @@ class BreachCatalog(BaseModel):
         description="Shortened version of title field when necessary."
     )
 
-    site: Optional[str] = Field(
-        description="Website of breached organization, when available."
-    )
-    site_description: Optional[str] = Field(
-        description="Description of the breached organization, when available."
-    )
-    breach_date: Optional[datetime] = Field(
-        description="The date on which we believe the breach took place."
-    )
-    public_date: Optional[datetime] = Field(
-        description="The date on which this breach was made known to the public. This is usually accompanied by media URLs in media_urls list below.",
-    )
-    media_urls: Optional[list] = Field(
-        description="Array field. List of one or more media URLs referencing the breach in media.",
-    )
-    combo_list_flag: Optional[str] = Field(
-        description="Indicates if the breach is a combo list."
-    )
-    breached_companies: Optional[list] = Field(
-        description="Companies that are allegedly or confirmed to be involved in the data breach.",
-    )
-    targeted_companies: Optional[list] = Field(
-        description="Companies determined to be targeted by the breach."
-    )
-    targeted_industries: Optional[list] = Field(
-        description="General industries determined to be targeted by the breach."
-    )
-    malware_family: Optional[str] = Field(
-        description="Contains the malware family variant of the infostealer. Only optionally present when breach_category is infostealer.",
-    )
-
 
 class BreachRecord(BaseModel):
     """
     Class for SpyCloud breach records.
-    Only required fields and those useful for OCTI entities are described here but all extra fields provided by Spycloud API are allowed.
+    Only required fields and those useful for OCTI entities are described explicitly but all extra fields provided by Spycloud API are allowed.
     Extra fields are all optional and _might_ be present in API response.
     See https://spycloud-external.readme.io/sc-data-schema/docs/getting-started#breach-records for fields reference.
     """

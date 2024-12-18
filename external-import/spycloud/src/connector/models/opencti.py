@@ -9,6 +9,8 @@ import pycti
 class OCTIBaseModel(BaseModel):
     """
     Base class for OpenCTI models.
+    OpenCTI models are extended implementations of STIX 2.1 specification.
+    All OpenCTI models implement `to_stix2_object` method to return a validated and formatted STIX 2.1 dict.
     """
 
     model_config: ConfigDict = ConfigDict(extra="forbid", frozen=True)
@@ -16,7 +18,7 @@ class OCTIBaseModel(BaseModel):
     _stix2_representation = PrivateAttr(default=None)
     _id = PrivateAttr(default=None)
 
-    def model_post_init(self):
+    def model_post_init(self, _):
         self._stix2_representation = self.to_stix2_object()
         self._id = self._stix2_representation["id"]
 
@@ -31,7 +33,7 @@ class OCTIBaseModel(BaseModel):
         return self._stix2_representation
 
     @abstractmethod
-    def to_stix2_object(self) -> Any:
+    def to_stix2_object(self) -> dict:
         """Construct STIX 2.1 object (usually from stix2 python lib objects)"""
         ...
 
@@ -42,21 +44,16 @@ class Author(OCTIBaseModel):  # TODO complete description
     """
 
     name: str = Field(description="", min_length=1)
-    description: str = Field(description="", min_length=1)
-    identity_class: Literal["organization"] = Field(
-        description="", default="organization"
-    )
-    object_marking_refs: list[stix2.MarkingDefinition] = Field(
-        description="", default=[]
-    )
+    description: str = Field(description="", min_length=1, default=None)
 
     def to_stix2_object(self) -> stix2.Identity:
+        identity_class = "organization"
+
         return stix2.Identity(
-            id=pycti.Identity.generate_id(self.name, self.identity_class),
+            id=pycti.Identity.generate_id(self.name, identity_class),
             name=self.name,
-            identity_class=self.identity_class,
+            identity_class=identity_class,
             description=self.description,
-            object_marking_refs=self.object_marking_refs,
         )
 
 
@@ -66,15 +63,17 @@ class Incident(OCTIBaseModel):  # TODO: complete description
     """
 
     name: str = Field(description="", min_length=1)
-    description: str = Field(description="", min_length=1)
+    description: str = Field(description="", min_length=1, default=None)
     source: str = Field(description="", min_length=1)
     severity: Literal["low", "medium", "high", "critical"] = Field(description="")
+    incident_type: str = Field(description="")
     author: Author = Field(description="")
     created_at: datetime = Field(description="")
     updated_at: datetime = Field(description="")
-    object_marking_refs: list[stix2.MarkingDefinition] = Field(
-        description="", default=[]
-    )
+    # object_marking_refs: list[stix2.MarkingDefinition] = Field(
+    #     description="", default=[]
+    # )
+    object_marking_refs: list[Any] = Field(description="", default=[])
     external_references: list[dict] = Field(description="", default=[])
 
     def to_stix2_object(self) -> stix2.Incident:
@@ -89,7 +88,7 @@ class Incident(OCTIBaseModel):  # TODO: complete description
             custom_properties={
                 "source": self.source,
                 "severity": self.severity,
-                "incident_type": "data-breach",
+                "incident_type": self.incident_type,
                 "first_seen": self.created_at,
                 "last_seen": self.updated_at,
             },
