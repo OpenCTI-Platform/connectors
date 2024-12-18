@@ -8,6 +8,7 @@ import pycti
 import requests
 import tldextract
 import validators
+import whois
 from pycti import OpenCTIConnectorHelper
 from stix2 import (
     TLP_WHITE,
@@ -24,7 +25,6 @@ from stix2 import (
     ThreatActor,
 )
 
-import whois
 
 class RansomwareAPIConnector:
     """Specific external-import connector
