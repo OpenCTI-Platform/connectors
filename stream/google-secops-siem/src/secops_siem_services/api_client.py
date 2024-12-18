@@ -6,7 +6,7 @@ SECOPS_SIEM_API_BASE_URL = "https://chronicle.googleapis.com"
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 
 
-class ChronicleEntitiesClient:
+class SecOpsEntitiesClient:
     def __init__(self, helper, config):
         """
         Init Chronicle API client.

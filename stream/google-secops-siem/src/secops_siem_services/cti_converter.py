@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from .utils import ENTITY_TYPE_MAPPER, HASH_TYPES
+from .utils import ENTITY_TYPE_MAPPER, HASH_TYPES_MAPPER
 
 PRODUCT_NAME = "OPENCTI"
 VENDOR_NAME = "FILIGRAN"
@@ -34,16 +34,17 @@ class CTIConverter:
         :return: OpenCTI URL for the IOC
         """
         x_opencti_ioc_id = self.helper.get_attribute_in_extension("id", data)
+
+        if x_opencti_ioc_id is None:
+            return None
+
         ioc_opencti_url = (
             self.helper.opencti_url
             + "/dashboard/observations/indicators/"
             + x_opencti_ioc_id
         )
 
-        if x_opencti_ioc_id:
-            return ioc_opencti_url
-        else:
-            return None
+        return ioc_opencti_url
 
     def generate_entity_metadata(self, data: dict) -> dict:
         """
@@ -95,28 +96,24 @@ class CTIConverter:
 
         entity = {}
 
-        for observable_type in ENTITY_TYPE_MAPPER:
-            chronicle_entity_field = ENTITY_TYPE_MAPPER[observable_type][
-                "chronicle_entity_field"
-            ]
-            chronicle_entity_type = ENTITY_TYPE_MAPPER[observable_type][
-                "chronicle_entity_type"
-            ]
+        observable_type = ENTITY_TYPE_MAPPER.get(x_opencti_observable_type)
 
-            if (
-                x_opencti_observable_type == observable_type
-                and x_opencti_observable_type != "stixfile"
-            ):
-                entity[chronicle_entity_field] = observable.get("value")
-                entity_metadata["entity_type"] = chronicle_entity_type
-            elif x_opencti_observable_type == "stixfile":
-                file = {}
-                for key, value in observable.get("hashes").items():
-                    if key.lower() in HASH_TYPES:
-                        file[key.lower()] = value
+        chronicle_entity_field = observable_type["chronicle_entity_field"]
+        chronicle_entity_type = observable_type["chronicle_entity_type"]
 
-                entity["file"] = file
-                entity_metadata["entity_type"] = chronicle_entity_type
+        if x_opencti_observable_type == "stixfile":
+            file = {}
+            for key, value in observable.get("hashes", {}).items():
+                hash_type = HASH_TYPES_MAPPER.get(key.lower())
+
+                if hash_type is not None:
+                    file[hash_type] = value
+
+            entity["file"] = file
+            entity_metadata["entity_type"] = chronicle_entity_type
+        else:
+            entity[chronicle_entity_field] = observable.get("value")
+            entity_metadata["entity_type"] = chronicle_entity_type
 
         return entity
 

@@ -25,4 +25,4 @@ ENTITY_TYPE_MAPPER = {
     },
 }
 
-HASH_TYPES = ["md5", "sha1", "sha256"]
+HASH_TYPES_MAPPER = {"md5": "md5", "sha-1": "sha1", "sha-256": "sha256"}

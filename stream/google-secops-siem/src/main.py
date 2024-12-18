@@ -1,6 +1,6 @@
 import traceback
 
-from chronicle_siem_connector import ChronicleSIEMConnector
+from secops_siem_connector import SecOpsSIEMConnector
 
 if __name__ == "__main__":
     """
@@ -13,7 +13,7 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        connector = ChronicleSIEMConnector()
+        connector = SecOpsSIEMConnector()
         connector.run()
     except Exception:
         traceback.print_exc()

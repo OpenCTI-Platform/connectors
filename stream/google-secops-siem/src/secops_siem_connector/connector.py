@@ -2,40 +2,11 @@ import json
 import sys
 from json import JSONDecodeError
 
-from chronicle_siem_services import (
-    ChronicleEntitiesClient,
-    ConfigConnector,
-    CTIConverter,
-)
 from pycti import OpenCTIConnectorHelper
+from secops_siem_services import ConfigConnector, CTIConverter, SecOpsEntitiesClient
 
 
-class ChronicleSIEMConnector:
-    """
-    Specifications of the Stream connector
-
-    This class encapsulates the main actions, expected to be run by any stream connector.
-    Note that the attributes defined below will be complemented per each connector type.
-    This type of connector has the capability to listen to live streams from the OpenCTI platform.
-    It is highly useful for creating connectors that can react and make decisions in real time.
-    Actions on OpenCTI will apply the changes to the third-party connected platform
-    ---
-
-    Attributes
-        - `config (ConfigConnector())`:
-            Initialize the connector with necessary configuration environment variables
-
-        - `helper (OpenCTIConnectorHelper(config))`:
-            This is the helper to use.
-            ALL connectors have to instantiate the connector helper with configurations.
-            Doing this will do a lot of operations behind the scene.
-
-    ---
-
-    Best practices
-        - `self.helper.connector_logger.[info/debug/warning/error]` is used when logging a message
-
-    """
+class SecOpsSIEMConnector:
 
     def __init__(self):
         """
@@ -45,7 +16,7 @@ class ChronicleSIEMConnector:
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
         self.converter = CTIConverter(self.helper, self.config)
-        self.api_client = ChronicleEntitiesClient(self.helper, self.config)
+        self.api_client = SecOpsEntitiesClient(self.helper, self.config)
 
     def check_stream_id(self) -> None:
         """
