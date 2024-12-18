@@ -138,7 +138,10 @@ class ConverterToStix:
                 },
             )
             # create STIX indicator
-            pattern_value = "[url:value = '" + data.get("ioc") + "']"
+            url_value = data.get("ioc").replace(
+                "'", "\\'"
+            )  # single quotes must be escaped
+            pattern_value = "[url:value = '" + url_value + "']"
             observable_type = "Url"
 
         elif data.get("ioc_type") == "domain":
@@ -276,7 +279,8 @@ class ConverterToStix:
             },
         )
         # create STIX indicator
-        pattern_value = "[url:value = '" + data.get("url") + "']"
+        url_value = data.get("url").replace("'", "\\'")  # single quotes must be escaped
+        pattern_value = "[url:value = '" + url_value + "']"
         observable_type = "Url"
 
         # create an indicator for the ioc
@@ -340,7 +344,8 @@ class ConverterToStix:
             },
         )
         # create STIX indicator
-        pattern_value = "[url:value = '" + data.get("url") + "']"
+        url_value = data.get("url").replace("'", "\\'")  # single quotes must be escaped
+        pattern_value = "[url:value = '" + url_value + "']"
         observable_type = "Url"
 
         # create an indicator for the ioc
