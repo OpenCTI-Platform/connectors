@@ -1,6 +1,7 @@
 import sys
 from datetime import datetime, timezone
 
+import stix2
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
@@ -10,24 +11,26 @@ from .utils import SUPPORTED_COLLECTIONS
 
 
 class ConnectorZvelo:
+    """
+    Represents Zvelo external import connector.
+    """
 
     def __init__(self):
         """
         Initialize the Connector with necessary configurations
         """
-
         # Load configuration file and connection helper
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
         self.client = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper)
 
-    def _collect_intelligence(self, from_date) -> list:
+    def _collect_intelligence(self, from_date: str) -> list[stix2.v21._STIXBase21]:
         """
-        Collect intelligence from the source and convert into STIX object
+        Collect intelligence from Zvelo and convert into STIX object
+        :param from_date: Minimum Zvelo IOC creation date timestamp
         :return: List of STIX objects
         """
-
         # validate collection configured
         for collection in self.config.zvelo_collections:
             if collection not in SUPPORTED_COLLECTIONS:

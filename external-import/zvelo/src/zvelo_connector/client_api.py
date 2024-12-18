@@ -4,6 +4,9 @@ import requests
 
 
 class ConnectorClient:
+    """
+    Represent Zvelo API client interface.
+    """
 
     def __init__(self, helper, config):
         """
@@ -27,9 +30,10 @@ class ConnectorClient:
             "malicious": "/v1/malicious",
         }
 
-    def _get_authentication_token(self):
+    def _get_authentication_token(self) -> str:
         """
-        :return:
+        Get a authentication token from Zvelo.
+        :return: Authentication token
         """
         token_headers = {"Content-Type": "application/json"}
         data = {
@@ -52,11 +56,12 @@ class ConnectorClient:
         return response_data.get("access_token")
 
     @staticmethod
-    def _extract_entities(response, collection):
+    def _extract_entities(response: dict, collection: str) -> list[dict]:
         """
-        :param response:
-        :param collection:
-        :return:
+        Extract collection's data from Zvelo response.
+        :param response: Parsed JSON response
+        :param collection: Name of collection to get data for
+        :return: List of collection's entities
         """
         if collection == "threat":
             return response.get("threat_info").get("threat")
@@ -65,11 +70,12 @@ class ConnectorClient:
         if collection == "phish":
             return response.get("phish_info").get("phish")
 
-    def get_collections_entities(self, collection, from_date) -> list:
+    def get_collections_entities(self, collection: str, from_date: str) -> list[dict]:
         """
-        :param collection:
-        :param from_date:
-        :return:
+        Get collection's entities from Zvelo.
+        :param collection: Name of collection to get entities for
+        :param from_date: Minimum entity creation date timestamp
+        :return: List of collection's entities
         """
         params = {"page": 0}
         if from_date:

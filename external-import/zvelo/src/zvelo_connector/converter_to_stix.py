@@ -7,7 +7,7 @@ from pycti import Identity, Indicator, Malware, StixCoreRelationship
 
 class ConverterToStix:
     """
-    Provides methods for converting various zvelo IOCs format into STIX 2.1 objects.
+    Provides methods for converting various Zvelo IOCs format into STIX 2.1 objects.
     """
 
     def __init__(self, helper):
@@ -16,12 +16,11 @@ class ConverterToStix:
         self.tlp = stix2.TLP_AMBER
 
     @staticmethod
-    def create_author() -> dict:
+    def create_author() -> stix2.Identity:
         """
-        Create Author
-        :return: Author in Stix2 object
+        Create Author.
+        :return: Author as STIX 2.1 Identity object
         """
-
         author = stix2.Identity(
             id=Identity.generate_id(name="Zvelo", identity_class="organization"),
             name="Zvelo",
@@ -36,7 +35,6 @@ class ConverterToStix:
         :param value: Value in string
         :return: A boolean
         """
-
         try:
             ipaddress.IPv6Address(value)
             return True
@@ -50,21 +48,22 @@ class ConverterToStix:
         :param value: Value in string
         :return: A boolean
         """
-
         try:
             ipaddress.IPv4Address(value)
             return True
         except ipaddress.AddressValueError:
             return False
 
-    def _convert_related_ips(self, ip_info, observable_id, labels) -> list:
+    def _convert_related_ips(
+        self, ip_info: list[dict], observable_id: str, labels: list[str]
+    ) -> list[stix2.v21._STIXBase21]:
         """
-        :param ip_info:
-        :param observable_id:
-        :param labels:
-        :return:
+        Convert IOC's associated IPs to STIX 2.1 IPs Observables and link them to the main Observable.
+        :param ip_info: List of IOC's associated IPs
+        :param observable_id: ID of STIX 2.1 Observable representing IOC
+        :param labels: Labels to set to STIX 2.1 IP Observables
+        :return: List of STIX 2.1 objects (IP Observables and their relationship)
         """
-
         stix_objects = []
         for ip_address in ip_info:
             if self._is_ipv4(ip_address.get("ip")):
@@ -97,14 +96,16 @@ class ConverterToStix:
             stix_objects.append(stix_relationship)
         return stix_objects
 
-    def _create_relation(self, source_id, target_id, relation) -> dict:
+    def _create_relation(
+        self, source_id: str, target_id: str, relation: str
+    ) -> stix2.Relationship:
         """
-        :param source_id:
-        :param target_id:
-        :param relation:
-        :return:
+        Create a STIX 2.1 Relationship object.
+        :param source_id: STIX 2.1 source object's ID
+        :param target_id: STIX 2.1 target object's ID
+        :param relation: Name of relationship to create
+        :return: STIX 2.1 relationship object
         """
-
         stix_relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
                 relation,
@@ -118,13 +119,12 @@ class ConverterToStix:
         )
         return stix_relationship
 
-    def convert_threat_to_stix(self, data) -> list:
+    def convert_threat_to_stix(self, data) -> list[stix2.v21._STIXBase21]:
         """
-        Convert threat ioc into stix entities (indicator and related observables)
-        :param data:
-        :return:
+        Convert threat IOC into STIX entities (indicator and related observables)
+        :param data: Raw threat data from Zvelo
+        :return: List of STIX 2.1 objects and relationships
         """
-
         bundle_objects = []
         if data.get("ioc_type") == "url":
             # create URL observable
@@ -257,11 +257,11 @@ class ConverterToStix:
 
         return bundle_objects
 
-    def convert_phish_to_stix(self, data) -> list:
+    def convert_phish_to_stix(self, data) -> list[stix2.v21._STIXBase21]:
         """
-        Convert phish ioc into stix entities (indicator and related observables)
-        :param data:
-        :return:
+        Convert phish IOC into STIX entities (indicator and related observables)
+        :param data: Raw phish data from Zvelo
+        :return: List of STIX 2.1 objects and relationships
         """
         bundle_objects = []
 
@@ -321,11 +321,11 @@ class ConverterToStix:
 
         return bundle_objects
 
-    def convert_malicious_to_stix(self, data) -> list:
+    def convert_malicious_to_stix(self, data) -> list[stix2.v21._STIXBase21]:
         """
-        Convert malicious ioc into stix entities (indicator and related observables)
-        :param data:
-        :return:
+        Convert malicious IOC into STIX entities (indicator and related observables)
+        :param data: Raw malicious data from Zvelo
+        :return: List of STIX 2.1 objects and relationships
         """
         bundle_objects = []
 
