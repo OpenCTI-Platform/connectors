@@ -4,7 +4,7 @@ from typing import Any, List, Optional
 from google.auth.transport import requests as ChronicleRequests
 from google.oauth2 import service_account
 from requests import Response
-from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
+from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 SECOPS_SIEM_API_BASE_URL = "https://chronicle.googleapis.com"
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
