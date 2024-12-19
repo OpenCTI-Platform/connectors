@@ -36,7 +36,7 @@ class ConversionError(Exception):
 class RFStixEntity:
     """Parent class"""
 
-    def __init__(self, name, _type, author=None, tlp="white"):
+    def __init__(self, name, _type, author=None, tlp="red"):
         self.name = name
         self.type = _type
         self.author = author or self._create_author()
@@ -947,7 +947,6 @@ class StixNote:
         opencti_helper,
         tas,
         rfapi,
-        tlp="white",
         person_to_ta=False,
         ta_to_intrusion_set=False,
         risk_as_score=False,
@@ -967,7 +966,7 @@ class StixNote:
         self.ta_to_intrusion_set = ta_to_intrusion_set
         self.risk_as_score = risk_as_score
         self.risk_threshold = risk_threshold
-        self.tlp = TLP_MAP.get(tlp.lower(), None)
+        self.tlp = stix2.TLP_RED
         self.rfapi = rfapi
 
     def _create_author(self):
