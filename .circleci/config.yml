@@ -1049,7 +1049,7 @@ jobs:
           name: Build Docker image opencti/connector-zvelo
           command: docker build -t opencti/connector-zvelo:latest . && docker tag opencti/connector-zvelo:latest opencti/connector-zvelo:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/external-import/google-secops-siem
+          working_directory: ~/opencti/stream/google-secops-siem
           name: Build Docker image opencti/connector-google-secops-siem
           command: docker build -t opencti/connector-google-secops-siem:latest . && docker tag opencti/connector-google-secops-siem:latest opencti/connector-google-secops-siem:${CIRCLE_TAG}
       - run:
@@ -1955,7 +1955,7 @@ jobs:
           name: Build Docker image opencti/connector-zvelo
           command: docker build -t opencti/connector-zvelo:rolling .
       - run:
-          working_directory: ~/opencti/external-import/google-secops-siem
+          working_directory: ~/opencti/stream/google-secops-siem
           name: Build Docker image opencti/connector-google-secops-siem
           command: docker build -t opencti/connector-google-secops-siem:rolling .
       - run:
