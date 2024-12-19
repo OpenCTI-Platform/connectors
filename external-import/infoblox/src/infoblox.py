@@ -9,6 +9,7 @@ import stix2
 import yaml
 from pycti import (
     Indicator,
+    MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     get_config_variable,
@@ -66,7 +67,7 @@ class Infoblox:
             "INFOBLOX_MARKING",
             ["infoblox", "marking_definition"],
             config,
-            default="TLP:AMBER",
+            default="TLP:AMBER+STRICT",
         )
 
     def set_marking(self):
@@ -76,10 +77,26 @@ class Infoblox:
             marking = stix2.TLP_GREEN
         elif self.infoblox_marking == "TLP:AMBER":
             marking = stix2.TLP_AMBER
+        elif self.infoblox_marking == "TLP:AMBER+STRICT":
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:AMBER+STRICT",
+            )
         elif self.infoblox_marking == "TLP:RED":
             marking = stix2.TLP_RED
         else:
-            marking = stix2.TLP_AMBER
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="TLP",
+                definition={"TLP": "AMBER+STRICT"},
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:AMBER+STRICT",
+            )
 
         self.infoblox_marking = marking
 
@@ -229,7 +246,7 @@ class Infoblox:
             object_marking_refs=stix2.TLP_WHITE,
         )
 
-        stix_objects = [identity]
+        stix_objects = [identity, self.infoblox_marking]
         all_threats = urls + ips + domains
         for threat in all_threats:
             stix_object = self.create_stix_object(threat, identity_id)

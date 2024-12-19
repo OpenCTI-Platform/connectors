@@ -65,7 +65,7 @@ def create_stix_intrusionset(connector, actor_details):
             else []
         ),
         created_by_ref=connector.identity.get("standard_id"),
-        object_marking_refs=[stix2.TLP_AMBER.get("id")],
+        object_marking_refs=connector.mandiant_marking,
         primary_motivation=primary_motivation,
         secondary_motivations=secondary_motivations,
         allow_custom=True,
