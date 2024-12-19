@@ -2,7 +2,7 @@ import os
 import sys
 import time
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 import stix2
@@ -27,7 +27,7 @@ class RSTThreatFeed:
     def __init__(self):
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config = (
-            yaml.safe_load(open(config_file_path))
+            yaml.safe_load(open(config_file_path, encoding="UTF-8"))
             if os.path.isfile(config_file_path)
             else {}
         )
@@ -45,20 +45,15 @@ class RSTThreatFeed:
             "retry": int(self.get_config("retry", config, 5)),
             "delete_gz": True,
             "feeds": {"filetype": "json"},
-            "dirs": {"tmp": self.get_config("dirs_tmp", config, "/tmp")},
+            "dirs": {"tmp": self.get_config("dirs_tmp", config, "./")},
         }
-        self._state_dir = self.get_config("dirs_tmp", config, "/tmp")
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
+        self._state_dir = self.get_config("dirs_tmp", config, "./")
         self._min_score_import = int(self.get_config("min_score_import", config, 20))
         self._min_score_detection = {
             "IPv4-Addr": self.get_config(
                 "min_score_detection_ip",
                 config,
-                50,
+                45,
             ),
             "Domain-Name": self.get_config(
                 "min_score_detection_domain",
@@ -68,20 +63,28 @@ class RSTThreatFeed:
             "Url": self.get_config(
                 "min_score_detection_url",
                 config,
-                30,
+                45,
             ),
             "StixFile": self.get_config(
                 "min_score_detection_hash",
                 config,
-                25,
+                45,
             ),
         }
         self._only_new = bool(self.get_config("only_new", config, True))
         self._only_attributed = bool(self.get_config("only_attributed", config, True))
+        self.update_existing_data = bool(
+            get_config_variable(
+                "CONNECTOR_UPDATE_EXISTING_DATA",
+                ["connector", "update_existing_data"],
+                config,
+                default=True,
+            )
+        )
 
     @staticmethod
     def get_config(name: str, config, default=None):
-        env_name = "RST_THREAT_FEED_{}".format(name.upper())
+        env_name = f"RST_THREAT_FEED_{name.upper()}"
         result = get_config_variable(env_name, ["rst-threat-feed", name], config)
         if result is not None:
             return result
@@ -100,12 +103,10 @@ class RSTThreatFeed:
                 current_state = self.helper.get_state()
                 if current_state is not None and "last_run" in current_state:
                     last_run = current_state["last_run"]
-                    last_run_str = datetime.utcfromtimestamp(last_run).strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                    self.helper.log_info(
-                        "Connector's last run: {}".format(last_run_str)
-                    )
+                    last_run_str = datetime.fromtimestamp(
+                        last_run, tz=timezone.utc
+                    ).strftime("%Y-%m-%d %H:%M:%S")
+                    self.helper.log_info(f"Connector's last run: {last_run_str}")
                 else:
                     last_run = None
                     self.helper.log_info("Connector's first run")
@@ -119,9 +120,7 @@ class RSTThreatFeed:
                 else:
                     new_interval = self.get_interval() - (timestamp - last_run)
                     self.helper.log_info(
-                        "Connector will not run. Next run in: {} seconds.".format(
-                            round(new_interval, 2)
-                        )
+                        f"Connector will not run. Next run in: {round(new_interval, 2)} seconds."
                     )
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stopped")
@@ -153,7 +152,7 @@ class RSTThreatFeed:
         write_state(self._state_dir, feed_type, new_state)
 
     def _create_stix_bundle(self, new_state, feed_type):
-        self.helper.log_info("Parsing IOCs from Feed. State {}".format(new_state))
+        self.helper.log_info(f"Parsing IOCs from Feed. State {new_state}")
 
         iocs, threats, mapping = feed_converter(
             self._downloader_config["dirs"]["tmp"],
@@ -165,9 +164,7 @@ class RSTThreatFeed:
         )
 
         self.helper.log_info(
-            "Parsed IOCs: {}, Threats: {}, Mappings: {}".format(
-                len(iocs), len(threats), len(mapping)
-            )
+            f"Parsed IOCs: {len(iocs)}, Threats: {len(threats)}, Mappings: {len(mapping)}"
         )
 
         stix_bundle = list()
@@ -179,7 +176,7 @@ class RSTThreatFeed:
         )
         stix_bundle.append(organization)
 
-        self.helper.log_info("Converting {} IOCs to STIX objects".format(len(iocs)))
+        self.helper.log_info(f"Converting {len(iocs)} IOCs to STIX objects")
         for ioc_id, ioc in iocs.items():
             external_references = list()
             for i in ioc["src"]:
@@ -192,11 +189,9 @@ class RSTThreatFeed:
                     self._min_score_detection[ioc["observable_type"]]
                 ):
                     x_opencti_detection = True
-            except:
+            except Exception as ex:
                 self.helper.log_info(
-                    "Error while checking x_opencti_detection for {} IOCs to STIX objects".format(
-                        ioc["name"]
-                    )
+                    f"Error while checking x_opencti_detection for {ioc['name']}. {ex}"
                 )
             # indicator
             indicator = stix2.v21.Indicator(
@@ -211,7 +206,7 @@ class RSTThreatFeed:
                 modified=ioc["collect"],
                 created_by_ref=organization.id,
                 object_marking_refs=[stix2.TLP_WHITE],
-                confidence=int(ioc["score"]),
+                confidence=int(ioc["confidence"]),
                 external_references=external_references,
                 custom_properties={
                     "x_opencti_score": ioc["score"],
@@ -221,9 +216,7 @@ class RSTThreatFeed:
             )
             stix_bundle.append(indicator)
 
-        self.helper.log_info(
-            "Converting {} Threats to STIX objects".format(len(threats))
-        )
+        self.helper.log_info(f"Converting {len(threats)} Threats to STIX objects")
         for threat_key, threat in threats.items():
             external_references = list()
             for source_name, source_url in threat["src"].items():
@@ -238,7 +231,6 @@ class RSTThreatFeed:
                     id=threat_key,
                     is_family=isfamily,
                     name=threat["name"],
-                    description="{} malware".format(threat["name"]),
                     created_by_ref=organization.id,
                     external_references=external_references,
                 )
@@ -247,7 +239,6 @@ class RSTThreatFeed:
                     id=threat_key,
                     is_family=isfamily,
                     name=threat["name"],
-                    description="{} ransomware".format(threat["name"]),
                     created_by_ref=organization.id,
                     malware_types=["ransomware"],
                     external_references=external_references,
@@ -257,7 +248,6 @@ class RSTThreatFeed:
                     id=threat_key,
                     is_family=isfamily,
                     name=threat["name"],
-                    description="{} backdoor".format(threat["name"]),
                     created_by_ref=organization.id,
                     malware_types=["backdoor"],
                     external_references=external_references,
@@ -267,7 +257,6 @@ class RSTThreatFeed:
                     id=threat_key,
                     is_family=isfamily,
                     name=threat["name"],
-                    description="{} remote access trojan".format(threat["name"]),
                     created_by_ref=organization.id,
                     malware_types=["remote-access-trojan"],
                     external_references=external_references,
@@ -277,7 +266,6 @@ class RSTThreatFeed:
                     id=threat_key,
                     is_family=isfamily,
                     name=threat["name"],
-                    description="{} exploit".format(threat["name"]),
                     created_by_ref=organization.id,
                     malware_types=["exploit-kit"],
                     external_references=external_references,
@@ -287,7 +275,6 @@ class RSTThreatFeed:
                     id=threat_key,
                     is_family=isfamily,
                     name=threat["name"],
-                    description="{} cryptominer".format(threat["name"]),
                     created_by_ref=organization.id,
                     malware_types=["resource-exploitation"],
                     external_references=external_references,
@@ -296,7 +283,6 @@ class RSTThreatFeed:
                 malicious_object = stix2.v21.IntrusionSet(
                     id=threat_key,
                     name=threat["name"],
-                    description="{} group".format(threat["name"]),
                     created_by_ref=organization.id,
                     external_references=external_references,
                 )
@@ -304,7 +290,6 @@ class RSTThreatFeed:
                 malicious_object = stix2.v21.Campaign(
                     id=threat_key,
                     name=threat["name"],
-                    description="{} campaign".format(threat["name"]),
                     created_by_ref=organization.id,
                     external_references=external_references,
                 )
@@ -312,7 +297,6 @@ class RSTThreatFeed:
                 malicious_object = stix2.v21.Tool(
                     id=threat_key,
                     name=threat["name"],
-                    description="{} tool".format(threat["name"]),
                     created_by_ref=organization.id,
                     external_references=external_references,
                 )
@@ -323,17 +307,16 @@ class RSTThreatFeed:
                     created_by_ref=organization.id,
                     external_references=[
                         stix2.v21.ExternalReference(
-                            source_name=threat["name"],
-                            url="https://www.cve.org/CVERecord?id=" + threat["name"],
+                            source_name="cve.org",
+                            external_id=threat["name"].upper(),
+                            url=f"https://www.cve.org/CVERecord?id={threat['name'].upper()}",
                         )
                     ],
                 )
             if malicious_object:
                 stix_bundle.append(malicious_object)
 
-        self.helper.log_info(
-            "Converting {} Relations to STIX objects".format(len(mapping))
-        )
+        self.helper.log_info(f"Converting {len(mapping)} Relations to STIX objects")
         for m in mapping:
             indicator_id = m[0]
             threat_id = m[1]
@@ -346,9 +329,9 @@ class RSTThreatFeed:
                 external_references.append(
                     stix2.v21.ExternalReference(source_name=i["name"], url=i["url"])
                 )
-            relationshipType = "indicates"
+            relationship_type = "indicates"
             if threats[threat_id]["type"] == "sector":
-                relationshipType = "related-to"
+                relationship_type = "related-to"
             if fseen > collect + timedelta(0, 3):
                 self.helper.log_error(
                     f"stop_time {collect} must be later than start_time {fseen}. Fixing"
@@ -356,16 +339,14 @@ class RSTThreatFeed:
                 fseen = collect
             relation = stix2.v21.Relationship(
                 id=StixCoreRelationship.generate_id(
-                    relationshipType, indicator_id, threat_id, collect, collect
+                    relationship_type, indicator_id, threat_id, collect, collect
                 ),
                 source_ref=indicator_id,
                 target_ref=threat_id,
-                relationship_type=relationshipType,
+                relationship_type=relationship_type,
                 start_time=fseen,
                 stop_time=collect + timedelta(0, 3),
-                description="IOC associated with: {}".format(
-                    threats[threat_id]["name"]
-                ),
+                description=f"IOC associated with: {threats[threat_id]['name']}",
                 created_by_ref=organization.id,
                 object_marking_refs=[stix2.TLP_WHITE],
                 created=collect,
@@ -380,14 +361,9 @@ class RSTThreatFeed:
 
     def _batch_send(self, stix_bundle: List, feed_type: str):
         timestamp = int(time.time())
-        now = datetime.utcfromtimestamp(timestamp)
-        friendly_name = "Run for {} @ {}".format(
-            feed_type, now.strftime("%Y-%m-%d %H:%M:%S")
-        )
-
-        self.helper.log_debug(
-            "Start uploading of the objects: {}".format(len(stix_bundle))
-        )
+        now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        friendly_name = f"Run for {feed_type} @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
+        self.helper.log_debug(f"Start uploading of the objects: {len(stix_bundle)}")
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
