@@ -93,14 +93,17 @@ class SecOpsSIEMConnector:
         :param indicator: Indicator to upsert
         """
         udm_entities = self.converter.create_udm_entities_from_indicator(indicator)
-        entities_ingested = self.api_client.ingest(udm_entities)
+        if udm_entities:
+            entities_ingested = self.api_client.ingest(udm_entities)
 
-        if entities_ingested:
-            self.helper.connector_logger.info(
-                "[API] Entities have been successfully ingested",
-            )
-        else:
-            self.helper.connector_logger.error("[API] Error while ingesting indicator")
+            if entities_ingested:
+                self.helper.connector_logger.info(
+                    "[API] Entities have been successfully ingested",
+                )
+            else:
+                self.helper.connector_logger.error(
+                    "[API] Error while ingesting indicator"
+                )
 
     def process_message(self, msg) -> None:
         """

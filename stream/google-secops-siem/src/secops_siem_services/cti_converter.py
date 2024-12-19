@@ -108,9 +108,9 @@ class CTIConverter:
 
                 if hash_type is not None:
                     file[hash_type] = value
-
-            entity["file"] = file
-            entity_metadata["entity_type"] = chronicle_entity_type
+            if file:
+                entity["file"] = file
+                entity_metadata["entity_type"] = chronicle_entity_type
         else:
             entity[chronicle_entity_field] = observable.get("value")
             entity_metadata["entity_type"] = chronicle_entity_type
@@ -144,9 +144,16 @@ class CTIConverter:
                     observable, entity_metadata
                 )
 
-                # create the final UDM event
-                udm_entity = {"metadata": entity_metadata, "entity": entity_details}
-                udm_entities.append(udm_entity)
+                if not entity_metadata or not entity_details:
+                    self.helper.connector_logger.info(
+                        "Skipping indicator as it is not supported",
+                        {"observable_details": observable},
+                    )
+                    continue
+                else:
+                    # create the final UDM event
+                    udm_entity = {"metadata": entity_metadata, "entity": entity_details}
+                    udm_entities.append(udm_entity)
         else:
             self.helper.connector_logger.info(
                 "Indicator doesn't contains 'observable_values' key, unable to parse observables",

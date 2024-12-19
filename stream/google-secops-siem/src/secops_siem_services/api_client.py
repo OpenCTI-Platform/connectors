@@ -1,5 +1,9 @@
+import time
+from typing import Any, List, Optional
+
 from google.auth.transport import requests as ChronicleRequests
 from google.oauth2 import service_account
+from requests import Response
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 
 SECOPS_SIEM_API_BASE_URL = "https://chronicle.googleapis.com"
@@ -36,16 +40,6 @@ class SecOpsEntitiesClient:
         This method leverages the Google Python library to handle authentication and token management,
         including retry strategies for specific status codes. It ensures that credentials are refreshed
         automatically when expired (e.g., for a 401 Unauthorized error).
-
-        Retry strategy details:
-        The session retries on the following HTTP status codes:
-          - 500: Internal Server Error
-          - 503: Service Unavailable
-          - 408: Request Timeout
-          - 429: Too Many Requests
-
-        Google Authentication Reference:
-        https://github.com/googleapis/google-auth-library-python/blob/98c3ed94a25bd99e89f87f9500408e8e65d79723/google/auth/transport/__init__.py#L30
 
         :return:
             An instance of `ChronicleRequests.AuthorizedSession`, ready for authenticated API calls.
@@ -123,6 +117,81 @@ class SecOpsEntitiesClient:
             base_url = base_url.replace("https://", f"https://{region}-")
         return base_url
 
+    @staticmethod
+    def backoff_delay(backoff_factor: float, attempts: int) -> float:
+        """
+        Calculate the delay for a retry attempt using an exponential backoff algorithm.
+
+        :param backoff_factor: float, the base delay time in seconds. This value is
+                               multiplied by the exponential factor to determine the delay.
+        :param attempts: int, the number of retry attempts already made (1-based).
+        :return: float, the calculated delay time in seconds.
+
+        Example:
+            For `backoff_factor` = 0.5 and `attempts` = 3, the delay is calculated as:
+            delay = 0.5 * (2 ** (3 - 1)) = 0.5 * 4 = 2.0 seconds.
+        """
+        delay = backoff_factor * (2 ** (attempts - 1))
+        return delay
+
+    def _send_request(
+        self,
+        entities: List[Any],
+        backoff_factor: int = 30,
+        total: int = 4,
+        retry_status_forcelist: Optional[List[int]] = None,
+    ) -> Optional[Response]:
+        """
+        Send a POST request with retry logic and exponential backoff for specified HTTP statuses.
+
+        :param entities: List[Any], the list of entities to include in the request body.
+        :param backoff_factor: int, the base delay factor (in seconds) for exponential backoff. Defaults to 10.
+        :param total: int, the maximum number of retry attempts. Defaults to 4.
+        :param retry_status_forcelist: Optional[List[int]], a list of HTTP status codes that should trigger retries.
+                                 Defaults to an empty list.
+        :return: Optional[Response], the HTTP response object from the final successful request, or the last
+                 response after all retries fail.
+
+        Retry Logic:
+            - If the response status code matches any in `status_forcelist`, the method retries the request
+              after a delay calculated using the `backoff_delay` function.
+            - Delays between retries increase exponentially, and logs are generated for each retry attempt.
+
+        Error Handling:
+            - Tracks and logs responses with status codes in `status_forcelist` during retries.
+            - Returns the most recent response (`last_response`) if all retries fail.
+        """
+        if retry_status_forcelist is None:
+            retry_status_forcelist = []
+        last_response: Optional[Response] = None
+
+        # Implement retry logic
+        for attempt in range(total):
+
+            body = {"inline_source": {"entities": entities, "log_type": "OPENCTI"}}
+            response = self.chronicle_http_session.request(
+                method="POST", url=self.url, json=body
+            )
+
+            if response.status_code in retry_status_forcelist:
+                # Implement backoff
+                delay = self.backoff_delay(backoff_factor, attempt)
+                time.sleep(delay)
+
+                self.helper.connector_logger.info(
+                    "[API] Request failed. Retrying in a few seconds",
+                    {"status_code": response.status_code, "delay_in_seconds": delay},
+                )
+
+                # Track the last response
+                last_response = response
+                continue
+            else:
+                return response
+
+        # Return the last response after all retries fail
+        return last_response
+
     def ingest(self, entities: list):
         """
         Ingests a list of entities by making an HTTP POST request to the configured Chronicle URL.
@@ -152,29 +221,22 @@ class SecOpsEntitiesClient:
             Errors are logged using `self.helper.connector_logger` with appropriate log levels and error details.
         """
         try:
-            body = {"inline_source": {"entities": entities, "log_type": "OPENCTI"}}
-            response = self.chronicle_http_session.request(
-                method="POST", url=self.url, json=body
+
+            response = self._send_request(
+                entities=entities, retry_status_forcelist=[429]
             )
-            response.raise_for_status()
 
             if response.status_code == 200:
                 # Google returns True for response.ok when the request is successful
                 return response.ok
-
-        except RetryError as err:
-            self.helper.connector_logger.error(
-                "A retry error occurred during data handling, maximum retries exceeded for url",
-                {"retry_error": str(err)},
-            )
-            return None
+            else:
+                response.raise_for_status()
 
         except HTTPError as err:
             self.helper.connector_logger.error(
                 "An HTTP error occurred during data handling",
                 {"http_error": str(err)},
             )
-
             return None
 
         except Timeout as err:
