@@ -1,7 +1,7 @@
 version: '3'
 services:
   harfanglab-intel:
-    image: opencti/connector-harfanglab-intel:6.3.11
+    image: opencti/connector-harfanglab-intel:6.4.5
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
