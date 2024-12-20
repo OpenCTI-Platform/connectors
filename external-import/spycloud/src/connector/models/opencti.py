@@ -1,9 +1,10 @@
-from pydantic import BaseModel, Field, PrivateAttr, ConfigDict
 from abc import abstractmethod
-from typing import Any, Literal
 from datetime import datetime
-import stix2
+from typing import Any, Literal
+
 import pycti
+import stix2
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 class OCTIBaseModel(BaseModel):
@@ -44,15 +45,14 @@ class Author(OCTIBaseModel):  # TODO complete description
     """
 
     name: str = Field(description="", min_length=1)
+    identity_class: str = Field(description="", min_length=1)
     description: str = Field(description="", min_length=1, default=None)
 
     def to_stix2_object(self) -> stix2.Identity:
-        identity_class = "organization"
-
         return stix2.Identity(
-            id=pycti.Identity.generate_id(self.name, identity_class),
+            id=pycti.Identity.generate_id(self.name, self.identity_class),
             name=self.name,
-            identity_class=identity_class,
+            identity_class=self.identity_class,
             description=self.description,
         )
 
