@@ -1,7 +1,7 @@
 import requests
+from pycti import OpenCTIConnectorHelper
 
 from .config_loader import ConfigLoader
-from pycti import OpenCTIConnectorHelper
 
 
 class SpyCloudClient:

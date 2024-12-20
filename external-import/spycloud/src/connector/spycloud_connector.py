@@ -3,9 +3,9 @@ from datetime import datetime
 
 from pycti import OpenCTIConnectorHelper
 
-from .services.spycloud_client import SpyCloudClient
 from .services.config_loader import ConfigLoader
 from .services.converter_to_stix import ConverterToStix
+from .services.spycloud_client import SpyCloudClient
 
 
 class SpyCloudConnector:
