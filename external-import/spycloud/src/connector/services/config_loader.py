@@ -1,11 +1,10 @@
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from datetime import datetime, timezone
 
 import yaml
 from pycti import get_config_variable
-
 
 config_yml_file_path = Path(__file__).parents[2].joinpath("config.yml")
 config_yml = (
@@ -114,6 +113,7 @@ class SpyCloudConfig:
 
     @property
     def breach_severities(self) -> list[str]:
+        # TODO: add enum validation?
         breach_severities_string = get_config_variable(
             env_var="SPYCLOUD_BREACH_SEVERITIES",
             yaml_path=["spycloud", "breach_severities"],
@@ -121,10 +121,13 @@ class SpyCloudConfig:
             default="2,5,20,25",
             required=False,
         )
-        return [string.strip() for string in breach_severities_string.split(",")]
+        return [
+            string.strip() for string in breach_severities_string.split(",")
+        ]  # TODO parse to int ?
 
     @property
     def watchlist_types(self) -> list[str]:
+        # TODO: add enum validation?
         watchlist_types_string = get_config_variable(
             env_var="SPYCLOUD_WATCHLIST_TYPES",
             yaml_path=["spycloud", "watchlist_types"],
