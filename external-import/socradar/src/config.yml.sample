@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'OPENCTI_TOKEN'
+
+connector:
+  id: 'CONNECTOR_ID'
+  type: 'EXTERNAL_IMPORT'
+  name: 'SOCRadar'
+  scope: 'socradar'
+  confidence_level: 75
+  log_level: 'info'
+  update_existing_data: true
+
+radar:
+  base_feed_url: "https://platform.socradar.com/api/threat/intelligence/feed_list/"
+  format_type: ".json?key="
+  socradar_key: "SOCRADAR_KEY"
+  run_interval: 600
+  collections_uuid:
+    collection_1:
+      id: ["COLLECTION_UUID"]
+      name: ["COLLECTION_NAME"]
+  default_marking: 'TLP:WHITE'
+  create_observables: true
+  create_indicators: true
+
