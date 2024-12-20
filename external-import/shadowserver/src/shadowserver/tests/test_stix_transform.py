@@ -151,6 +151,12 @@ class TestShadowserverStixTransformation(unittest.TestCase):
         self.assertTrue(isinstance(certificate, str))
         self.assertTrue(certificate.startswith("x509-certificate--"))
 
+    def test_create_vulnerability(self):
+        name = "CVE-2022-1234"
+        vulnerability = self.transformation.create_vulnerability(name)
+        self.assertTrue(isinstance(vulnerability, str))
+        self.assertTrue(vulnerability.startswith("vulnerability--"))
+
     def test_create_opencti_case(self):
         self.transformation.create_opencti_case()
         self.assertTrue(
