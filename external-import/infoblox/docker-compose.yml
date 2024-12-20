@@ -13,5 +13,5 @@ services:
       - INFOBLOX_INTERVAL=12 # In hours
       - INFOBLOX_IOC_LIMIT=10000 # Limit of IOCs to import (for each IOC types)
       - INFOBLOX_URL=https://csp.infoblox.com/tide/api/data/threats
-      - INFOBLOX_MARKING=TLP:AMBER
+      - INFOBLOX_MARKING=TLP:AMBER+STRICT
     restart: always
