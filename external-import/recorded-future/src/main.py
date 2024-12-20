@@ -50,7 +50,11 @@ class BaseRFConnector:
         )
 
         self.tlp = get_config_variable(
-            "RECORDED_FUTURE_TLP", ["rf", "TLP"], config
+            "RECORDED_FUTURE_TLP",
+            ["rf", "TLP"],
+            config,
+            required=True,
+            default="Red",
         ).lower()
 
         self.rf_pull_signatures = get_config_variable(
@@ -299,7 +303,6 @@ class RFNotes:
                     self.helper,
                     tas,
                     self.rfapi,
-                    self.tlp,
                     self.rf_person_to_TA,
                     self.rf_TA_to_intrusion_set,
                     self.risk_as_score,
