@@ -10,6 +10,8 @@ from pycti import Note as pycti_note
 from pycti import ObservedData as pycti_observed_data
 from pycti import OpenCTIConnectorHelper
 from pycti import Report as pycti_report
+from pycti import Vulnerability as pycti_vulnerability
+
 from stix2 import (
     Artifact,
     AutonomousSystem,
@@ -531,7 +533,7 @@ class ShadowserverStixTransformation:
             "object_marking_refs": self.marking_refs,
         }
 
-        opencti_obj = Vulnerability(id=Vulnerability.generate_id(name), **kwargs)
+        opencti_obj = Vulnerability(id=pycti_vulnerability.generate_id(name), **kwargs)
 
         if opencti_obj.get("id"):
             self.object_refs.append(opencti_obj.get("id"))
