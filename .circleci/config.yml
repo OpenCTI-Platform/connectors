@@ -385,6 +385,10 @@ jobs:
           name: Build Docker image opencti/connector-attribution-tools
           command: docker build -t opencti/connector-attribution-tools:latest . && docker tag opencti/connector-attribution-tools:latest opencti/connector-attribution-tools:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/tenable-security-center
+          name: Build Docker image opencti/connector-tenable-security-center
+          command: docker build -t opencti/connector-tenable-security-center:latest . && docker tag opencti/connector-tenable-security-center:latest opencti/connector-tenable-security-center:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -538,6 +542,8 @@ jobs:
             docker push opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
             docker push opencti/connector-attribution-tools:latest
             docker push opencti/connector-attribution-tools:${CIRCLE_TAG}
+            docker push opencti/connector-tenable-security-center:latest
+            docker push opencti/connector-tenable-security-center:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1035,6 +1041,18 @@ jobs:
           name: Build Docker image opencti/connector-harfanglab
           command: docker build -t opencti/connector-harfanglab:latest . && docker tag opencti/connector-harfanglab:latest opencti/connector-harfanglab:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/intel471_v2
+          name: Build Docker image opencti/connector-intel471_v2
+          command: docker build -t opencti/connector-intel471_v2:latest . && docker tag opencti/connector-intel471_v2:latest opencti/connector-intel471_v2:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/zvelo
+          name: Build Docker image opencti/connector-zvelo
+          command: docker build -t opencti/connector-zvelo:latest . && docker tag opencti/connector-zvelo:latest opencti/connector-zvelo:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/google-secops-siem
+          name: Build Docker image opencti/connector-google-secops-siem
+          command: docker build -t opencti/connector-google-secops-siem:latest . && docker tag opencti/connector-google-secops-siem:latest opencti/connector-google-secops-siem:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1042,6 +1060,12 @@ jobs:
             docker push opencti/connector-webhook:${CIRCLE_TAG}
             docker push opencti/connector-harfanglab:latest
             docker push opencti/connector-harfanglab:${CIRCLE_TAG}
+            docker push opencti/connector-intel471_v2:latest
+            docker push opencti/connector-intel471_v2:${CIRCLE_TAG}
+            docker push opencti/connector-zvelo:latest
+            docker push opencti/connector-zvelo:${CIRCLE_TAG}            
+            docker push opencti/connector-google-secops-siem:latest
+            docker push opencti/connector-google-secops-siem:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1401,6 +1425,10 @@ jobs:
           name: Build Docker image opencti/connector-attribution-tools
           command: docker build -t opencti/connector-attribution-tools:rolling .
       - run:
+          working_directory: ~/opencti/external-import/tenable-security-center
+          name: Build Docker image opencti/connector-tenable-security-center
+          command: docker build -t opencti/connector-tenable-security-center:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1477,6 +1505,7 @@ jobs:
             docker push opencti/connector-greynoise-vuln:rolling
             docker push opencti/connector-tenable-vuln-management:rolling
             docker push opencti/connector-attribution-tools:rolling
+            docker push opencti/connector-tenable-security-center:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1918,11 +1947,26 @@ jobs:
           name: Build Docker image opencti/connector-harfanglab
           command: docker build -t opencti/connector-harfanglab:rolling .
       - run:
+          working_directory: ~/opencti/external-import/intel471_v2
+          name: Build Docker image opencti/connector-intel471_v2
+          command: docker build -t opencti/connector-intel471_v2:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/zvelo
+          name: Build Docker image opencti/connector-zvelo
+          command: docker build -t opencti/connector-zvelo:rolling .
+      - run:
+          working_directory: ~/opencti/stream/google-secops-siem
+          name: Build Docker image opencti/connector-google-secops-siem
+          command: docker build -t opencti/connector-google-secops-siem:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push opencti/connector-webhook:rolling
             docker push opencti/connector-harfanglab:rolling
+            docker push opencti/connector-intel471_v2:rolling
+            docker push opencti/connector-zvelo:rolling
+            docker push opencti/connector-google-secops-siem:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
