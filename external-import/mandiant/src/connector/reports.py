@@ -413,6 +413,7 @@ class MandiantReport:
 
         if len(intrusion_sets) > 0:
             definitions += [
+                # https://github.com/OpenCTI-Platform/connectors/compare/issue/3129
                 # {
                 #    "type": "originates-from",
                 #    "sources": intrusion_sets,
@@ -457,6 +458,7 @@ class MandiantReport:
 
         if len(malwares) > 0:
             definitions += [
+                # https://github.com/OpenCTI-Platform/connectors/compare/issue/3129
                 # {
                 #    "type": "originates-from",
                 #    "sources": malwares,
