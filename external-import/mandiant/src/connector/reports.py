@@ -398,7 +398,7 @@ class MandiantReport:
         ]
 
         # Get objects from tags
-        source_geographies = list(self._get_objects_from_tags("source_geographies"))
+        # source_geographies = list(self._get_objects_from_tags("source_geographies"))
         target_geographies = list(self._get_objects_from_tags("target_geographies"))
         affected_industries = list(self._get_objects_from_tags("affected_industries"))
         affected_systems = list(self._get_objects_from_tags("affected_systems"))
