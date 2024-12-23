@@ -1,6 +1,6 @@
 pycti==6.4.5
 weasyprint==62.3
-Jinja2==3.1.4
+Jinja2==3.1.5
 pygal==3.0.5
 wheel==0.45.1
 CairoSVG==2.7.1
