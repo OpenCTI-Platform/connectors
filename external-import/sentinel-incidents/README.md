@@ -1,13 +1,5 @@
 # OpenCTI Sentinel Incidents Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
 
 Table of Contents
 
