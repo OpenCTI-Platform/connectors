@@ -32,11 +32,16 @@ help !
 
 It's also important to define the necessary permissions in Sentinel for the connector to work.
 
-In the Azure portal, you need to set :
-Home > Application Registration > OpenCTI (your name) > API Permissions
-and prioritize the "ThreatIndicators.ReadWrite.OwnedBy" permissions.
+In the Azure portal, you need to set :  
+Home > Application Registration > OpenCTI (your name) > API Permissions  
+and enable the permissions named :  
+- "SecurityEvent.Read.All"
+- "SecurityEvent.ReadWrite.All"
+- "SecurityIncident.Read.All"
+- "SecurityIncident.ReadWrite.All"  
+
 ![Sentinel_permission](./doc/permission_mandatory.png)
-You will then be able to view the data (indicators) in :
+You will then be able to view the data (indicators) in :  
 Home > Microsoft Sentinel > OpenCTI (Your Name) > Threat Indicators
 
 For more information, visit:
