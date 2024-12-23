@@ -413,11 +413,11 @@ class MandiantReport:
 
         if len(intrusion_sets) > 0:
             definitions += [
-                {
-                    "type": "originates-from",
-                    "sources": intrusion_sets,
-                    "destinations": source_geographies,
-                },
+                # {
+                #    "type": "originates-from",
+                #    "sources": intrusion_sets,
+                #    "destinations": source_geographies,
+                # },
                 {
                     "type": "targets",
                     "sources": intrusion_sets,
@@ -457,11 +457,11 @@ class MandiantReport:
 
         if len(malwares) > 0:
             definitions += [
-                {
-                    "type": "originates-from",
-                    "sources": malwares,
-                    "destinations": source_geographies,
-                },
+                # {
+                #    "type": "originates-from",
+                #    "sources": malwares,
+                #    "destinations": source_geographies,
+                # },
                 {
                     "type": "targets",
                     "sources": malwares,
