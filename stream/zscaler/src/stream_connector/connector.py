@@ -6,7 +6,6 @@ import requests
 import urllib3
 import validators
 from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
-
 from stream_connector.utils import obfuscate_api_key
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
