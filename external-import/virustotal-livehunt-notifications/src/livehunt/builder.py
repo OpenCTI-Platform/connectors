@@ -13,7 +13,7 @@ import stix2
 import vt
 from pycti import Incident, Indicator, OpenCTIConnectorHelper, StixCoreRelationship
 
-plyara.logger.setLevel(logging.ERROR)
+logging.getLogger("plyara").setLevel(logging.ERROR)
 
 
 class LivehuntBuilder:
