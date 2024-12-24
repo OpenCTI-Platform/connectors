@@ -76,6 +76,8 @@ Below are the parameters you'll need to set for OpenCTI:
 | TAXII2_NOTES_TO_IGNORE | notes_to_ignore | ChangeMe | No | List of strings which contains a portion of the note to ignore. |
 | TAXII2_SAVE_ORIGINAL_INDICATOR_ID_TO_NOTE | save_original_indicator_id_to_note | false | No | Boolean statement on whether to save the original indicator id to a note. |
 | TAXII2_SAVE_ORIGINAL_INDICATOR_ID_ABSTRACT | save_original_indicator_id_abstract | ChangeMe | No | String to use for note abstract. |
+| TAXII2_CHANGE_REPORT_STATUS | change_report_status | false | No | Boolean statement on whether to change the report status on ingestion. |
+| TAXII2_CHANGE_REPORT_STATUS_X_OPENCTI_WORKFLOW_ID | change_report_status_x_opencti_workflow_id | ChangeMe | No | x_opencti_workflow_id value of the report status. |
 
 ### Collections and API roots
 TAXII 2.0 introduced a new concept into the TAXII standard called an "API Root." API Roots are logical groupings of TAXII Collections and Channels that allow for better organization and federated access. More information can be found in the [TAXII2 standard](https://docs.oasis-open.org/cti/taxii/v2.1/csprd01/taxii-v2.1-csprd01.pdf)
