@@ -169,7 +169,7 @@ class ConverterToStix:
     def create_case_incident(
         self,
         threat: harfanglab.Threat,
-        object_refs: list[opencti.BaseModel] = None,
+        object_refs: list[opencti.BaseModel] | None = None,
     ) -> opencti.CaseIncident:
         incident_priority = INCIDENT_PRIORITIES_BY_LEVEL[threat.level]
         incident_top_agent = threat.top_agents[0]
@@ -198,7 +198,7 @@ class ConverterToStix:
         alert: harfanglab.Alert,
         alert_intelligence: (
             harfanglab.IocRule | harfanglab.SigmaRule | harfanglab.YaraSignature
-        ) = None,
+        ) | None = None,
     ) -> opencti.Incident:
         """
         Create an Incident (STIX 2.1 domain object, aka SDO) for a given Harfanglab alert and its corresponding ioc.
@@ -243,7 +243,7 @@ class ConverterToStix:
         alert: harfanglab.Alert,
         alert_intelligence: (
             harfanglab.IocRule | harfanglab.SigmaRule | harfanglab.YaraSignature
-        ) = None,
+        ) | None = None,
     ) -> opencti.Indicator:
         """
         Create an Indicator (STIX 2.1 domain object, aka SDO) from a Harfanglab alert and its corresponding IOC, Sigma rule or Yara signature.
@@ -291,7 +291,7 @@ class ConverterToStix:
     def create_note(
         self,
         threat_note: harfanglab.ThreatNote,
-        object_refs: list[opencti.BaseModel] = None,
+        object_refs: list[opencti.BaseModel] | None = None,
     ) -> opencti.Note:
         case_incident = object_refs[0]
 
@@ -312,7 +312,7 @@ class ConverterToStix:
         alert: harfanglab.Alert,
         alert_intelligence: (
             harfanglab.IocRule | harfanglab.SigmaRule | harfanglab.YaraSignature
-        ) = None,
+        ) | None = None,
     ):
         """
         Create STIX 2.1 observables, aka SCO, from a Harfanglab alert and its corresponding IOC, Sigma rule or Yara signature.
@@ -356,7 +356,7 @@ class ConverterToStix:
     def create_sighting(
         self,
         alert: harfanglab.Alert,
-        sighted_ref: opencti.BaseModel = None,
+        sighted_ref: opencti.BaseModel | None = None,
     ) -> opencti.Sighting:
         """
         Create a Sighting (STIX 2.1 relationship object, aka SRO) for an indicator sighted in a Harfanglab alert.
