@@ -40,7 +40,7 @@ if __name__ == "__main__":
         connector.authenticate_with_zscaler()
         connector.start()
 
-    except Exception as e:
+    except :
         traceback.print_exc()
         time.sleep(10)
         sys.exit(1)
