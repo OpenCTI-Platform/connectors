@@ -127,7 +127,7 @@ class HarfanglabIncidentsConnector:
         self.helper.set_state(state)
 
     def _collect_incident_intelligence(
-        self, threat: harfanglab.Threat = None
+        self, threat: harfanglab.Threat | None = None
     ) -> list[opencti.BaseModel]:
         """
         Collect intelligence from Harfanglab and convert into STIX object

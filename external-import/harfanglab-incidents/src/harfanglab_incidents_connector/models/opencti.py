@@ -57,8 +57,8 @@ class AttackPattern(BaseModel):
 
     def __init__(
         self,
-        name: str = None,
-        x_mitre_id: str = None,
+        name: str | None = None,
+        x_mitre_id: str | None = None,
         author=None,
         object_marking_refs: list[
             stix2.MarkingDefinition
@@ -89,8 +89,8 @@ class Author(BaseModel):
 
     def __init__(
         self,
-        name: str = None,
-        description: str = None,
+        name: str | None = None,
+        description: str | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition
         ] = DEFAULT_MARKING_DEFINITIONS,
@@ -116,17 +116,17 @@ class Author(BaseModel):
 class CaseIncident(BaseModel):
     def __init__(
         self,
-        name: str = None,
-        description: str = None,
-        severity: str = None,
-        priority: str = None,
-        object_refs: list[dict] = None,
-        author: Author = None,
-        created_at: datetime = None,
+        name: str | None = None,
+        description: str | None = None,
+        severity: str | None = None,
+        priority: str | None = None,
+        object_refs: list[dict] | None = None,
+        author: Author | None = None,
+        created_at: datetime | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition
         ] = DEFAULT_MARKING_DEFINITIONS,
-        external_references: list[dict] = None,
+        external_references: list[dict] | None = None,
     ):
         self.name = name
         self.description = description
@@ -161,8 +161,8 @@ class Directory(BaseModel):
 
     def __init__(
         self,
-        path: str = None,
-        author: Author = None,
+        path: str | None = None,
+        author: Author | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition
         ] = DEFAULT_MARKING_DEFINITIONS,
@@ -189,8 +189,8 @@ class DomainName(BaseModel):
 
     def __init__(
         self,
-        value: str = None,
-        author: Author = None,
+        value: str | None = None,
+        author: Author | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition
         ] = DEFAULT_MARKING_DEFINITIONS,
@@ -220,9 +220,9 @@ class File(BaseModel):
 
     def __init__(
         self,
-        name: str = None,
-        hashes: dict = None,
-        author: Author = None,
+        name: str | None = None,
+        hashes: dict | None = None,
+        author: Author | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition
         ] = DEFAULT_MARKING_DEFINITIONS,
@@ -251,8 +251,8 @@ class Hostname(BaseModel):
 
     def __init__(
         self,
-        value: str = None,
-        author: Author = None,
+        value: str | None = None,
+        author: Author | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition
         ] = DEFAULT_MARKING_DEFINITIONS,
@@ -280,8 +280,8 @@ class IPv4(BaseModel):
 
     def __init__(
         self,
-        value: str = None,
-        author: Author = None,
+        value: str | None = None,
+        author: Author | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition
         ] = DEFAULT_MARKING_DEFINITIONS,
@@ -311,8 +311,8 @@ class IPv6(BaseModel):
 
     def __init__(
         self,
-        value: str = None,
-        author: Author = None,
+        value: str | None = None,
+        author: Author | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition
         ] = DEFAULT_MARKING_DEFINITIONS,
@@ -342,17 +342,17 @@ class Incident(BaseModel):
 
     def __init__(
         self,
-        name: str = None,
-        description: str = None,
-        source: str = None,
-        severity: str = None,
-        author: Author = None,
-        created_at: datetime = None,
-        updated_at: datetime = None,
+        name: str | None = None,
+        description: str | None = None,
+        source: str | None = None,
+        severity: str | None = None,
+        author: Author | None = None,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition
         ] = DEFAULT_MARKING_DEFINITIONS,
-        external_references: list[dict] = None,
+        external_references: list[dict] | None = None,
     ):
         self.name = name
         self.description = description
@@ -391,13 +391,13 @@ class Indicator(BaseModel):
 
     def __init__(
         self,
-        name: str = None,
-        pattern: str = None,
-        pattern_type: str = None,
-        x_opencti_score: int = None,
-        author: Author = None,
-        created_at: datetime = None,
-        updated_at: datetime = None,
+        name: str | None = None,
+        pattern: str | None = None,
+        pattern_type: str | None = None,
+        x_opencti_score: int | None = None,
+        author: Author | None = None,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition
         ] = DEFAULT_MARKING_DEFINITIONS,
@@ -435,7 +435,7 @@ class Note(BaseModel):
         abstract=None,
         content=None,
         object_refs=None,
-        author: Author = None,
+        author: Author | None = None,
         created_at=None,
         updated_at=None,
         object_marking_refs: list[
@@ -477,7 +477,7 @@ class Relationship(BaseModel):
         type=None,
         source=None,
         target=None,
-        author: Author = None,
+        author: Author | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition
         ] = DEFAULT_MARKING_DEFINITIONS,
@@ -507,10 +507,10 @@ class Sighting(BaseModel):
 
     def __init__(
         self,
-        source: Author = None,
-        target: Indicator = None,
-        first_seen_at: datetime = None,
-        last_seen_at: datetime = None,
+        source: Author | None = None,
+        target: Indicator | None = None,
+        first_seen_at: datetime | None = None,
+        last_seen_at: datetime | None = None,
         count: int = 1,
         object_marking_refs: list[
             stix2.MarkingDefinition
@@ -556,8 +556,8 @@ class Url(BaseModel):
 
     def __init__(
         self,
-        value: str = None,
-        author: Author = None,
+        value: str | None = None,
+        author: Author | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition
         ] = DEFAULT_MARKING_DEFINITIONS,
@@ -585,7 +585,7 @@ class UserAccount(BaseModel):
     def __init__(
         self,
         account_login=None,
-        author: Author = None,
+        author: Author | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition
         ] = DEFAULT_MARKING_DEFINITIONS,
