@@ -12,17 +12,7 @@ from stream_connector.utils import obfuscate_api_key
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class ZscalerConnector:
-    def __init__(
-        self,
-        config_path,
-        helper: OpenCTIConnectorHelper,
-        opencti_url,
-        opencti_token,
-        ssl_verify,
-        zscaler_username,
-        zscaler_password,
-        zscaler_api_key
-    ):
+    def __init__(self, helper: OpenCTIConnectorHelper, opencti_url, opencti_token, ssl_verify, zscaler_username, zscaler_password, zscaler_api_key):
         self.helper = helper
         self.helper.connector_logger.info("Initializing Zscaler connector...")
 
