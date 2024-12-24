@@ -298,6 +298,4 @@ class ZscalerConnector:
         self.helper.connector_logger.info("Starting connector and listening for OpenCTI events...")
         self.helper.listen_stream(self._process_message)
 
-if __name__ == "__main__":
-    ZscalerInstance = ZscalerConnector
-    ZscalerInstance.start()
+
