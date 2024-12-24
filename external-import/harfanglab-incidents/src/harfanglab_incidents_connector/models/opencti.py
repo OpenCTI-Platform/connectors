@@ -189,7 +189,7 @@ class DomainName(BaseModel):
 
     def __init__(
         self,
-        value: str  | None = None,
+        value: str | None = None,
         author: Author | None = None,
         object_marking_refs: list[
             stix2.MarkingDefinition

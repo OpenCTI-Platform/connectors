@@ -50,7 +50,9 @@ class HarfanglabClient:
             )
             return None
 
-    def generate_alerts(self, since: datetime | None = None, threat_id: str | None = None):
+    def generate_alerts(
+        self, since: datetime | None = None, threat_id: str | None = None
+    ):
         """
         Get lists of alerts from Harfanglab API.
         :param since: Minimum alerts creation datetime

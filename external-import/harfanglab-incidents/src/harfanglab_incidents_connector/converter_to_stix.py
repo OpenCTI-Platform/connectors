@@ -28,9 +28,7 @@ class ConverterToStix:
             MARKING_DEFINITIONS_BY_NAME["TLP:CLEAR"],
         )
 
-    def _create_directory(
-        self, process: harfanglab.Process
-    ) -> opencti.Directory:
+    def _create_directory(self, process: harfanglab.Process) -> opencti.Directory:
         """
         Create a Directory (STIX2.1 observable, aka SCO) for a given alert's process.
         :param process: Process found in a Harfanglab alert
@@ -123,9 +121,7 @@ class ConverterToStix:
         )
         return octi_url
 
-    def _create_user_account(
-        self, process: harfanglab.Process
-    ) -> opencti.UserAccount:
+    def _create_user_account(self, process: harfanglab.Process) -> opencti.UserAccount:
         """
         Create a UserAccount (STIX2.1 observable, aka SCO) for a given alert's process.
         :param process: Process found in a Harfanglab alert
@@ -179,7 +175,9 @@ class ConverterToStix:
             description=f"Incident from {self.helper.connect_name}",
             severity=threat.level,
             priority=incident_priority,
-            object_refs=[object_ref.id for object_ref in object_refs] if object_refs else [],
+            object_refs=(
+                [object_ref.id for object_ref in object_refs] if object_refs else []
+            ),
             author=self.author,
             created_at=threat.created_at,
             object_marking_refs=[self.marking_definition.id],
@@ -298,7 +296,9 @@ class ConverterToStix:
         octi_note = opencti.Note(
             abstract=threat_note.title,
             content=threat_note.content,
-            object_refs=[object_ref.id for object_ref in object_refs] if object_refs else [],
+            object_refs=(
+                [object_ref.id for object_ref in object_refs] if object_refs else []
+            ),
             author=self.author,
             created_at=threat_note.created_at,
             updated_at=threat_note.updated_at,
@@ -337,9 +337,12 @@ class ConverterToStix:
                         observable = self._create_domain_name(alert_intelligence)
                 case "url":
                     observable = self._create_url(alert_intelligence)
-        if isinstance(
-            alert_intelligence, (harfanglab.SigmaRule, harfanglab.YaraSignature) 
-        ) and alert.process is not None :
+        if (
+            isinstance(
+                alert_intelligence, (harfanglab.SigmaRule, harfanglab.YaraSignature)
+            )
+            and alert.process is not None
+        ):
             observable = self._create_file(alert.process)
 
         if observable:
