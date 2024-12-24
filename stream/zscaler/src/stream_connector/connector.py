@@ -5,7 +5,6 @@ import time
 import requests
 import urllib3
 import validators
-import yaml
 from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
 
 from stream_connector.utils import obfuscate_api_key
