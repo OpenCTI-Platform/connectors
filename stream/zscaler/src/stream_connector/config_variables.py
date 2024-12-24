@@ -5,23 +5,56 @@ def load_config_variables(helper, config):
     # Variables OpenCTI
     opencti_url = get_config_variable("OPENCTI_URL", ["opencti", "url"], config)
     opencti_token = get_config_variable("OPENCTI_TOKEN", ["opencti", "token"], config)
-    ssl_verify = get_config_variable("OPENCTI_SSL_VERIFY", ["opencti", "ssl_verify"], config, default=False)
+    ssl_verify = get_config_variable(
+        "OPENCTI_SSL_VERIFY", ["opencti", "ssl_verify"], config, default=False
+    )
 
     # Variables du connecteur
-    connector_name = get_config_variable("CONNECTOR_NAME", ["connector", "name"], config)
+    connector_name = get_config_variable(
+        "CONNECTOR_NAME", ["connector", "name"], config
+    )
     connector_id = get_config_variable("CONNECTOR_ID", ["connector", "id"], config)
-    connector_type = get_config_variable("CONNECTOR_TYPE", ["connector", "type"], config)
-    connector_scope = get_config_variable("CONNECTOR_SCOPE", ["connector", "scope"], config)
-    connector_log_level = get_config_variable("CONNECTOR_LOG_LEVEL", ["connector", "log_level"], config, default="info")
-    connector_live_stream_id = get_config_variable("CONNECTOR_LIVE_STREAM_ID", ["connector", "live_stream_id"], config)
-    connector_live_stream_listen_delete = get_config_variable("CONNECTOR_LIVE_STREAM_LISTEN_DELETE", ["connector", "live_stream_listen_delete"], config, default=True)
-    connector_live_stream_no_dependencies = get_config_variable("CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES", ["connector", "live_stream_no_dependencies"], config, default=True)
-    connector_duration_period = get_config_variable("CONNECTOR_DURATION_PERIOD", ["connector", "duration_period"], config, default="PT5M")
+    connector_type = get_config_variable(
+        "CONNECTOR_TYPE", ["connector", "type"], config
+    )
+    connector_scope = get_config_variable(
+        "CONNECTOR_SCOPE", ["connector", "scope"], config
+    )
+    connector_log_level = get_config_variable(
+        "CONNECTOR_LOG_LEVEL", ["connector", "log_level"], config, default="info"
+    )
+    connector_live_stream_id = get_config_variable(
+        "CONNECTOR_LIVE_STREAM_ID", ["connector", "live_stream_id"], config
+    )
+    connector_live_stream_listen_delete = get_config_variable(
+        "CONNECTOR_LIVE_STREAM_LISTEN_DELETE",
+        ["connector", "live_stream_listen_delete"],
+        config,
+        default=True,
+    )
+    connector_live_stream_no_dependencies = get_config_variable(
+        "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES",
+        ["connector", "live_stream_no_dependencies"],
+        config,
+        default=True,
+    )
+    connector_duration_period = get_config_variable(
+        "CONNECTOR_DURATION_PERIOD",
+        ["connector", "duration_period"],
+        config,
+        default="PT5M",
+    )
 
     # Variables Zscaler
-    zscaler_username = get_config_variable("ZSCALER_USERNAME", ["zscaler", "username"], config)
-    zscaler_password = get_config_variable("ZSCALER_PASSWORD", ["zscaler", "password"], config)
-    zscaler_api_key = get_config_variable("ZSCALER_API_KEY", ["zscaler", "api_key"], config)
+    zscaler_username = get_config_variable(
+        "ZSCALER_USERNAME", ["zscaler", "username"], config
+    )
+    zscaler_password = get_config_variable(
+        "ZSCALER_PASSWORD", ["zscaler", "password"], config
+    )
+    zscaler_api_key = get_config_variable(
+        "ZSCALER_API_KEY", ["zscaler", "api_key"], config
+    )
 
     return {
         "opencti_url": opencti_url,
@@ -38,5 +71,5 @@ def load_config_variables(helper, config):
         "connector_duration_period": connector_duration_period,
         "zscaler_username": zscaler_username,
         "zscaler_password": zscaler_password,
-        "zscaler_api_key": zscaler_api_key
+        "zscaler_api_key": zscaler_api_key,
     }

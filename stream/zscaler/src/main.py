@@ -33,13 +33,13 @@ if __name__ == "__main__":
             ssl_verify=vars["ssl_verify"],
             zscaler_username=vars["zscaler_username"],
             zscaler_password=vars["zscaler_password"],
-            zscaler_api_key=vars["zscaler_api_key"]
+            zscaler_api_key=vars["zscaler_api_key"],
         )
 
         connector.authenticate_with_zscaler()
         connector.start()
 
-    except :
+    except:
         traceback.print_exc()
         time.sleep(10)
         sys.exit(1)
