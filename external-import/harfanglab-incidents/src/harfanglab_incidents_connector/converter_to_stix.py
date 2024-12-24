@@ -338,8 +338,8 @@ class ConverterToStix:
                 case "url":
                     observable = self._create_url(alert_intelligence)
         if isinstance(
-            alert_intelligence, (harfanglab.SigmaRule, harfanglab.YaraSignature)
-        ):
+            alert_intelligence, (harfanglab.SigmaRule, harfanglab.YaraSignature) 
+        ) and alert.process is not None :
             observable = self._create_file(alert.process)
 
         if observable:
