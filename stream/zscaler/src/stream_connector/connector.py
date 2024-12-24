@@ -27,9 +27,6 @@ class ZscalerConnector:
         self.helper = helper
         self.helper.connector_logger.info("Initializing Zscaler connector...")
 
-        with open(config_path) as f:
-            config = yaml.safe_load(f) or {}
-
         self.opencti_url = opencti_url
         self.opencti_token = opencti_token
         self.ssl_verify = ssl_verify
