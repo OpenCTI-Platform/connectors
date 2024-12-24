@@ -1,0 +1,5 @@
+src/config.yml
+__pycache__
+src/logs
+src/*.gql
+.venv
