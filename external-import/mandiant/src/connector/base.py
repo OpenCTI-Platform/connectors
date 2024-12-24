@@ -12,11 +12,13 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 from .api import OFFSET_PAGINATION, MandiantAPI
 from .constants import (
     BATCH_REPORT_SIZE,
+    DEFAULT_TLP_MARKING_DEFINITION,
     STATE_END,
     STATE_LAST_RUN,
     STATE_OFFSET,
     STATE_START,
     STATEMENT_MARKINGS,
+    TLP_MARKING_DEFINITION_MAPPING,
 )
 from .errors import StateError
 from .utils import Timestamp
@@ -76,6 +78,14 @@ class Mandiant:
             config,
             default=False,
         )
+
+        self.mandiant_marking = get_config_variable(
+            "MANDIANT_MARKING",
+            ["mandiant", "marking_definition"],
+            config,
+            default="AMBER+STRICT",
+        )
+        self._convert_tlp_to_marking_definition()
 
         self.mandiant_collections = []
 
@@ -759,6 +769,18 @@ class Mandiant:
                     del obj["object_marking_refs"]
                 else:
                     obj["object_marking_refs"] = new_markings
+
+    def _convert_tlp_to_marking_definition(self):
+        """Get marking definition for given TLP."""
+        if self.mandiant_marking is None:
+            self.mandiant_marking = DEFAULT_TLP_MARKING_DEFINITION
+
+        marking_definition = TLP_MARKING_DEFINITION_MAPPING.get(
+            self.mandiant_marking.lower()
+        )
+        if marking_definition is None:
+            raise ValueError(f"Invalid TLP value '{self.mandiant_marking}'")
+        self.mandiant_marking = marking_definition
 
     def _process_batch_reports(
         self, new_batch_reports: list[Any], info_reports: dict[str, Any]
