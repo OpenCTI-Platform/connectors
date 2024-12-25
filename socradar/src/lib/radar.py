@@ -26,7 +26,6 @@ from stix2 import (
 
 
 class RadarConnector:
-
     def __init__(self):
         # Step 1.0: Initialize connector from config
         config_path = os.path.dirname(os.path.abspath(__file__)) + "/../config.yml"
@@ -50,9 +49,6 @@ class RadarConnector:
             "RADAR_INTERVAL", ["radar", "run_interval"], config, True
         )
 
-        # Initialize empty identity mapping
-        self.identity_mapping = {}
-
         # Step 1.2: Initialize regex patterns for value classification
         self.regex_patterns = {
             "md5": r"^[a-fA-F\d]{32}$",
@@ -64,8 +60,11 @@ class RadarConnector:
             "url": r"^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$",
         }
 
+        # Step 1.3: Initialize identity cache
+        self.identity_mapping = {}
+
     def _get_indicator_type(self, feed_type):
-        """Map feed types to STIX indicator types"""
+        """Step 2.0: Map feed types to STIX indicator types"""
         type_mapping = {
             "url": ["url-watchlist"],
             "domain": ["domain-watchlist"],
@@ -75,14 +74,13 @@ class RadarConnector:
         return type_mapping.get(feed_type, ["malicious-activity"])
 
     def _get_or_create_identity(self, maintainer_name):
-        """Get existing identity or create new one for maintainer"""
+        """Step 2.1: Get existing identity or create new one for maintainer"""
         try:
             if maintainer_name in self.identity_mapping:
                 return self.identity_mapping[maintainer_name]
 
             current_time = datetime.utcnow()
 
-            # Create new identity for maintainer
             identity = Identity(
                 id=f"identity--{str(uuid.uuid4())}",
                 name=maintainer_name,
@@ -93,11 +91,7 @@ class RadarConnector:
                 modified=current_time,
             )
 
-            # Store in mapping for reuse
             self.identity_mapping[maintainer_name] = identity
-            self.helper.log_info(
-                f"Created new identity for maintainer: {maintainer_name}"
-            )
             return identity
 
         except Exception as e:
@@ -107,7 +101,9 @@ class RadarConnector:
             return None
 
     def _process_feed_item(self, item, work_id):
+        """Step 3.0: Process individual feed items and create STIX objects"""
         try:
+            # Step 3.1: Extract feed item data
             value = item["feed"]
             feed_type = item.get("feed_type", "").lower()
             maintainer = item.get("maintainer_name", "Unknown")
@@ -117,22 +113,16 @@ class RadarConnector:
             if last_seen <= first_seen:
                 last_seen = first_seen + timedelta(days=365)
 
-            # Get or create identity for this maintainer
+            # Step 3.2: Create identity and pattern
             maintainer_identity = self._get_or_create_identity(maintainer)
             if not maintainer_identity:
-                self.helper.log_error(
-                    f"Could not create identity for maintainer: {maintainer}"
-                )
                 return
 
             pattern = self._create_stix_pattern(value, feed_type)
             if not pattern:
-                self.helper.log_error(
-                    f"Could not create pattern for: {value} ({feed_type})"
-                )
                 return
 
-            # Create kill chain phase
+            # Step 3.3: Create STIX objects
             kill_chain_phase = KillChainPhase(
                 kill_chain_name="lockheed-martin-cyber-kill-chain",
                 phase_name="reconnaissance",
@@ -144,10 +134,7 @@ class RadarConnector:
                 self.helper.log_error(f"Error generating indicator ID: {str(e)}")
                 return
 
-            if not indicator_id:
-                self.helper.log_error("Failed to generate valid indicator ID")
-                return
-
+            # Step 3.4: Create indicator
             indicator = Indicator(
                 id=indicator_id,
                 name=f"{feed_type.upper()}: {value}",
@@ -162,11 +149,11 @@ class RadarConnector:
                 kill_chain_phases=[kill_chain_phase],
                 created=first_seen,
                 modified=first_seen,
-                created_by_ref=maintainer_identity.id,  # Use maintainer's identity
+                created_by_ref=maintainer_identity.id,
                 object_marking_refs=[TLP_WHITE],
             )
 
-            # Create relationship between indicator and maintainer identity
+            # Step 3.5: Create relationships
             relationship_id = StixCoreRelationship.generate_id(
                 "created-by", indicator.id, maintainer_identity.id
             )
@@ -182,10 +169,8 @@ class RadarConnector:
                 object_marking_refs=[TLP_WHITE],
             )
 
-            # Create bundle with all objects
+            # Step 3.6: Create and send bundle
             bundle = Bundle(objects=[maintainer_identity, indicator, relationship])
-
-            # Send to OpenCTI
             self.helper.send_stix2_bundle(bundle.serialize(), work_id=work_id)
 
             self.helper.log_info(
@@ -283,28 +268,24 @@ class RadarConnector:
         return None
 
     def run(self):
-        """Main loop for the connector"""
+        """Step 4.0: Main connector loop"""
         self.helper.log_info("Starting SOCRadar connector...")
         while True:
             try:
-                # Create a wrapper function that doesn't require arguments
+                # Step 4.1: Create process wrapper
                 def process_data():
-                    # Get work_id from helper
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, "Synchronizing SOCRadar feeds"
                     )
                     try:
                         self._process_feed(work_id)
                     finally:
-                        # Ensure work is marked as complete
                         self.helper.api.work.to_processed(
                             work_id, "Feed synchronization complete"
                         )
 
-                self.helper.schedule_iso(
-                    process_data,  # Use wrapper function instead
-                    self.interval,
-                )
+                # Step 4.2: Schedule processing
+                self.helper.schedule_iso(process_data, self.interval)
                 self.helper.log_info("Feed collection complete")
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
@@ -314,10 +295,11 @@ class RadarConnector:
                 time.sleep(60)
 
     def _process_feed(self, work_id: str) -> None:
-        """Process the feed data"""
+        """Step 5.0: Process feed collection"""
         try:
             self.helper.log_info("Starting feed collection...")
 
+            # Step 5.1: Process each collection
             for collection_name, collection_data in self.collections.items():
                 try:
                     collection_id = collection_data["id"][0]
@@ -333,6 +315,7 @@ class RadarConnector:
                         f"Processing {total_items} items from {collection_name}"
                     )
 
+                    # Step 5.2: Process items
                     for item in items:
                         self._process_feed_item(item, work_id)
                         time.sleep(0.5)  # Add small delay between items
