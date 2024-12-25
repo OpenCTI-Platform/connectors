@@ -1,4 +1,3 @@
-# import os
 import sys
 import time
 
@@ -6,7 +5,7 @@ import time
 import dotenv
 from adapter import DataToSTIXAdapter
 from lib.external_import import ExternalImportConnector
-
+from traceback import format_exc
 dotenv.load_dotenv()
 
 
@@ -282,6 +281,6 @@ if __name__ == "__main__":
         connector = CustomConnector()
         connector.run()
     except Exception as e:
-        print(e)
+        print(format_exc())
         time.sleep(10)
         sys.exit(0)
