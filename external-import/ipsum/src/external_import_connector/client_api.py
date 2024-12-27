@@ -17,7 +17,6 @@ class ConnectorClient:
         self.helper = helper
         self.config = config
 
-        # Define headers in session and update when needed
         headers = {"Bearer": self.config.api_key}
         self.session = requests.Session()
         if self.config.api_key and self.config.api_key != "":
@@ -69,8 +68,5 @@ class ConnectorClient:
                             if not is_private_ip(ip):
                                 ips.append(ip)
             return ips
-            # ==========================
-            # === Add your code above ===
-            # ===========================
         except Exception as err:
             self.helper.connector_logger.error(err)

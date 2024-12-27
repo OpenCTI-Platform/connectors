@@ -48,8 +48,6 @@ class ConnectorIPSUM:
         """
         Initialize the Connector with necessary configurations
         """
-
-        # Load configuration file and connection helper
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
         self.client = ConnectorClient(self.helper, self.config)
@@ -62,11 +60,6 @@ class ConnectorIPSUM:
         """
         stix_objects = []
 
-        # ===========================
-        # === Add your code below ===
-        # ===========================
-
-        # Get entities from external sources
         entities = self.client.get_entities()
         if entities is None:
             return stix_objects
@@ -77,9 +70,6 @@ class ConnectorIPSUM:
             if entity is not None
         ]
         return stix_objects
-        # ===========================
-        # === Add your code above ===
-        # ===========================
 
     def process_message(self) -> None:
         """
@@ -92,7 +82,6 @@ class ConnectorIPSUM:
         )
 
         try:
-            # Get the current state
             now = datetime.now()
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
@@ -109,10 +98,8 @@ class ConnectorIPSUM:
                     "[CONNECTOR] Connector has never run..."
                 )
 
-            # Friendly name will be displayed on OpenCTI platform
             friendly_name = "Connector IPSum"
 
-            # Initiate a new work
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
@@ -122,10 +109,6 @@ class ConnectorIPSUM:
                 {"connector_name": self.helper.connect_name},
             )
 
-            # Performing the collection of intelligence
-            # ===========================
-            # === Add your code below ===
-            # ===========================
             stix_objects = self._collect_intelligence()
 
             if stix_objects is not None and len(stix_objects) != 0:
@@ -138,11 +121,7 @@ class ConnectorIPSUM:
                     "Sending STIX objects to OpenCTI...",
                     {"bundles_sent": {str(len(bundles_sent))}},
                 )
-            # ===========================
-            # === Add your code above ===
-            # ===========================
 
-            # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug(
                 "Getting current state and update it with last run of the connector",
                 {"current_timestamp": current_timestamp},

@@ -10,8 +10,6 @@ class ConfigConnector:
         """
         Initialize the connector with necessary configurations
         """
-
-        # Load configuration file
         self.load = self._load_config()
         self._initialize_configurations()
 
@@ -35,7 +33,6 @@ class ConfigConnector:
         Connector configuration variables
         :return: None
         """
-        # OpenCTI configurations
         self.duration_period = get_config_variable(
             "CONNECTOR_DURATION_PERIOD",
             ["connector", "duration_period"],
@@ -50,15 +47,16 @@ class ConfigConnector:
             isNumber=True,
         )
 
-        # Connector extra parameters
         self.api_base_url = get_config_variable(
             "CONNECTOR_IPSUM_API_BASE_URL",
             ["connector_ipsum", "api_base_url"],
             self.load,
+            default="https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/5.txt",
         )
 
         self.api_key = get_config_variable(
             "CONNECTOR_IPSUM_API_KEY",
             ["connector_ipsum", "api_key"],
             self.load,
+            required=False,
         )
