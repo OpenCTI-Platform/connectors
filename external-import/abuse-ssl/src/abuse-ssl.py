@@ -47,11 +47,6 @@ class AbuseSSLImportConnector:
             )
             * 60
         )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
 
     def run(self):
         """Running component of class"""
@@ -223,13 +218,13 @@ class AbuseSSLImportConnector:
         self.helper.log_info("Sending STIX Bundle")
         try:
             self.helper.send_stix2_bundle(
-                bundle, work_id=work_id, update=self.update_existing_data
+                bundle, work_id=work_id
             )
         except:
             time.sleep(60)
             try:
                 self.helper.send_stix2_bundle(
-                    bundle, work_id=work_id, update=self.update_existing_data
+                    bundle, work_id=work_id
                 )
             except Exception as e:
                 self.helper.log_error(str(e))
