@@ -5,13 +5,8 @@ from datetime import datetime, timezone
 import requests
 import stix2
 import yaml
-from pycti import (
-    Identity,
-    Indicator,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    get_config_variable,
-)
+from pycti import (Identity, Indicator, OpenCTIConnectorHelper,
+                   StixCoreRelationship, get_config_variable)
 
 
 class AbuseSSLImportConnector:
