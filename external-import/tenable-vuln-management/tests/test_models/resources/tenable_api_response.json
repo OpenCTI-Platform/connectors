@@ -15,7 +15,8 @@
         "Microsoft Windows Server 2016 Standard"
       ],
       "network_id": "00000000-0000-0000-0000-000000000000",
-      "tracked": true
+      "tracked": true,
+      "last_scan_target": "192.0.0.1"
     },
     "output": "\n\n  Produact : Microsoft SharePoint Enterprise Server 2016\n  KB : 5002113\n  - C:\\Program Files\\Microsoft Office Servers\\16.0\\bin\\ascalc.dll has not been patched.\n    Remote version : 16.0.4342.1000\n    Should be      : 16.0.5266.1000\n\n",
     "plugin": {
@@ -73,6 +74,7 @@
       "family": "Windows : Microsoft Bulletins",
       "family_id": 41,
       "has_patch": true,
+      "has_workaround": false,
       "id": 156641,
       "in_the_news": false,
       "ms_bulletin": [
@@ -150,7 +152,8 @@
     "scan": {
       "schedule_uuid": "461e4ebc-b309-face-6fa1-afa4ba163cb6d84b9dc0a0dc5020",
       "started_at": "2023-05-03T14:14:02.387Z",
-      "uuid": "270b911b-1fe6-4760-8c49-88d315cb764e"
+      "uuid": "270b911b-1fe6-4760-8c49-88d315cb764e",
+      "target": "192.0.0.1"
     },
     "severity": "high",
     "severity_id": 3,
@@ -173,7 +176,8 @@
         "VMware vCenter Server 8.0.0 build-20037386"
       ],
       "network_id": "00000000-0000-0000-0000-000000000000",
-      "tracked": true
+      "tracked": true,
+      "last_scan_target": "192.0.0.1"
     },
     "output": "\nThe following pages do not set a Content-Security-Policy frame-ancestors response header or set a permissive policy:\n\n  - https://vcsa8.target.example.com/\n  - https://vcsa8.target.example.com/ui/\n",
     "plugin": {
@@ -195,6 +199,7 @@
       "family": "CGI abuses",
       "family_id": 3,
       "has_patch": false,
+      "has_workaround": false,
       "id": 50344,
       "in_the_news": false,
       "name": "Missing or Permissive Content-Security-Policy frame-ancestors HTTP Response Header",
@@ -222,7 +227,8 @@
     "scan": {
       "schedule_uuid": "16cf08d3-3f94-79f4-8038-996376eabd4f186741fe15533e70",
       "started_at": "2023-05-03T14:13:56.983Z",
-      "uuid": "e86252a3-8dc0-43b6-8ddd-afb219d040ed"
+      "uuid": "e86252a3-8dc0-43b6-8ddd-afb219d040ed",
+      "target": "192.0.0.1"
     },
     "severity": "info",
     "severity_id": 0,

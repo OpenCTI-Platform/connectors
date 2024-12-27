@@ -1,0 +1,118 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tenable-security-center"
+dynamic = ["version"]
+requires-python = ">= 3.11, <3.13"
+readme = "README.md"
+classifiers = [
+    #   4 - Beta
+    #   5 - Production/Stable
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    ]
+dependencies = [
+    "stix2~=3.0.1",
+    "pycti==6.4.5",
+    "validators~=0.33.0",
+    "pydantic>=2.8.2,<3.0.0",
+    "pytenable~=1.5.3", # for now we handle API from 5.13 to 6.4
+    "cvss~=3.3",
+    "semver>=3,<4",
+    "requests~=2.32.2",
+    "PyYAML~=6.0.0"
+]
+
+[project.optional-dependencies]
+# Define extras for testing and development
+test = [
+    "pytest>=8.1.1,<9",             # Pytest for running tests
+]
+dev = [
+    "black>=22.0.0,<25",  # Code formatter
+    "isort>=5.10.0,<6",  # Import sorter
+    "ruff>=0.7.2,<1",  # linter
+    "mypy>=1.13.0,<2",  # type validator
+    "types-requests",  # stubs for requests lib
+    "types-PyYAML",  # stubs for PyYAML lib
+    "python-dotenv~=1.0.1",
+    "pip-audit~=2.7.3"
+]
+all = [
+    "tenable_security_center[test,dev]"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.dynamic]
+version = {attr = "tenable_security_center.__version__"}
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+target-version = ['py311']
+
+[tool.ruff]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+    "tests"
+]
+
+target-version = "py311"
+
+[tool.ruff.lint]
+# Never enforce `E501` (line length violations). Already handle with black
+# Never enforce `F821` (Undefined name `null`). incorrect issue with notebook
+# Never enforce `D213` (Multi-line docstring summary should start at the second line) conflict with our docstring convention
+# Never enforce `D211` (NoBlankLinesBeforeClass)`
+# Never enforce `G004` (logging-f-string) Logging statement uses f-string
+# Never enforce `TRY003`() Avoid specifying long messages outside the exception class not useful
+# Never enforce `D104` (Missing docstring in public package) 
+# Never enforce `D407` (Missing dashed underline after section) 
+# Never enforce `D408` (Section underline should be in the line following the section’s name) 
+# Never enforce `D409` (Section underline should match the length of its name)
+ignore = ["D203", "E501", "F821", "D205", "D213" , "D211", "G004", "TRY003", "D104", "D407", "D408", "D409"]
+select = ["E", "F", "W", "D", "G", "T", "B", "C", "N", "I", "S"]
+
+[tool.mypy]
+strict = true
+exclude = [
+    '^tests', 
+    '^docs',
+    '^build',
+    '^dist',
+    '^venv',
+    '^site-packages',
+    '^__pypackages__',
+    '^.venv',
+]

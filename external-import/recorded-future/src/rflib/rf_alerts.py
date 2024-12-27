@@ -212,6 +212,8 @@ class RecordedFutureAlertConnector(threading.Thread):
         self.helper.set_state(
             {"last_alert_run": timestamp.strftime("%Y-%m-%dT%H:%M:%S")}
         )
+        message = f"{self.helper.connect_name} connector successfully run for Recorded Future Alerts"
+        self.helper.api.work.to_processed(self.work_id, message)
 
     def alert_to_incident(self, alert):
         external_files = []

@@ -1,13 +1,9 @@
 # crt_sh/api.py
+from datetime import datetime
+
 import requests
-from pycti import StixCoreRelationship
-from stix2 import (
-    DomainName,
-    EmailAddress,
-    Relationship,
-    X509Certificate,
-    X509V3ExtensionsType,
-)
+import stix2
+from pycti import Identity, StixCoreRelationship
 from stix2.exceptions import AtLeastOnePropertyError
 from validators import ValidationError
 from validators import domain as domain_validator
@@ -17,6 +13,7 @@ from .crtsh_utils import (
     TLP_MAP,
     configure_logger,
     convert_to_datetime,
+    is_valid_entry_timestamp,
     is_valid_stix_id,
 )
 
@@ -39,7 +36,7 @@ class CrtSHClient:
         self.url = DEFAULT_URL.format(search=domain)
         if is_expired:
             self.url += "&exclude=expired"
-        self._response = self._request_data()
+        self.author = CrtSHClient._create_author("crtsh")
 
     def _transform_domain(self, domain, is_wildcard):
         try:
@@ -70,19 +67,15 @@ class CrtSHClient:
             LOGGER.error(f"Error while fetching data from {self.url}: {str(e)}")
             return None
 
-    def get_response(self):
-        """Return the response from the API."""
-        return self._response
-
     def process_certificate(self, item, stix_objects):
         """Return a STIX X509Certificate object."""
         x509_v3_extensions = None
         if hasattr(item, "name_value") and item.get("name_value"):
-            x509_v3_extensions = X509V3ExtensionsType(
+            x509_v3_extensions = stix2.X509V3ExtensionsType(
                 subject_alternative_name=item.get("name_value"),
             )
         try:
-            cert = X509Certificate(
+            cert = stix2.X509Certificate(
                 type="x509-certificate",
                 issuer=item.get("issuer_name"),
                 validity_not_before=convert_to_datetime(item.get("not_before")),
@@ -93,6 +86,7 @@ class CrtSHClient:
                 x509_v3_extensions=x509_v3_extensions,
                 custom_properties={
                     "labels": self.labels,
+                    "x_opencti_created_by_ref": self.author.id,
                 },
             )
             stix_objects.append(cert)
@@ -119,12 +113,13 @@ class CrtSHClient:
         """Return a STIX DomainName object."""
         try:
             if domain_validator(domain):
-                return DomainName(
+                return stix2.DomainName(
                     type="domain-name",
                     value=domain.lower(),
                     object_marking_refs=self.marking_refs,
                     custom_properties={
                         "labels": self.labels,
+                        "x_opencti_created_by_ref": self.author.id,
                     },
                 )
             elif isinstance(domain, str) and domain.startswith("*."):
@@ -180,12 +175,13 @@ class CrtSHClient:
         """Return a STIX EmailAddress object."""
         try:
             if email_validator(email):
-                return EmailAddress(
+                return stix2.EmailAddress(
                     type="email-addr",
                     value=email.lower(),
                     object_marking_refs=self.marking_refs,
                     custom_properties={
                         "labels": self.labels,
+                        "x_opencti_created_by_ref": self.author.id,
                     },
                 )
             else:
@@ -215,7 +211,7 @@ class CrtSHClient:
         elif len(source_ref) == 0 or len(target_ref) == 0:
             return None
         else:
-            return Relationship(
+            return stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
                     "related-to", source_ref, target_ref
                 ),
@@ -223,25 +219,45 @@ class CrtSHClient:
                 source_ref=source_ref,
                 target_ref=target_ref,
                 object_marking_refs=self.marking_refs,
+                created_by_ref=self.author.id,
                 custom_properties={
                     "labels": self.labels,
                 },
             )
 
-    def get_stix_objects(self):
+    def get_stix_objects(self, since: datetime = None):
         """Return a list of STIX objects."""
         stix_objects = []
-        for item in self._response:
-            LOGGER.debug(f"Processing item: {item}")
-            certificate_id = self.process_certificate(item, stix_objects)
-            if "common_name" in item:
-                LOGGER.debug(f"Processing common_name: {item.get('common_name')}")
-                self.process_common_name(item, stix_objects, certificate_id)
-            if "name_value" in item:
-                LOGGER.debug(f"Processing name_value: {item.get('name_value')}")
-                self.process_name_value(item, stix_objects, certificate_id)
+
+        data = self._request_data()
+        if data is None:
+            return stix_objects
+
+        for item in data:
+            if is_valid_entry_timestamp(item["entry_timestamp"], since):
+                LOGGER.debug(f"Processing item: {item}")
+                certificate_id = self.process_certificate(item, stix_objects)
+                if "common_name" in item:
+                    LOGGER.debug(f"Processing common_name: {item.get('common_name')}")
+                    self.process_common_name(item, stix_objects, certificate_id)
+                if "name_value" in item:
+                    LOGGER.debug(f"Processing name_value: {item.get('name_value')}")
+                    self.process_name_value(item, stix_objects, certificate_id)
+
         uniq_stix_objects = []
         for item in stix_objects:
             if item not in uniq_stix_objects:
                 uniq_stix_objects.append(item)
+
         return uniq_stix_objects
+
+    @staticmethod
+    def _create_author(name: str = None):
+        identity_class = "organization"
+
+        return stix2.Identity(
+            id=Identity.generate_id(name, identity_class),
+            name=name,
+            description="CRTSH external import connector",
+            identity_class=identity_class,
+        )

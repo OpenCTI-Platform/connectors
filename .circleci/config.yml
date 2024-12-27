@@ -385,6 +385,10 @@ jobs:
           name: Build Docker image opencti/connector-attribution-tools
           command: docker build -t opencti/connector-attribution-tools:latest . && docker tag opencti/connector-attribution-tools:latest opencti/connector-attribution-tools:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/tenable-security-center
+          name: Build Docker image opencti/connector-tenable-security-center
+          command: docker build -t opencti/connector-tenable-security-center:latest . && docker tag opencti/connector-tenable-security-center:latest opencti/connector-tenable-security-center:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -538,7 +542,8 @@ jobs:
             docker push opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
             docker push opencti/connector-attribution-tools:latest
             docker push opencti/connector-attribution-tools:${CIRCLE_TAG}
-
+            docker push opencti/connector-tenable-security-center:latest
+            docker push opencti/connector-tenable-security-center:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -810,10 +815,6 @@ jobs:
           name: Build Docker image opencti/connector-tanium-intel
           command: docker build -t opencti/connector-tanium-intel:latest . && docker tag opencti/connector-tanium-intel:latest opencti/connector-tanium-intel:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/stream/webhook
-          name: Build Docker image opencti/connector-webhook
-          command: docker build -t opencti/connector-webhook:latest . && docker tag opencti/connector-webhook:latest opencti/connector-webhook:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/stream/qradar
           name: Build Docker image opencti/connector-qradar
           command: docker build -t opencti/connector-qradar:latest . && docker tag opencti/connector-qradar:latest opencti/connector-qradar:${CIRCLE_TAG}
@@ -949,8 +950,6 @@ jobs:
             docker push opencti/connector-tanium-incidents:${CIRCLE_TAG}
             docker push opencti/connector-tanium-intel:latest
             docker push opencti/connector-tanium-intel:${CIRCLE_TAG}
-            docker push opencti/connector-webhook:latest
-            docker push opencti/connector-webhook:${CIRCLE_TAG}
             docker push opencti/connector-qradar:latest
             docker push opencti/connector-qradar:${CIRCLE_TAG}
       - slack/notify:
@@ -988,10 +987,6 @@ jobs:
           name: Build Docker image opencti/connector-harfanglab-intel
           command: docker build -t opencti/connector-harfanglab-intel:latest . && docker tag opencti/connector-harfanglab-intel:latest opencti/connector-harfanglab-intel:${CIRCLE_TAG}
       - run:
-          working_directory: ~/opencti/stream/harfanglab
-          name: Build Docker image opencti/connector-harfanglab
-          command: docker build -t opencti/connector-harfanglab:latest . && docker tag opencti/connector-harfanglab:latest opencti/connector-harfanglab:${CIRCLE_TAG}
-      - run:
           working_directory: ~/opencti/stream/splunk
           name: Build Docker image opencti/connector-splunk
           command: docker build -t opencti/connector-splunk:latest . && docker tag opencti/connector-splunk:latest opencti/connector-splunk:${CIRCLE_TAG}
@@ -999,6 +994,10 @@ jobs:
           working_directory: ~/opencti/internal-enrichment/riskiq-passive-total
           name: Build Docker image opencti/connector-riskiq-passive-total
           command: docker build -t opencti/connector-riskiq-passive-total:latest . && docker tag opencti/connector-riskiq-passive-total:latest opencti/connector-riskiq-passive-total:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/lia-file-feed
+          name: Build Docker image opencti/connector-lia-file-feed
+          command: docker build -t opencti/connector-lia-file-feed:latest . && docker tag opencti/connector-lia-file-feed:latest opencti/connector-lia-file-feed:${CIRCLE_TAG}
       - run:
           name: Publish Docker Image to Docker Hub
           command: |
@@ -1009,13 +1008,70 @@ jobs:
             docker push opencti/connector-sentinel-intel:${CIRCLE_TAG}
             docker push opencti/connector-sentinel:latest
             docker push opencti/connector-sentinel:${CIRCLE_TAG}
-            docker push opencti/connector-harfanglab:latest
-            docker push opencti/connector-harfanglab:${CIRCLE_TAG}
+            docker push opencti/connector-harfanglab-incidents:latest
+            docker push opencti/connector-harfanglab-incidents:${CIRCLE_TAG}
+            docker push opencti/connector-harfanglab-intel:latest
+            docker push opencti/connector-harfanglab-intel:${CIRCLE_TAG}
             docker push opencti/connector-splunk:latest
             docker push opencti/connector-splunk:${CIRCLE_TAG}
             docker push opencti/connector-riskiq-passive-total:latest
             docker push opencti/connector-riskiq-passive-total:${CIRCLE_TAG}
-
+            docker push opencti/connector-lia-file-feed:latest
+            docker push opencti/connector-lia-file-feed:${CIRCLE_TAG}
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
+  build_4:
+    working_directory: ~/opencti
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
+      - run:
+          working_directory: ~/opencti/stream/webhook
+          name: Build Docker image opencti/connector-webhook
+          command: docker build -t opencti/connector-webhook:latest . && docker tag opencti/connector-webhook:latest opencti/connector-webhook:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/harfanglab
+          name: Build Docker image opencti/connector-harfanglab
+          command: docker build -t opencti/connector-harfanglab:latest . && docker tag opencti/connector-harfanglab:latest opencti/connector-harfanglab:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/intel471_v2
+          name: Build Docker image opencti/connector-intel471_v2
+          command: docker build -t opencti/connector-intel471_v2:latest . && docker tag opencti/connector-intel471_v2:latest opencti/connector-intel471_v2:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/zvelo
+          name: Build Docker image opencti/connector-zvelo
+          command: docker build -t opencti/connector-zvelo:latest . && docker tag opencti/connector-zvelo:latest opencti/connector-zvelo:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/stream/google-secops-siem
+          name: Build Docker image opencti/connector-google-secops-siem
+          command: docker build -t opencti/connector-google-secops-siem:latest . && docker tag opencti/connector-google-secops-siem:latest opencti/connector-google-secops-siem:${CIRCLE_TAG}
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push opencti/connector-webhook:latest
+            docker push opencti/connector-webhook:${CIRCLE_TAG}
+            docker push opencti/connector-harfanglab:latest
+            docker push opencti/connector-harfanglab:${CIRCLE_TAG}
+            docker push opencti/connector-intel471_v2:latest
+            docker push opencti/connector-intel471_v2:${CIRCLE_TAG}
+            docker push opencti/connector-zvelo:latest
+            docker push opencti/connector-zvelo:${CIRCLE_TAG}            
+            docker push opencti/connector-google-secops-siem:latest
+            docker push opencti/connector-google-secops-siem:${CIRCLE_TAG}
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
   build_fips_1:
     working_directory: ~/opencti
     docker:
@@ -1369,6 +1425,10 @@ jobs:
           name: Build Docker image opencti/connector-attribution-tools
           command: docker build -t opencti/connector-attribution-tools:rolling .
       - run:
+          working_directory: ~/opencti/external-import/tenable-security-center
+          name: Build Docker image opencti/connector-tenable-security-center
+          command: docker build -t opencti/connector-tenable-security-center:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1445,6 +1505,7 @@ jobs:
             docker push opencti/connector-greynoise-vuln:rolling
             docker push opencti/connector-tenable-vuln-management:rolling
             docker push opencti/connector-attribution-tools:rolling
+            docker push opencti/connector-tenable-security-center:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1724,10 +1785,6 @@ jobs:
           name: Build Docker image opencti/connector-tanium-intel
           command: docker build -t opencti/connector-tanium-intel:rolling .
       - run:
-          working_directory: ~/opencti/stream/webhook
-          name: Build Docker image opencti/connector-webhook
-          command: docker build -t opencti/connector-webhook:rolling .
-      - run:
           working_directory: ~/opencti/stream/qradar
           name: Build Docker image opencti/connector-qradar
           command: docker build -t opencti/connector-qradar:rolling .
@@ -1800,7 +1857,6 @@ jobs:
             docker push opencti/connector-import-file-misp:rolling
             docker push opencti/connector-tanium-incidents:rolling
             docker push opencti/connector-tanium-intel:rolling
-            docker push opencti/connector-webhook:rolling
             docker push opencti/connector-qradar:rolling
       - slack/notify:
           event: fail
@@ -1833,10 +1889,6 @@ jobs:
           name: Build Docker image opencti/connector-sentinel-intel
           command: docker build -t opencti/connector-sentinel-intel:rolling .
       - run:
-          working_directory: ~/opencti/stream/harfanglab
-          name: Build Docker image opencti/connector-harfanglab
-          command: docker build -t opencti/connector-harfanglab:rolling .
-      - run:
           working_directory: ~/opencti/external-import/harfanglab-incidents
           name: Build Docker image opencti/connector-harfanglab-incidents
           command: docker build -t opencti/connector-harfanglab-incidents:rolling .
@@ -1853,16 +1905,74 @@ jobs:
           name: Build Docker image opencti/connector-riskiq-passive-total
           command: docker build -t opencti/connector-riskiq-passive-total:rolling .
       - run:
+          working_directory: ~/opencti/external-import/lia-file-feed
+          name: Build Docker image opencti/connector-lia-file-feed
+          command: docker build -t opencti/connector-lia-file-feed:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push opencti/connector-sentinel:rolling
             docker push opencti/connector-sentinel-incidents:rolling
             docker push opencti/connector-sentinel-intel:rolling
-            docker push opencti/connector-harfanglab:rolling
+            docker push opencti/connector-harfanglab-incidents:rolling
+            docker push opencti/connector-harfanglab-intel:rolling
             docker push opencti/connector-splunk:rolling
             docker push opencti/connector-riskiq-passive-total:rolling
-
+            docker push opencti/connector-lia-file-feed:rolling
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
+  build_rolling_4:
+    working_directory: ~/opencti
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
+      - run:
+          working_directory: ~/opencti
+          name: Replace pycti requirement of stable version with latest master branch code
+          command: find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|' -i {} \;
+      - run:
+          working_directory: ~/opencti/stream/webhook
+          name: Build Docker image opencti/connector-webhook
+          command: docker build -t opencti/connector-webhook:rolling .
+      - run:
+          working_directory: ~/opencti/stream/harfanglab
+          name: Build Docker image opencti/connector-harfanglab
+          command: docker build -t opencti/connector-harfanglab:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/intel471_v2
+          name: Build Docker image opencti/connector-intel471_v2
+          command: docker build -t opencti/connector-intel471_v2:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/zvelo
+          name: Build Docker image opencti/connector-zvelo
+          command: docker build -t opencti/connector-zvelo:rolling .
+      - run:
+          working_directory: ~/opencti/stream/google-secops-siem
+          name: Build Docker image opencti/connector-google-secops-siem
+          command: docker build -t opencti/connector-google-secops-siem:rolling .
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push opencti/connector-webhook:rolling
+            docker push opencti/connector-harfanglab:rolling
+            docker push opencti/connector-intel471_v2:rolling
+            docker push opencti/connector-zvelo:rolling
+            docker push opencti/connector-google-secops-siem:rolling
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+      - ms-teams/report:
+          only_on_fail: true
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
   build_fips_rolling_1:
     working_directory: ~/opencti
     docker:
@@ -1958,6 +2068,12 @@ workflows:
               only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
             branches:
               ignore: /.*/
+      - build_4:
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
       - build_fips_1:
           filters:
             tags:
@@ -1991,6 +2107,15 @@ workflows:
             branches:
               only:
                 - master
+      - build_rolling_4:
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+          filters:
+            branches:
+              only:
+                - master
       - build_fips_rolling_1:
           requires:
             - ensure_formatting
@@ -2005,12 +2130,14 @@ workflows:
             - build_rolling_1
             - build_rolling_2
             - build_rolling_3
+            - build_rolling_4
             - build_fips_rolling_1
       - notify:
           requires:
             - build_1
             - build_2
             - build_3
+            - build_4
             - build_fips_1
           filters:
             tags:

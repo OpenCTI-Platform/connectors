@@ -117,6 +117,12 @@ class ConfigCrowdstrike:
             self.load,
         )
 
+        self.report_target_industries: str = get_config_variable(
+            "CROWDSTRIKE_REPORT_TARGET_INDUSTRIES",
+            ["crowdstrike", "report_target_industries"],
+            self.load,
+        )
+
         self.report_type: str = get_config_variable(
             "CROWDSTRIKE_REPORT_TYPE",
             ["crowdstrike", "report_type"],
