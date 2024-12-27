@@ -8,4 +8,4 @@ ls -la /opt/opencti-connector-socradar/src
 
 # Directly execute python script
 cd /opt/opencti-connector-socradar
-python3 -v src/main.py
+python3 src/main.py

@@ -12,12 +12,10 @@ connector:
   update_existing_data: true
 
 radar:
-  base_feed_url: "https://platform.socradar.com/api/threat/intelligence/feed_list/"
-  format_type: ".json?key="
-  socradar_key: "SOCRADAR_KEY"
-  run_interval: 600
-  collections_uuid:
+  radar_base_feed_url: "https://platform.socradar.com/api/threat/intelligence/feed_list/"
+  radar_socradar_key: "SOCRADAR_KEY"
+  radar_run_interval: 600
+  radar_collections_uuid:
     collection_1:
       id: ["COLLECTION_UUID"]
       name: ["COLLECTION_NAME"]
-

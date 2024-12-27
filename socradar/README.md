@@ -18,10 +18,10 @@ SOCRadar provides comprehensive threat intelligence feeds that can be used to de
 | --- | --- | --- | --- |
 | `opencti.url` | `OPENCTI_URL` | Yes | The URL of your OpenCTI platform |
 | `opencti.token` | `OPENCTI_TOKEN` | Yes | Your OpenCTI admin token |
-| `radar.base_feed_url` | `RADAR_BASE_FEED_URL` | Yes | SOCRadar API base URL |
-| `radar.socradar_key` | `RADAR_SOCRADAR_KEY` | Yes | Your SOCRadar API key |
-| `radar.interval` | `RADAR_INTERVAL` | Yes | Time between runs (in seconds, default: 600) |
-| `radar.collections_uuid` | `RADAR_COLLECTIONS_UUID` | Yes | Collection IDs to fetch |
+| `radar.radar_base_feed_url` | `RADAR_BASE_FEED_URL` | Yes | SOCRadar API base URL |
+| `radar.radar_socradar_key` | `RADAR_SOCRADAR_KEY` | Yes | Your SOCRadar API key |
+| `radar.radar_run_interval` | `RADAR_RUN_INTERVAL` | Yes | Time between runs (in seconds, default: 600) |
+| `radar.radar_collections_uuid` | `RADAR_COLLECTIONS_UUID` | Yes | Collection IDs to fetch |
 
 ### Debugging
 
