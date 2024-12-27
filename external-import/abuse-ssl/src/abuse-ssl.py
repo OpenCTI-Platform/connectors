@@ -195,7 +195,9 @@ class AbuseSSLImportConnector:
     def create_bundle(self, observables, indicators, relationships):
         """Creates serialized STIX Bundle object from the provided lists of STIX Observables, Indicators, and Relationships
 
+        :param observables: List of STIX Observables objects
         :param indicators: List of STIX Indicator objects
+        :param relationships: List of STIX Relationship objects
         :return: Serialized STIX Bundle object
         """
         self.helper.log_info("Creating STIX Bundle")
@@ -214,6 +216,7 @@ class AbuseSSLImportConnector:
         Attempts to send serialized STIX Bundle to OpenCTI client
 
         :param bundle: Serialized STIX Bundle
+        :param work_id: a valid work id
         """
         self.helper.log_info("Sending STIX Bundle")
         try:
