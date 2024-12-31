@@ -1,0 +1,5 @@
+pycti==6.4.5
+validators==0.34.0
+stix-shifter==7.1.1
+stix-shifter-utils==7.1.1
+stix-shifter-modules-splunk==7.1.1

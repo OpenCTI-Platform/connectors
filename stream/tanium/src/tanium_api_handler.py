@@ -487,7 +487,7 @@ class TaniumApiHandler:
     def get_labels(self, labels):
         # List labels
         tanium_labels = self._query(
-            "get", "/plugin/products/threat-response/api/v1/labels", {"limit": 500}
+            "get", "/plugin/products/threat-response/api/v1/labels", {"noLimit": True}
         )
         tanium_labels_dict = {}
         for tanium_label in tanium_labels:

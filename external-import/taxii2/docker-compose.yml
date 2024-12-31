@@ -1,30 +1,63 @@
 version: '3'
 services:
   connector-taxii2:
-    image: opencti/connector-taxii2:6.3.6
+    image: opencti/connector-taxii2:6.4.5
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=TAXII2
       - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1
-      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
-      - TAXII2_DISCOVERY_URL=ChangeMe # Required
-      - TAXII2_CERT_PATH=ChangeMe # Optional (.pem)
-      - TAXII2_USERNAME=ChangeMe # Required
+      - CONNECTOR_DURATION_PERIOD=PT60M
+      - TAXII2_DISCOVERY_URL=ChangeMe
+      - TAXII2_CERT_PATH=
+      - TAXII2_USERNAME=ChangeMe
       - TAXII2_PASSWORD=ChangeMe
       - TAXII2_USE_TOKEN=false
-      - TAXII2_TOKEN=ChangeMe # change TAXII2_USE_TOKEN to true to use this
-      - TAXII2_V21=true # Is TAXII v2.1
-      - TAXII2_COLLECTIONS=*.* # Required
-      - TAXII2_INITIAL_HISTORY= 24 # Required, in hours
-      - TAXII2_INTERVAL=100 # Required, in hours
+      - TAXII2_TOKEN=ChangeMe
+      - TAXII2_USE_APIKEY=false
+      - TAXII2_APIKEY_KEY=ChangeMe
+      - TAXII2_APIKEY_VALUE=ChangeMe
+      - TAXII2_V21=true
+      - TAXII2_COLLECTIONS=*.*
+      - TAXII2_INITIAL_HISTORY=24
       - TAXII2_VERIFY_SSL=true
-      - TAXII2_CREATE_INDICATORS=true # Generate indicators for ingested observables
-      - TAXII2_CREATE_OBSERVABLES=true # Generate observables for ingested indicators
-      - TAXII2_ADD_CUSTOM_LABEL=false # Enable custom label
-      - TAXII2_CUSTOM_LABEL= # Custom label added to all objects
+      - TAXII2_CREATE_INDICATORS=true
+      - TAXII2_CREATE_OBSERVABLES=true
+      - TAXII2_ADD_CUSTOM_LABEL=false
+      - TAXII2_CUSTOM_LABEL=ChangeMe
       - TAXII2_FORCE_PATTERN_AS_NAME=false
       - "TAXII2_FORCE_MULTIPLE_PATTERN_NAME=Multiple Indicators"
+      - TAXII2_STIX_CUSTOM_PROPERTY_TO_LABEL=false
+      - TAXII2_STIX_CUSTOM_PROPERTY=ChangeMe
+      - TAXII2_ENABLE_URL_QUERY_LIMIT=false
+      - TAXII2_URL_QUERY_LIMIT=100
+      - TAXII2_DETERMINE_X_OPENCTI_SCORE_BY_LABEL=false
+      - TAXII2_DEFAULT_X_OPENCTI_SCORE=50
+      - "TAXII2_INDICATOR_HIGH_SCORE_LABELS=high"
+      - TAXII2_INDICATOR_HIGH_SCORE=80
+      - "TAXII2_INDICATOR_MEDIUM_SCORE_LABELS=medium"
+      - TAXII2_INDICATOR_MEDIUM_SCORE=60
+      - "TAXII2_INDICATOR_LOW_SCORE_LABELS=low"
+      - TAXII2_INDICATOR_LOW_SCORE=40
+      - TAXII2_SET_INDICATOR_AS_DETECTION=false
+      - TAXII2_CREATE_AUTHOR=false
+      - TAXII2_AUTHOR_NAME=ChangeMe
+      - TAXII2_AUTHOR_DESCRIPTION=ChangeMe
+      - "TAXII2_AUTHOR_RELIABILITY=A - Completely reliable"
+      - TAXII2_EXCLUDE_SPECIFIC_LABELS=false
+      - TAXII2_LABELS_TO_EXCLUDE=ChangeMe
+      - TAXII2_REPLACE_CHARACTERS_IN_LABEL=false
+      - TAXII2_CHARACTERS_TO_REPLACE_IN_LABEL=ChangeMe
+      - TAXII2_IGNORE_PATTERN_TYPES=false
+      - TAXII2_PATTERN_TYPES_TO_IGNORE=ChangeMe
+      - TAXII2_IGNORE_OBJECT_TYPES=false
+      - TAXII2_OBJECT_TYPES_TO_IGNORE=ChangeMe
+      - TAXII2_IGNORE_SPECIFIC_PATTERNS=false
+      - TAXII2_PATTERNS_TO_IGNORE=ChangeMe
+      - TAXII2_IGNORE_SPECIFIC_NOTES=false
+      - TAXII2_NOTES_TO_IGNORE=ChangeMe
+      - TAXII2_SAVE_ORIGINAL_INDICATOR_ID_TO_NOTE=false
+      - TAXII2_SAVE_ORIGINAL_INDICATOR_ID_ABSTRACT=ChangeMe
     restart: always

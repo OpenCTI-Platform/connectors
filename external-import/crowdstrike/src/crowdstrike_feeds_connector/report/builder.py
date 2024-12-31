@@ -50,6 +50,7 @@ class ReportBundleBuilder:
         confidence_level: int,
         guessed_malwares: Mapping[str, str],
         report_file: Optional[Mapping[str, str]] = None,
+        related_indicators: Optional = None,
     ) -> None:
         """Initialize report bundle builder."""
         self.report = report
@@ -61,6 +62,7 @@ class ReportBundleBuilder:
         self.report_type = report_type
         self.report_file = report_file
         self.guessed_malwares = guessed_malwares
+        self.related_indicators = related_indicators
 
         # Use report dates for start time and stop time.
         start_time = timestamp_to_datetime(self.report["created_date"])
@@ -279,6 +281,10 @@ class ReportBundleBuilder:
         )
         bundle_objects.extend(malwares_target_countries)
 
+        # Indicators linked to the report and add to bundle
+        indicators_linked = self.related_indicators
+        bundle_objects.extend(indicators_linked)
+
         # Create object references for the report.
         object_refs = create_object_refs(
             intrusion_sets,
@@ -302,6 +308,9 @@ class ReportBundleBuilder:
 
             bundle_objects.append(dummy_object)
             object_refs.append(dummy_object)
+
+        # Add related indicator to object refs for report
+        object_refs.extend(indicators_linked)
 
         report = self._create_report(object_refs)
         bundle_objects.append(report)

@@ -1,0 +1,4 @@
+pycti==6.4.5
+stix2~=3.0.1
+APScheduler~=3.11.0
+Titan-Client @ git+https://github.com/intel471/titan-client-python@f5af748

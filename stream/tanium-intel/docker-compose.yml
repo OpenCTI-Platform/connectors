@@ -1,0 +1,23 @@
+version: "3"
+services:
+  connector-tanium-intel:
+    image: opencti/connector-tanium-intel:6.4.5
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - "CONNECTOR_NAME=Tanium Threat Response"
+      - CONNECTOR_SCOPE=tanium
+      - CONNECTOR_LOG_LEVEL=error
+      - TANIUM_INTEL_URL=https://console.changeme.com
+      - TANIUM_INTEL_URL_CONSOLE=https://console.changeme.com
+      - TANIUM_INTEL_SSL_VERIFY=true
+      - TANIUM_INTEL_TOKEN=ChangeMe
+      - TANIUM_INTEL_HASHES_IN_REPUTATION=true
+      - TANIUM_INTEL_NO_HASHES_IN_INTELS=true
+      - TANIUM_INTEL_AUTO_ONDEMAND_SCAN=true # trigger a quick scan when an intel document is imported
+      - TANIUM_INTEL_COMPUTER_GROUPS=1 # computer groups targeted by the auto on-demand scan (separated by ,)
+    restart: always

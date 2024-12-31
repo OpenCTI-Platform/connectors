@@ -1,0 +1,19 @@
+opencti:
+    url: "http://opencti:8080"
+    token: "CHANGEME"
+
+connector:
+    id: "CHANGEME"
+    name: "Tenable Security Center"
+    scope: "vulnerability"
+    log_level: "warn"
+    duration_period: "PT12H"
+    
+tenable_security_center:
+    api_base_url: "CHANGEME"
+    api_access_key: "CHANGEME"
+    api_secret_key: "CHANGEME"
+    export_since: "2024-11-18T12:00:00Z"
+    severity_min_level: "high"
+    process_systems_without_vulnerabilities: false
+    marking_definition: "TLP:CLEAR"

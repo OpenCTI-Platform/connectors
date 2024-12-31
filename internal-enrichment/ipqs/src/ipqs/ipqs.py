@@ -3,6 +3,7 @@
 from os import path
 from typing import Dict
 
+import pycti
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import Identity
 from yaml import FullLoader, load
@@ -40,8 +41,9 @@ class IPQSConnector:
         )
 
         self.author = Identity(
+            id=pycti.Identity.generate_id(self._SOURCE_NAME, "organization"),
             name=self._SOURCE_NAME,
-            identity_class="Organization",
+            identity_class="organization",
             description="IPQS",
             confidence=self.helper.connect_confidence_level,
         )

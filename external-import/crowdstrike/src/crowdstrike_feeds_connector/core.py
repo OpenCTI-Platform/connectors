@@ -105,6 +105,13 @@ class CrowdStrike:
                 report_include_types_str
             )
 
+        report_target_industries_str = self.config.report_target_industries
+        report_target_industries = []
+        if report_target_industries_str is not None:
+            report_target_industries = convert_comma_separated_str_to_list(
+                report_target_industries_str
+            )
+
         report_guess_malware = bool(self.config.report_guess_malware)
 
         indicator_start_timestamp = self.config.indicator_start_timestamp
@@ -184,15 +191,31 @@ class CrowdStrike:
             importers.append(actor_importer)
 
         if self._CONFIG_SCOPE_REPORT in scopes:
+            indicator_config = {
+                "default_latest_timestamp": indicator_start_timestamp,
+                "create_observables": create_observables,
+                "create_indicators": create_indicators,
+                "exclude_types": indicator_exclude_types,
+                "default_x_opencti_score": default_x_opencti_score,
+                "indicator_low_score": indicator_low_score,
+                "indicator_low_score_labels": set(indicator_low_score_labels),
+                "indicator_medium_score": indicator_medium_score,
+                "indicator_medium_score_labels": set(indicator_medium_score_labels),
+                "indicator_high_score": indicator_high_score,
+                "indicator_high_score_labels": set(indicator_high_score_labels),
+                "indicator_unwanted_labels": set(indicator_unwanted_labels),
+            }
             report_importer = ReportImporter(
                 self.helper,
                 author,
                 report_start_timestamp,
                 tlp_marking,
                 report_include_types,
+                report_target_industries,
                 report_status,
                 report_type,
                 report_guess_malware,
+                indicator_config,
             )
 
             importers.append(report_importer)

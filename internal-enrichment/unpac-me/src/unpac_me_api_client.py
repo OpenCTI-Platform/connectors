@@ -503,7 +503,7 @@ if __name__ == "__main__":
                     exit()
 
             for file_data in tasks:
-                upload = api.upload(file_data)
+                upload = api.upload(file_data, False)
                 if args.print_id:
                     print(f"Your upload ID: {upload.id}")
                     continue

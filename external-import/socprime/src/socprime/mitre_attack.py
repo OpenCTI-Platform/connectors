@@ -79,7 +79,7 @@ class MitreAttack:
             props = res[0]._inner
             return IntrusionSet(
                 type="intrusion-set",
-                id=props["id"],
+                id=props["id"] or IntrusionSet.generate_id(name=props["name"]),
                 name=props["name"],
                 description=props["description"],
                 external_references=props["external_references"],

@@ -16,7 +16,7 @@ from pycti import (
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     StixSightingRelationship,
-    ThreatActor,
+    ThreatActorGroup,
     Tool,
     Vulnerability,
     get_config_variable,
@@ -524,17 +524,45 @@ class GreyNoiseConnector:
         """
 
         default_now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-
-        stix_sighting = stix2.Sighting(
+        # Create sighting for target entity
+        first_seen = default_now if sighting_not_seen is True else self.first_seen
+        last_seen = default_now if sighting_not_seen is True else self.last_seen
+        sighting_count = 0 if sighting_not_seen is True else 1
+        stix_sighting_entity = stix2.Sighting(
             id=StixSightingRelationship.generate_id(
                 self.stix_entity["id"],
                 self.greynoise_identity["id"],
-                default_now if sighting_not_seen is True else self.first_seen,
-                default_now if sighting_not_seen is True else self.last_seen,
+                first_seen,
+                last_seen,
             ),
-            first_seen=default_now if sighting_not_seen is True else self.first_seen,
-            last_seen=default_now if sighting_not_seen is True else self.last_seen,
-            count=0 if sighting_not_seen is True else 1,
+            first_seen=first_seen,
+            last_seen=last_seen,
+            count=sighting_count,
+            description=self.greynoise_ent_desc,
+            created_by_ref=self.greynoise_identity["id"],
+            where_sighted_refs=[self.greynoise_identity["id"]],
+            external_references=external_reference,
+            object_marking_refs=stix2.TLP_WHITE,
+            # As SDO are not supported in official STIX, we use a fake ID in ref
+            # Worker will use custom_properties instead
+            sighting_of_ref="indicator--51b92778-cef0-4a90-b7ec-ebd620d01ac8",  # Fake
+            custom_properties={
+                "x_opencti_sighting_of_ref": self.stix_entity["id"],
+                "x_opencti_negative": True,
+            },
+        )
+        self.stix_objects.append(stix_sighting_entity)
+        # Create sighting for associated indicator
+        stix_sighting_indicator = stix2.Sighting(
+            id=StixSightingRelationship.generate_id(
+                stix_indicator["id"],
+                self.greynoise_identity["id"],
+                first_seen,
+                last_seen,
+            ),
+            first_seen=first_seen,
+            last_seen=last_seen,
+            count=sighting_count,
             description=self.greynoise_ent_desc,
             created_by_ref=self.greynoise_identity["id"],
             sighting_of_ref=stix_indicator["id"],
@@ -542,11 +570,10 @@ class GreyNoiseConnector:
             external_references=external_reference,
             object_marking_refs=stix2.TLP_WHITE,
             custom_properties={
-                "x_opencti_sighting_of_ref": self.stix_entity["id"],
                 "x_opencti_negative": True,
             },
         )
-        self.stix_objects.append(stix_sighting)
+        self.stix_objects.append(stix_sighting_indicator)
 
     def _generate_stix_malware_with_relationship(self, malwares: list):
         """
@@ -597,7 +624,7 @@ class GreyNoiseConnector:
         ):
             # Generate Threat Actor
             stix_threat_actor = stix2.ThreatActor(
-                id=ThreatActor.generate_id(data["actor"]),
+                id=ThreatActorGroup.generate_id(data["actor"]),
                 name=data["actor"],
                 created_by_ref=self.greynoise_identity["id"],
             )

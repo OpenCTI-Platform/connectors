@@ -1,15 +1,12 @@
-import json
 import re
 from datetime import datetime, timedelta, timezone
-
-import stix2
 
 
 class Timestamp:
     format = "%Y-%m-%dT%H:%M:%S.%fZ"
 
     def __init__(self, value):
-        if type(value) == datetime:
+        if isinstance(value, datetime):
             self._value = value.replace(microsecond=0)
         else:
             raise TypeError("Value must be a datetime object")
@@ -86,14 +83,6 @@ def clean_aliases(object):
             aliases.append(name)
 
     return aliases
-
-
-def generate_note(data):
-    note = json.loads(
-        stix2.Note(object_refs=data["object_refs"], content="").serialize()
-    )
-    note.update(**data)
-    return note
 
 
 def retrieve(bundle, key, value):

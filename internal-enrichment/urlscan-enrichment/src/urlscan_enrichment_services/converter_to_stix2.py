@@ -202,51 +202,37 @@ class UrlscanConverter:
         now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         x_opencti_type = stix_entity.get("x_opencti_type", None)
 
-        common_data = {
-            "labels": labels,
-            "created_by_ref": self.identity["id"],
-            "external_references": external_reference,
-            "valid_from": now,
-            "pattern_type": "stix",
-            "custom_properties": {
+        if stix_entity["type"] == "url":
+            data_name_url = data["task"]["url"]
+            stix_name = data_name_url
+            stix_pattern = f"[url:value = '{data_name_url}']"
+        elif stix_entity["type"] == "domain-name":
+            data_name_domain = data["task"]["apexDomain"]
+            stix_name = data_name_domain
+            stix_pattern = f"[domain-name:value = '{data_name_domain}']"
+        elif stix_entity["type"] == "hostname":
+            data_name_hostname = data["task"]["domain"]
+            stix_name = data_name_hostname
+            stix_pattern = f"[hostname:value = '{data_name_hostname}']"
+        else:
+            return []
+
+        stix_indicator = stix2.Indicator(
+            id=Indicator.generate_id(stix_pattern),
+            pattern=stix_pattern,
+            name=stix_name,
+            labels=labels,
+            created_by_ref=self.identity["id"],
+            external_references=external_reference,
+            valid_from=now,
+            pattern_type="stix",
+            custom_properties={
                 "x_opencti_main_observable_type": x_opencti_type,
                 "x_opencti_files": (
                     [prepared_file_png] if prepared_file_png is not None else []
                 ),
             },
-        }
-
-        if stix_entity["type"] == "url":
-            data_name_url = data["task"]["url"]
-            specific_data = {
-                "id": Indicator.generate_id(data_name_url),
-                "name": data_name_url,
-                "pattern": f"[url:value = '{data_name_url}']",
-            }
-
-        elif stix_entity["type"] == "domain-name":
-            data_name_domain = data["task"]["apexDomain"]
-            specific_data = {
-                "id": Indicator.generate_id(data_name_domain),
-                "name": data_name_domain,
-                "pattern": f"[domain-name:value = '{data_name_domain}']",
-            }
-
-        elif stix_entity["type"] == "hostname":
-            data_name_hostname = data["task"]["domain"]
-            specific_data = {
-                "id": Indicator.generate_id(data_name_hostname),
-                "name": data_name_hostname,
-                "pattern": f"[hostname:value = '{data_name_hostname}']",
-            }
-        else:
-            return []
-
-        merged_data = {
-            **common_data,
-            **specific_data,
-        }
-        stix_indicator = stix2.Indicator(**merged_data)
+        )
 
         stix_indicator_with_relationship.append(stix_indicator)
 
@@ -330,7 +316,7 @@ class UrlscanConverter:
             )
             stix_asn_with_relationship.append(ip_to_asn)
 
-            return stix_asn_with_relationship
+        return stix_asn_with_relationship
 
     def generate_stix_hostname_with_relationship(
         self,

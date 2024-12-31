@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-intel471_v2:
+    image: opencti/connector-intel471_v2:6.4.5
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=Intel471
+      - CONNECTOR_SCOPE=malware,vulnerability,indicator
+      - CONNECTOR_LOG_LEVEL=error
+      - INTEL471_API_USERNAME=CHANGEME
+      - INTEL471_API_KEY=CHANGEME
+      - INTEL471_INTERVAL_INDICATORS=60
+      - INTEL471_INITIAL_HISTORY_INDICATORS=0
+      - INTEL471_INTERVAL_YARA=60
+      - INTEL471_INITIAL_HISTORY_YARA=0
+      - INTEL471_INTERVAL_CVES=120
+      - INTEL471_INITIAL_HISTORY_CVES=0
+      - INTEL471_INTERVAL_REPORTS=120
+      - INTEL471_INITIAL_HISTORY_REPORTS=0
+    restart: always

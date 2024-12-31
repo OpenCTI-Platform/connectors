@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  name: 'HarfangLab'
+  scope: 'harfanglab'
+  log_level: 'info'
+  live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true
+  live_stream_no_dependencies: true
+
+harfanglab:
+  url: 'ChangeMe' # The URL of the Harfang Lab Server
+  ssl_verify: true
+  token: 'ChangeMe' # Token for bearer auth (if set, will ignore basic auth params)
+  source_list_name: 'from_OpenCTI'
+  remove_indicator: true
+  rule_maturity: 'stable' # Available : stable or testing

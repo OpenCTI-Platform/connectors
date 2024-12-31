@@ -126,7 +126,10 @@ class ExportFileStix:
                 filters=main_filter, getAll=True
             )
             for stix_object_result in stix_objects:
-                current_entity_type = stix_object_result["entity_type"]
+                if entity_type == "stix-core-relationship":
+                    current_entity_type = "stix-core-relationship"
+                else:
+                    current_entity_type = stix_object_result["entity_type"]
                 do_read = self.helper.api.stix2.get_reader(current_entity_type)
                 # Reader, we can safely read as max marking was handled by stix_object_or_stix_relationship.list
                 entity_data = do_read(id=stix_object_result["id"])

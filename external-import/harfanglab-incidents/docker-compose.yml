@@ -1,0 +1,46 @@
+version: '3'
+services:
+  harfanglab-incidents:
+    image: opencti/connector-harfanglab-incidents:6.4.5
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=CHANGEME
+      - CONNECTOR_SCOPE=harfanglab
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=CHANGEME # ISO8601 format in String, start with 'P...' for Period
+
+      # Connector's definition parameters OPTIONAL
+      # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
+      # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
+      # - CONNECTOR_SEND_TO_QUEUE=True # Default True
+      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False 
+      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+      # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
+
+      # Connector's custom execution parameters
+      - HARFANGLAB_INCIDENTS_URL=https://console.changeme.com
+      - HARFANGLAB_INCIDENTS_SSL_VERIFY=true
+      - HARFANGLAB_INCIDENTS_TOKEN=ChangeMe
+      - HARFANGLAB_INCIDENTS_IMPORT_THREATS=false # If true then threats will be imported too (as Case Incidents), otherwise only alerts will be imported (as Incidents)
+      - HARFANGLAB_INCIDENTS_ALERT_STATUSES=ChangeMe # Filters available : new, investigating, false_positive, closed
+      - HARFANGLAB_INCIDENTS_ALERT_TYPES=ChangeMe # Filters available : yara, sigma, ioc
+      - HARFANGLAB_INCIDENTS_DEFAULT_MARKING=ChangeMe # Markings available : TLP:CLEAR - TLP:GREEN - TLP:AMBER - TLP:RED (default: TLP:CLEAR)
+      - HARFANGLAB_INCIDENTS_DEFAULT_SCORE=50 # Former confidence_level deprecated in OpenCTI version >= 6.0
+      - HARFANGLAB_INCIDENTS_IMPORT_START_DATE=1970-01-01
+
+      # Add proxy parameters below if needed
+      # - HTTP_PROXY=CHANGEME
+      # - HTTPS_PROXY=CHANGEME
+      # - NO_PROXY=CHANGEME
+    restart: always
+    # networks:
+    #   - docker_default
+
+# networks:
+#   default:
+#     external: true
+#     name: docker_default

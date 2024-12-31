@@ -1,14 +1,16 @@
 # ReversingLabs Spectra Analyze Submission
 
-Connector supports enrichment of observables and creation of indicators based on the analysis result received from ReversingLabs Spectra Analyze. Connector enables file and url submission to the Spectra Analyze. Based on the result, connector creates indicators, malwares, calculates score, adds labels and creates relationships between created objects for submitted observable.
+The ReversingLabs Spectra Analyze connector supports enrichment of observables and creation of indicators based on the analysis result received from ReversingLabs Spectra Analyze. Connector enables file and url submission to the Spectra Analyze. Based on the result, connector creates indicators, malwares, calculates score, adds labels and creates relationships between created objects for submitted observable.
 
-Connector enables `file` and `url` submission to the ReversingLabs Spectra Analyze
+It enables `file` and `URL` submission to the ReversingLabs Spectra Analyze platform and obtaining network threat intelligence reports for `URLs`, `domains` and `IP addresses`.
 
 The connector works for the following observable types in OpenCTI:
 
 - Artifact
 - Url
 - StixFile  
+- Domain-Name
+- IPv4-Addr
 
 
 ## Installation
@@ -21,14 +23,14 @@ The connector works for the following observable types in OpenCTI:
 
 Configuration parameters are provided using environment variables as described below. Some of them are placed directly in the `docker-compose.yml` since they are not expected to be modified by final users once that they have been defined by the developer of the connector.
 
-Expected environment variables to be set in the  `docker-compose.yml` that describe the connector itself. Most of the times, these values are NOT expected to be changed.
+Expected environment variables to be set in the  `docker-compose.yml` that describe the connector itself. Most of the time, these values are NOT expected to be changed.
 
 | Parameter                            | Docker envvar                       | Mandatory    | Description                                                                                                                                                |
 | ------------------------------------ | ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `connector_name`                     | `CONNECTOR_NAME`                    | Yes          | A connector name to be shown in OpenCTI.                                                                                                                   |
 | `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported scope. E. g., `text/html`.                                                                                                                       |
 
-However, there are other values which are expected to be configured by end users. The following values are expected to be defined in the `.env` file or `/etc/environments`. This file is included in the `.gitignore` to avoid leaking sensitive date).  Note tha the `.env.sample` file can be used as a reference.
+However, there are other values which are expected to be configured by end users. The following values are expected to be defined in the `.env` file or `/etc/environments`. This file is included in the `.gitignore` to avoid leaking sensitive data).  Note that the `.env.sample` file can be used as a reference.
 
 The ones that follow are connector's generic execution parameters expected to be added for export connectors.
 
