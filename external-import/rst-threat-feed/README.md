@@ -36,7 +36,6 @@ Configuration of the connector is straightforward. The minimal configuration req
 | Connector Scope | `CONNECTOR_SCOPE` | Yes | The scope or type of data the connector is importing, either a MIME type or Stix Object. E.g. application/json |
 | Log Level | `CONNECTOR_LOG_LEVEL` | Yes | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
 | Run and Terminate | `CONNECTOR_RUN_AND_TERMINATE` | Yes | If set to true, the connector will terminate after a successful run. Useful for debugging or one-time runs. |
-| Update Existing Data | `CONFIG_UPDATE_EXISTING_DATA` | Yes | Decide whether the connector should update already existing data in the database. |
 | Interval | `CONFIG_INTERVAL` | Yes | Determines how often the connector will run, set in hours. |
 | RST Threat Feed API Key | `RST_THREAT_FEED_API_KEY` | Yes | Your API Key for accessing RST Cloud. |
 | RST Threat Feed Base URL | `RST_THREAT_FEED_BASEURL` | No | By default, use https://api.rstcloud.net/v1/. In some cases, you may want to use a local API endpoint |
@@ -45,10 +44,8 @@ Configuration of the connector is straightforward. The minimal configuration req
 | RST Threat Feed Download Retry Count | `RST_THREAT_FEED_RETRY` | No | Default (attempts): `5` |
 | RST Threat Feed Fetch Interval | `RST_THREAT_FEED_INTERVAL` | No | Default (sec): `86400` |
 | RST Threat Feed Minimal Score to Import | `RST_THREAT_FEED_MIN_SCORE_IMPORT` | No | Import only indicators with risk score more than X. The objects that are related to these indicators will also be imported with corresponding relations. Default (score): `20` |
-| RST Threat Feed Minimal Score for IP to be marked for Detection | `RST_THREAT_FEED_MIN_SCORE_DETECTION_IP` | No | Indicators with risk score more than X are marked with x_opencti_detection=true. Default (score): `50` |
+| RST Threat Feed Minimal Score for IP to be marked for Detection | `RST_THREAT_FEED_MIN_SCORE_DETECTION_IP` | No | Indicators with risk score more than X are marked with x_opencti_detection=true. Default (score): `45` |
 | RST Threat Feed Minimal Score for Domain to be marked for Detection | `RST_THREAT_FEED_MIN_SCORE_DETECTION_DOMAIN` | No | Indicators with risk score more than X are marked with x_opencti_detection=true. Default (score): `45` |
-| RST Threat Feed Minimal Score for URL to be marked for Detection | `RST_THREAT_FEED_MIN_SCORE_DETECTION_URL` | No | Indicators with risk score more than X are marked with x_opencti_detection=true. Default (score): `30` |
-| RST Threat Feed Minimal Score for Hash to be marked for Detection | `RST_THREAT_FEED_MIN_SCORE_DETECTION_HASH` | No | Indicators with risk score more than X are marked with x_opencti_detection=true. Default (score): `25` |
-| RST Threat Feed Import only New Indicators | `RST_THREAT_FEED_ONLY_NEW` | No | Defines if you only want to import indicators with recent "First Seen" or also want to re-import changes to the indicators with "First Seen" < yesterday. If set to `False`, there will be a big queue as we provide a lot of information. It is recommended to import with `False` once to get more data and observe performance. Then switch to `True` if you system is not ready to process all data we provide. Default: `True` |
-| RST Threat Feed Temp Dir Path inside the container | `RST_THREAT_FEED_DIRS_TMP` | No | Maybe used for troubleshooting. Default: `/tmp` |
-| RST Threat Feed State Dir Path inside the container | `RST_THREAT_FEED_DIRS_STATE` | No | Maybe used for troubleshooting. Default: `/tmp` |
+| RST Threat Feed Minimal Score for URL to be marked for Detection | `RST_THREAT_FEED_MIN_SCORE_DETECTION_URL` | No | Indicators with risk score more than X are marked with x_opencti_detection=true. Default (score): `45` |
+| RST Threat Feed Minimal Score for Hash to be marked for Detection | `RST_THREAT_FEED_MIN_SCORE_DETECTION_HASH` | No | Indicators with risk score more than X are marked with x_opencti_detection=true. Default (score): `45` |
+| RST Threat Feed Import only New Indicators | `RST_THREAT_FEED_ONLY_NEW` | No | Defines if you only want to import indicators with recent "First Seen" or also want to re-import changes to the indicators with "Last Seen" >= yesterday. Default: `true` |
