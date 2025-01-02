@@ -153,6 +153,9 @@ class TAPCampaignClient(BaseTAPClient):
         ...     os.environ["TAP_BASE_URL"],
         ...     os.environ["TAP_PRINCIPAL"],
         ...     os.environ["TAP_SECRET"],
+        ...     int(os.environ["TAP_TIMEOUT"]),
+        ...     int(os.environ["TAP_RETRY"]),
+        ...     int(os.environ["TAP_BACKOFF"]),
         ... )
         >>> start_time = datetime(2023, 12, 13, tzinfo=timezone.utc)
         >>> end_time = datetime(2023, 12, 13, 12, 00, 00, tzinfo=timezone.utc)
@@ -220,23 +223,7 @@ class TAPCampaignClient(BaseTAPClient):
             str: The query URL.
 
         """
-        return self.format_get_query(urljoin("/v2/campaign/", campaign_id))
-
-    async def _fetch_data(self, query_url: str) -> dict[str, Any]:
-        """Fetch data from the API.
-
-        Args:
-            query_url (str): The query URL.
-
-        Returns:
-            (dict[str, Any]): The json-like raw response data.
-
-        """
-        async with aiohttp.ClientSession(auth=self.auth) as session:
-            async with session.get(query_url) as resp:
-                resp.raise_for_status()
-                raw_resp = await resp.json()
-                return dict(raw_resp)  # Exlpicit cast for typing validator
+        return self.format_get_query(path=urljoin("/v2/campaign/", campaign_id))
 
     async def fetch_campaign_ids(
         self,
@@ -258,8 +245,7 @@ class TAPCampaignClient(BaseTAPClient):
 
         """
         query_url = self._build_campaign_ids_query(start_time, end_time, page, size)
-        ids_data = await self._fetch_data(query_url)
-        return CampaignIdsResponse.model_validate(ids_data)
+        return await self.get(query_url, CampaignIdsResponse)
 
     async def fetch_campaign_details(self, campaign_id: str) -> CampaignDetailsResponse:
         """Fetch the details of a campaign.
@@ -272,5 +258,4 @@ class TAPCampaignClient(BaseTAPClient):
 
         """
         query_url = self._build_campaign_details_query(campaign_id)
-        detail_data = await self._fetch_data(query_url)
-        return CampaignDetailsResponse.model_validate(detail_data)
+        return await self.get(query_url, response_model=CampaignDetailsResponse)

@@ -313,6 +313,9 @@ class TAPForensicsClient(BaseTAPClient):
         ...     base_url=os.environ["TAP_BASE_URL"],
         ...     principal=os.environ["TAP_PRINCIPAL"],
         ...     secret=os.environ["TAP_SECRET"],
+        ...     timeout=int(os.environ["TAP_TIMEOUT"]),
+        ...     retry=int(os.environ["TAP_RETRY"]),
+        ...     backoff=int(os.environ["TAP_BACKOFF"]),
         ... )
         >>> forensics_from_threat = asyncio.run(
         ...     client.fetch_forensics(
@@ -353,7 +356,7 @@ class TAPForensicsClient(BaseTAPClient):
         }
         query_params = {k: v for k, v in query_params.items() if v is not None}
 
-        return self.format_get_query("/v2/forensics", query=query_params)
+        return self.format_get_query("/v2/forensics", params=query_params)
 
     async def fetch_forensics(
         self,
@@ -377,9 +380,4 @@ class TAPForensicsClient(BaseTAPClient):
             campaign_id=campaign_id,
             include_campaign_forensics=include_campaign_forensics,
         )
-
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, auth=self.auth) as response:
-                response.raise_for_status()
-                data = await response.json()
-                return Forensics.model_validate(data)
+        return await self.get(url, response_model=Forensics)

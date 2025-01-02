@@ -149,6 +149,9 @@ class TAPThreatClient(BaseTAPClient):
         ...     os.environ["TAP_BASE_URL"],
         ...     os.environ["TAP_PRINCIPAL"],
         ...     os.environ["TAP_SECRET"],
+        ...     int(os.environ["TAP_TIMEOUT"]),
+        ...     int(os.environ["TAP_RETRY"]),
+        ...     int(os.environ["TAP_BACKOFF"]),
         ... )
         >>> threat_summary = asyncio.run(
         ...     client.fetch_threat_summary(
@@ -167,7 +170,7 @@ class TAPThreatClient(BaseTAPClient):
             str: The query URL.
 
         """
-        return self.format_get_query(urljoin("/v2/threat/summary/", threat_id))
+        return self.format_get_query(path=urljoin("/v2/threat/summary/", threat_id))
 
     async def fetch_threat_summary(self, threat_id: str) -> ThreatSummary:
         """Fetch the threat summary for a given threat ID.
@@ -180,8 +183,4 @@ class TAPThreatClient(BaseTAPClient):
 
         """
         query_url = self._build_threat_summary_query(threat_id)
-        async with aiohttp.ClientSession(auth=self.auth) as session:
-            async with session.get(query_url) as resp:
-                resp.raise_for_status()
-                threat_data = await resp.json()
-                return ThreatSummary.model_validate(threat_data)
+        return await self.get(query_url=query_url, response_model=ThreatSummary)

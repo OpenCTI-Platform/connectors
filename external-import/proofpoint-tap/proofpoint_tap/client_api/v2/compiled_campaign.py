@@ -40,23 +40,28 @@ class TAPCompiledCampaignClient(BaseTAPClient):
         ...     base_url=os.environ["TAP_BASE_URL"],
         ...     principal=os.environ["TAP_PRINCIPAL"],
         ...     secret=os.environ["TAP_SECRET"],
+        ...     timeout=os.environ["TAP_TIMEOUT"],
         ... )
         >>> campaign_id = "90116999-337f-40e0-a25f-e17ae1d8a4f4"
         >>> results = asyncio.run(client.fetch_campaign(campaign_id))
 
     """
 
-    def __init__(self, base_url: str, principal: str, secret: str):
+    def __init__(self, base_url: str, principal: str, secret: str, timeout: int, retry: int, backoff: int):
         """Initialize the client
         Args:
             base_url (str): The base URL of the TAP API.
             principal (str): The principal to authenticate with the API.
             secret (str): The secret to authenticate with the API.
+            timeout (int): The timeout for the API requests in seconds.
+
         """
-        super().__init__(base_url, principal, secret)
-        self.campaign = TAPCampaignClient(base_url, principal, secret)
-        self.threat = TAPThreatClient(base_url, principal, secret)
-        self.forensics = TAPForensicsClient(base_url, principal, secret)
+        common_kwargs = dict(base_url=base_url, principal=principal, secret=secret, timeout=timeout, retry=retry, backoff=backoff)  # noqa: C408
+
+        super().__init__(**common_kwargs)
+        self.campaign = TAPCampaignClient(**common_kwargs)
+        self.threat = TAPThreatClient(**common_kwargs)
+        self.forensics = TAPForensicsClient(**common_kwargs)
 
     async def fetch_campaign(self, campaign_id: str) -> CampaignCompiledInfo:
         """Fetch the details of a campaign and compile additional information.
