@@ -1,19 +1,18 @@
 """Offer common tools for the TAP API."""
-from logging import getLogger
 import json
-from typing import Any, Type, TypeVar, TYPE_CHECKING
+from logging import getLogger
+from typing import TYPE_CHECKING, Any, Type, TypeVar
 from urllib.parse import urlencode, urlparse, urlunparse
 
 import aiohttp
-from aiohttp_retry import RetryClient, RandomRetry
-
+from aiohttp_retry import RandomRetry, RetryClient
 
 from proofpoint_tap.errors import ProofpointAPIError
 
-
 if TYPE_CHECKING:
-    from pydantic import BaseModel
     from types import SimpleNamespace
+
+    from pydantic import BaseModel
 
 T = TypeVar('T', bound="BaseModel")
 logger = getLogger(__name__)
