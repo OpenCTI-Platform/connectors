@@ -303,7 +303,23 @@ class TAPSIEMClient(BaseTAPClient):
         https://help.proofpoint.com/Threat_Insight_Dashboard/API_Documentation/SIEM_API [consulted on December 12, 2024]
 
     Exemple:
-        TODO
+        >>> import asyncio
+        >>> import os
+        >>> from datetime import datetime
+        >>> from dotenv import load_dotenv
+
+        >>> _ = load_dotenv()
+        >>> client = TAPSIEMClient(
+        ... os.environ["TAP_BASE_URL"],
+        ...     os.environ["TAP_PRINCIPAL"],
+        ...     os.environ["TAP_SECRET"],
+        ...     int(os.environ["TAP_TIMEOUT"]),
+        ...     int(os.environ["TAP_RETRY"]),
+        ...     int(os.environ["TAP_BACKOFF"]),
+        ... )
+        >>> start_time = datetime.fromisoformat("2025-01-02T09:00:00Z")
+        >>> end_time = datetime.fromisoformat("2025-01-02T10:00:00Z")
+        >>> results = asyncio.run(client.fetch_all(start_time, end_time))
 
     """
 
@@ -538,24 +554,3 @@ class TAPSIEMClient(BaseTAPClient):
             threat_type,
             threat_status,
         )
-
-
-if __name__ == "__main__":
-    import asyncio
-    import os
-    from datetime import datetime
-
-    from dotenv import load_dotenv
-
-    _ = load_dotenv()
-    client = TAPSIEMClient(
-        os.environ["TAP_BASE_URL"],
-        os.environ["TAP_PRINCIPAL"],
-        os.environ["TAP_SECRET"],
-        int(os.environ["TAP_TIMEOUT"]),
-        int(os.environ["TAP_RETRY"]),
-        int(os.environ["TAP_BACKOFF"]),
-    )
-    start_time = datetime.fromisoformat("2025-01-02T09:00:00Z")
-    end_time = datetime.fromisoformat("2025-01-02T10:00:00Z")
-    results = asyncio.run(client.fetch_all(start_time, end_time))
