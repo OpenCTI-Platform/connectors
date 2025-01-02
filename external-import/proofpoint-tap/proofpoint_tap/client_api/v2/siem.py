@@ -1,0 +1,645 @@
+"""Offer python client and response models for the ProofPoint TAP SIEM API."""
+
+from datetime import timedelta, timezone
+from enum import Enum
+from typing import TYPE_CHECKING, Any, Literal, Optional
+
+from pydantic import AwareDatetime, Field, field_validator, model_validator
+
+from proofpoint_tap.client_api.common import BaseTAPClient
+from proofpoint_tap.errors import ProofpointAPIError
+from proofpoint_tap.warnings import (
+    BaseModelWithRecommendedFieldAndExtraWarning,
+    RecommendedField,
+)
+
+if TYPE_CHECKING:
+    from datetime import datetime
+
+
+class MessagePart(BaseModelWithRecommendedFieldAndExtraWarning):
+    """Model MessagePart from /v2/siem/* responses."""
+
+    content_type: str = Field(
+        ...,
+        alias="contentType",
+        description="The true detected Content-Type of the message part.",
+    )
+    disposition: Literal["inline", "attached"] = Field(
+        ..., description="Disposition of the message part (inline or attached)."
+    )
+    filename: Optional[str] = Field(
+        None, description="The filename of the message part."
+    )
+    md5: Optional[str] = Field(
+        None, description="The MD5 hash of the message part contents."
+    )
+    sha256: Optional[str] = Field(
+        None, description="The SHA256 hash of the message part contents."
+    )
+    o_content_type: Optional[str] = Field(
+        None,
+        alias="oContentType",
+        description="The declared Content-Type of the message part.",
+    )
+    sandbox_status: Optional[
+        Literal[
+            "unsupported",
+            "threat",
+            "clean",
+            "prefilter",
+            "uploaded",
+            "inprogress",
+            "uploaddisabled",
+        ]
+    ] = Field(
+        None,
+        alias="sandboxStatus",
+        description="The verdict from sandbox scanning process.",
+    )
+
+
+class ThreatInfo(BaseModelWithRecommendedFieldAndExtraWarning):
+    """Model ThreatInfo from /v2/siem/* responses."""
+
+    actors: Optional[list[dict[Any, Any]]] = Field(
+        None, description="List of actors associated with the threat. Undocumented."
+    )
+    detection_type: Optional[str] = Field(
+        None, alias="detectionType", description="Type of detection."
+    )
+    campaign_id: Optional[str] = Field(
+        None,
+        alias="campaignID",
+        description="Campaign identifier if a campaign has been identified. Note: The documentation specifies campaignId but the API response is campaignID.",
+    )
+    classification: Literal["Malware", "Phish", "Spam", "Impostor", "TOAD"] = Field(
+        ..., description="Threat classification."
+    )
+    threat: str = Field(..., description="The artifact condemned by Proofpoint.")
+    threat_id: str = Field(
+        ...,
+        alias="threatID",
+        description="Unique identifier of the threat. Note: The documentation specifies threatId but the API response is threatID.",
+    )
+    threat_status: Literal["active", "falsepositive", "cleared"] = Field(
+        ..., alias="threatStatus", description="Current state of the threat."
+    )
+    threat_time: AwareDatetime = Field(
+        ..., alias="threatTime", description="Time the threat was identified."
+    )
+    threat_type: Literal["Attachment", "Url", "Message"] = Field(
+        ..., alias="threatType", description="Type of the threat."
+    )
+    threat_url: Optional[str] = Field(
+        None,
+        alias="threatUrl",
+        description="URL link to the threat on the TAP Dashboard.",
+    )
+
+    @field_validator("classification", "threat_type", mode="before")
+    @classmethod
+    def _format_classification(cls, value: str) -> str:
+        """Format the classification value.
+
+        Proofpoint documentation suggests that the classification value would be capitalized but it is not.
+
+        """
+        return value.capitalize()
+
+
+class MessageEvent(BaseModelWithRecommendedFieldAndExtraWarning):
+    """Model MessageEvent from /v2/siem/* responses."""
+
+    cc_addresses: Optional[list[str]] = Field(
+        None, alias="ccAddresses", description="List of CC email addresses."
+    )
+    cluster: str = Field(
+        ...,
+        description="PPS cluster name. Note: The documentation talks about clusterID but the API response is cluster.",
+    )
+    completely_rewritten: Optional[bool] = Field(
+        None, alias="completelyRewritten", description="URL rewrite status."
+    )
+    from_address: list[str] = Field(
+        ...,
+        alias="fromAddress",
+        description="Email address in the From header. Note: The documentation specifies a single email address but the API response is a list.",
+    )
+    guid: str = Field(..., alias="GUID", description="Unique ID of the message in PPS.")
+    header_from: str = Field(
+        ..., alias="headerFrom", description="Full content of the From header."
+    )
+    header_reply_to: Optional[str] = Field(
+        None, alias="headerReplyTo", description="Full content of the Reply-To header."
+    )
+    id: str = RecommendedField(..., description="ID of the message in PPS.")
+    impostor_score: Optional[int] = Field(
+        None,
+        alias="impostorScore",
+        ge=0,
+        le=100,
+        description="Impostor score of the message (0-100).",
+    )
+    malware_score: Optional[int] = Field(
+        None,
+        alias="malwareScore",
+        ge=0,
+        le=100,
+        description="Malware score of the message (0-100).",
+    )
+    message_id: Optional[str] = Field(
+        None, alias="messageID", description="Message-ID from headers."
+    )
+    message_parts: list[MessagePart] = Field(
+        ..., alias="messageParts", description="Details about message parts."
+    )
+    message_size: Optional[int] = Field(
+        None, alias="messageSize", description="Size of the message in bytes."
+    )
+    message_time: AwareDatetime = Field(
+        ..., alias="messageTime", description="Time the message was processed."
+    )
+    modules_run: Optional[list[str]] = Field(
+        None, alias="modulesRun", description="Modules that processed the message."
+    )
+    phish_score: Optional[int] = Field(
+        None,
+        alias="phishScore",
+        description="Phish score of the message (0-100).",
+        ge=0,
+        le=100,
+    )
+    policy_routes: Optional[list[str]] = Field(
+        None,
+        alias="policyRoutes",
+        description="Policy routes matched during processing.",
+    )
+    qid: str = Field(..., alias="QID", description="Queue ID of the message in PPS.")
+    quarantine_folder: Optional[str] = Field(
+        None,
+        alias="quarantineFolder",
+        description="Quarantine folder name (if quarantined).",
+    )
+    quarantine_rule: Optional[str] = Field(
+        None, alias="quarantineRule", description="Rule that quarantined the message."
+    )
+    recipient: list[str] = Field(
+        ...,
+        description="SMTP recipient email address. Note: The documentation specifies a single email address but the API response is a list.",
+    )
+    reply_to_address: Optional[list[str]] = Field(
+        None,
+        alias="replyToAddress",
+        description="Email address in the Reply-To header.",
+    )
+    sender: str = Field(..., description="SMTP sender email address.")
+    sender_ip: str = Field(..., alias="senderIP", description="Sender's IP address.")
+    spam_score: Optional[int] = Field(
+        None,
+        alias="spamScore",
+        description="Spam score of the message (0-100).",
+        ge=0,
+        le=100,
+    )
+    subject: Optional[str] = Field(None, description="Subject line of the message.")
+    threats_info_map: list[ThreatInfo] = Field(
+        ..., alias="threatsInfoMap", description="Details about detected threats."
+    )
+    to_addresses: Optional[list[str]] = Field(
+        None, alias="toAddresses", description="list of To email addresses."
+    )
+    xmailer: Optional[str] = Field(None, description="Content of the X-Mailer header.")
+
+    @field_validator("completely_rewritten", mode="before")
+    @classmethod
+    def _format_completely_rewritten(cls, value: str | bool) -> Optional[bool]:
+        """Format the completely_rewritten value."""
+        return {"true": True, "false": False, "na": None}[str(value).lower()]
+
+
+class ClickEvent(BaseModelWithRecommendedFieldAndExtraWarning):
+    """Model ClickEvent from /v2/siem/* responses."""
+
+    campaign_id: Optional[str] = Field(
+        None, alias="campaignId", description="Campaign identifier."
+    )
+    classification: Literal["Malware", "Phish", "Spam"] = Field(
+        ..., description="Threat classification of the URL."
+    )
+    click_ip: str = Field(
+        ...,
+        alias="clickIP",
+        description="External IP of the user who clicked the link.",
+    )
+    click_time: AwareDatetime = Field(
+        ..., alias="clickTime", description="Time the click occurred."
+    )
+    url: str = Field(..., description="The URL clicked by the user.")
+    threats_info_map: list[ThreatInfo] = Field(
+        ..., alias="threatsInfoMap", description="Details about detected threats."
+    )
+
+
+class SIEMResponse(BaseModelWithRecommendedFieldAndExtraWarning):
+    """Model SIEMResponse from /v2/siem/* responses."""
+
+    query_end_time: AwareDatetime = Field(
+        ..., alias="queryEndTime", description="End time of the queried data period."
+    )
+    messages_delivered: Optional[list[MessageEvent]] = Field(
+        None,
+        alias="messagesDelivered",
+        description="Messages with threats that were delivered.",
+    )
+    messages_blocked: Optional[list[MessageEvent]] = Field(
+        None,
+        alias="messagesBlocked",
+        description="Messages with threats that were blocked.",
+    )
+    clicks_permitted: Optional[list[ClickEvent]] = Field(
+        None,
+        alias="clicksPermitted",
+        description="Clicks to malicious URLs that were permitted.",
+    )
+    clicks_blocked: Optional[list[ClickEvent]] = Field(
+        None,
+        alias="clicksBlocked",
+        description="Clicks to malicious URLs that were blocked.",
+    )
+
+    @model_validator(mode="after")
+    def _check_at_least_one_events_key(self) -> "SIEMResponse":
+        if all(
+            event_type is None
+            for event_type in [
+                self.messages_delivered,
+                self.messages_blocked,
+                self.clicks_permitted,
+                self.clicks_blocked,
+            ]
+        ):
+            raise ValueError(
+                "At least one of the following keys must be present: messagesDelivered, messagesBlocked, clicksPermitted, clicksBlocked"
+            )
+        return self
+
+
+class TAPSIEMEndpoint(Enum):
+    """Enumeration of the TAP SIEM API endpoints."""
+
+    CLICKS_BLOCKED = "v2/siem/clicks/blocked"
+    CLICKS_PERMITTED = "v2/siem/clicks/permitted"
+    MESSAGES_BLOCKED = "v2/siem/messages/blocked"
+    MESSAGES_DELIVERED = "v2/siem/messages/delivered"
+    ISSUES = "v2/siem/issues"
+    ALL = "v2/siem/all"
+
+
+class TAPSIEMClient(BaseTAPClient):
+    """Client to interact with the TAP SIEM API.
+
+    Reference:
+        https://help.proofpoint.com/Threat_Insight_Dashboard/API_Documentation/SIEM_API [consulted on December 12, 2024]
+
+    Exemple:
+        TODO
+
+    """
+
+    RESPONSE_FORMAT = Literal["syslog", "JSON"]
+    THREAT_TYPE = Optional[Literal["url", "attachment", "messageText"]]
+    THREAT_STATUS = Optional[Literal["active", "cleared", "falsePositive"]]
+
+    @staticmethod
+    def _format_interval_param(start_time: "datetime", end_time: "datetime") -> str:
+        """Format the interval parameter for the query URL."""
+        if start_time.tzinfo is None or end_time.tzinfo is None:
+            raise ProofpointAPIError(
+                "Both start_time and end_time must be timezone aware."
+            )
+
+        now_utc = datetime.now(timezone.utc)
+        if start_time < now_utc - timedelta(hours=168):
+            raise ProofpointAPIError(
+                "The start_time must be within the last 168 hours (7 days)."
+            )
+
+        if end_time > now_utc:
+            raise ProofpointAPIError("The end_time must be in the past.")
+
+        if end_time < start_time:
+            # API answers 400 error code without error description.
+            raise ProofpointAPIError(
+                "The end_time must be greater than the start_time."
+            )
+
+        if end_time - start_time > timedelta(hours=1):
+            raise ProofpointAPIError("The time range must be less than 1 hour.")
+
+        return f"{start_time.isoformat()}/{end_time.isoformat()}"
+
+    def _handle_params(
+        self,
+        start_time: "datetime",
+        end_time: "datetime",
+        response_format: RESPONSE_FORMAT = "JSON",
+        threat_type: THREAT_TYPE = None,
+        threat_status: THREAT_STATUS = None,
+    ) -> dict[str, str]:
+        """Handle the query parameters.
+
+        Note:
+            The V2 siem API provides 3 way to handle time range (sinceSeconds, sinceTime, interval).
+            We only use interval here.
+
+        """
+        params = {
+            "format": response_format,
+            "interval": self._format_interval_param(start_time, end_time),
+        }
+        if threat_type:
+            params["threatType"] = threat_type
+        if threat_status:
+            params["threatStatus"] = threat_status
+        return params
+
+    def _build_query(
+        self,
+        endpoint: TAPSIEMEndpoint,
+        start_time: "datetime",
+        end_time: "datetime",
+        response_format: RESPONSE_FORMAT = "JSON",
+        threat_type: THREAT_TYPE = None,
+        threat_status: THREAT_STATUS = None,
+    ) -> str:
+        """Build a query for events in the specified time period.
+
+        Args:
+            endpoint (TAPSIEMEndpoint): The endpoint to query.
+            start_time (datetime): The start time of the events.
+            end_time (datetime): The end time of the events.
+            response_format (str): The format in which data is returned. Default is JSON.
+            threat_type (str): The threat type to return in the data. Default is None.
+            threat_status (str): The threat status to return in the data. Default is None.
+
+        Returns:
+            str: The formatted URL.
+
+        """
+        return self.format_get_query(
+            path=endpoint.value,
+            params=self._handle_params(
+                start_time=start_time,
+                end_time=end_time,
+                response_format=response_format,
+                threat_type=threat_type,
+                threat_status=threat_status,
+            ),
+        )
+
+    async def _get_siem_data(
+        self,
+        endpoint: TAPSIEMEndpoint,
+        start_time: "datetime",
+        end_time: "datetime",
+        response_format: RESPONSE_FORMAT = "JSON",
+        threat_type: THREAT_TYPE = None,
+        threat_status: THREAT_STATUS = None,
+    ) -> SIEMResponse:
+        """Fetch SIEM data from the specified endpoint in the given time period.
+
+        Args:
+            endpoint (TAPSIEMEndpoint): The endpoint to query.
+            start_time (datetime): The start time of the events.
+            end_time (datetime): The end time of the events.
+            response_format (str): The format in which data is returned. Default is JSON.
+            threat_type (str): The threat type to return in the data. Default is None.
+            threat_status (str): The threat status to return in the data. Default is None.
+
+        Returns:
+            SIEMResponse: The fetched events.
+
+        """
+        query_url = self._build_query(
+            endpoint,
+            start_time,
+            end_time,
+            response_format,
+            threat_type,
+            threat_status,
+        )
+        return await self.get(query_url=query_url, response_model=SIEMResponse)
+
+    async def fetch_clicks_blocked(
+        self,
+        start_time: "datetime",
+        end_time: "datetime",
+        response_format: RESPONSE_FORMAT = "JSON",
+        threat_type: THREAT_TYPE = None,
+        threat_status: THREAT_STATUS = None,
+    ) -> SIEMResponse:
+        """Fetch events for clicks to malicious URLs blocked in the specified time period."""
+        return await self._get_siem_data(
+            TAPSIEMEndpoint.CLICKS_BLOCKED,
+            start_time,
+            end_time,
+            response_format,
+            threat_type,
+            threat_status,
+        )
+
+    async def fetch_clicks_permitted(
+        self,
+        start_time: "datetime",
+        end_time: "datetime",
+        response_format: RESPONSE_FORMAT = "JSON",
+        threat_type: THREAT_TYPE = None,
+        threat_status: THREAT_STATUS = None,
+    ) -> SIEMResponse:
+        """Fetch events for clicks to malicious URLs permitted in the specified time period."""
+        return await self._get_siem_data(
+            TAPSIEMEndpoint.CLICKS_PERMITTED,
+            start_time,
+            end_time,
+            response_format,
+            threat_type,
+            threat_status,
+        )
+
+    async def fetch_messages_blocked(
+        self,
+        start_time: "datetime",
+        end_time: "datetime",
+        response_format: RESPONSE_FORMAT = "JSON",
+        threat_type: THREAT_TYPE = None,
+        threat_status: THREAT_STATUS = None,
+    ) -> SIEMResponse:
+        """Fetch events for messages blocked in the specified time period which contained a known threat."""
+        return await self._get_siem_data(
+            TAPSIEMEndpoint.MESSAGES_BLOCKED,
+            start_time,
+            end_time,
+            response_format,
+            threat_type,
+            threat_status,
+        )
+
+    async def fetch_messages_delivered(
+        self,
+        start_time: "datetime",
+        end_time: "datetime",
+        response_format: RESPONSE_FORMAT = "JSON",
+        threat_type: THREAT_TYPE = None,
+        threat_status: THREAT_STATUS = None,
+    ) -> SIEMResponse:
+        """Fetch events for messages delivered in the specified time period which contained a known threat."""
+        return await self._get_siem_data(
+            TAPSIEMEndpoint.MESSAGES_DELIVERED,
+            start_time,
+            end_time,
+            response_format,
+            threat_type,
+            threat_status,
+        )
+
+    async def fetch_issues(
+        self,
+        start_time: "datetime",
+        end_time: "datetime",
+        response_format: RESPONSE_FORMAT = "JSON",
+        threat_type: THREAT_TYPE = None,
+        threat_status: THREAT_STATUS = None,
+    ) -> SIEMResponse:
+        """Fetch events for clicks to malicious URLs permitted and messages delivered containing a known threat within the specified time period."""
+        return await self._get_siem_data(
+            TAPSIEMEndpoint.ISSUES,
+            start_time,
+            end_time,
+            response_format,
+            threat_type,
+            threat_status,
+        )
+
+    async def fetch_all(
+        self,
+        start_time: "datetime",
+        end_time: "datetime",
+        response_format: RESPONSE_FORMAT = "JSON",
+        threat_type: THREAT_TYPE = None,
+        threat_status: THREAT_STATUS = None,
+    ) -> SIEMResponse:
+        """Fetch events for all clicks and messages relating to known threats within the specified time period."""
+        return await self._get_siem_data(
+            TAPSIEMEndpoint.ALL,
+            start_time,
+            end_time,
+            response_format,
+            threat_type,
+            threat_status,
+        )
+
+
+if __name__ == "__main__":
+    import asyncio
+    import os
+    from datetime import datetime
+
+    from dotenv import load_dotenv
+
+    _ = load_dotenv()
+    client = TAPSIEMClient(
+        os.environ["TAP_BASE_URL"],
+        os.environ["TAP_PRINCIPAL"],
+        os.environ["TAP_SECRET"],
+        int(os.environ["TAP_TIMEOUT"]),
+        int(os.environ["TAP_RETRY"]),
+        int(os.environ["TAP_BACKOFF"]),
+    )
+    start_time = datetime.fromisoformat("2025-01-02T09:00:00Z")
+    end_time = datetime.fromisoformat("2025-01-02T10:00:00Z")
+    results = asyncio.run(client.fetch_all(start_time, end_time))
+
+
+# /v2/siem/clicks/blocked
+
+# Fetch events for clicks to malicious URLs blocked in the specified time period
+# /v2/siem/clicks/permitted
+
+# Fetch events for clicks to malicious URLs permitted in the specified time period
+# /v2/siem/messages/blocked
+
+# Fetch events for messages blocked in the specified time period which contained a known threat
+# /v2/siem/messages/delivered
+
+# Fetch events for messages delivered in the specified time period which contained a known threat
+# /v2/siem/issues
+
+# Fetch events for clicks to malicious URLs permitted and messages delivered containing a known threat within the specified time period. (It is a combination of /v2/siem/clicks/permitted and /v2/siem/messages/delivered)
+# /v2/siem/all
+
+# Fetch events for all clicks and messages relating to known threats within the specified time period
+# Required Parameters
+
+# One of the following three query parameters describing the desired time range for the data must be supplied with each request:
+# interval
+
+# A string containing an ISO8601-formatted interval. If this interval overlaps with previous requests for data, records from the previous request may be duplicated. The minimum interval is thirty seconds. The maximum interval is one hour.
+
+# Examples:
+
+#     2016-05-01T12:00:00Z/2016-05-01T13:00:00Z - an hour interval, beginning at noon UTC on 05-01-2016
+#     PT30M/2016-05-01T12:30:00Z - the thirty minutes beginning at noon UTC on 05-01-2016 and ending at 12:30pm UTC
+#     2016-05-01T05:00:00-0700/PT30M - the same interval as above, but using -0700 as the time zone
+
+# sinceSeconds
+
+# An integer representing a time window in seconds from the current API server time. The start of the window is the current API server time, rounded to the nearest minute, less the number of seconds provided. The end of the window is the current API server time rounded to the nearest minute. If JSON output is selected, the end time is included in the returned result.
+# sinceTime
+
+# A string containing an ISO8601 date. It represents the start of the data retrieval period. The end of the period is determined by current API server time rounded to the nearest minute. If JSON output is selected, the end time is included in the returned result.
+# Optional Parameters
+
+# One or more of these parameters may also be provided:
+# format
+
+# A string specifying the format in which data is returned. If no format is specified, syslog will be used as the default. The following values are accepted:
+
+#     syslog
+#     JSON
+
+# threatType
+
+# A string specifying which threat type will be returned in the data. If no value is specified, all threat types are returned. The following values are accepted:
+
+#     url
+#     attachment
+#     messageText
+
+# threatStatus
+
+# A string specifying which threat statuses will be returned in the data. If no value is specified, active and cleared threats are returned. The following values are accepted:
+
+#     active
+#     cleared
+#     falsePositive
+
+# Example Commands in Curl
+
+# The following commands assume that principal and secret are defined environment variables. They correspond to the service principal and secret that was created on the Settings page.
+
+# curl "https://tap-api-v2.proofpoint.com/v2/siem/issues?format=json&sinceTime=2016-05-01T12:00:00Z" --user "$PRINCIPAL:$SECRET" -s
+
+# Retrieves events from noon on 05/01/2016 to the present. Returned events are limited to just permitted clicks and delivered messages with known threats. Output is in the JSON format.
+
+# curl "https://tap-api-v2.proofpoint.com/v2/siem/all?format=syslog&sinceSeconds=3600" --user "$PRINCIPAL:$SECRET" -s
+
+# Retrieves events to the present, starting 3600 seconds before the query time. All events are returned. Output is in the syslog Format.
+
+# curl "https://tap-api-v2.proofpoint.com/v2/siem/clicks/permitted?format=syslog&interval=PT30M/2016-05-01T12:30:00Z" --user "$PRINCIPAL:$SECRET" -s
+
+# Retrieves events from the thirty minutes beginning at noon UTC on 05-01-2016 and ending at 12:30pm UTC. Only permitted clicks are returned. Output is in the syslog format.
+
+# curl "https://tap-api-v2.proofpoint.com/v2/siem/all?format=json&interval=PT30M/2016-05-01T12:30:00Z&threatStatus=falsePositive&threatStatus=active&threatStatus=cleared" --user "$PRINCIPAL:$SECRET" -s
+
+# Retrieves events from the thirty minutes beginning at noon UTC on 05-01-2016 and ending at 12:30pm UTC. All events are returned. False positives are included in the output. Output is in the JSON format.
