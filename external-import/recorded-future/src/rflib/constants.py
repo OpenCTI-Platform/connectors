@@ -1,4 +1,5 @@
 import stix2
+from pycti import MarkingDefinition
 
 from .rf_to_stix2 import URL, Domain, FileHash, IntrusionSet, IPAddress, Malware
 
@@ -29,5 +30,13 @@ TLP_MAP = {
     "white": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
     "amber": stix2.TLP_AMBER,
+    "amber+strict": stix2.MarkingDefinition(
+        id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+        definition_type="statement",
+        definition={"statement": "custom"},
+        allow_custom=True,
+        x_opencti_definition_type="TLP",
+        x_opencti_definition="TLP:AMBER+STRICT",
+    ),
     "red": stix2.TLP_RED,
 }
