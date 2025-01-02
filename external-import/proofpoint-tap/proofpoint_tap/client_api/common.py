@@ -1,4 +1,5 @@
 """Offer common tools for the TAP API."""
+
 import json
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Type, TypeVar
@@ -14,21 +15,22 @@ if TYPE_CHECKING:
 
     from pydantic import BaseModel
 
-T = TypeVar('T', bound="BaseModel")
+T = TypeVar("T", bound="BaseModel")
 logger = getLogger(__name__)
+
 
 class BaseTAPClient:
     """Base class for the TAP API client."""
 
     def __init__(
-            self, 
-            base_url: str, 
-            principal: str, 
-            secret: str, 
-            timeout: int,
-            retry:int,
-            backoff:int,
-        ) -> None:
+        self,
+        base_url: str,
+        principal: str,
+        secret: str,
+        timeout: int,
+        retry: int,
+        backoff: int,
+    ) -> None:
         """Initialize the client.
 
         Args:
@@ -43,7 +45,7 @@ class BaseTAPClient:
         self.base_url_netloc = netloc
         self.auth = aiohttp.BasicAuth(principal, secret)
         self.connect_timeout = timeout
-        self.timeout = 5*timeout
+        self.timeout = 5 * timeout
         self.retry = retry
         self.backoff = backoff
 
@@ -69,14 +71,17 @@ class BaseTAPClient:
             )
         )
 
-
     async def get(self, query_url: str, response_model: Type[T]) -> T:
         async with aiohttp.ClientSession(
             auth=self.auth,
-            timeout=aiohttp.ClientTimeout(total=self.timeout, sock_connect=self.connect_timeout),
+            timeout=aiohttp.ClientTimeout(
+                total=self.timeout, sock_connect=self.connect_timeout
+            ),
         ) as session:
             # We use a random retry but with min and max the same.
-            retry_options = RandomRetry(attempts=self.retry, min_timeout=self.backoff, max_timeout=self.backoff)
+            retry_options = RandomRetry(
+                attempts=self.retry, min_timeout=self.backoff, max_timeout=self.backoff
+            )
 
             async def _before_retry(
                 session: aiohttp.ClientSession,
@@ -84,13 +89,19 @@ class BaseTAPClient:
                 params: aiohttp.TraceRequestStartParams,
             ) -> None:
                 """Inner method to log the retry attempt."""
-                current_attempt = trace_config_ctx.trace_request_ctx['current_attempt']
+                current_attempt = trace_config_ctx.trace_request_ctx["current_attempt"]
                 if current_attempt > 1:
-                    logger.warning(f'Attempt {current_attempt} for {params.method} {params.url}')
+                    logger.warning(
+                        f"Attempt {current_attempt} for {params.method} {params.url}"
+                    )
 
             trace_config = aiohttp.TraceConfig()
             trace_config.on_request_start.append(_before_retry)
-            async with RetryClient(client_session=session, retry_options=retry_options, trace_configs=[trace_config]) as retry_client:
+            async with RetryClient(
+                client_session=session,
+                retry_options=retry_options,
+                trace_configs=[trace_config],
+            ) as retry_client:
                 async with retry_client.get(query_url) as resp:
                     try:
                         resp.raise_for_status()

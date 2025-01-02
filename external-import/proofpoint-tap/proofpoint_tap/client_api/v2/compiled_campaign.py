@@ -47,7 +47,15 @@ class TAPCompiledCampaignClient(BaseTAPClient):
 
     """
 
-    def __init__(self, base_url: str, principal: str, secret: str, timeout: int, retry: int, backoff: int):
+    def __init__(
+        self,
+        base_url: str,
+        principal: str,
+        secret: str,
+        timeout: int,
+        retry: int,
+        backoff: int,
+    ):
         """Initialize the client
         Args:
             base_url (str): The base URL of the TAP API.
@@ -56,7 +64,14 @@ class TAPCompiledCampaignClient(BaseTAPClient):
             timeout (int): The timeout for the API requests in seconds.
 
         """
-        common_kwargs = dict(base_url=base_url, principal=principal, secret=secret, timeout=timeout, retry=retry, backoff=backoff)  # noqa: C408
+        common_kwargs = dict(
+            base_url=base_url,
+            principal=principal,
+            secret=secret,
+            timeout=timeout,
+            retry=retry,
+            backoff=backoff,
+        )  # noqa: C408
 
         super().__init__(**common_kwargs)
         self.campaign = TAPCampaignClient(**common_kwargs)
