@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-tenable-vuln-management:
-    image: opencti/connector-tenable-vuln-management:6.4.2
+    image: opencti/connector-tenable-vuln-management:6.4.5
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=CHANGEME

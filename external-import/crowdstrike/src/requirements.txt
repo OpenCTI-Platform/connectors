@@ -1,4 +1,4 @@
-pycti==6.4.2
+pycti==6.4.5
 lxml==5.3.0
 crowdstrike-falconpy==1.4.6
-pydantic==2.8.2
+pydantic>=2.8.2,<3.0.0

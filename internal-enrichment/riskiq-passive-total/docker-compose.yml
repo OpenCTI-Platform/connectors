@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-riskiq-passive-total:
-    image: opencti/connector-riskiq-passive-total:6.4.2
+    image: opencti/connector-riskiq-passive-total:6.4.5
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost

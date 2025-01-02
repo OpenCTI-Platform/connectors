@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-webhook:
-    image: opencti/connector-webhook:6.4.2
+    image: opencti/connector-webhook:6.4.5
     environment:
       OPENCTI_URL: http://localhost
       OPENCTI_TOKEN: ChangeMe

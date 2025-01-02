@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-google-safebrowsing:
-    image: opencti/connector-google-safebrowsing:6.4.2
+    image: opencti/connector-google-safebrowsing:6.4.5
     environment:
       # Connector's definition parameters:
       - CONNECTOR_NAME=Google Safe Browsing

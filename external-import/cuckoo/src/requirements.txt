@@ -2,11 +2,11 @@ antlr4-python3-runtime
 chardet==5.2.0
 datefinder==0.7.3
 idna==3.10
-pycti==6.4.2
+pycti==6.4.5
 python-dateutil==2.9.0.post0
 pytz==2024.2
 regex==2024.11.6
 simplejson==3.19.3
-six==1.16.0
+six==1.17.0
 stix2-patterns==2.0.0
 urllib3==2.2.2

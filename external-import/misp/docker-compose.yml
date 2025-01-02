@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-misp:
-    image: opencti/connector-misp:6.4.2
+    image: opencti/connector-misp:6.4.5
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -28,7 +28,7 @@ services:
       - MISP_ENFORCE_WARNING_LIST=false # Optional, enforce warning list in MISP queries
       - MISP_REPORT_TYPE=misp-event # Optional, report_class if creating report for event
       - MISP_IMPORT_FROM_DATE=2000-01-01 # Required, import all event from this date
-      - MISP_IMPORT_TAGS=opencti:import,type:osint # Optional, list of tags used for import events
+      - MISP_IMPORT_TAGS= # Optional, list of tags used to filter events to import
       - MISP_IMPORT_TAGS_NOT= # Optional, list of tags to not include
       - MISP_IMPORT_CREATOR_ORGS= # Optional, only import events created by those orgs (put the identifiers here)
       - MISP_IMPORT_CREATOR_ORGS_NOT= # Optional, do not import events created by those orgs (put the identifiers here)

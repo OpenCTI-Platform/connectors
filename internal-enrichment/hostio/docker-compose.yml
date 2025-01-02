@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-hostio:
-    image: opencti/connector-hostio:6.4.2
+    image: opencti/connector-hostio:6.4.5
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=#Changeme

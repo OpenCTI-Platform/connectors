@@ -1,4 +1,4 @@
 python-dateutil==2.9.0.post0
-pycti==6.4.2
+pycti==6.4.5
 stix2==3.0.1
 PyYAML==6.0.2

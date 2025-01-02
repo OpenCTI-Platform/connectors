@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-urlscan-enrichment:
-    image: opencti/connector-urlscan-enrichment:6.4.2
+    image: opencti/connector-urlscan-enrichment:6.4.5
     environment:
       # OpenCTI's generic execution parameters:
       - OPENCTI_URL=http://localhost

@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-ransomware:
-    image: opencti/connector-ransomwarelive:6.4.2
+    image: opencti/connector-ransomwarelive:6.4.5
     container_name: ransomware-connector
     environment:
       # Connector's definition parameters:

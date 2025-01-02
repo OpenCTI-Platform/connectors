@@ -105,6 +105,13 @@ class CrowdStrike:
                 report_include_types_str
             )
 
+        report_target_industries_str = self.config.report_target_industries
+        report_target_industries = []
+        if report_target_industries_str is not None:
+            report_target_industries = convert_comma_separated_str_to_list(
+                report_target_industries_str
+            )
+
         report_guess_malware = bool(self.config.report_guess_malware)
 
         indicator_start_timestamp = self.config.indicator_start_timestamp
@@ -204,6 +211,7 @@ class CrowdStrike:
                 report_start_timestamp,
                 tlp_marking,
                 report_include_types,
+                report_target_industries,
                 report_status,
                 report_type,
                 report_guess_malware,

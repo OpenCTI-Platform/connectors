@@ -40,60 +40,69 @@ class ConfigConnector:
         """
         # OpenCTI configurations
         self.duration_period = get_config_variable(
-            "CONNECTOR_DURATION_PERIOD",
-            ["connector", "duration_period"],
-            self.load,
+            env_var="CONNECTOR_DURATION_PERIOD",
+            yaml_path=["connector", "duration_period"],
+            config=self.load,
+            required=True,
         )
 
         # Connector extra parameters
         self.harfanglab_api_base_url = get_config_variable(
-            "HARFANGLAB_INCIDENTS_URL",
-            ["harfanglab_incidents", "url"],
-            self.load,
+            env_var="HARFANGLAB_INCIDENTS_URL",
+            yaml_path=["harfanglab_incidents", "url"],
+            config=self.load,
+            required=True,
         )
         self.harfanglab_ssl_verify = get_config_variable(
-            "HARFANGLAB_INCIDENTS_SSL_VERIFY",
-            ["harfanglab_incidents", "ssl_verify"],
-            self.load,
-            False,
-            True,
+            env_var="HARFANGLAB_INCIDENTS_SSL_VERIFY",
+            yaml_path=["harfanglab_incidents", "ssl_verify"],
+            config=self.load,
+            isNumber=False,
+            required=True,
         )
+
         self.harfanglab_token = get_config_variable(
-            "HARFANGLAB_INCIDENTS_TOKEN", ["harfanglab_incidents", "token"], self.load
+            env_var="HARFANGLAB_INCIDENTS_TOKEN",
+            yaml_path=["harfanglab_incidents", "token"],
+            config=self.load,
+            required=True,
         )
 
         self.harfanglab_import_threats = get_config_variable(
-            "HARFANGLAB_INCIDENTS_IMPORT_THREATS",
-            ["harfanglab_incidents", "import_threats"],
-            self.load,
-            False,
-            False,
+            env_var="HARFANGLAB_INCIDENTS_IMPORT_THREATS",
+            yaml_path=["harfanglab_incidents", "import_threats"],
+            config=self.load,
+            isNumber=False,
+            default=False,
         )
         self.harfanglab_alert_statuses = get_config_variable(
-            "HARFANGLAB_INCIDENTS_ALERT_STATUSES",
-            ["harfanglab_incidents", "alert_statuses"],
-            self.load,
+            env_var="HARFANGLAB_INCIDENTS_ALERT_STATUSES",
+            yaml_path=["harfanglab_incidents", "alert_statuses"],
+            config=self.load,
+            required=True,
         )
         self.harfanglab_alert_types = get_config_variable(
-            "HARFANGLAB_INCIDENTS_ALERT_TYPES",
-            ["harfanglab_incidents", "alert_types"],
-            self.load,
+            env_var="HARFANGLAB_INCIDENTS_ALERT_TYPES",
+            yaml_path=["harfanglab_incidents", "alert_types"],
+            config=self.load,
+            required=True,
         )
         self.harfanglab_default_marking = get_config_variable(
-            "HARFANGLAB_INCIDENTS_DEFAULT_MARKING",
-            ["harfanglab_incidents", "default_marking"],
-            self.load,
-            False,
-            "TLP:CLEAR",
+            env_var="HARFANGLAB_INCIDENTS_DEFAULT_MARKING",
+            yaml_path=["harfanglab_incidents", "default_marking"],
+            config=self.load,
+            isNumber=False,
+            default="TLP:CLEAR",
         )
         self.harfanglab_default_score = get_config_variable(
-            "HARFANGLAB_INCIDENTS_DEFAULT_SCORE",
-            ["harfanglab_incidents", "default_score"],
+            env_var="HARFANGLAB_INCIDENTS_DEFAULT_SCORE",
+            yaml_path=["harfanglab_incidents", "default_score"],
+            config=self.load,
         )
         harfanglab_import_start_date_var = get_config_variable(
-            "HARFANGLAB_INCIDENTS_IMPORT_START_DATE",
-            ["harfanglab_incidents", "import_start_date"],
-            self.load,
+            env_var="HARFANGLAB_INCIDENTS_IMPORT_START_DATE",
+            yaml_path=["harfanglab_incidents", "import_start_date"],
+            config=self.load,
         )
         self.harfanglab_import_start_datetime = (
             parser.parse(harfanglab_import_start_date_var).replace(tzinfo=tz.UTC)

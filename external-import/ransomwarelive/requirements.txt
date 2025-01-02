@@ -1,4 +1,4 @@
-pycti==6.4.2
+pycti==6.4.5
 stix2==3.0.1
 validators==0.33.0
 tldextract

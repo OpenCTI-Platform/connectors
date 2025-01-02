@@ -1,5 +1,5 @@
   connector-redflag-domains:
-    image: opencti/connector-red-flag-domains:6.4.2
+    image: opencti/connector-red-flag-domains:6.4.5
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=OPEN_CTI_TOKEN

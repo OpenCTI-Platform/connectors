@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-sentinel-incidents:
-    image: opencti/connector-sentinel-incidents:6.4.2
+    image: opencti/connector-sentinel-incidents:6.4.5
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost

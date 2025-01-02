@@ -1,2 +1,2 @@
-pycti==6.4.2
-pydantic==2.8.2
+pycti==6.4.5
+pydantic>=2.8.2,<3.0.0

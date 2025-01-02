@@ -1,4 +1,4 @@
-pycti==6.4.2
+pycti==6.4.5
 nltk==3.9.1
 cron-converter==1.2.1
 https://github.com/WithSecureLabs/opencti-attribution-tools/releases/download/0.3.2/opencti_attribution_tools-0.3.2-py3-none-any.whl

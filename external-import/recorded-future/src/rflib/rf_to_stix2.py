@@ -11,10 +11,13 @@
 
 import ipaddress
 import json
+from collections import OrderedDict
 from datetime import datetime
 
 import pycti  # type: ignore
 import stix2
+from stix2 import Report
+from stix2.properties import ListProperty, ReferenceProperty
 
 TLP_MAP = {
     "white": stix2.TLP_WHITE,
@@ -898,6 +901,16 @@ RELATIONSHIPS_MAPPER = [
 ]
 
 
+class RFReport(Report):
+    """Subclass of Report with 'object_refs' property set to required=False."""
+
+    _properties = OrderedDict(Report._properties)  # Copy the parent class properties
+    _properties["object_refs"] = ListProperty(
+        ReferenceProperty(valid_types=["SCO", "SDO", "SRO"], spec_version="2.1"),
+        required=False,
+    )
+
+
 class StixNote:
     """Represents Analyst Note"""
 
@@ -1105,7 +1118,11 @@ class StixNote:
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
-        report = stix2.Report(
+        report_object_refs = [obj.id for obj in self.objects]
+
+        # Report in STIX lib must have at least one object_refs even if there is no object_refs
+        # Use a subclass of Report to make the object_refs optional
+        report = RFReport(
             id=pycti.Report.generate_id(self.name, self.published),
             name=self.name,
             description=self.text,
@@ -1113,7 +1130,7 @@ class StixNote:
             created_by_ref=self.author.id,
             labels=self.labels,
             report_types=self.report_types,
-            object_refs=[obj.id for obj in self.objects],
+            object_refs=report_object_refs,
             external_references=self.external_references,
             object_marking_refs=self.tlp,
         )

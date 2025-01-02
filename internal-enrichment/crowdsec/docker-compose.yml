@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-crowdsec:
-    image: opencti/connector-crowdsec:6.4.2
+    image: opencti/connector-crowdsec:6.4.5
     environment:
       - OPENCTI_URL=http://opencti:8080 # OpenCTI API URL
       - OPENCTI_TOKEN=ChangeMe # Add OpenCTI API token here

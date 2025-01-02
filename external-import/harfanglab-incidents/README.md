@@ -129,24 +129,25 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter                                    | config.yml `harfanglab_incidents` | Docker environment variable    | Default    | Mandatory | Description                                                                                                                        |
-|----------------------------------------------|-----------------------------------|--------------------------------|------------|-----------|------------------------------------------------------------------------------------------------------------------------------------|
-| HarfangLab url                               | `url`                             | `HARFANGLAB_URL`               | /          | Yes       | The HarfangLab instance URL                                                                                                        |
-| HarfangLab SSL verify                        | `ssl_verify`                      | `HARFANGLAB_SSL_VERIFY`        | /          | Yes       | Enable the SSL certificate check                                                                                                   |
-| HarfangLab Token                             | `token`                           | `HARFANGLAB_TOKEN`             | /          | Yes       | The token of the HarfangLab user                                                                                                   |
-| HarfangLab Import threats as case incidents  | `import_threats`                  | `HARFANGLAB_IMPORT_THREATS`    | False      | No        | Import threats as case incidents, from HarfangLab to openCTI.                                                                      |
-| HarfangLab Security events filters by status | `alert_statuses`                  | `HARFANGLAB_ALERT_STATUSES`    | /          | Yes       | Filters available : `new`, `investigating`, `false_positive`, `closed` - example : 'new, investigating'                            |
-| HarfangLab Import filters by alert type      | `alert_types`                     | `HARFANGLAB_ALERT_TYPES`       | /          | Yes       | Filters available : `yara`, `sigma`, `ioc` - example : 'sigma, ioc'                                                                |
-| HarfangLab Default marking                   | `default_marking`                 | `HARFANGLAB_DEFAULT_MARKING`   | TLP:CLEAR  | No        | Choose one marking by default. Markings available : `TLP:CLEAR` - `TLP:GREEN` - `TLP:AMBER` - `TLP:RED`                            |
-| HarfangLab Default score                     | `default_score`                   | `HARFANGLAB_DEFAULT_SCORE`     | /          | No        | Default_score allows you to add a default score for an indicator and its observable (a number between 1 and 100)                   |
-| HarfangLab Import start date                 | `import_start_date`               | `HARFANGLAB_IMPORT_START_DATE` | 1970-01-01 | No        | Date to start import from (in ISO-8601 format) if connector's state doesn't contain last imported incident/case incident datetime. |
+| Parameter                                    | config.yml `harfanglab_incidents`         | Docker environment variable                 | Default      | Mandatory | Description                                                                                                                        |
+|----------------------------------------------|-------------------------------------------|---------------------------------------------|--------------|-----------|------------------------------------------------------------------------------------------------------------------------------------|
+| HarfangLab URL                               | `url`                                     | `HARFANGLAB_INCIDENTS_URL`                  | /            | Yes       | The HarfangLab instance URL                                                                                                        |
+| HarfangLab SSL Verify                        | `ssl_verify`                              | `HARFANGLAB_INCIDENTS_SSL_VERIFY`           | /            | Yes       | Enable the SSL certificate check                                                                                                   |
+| HarfangLab Token                             | `token`                                   | `HARFANGLAB_INCIDENTS_TOKEN`                | /            | Yes       | The token of the HarfangLab user                                                                                                   |
+| HarfangLab Import Threats as Case Incidents  | `import_threats`                          | `HARFANGLAB_INCIDENTS_IMPORT_THREATS`       | False        | No        | Import threats as case incidents, from HarfangLab to OpenCTI.                                                                      |
+| HarfangLab Security Events Filters by Status | `alert_statuses`                          | `HARFANGLAB_INCIDENTS_ALERT_STATUSES`       | /            | Yes       | Filters available: `new`, `investigating`, `false_positive`, `closed` - example: `new, investigating`                              |
+| HarfangLab Import Filters by Alert Type      | `alert_types`                             | `HARFANGLAB_INCIDENTS_ALERT_TYPES`          | /            | Yes       | Filters available: `yara`, `sigma`, `ioc` - example: `sigma, ioc`                                                                  |
+| HarfangLab Default Marking                   | `default_marking`                         | `HARFANGLAB_INCIDENTS_DEFAULT_MARKING`      | TLP:CLEAR    | No        | Choose one marking by default. Markings available: `TLP:CLEAR`, `TLP:GREEN`, `TLP:AMBER`, `TLP:RED`                                |
+| HarfangLab Default Score                     | `default_score`                           | `HARFANGLAB_INCIDENTS_DEFAULT_SCORE`        | /            | No        | Default score allows you to add a default score for an indicator and its observable (a number between 1 and 100).                  |
+| HarfangLab Import Start Date                 | `import_start_date`                       | `HARFANGLAB_INCIDENTS_IMPORT_START_DATE`    | 1970-01-01   | No        | Date to start import from (in ISO-8601 format) if connector's state doesn't contain last imported incident/case incident datetime. |
+
 
 ## Deployment
 
 ### Docker Deployment
 
 Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==6.4.2`. If you don't, it will take the latest version, but
+version of OpenCTI you're running. Example, `pycti==6.4.5`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.

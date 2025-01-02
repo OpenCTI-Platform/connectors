@@ -124,7 +124,7 @@ Below are the parameters you'll need to set for the connector:
 ### Docker Deployment
 
 Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==6.4.2`. If you don't, it will take the latest version, but
+version of OpenCTI you're running. Example, `pycti==6.4.5`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
