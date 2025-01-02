@@ -3,7 +3,6 @@
 from typing import Literal, Optional
 from urllib.parse import urljoin
 
-import aiohttp
 from pydantic import AwareDatetime, Field
 
 from proofpoint_tap.client_api.common import BaseTAPClient

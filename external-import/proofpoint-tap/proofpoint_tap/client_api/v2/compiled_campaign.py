@@ -64,19 +64,22 @@ class TAPCompiledCampaignClient(BaseTAPClient):
             timeout (int): The timeout for the API requests in seconds.
 
         """
-        common_kwargs = dict(
+        common_kwargs = dict(  # noqa: C408  # keep dict constructor rather than literal dict for maintainance.
             base_url=base_url,
             principal=principal,
             secret=secret,
             timeout=timeout,
             retry=retry,
             backoff=backoff,
-        )  # noqa: C408
+        )
 
-        super().__init__(**common_kwargs)
-        self.campaign = TAPCampaignClient(**common_kwargs)
-        self.threat = TAPThreatClient(**common_kwargs)
-        self.forensics = TAPForensicsClient(**common_kwargs)
+        # we deserialize instead of repeating kwargs
+        super().__init__(
+            **common_kwargs  # type:ignore[arg-type]
+        )
+        self.campaign = TAPCampaignClient(**common_kwargs)  # type:ignore[arg-type]
+        self.threat = TAPThreatClient(**common_kwargs)  # type:ignore[arg-type]
+        self.forensics = TAPForensicsClient(**common_kwargs)  # type:ignore[arg-type]
 
     async def fetch_campaign(self, campaign_id: str) -> CampaignCompiledInfo:
         """Fetch the details of a campaign and compile additional information.

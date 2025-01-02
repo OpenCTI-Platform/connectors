@@ -2,7 +2,6 @@
 
 from typing import Any, List, Literal, Optional, Union
 
-import aiohttp
 from pydantic import AwareDatetime, Field, model_validator
 
 from proofpoint_tap.client_api.common import BaseTAPClient

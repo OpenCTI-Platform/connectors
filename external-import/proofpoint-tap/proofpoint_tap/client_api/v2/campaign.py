@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from typing import Any, Literal, Optional, Sequence
 from urllib.parse import urljoin
 
-import aiohttp
 from pydantic import AwareDatetime, Field
 
 from proofpoint_tap.client_api.common import BaseTAPClient
