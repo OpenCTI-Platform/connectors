@@ -38,6 +38,8 @@ class BaseTAPClient:
             principal (str): The principal to authenticate with the API.
             secret (str): The secret to authenticate with the API.
             timeout (int): The timeout for the API requests in seconds.
+            retry (int): The number of retries to perform.
+            backoff (int): The backoff time between retries in seconds.
 
         """
         scheme, netloc, _, _, _, _ = urlparse(base_url)
@@ -72,6 +74,16 @@ class BaseTAPClient:
         )
 
     async def get(self, query_url: str, response_model: Type[T]) -> T:
+        """Perform a GET request.
+
+        Args:
+            query_url (str): The URL to query.
+            response_model (Type[T]): The model to validate the response.
+
+        Returns:
+            (BaseModel-like): The validated response.
+
+        """
         async with aiohttp.ClientSession(
             auth=self.auth,
             timeout=aiohttp.ClientTimeout(
