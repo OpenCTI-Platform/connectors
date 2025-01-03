@@ -131,7 +131,6 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                             + playbook_alert["data"]["playbook_alert_id"]
                         )
                 except Exception as err:
-                    print(err)
                     self.helper.log_error(err)
                 self.update_state(plb_alert.category)
 
