@@ -4,7 +4,6 @@ from traceback import format_exc
 
 # WARN: python-dotenv is used for integration manual run
 import dotenv
-
 from adapter import DataToSTIXAdapter
 from lib.external_import import ExternalImportConnector
 
