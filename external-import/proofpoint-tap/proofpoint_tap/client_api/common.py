@@ -1,6 +1,6 @@
 """Offer common tools for the TAP API."""
-
 import json
+from abc import ABC
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Type, TypeVar
 from urllib.parse import urlencode, urlparse, urlunparse
@@ -19,7 +19,7 @@ T = TypeVar("T", bound="BaseModel")
 logger = getLogger(__name__)
 
 
-class BaseTAPClient:
+class BaseTAPClient(ABC):  # noqa: B024 # Even though there is not abstract method, it is still an abstract class.
     """Base class for the TAP API client."""
 
     def __init__(
