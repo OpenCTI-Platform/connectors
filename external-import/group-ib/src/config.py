@@ -1,13 +1,13 @@
 import os
 from pathlib import Path
-
-import yaml
 from typing import Any
 
+import yaml
+from cyberintegrations.utils import FileHandler
+from pycti import get_config_variable
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 from stix2.v21.vocab import MALWARE_TYPE
-from pycti import get_config_variable
-from cyberintegrations.utils import FileHandler
+
 
 class ConfigConnector:
     collection_map = {
