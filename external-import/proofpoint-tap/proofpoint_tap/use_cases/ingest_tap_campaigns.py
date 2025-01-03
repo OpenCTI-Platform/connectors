@@ -53,7 +53,6 @@ class TAPCampaignProcessor:
 
         Args:
             tap_actor (Actor): The actor to ingest.
-            author (OrganizationAuthor): The author of the intrusion set.
             tlp_marking (TLPMarking): default marking for ingested objects.
 
         """
@@ -71,7 +70,6 @@ class TAPCampaignProcessor:
 
         Args:
             tap_malware (TAPMalware): The malware to ingest.
-            author (OrganizationAuthor): The author of the malware.
             tlp_marking (TLPMarking): default marking for ingested objects.
 
         """
@@ -94,7 +92,6 @@ class TAPCampaignProcessor:
 
         Args:
             tap_technique (Technique): The technique to ingest.
-            author (OrganizationAuthor): The author of the attack pattern.
             tlp_marking (TLPMarking): default marking for ingested objects.
 
         """
@@ -117,7 +114,6 @@ class TAPCampaignProcessor:
 
         Args:
             tap_brand (Brand): The brand to ingest.
-            author (OrganizationAuthor): The author of the targeted organization.
             tlp_marking (TLPMarking): default marking for ingested objects.
 
         """
@@ -139,8 +135,7 @@ class TAPCampaignProcessor:
         """Make an OCTI Campaign from a ProofPoint TAP campaign.
 
         Args:
-            tap_campaign (CampaignCompiledInfo): The campaign to ingest.
-            author (OrganizationAuthor): The author of the campaign.
+            tap_campaign (CampaignCompiledInfo): The campaign to ingest
             tlp_marking (TLPMarking): default marking for ingested objects.
 
         """
