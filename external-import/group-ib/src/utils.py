@@ -7,7 +7,9 @@ from pycti import OpenCTIConnectorHelper
 
 class ExternalImportHelper:
     @staticmethod
-    def validation_interval(cfg: ConfigConnector, helper: OpenCTIConnectorHelper) -> str:
+    def validation_interval(
+        cfg: ConfigConnector, helper: OpenCTIConnectorHelper
+    ) -> str:
         """
         Validates the CONNECTOR__DURATION_PERIOD value to ensure it conforms to ISO-8601 duration format.
         """
@@ -36,16 +38,16 @@ class ExternalImportHelper:
     def get_interval(interval: str, helper: OpenCTIConnectorHelper) -> int:
         """
         Converts an ISO-8601 duration string to seconds.
-        
+
         This always returns the interval in seconds for the connector.
         """
         try:
             # Parse the ISO-8601 duration and convert to timedelta
             duration = parse_duration(interval)
-            
+
             if not isinstance(duration, timedelta):
                 raise ValueError("Parsed duration is not a valid timedelta object.")
-            
+
             # Convert timedelta to seconds
             return int(duration.total_seconds())
         except Exception as ex:
@@ -56,7 +58,9 @@ class ExternalImportHelper:
                 f"Error when converting CONNECTOR__DURATION_PERIOD environment variable: '{interval}'. {str(ex)}"
             ) from ex
 
-    def validation_update_existing_data(cfg: ConfigConnector, helper: OpenCTIConnectorHelper) -> str | bool:
+    def validation_update_existing_data(
+        cfg: ConfigConnector, helper: OpenCTIConnectorHelper
+    ) -> str | bool:
         update_existing_data = cfg.connector_update_existing_data
         if isinstance(update_existing_data, str) and update_existing_data.lower() in [
             "true",
@@ -75,10 +79,14 @@ class ExternalImportHelper:
             )
             helper.log_warning(msg)
             update_existing_data = "false"
-            
+
         return update_existing_data
-    
-    def get_next_run_it(interval: str, helper: OpenCTIConnectorHelper, timestamp: int, last_run: int):
+
+    def get_next_run_it(
+        interval: str, helper: OpenCTIConnectorHelper, timestamp: int, last_run: int
+    ):
         last_run = 0 if last_run is None else last_run
-        new_interval = ExternalImportHelper.get_interval(interval=interval, helper=helper) - (timestamp - last_run)
+        new_interval = ExternalImportHelper.get_interval(
+            interval=interval, helper=helper
+        ) - (timestamp - last_run)
         return datetime.now() + timedelta(seconds=new_interval)
