@@ -1,16 +1,17 @@
 import sys
 import time
 from datetime import datetime
+from traceback import format_exc
+from typing import Any
 
 import stix2
-from config import ConfigConnector
 from cyberintegrations import TIAdapter
 from cyberintegrations.decorators import cache_data
 from cyberintegrations.utils import ProxyConfigurator
 from pycti import OpenCTIConnectorHelper
+
+from config import ConfigConnector
 from utils import ExternalImportHelper
-from typing import Any
-from traceback import format_exc
 
 
 @cache_data(
@@ -322,7 +323,7 @@ class ExternalImportConnector:
                                 )
                                 self.set_or_update_state(prepared_data=prepared_data)
 
-                    except Exception as e:
+                    except Exception:
                         self.helper.log_error(format_exc())
 
                     # Store the current timestamp as a last run
@@ -357,7 +358,7 @@ class ExternalImportConnector:
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info(f"{self.helper.connect_name} connector stopped")
                 sys.exit(0)
-            except Exception as e:
+            except Exception:
                 self.helper.metric.inc("error_count")
                 self.helper.metric.state("stopped")
                 self.helper.log_error(format_exc())
