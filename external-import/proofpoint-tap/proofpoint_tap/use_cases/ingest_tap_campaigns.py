@@ -9,12 +9,16 @@ from proofpoint_tap.models.octi import (
     IntrusionSet,
     Malware,
     TargetedOrganization,
+    CampaignAttributedToIntrusionSet,
+    CampaignTargetsOrganization,
+    CampaignUsesMalware,
+    CampaignUsesAttackPattern,
 )
 
 if TYPE_CHECKING:
-    # for now we use V2 API compiled response directly into the use case and no true dependency injection.
     from stix2 import TLPMarking  # type: ignore[import-untyped] # stix2 is not typed
 
+    # for now we use V2 API compiled response directly into the use case and no interface injection.
     from proofpoint_tap.client_api.v2 import CampaignCompiledInfo
     from proofpoint_tap.client_api.v2.campaign import Actor, Brand, Technique
     from proofpoint_tap.client_api.v2.campaign import Malware as TAPMalware
@@ -129,10 +133,83 @@ class TAPCampaignProcessor:
             name=tap_campaign.name,
             description=tap_campaign.description,
             first_seen=tap_campaign.start_date,
+            last_seen=None,
             external_references=None,
             markings=[self.tlp_marking],
             labels=[family.name for family in tap_campaign.families or []],
             author=self.author,
+        )
+
+    def make_campaign_attributed_to_intrusion_set(
+        self, campaign: Campaign, intrusion_set: IntrusionSet
+    ) -> CampaignAttributedToIntrusionSet:
+        """Make an OCTI CampaignAttributedToIntrusionSet relationship from a ProofPoint TAP campaign and an IntrusionSet."""
+        return CampaignAttributedToIntrusionSet(
+            author=self.author,
+            created=None,
+            modified=None,
+            description=None,
+            source=campaign,
+            target=intrusion_set,
+            start_time=None,
+            stop_time=None,
+            confidence=None,
+            markings=[self.tlp_marking],
+            external_references=None,
+        )
+
+    def make_campaign_targets_organization(
+        self, campaign: Campaign, targeted_org: TargetedOrganization
+    ) -> CampaignTargetsOrganization:
+        """Make an OCTI CampaignTargetsOrganization relationship from a ProofPoint TAP campaign and a TargetedOrganization."""
+        return CampaignTargetsOrganization(
+            author=self.author,
+            created=None,
+            modified=None,
+            description=None,
+            source=campaign,
+            target=targeted_org,
+            start_time=None,
+            stop_time=None,
+            confidence=None,
+            markings=[self.tlp_marking],
+            external_references=None,
+        )
+
+    def make_campaign_uses_malware(
+        self, campaign: Campaign, malware: Malware
+    ) -> CampaignUsesMalware:
+        """Make an OCTI CampaignUsesMalware relationship from a ProofPoint TAP campaign and a Malware."""
+        return CampaignUsesMalware(
+            author=self.author,
+            created=None,
+            modified=None,
+            description=None,
+            source=campaign,
+            target=malware,
+            start_time=None,
+            stop_time=None,
+            confidence=None,
+            markings=[self.tlp_marking],
+            external_references=None,
+        )
+
+    def make_campaign_uses_attack_pattern(
+        self, campaign: Campaign, attack_pattern: AttackPattern
+    ) -> CampaignUsesAttackPattern:
+        """Make an OCTI CampaignUsesAttackPattern relationship from a ProofPoint TAP campaign and an AttackPattern."""
+        return CampaignUsesAttackPattern(
+            author=self.author,
+            created=None,
+            modified=None,
+            description=None,
+            source=campaign,
+            target=attack_pattern,
+            start_time=None,
+            stop_time=None,
+            confidence=None,
+            markings=[self.tlp_marking],
+            external_references=None,
         )
 
     def run_on(self, tap_campaign: "CampaignCompiledInfo") -> list["BaseEntity"]:
@@ -149,20 +226,37 @@ class TAPCampaignProcessor:
         for actor in tap_campaign.actors or []:
             intrusion_set = self.make_intrusion_set(actor)
             entities.append(intrusion_set)
+            # Relationships
+            entities.append(
+                self.make_campaign_attributed_to_intrusion_set(campaign, intrusion_set)
+            )
 
         # Process associated malware
         for malware in tap_campaign.malware or []:
             malware_entity = self.make_malware(malware)
             entities.append(malware_entity)
+            # Relationships
+            entities.append(self.make_campaign_uses_malware(campaign, malware_entity))
 
         # Process associated techniques
         for technique in tap_campaign.techniques or []:
             attack_pattern = self.make_attack_pattern(technique)
             entities.append(attack_pattern)
+            # Relationships
+            entities.append(
+                self.make_campaign_uses_attack_pattern(campaign, attack_pattern)
+            )
 
         # Process associated brands
         for brand in tap_campaign.brands or []:
             targeted_org = self.make_targeted_organization(brand)
             entities.append(targeted_org)
+            # Relationships
+            entities.append(
+                self.make_campaign_targets_organization(campaign, targeted_org)
+            )
 
+        # Only append Author if at least one entity is present
+        if entities:
+            entities.append(self.author)
         return entities
