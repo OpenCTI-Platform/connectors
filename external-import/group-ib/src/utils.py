@@ -1,8 +1,10 @@
-from config import ConfigConnector
+from datetime import datetime, timedelta
+
+from isodate import parse_duration
 from pycti import OpenCTIConnectorHelper
 
-from datetime import timedelta, datetime
-from isodate import parse_duration
+from config import ConfigConnector
+
 
 class ExternalImportHelper:
     @staticmethod
