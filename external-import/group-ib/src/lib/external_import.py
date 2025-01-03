@@ -5,12 +5,11 @@ from traceback import format_exc
 from typing import Any
 
 import stix2
+from config import ConfigConnector
 from cyberintegrations import TIAdapter
 from cyberintegrations.decorators import cache_data
 from cyberintegrations.utils import ProxyConfigurator
 from pycti import OpenCTIConnectorHelper
-
-from config import ConfigConnector
 from utils import ExternalImportHelper
 
 
