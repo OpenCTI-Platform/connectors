@@ -34,8 +34,8 @@ class TAPCampaignProcessor:
         # This might have to be factorized for several use cases later.
         self.author = OrganizationAuthor(
             name="ProofPoint TAP",
-            description="oofpoint Targeted Attack Protection (TAP) offers an innovative " \
-                "approach to detecting, analysing and blocking advanced threats that target the employees.",
+            description="oofpoint Targeted Attack Protection (TAP) offers an innovative "
+            "approach to detecting, analysing and blocking advanced threats that target the employees.",
             confidence=None,
             author=None,
             labels=None,
