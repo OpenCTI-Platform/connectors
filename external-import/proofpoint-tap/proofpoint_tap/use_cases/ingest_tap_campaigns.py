@@ -28,9 +28,24 @@ if TYPE_CHECKING:
 class TAPCampaignProcessor:
     """Process ProofPoint TAP Compiled Campaign data."""
 
-    def __init__(self, author: "OrganizationAuthor", tlp_marking: "TLPMarking"):
+    def __init__(self, tlp_marking: "TLPMarking"):
         """Initialize the TAPCampaignProcessor with author and TLP marking."""
-        self.author = author
+        # Directly implementing Author in the use case for now.
+        # This might have to be factorized for several use cases later.
+        self.author = OrganizationAuthor(
+            name="ProofPoint TAP",
+            description="oofpoint Targeted Attack Protection (TAP) offers an innovative " \
+                "approach to detecting, analysing and blocking advanced threats that target the employees.",
+            confidence=None,
+            author=None,
+            labels=None,
+            markings=None,
+            external_references=None,
+            contact_information="https://www.proofpoint.com/us/contact",
+            organization_type="vendor",
+            reliability=None,
+            aliases=None,
+        )
         self.tlp_marking = tlp_marking
 
     def make_intrusion_set(self, tap_actor: "Actor") -> IntrusionSet:
