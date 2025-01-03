@@ -220,15 +220,11 @@ class AbuseSSLImportConnector:
         """
         self.helper.log_info("Sending STIX Bundle")
         try:
-            self.helper.send_stix2_bundle(
-                bundle, work_id=work_id
-            )
+            self.helper.send_stix2_bundle(bundle, work_id=work_id)
         except:
             time.sleep(60)
             try:
-                self.helper.send_stix2_bundle(
-                    bundle, work_id=work_id
-                )
+                self.helper.send_stix2_bundle(bundle, work_id=work_id)
             except Exception as e:
                 self.helper.log_error(str(e))
 
