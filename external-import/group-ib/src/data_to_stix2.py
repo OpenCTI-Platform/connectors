@@ -17,7 +17,6 @@ from urllib.parse import urlparse
 
 import pycti  # type: ignore
 import stix2
-
 from config import ConfigConnector
 
 
