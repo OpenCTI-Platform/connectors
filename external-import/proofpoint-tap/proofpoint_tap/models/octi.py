@@ -1,13 +1,12 @@
 """Define the OpenCTI models."""
 
 from abc import abstractmethod
+from datetime import datetime
 from typing import Any, Literal, Optional
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, PrivateAttr
-
-# if TYPE_CHECKING:
 
 
 class BaseModelWithoutExtra(BaseModel):
@@ -31,6 +30,20 @@ class BaseModelWithoutExtra(BaseModel):
 
 class BaseEntity(BaseModelWithoutExtra):
     """Base class to implement common attributes and methods for all entities."""
+
+    # Update BaseEntity config with arbitrary_types_allowed set to True
+    # because of markings that is not a built-in type.
+
+    # An other way to deal with it could have been to add __get_pydantic_core_schema__ and __get_pydantic_json_schema__
+    # methods to TLPMarking class.
+    # see https://docs.pydantic.dev/2.8/concepts/json_schema/#implementing-__get_pydantic_core_schema__
+    # This solution is not retained beczause it is more complex and only useful if model is wanted to be
+    # exported to json schema. (Not the case for these entities).
+
+    model_config = ConfigDict(
+        **BaseModelWithoutExtra.model_config,
+        arbitrary_types_allowed=True,
+    )
 
     _stix2_representation: Optional[Any] = PrivateAttr(None)
     _id: str = PrivateAttr(None)
@@ -75,7 +88,7 @@ class ExternalReference(BaseModelWithoutExtra):
     )
     url: Optional[str] = Field(None, description="URL of the external reference.")
 
-    def to_stix2_object(self) -> Any:
+    def to_stix2_object(self) -> stix2.v21.ExternalReference:
         """Make stix object."""
         return stix2.ExternalReference(
             source_name=self.source_name,
@@ -131,7 +144,7 @@ class Organization(BaseEntity):
         None, description="Aliases of the organization."
     )
 
-    def to_stix2_object(self) -> stix2.v21._STIXBase21:
+    def to_stix2_object(self) -> stix2.v21.Identity:
         """Make stix object."""
         if self._stix2_representation is not None:
             return self._stix2_representation
@@ -171,6 +184,10 @@ class Organization(BaseEntity):
 class OrganizationAuthor(Author, Organization):
     """Represent an organization author."""
 
+    def to_stix2_object(self) -> stix2.v21.Identity:
+        """Make stix object."""
+        return Organization.to_stix2_object(self)
+
 
 class Campaign(BaseEntity):
     """Represent a campaign."""
@@ -188,8 +205,11 @@ class Campaign(BaseEntity):
     first_seen: Optional[AwareDatetime] = Field(
         None, description="First seen date of the campaign."
     )
+    last_seen: Optional[AwareDatetime] = Field(
+        None, description="Last seen date of the campaign."
+    )
 
-    def to_stix2_object(self) -> stix2.v21._STIXBase21:
+    def to_stix2_object(self) -> stix2.v21.Campaign:
         """Make stix object."""
         if self._stix2_representation is not None:
             return self._stix2_representation
@@ -197,18 +217,18 @@ class Campaign(BaseEntity):
             id=pycti.Campaign.generate_id(name=self.name),
             name=self.name,
             description=self.description,
-            create_by_ref=self.author.id if self.author is not None else None,
             labels=self.labels,
+            created_by_ref=self.author.id if self.author is not None else None,
             external_references=[
                 external_reference.to_stix2_object()
                 for external_reference in self.external_references or []
             ],
             first_seen=self.first_seen,
+            last_seen=self.last_seen,
             object_marking_refs=[marking["id"] for marking in self.markings or []],
             # unused
             created=None,
             modified=None,
-            last_seen=None,
             objective=None,
             revoked=None,
             confidence=None,
@@ -216,7 +236,7 @@ class Campaign(BaseEntity):
             granular_markings=None,
             extensions=None,
             # customs
-            custom_properties=None,
+            custom_properties={},
         )
 
 
@@ -236,7 +256,7 @@ class IntrusionSet(BaseEntity):
         None, description="External references of the intrusion set."
     )
 
-    def to_stix2_object(self) -> stix2.v21._STIXBase21:
+    def to_stix2_object(self) -> stix2.v21.IntrusionSet:
         """Make stix object."""
         if self._stix2_representation is not None:
             return self._stix2_representation
@@ -244,7 +264,7 @@ class IntrusionSet(BaseEntity):
             id=pycti.IntrusionSet.generate_id(name=self.name),
             name=self.name,
             description=self.description,
-            create_by_ref=self.author.id if self.author is not None else None,
+            created_by_ref=self.author.id if self.author is not None else None,
             labels=self.labels,
             external_references=[
                 external_reference.to_stix2_object()
@@ -261,15 +281,12 @@ class IntrusionSet(BaseEntity):
             resource_level=None,
             primary_motivation=None,
             secondary_motivations=None,
-            personal_motivations=None,
-            infrastructure=None,
-            attribution=None,
             confidence=None,
             lang=None,
             granular_markings=None,
             extensions=None,
             # customs
-            custom_properties=None,
+            custom_properties={},
         )
 
 
@@ -354,13 +371,13 @@ class Malware(BaseEntity):
         None, description="External references of the malware."
     )
 
-    def to_stix2_object(self) -> stix2.v21._STIXBase21:
+    def to_stix2_object(self) -> stix2.v21.Malware:
         """Make stix object."""
         if self._stix2_representation is not None:
             return self._stix2_representation
         return stix2.Malware(
             id=pycti.Malware.generate_id(name=self.name),
-            crate_by_ref=self.author.id if self.author is not None else None,
+            created_by_ref=self.author.id if self.author is not None else None,
             name=self.name,
             description=self.description,
             malware_types=self.types,
@@ -388,7 +405,7 @@ class Malware(BaseEntity):
             granular_markings=None,
             extensions=None,
             # customs
-            custom_properties=None,
+            custom_properties={},
         )
 
 
@@ -416,13 +433,13 @@ class AttackPattern(BaseEntity):
         None, description="External references of the attack pattern."
     )
 
-    def to_stix2_object(self) -> stix2.v21._STIXBase21:
+    def to_stix2_object(self) -> stix2.v21.AttackPattern:
         """Make stix object."""
         if self._stix2_representation is not None:
             return self._stix2_representation
         return stix2.AttackPattern(
             id=pycti.AttackPattern.generate_id(name=self.name),
-            crate_by_ref=self.author.id if self.author is not None else None,
+            create_by_ref=self.author.id if self.author is not None else None,
             name=self.name,
             description=self.description,
             external_id=self.external_id,
@@ -444,7 +461,7 @@ class AttackPattern(BaseEntity):
             granular_markings=None,
             extensions=None,
             # customs
-            custom_properties=None,
+            custom_properties={},
         )
 
 
@@ -472,3 +489,160 @@ class Observable(BaseEntity):
     @abstractmethod
     def to_indicator(self) -> stix2.Indicator:
         """Make indicator stix object."""
+
+
+class BaseRelationship(BaseEntity):
+    """Represents a Base relationship."""
+
+    author: Author = Field(
+        ..., description="Reference to the author that reported this relationship."
+    )
+    created: Optional["datetime"] = Field(
+        None, description="Creation timestamp of the relationship."
+    )
+    modified: Optional["datetime"] = Field(
+        None, description="Last modification timestamp of the relationship."
+    )
+    description: Optional[str] = Field(
+        None, description="Description of the relationship."
+    )
+    source: BaseEntity = Field(
+        ..., description="The source entity of the relationship."
+    )
+    target: BaseEntity = Field(
+        ..., description="The target entity of the relationship."
+    )
+    start_time: Optional["datetime"] = Field(
+        None, description="Start time of the relationship in ISO 8601 format."
+    )
+    stop_time: Optional["datetime"] = Field(
+        None, description="End time of the relationship in ISO 8601 format."
+    )
+    confidence: Optional[int] = Field(
+        None, description="Confidence level regarding the relationship.", ge=0, le=100
+    )
+    markings: Optional[list[stix2.TLPMarking]] = Field(
+        None,
+        description="References for object marking",
+    )
+    external_references: Optional[list[ExternalReference]] = Field(
+        None,
+        description="External references",
+    )
+
+    @abstractmethod
+    def to_stix2_object(self) -> Any:
+        """Make stix object."""
+
+    def _common_stix2_args(self) -> dict[str, Any]:
+        # keep dict constructor rather than literal dict for maintainance.
+        return dict(  # noqa: C408
+            source_ref=self.source.id,
+            target_ref=self.target.id,
+            # optional
+            created_by_ref=self.author.id,
+            created=self.created,
+            modified=self.modified,
+            description=self.description,
+            start_time=self.start_time,
+            stop_time=self.stop_time,
+            confidence=self.confidence,
+            object_marking_refs=self.markings,
+            external_references=(
+                [ref.to_stix2_object() for ref in self.external_references]
+                if self.external_references
+                else None
+            ),
+        )
+
+
+class Relationship(BaseRelationship):
+    """Represents a relationship between two entities."""
+
+    _relationship_type: str = PrivateAttr(...)
+
+    def to_stix2_object(self) -> stix2.v21.Relationship:
+        """Make stix object."""
+        return stix2.Relationship(
+            id=pycti.StixCoreRelationship.generate_id(
+                relationship_type=self._relationship_type,
+                source_ref=self.source.id,
+                target_ref=self.target.id,
+                start_time=self.start_time,
+                stop_time=self.stop_time,
+            ),
+            relationship_type=self._relationship_type,
+            **self._common_stix2_args(),
+        )
+
+
+class CampaignAttributedToIntrusionSet(Relationship):
+    """Represents a relationship indicating that a campaign is attributed to an intrusion-set.
+
+    Examples:
+        >>> campaign = Campaign(name="Campaign 1", description="Campaign description")
+        >>> intrusion_set = IntrusionSet(name="Intrusion Set 1", description="Intrusion Set description")
+        >>> relationship = CampaignAttributedToIntrusionSet(
+        ...     author=OrganizationAuthor(name="author"),
+        ...     source=campaign,
+        ...     target=intrusion_set,
+        ...     start_time=datetime.now(),
+        ... )
+
+    """
+
+    # Override BaseRelationship
+    source: Campaign = Field(
+        ...,
+        description="Reference to the source entity of the relationship. Here a Campaign.",
+    )
+    target: IntrusionSet = Field(
+        ...,
+        description="Reference to the target entity of the relationship. Here an IntrusionSet.",
+    )
+    _relationship_type: Literal["attributed-to"] = "attributed-to"
+
+
+class CampaignUsesMalware(Relationship):
+    """Represents a relationship indicating that a campaign uses a malware."""
+
+    # Override BaseRelationship
+    source: Campaign = Field(
+        ...,
+        description="Reference to the source entity of the relationship. Here a Campaign.",
+    )
+    target: Malware = Field(
+        ...,
+        description="Reference to the target entity of the relationship. Here a Malware.",
+    )
+    _relationship_type: Literal["uses"] = "uses"
+
+
+class CampaignUsesAttackPattern(Relationship):
+    """Represents a relationship indicating that a campaign uses an attack pattern."""
+
+    # Override BaseRelationship
+    source: Campaign = Field(
+        ...,
+        description="Reference to the source entity of the relationship. Here a Campaign.",
+    )
+    target: AttackPattern = Field(
+        ...,
+        description="Reference to the target entity of the relationship. Here an AttackPattern.",
+    )
+    _relationship_type: Literal["uses"] = "uses"
+
+
+class CampaignTargetsOrganization(Relationship):
+    """Represents a relationship indicating that a campaign targets an organization."""
+
+    # Override BaseRelationship
+    source: Campaign = Field(
+        ...,
+        description="Reference to the source entity of the relationship. Here a Campaign.",
+    )
+    target: TargetedOrganization = Field(
+        ...,
+        description="Reference to the target entity of the relationship. Here a TargetedOrganization.",
+    )
+    _relationship_type: Literal["targets"] = "targets"
