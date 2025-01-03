@@ -40,9 +40,9 @@ class TAPCompiledCampaignClient(BaseTAPClient):
         ...     base_url=os.environ["TAP_BASE_URL"],
         ...     principal=os.environ["TAP_PRINCIPAL"],
         ...     secret=os.environ["TAP_SECRET"],
-        ...     timeout=os.environ["TAP_TIMEOUT"],
-        ...     retrty=os.environ["TAP_RETRY"],
-        ...     backoff=os.environ["TAP_BACKOFF"],
+        ...     timeout=int(os.environ["TAP_TIMEOUT"]),
+        ...     retrty=int(os.environ["TAP_RETRY"]),
+        ...     backoff=int(os.environ["TAP_BACKOFF"]),
         ... )
         >>> campaign_id = "90116999-337f-40e0-a25f-e17ae1d8a4f4"
         >>> results = asyncio.run(client.fetch_campaign(campaign_id))
