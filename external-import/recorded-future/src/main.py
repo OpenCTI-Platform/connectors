@@ -42,6 +42,10 @@ class BaseRFConnector:
         self.rf_token = get_config_variable(
             "RECORDED_FUTURE_TOKEN", ["rf", "token"], config
         )
+
+        if not self.rf_token:
+            raise ValueError("Recorded Future token is missing")
+
         self.rf_initial_lookback = get_config_variable(
             "RECORDED_FUTURE_INITIAL_LOOKBACK",
             ["rf", "initial_lookback"],
