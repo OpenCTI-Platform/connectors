@@ -792,6 +792,26 @@ class Flashpoint:
                                                         )
                                                         # Channel
                                                         channel = CustomObjectChannel(
+                                                            id=Channel.generate_id(
+                                                                (
+                                                                    item[
+                                                                        "container_name"
+                                                                    ]
+                                                                    if "container_name"
+                                                                    in item
+                                                                    else item[
+                                                                        "site_title"
+                                                                    ]
+                                                                )
+                                                                .replace(
+                                                                    "<x-fp-highlight>",
+                                                                    "",
+                                                                )
+                                                                .replace(
+                                                                    "</x-fp-highlight>",
+                                                                    "",
+                                                                )
+                                                            ),
                                                             name=(
                                                                 item["container_name"]
                                                                 if "container_name"

@@ -28,9 +28,7 @@ class ConverterToStix:
             MARKING_DEFINITIONS_BY_NAME["TLP:CLEAR"],
         )
 
-    def _create_directory(
-        self, process: harfanglab.Process = None
-    ) -> opencti.Directory:
+    def _create_directory(self, process: harfanglab.Process) -> opencti.Directory:
         """
         Create a Directory (STIX2.1 observable, aka SCO) for a given alert's process.
         :param process: Process found in a Harfanglab alert
@@ -43,7 +41,7 @@ class ConverterToStix:
         )
         return octi_directory
 
-    def _create_domain_name(self, ioc: harfanglab.IocRule = None) -> opencti.DomainName:
+    def _create_domain_name(self, ioc: harfanglab.IocRule) -> opencti.DomainName:
         """
         Create a DomainName (STIX2.1 observable, aka SCO) for a given ioc.
         :param ioc: Indicator from Harfanglab
@@ -56,7 +54,7 @@ class ConverterToStix:
         )
         return octi_domain_name
 
-    def _create_file(self, process: harfanglab.Process = None) -> opencti.File:
+    def _create_file(self, process: harfanglab.Process) -> opencti.File:
         """
         Create a File (STIX2.1 observable, aka SCO) for a given ioc.
         :param process: Process found in a Harfanglab alert
@@ -71,7 +69,7 @@ class ConverterToStix:
         )
         return octi_file
 
-    def _create_hostname(self, agent: harfanglab.Agent = None) -> opencti.Hostname:
+    def _create_hostname(self, agent: harfanglab.Agent) -> opencti.Hostname:
         """
         Create a Hostname (custom observable, extension of STIX 2.1 observables) for a given alert's agent.
         :param agent: Agent found in a Harfanglab alert
@@ -84,7 +82,7 @@ class ConverterToStix:
         )
         return octi_hostname
 
-    def _create_ipv4(self, ioc: harfanglab.IocRule = None) -> opencti.IPv4:
+    def _create_ipv4(self, ioc: harfanglab.IocRule) -> opencti.IPv4:
         """
         Create an IPv4Address (STIX2.1 observable, aka SCO) for a given ioc.
         :param ioc: Indicator from Harfanglab
@@ -97,7 +95,7 @@ class ConverterToStix:
         )
         return octi_ipv4
 
-    def _create_ipv6(self, ioc: harfanglab.IocRule = None) -> opencti.IPv6:
+    def _create_ipv6(self, ioc: harfanglab.IocRule) -> opencti.IPv6:
         """
         Create an IPv6Address (STIX2.1 observable, aka SCO) for a given ioc.
         :param ioc: Indicator from Harfanglab
@@ -110,7 +108,7 @@ class ConverterToStix:
         )
         return octi_ipv6
 
-    def _create_url(self, ioc: harfanglab.IocRule = None) -> opencti.Url:
+    def _create_url(self, ioc: harfanglab.IocRule) -> opencti.Url:
         """
         Create a URL (STIX2.1 observable, aka SCO) for a given ioc.
         :param ioc: Indicator from Harfanglab
@@ -123,9 +121,7 @@ class ConverterToStix:
         )
         return octi_url
 
-    def _create_user_account(
-        self, process: harfanglab.Process = None
-    ) -> opencti.UserAccount:
+    def _create_user_account(self, process: harfanglab.Process) -> opencti.UserAccount:
         """
         Create a UserAccount (STIX2.1 observable, aka SCO) for a given alert's process.
         :param process: Process found in a Harfanglab alert
@@ -149,7 +145,7 @@ class ConverterToStix:
         )
         return octi_author
 
-    def create_attack_pattern(self, technique_tag: str = None) -> opencti.AttackPattern:
+    def create_attack_pattern(self, technique_tag: str) -> opencti.AttackPattern:
         """
         Create an AttackPattern (STIX 2.1 domain object, aka SDO) for a given technique.
         :param technique_tag: A Yara signature's technique tag
@@ -168,8 +164,8 @@ class ConverterToStix:
 
     def create_case_incident(
         self,
-        threat: harfanglab.Threat = None,
-        object_refs: list[opencti.BaseModel] = None,
+        threat: harfanglab.Threat,
+        object_refs: list[opencti.BaseModel] | None = None,
     ) -> opencti.CaseIncident:
         incident_priority = INCIDENT_PRIORITIES_BY_LEVEL[threat.level]
         incident_top_agent = threat.top_agents[0]
@@ -179,7 +175,9 @@ class ConverterToStix:
             description=f"Incident from {self.helper.connect_name}",
             severity=threat.level,
             priority=incident_priority,
-            object_refs=[object_ref.id for object_ref in object_refs],
+            object_refs=(
+                [object_ref.id for object_ref in object_refs] if object_refs else []
+            ),
             author=self.author,
             created_at=threat.created_at,
             object_marking_refs=[self.marking_definition.id],
@@ -195,10 +193,10 @@ class ConverterToStix:
 
     def create_incident(
         self,
-        alert: harfanglab.Alert = None,
+        alert: harfanglab.Alert,
         alert_intelligence: (
             harfanglab.IocRule | harfanglab.SigmaRule | harfanglab.YaraSignature
-        ) = None,
+        ) | None = None,
     ) -> opencti.Incident:
         """
         Create an Incident (STIX 2.1 domain object, aka SDO) for a given Harfanglab alert and its corresponding ioc.
@@ -240,10 +238,10 @@ class ConverterToStix:
 
     def create_indicator(
         self,
-        alert: harfanglab.Alert = None,
+        alert: harfanglab.Alert,
         alert_intelligence: (
             harfanglab.IocRule | harfanglab.SigmaRule | harfanglab.YaraSignature
-        ) = None,
+        ) | None = None,
     ) -> opencti.Indicator:
         """
         Create an Indicator (STIX 2.1 domain object, aka SDO) from a Harfanglab alert and its corresponding IOC, Sigma rule or Yara signature.
@@ -290,15 +288,17 @@ class ConverterToStix:
 
     def create_note(
         self,
-        threat_note: harfanglab.ThreatNote = None,
-        object_refs: list[opencti.BaseModel] = None,
+        threat_note: harfanglab.ThreatNote,
+        object_refs: list[opencti.BaseModel] | None = None,
     ) -> opencti.Note:
         case_incident = object_refs[0]
 
         octi_note = opencti.Note(
             abstract=threat_note.title,
             content=threat_note.content,
-            object_refs=[object_ref.id for object_ref in object_refs],
+            object_refs=(
+                [object_ref.id for object_ref in object_refs] if object_refs else []
+            ),
             author=self.author,
             created_at=threat_note.created_at,
             updated_at=threat_note.updated_at,
@@ -309,10 +309,10 @@ class ConverterToStix:
 
     def create_observables(
         self,
-        alert: harfanglab.Alert = None,
+        alert: harfanglab.Alert,
         alert_intelligence: (
             harfanglab.IocRule | harfanglab.SigmaRule | harfanglab.YaraSignature
-        ) = None,
+        ) | None = None,
     ):
         """
         Create STIX 2.1 observables, aka SCO, from a Harfanglab alert and its corresponding IOC, Sigma rule or Yara signature.
@@ -337,8 +337,11 @@ class ConverterToStix:
                         observable = self._create_domain_name(alert_intelligence)
                 case "url":
                     observable = self._create_url(alert_intelligence)
-        if isinstance(
-            alert_intelligence, (harfanglab.SigmaRule, harfanglab.YaraSignature)
+        if (
+            isinstance(
+                alert_intelligence, (harfanglab.SigmaRule, harfanglab.YaraSignature)
+            )
+            and alert.process is not None
         ):
             observable = self._create_file(alert.process)
 
@@ -355,8 +358,8 @@ class ConverterToStix:
 
     def create_sighting(
         self,
-        alert: harfanglab.Alert = None,
-        sighted_ref: opencti.BaseModel = None,
+        alert: harfanglab.Alert,
+        sighted_ref: opencti.BaseModel | None = None,
     ) -> opencti.Sighting:
         """
         Create a Sighting (STIX 2.1 relationship object, aka SRO) for an indicator sighted in a Harfanglab alert.
@@ -383,9 +386,9 @@ class ConverterToStix:
 
     def create_relationship(
         self,
-        relationship_type: str = None,
-        source: opencti.BaseModel = None,
-        target: opencti.BaseModel = None,
+        relationship_type: str,
+        source: opencti.BaseModel,
+        target: opencti.BaseModel,
     ) -> opencti.Relationship:
         """
         Create a Relationship (STIX 2.1 relationship object, aka SRO).
