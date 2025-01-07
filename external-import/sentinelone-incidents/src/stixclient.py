@@ -1,15 +1,15 @@
+from pycti import get_config_variable
 from stix2 import (
-    Incident,
-    ExternalReference,
+    TLP_RED,
     AttackPattern,
-    Note,
+    ExternalReference,
+    Identity,
+    Incident,
     Indicator,
+    Note,
     Relationship,
     UserAccount,
-    Identity,
-    TLP_RED,
 )
-from pycti import get_config_variable
 
 
 class StixClient:

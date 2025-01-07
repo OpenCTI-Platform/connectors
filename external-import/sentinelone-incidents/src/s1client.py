@@ -1,7 +1,7 @@
-from pycti import get_config_variable
-import requests
 import time
 
+import requests
+from pycti import get_config_variable
 
 INCIDENTS_API_LOCATION = "web/api/v2.1/private/threat-groups?limit=50&sortBy=createdAt&sortOrder=desc&accountIds="
 INCIDENT_NOTES_API_LOCATION_TEMPLATE = "web/api/v2.1/threats/{incident_id}/notes"
