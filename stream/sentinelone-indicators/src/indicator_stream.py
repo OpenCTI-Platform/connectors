@@ -8,7 +8,6 @@ import stix2
 import yaml
 from pycti import Identity, OpenCTIConnectorHelper, get_config_variable
 
-
 # The api location for posting IOCS to SentinelOne
 IOC_API_LOCATION = "web/api/v2.1/threat-intelligence/iocs?accountIds="
 
