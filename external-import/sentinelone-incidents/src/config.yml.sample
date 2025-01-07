@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost:8080/'
+  token: 'ChangeMe'
+
+sentinelOne:
+  url: 'ChangeMe'
+  api_key: 'ChangeMe'
+  account_id: 'ChangeMe'
+  search_sign: "[OpenCTI_add]"
+  max_calls: 5
+  private_url: 'ChangeMe'
+
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'SentinelOne Incident Importer'
+  scope: 'all'
+  log_level: 'debug'
+  fetch_interval: 10
