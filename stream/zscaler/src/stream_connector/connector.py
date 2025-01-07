@@ -11,6 +11,7 @@ from stream_connector.utils import obfuscate_api_key
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+
 class ZscalerConnector:
     def __init__(
         self,
@@ -22,7 +23,7 @@ class ZscalerConnector:
         zscaler_username,
         zscaler_password,
         zscaler_api_key,
-        zscaler_blacklist_name  
+        zscaler_blacklist_name,
     ):
         self.helper = helper
         self.helper.connector_logger.info("Initializing Zscaler connector...")
@@ -33,7 +34,9 @@ class ZscalerConnector:
         self.zscaler_username = zscaler_username
         self.zscaler_password = zscaler_password
         self.api_key = zscaler_api_key
-        self.zscaler_blacklist_name = zscaler_blacklist_name  #Parameter for the blacklist 
+        self.zscaler_blacklist_name = (
+            zscaler_blacklist_name  # Parameter for the blacklist
+        )
 
         self.helper = helper
         self.helper.connector_logger.info("Initializing Zscaler connector...")
@@ -42,7 +45,9 @@ class ZscalerConnector:
         self.opencti_token = opencti_token
         self.ssl_verify = ssl_verify
 
-        self.api = OpenCTIApiClient(self.opencti_url, self.opencti_token, ssl_verify=self.ssl_verify)
+        self.api = OpenCTIApiClient(
+            self.opencti_url, self.opencti_token, ssl_verify=self.ssl_verify
+        )
 
         self.username = zscaler_username
         self.password = zscaler_password
@@ -76,9 +81,13 @@ class ZscalerConnector:
             requests.post, url, json=payload, headers=headers
         )
 
-        self.helper.connector_logger.debug(f"Payload sent: {json.dumps(payload, indent=4)}")
+        self.helper.connector_logger.debug(
+            f"Payload sent: {json.dumps(payload, indent=4)}"
+        )
         if response:
-            self.helper.connector_logger.debug(f"Raw response from Zscaler: {response.text}")
+            self.helper.connector_logger.debug(
+                f"Raw response from Zscaler: {response.text}"
+            )
 
         if response and response.status_code == 200:
             self.session_cookie = response.cookies.get("JSESSIONID")
@@ -117,16 +126,22 @@ class ZscalerConnector:
                         f"Request failed with status {response.status_code}: {response.text}"
                     )
                 else:
-                    self.helper.connector_logger.error("No response received from the request.")
+                    self.helper.connector_logger.error(
+                        "No response received from the request."
+                    )
                 return None
 
-        self.helper.connector_logger.error("Max retries reached. Failed to complete the request.")
+        self.helper.connector_logger.error(
+            "Max retries reached. Failed to complete the request."
+        )
         return None
 
     def get_zscaler_session_cookie(self):
         """Retrieve or renew the Zscaler session by getting the JSESSIONID cookie."""
         if self.session_cookie is None:
-            self.helper.connector_logger.warning("Zscaler session expired or missing. Re-authenticating...")
+            self.helper.connector_logger.warning(
+                "Zscaler session expired or missing. Re-authenticating..."
+            )
             self.authenticate_with_zscaler()
         return self.session_cookie
 
@@ -174,7 +189,9 @@ class ZscalerConnector:
                     f"Unexpected or empty response for domain {domain}: {lookup_data}"
                 )
         else:
-            self.helper.connector_logger.error(f"Failed to lookup domain {domain} in Zscaler.")
+            self.helper.connector_logger.error(
+                f"Failed to lookup domain {domain} in Zscaler."
+            )
 
         return None
 
@@ -203,19 +220,22 @@ class ZscalerConnector:
             )
             return []
 
-
     def check_and_send_to_zscaler(self, data, event_type):
         """Verify if a domain is already blocked and its classification before sending to Zscaler."""
         domain = self.is_valid_domain(data["pattern"])
         if domain:
             classification = self.get_domain_classification_in_zscaler(domain)
             if classification:
-                self.helper.connector_logger.info(f"Classification found for {domain}: {classification}")
+                self.helper.connector_logger.info(
+                    f"Classification found for {domain}: {classification}"
+                )
 
             blocked_domains = self.get_zscaler_blocked_domains()
 
             if domain in blocked_domains:
-                self.helper.connector_logger.info(f"The domain {domain} is already in BLACK_LIST_DYNDNS.")
+                self.helper.connector_logger.info(
+                    f"The domain {domain} is already in BLACK_LIST_DYNDNS."
+                )
             else:
                 self.helper.connector_logger.info(
                     f"The domain {domain} is not blocked. Sending to Zscaler..."
@@ -280,13 +300,19 @@ class ZscalerConnector:
         )
 
         if response:
-            self.helper.connector_logger.debug(f"Response after activating changes: {response.text}")
+            self.helper.connector_logger.debug(
+                f"Response after activating changes: {response.text}"
+            )
 
         if response and response.status_code == 200:
-            self.helper.connector_logger.info("Configuration changes activated successfully.")
+            self.helper.connector_logger.info(
+                "Configuration changes activated successfully."
+            )
         else:
             text = response.text if response else "No response"
-            self.helper.connector_logger.error(f"Failed to activate configuration changes: {text}")
+            self.helper.connector_logger.error(
+                f"Failed to activate configuration changes: {text}"
+            )
 
     def _process_message(self, msg):
         """Process messages from the OpenCTI stream."""
@@ -306,7 +332,7 @@ class ZscalerConnector:
 
     def start(self):
         """Start listening for OpenCTI events."""
-        self.helper.connector_logger.info("Starting connector and listening for OpenCTI events...")
+        self.helper.connector_logger.info(
+            "Starting connector and listening for OpenCTI events..."
+        )
         self.helper.listen_stream(self._process_message)
-
-

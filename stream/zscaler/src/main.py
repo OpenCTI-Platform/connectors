@@ -1,11 +1,13 @@
 import os
-import traceback
-import time
 import sys
+import time
+import traceback
+
 import yaml
 from pycti import OpenCTIConnectorHelper
-from stream_connector.config_variables import load_config_variables
+
 from stream_connector import ZscalerConnector
+from stream_connector.config_variables import load_config_variables
 
 CONFIG_FILE_PATH = "/opt/opencti-connector-zscaler/config.yml"
 
@@ -33,7 +35,7 @@ if __name__ == "__main__":
             zscaler_username=vars["zscaler_username"],
             zscaler_password=vars["zscaler_password"],
             zscaler_api_key=vars["zscaler_api_key"],
-            zscaler_blacklist_name=vars["zscaler_blacklist_name"]  
+            zscaler_blacklist_name=vars["zscaler_blacklist_name"],
         )
 
         connector.authenticate_with_zscaler()
