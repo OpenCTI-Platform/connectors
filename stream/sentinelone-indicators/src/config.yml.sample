@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080/'
+  token: 'changeMe' 
+
+sentinelOne:
+  url: 'changeMe'
+  api_key: 'changeMe'
+  account_id: 'changeMe'
+  max_api_attempts: 5
+
+connector:
+  id: 'changeMe'
+  name: 'SentinelOne Indicator Export Stream'
+  scope: 'all'
+  log_level: 'debug'
+  type: 'STREAM'
+
