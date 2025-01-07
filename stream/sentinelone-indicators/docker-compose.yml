@@ -1,0 +1,20 @@
+version: '3'
+  services: 
+    connector-sentinelone-indicator:
+      build: ../sentinelone-opencti-indicator-connector/
+      container_name: connector-sentinelone-indicator
+      environment:
+        - OPENCTI_URL=http://opencti:8080
+        - OPENCTI_TOKEN=changeMe
+        - SENTINELONE_URL=changeMeEndingIn/
+        - SENTINELONE_API_KEY=changeMe
+        - SENTINELONE_ACCOUNT_ID=changeMe
+        - SENTINELONE_MAX_API_ATTEMPTS=5
+        - CONNECTOR_ID=changeMe
+        - CONNECTOR_NAME=SentinelOne Indicator Export Stream
+        - CONNECTOR_SCOPE=all
+        - CONNECTOR_LOG_LEVEL=debug
+      restart: always
+      #depends_on:
+      #  opencti:
+      #    condition: service_healthy
