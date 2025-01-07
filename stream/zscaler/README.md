@@ -49,17 +49,40 @@ This connector integrates **OpenCTI** threat intelligence into the **Zscaler** e
 
 ## Usage
 
-1. **Set Environment Variables**:  
-   Configure the OpenCTI URL and token, as well as your Zscaler credentials (`ZSCALER_USERNAME`, `ZSCALER_PASSWORD`, and `ZSCALER_API_KEY`) as shown in the table above.  
-2. **Configure the Category**:  
-   By default, the connector uses the `BLACK_LIST_DYNDNS` category. If you want to use another list, modify the reference in the code (or environment variables depending on your implementation) to point to the Zscaler category that suits you (e.g., `'Black-list').  
-   For use another list, you need to going in "connector.py" and modifiy the function "get_zscaler_blocked_domains" in end of the resquest API "https://zsapi.zscalertwo.net/api/v1/urlCategories/CUSTOM_07" replace "CUSTOM_O7" to your another list and you need also to replace request and the configure name in the function "send_to_zscaler" 
+1. **Set Environment Variables**:
+   - Configure the OpenCTI URL and token, as well as your Zscaler credentials (`ZSCALER_USERNAME`, `ZSCALER_PASSWORD`, `ZSCALER_API_KEY`) and blacklist name (`ZSCALER_BLACKLIST_NAME`) as shown in the table above.
+2. **Configure the Category**:
+   - By default, the connector uses the `BLACK_LIST_DYNDNS` category.  
+   - To use another list:
+     - Set the `ZSCALER_BLACKLIST_NAME` environment variable in your `docker-compose.yml` or update the `blacklist_name` in your `config.yml`.
+     - For example:
+       - In `config.yml`:  
+         ```yaml
+         blacklist_name: "YOUR_CUSTOM_BLACKLIST"  # Specify your custom category here
+         ```
+       - In `docker-compose.yml`:  
+         ```yaml
+         ZSCALER_BLACKLIST_NAME: "YOUR_CUSTOM_BLACKLIST" # Specify your custom category here
 3. **Run the Connector**:  
    Once the Docker image is built or retrieved, run `docker-compose up -d` or an equivalent command. The connector will then connect to OpenCTI and, for every creation or deletion of a `domain-name` indicator, add or remove it from the specified list in Zscaler and activate the changes.
 
-## Example Docker Compose
+## Example Configuration
+
+### Example `config.yml`
 
 ```yaml
+opencti:
+  url: "https://your-opencti-instance.com"
+  token: "YOUR_OPENCTI_TOKEN"
+
+zscaler:
+  username: "YOUR_ZSCALER_USERNAME"
+  password: "YOUR_ZSCALER_PASSWORD"
+  api_key: "YOUR_ZSCALER_API_KEY"
+  blacklist_name: "BLACK_LIST_DYNDNS"  # Customize this as needed
+
+### Example `Docker Compose`
+
 version: '3'
 services:
   connector-zscaler:
@@ -75,13 +98,25 @@ services:
       CONNECTOR_LIVE_STREAM_ID: "YOUR_LIVE_STREAM_ID"
       CONNECTOR_LIVE_STREAM_LISTEN_DELETE: "true"
       CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES: "true"
-
       ZSCALER_USERNAME: "YOUR_ZSCALER_USERNAME"
       ZSCALER_PASSWORD: "YOUR_ZSCALER_PASSWORD"
       ZSCALER_API_KEY: "YOUR_ZSCALER_API_KEY"
+      ZSCALER_BLACKLIST_NAME: "YOUR_CUSTOM_BLACKLIST"  # Customize the blacklist name
     networks:
       - opencti_network
 
 networks:
   opencti_network:
     external: true
+
+
+More information : 
+What happens if a domain is already in the blacklist?
+
+The connector checks the blacklist before adding a domain to avoid duplicates.
+Can I use multiple blacklists?
+
+Not currently. The connector works with one blacklist at a time, as specified in ZSCALER_BLACKLIST_NAME.
+Does the connector handle rate limits?
+
+Yes, it includes logic to respect API rate limits and retries failed requests.

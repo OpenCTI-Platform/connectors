@@ -16,6 +16,7 @@ services:
       - ZSCALER_API_KEY=ChangeMe
       - ZSCALER_USERNAME=ChangeMe
       - ZSCALER_PASSWORD=ChangeMe
+      - ZSCALER_BLACKLIST_NAME=ChangeMe
     networks:
       - opencti_network
 
