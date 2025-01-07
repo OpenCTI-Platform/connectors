@@ -33,18 +33,18 @@ This connector integrates **OpenCTI** threat intelligence into the **Zscaler** e
 |-----------------------------------------|-------------------------------------------------|------------|-------------------------------------------------------------------------------------------------|
 | `OPENCTI_URL`                           | `OPENCTI_URL`                                   | Yes        | The URL of the OpenCTI platform.                                                               |
 | `OPENCTI_TOKEN`                         | `OPENCTI_TOKEN`                                 | Yes        | The API token for OpenCTI.                                                                     |
-| `CONNECTOR_ID`                          | `CONNECTOR_ID`                                  | Yes        | A unique UUIDv4 for this connector.                                                            |
+| `CONNECTOR_ID`                          | `CONNECTOR_ID`                                  | Yes        | A unique UUIDv4 for this connector.                                                             |
 | `CONNECTOR_TYPE`                        | `CONNECTOR_TYPE`                                | Yes        | Must be set to `STREAM` for this connector.                                                    |
 | `CONNECTOR_NAME`                        | `CONNECTOR_NAME`                                | Yes        | Name of the connector, e.g., `ZscalerConnector`.                                               |
-| `CONNECTOR_SCOPE`                       | `CONNECTOR_SCOPE`                               | Yes        | Set to `domain-name` to focus on domain indicators.                                            |
+| `CONNECTOR_SCOPE`                       | `CONNECTOR_SCOPE`                               | Yes        | Set to `domain-name` to focus on domain indicators.                                           |
 | `CONNECTOR_LOG_LEVEL`                   | `CONNECTOR_LOG_LEVEL`                           | No         | Logging level (`debug`, `info`, `warn`, or `error`).                                           |
-| `CONNECTOR_LIVE_STREAM_ID`              | `CONNECTOR_LIVE_STREAM_ID`                      | Yes        | The ID of the OpenCTI Live Stream.                                                             |
+| `CONNECTOR_LIVE_STREAM_ID`              | `CONNECTOR_LIVE_STREAM_ID`                      | Yes        | The ID of the OpenCTI Live Stream.                                                            |
 | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`           | Yes        | Whether to listen for deletions (`true` or `false`).                                           |
 | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`         | Yes        | Disable dependency processing (`true` or `false`).                                             |
 | `ZSCALER_API_KEY`                       | `ZSCALER_API_KEY`                               | Yes        | Zscaler API key.                                                                               |
 | `ZSCALER_USERNAME`                      | `ZSCALER_USERNAME`                              | Yes        | Zscaler username.                                                                              |
 | `ZSCALER_PASSWORD`                      | `ZSCALER_PASSWORD`                              | Yes        | Zscaler password.                                                                              |
-
+| `ZSCALER_BLACKLIST_NAME`                | `ZSCALER_BLACKLIST_NAME`                        | Yes        | The name of the Zscaler blacklist to use (default: `BLACK_LIST_DYNDNS`).                        |
 
 
 ## Usage
