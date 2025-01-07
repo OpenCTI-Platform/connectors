@@ -3,7 +3,6 @@ import time
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-
 from s1client import S1Client
 from stixclient import StixClient
 
