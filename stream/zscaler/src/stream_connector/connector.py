@@ -230,7 +230,7 @@ class ZscalerConnector:
                 )
 
             blocked_domains = self.get_zscaler_blocked_domains()
-
+            #check if the domain is in blacklist
             if domain in blocked_domains:
                 self.helper.connector_logger.info(
                     f"The domain {domain} is already in BLACK_LIST_DYNDNS."
