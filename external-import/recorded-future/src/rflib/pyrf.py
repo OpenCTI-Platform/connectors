@@ -128,7 +128,7 @@ class RecordedFutureApiClient:
                 )
 
             # If the response status_code is not Ok, log the error
-            if data["status"]["status_code"] != "Ok":
+            if data.get("status", {}).get("status_code", "").lower() != "ok":
                 self.helper.log_error("Response status_code is not Ok")
 
             # If the alert search is unsuccessful, log the error
