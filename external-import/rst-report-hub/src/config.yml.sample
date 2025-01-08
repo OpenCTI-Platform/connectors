@@ -12,7 +12,7 @@ connector:
 rst-report-hub:
   base_url: 'https://api.rstcloud.net/v1'
   api_key: 'ChangeMe'
-  connection_timeout: 10
+  connection_timeout: 30
   read_timeout: 30
   retry_delay: 30
   retry_attempts: 5
