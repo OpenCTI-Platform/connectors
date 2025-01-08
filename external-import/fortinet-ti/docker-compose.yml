@@ -13,5 +13,5 @@ services:
       - FORTINET_INTERVAL=24                    # In hours
       - FORTINET_URL=https://premiumapi.fortinet.com/v1/cti/feed/stix2?cc=all
       - FORTINET_IOC_SCORE=50                   # The score to be set on Indicators and Observables
-      - FORTINET_MARKING=TLP:AMBER
+      - FORTINET_MARKING=TLP:AMBER+STRICT
     restart: always

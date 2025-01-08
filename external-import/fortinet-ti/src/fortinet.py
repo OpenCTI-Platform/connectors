@@ -11,6 +11,7 @@ import stix2
 import yaml
 from pycti import (
     Indicator,
+    MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     get_config_variable,
@@ -119,7 +120,7 @@ class Fortinet:
             "FORTINET_MARKING",
             ["fortinet", "marking_definition"],
             config,
-            default="TLP:AMBER",
+            default="TLP:AMBER+STRICT",
         )
 
         self.identity_id = "identity--da04cc3f-ad56-5cf3-a1f0-860685179cdf"
@@ -131,10 +132,26 @@ class Fortinet:
             marking = stix2.TLP_GREEN
         elif self.fortinet_marking == "TLP:AMBER":
             marking = stix2.TLP_AMBER
+        elif self.fortinet_marking == "TLP:AMBER+STRICT":
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:AMBER+STRICT",
+            )
         elif self.fortinet_marking == "TLP:RED":
             marking = stix2.TLP_RED
         else:
-            marking = stix2.TLP_AMBER
+            marking = stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="TLP",
+                definition={"TLP": "AMBER+STRICT"},
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:AMBER+STRICT",
+            )
 
         self.fortinet_marking = marking
 
@@ -261,7 +278,7 @@ class Fortinet:
 
         identity = self.create_fortinet_org()
 
-        stix_objects = [identity]
+        stix_objects = [identity, self.fortinet_marking]
 
         # Filter to process only new IOCs (those that were not present in the previous day's file)
         stix_new = load_stix("fortinet_ioc.json.backup")
