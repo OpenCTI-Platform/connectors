@@ -85,6 +85,7 @@ def create_stix_campaign(connector, campaign_details):
         last_seen=utils.sanitizer("last_activity_time", campaign_details),
         created_by_ref=connector.identity.get("standard_id"),
         allow_custom=True,
+        object_marking_refs=connector.mandiant_marking,
     )
 
 

@@ -40,16 +40,16 @@ This is done by comparing the entities retrieved at runtime with those retrieved
 
 ### Configuration
 
-| Parameter            | Docker envvar         | Mandatory | Description                                                                       |
-|----------------------|-----------------------|-----------|-----------------------------------------------------------------------------------|
-| `opencti_url`        | `OPENCTI_URL`         | Yes       | The URL of the OpenCTI platform.                                                  |
-| `opencti_token`      | `OPENCTI_TOKEN`       | Yes       | The user token configured in the OpenCTI platform                                 |
-| `connector_id`       | `CONNECTOR_ID`        | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                |
-| `connector_name`     | `CONNECTOR_NAME`      | Yes       | Option `Fortinet`                                                                 |
-| `connector_scope`    | `CONNECTOR_SCOPE`     | Yes       | Supported scope: Template Scope (MIME Type or Stix Object)                        |
-| `log_level`          | `CONNECTOR_LOG_LEVEL` | No        | Log output for the connector. Defaults to `INFO`                                  |
-| `api_key`            | `FORTINET_API_KEY`    | No        | The user api key configured in Fortinet                                           |
-| `url`                | `FORTINET_URL`        | No        | Defaults to `https://premiumapi.fortinet.com/v1/cti/feed/stix2?cc=all`            |
-| `interval`           | `FORTINET_INTERVAL`   | No        | Run interval, in hours. Defaults to `24`                                          |
-| `ioc_score`          | `FORTINET_IOC_SCORE`  | No        | The score to be set on IOCs. Defaults to `50`                                     |
-| `marking_definition` | `FORTINET_MARKING`    | No        | TLP to be applied to created entities (syntax: "TLP:XXX"). Default to `TLP:AMBER` |
+| Parameter            | Docker envvar         | Mandatory | Description                                                                              |
+|----------------------|-----------------------|-----------|------------------------------------------------------------------------------------------|
+| `opencti_url`        | `OPENCTI_URL`         | Yes       | The URL of the OpenCTI platform.                                                         |
+| `opencti_token`      | `OPENCTI_TOKEN`       | Yes       | The user token configured in the OpenCTI platform                                        |
+| `connector_id`       | `CONNECTOR_ID`        | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                       |
+| `connector_name`     | `CONNECTOR_NAME`      | Yes       | Option `Fortinet`                                                                        |
+| `connector_scope`    | `CONNECTOR_SCOPE`     | Yes       | Supported scope: Template Scope (MIME Type or Stix Object)                               |
+| `log_level`          | `CONNECTOR_LOG_LEVEL` | No        | Log output for the connector. Defaults to `INFO`                                         |
+| `api_key`            | `FORTINET_API_KEY`    | No        | The user api key configured in Fortinet                                                  |
+| `url`                | `FORTINET_URL`        | No        | Defaults to `https://premiumapi.fortinet.com/v1/cti/feed/stix2?cc=all`                   |
+| `interval`           | `FORTINET_INTERVAL`   | No        | Run interval, in hours. Defaults to `24`                                                 |
+| `ioc_score`          | `FORTINET_IOC_SCORE`  | No        | The score to be set on IOCs. Defaults to `50`                                            |
+| `marking_definition` | `FORTINET_MARKING`    | No        | TLP to be applied to created entities (syntax: "TLP:XXX"). Default to `TLP:AMBER+STRICT` |
