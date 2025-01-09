@@ -317,6 +317,7 @@ class RansomwareAPIConnector:
                                     "operator": "search",
                                 },
                             ],
+                            "filterGroups": [],
                         }
                     ],
                 },
