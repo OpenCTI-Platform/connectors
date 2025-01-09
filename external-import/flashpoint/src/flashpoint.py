@@ -95,7 +95,7 @@ class Flashpoint:
             "FLASHPOINT_COMMUNITIES_QUERIES",
             ["flashpoint", "communities_queries"],
             config,
-            default="",
+            default="cybersecurity,cyberattack",
         ).split(",")
         self.flashpoint_import_alerts = get_config_variable(
             "FLASHPOINT_IMPORT_ALERTS",
@@ -468,131 +468,134 @@ class Flashpoint:
             "Authorization": "Bearer " + self.flashpoint_api_key,
         }
         for query in self.flashpoint_communities_queries:
-            body_params = {
-                "query": query,
-                "include": {
-                    "date": {"start": start_date.replace("+00:00", "Z"), "end": ""}
-                },
-                "size": "1000",
-                "sort": {"date": "asc"},
-                "page": 0,
-            }
-            response = requests.post(url, headers=headers, json=body_params)
-            data = json.loads(response.content)
-            try:
-                if "items" in data:
-                    page = 0
-                    while "items" in data and len(data["items"]) > 0:
-                        self.helper.log_info(
-                            "Iterating over communities with page=" + str(page)
-                        )
-                        try:
-                            for item in data["items"]:
-                                title = ""
-                                if "title" in item:
-                                    title = item["title"]
-                                elif "message" in item:
-                                    title = (
-                                        (item["message"][:50] + "..")
-                                        if len(item["message"]) > 50
-                                        else item["message"]
+            if len(query) > 0:
+                body_params = {
+                    "query": query,
+                    "include": {
+                        "date": {"start": start_date.replace("+00:00", "Z"), "end": ""}
+                    },
+                    "size": "1000",
+                    "sort": {"date": "asc"},
+                    "page": 0,
+                }
+                response = requests.post(url, headers=headers, json=body_params)
+                data = json.loads(response.content)
+                try:
+                    if "items" in data:
+                        page = 0
+                        while "items" in data and len(data["items"]) > 0:
+                            self.helper.log_info(
+                                "Iterating over communities with page=" + str(page)
+                            )
+                            try:
+                                for item in data["items"]:
+                                    title = ""
+                                    if "title" in item:
+                                        title = item["title"]
+                                    elif "message" in item:
+                                        title = (
+                                            (item["message"][:50] + "..")
+                                            if len(item["message"]) > 50
+                                            else item["message"]
+                                        )
+
+                                    start_time = (
+                                        parse(item["first_observed_at"])
+                                        if "first_observed_at" in item
+                                        else None
+                                    )
+                                    stop_time = (
+                                        parse(item["last_observed_at"])
+                                        if "last_observed_at" in item
+                                        and parse(item["last_observed_at"]) > start_time
+                                        else None
                                     )
 
-                                start_time = (
-                                    parse(item["first_observed_at"])
-                                    if "first_observed_at" in item
-                                    else None
-                                )
-                                stop_time = (
-                                    parse(item["last_observed_at"])
-                                    if "last_observed_at" in item
-                                    and parse(item["last_observed_at"]) > start_time
-                                    else None
-                                )
-
-                                # Channel
-                                channel = CustomObjectChannel(
-                                    id=Channel.generate_id(
-                                        (
+                                    # Channel
+                                    channel = CustomObjectChannel(
+                                        id=Channel.generate_id(
+                                            (
+                                                item["container_name"]
+                                                if "container_name" in item
+                                                else item["site_title"]
+                                            )
+                                            .replace("<x-fp-highlight>", "")
+                                            .replace("</x-fp-highlight>", "")
+                                        ),
+                                        name=(
                                             item["container_name"]
                                             if "container_name" in item
                                             else item["site_title"]
                                         )
                                         .replace("<x-fp-highlight>", "")
-                                        .replace("</x-fp-highlight>", "")
-                                    ),
-                                    name=(
-                                        item["container_name"]
-                                        if "container_name" in item
-                                        else item["site_title"]
+                                        .replace("</x-fp-highlight>", ""),
+                                        channel_types=[item["site"]],
+                                        external_references=(
+                                            [
+                                                stix2.ExternalReference(
+                                                    source_name="URL",
+                                                    url=item["site_source_uri"],
+                                                )
+                                            ]
+                                            if item.get("site_source_uri")
+                                            else []
+                                        ),
                                     )
-                                    .replace("<x-fp-highlight>", "")
-                                    .replace("</x-fp-highlight>", ""),
-                                    channel_types=[item["site"]],
-                                    external_references=(
-                                        [
-                                            stix2.ExternalReference(
-                                                source_name="URL",
-                                                url=item["site_source_uri"],
-                                            )
-                                        ]
-                                        if item.get("site_source_uri")
-                                        else []
-                                    ),
-                                )
-                                media_content = CustomObservableMediaContent(
-                                    title=title,
-                                    content=item["message"],
-                                    url="https://app.flashpoint.io/search/context/communities/"
-                                    + item["id"],
-                                    publication_date=item["date"],
-                                )
-                                # Waiting for FBI PR Persona / Monikers
-                                # author = CustomObservablePersona(
-                                #    title=community["title"],
-                                #    content=community["message"],
-                                #    url="https://app.flashpoint.io/search/context/communities/" + community["id"],
-                                #    publication_date=community["date"]
-                                # )
-                                relationship_publishes = stix2.Relationship(
-                                    id=StixCoreRelationship.generate_id(
-                                        "publishes", channel.id, media_content.id
-                                    ),
-                                    relationship_type="publishes",
-                                    created_by_ref=self.identity["standard_id"],
-                                    source_ref=channel.id,
-                                    target_ref=media_content.id,
-                                    start_time=start_time,
-                                    stop_time=stop_time,
-                                    object_marking_refs=[stix2.TLP_GREEN.get("id")],
-                                    allow_custom=True,
-                                )
-                                # TODO Implement personas after community merge for author
+                                    media_content = CustomObservableMediaContent(
+                                        title=title,
+                                        content=item["message"],
+                                        url="https://app.flashpoint.io/search/context/communities/"
+                                        + item["id"],
+                                        publication_date=item["date"],
+                                    )
+                                    # Waiting for FBI PR Persona / Monikers
+                                    # author = CustomObservablePersona(
+                                    #    title=community["title"],
+                                    #    content=community["message"],
+                                    #    url="https://app.flashpoint.io/search/context/communities/" + community["id"],
+                                    #    publication_date=community["date"]
+                                    # )
+                                    relationship_publishes = stix2.Relationship(
+                                        id=StixCoreRelationship.generate_id(
+                                            "publishes", channel.id, media_content.id
+                                        ),
+                                        relationship_type="publishes",
+                                        created_by_ref=self.identity["standard_id"],
+                                        source_ref=channel.id,
+                                        target_ref=media_content.id,
+                                        start_time=start_time,
+                                        stop_time=stop_time,
+                                        object_marking_refs=[stix2.TLP_GREEN.get("id")],
+                                        allow_custom=True,
+                                    )
+                                    # TODO Implement personas after community merge for author
 
-                                objects = [
-                                    channel,
-                                    media_content,
-                                    relationship_publishes,
-                                ]
-                                bundle = self.helper.stix2_create_bundle(objects)
-                                self.helper.send_stix2_bundle(
-                                    bundle,
-                                    work_id=work_id,
-                                )
-                        except Exception as e:
-                            self.helper.log_error(str(e))
-                        page = page + 1
-                        body_params = {
-                            "query": query,
-                            "include": {"date": {"start": start_date, "end": ""}},
-                            "size": "1000",
-                            "sort": {"date": "asc"},
-                            "page": page,
-                        }
-                        response = requests.post(url, headers=headers, json=body_params)
-                        data = json.loads(response.content)
-            except Exception as e:
-                self.helper.log_error(str(e))
+                                    objects = [
+                                        channel,
+                                        media_content,
+                                        relationship_publishes,
+                                    ]
+                                    bundle = self.helper.stix2_create_bundle(objects)
+                                    self.helper.send_stix2_bundle(
+                                        bundle,
+                                        work_id=work_id,
+                                    )
+                            except Exception as e:
+                                self.helper.log_error(str(e))
+                            page = page + 1
+                            body_params = {
+                                "query": query,
+                                "include": {"date": {"start": start_date, "end": ""}},
+                                "size": "1000",
+                                "sort": {"date": "asc"},
+                                "page": page,
+                            }
+                            response = requests.post(
+                                url, headers=headers, json=body_params
+                            )
+                            data = json.loads(response.content)
+                except Exception as e:
+                    self.helper.log_error(str(e))
 
     def _import_alerts(self, work_id, start_date):
         # Query params
