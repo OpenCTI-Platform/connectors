@@ -5,7 +5,6 @@ import traceback
 
 import yaml
 from pycti import OpenCTIConnectorHelper
-
 from stream_connector import ZscalerConnector
 from stream_connector.config_variables import load_config_variables
 
