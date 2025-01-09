@@ -6,6 +6,7 @@ from pycti import OpenCTIConnectorHelper
 from .services.config_loader import ConfigLoader
 from .services.converter_to_stix import ConverterToStix
 from .services.spycloud_client import SpyCloudClient
+from .models.opencti import OCTIBaseModel
 
 
 class SpyCloudConnector:
@@ -28,30 +29,44 @@ class SpyCloudConnector:
         self.client = SpyCloudClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
-    def _collect_intelligence(self) -> list:
+    def _collect_intelligence(self) -> list[OCTIBaseModel]:
         """
-        Collect intelligence from the source and convert into STIX object
-        :return: List of STIX objects
+        Collect intelligence from the source and convert into OCTI objects
+        :return: List of OCTI objects
         """
-        stix_objects = []
+        octi_objects = []
 
-        # ===========================
-        # === Add your code below ===
-        # ===========================
+        breach_records = self.client.get_breach_records(
+            watchlist_types=self.config.spycloud.watchlist_types,
+            breach_severities=self.config.spycloud.breach_severities,
+            since=self.config.spycloud.import_start_date,
+        )
+        for breach_record in breach_records:
+            breach_catalog = self.client.get_breach_catalog(breach_record.source_id)
+            octi_indicent = self.converter_to_stix.create_incident(
+                breach_record=breach_record, breach_catalog=breach_catalog
+            )
+            octi_objects.append(octi_indicent)
 
-        # Get entities from external sources
-        entities = self.client.get_entities()
+        if octi_objects:
+            octi_objects.append(self.converter_to_stix.author)
 
-        # Convert into STIX2 object and add it on a list
-        for entity in entities:
-            entity_to_stix = self.converter_to_stix.create_obs(entity["value"])
-            stix_objects.append(entity_to_stix)
+        return octi_objects
 
-        return stix_objects
+    def _create_stix_bundle(self, octi_objects: list[OCTIBaseModel] = []) -> str:
+        """
+        Create a consistent STIX bundle from OCTI objects.
+        :return: STIX bundle string
+        """
+        if not octi_objects:
+            return None
 
-        # ===========================
-        # === Add your code above ===
-        # ===========================
+        octi_objects.append(self.converter_to_stix.author)
+        stix_objects = [octi_object.to_stix2_object() for octi_object in octi_objects]
+
+        stix_bundle = self.helper.stix2_create_bundle(stix_objects)
+
+        return stix_bundle
 
     def process_message(self) -> None:
         """
@@ -81,12 +96,9 @@ class SpyCloudConnector:
                     "[CONNECTOR] Connector has never run..."
                 )
 
-            # Friendly name will be displayed on OpenCTI platform
-            friendly_name = "SpyCloud"
-
             # Initiate a new work
             work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
+                self.helper.connect_id, self.helper.connect_name
             )
 
             self.helper.connector_logger.info(
@@ -94,25 +106,17 @@ class SpyCloudConnector:
                 {"connector_name": self.helper.connect_name},
             )
 
-            # Performing the collection of intelligence
-            # ===========================
-            # === Add your code below ===
-            # ===========================
-            stix_objects = self._collect_intelligence()
-
-            if stix_objects is not None and len(stix_objects) != 0:
-                stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
+            octi_objects = self._collect_intelligence()
+            if octi_objects:
+                stix_bundle = self._create_stix_bundle(octi_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
-                    stix_objects_bundle, work_id=work_id
+                    stix_bundle, work_id=work_id, cleanup_inconsistent_bundle=True
                 )
 
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": {str(len(bundles_sent))}},
+                    {"bundles_sent": len(bundles_sent)},
                 )
-            # ===========================
-            # === Add your code above ===
-            # ===========================
 
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug(
