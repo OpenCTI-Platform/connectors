@@ -52,7 +52,7 @@ def create_stix_intrusionset(
         id=actor.get("id").replace("threat-actor", "intrusion-set"),
         name=utils.sanitizer("name", actor),
         created_by_ref=connector.identity.get("standard_id"),
-        object_marking_refs=[stix2.TLP_AMBER.get("id")],
+        object_marking_refs=connector.mandiant_marking,
         allow_custom=True,
     )
     stix_relationship = create_stix_relationship(

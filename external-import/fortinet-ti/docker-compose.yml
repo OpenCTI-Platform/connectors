@@ -1,7 +1,7 @@
 version: '1'
 services:
   connector-fortinet-ti:
-    image: opencti/connector-fortinet-ti:6.4.5
+    image: opencti/connector-fortinet-ti:6.4.6
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
@@ -13,5 +13,5 @@ services:
       - FORTINET_INTERVAL=24                    # In hours
       - FORTINET_URL=https://premiumapi.fortinet.com/v1/cti/feed/stix2?cc=all
       - FORTINET_IOC_SCORE=50                   # The score to be set on Indicators and Observables
-      - FORTINET_MARKING=TLP:AMBER
+      - FORTINET_MARKING=TLP:AMBER+STRICT
     restart: always

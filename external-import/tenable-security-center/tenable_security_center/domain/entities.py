@@ -161,7 +161,7 @@ class BaseEntity(BaseModelWithoutExtra):  # type: ignore[type-arg]
     """Base class to implement common attributes and methods for all entities."""
 
     _stix2_representation: Optional[Any] = PrivateAttr(None)
-    _id: str = PrivateAttr(None)
+    _id: str = PrivateAttr("")
 
     def model_post_init(
         self, context__: Any

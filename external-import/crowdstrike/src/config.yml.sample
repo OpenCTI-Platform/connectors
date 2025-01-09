@@ -14,7 +14,7 @@ crowdstrike:
   base_url: 'https://api.crowdstrike.com'
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
-  tlp: 'Amber'
+  tlp: 'amber+strict'
   create_observables: true
   create_indicators: true
   scopes: 'actor,report,indicator,yara_master,snort_suricata_master' # One or all of the following: actor,report,indicator,yara_master,snort_suricata_master
