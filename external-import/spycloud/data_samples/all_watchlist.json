@@ -1,7 +1,3 @@
-//curl --request GET \
-//     --url https://api.spycloud.io/enterprise-v2/breach/data/watchlist \
-//     --header 'X-API-KEY: XXX' \
-//     --header 'accept: application/json'
 {
   "cursor": "bf8c4a04-50b0-49cb-88cb-3ea51393d220",
   "hits": 27444,
