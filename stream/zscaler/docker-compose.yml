@@ -15,7 +15,7 @@ services:
       - ZSCALER_API_KEY=ChangeMe
       - ZSCALER_USERNAME=ChangeMe
       - ZSCALER_PASSWORD=ChangeMe
-      - ZSCALER_BLACKLIST_NAME=ChangeMe
+      - ZSCALER_BLACKLIST_NAME=ChangeMe #Add name of your Zscaler blacklist
     networks:
       - opencti_network
 

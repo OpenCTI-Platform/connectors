@@ -71,5 +71,5 @@ def load_config_variables(helper, config):
         "zscaler_username": zscaler_username,
         "zscaler_password": zscaler_password,
         "zscaler_api_key": zscaler_api_key,
-        "zscaler_blacklist_name": zscaler_blacklist_name,  # New parameter for the blacklist name
+        "zscaler_blacklist_name": zscaler_blacklist_name,  #  Parameter for the blacklist name
     }

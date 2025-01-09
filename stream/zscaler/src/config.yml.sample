@@ -17,4 +17,4 @@ zscaler:
   username: "ChangeMe"
   password: "ChangeMe"
   api_key: "ChangeMe"
-  blacklist_name: "ChangeMe"  # Default blacklist name
+  blacklist_name: "ChangeMe"  # Blacklist name

@@ -5,6 +5,7 @@ import traceback
 
 import yaml
 from pycti import OpenCTIConnectorHelper
+
 from stream_connector import ZscalerConnector
 from stream_connector.config_variables import load_config_variables
 
@@ -12,7 +13,7 @@ CONFIG_FILE_PATH = "/opt/opencti-connector-zscaler/config.yml"
 
 if __name__ == "__main__":
     try:
-        # Load YAML config
+        # Load config.yml
         config = {}
         if os.path.isfile(CONFIG_FILE_PATH):
             with open(CONFIG_FILE_PATH) as f:

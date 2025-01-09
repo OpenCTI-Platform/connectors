@@ -1,3 +1,4 @@
+#all the dependencies
 pycti==6.4.5
 requests~=2.32.2
 python-dotenv==0.21.1

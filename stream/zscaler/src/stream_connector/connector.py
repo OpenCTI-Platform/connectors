@@ -6,6 +6,7 @@ import requests
 import urllib3
 import validators
 from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
+
 from stream_connector.utils import obfuscate_api_key
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -230,7 +231,7 @@ class ZscalerConnector:
                 )
 
             blocked_domains = self.get_zscaler_blocked_domains()
-            #check if the domain is in blacklist
+
             if domain in blocked_domains:
                 self.helper.connector_logger.info(
                     f"The domain {domain} is already in BLACK_LIST_DYNDNS."

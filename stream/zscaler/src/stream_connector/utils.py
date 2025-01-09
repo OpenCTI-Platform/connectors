@@ -29,7 +29,7 @@ def handle_rate_limit(request_func, retry_delay, *args, **kwargs):
     """Handle the rate limits of the Zscaler API."""
     while True:
         try:
-            # Add a timeout to the request (e.g., 10 seconds)
+            # Add a timeout to the request (10 seconds)
             kwargs["timeout"] = 10
             response = request_func(*args, **kwargs)
             if response.status_code == 429:  # HTTP code for too many requests

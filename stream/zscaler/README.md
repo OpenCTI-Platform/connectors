@@ -44,7 +44,7 @@ This connector integrates **OpenCTI** threat intelligence into the **Zscaler** e
 | `ZSCALER_API_KEY`                       | `ZSCALER_API_KEY`                               | Yes        | Zscaler API key.                                                                               |
 | `ZSCALER_USERNAME`                      | `ZSCALER_USERNAME`                              | Yes        | Zscaler username.                                                                              |
 | `ZSCALER_PASSWORD`                      | `ZSCALER_PASSWORD`                              | Yes        | Zscaler password.                                                                              |
-| `ZSCALER_BLACKLIST_NAME`                | `ZSCALER_BLACKLIST_NAME`                        | Yes        | The name of the Zscaler blacklist to use (default: `BLACK_LIST_DYNDNS`).                        |
+| `ZSCALER_BLACKLIST_NAME`                | `ZSCALER_BLACKLIST_NAME`                        | Yes        | The name of the Zscaler blacklist to use.                        |
 
 
 ## Usage
