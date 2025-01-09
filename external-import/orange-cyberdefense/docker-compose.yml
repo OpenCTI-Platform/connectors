@@ -7,7 +7,7 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - "CONNECTOR_NAME=Orange Cyberdefense Cyber Threat Intelligence"
-      - CONNECTOR_SCOPE=ocd
+      - CONNECTOR_SCOPE=identity,attack-pattern,intrusion-set,malware,tool,report,location,vulnerability,indicator,campaign,relationship
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=error
@@ -22,6 +22,6 @@ services:
       - OCD_CREATE_OBSERVABLES=true  # Create observables from indicators
       - OCD_CURATE_LABELS=true # Curated labels
       - OCD_THREAT_ACTOR_AS_INTRUSION_SET=true
-      - OCD_INTERVAL=15 # Required, in minutes
+      - OCD_INTERVAL=30 # Required, in minutes
       - OCD_RESET_STATE=false # force the use of the start_dates from the config instead of getting the state saved in opencti
     restart: always
