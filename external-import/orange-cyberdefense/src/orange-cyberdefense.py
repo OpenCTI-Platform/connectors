@@ -331,16 +331,18 @@ class OrangeCyberDefense:
     def _process_object(self, object):
 
         dict_label_to_object_marking_refs = {
-            "tlp:clear":[stix2.TLP_WHITE.get("id")],
-            "tlp:white":[stix2.TLP_WHITE.get("id")],
-            "tlp:green":[stix2.TLP_GREEN.get("id")],
-            "tlp:amber":[stix2.TLP_AMBER.get("id"),self.marking["standard_id"]],
-            "tlp:red":[stix2.TLP_RED.get("id"),self.marking["standard_id"]]
+            "tlp:clear": [stix2.TLP_WHITE.get("id")],
+            "tlp:white": [stix2.TLP_WHITE.get("id")],
+            "tlp:green": [stix2.TLP_GREEN.get("id")],
+            "tlp:amber": [stix2.TLP_AMBER.get("id"), self.marking["standard_id"]],
+            "tlp:red": [stix2.TLP_RED.get("id"), self.marking["standard_id"]],
         }
         if "labels" in object:
             for label in object["labels"]:
                 if label in dict_label_to_object_marking_refs.keys():
-                    object["object_marking_refs"] = dict_label_to_object_marking_refs[label]
+                    object["object_marking_refs"] = dict_label_to_object_marking_refs[
+                        label
+                    ]
         if "labels" in object and self.ocd_curate_labels:
             object["labels"] = _curate_labels(object["labels"])
         if "confidence" not in object:
@@ -918,7 +920,9 @@ class OrangeCyberDefense:
         if state is None:
             return False
 
-        return all(key in state.keys() for key in ["worldwatch", "datalake", "threat_library"])
+        return all(
+            key in state.keys() for key in ["worldwatch", "datalake", "threat_library"]
+        )
 
     def run(self):
         if self.ocd_reset_state:
