@@ -1065,6 +1065,10 @@ jobs:
           name: Build Docker image opencti/connector-google-secops-siem
           command: docker build -t opencti/connector-google-secops-siem:latest . && docker tag opencti/connector-google-secops-siem:latest opencti/connector-google-secops-siem:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/stream/zscaler
+          name: Build Docker image opencti/connector-zscaler
+          command: docker build -t opencti/connector-zscaler:latest . && docker tag opencti/connector-zscaler:latest opencti/connector-zscaler:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1078,6 +1082,8 @@ jobs:
             docker push opencti/connector-zvelo:${CIRCLE_TAG}            
             docker push opencti/connector-google-secops-siem:latest
             docker push opencti/connector-google-secops-siem:${CIRCLE_TAG}
+            docker push opencti/connector-zscaler:latest
+            docker push opencti/connector-zscaler:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1981,6 +1987,10 @@ jobs:
           name: Build Docker image opencti/connector-google-secops-siem
           command: docker build -t opencti/connector-google-secops-siem:rolling .
       - run:
+          working_directory: ~/opencti/stream/zscaler
+          name: Build Docker image opencti/connector-zscaler
+          command: docker build -t opencti/connector-zscaler:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1989,6 +1999,7 @@ jobs:
             docker push opencti/connector-intel471_v2:rolling
             docker push opencti/connector-zvelo:rolling
             docker push opencti/connector-google-secops-siem:rolling
+            docker push opencti/connector-zscaler:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
