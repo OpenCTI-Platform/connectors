@@ -437,10 +437,7 @@ class RansomwareAPIConnector:
 
         # Creating Intrusion Set object
         try:
-            if (
-                item.get("group") == "lockbit3"
-                or item.get("group") == "lockbit2"
-            ):
+            if item.get("group") == "lockbit3" or item.get("group") == "lockbit2":
                 intrusion_set = IntrusionSet(
                     id=pycti.IntrusionSet.generate_id("lockbit"),
                     name="lockbit",
@@ -501,9 +498,7 @@ class RansomwareAPIConnector:
         if self.create_threat_actor:
             object_refs.append(target_relation.get("id"))
             object_refs.append(relation_is_ta.get("id"))
-        report_name = (
-            item.get("group") + " has published a new victim: " + post_title
-        )
+        report_name = item.get("group") + " has published a new victim: " + post_title
         report_created = datetime.fromisoformat(item.get("discovered"))
         report_published = datetime.fromisoformat(item.get("attackdate"))
         report = Report(
