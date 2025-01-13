@@ -33,18 +33,15 @@ class SpyCloudClient:
             data = json.load(f)
             return data
 
-    def _request(self, **kwargs):
+    def _request(self, method: str = "GET", url: str = None, **kwargs):
         """
         Internal method to handle API requests.
         :param kwargs: Any arguments accepted by request.request()
         :return: Parsed response body
         """
-        method = kwargs.get("method")
-        url = kwargs.get("url")
-
         try:
             # TODO: implement retry logic
-            response = self.session.request(**kwargs)
+            response = self.session.request(method, url, **kwargs)
             response.raise_for_status()
 
             self.helper.connector_logger.info(
@@ -89,8 +86,8 @@ class SpyCloudClient:
     ) -> Generator[BreachRecord, None, None]:
         """
         Retrieve breach records from Spycloud.
-        :param watchlist_type: Optional query param to filter breach records by watchlist
-        :param severity: Optional query param to filter breach records by severity level
+        :param watchlist_types: Optional query param to filter breach records by watchlist
+        :param breach_severities: Optional query param to filter breach records by severity level
         :param since: Optional query param to filter breach records by publish date
         :return: List of breach records
         """

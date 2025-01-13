@@ -14,9 +14,10 @@ from connector.services.converter_to_stix import ConverterToStix
 @pytest.fixture
 def mock_converter_to_stix():
     helper = Mock()
+    helper.connect_name = "Spycloud Test"
+
     config = Mock()
 
-    helper.connect_name = "Spycloud Test"
     return ConverterToStix(helper=helper, config=config)
 
 
