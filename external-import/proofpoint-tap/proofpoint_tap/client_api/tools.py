@@ -13,7 +13,6 @@ from yarl import URL
 
 if TYPE_CHECKING:
     from aiohttp.tracing import Trace
-
     from proofpoint_tap.client_api.common import BaseClient
 
 logger = getLogger(__name__)

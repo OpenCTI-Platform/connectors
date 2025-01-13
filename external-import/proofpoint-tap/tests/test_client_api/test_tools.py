@@ -5,12 +5,11 @@ import pathlib
 from unittest.mock import patch
 
 import pytest
-from yarl import URL
-
 from proofpoint_tap.client_api.tools import (
     _convert_get_query_url_to_filepath,
     cache_get_response_decorator,
 )
+from yarl import URL
 
 
 class MockBaseTAPClient:

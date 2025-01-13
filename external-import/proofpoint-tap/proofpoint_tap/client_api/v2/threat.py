@@ -3,10 +3,9 @@
 from typing import TYPE_CHECKING, Literal, Optional
 from urllib.parse import urljoin
 
-from pydantic import AwareDatetime, Field
-
 from proofpoint_tap.client_api.common import BaseClient, ResponseModel
 from proofpoint_tap.warnings import PermissiveLiteral, Recommended
+from pydantic import AwareDatetime, Field
 
 if TYPE_CHECKING:
     from yarl import URL

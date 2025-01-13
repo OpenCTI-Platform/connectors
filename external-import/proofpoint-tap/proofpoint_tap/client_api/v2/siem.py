@@ -4,11 +4,10 @@ from datetime import timedelta, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
-from pydantic import AwareDatetime, Field, field_validator, model_validator
-
 from proofpoint_tap.client_api.common import BaseClient, ResponseModel
 from proofpoint_tap.errors import ProofpointAPIError, ProofPointAPIRequestParamsError
 from proofpoint_tap.warnings import PermissiveLiteral, Recommended
+from pydantic import AwareDatetime, Field, field_validator, model_validator
 
 if TYPE_CHECKING:
     from datetime import datetime

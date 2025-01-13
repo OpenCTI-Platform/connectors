@@ -5,14 +5,13 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from aiohttp import ClientResponse, ClientResponseError, ContentTypeError
-from yarl import URL
-
 from proofpoint_tap.client_api.common import BaseClient, ResponseModel
 from proofpoint_tap.errors import (
     ProofpointAPI404Error,
     ProofpointAPI404NoReasonError,
     ProofpointAPIError,
 )
+from yarl import URL
 
 
 def make_fake_get_client_response() -> ClientResponse:

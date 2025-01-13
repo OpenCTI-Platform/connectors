@@ -15,9 +15,6 @@ from aiohttp import (
     TraceConfig,
 )
 from aiohttp_retry import ListRetry, RetryClient
-from pydantic import ValidationError
-from yarl import URL
-
 from proofpoint_tap.client_api.tools import cache_get_response_decorator
 from proofpoint_tap.errors import (
     ProofpointAPI404Error,
@@ -27,6 +24,8 @@ from proofpoint_tap.errors import (
     ProofpointAPIInvalidResponseError,
 )
 from proofpoint_tap.warnings import PermissiveBaseModel
+from pydantic import ValidationError
+from yarl import URL
 
 if TYPE_CHECKING:
     from datetime import timedelta

@@ -5,14 +5,13 @@ from logging import getLogger
 from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence
 from urllib.parse import urljoin
 
-from pydantic import AwareDatetime, Field
-
 from proofpoint_tap.client_api.common import BaseClient, ResponseModel
 from proofpoint_tap.errors import (
     ProofpointAPI404NoReasonError,
     ProofPointAPIRequestParamsError,
 )
 from proofpoint_tap.warnings import PermissiveLiteral, Recommended
+from pydantic import AwareDatetime, Field
 
 if TYPE_CHECKING:
     from yarl import URL

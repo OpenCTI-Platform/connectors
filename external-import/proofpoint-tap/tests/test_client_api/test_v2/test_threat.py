@@ -12,10 +12,9 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from aiohttp import ClientResponse, ClientResponseError
-from yarl import URL
-
 from proofpoint_tap.client_api.v2.threat import ThreatClient, ThreatSummary
 from proofpoint_tap.errors import ProofpointAPIError, ProofpointAPIInvalidResponseError
+from yarl import URL
 
 
 def make_fake_get_client_response() -> ClientResponse:

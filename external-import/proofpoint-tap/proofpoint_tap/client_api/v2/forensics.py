@@ -3,11 +3,10 @@
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, List, Literal, Optional, Union
 
-from pydantic import AwareDatetime, Field, model_validator
-
 from proofpoint_tap.client_api.common import BaseClient, ResponseModel
 from proofpoint_tap.errors import ProofPointAPIRequestParamsError
 from proofpoint_tap.warnings import PermissiveLiteral, Recommended
+from pydantic import AwareDatetime, Field, model_validator
 
 if TYPE_CHECKING:
     from yarl import URL

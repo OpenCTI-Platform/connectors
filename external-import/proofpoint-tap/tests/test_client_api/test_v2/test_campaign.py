@@ -14,8 +14,6 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from aiohttp import ClientResponse, ClientResponseError
-from yarl import URL
-
 from proofpoint_tap.client_api.v2.campaign import CampaignClient
 from proofpoint_tap.errors import (
     ProofpointAPI404Error,
@@ -24,6 +22,7 @@ from proofpoint_tap.errors import (
     ProofpointAPIInvalidResponseError,
     ProofPointAPIRequestParamsError,
 )
+from yarl import URL
 
 
 def make_fake_get_client_response() -> ClientResponse:

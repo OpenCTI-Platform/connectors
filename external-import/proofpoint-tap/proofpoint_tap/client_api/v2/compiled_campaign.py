@@ -7,8 +7,6 @@ This merges Campaign, Threat and Forensics API to provide a compiled view of a c
 import asyncio
 from typing import TYPE_CHECKING, Sequence
 
-from pydantic import Field
-
 from proofpoint_tap.client_api.v2.campaign import (
     CampaignClient,
     CampaignDetailsResponse,
@@ -16,6 +14,7 @@ from proofpoint_tap.client_api.v2.campaign import (
 )
 from proofpoint_tap.client_api.v2.forensics import Forensics, ForensicsClient
 from proofpoint_tap.client_api.v2.threat import ThreatClient, ThreatSummary
+from pydantic import Field
 
 if TYPE_CHECKING:
     from datetime import timedelta
