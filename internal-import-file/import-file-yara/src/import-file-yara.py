@@ -10,7 +10,7 @@ import plyara
 import stix2
 import yaml
 from plyara.utils import rebuild_yara_rule
-from pycti import OpenCTIConnectorHelper, Indicator, get_config_variable
+from pycti import Indicator, OpenCTIConnectorHelper, get_config_variable
 
 
 class ImportFileYARA:
