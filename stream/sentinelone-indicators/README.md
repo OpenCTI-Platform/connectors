@@ -76,11 +76,11 @@ It is best practice to create a new user under the `Connectors` group and to use
 
 - To create a dedicated stream for this connector head to `Data sharing` -> `Live streams` in the OpenCTI platform.
 
-![Generating A User In OpenCTI](doc/stream_creation.png)
+![Creating a Stream in OpenCTI](doc/stream_creation.png)
 
 - Give the stream a name so that it can be identified
 - Optional filters can be applied to determine what kind of data goes into the connector. It is recommended to not set any filters as to allow SentinelOne to consume all types it can.
-- You can then copy the streams ID to be you used in your environment variables. 
+- Copy the streams ID to be you used in your environment variables. 
 
 
 <br>
@@ -106,9 +106,9 @@ It is best practice to create a new user under the `Connectors` group and to use
 | Name            | `name`     | `CONNECTOR_NAME`            | `SentinelOne Indicator Export Stream`  | The Connector's name as it will appear in OpenCTI.                                     |
 | Scope           | `scope`    | `CONNECTOR_SCOPE`           | `all`                                  | The scope of this connector.                                                           |
 | Log Level       | `log_level`| `CONNECTOR_LOG_LEVEL`       | `info`                                 | The level of logs/outputs presented. `info` is recommended.                            |
-| Live Stream ID | `_________`| `CONNECTOR_LIVE_STREAM_ID` | `___________________________________`  | ______________________________________________________________________                 |
-| Stream Delete | `_________`| `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` | `___________________________________`  | ______________________________________________________________________                 |
-| Stream No Dependencies | `_________`| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | `___________________________________`  | ______________________________________________________________________                 |
+| Live Stream ID | `live_stream_id`| `CONNECTOR_LIVE_STREAM_ID` | `live`  | The id of the stream to listen into, the default `live` is okay to use. |
+| Stream Delete | `live_stream_listen_delete`| `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` | `true`  | Whether or not the connector will delete Indicator creation events after processing them (stops repetition) |
+| Stream No Dependencies | `live_stream_no_dependencies`| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | `true`  | Determines whether the stream will require dependency on other entities, set to `true` |
 
 
 ---
