@@ -25,7 +25,7 @@ def make_session(retries: int = 3, backoff_factor: float = 0.3) -> requests.Sess
         status_forcelist=[429, 500, 502, 503, 504],
     )
 
-    adapter = requests.adapters.HTTPAdapter(max_retries=retry)
+    adapter = HTTPAdapter(max_retries=retry)
     session.mount("https://", adapter)
     return session
 
