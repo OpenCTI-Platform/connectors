@@ -1,17 +1,17 @@
 from connector.connector import ProofpointEtReputationConnector
-from connector.services.client_api import ProofpointEtReputationClient
 from connector.models import (
-    ProofpointEtReputationConfigVar,
     Author,
     DomainName,
+    DomainReputationModel,
     Indicator,
     IPAddress,
-    MarkingDefinition,
-    Relationship,
-    DomainReputationModel,
     IPReputationModel,
+    MarkingDefinition,
+    ProofpointEtReputationConfigVar,
+    Relationship,
     ReputationScore,
 )
+from connector.services.client_api import ProofpointEtReputationClient
 
 __all__ = [
     "ProofpointEtReputationConnector",
