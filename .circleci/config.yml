@@ -1681,10 +1681,6 @@ jobs:
           name: Build Docker image opencti/connector-intel471
           command: docker build -t opencti/connector-intel471:rolling .
       - run:
-          working_directory: ~/opencti/external-import/ipsum
-          name: Build Docker image opencti/connector-ipsum
-          command: docker build -t opencti/connector-ipsum:rolling .
-      - run:
           working_directory: ~/opencti/external-import/orange-cyberdefense
           name: Build Docker image opencti/connector-orange-cyberdefense
           command: docker build -t opencti/connector-orange-cyberdefense:rolling .
@@ -1908,7 +1904,6 @@ jobs:
             docker push opencti/connector-qradar:rolling
             docker push opencti/connector-stream-exporter:rolling
             docker push opencti/connector-stream-importer:rolling
-            docker push opencti/connector-ipsum:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
