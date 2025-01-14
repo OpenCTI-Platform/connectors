@@ -1,0 +1,84 @@
+{
+  "exemple.example1-domain.com": {
+    "CnC": "95",
+    "IPCheck": "55"
+  },
+  "exemple.vpn-provider-secure.net": {
+    "VPN": "125",
+    "DynDNS": "120"
+  },
+  "exemple.abusedtld-server-xyz.org": {
+    "AbusedTLD": "95"
+  },
+  "exemple.blackhole-server-exe.info": {
+    "Blackhole": "66",
+    "EXE_Source": "107"
+  },
+  "exemple.secure-monitoring-domain.co": {
+    "VPN": "80",
+    "DynDNS": "100"
+  },
+  "exemple.web-monitoring-tool.biz": {
+    "IPCheck": "60",
+    "Scanner": "90"
+  },
+  "exemple.malware-reports-secure.net": {
+    "Proxy": "85"
+  },
+  "exemple.monitoring-tool-scan.co.uk": {
+    "DynDNS": "110",
+    "IPCheck": "50"
+  },
+  "exemple.malicious-server-info.eu": {
+    "Blackhole": "92"
+  },
+  "exemple.protective-firewall-secure.tv": {
+    "VPN": "60",
+    "IPCheck": "80"
+  },
+  "exemple.suspicious-domain-monitoring.co.uk": {
+    "Proxy": "72",
+    "EXE_Source": "118"
+  },
+  "exemple.reputation-checker-secure.museum": {
+    "VPN": "100",
+    "IPCheck": "105"
+  },
+  "exemple.chatserver-xyz.info": {
+    "ChatServer": "84",
+    "DynDNS": "120"
+  },
+  "exemple.remoteaccess-abc.co": {
+    "Drop": "42",
+    "RemoteAccessService": "120"
+  },
+  "exemple.scanner-online.com": {
+    "Scanner": "87",
+    "Blackhole": "89"
+  },
+  "exemple.spyware-cnc.biz": {
+    "SpywareCnC": "45",
+    "Brute_Forcer": "102"
+  },
+  "exemple.selfsigned-ssl.dev": {
+    "SelfSignedSSL": "32",
+    "Undesirable": "107"
+  },
+  "exemple.undesirable-check.org": {
+    "IPCheck": "42",
+    "EXE_Source": "107"
+  },
+  "exemple.proxy-secure.site": {
+    "Proxy": "55",
+    "DynDNS": "120"
+  },
+  "exemple.ipcheck-vpn2.online": {
+    "VPN": "125"
+  },
+  "exemple.new-domain123.xyz": {
+    "DynDNS": "120"
+  },
+  "domain": {
+    "": " score"
+  }
+}
