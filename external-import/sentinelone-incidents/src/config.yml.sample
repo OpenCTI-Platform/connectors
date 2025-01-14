@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
-  name: 'External Import Connector Template'
+  name: 'SentinelOne Incident Connector'
   scope: 'ChangeMe'
   log_level: 'info'
   duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
