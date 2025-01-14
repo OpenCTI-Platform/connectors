@@ -14,7 +14,9 @@ This software is provided as a community-driven project and is not officially su
 <br>
 
 ## Implementation
-After appending the container to your compose file, you will need to create a new user in your OpenCTI instance and retrieve some information for your SentinelOne Account in order to interface with it 
+After appending the container to your compose file, you will need to create a new user in your OpenCTI instance and retrieve some information for your SentinelOne Account in order to interface with it.
+
+If you don't want to use the default stream, you will also need to create your own.
 
 <br>
 <br>
@@ -68,6 +70,21 @@ It is best practice to create a new user under the `Connectors` group and to use
 
 <br>
 
+
+### Creating a dedicated Stream (optional)
+
+
+- To create a dedicated stream for this connector head to `Data sharing` -> `Live streams` in the OpenCTI platform.
+
+![Generating A User In OpenCTI](doc/stream_creation.png)
+
+- Give the stream a name so that it can be identified
+- Optional filters can be applied to determine what kind of data goes into the connector. It is recommended to not set any filters as to allow SentinelOne to consume all types it can.
+- You can then copy the streams ID to be you used in your environment variables. 
+
+
+<br>
+
 ## Configuration
 
 ### **OpenCTI Parameters:**
@@ -84,11 +101,15 @@ It is best practice to create a new user under the `Connectors` group and to use
 ### **Connector Parameters:**
 
 | Parameter       | config.yml  | Docker environment variable | Example                                | Description                                                                            |
-|------------------------------|------------|-----------------------------|----------------------------------------|----------------------------------------------------------------------------------------|
-| ID                          | `id`       | `CONNECTOR_ID`              | `11111111-2222-3333-4444-555555555555` | Unique `UUIDv4` identifier for the connector.                             |
-| Name                        | `name`     | `CONNECTOR_NAME`            | `SentinelOne Indicator Export Stream`                   | The Connector's name as it will appear in OpenCTI.                                      |
-| Scope                       | `scope`    | `CONNECTOR_SCOPE`           | `all`                             | The scope of this connector.                                        |
-| Log Level                   | `log_level`| `CONNECTOR_LOG_LEVEL`       | `info`                                | The level of logs/outputs presented. `info` is recommended.     |
+|------------------|------------|-----------------------------|----------------------------------------|----------------------------------------------------------------------------------------|
+| ID              | `id`       | `CONNECTOR_ID`              | `11111111-2222-3333-4444-555555555555` | Unique `UUIDv4` identifier for the connector.                                          |
+| Name            | `name`     | `CONNECTOR_NAME`            | `SentinelOne Indicator Export Stream`  | The Connector's name as it will appear in OpenCTI.                                     |
+| Scope           | `scope`    | `CONNECTOR_SCOPE`           | `all`                                  | The scope of this connector.                                                           |
+| Log Level       | `log_level`| `CONNECTOR_LOG_LEVEL`       | `info`                                 | The level of logs/outputs presented. `info` is recommended.                            |
+| Live Stream ID | `_________`| `CONNECTOR_LIVE_STREAM_ID` | `___________________________________`  | ______________________________________________________________________                 |
+| Stream Delete | `_________`| `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` | `___________________________________`  | ______________________________________________________________________                 |
+| Stream No Dependencies | `_________`| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | `___________________________________`  | ______________________________________________________________________                 |
+
 
 ---
 

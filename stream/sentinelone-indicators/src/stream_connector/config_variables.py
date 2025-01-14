@@ -15,7 +15,6 @@ class ConfigConnector:
         self.load = self._load_config()
         self._initialize_configurations()
 
-
     @staticmethod
     def _load_config() -> dict:
         """
@@ -65,4 +64,3 @@ class ConfigConnector:
                 self.load,
             )
         )
-

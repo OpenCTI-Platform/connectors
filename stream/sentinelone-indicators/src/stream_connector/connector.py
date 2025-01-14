@@ -23,9 +23,9 @@ S1_CONVERSIONS = {
 }
 
 ###bit confused about the conversions here! found these:
-#[file:hashes.'SHA-1' = 'a7f075ba37961545ae0a819bda5d2be28618d60d']
-#[file:hashes.'SHA-256' = 'b3ad8409d82500e790e6599337abe4d6edf5bd4c6737f8357d19edd82c88b064']
-#[file:hashes.'SHA-256' = '326d05c29c46e6ca7f2f1a9b534d8a2ffb98a13f74f8f26fff2057ad1f8e0ca8']
+# [file:hashes.'SHA-1' = 'a7f075ba37961545ae0a819bda5d2be28618d60d']
+# [file:hashes.'SHA-256' = 'b3ad8409d82500e790e6599337abe4d6edf5bd4c6737f8357d19edd82c88b064']
+# [file:hashes.'SHA-256' = '326d05c29c46e6ca7f2f1a9b534d8a2ffb98a13f74f8f26fff2057ad1f8e0ca8']
 
 
 import json
@@ -105,7 +105,7 @@ class IndicatorStreamConnector:
         # EXAMPLE
         # Handle creation
         if msg.event == "create":
-            #self.helper.connector_logger.info("[CREATE]")
+            # self.helper.connector_logger.info("[CREATE]")
             message_dict = json.loads(msg.data)
 
             if "creates a Indicator" in message_dict["message"]:
@@ -121,16 +121,16 @@ class IndicatorStreamConnector:
                     )
 
         # Handle update
-        #if msg.event == "update":
-           # self.helper.connector_logger.info("[UPDATE]")
-            # Do something
-            #raise NotImplementedError
+        # if msg.event == "update":
+        # self.helper.connector_logger.info("[UPDATE]")
+        # Do something
+        # raise NotImplementedError
 
         # Handle delete
-        #if msg.event == "delete":
-            #self.helper.connector_logger.info("[DELETE]")
-            # Do something
-            #raise NotImplementedError
+        # if msg.event == "delete":
+        # self.helper.connector_logger.info("[DELETE]")
+        # Do something
+        # raise NotImplementedError
 
         # ===========================
         # === Add your code above ===
@@ -144,8 +144,6 @@ class IndicatorStreamConnector:
         The helper provide an easy way to listen to the events.
         """
         self.helper.listen_stream(message_callback=self.process_message)
-
-
 
     def process_indicator(self, indicator_id):
         """
@@ -168,7 +166,6 @@ class IndicatorStreamConnector:
             self.helper.log_debug("Success, Indicator retrieved")
             self.helper.log_debug("Attempting to extract Type and Value from pattern")
 
-
             ioc_type, ioc_value = self.extract_content(indicator["pattern"])
             if (ioc_type, ioc_value) == (None, None):
                 self.helper.log_error(
@@ -178,7 +175,6 @@ class IndicatorStreamConnector:
 
             self.helper.log_info("Success, Type and Value retrieved and formatted.")
             self.helper.log_debug("Attempting to create IOC Payload for SentinelOne")
-
 
             payload = self.create_payload(ioc_type, ioc_value, indicator)
             if not payload:
@@ -224,11 +220,7 @@ class IndicatorStreamConnector:
             try:
                 ioc_type = S1_CONVERSIONS[match.group(1)]
 
-
-
                 self.helper.log_debug(pattern)
-
-
 
                 self.helper.log_debug("Success, Type converted to SentinelOne format.")
                 return ioc_type, ioc_value
@@ -292,9 +284,6 @@ class IndicatorStreamConnector:
             very basic for now.
             """
             return last_wait_time * 2
-
-
-
 
         HEADERS = {
             "Content-Type": "application/json",
