@@ -4,8 +4,8 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'INTERNAL_IMPORT_FILE'
-  name: 'Internal Import File Connector Template'
+  type: 'STREAM'
+  name: 'SentinelOne Indicator Stream Connnector'
   scope: 'ChangeMe'
   log_level: 'info'
   live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
