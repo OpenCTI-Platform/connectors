@@ -37,7 +37,8 @@ class ConnectorClient:
     def get_collection_sources(self):
         sources: dict[str, TAXIICollectionSource] = {}
 
-        for collection in self.__taxii_server.api_roots[0].collections:
+        api_root = self.__taxii_server.default or self.__taxii_server.api_roots[0]
+        for collection in api_root.collections:
             if collection.can_read:
                 sources[collection.id] = TAXIICollectionSource(collection)
 
