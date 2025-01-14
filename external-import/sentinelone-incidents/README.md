@@ -6,6 +6,8 @@ This connector allows Incidents from a SentinelOne account to be created within 
 
 This software is provided as a community-driven project and is not officially supported by SentinelOne. It is offered on an "as-is" basis, without warranties or guarantees, either express or implied. Users are encouraged to thoroughly test and validate the software before deploying it in their environments. While community contributions and feedback are welcome, SentinelOne does not provide formal technical support, maintenance, or updates for this project.
 
+At present, this connector only allows Threat Incidents to be created. 
+
 <br>
 
 - This version of the connector creates the following objects in correspondence with a SentinelOne Incident:
