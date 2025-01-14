@@ -1,9 +1,9 @@
-import os
 from pathlib import Path
+
 import yaml
-from pydantic import ValidationError
+from connector.models import ProofpointEtReputationConfigVar
 from pycti import get_config_variable
-from ..models import ProofpointEtReputationConfigVar
+from pydantic import ValidationError
 
 
 class ProofpointEtReputationConfig:
@@ -42,7 +42,7 @@ class ProofpointEtReputationConfig:
             "CONNECTOR_DURATION_PERIOD",
             ["connector", "duration_period"],
             self.load,
-            default="PT24H"
+            default="PT24H",
         )
 
         # Connector extra parameters
@@ -86,4 +86,3 @@ class ProofpointEtReputationConfig:
 
         except ValidationError as err:
             raise ValueError(err)
-

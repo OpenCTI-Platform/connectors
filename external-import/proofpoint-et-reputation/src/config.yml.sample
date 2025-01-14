@@ -8,7 +8,7 @@ connector:
   name: 'ProofPoint ET Reputation'
   scope: 'IPv4-Addr,Domain-Name'
   log_level: 'error'
-  duration_period: 'PT24H' # Interval given for scheduler process in ISO-8601 format
+  duration_period: 'PT24H' # Interval given for scheduler process in ISO-8601 format (Default : PT24H)
   #============================================#
   # Optional connector's definition parameters #
   #============================================#
@@ -21,5 +21,5 @@ connector:
 
 proofpoint_et_reputation:
   api_token: 'ChangeMe'
-  create_indicator: False
-  min_score: 50
+  create_indicator: ChangeMe # Default: True
+  min_score: ChangeMe # Default: 20
