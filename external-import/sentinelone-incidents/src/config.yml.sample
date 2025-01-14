@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'External Import Connector Template'
+  scope: 'ChangeMe'
+  log_level: 'info'
+  duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
+
+sentinelOne:
+  url: 'change Me Ending In/'
+  api_key: 'eyJraWQiOiJ1cy1lYXN0LTEtcHJvZC0wIiwiYWxnIjoiRVMyNTYifQ.eyJzdWIiOiJtYXhpbXVzLmRlYnNraUBzZW50aW5lbG9uZS5jb20iLCJpc3MiOiJhdXRobi11cy1lYXN0LTEtcHJvZCIsImRlcGxveW1lbnRfaWQiOiI4NjA2MSIsInR5cGUiOiJ1c2VyIiwiZXhwIjoxNzM4NjgwOTk1LCJpYXQiOjE3MzYwODg5OTUsImp0aSI6ImU5YTkxNTkyLWI1YjgtNDI2My1hNDczLWY5NDkwM2M0OWJhMiJ9.Iwwg78NDMiarnYqbXkYbDxIWNMUaXLTRbx8je7GYbcdnNXqFweKqAgx8jMbvZYvfssp4ABmgA6I6kqWINWq7nA'
+  account_id: '1870896841399623160'
+  max_api_attempts: 5
+  search_sign: "[OpenCTI_add]"
+
+
+
+
