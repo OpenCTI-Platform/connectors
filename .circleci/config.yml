@@ -113,6 +113,10 @@ jobs:
           name: Build Docker image opencti/connector-diode-import
           command: docker build -t opencti/connector-diode-import:latest . && docker tag opencti/connector-diode-import:latest opencti/connector-diode-import:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/wiz
+          name: Build Docker image opencti/connector-wiz
+          command: docker build -t opencti/connector-wiz:latest . && docker tag opencti/connector-wiz:latest opencti/connector-wiz:${CIRCLE_TAG}          
+      - run:
           working_directory: ~/opencti/external-import/crowdstrike
           name: Build Docker image opencti/connector-crowdstrike
           command: docker build -t opencti/connector-crowdstrike:latest . && docker tag opencti/connector-crowdstrike:latest opencti/connector-crowdstrike:${CIRCLE_TAG}
@@ -408,6 +412,8 @@ jobs:
             docker push opencti/connector-diode-import:${CIRCLE_TAG}
             docker push opencti/connector-alienvault:latest
             docker push opencti/connector-alienvault:${CIRCLE_TAG}
+            docker push opencti/connector-wiz:latest
+            docker push opencti/connector-wiz:${CIRCLE_TAG}
             docker push opencti/connector-crowdstrike:latest
             docker push opencti/connector-crowdstrike:${CIRCLE_TAG}
             docker push opencti/connector-cuckoo:latest
@@ -544,6 +550,8 @@ jobs:
             docker push opencti/connector-attribution-tools:${CIRCLE_TAG}
             docker push opencti/connector-tenable-security-center:latest
             docker push opencti/connector-tenable-security-center:${CIRCLE_TAG}
+            docker push opencti/connector-ipsum:latest
+            docker push opencti/connector-ipsum:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1179,6 +1187,10 @@ jobs:
           name: Build Docker image opencti/connector-diode-import
           command: docker build -t opencti/connector-diode-import:rolling .
       - run:
+          working_directory: ~/opencti/external-import/wiz
+          name: Build Docker image opencti/connector-wiz
+          command: docker build -t opencti/connector-wiz:rolling .
+      - run:
           working_directory: ~/opencti/external-import/crowdstrike
           name: Build Docker image opencti/connector-crowdstrike
           command: docker build -t opencti/connector-crowdstrike:rolling .
@@ -1447,6 +1459,10 @@ jobs:
           name: Build Docker image opencti/connector-tenable-security-center
           command: docker build -t opencti/connector-tenable-security-center:rolling .
       - run:
+          working_directory: ~/opencti/external-import/ipsum
+          name: Build Docker image opencti/connector-ipsum
+          command: docker build -t opencti/connector-ipsum:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1458,6 +1474,7 @@ jobs:
             docker push opencti/connector-hygiene:rolling
             docker push opencti/connector-alienvault:rolling
             docker push opencti/connector-diode-import:rolling
+            docker push opencti/connector-wiz:rolling
             docker push opencti/connector-crowdstrike:rolling
             docker push opencti/connector-cuckoo:rolling
             docker push opencti/connector-cape:rolling
@@ -1524,6 +1541,7 @@ jobs:
             docker push opencti/connector-tenable-vuln-management:rolling
             docker push opencti/connector-attribution-tools:rolling
             docker push opencti/connector-tenable-security-center:rolling
+            docker push opencti/connector-ipsum:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1

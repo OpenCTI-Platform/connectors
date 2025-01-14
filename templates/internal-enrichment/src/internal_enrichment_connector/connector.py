@@ -151,7 +151,7 @@ class ConnectorTemplate:
             )
             self.helper.connector_logger.info(info_msg, {"type": {obs_type}})
 
-            if self.entity_in_scope:
+            if self.entity_in_scope(data):
                 # Performing the collection of intelligence and enrich the entity
                 # ===========================
                 # === Add your code below ===

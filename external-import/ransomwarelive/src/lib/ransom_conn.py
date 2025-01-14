@@ -28,7 +28,7 @@ from stix2 import (
 class RansomwareAPIConnector:
     """Specific external-import connector
 
-    This class encapsulates the main actions, expected to be run by the
+    This class encapsulates the main actions, expected to be run by
     any external-import connector. Note that the attributes defined below
     will be complemented per each connector type.
 
@@ -66,6 +66,7 @@ class RansomwareAPIConnector:
             raise ValueError(msg) from _
 
         update_existing_data = os.environ.get("CONNECTOR_UPDATE_EXISTING_DATA", "false")
+        create_threat_actor = os.environ.get("CONNECTOR_CREATE_THREAT_ACTOR", "false")
         self.tlp_marking = "TLP:WHITE"
         self.marking = TLP_WHITE
         author = Identity(
@@ -97,9 +98,25 @@ class RansomwareAPIConnector:
             )
             self.helper.log_warning(msg)
             self.update_existing_data = "false"
+        if isinstance(create_threat_actor, str) and create_threat_actor.lower() in [
+            "true",
+            "false",
+        ]:
+            self.create_threat_actor = (
+                True if create_threat_actor.lower() == "true" else False
+            )
+        elif isinstance(create_threat_actor, bool) and create_threat_actor.lower in [
+            True,
+            False,
+        ]:
+            self.create_threat_actor = create_threat_actor
+        else:
+            msg = f"Error when grabbing CONNECTOR_CREATE_THREAT_ACTOR environment variable: '{create_threat_actor}'. It SHOULD be either `true` or `false`. `false` is assumed. "
+            self.helper.log_warning(msg)
+            self.create_threat_actor = "false"
 
     # Generates a group description from the ransomware.live API data
-    def threat_discription_generater(self, group_name, group_data):
+    def threat_description_generator(self, group_name, group_data):
 
         matching_items = [
             item for item in group_data if item.get("name", None) == group_name
@@ -242,6 +259,8 @@ class RansomwareAPIConnector:
             return None
 
     def sector_fetcher(self, sector):
+        if sector == "":
+            return None
         try:
             sectors_split = []
             rubbish = [" and ", " or ", " ", ";"]
@@ -281,7 +300,26 @@ class RansomwareAPIConnector:
                             "operator": "search",
                         },
                     ],
-                    "filterGroups": [],
+                    "filterGroups": [
+                        {
+                            "mode": "or",
+                            "filters": [
+                                {
+                                    "key": "x_opencti_aliases",
+                                    "values": sector,
+                                    "mode": "or",
+                                    "operator": "search",
+                                },
+                                {
+                                    "key": "name",
+                                    "values": sector,
+                                    "mode": "or",
+                                    "operator": "search",
+                                },
+                            ],
+                            "filterGroups": [],
+                        }
+                    ],
                 },
             )
             if sector_out and sector_out.get("standard_id").startswith("identity--"):
@@ -289,7 +327,7 @@ class RansomwareAPIConnector:
             return None
 
         except Exception as e:
-            self.helper.log_error(f"Errot fetching sector{sector}")
+            self.helper.log_error(f"Error fetching sector{sector}")
             self.helper.log_error(str(e))
             return None
 
@@ -307,7 +345,7 @@ class RansomwareAPIConnector:
 
     # Generates a ransom note external reference
 
-    def ransome_note_generator(self, group_name):
+    def ransom_note_generator(self, group_name):
 
         if group_name in ("lockbit3", "lockbit2"):
             return ExternalReference(
@@ -375,25 +413,27 @@ class RansomwareAPIConnector:
         )
 
         # RansomNote External Reference
-        external_references_group = self.ransome_note_generator(item.get("group_name"))
+        external_references_group = self.ransom_note_generator(item.get("group_name"))
 
         # Creating Threat Actor object
-        threat_actor_name = item.get("group_name")
-        threat_actor = ThreatActor(
-            id=pycti.ThreatActorGroup.generate_id(threat_actor_name),
-            name=threat_actor_name,
-            labels=["ransomware"],
-            created_by_ref=self.author.get("id"),
-            description=self.threat_discription_generater(
-                item.get("group_name"), group_data
-            ),
-            object_marking_refs=[self.marking.get("id")],
-            external_references=[external_references_group],
-        )
+        threat_actor = None
+        if self.create_threat_actor:
+            threat_actor_name = item.get("group_name")
+            threat_actor = ThreatActor(
+                id=pycti.ThreatActorGroup.generate_id(threat_actor_name),
+                name=threat_actor_name,
+                labels=["ransomware"],
+                created_by_ref=self.author.get("id"),
+                description=self.threat_description_generator(
+                    threat_actor_name, group_data
+                ),
+                object_marking_refs=[self.marking.get("id")],
+                external_references=[external_references_group],
+            )
 
-        target_relation = self.relationship_generator(
-            threat_actor.get("id"), victim.get("id"), "targets"
-        )
+            target_relation = self.relationship_generator(
+                threat_actor.get("id"), victim.get("id"), "targets"
+            )
 
         # Creating Intrusion Set object
         try:
@@ -401,13 +441,12 @@ class RansomwareAPIConnector:
                 item.get("group_name") == "lockbit3"
                 or item.get("group_name") == "lockbit2"
             ):
-
-                intrusionset = IntrusionSet(
+                intrusion_set = IntrusionSet(
                     id=pycti.IntrusionSet.generate_id("lockbit"),
                     name="lockbit",
                     labels=["ransomware"],
                     created_by_ref=self.author.get("id"),
-                    description=self.threat_discription_generater(
+                    description=self.threat_description_generator(
                         item.get("lockbit3"), group_data
                     ),
                     object_marking_refs=[self.marking.get("id")],
@@ -416,12 +455,12 @@ class RansomwareAPIConnector:
 
             else:
                 intrusionset_name = item.get("group_name")
-                intrusionset = IntrusionSet(
+                intrusion_set = IntrusionSet(
                     id=pycti.IntrusionSet.generate_id(intrusionset_name),
                     name=intrusionset_name,
                     labels=["ransomware"],
                     created_by_ref=self.author.get("id"),
-                    description=self.threat_discription_generater(
+                    description=self.threat_description_generator(
                         item.get("group_name"), group_data
                     ),
                     object_marking_refs=[self.marking.get("id")],
@@ -429,17 +468,19 @@ class RansomwareAPIConnector:
                 )
 
             relation_vi_is = self.relationship_generator(
-                intrusionset.get("id"), victim.get("id"), "targets"
+                intrusion_set.get("id"), victim.get("id"), "targets"
             )
-            relation_is_ta = self.relationship_generator(
-                intrusionset.get("id"), threat_actor.get("id"), "attributed-to"
-            )
+            if self.create_threat_actor:
+                relation_is_ta = self.relationship_generator(
+                    intrusion_set.get("id"), threat_actor.get("id"), "attributed-to"
+                )
 
         except Exception as e:
             self.helper.log_error(str(e))
 
         # Creating External References Object if they have external references
-        external_references = [external_references_group]
+        external_references = []
+        external_references.append(external_references_group)
 
         for field in ["screenshot", "website", "post_url"]:
 
@@ -452,6 +493,14 @@ class RansomwareAPIConnector:
                 external_references.append(external_reference)
 
         # Creating Report object
+        object_refs = [
+            victim.get("id"),
+            intrusion_set.get("id"),
+            relation_vi_is.get("id"),
+        ]
+        if self.create_threat_actor:
+            object_refs.append(target_relation.get("id"))
+            object_refs.append(relation_is_ta.get("id"))
         report_name = (
             item.get("group_name") + " has published a new victim: " + post_title
         )
@@ -463,14 +512,7 @@ class RansomwareAPIConnector:
             name=report_name,
             description=item.get("description"),
             created_by_ref=self.author.get("id"),
-            object_refs=[
-                threat_actor.get("id"),
-                victim.get("id"),
-                intrusionset.get("id"),
-                target_relation.get("id"),
-                relation_vi_is.get("id"),
-                relation_is_ta.get("id"),
-            ],
+            object_refs=object_refs,
             published=report_published,
             created=report_created,
             object_marking_refs=[self.marking.get("id")],
@@ -481,39 +523,39 @@ class RansomwareAPIConnector:
         bundle = [
             self.author,
             victim,
-            threat_actor,
-            intrusionset,
-            target_relation,
-            relation_is_ta,
+            intrusion_set,
             relation_vi_is,
         ]
+        if self.create_threat_actor:
+            bundle.append(threat_actor)
+            bundle.append(relation_is_ta)
+            bundle.append(target_relation)
 
         # Creating Sector object
-
         try:
-
             if item.get("activity") is not None:
-
                 sector_id = self.sector_fetcher(item.get("activity"))
                 if sector_id is not None:
                     relation_sec_vic = self.relationship_generator(
                         victim.get("id"), sector_id, "part-of"
                     )
-                    relation_sec_ta = self.relationship_generator(
-                        threat_actor.get("id"), sector_id, "targets"
-                    )
+                    if self.create_threat_actor:
+                        relation_sec_TA = self.relationship_generator(
+                            threat_actor.get("id"), sector_id, "targets"
+                        )
+                        bundle.append(relation_sec_TA)
+                        report.get("object_refs").append(relation_sec_TA.get("id"))
                     relation_is_sec = self.relationship_generator(
-                        intrusionset.get("id"), sector_id, "targets"
+                        intrusion_set.get("id"), sector_id, "targets"
                     )
                     bundle.append(relation_sec_vic)
-                    bundle.append(relation_sec_ta)
+                    bundle.append(relation_sec_TA)
                     bundle.append(relation_is_sec)
 
                     report.get("object_refs").append(sector_id)
                     report.get("object_refs").append(relation_sec_vic.get("id"))
-                    report.get("object_refs").append(relation_sec_ta.get("id"))
+                    report.get("object_refs").append(relation_sec_TA.get("id"))
                     report.get("object_refs").append(relation_is_sec.get("id"))
-
         except Exception as e:
             self.helper.log_error(str(e))
 
@@ -618,25 +660,25 @@ class RansomwareAPIConnector:
             )
 
             relation_is_lo = self.relationship_generator(
-                intrusionset.get("id"), location3.get("id"), "targets"
+                intrusion_set.get("id"), location3.get("id"), "targets"
             )
-
-            relation_ta_lo = self.relationship_generator(
-                threat_actor.get("id"), location3.get("id"), "targets"
-            )
+            if self.create_threat_actor:
+                relation_TA_LO = self.relationship_generator(
+                    threat_actor.get("id"), location3.get("id"), "targets"
+                )
+                bundle.append(relation_TA_LO)
+                report.get("object_refs").append(relation_TA_LO.get("id"))
 
             bundle.append(relation_is_lo)
             bundle.append(location_relation)
-            bundle.append(relation_ta_lo)
 
             report.get("object_refs").append(location3.get("id"))
             report.get("object_refs").append(relation_is_lo.get("id"))
-            report.get("object_refs").append(relation_ta_lo.get("id"))
             report.get("object_refs").append(location_relation.get("id"))
 
         bundle.append(report)
         self.helper.log_info(
-            f"Sending {len(bundle)} STIX objects to collect_intellegince."
+            f"Sending {len(bundle)} STIX objects to collect_intelligence."
         )
         return bundle
 
@@ -655,7 +697,7 @@ class RansomwareAPIConnector:
             self.helper.log_error(str(e))
             group_data = []
 
-        curent_year = int(dt.date.today().year)
+        current_year = int(dt.date.today().year)
         # Checking if the historic year is less than 2020 as there is no data past 2020
         if int(self.get_historic_year) < 2020:
             year = 2020
@@ -665,7 +707,7 @@ class RansomwareAPIConnector:
         stix_objects = []
         bundle = []
 
-        for year in range(year, curent_year + 1):  # Looping through the years
+        for year in range(year, current_year + 1):  # Looping through the years
             year_url = base_url + str(year)
             for month in range(1, 13):  # Looping through the months
                 url = year_url + "/" + str(month)
@@ -895,7 +937,7 @@ class RansomwareAPIConnector:
                         self.helper.log_error("Something Wrong with Bundle creation")
 
                     try:
-                        if bundle_objects is not None:
+                        if bundle_objects:
                             self.helper.send_stix2_bundle(
                                 bundle,
                                 update=self.update_existing_data,
