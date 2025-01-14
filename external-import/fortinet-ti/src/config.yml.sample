@@ -15,4 +15,4 @@ fortinet:
   url: 'https://premiumapi.fortinet.com/v1/cti/feed/stix2?cc=all'
   ioc_score: 50                             # The score to be set on Indicators and Observables
   interval: 24                              # In hours
-  marking_definition: 'TLP:AMBER'
+  marking_definition: 'TLP:AMBER+STRICT'

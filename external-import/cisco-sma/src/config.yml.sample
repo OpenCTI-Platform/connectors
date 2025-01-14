@@ -32,4 +32,4 @@ cisco_sma:
   sinkholed-ip-dns: true      # DNS entries for samples communicating with a known dns sinkhole
   stolen-cert-dns: true       # DNS Entries observed from samples signed with a stolen certificate
   interval: 24                # In hours
-  marking_definition: 'TLP:AMBER'
+  marking_definition: 'TLP:AMBER+STRICT'

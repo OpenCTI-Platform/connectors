@@ -4,10 +4,10 @@ opencti:
 
 
 connector:
-  id: 'ChangeMe'
+  id: 'connector-orange-cyberdefense'
   type: 'EXTERNAL_IMPORT'
   name: 'Orange Cyberdefense Cyber Threat Intelligence'
-  scope: 'ocd'
+  scope: 'identity,attack-pattern,intrusion-set,malware,tool,report,location,vulnerability,indicator,campaign,relationship'
   confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   update_existing_data: true
   log_level: 'info'

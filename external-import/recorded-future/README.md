@@ -15,7 +15,7 @@ Summary
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
-  - [Behavior](#behavior)
+  - [Behavior - What the connector imports ?](#behavior)
     - [Analyst notes](#analyst-notes)
       - [Initial population](#initial-population)
       - [Verification](#verification)
@@ -25,6 +25,8 @@ Summary
     - [Threat Maps](#threat-maps)
       - [Initial population](#initial-population-2)
       - [Verification](#verification-2)
+    - [Alerts](#alerts)
+    - [Playbook Alerts](#playbook-alerts)
   - [Known Issues and Workarounds](#known-issues-and-workarounds)
     - [Importing risk lists](#importing-risk-lists)
   - [Useful Resources](#useful-resources)
@@ -98,7 +100,7 @@ Below are the parameters you'll need to set for Recorded Future connector:
 | Initial lookback             | `initial_lookback`           | `RECORDED_FUTURE_INITIAL_LOOKBACK`          | `240`                                                 | Yes       | The numeric timeframe the connector will search for Analyst Notes on the first run, required, in hours.                                                                                                                                                        |
 | Pull Analyst Notes           | `pull_analyst_notes`         | `RECORDED_FUTURE_PULL_ANALYST_NOTES`        | `True`                                                | yes       | A boolean flag of whether to pull entities from Analyst Notes into OpenCTI.                                                                                                                                                                                    |
 | Last Published Notes         | `last_published_notes`       | `RECORDED_FUTURE_LAST_PUBLISHED_NOTES`      | `24`                                                  | Yes       | The number of hours to fetch notes in far back                                                                                                                                                                                                                 |
-| Marking                      | `TLP`                        | `RECORDED_FUTURE_TLP`                       | `white`                                               | Yes       | TLP Marking for data imported, possible values: white, green, amber, red                                                                                                                                                                                       |
+| Marking                      | `TLP`                        | `RECORDED_FUTURE_TLP`                       | `red`                                                 | Yes       | TLP Marking for data imported, possible values: white, green, amber, amber+strict, red                                                                                                                                                                         |
 | Topic                        | `topic`                      | `RECORDED_FUTURE_TOPIC`                     | `VTrvnW,g1KBGl,ZjnoP0,aDKkpk,TXSFt5,UrMRnT,TXSFt3`    | No        | Filter Analyst Notes on a specific topic. Topics can be found [here](https://support.recordedfuture.com/hc/en-us/articles/360006361774-Analyst-Note-API). You **must** use the topic RFID, for example aUyI9M. Multiple topics are allowed (separated by ','). |
 | Notes from Insikt Group      | `insikt_only`                | `RECORDED_FUTURE_INSIKT_ONLY`               | `True`                                                | No        | A boolean flag of whether to pull analyst notes only from the Insikt research team, or whether to include notes written by Users. Default to True.                                                                                                             |
 | Pull signatures              | `pull_signatures`            | `RECORDED_FUTURE_PULL_SIGNATURES`           | `False`                                               | No        | Pull Yara/Snort/Sigma rules into OpenCTI                                                                                                                                                                                                                       |
@@ -315,6 +317,90 @@ Example of result if you want to perform an investigation on an intrusion set an
 
 To verify that Risk Lists have been imported, navigate to the `Threats` -> `Intrusion Set` tab in the OpenCTI Platform. You should see new intrusion sets authored by the Identity Recorded Future. Click on those intrusion sets to see the details, and on `Knowledge` to see the relationships with the related entities configured.
 
+### Alerts
+
+Also known as Classic Alerts (or "Basic" Alerts), these are essentially saved searches that run periodically on the Recorded Future database. For example, a classic alert could search for all typosquats of a specific domain, run on a schedule (e.g., every hour), and return all detected typosquats along with some associated raw data from that timeframe.
+
+- They are highly flexible and can be customized to search for virtually anything in the Recorded Future database.
+- Many prebuilt classic alerts are available, but their functionality is limited to simple searches and raw data retrieval.
+
+#### Prerequisites
+
+To use Classic Alerts, you need to have a Recorded Future account with the appropriate permissions.
+
+Then, you need to configure your watchlist in the Recorded Future platform.
+
+![rf watchlist](./__docs__/media/rf-watchlist.png)
+
+Check your Alerting Rules activation
+
+![rf alerting rules](./__docs__/media/rf-alerting-rules.png)
+
+And if you want to have priority alerts, you need to check the box
+
+![priority alerts](./__docs__/media/rf-priority-alerts.png)]
+
+#### Initial population
+
+Pulling Alerts is Optional. If pulling alerts is enabled, you can choose whether if you want priority alerts only or not.
+
+Pulling Alerts from Recorded Future will create an Incident.
+
+Example of result for an Incident:
+![incident view](./__docs__/media/rf-alert-1.png)
+
+Here the result for related entities:
+![incident entities](./__docs__/media/rf-alert-2.png)
+
+And notes will be added as well:
+![incident notes](./__docs__/media/rf-alert-3.png)
+
+### Playbook Alerts
+
+Playbook Alerts are more advanced and tailored to specific use cases. They provide enriched data and deeper context to streamline incident triage. For instance, in the case of a "Domain Abuse" Playbook Alert (focused on typosquatting), the output would include:
+
+- DNS Records: Detailed DNS information for the domain.
+- Screenshots: A screenshot of the detected domain.
+- AI Analysis: An automated analysis that identifies elements like company logos, login pages, and other key indicators on the screenshot.
+- Tags and Severity Levels: Automatically generated based on the enriched data and criteria.
+
+The key advantage of Playbook Alerts is that they consolidate all necessary information in one place, enabling quicker and more efficient triage of incidents compared to Classic Alerts.
+
+The connector will import all Playbook Alerts from the following alerting rules list:
+- Domain Abuse
+- Identity Exposure
+- Data Leakage on Code Repository
+
+#### Prerequisites
+
+Same as for Alerts, you need to have a Recorded Future account with the appropriate permissions and configure alerting rules and watchlist.
+
+#### Initial population
+
+Pulling Playbook Alerts is Optional.
+Pulling Alerts from Recorded Future will create an Incident.
+
+You can choose the severity of the alerting rules to pull
+
+```sh
+  severity_threshold_domain_abuse: 'High'
+  severity_threshold_identity_novel_exposures: 'High'
+  severity_threshold_code_repo_leakage: 'High'
+```
+
+Example of result for an Incident:
+
+![incident view](./__docs__/media/rf-pba-1.png)
+
+Here the result for related entities:
+
+![incident entities](./__docs__/media/rf-pba-2.png)
+
+And notes will be added as well:
+
+![incident notes](./__docs__/media/rf-pba-3.png)
+
+
 ## Known Issues and Workarounds
 
 ### Importing risk lists
@@ -336,3 +422,8 @@ OpenCTI documentation for connectors:
 - [OpenCTI Ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76)
 - [Connectors Deployment](https://docs.opencti.io/latest/deployment/connectors/)
 - [Connectors Development](https://docs.opencti.io/latest/development/connectors/)
+
+Recorded Future documentation (restricted access):
+- [Why the alert triggered?](https://support.recordedfuture.com/hc/en-us/articles/4407128752787-Why-did-this-alert-trigger)
+
+_Note: Base of Alerts and Playbook Alerts code was initiated by [Sydney](https://github.com/septdney/) from [Bouygues Telecom](https://www.corporate.bouyguestelecom.fr/csirt-bouygues-telecom/), thanks for the contribution_ 

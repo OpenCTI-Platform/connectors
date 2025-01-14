@@ -389,3 +389,16 @@ class ConfigConnector:
             ["taxii2", "save_original_indicator_id_abstract"],
             self.load,
         )
+
+        self.change_report_status = get_config_variable(
+            "TAXII2_CHANGE_REPORT_STATUS",
+            ["taxii2", "change_report_status"],
+            self.load,
+            default=False,
+        )
+
+        self.change_report_status_x_opencti_workflow_id = get_config_variable(
+            "TAXII2_CHANGE_REPORT_STATUS_X_OPENCTI_WORKFLOW_ID",
+            ["taxii2", "change_report_status_x_opencti_workflow_id"],
+            self.load,
+        )

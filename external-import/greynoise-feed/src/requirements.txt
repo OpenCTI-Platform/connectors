@@ -1,4 +1,4 @@
 urllib3==2.2.3
-pycti==6.4.5
+pycti==6.4.7
 certifi==2024.12.14
 greynoise==2.3.0
