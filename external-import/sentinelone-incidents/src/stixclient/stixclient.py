@@ -22,7 +22,7 @@ class StixClient:
         )
 
         source_identity = Identity(
-            id=utils.generate_stix_id("identity"),
+            #id=utils.generate_stix_id("identity"),
             name=source_name,
             identity_class="organization",
             description="SentinelOne Incident Connector.",
@@ -61,14 +61,14 @@ class StixClient:
         ]
 
         external_s1_ref = ExternalReference(
-            id=utils.generate_stix_id("external-reference"),
+            #id=utils.generate_stix_id("external-reference"),
             source_name="SentinelOne",
             url=f"{s1_url}/incidents/threats/{incident_id}/overview",
             description="View Incident In SentinelOne",
         )
 
         incident = Incident(
-            id=utils.generate_stix_id("incident"),
+            #id=utils.generate_stix_id("incident"),
             type="incident",
             name=incident_data.get("threatInfo", {}).get("threatName", ""),
             description=description,
@@ -104,7 +104,7 @@ class StixClient:
         desc = f"Affected Host on SentinelOne Account {account_name} (with id: {account_id})"
 
         endpoint_observable = UserAccount(
-            id=utils.generate_stix_id("user-account"),
+            #id=utils.generate_stix_id("user-account"),
             account_type="hostname",
             user_id="BWPC-PC1-RED",
             object_marking_refs=[TLP_RED.id],
@@ -121,7 +121,7 @@ class StixClient:
 
         def create_mitre_reference(technique):
             mitre_ref = ExternalReference(
-                id=utils.generate_stix_id("external-reference"),
+                #id=utils.generate_stix_id("external-reference"),
                 source_name="MITRE ATT&CK",
                 url=technique.get("link"),
                 external_id=technique.get("name"),
@@ -146,7 +146,7 @@ class StixClient:
             )
 
             attack_pattern = AttackPattern(
-                id=utils.generate_stix_id("attack-pattern"),
+                #id=utils.generate_stix_id("attack-pattern"),
                 name=pattern_name,
                 description=pattern.get("description", ""),
                 object_marking_refs=[TLP_RED.id],
@@ -162,7 +162,7 @@ class StixClient:
                 )
 
                 sub_pattern = AttackPattern(
-                    id=utils.generate_stix_id("attack-pattern"),
+                    #id=utils.generate_stix_id("attack-pattern"),
                     name="[sub] " + tactic.get("name", ""),
                     description=sub_desc,
                     external_references=[
@@ -191,7 +191,7 @@ class StixClient:
         incident_notes = []
         for note in s1_notes:
             incident_note = Note(
-                id=utils.generate_stix_id("note"),
+                #id=utils.generate_stix_id("note"),
                 content=note.get("text", "")
                 + "\ncreated by: "
                 + note.get("creator", ""),
@@ -219,7 +219,7 @@ class StixClient:
         indicators = []
         for pattern in available_patterns:
             indicator = Indicator(
-                id=utils.generate_stix_id("indicator"),
+                #id=utils.generate_stix_id("indicator"),
                 pattern=pattern,
                 name="Malicious File Hash Indicator",
                 pattern_type="stix",
@@ -235,7 +235,7 @@ class StixClient:
     def create_relationship(self, parent_id, child_id, relationship_type):
 
         relationship = Relationship(
-            id=utils.generate_stix_id("relationship"),
+            #id=utils.generate_stix_id("relationship"),
             relationship_type=relationship_type,
             source_ref=parent_id,
             target_ref=child_id,
