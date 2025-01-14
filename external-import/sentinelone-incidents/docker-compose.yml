@@ -1,0 +1,23 @@
+version: '3'
+  services: 
+    connector-sentinelone-incident:
+      build: ../sentinelone-opencti-incident-connector/
+      container_name: connector-sentinelone-incident
+      environment:
+        - OPENCTI_URL=http://opencti:8080
+        - OPENCTI_TOKEN=ChangeMe
+        - SENTINELONE_URL=ChangeMe
+        - SENTINELONE_API_KEY=ChangeMe
+        - SENTINELONE_ACCOUNT_ID=ChangeMe
+        - SENTINELONE_MAX_API_ATTEMPTS=5
+        - SENTINELONE_SEARCH_SIGN=[OpenCTI_add]
+        - CONNECTOR_ID=ChangeMe
+        - CONNECTOR_NAME=SentinelOne Incident Importer
+        - CONNECTOR_SCOPE=all
+        - CONNECTOR_LOG_LEVEL=debug
+        - CONNECTOR_FETCH_INTERVAL=15
+      
+      restart: always
+      #depends_on:
+      #  opencti:
+      #    condition: service_healthy
