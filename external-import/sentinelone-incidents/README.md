@@ -109,7 +109,7 @@ It is best practice to create a new user under the `Connectors` group and to use
 | Name                        | `name`     | `CONNECTOR_NAME`            | `SentinelOne Indicator Export Stream`                   | The Connector's name as it will appear in OpenCTI.                                      |
 | Scope                       | `scope`    | `CONNECTOR_SCOPE`           | `all`                             | The scope of this connector.                                        |
 | Log Level                   | `log_level`| `CONNECTOR_LOG_LEVEL`       | `info`                                | The level of logs/outputs presented. `info` is recommended.     |
-| Fetch Interval                  | `fetch_interval`| `CONNECTOR_FETCH_INTERVAL`       | `info`                                | The interval in seconds between scans    |
+| Duration Period                  | `duration_period`| `CONNECTOR_DURATION_PERIOD`       | `info`                                | The interval in minutes (ISO-8601 format) between scans. E.g `PT5M` is 5 minutes  |
 
 ---
 
