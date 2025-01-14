@@ -1,9 +1,9 @@
+import re
+
+import requests
 from pycti import OpenCTIConnectorHelper
 
 from .config_variables import ConfigConnector
-
-import requests
-import re
 
 IOC_API_LOCATION = "web/api/v2.1/threat-intelligence/iocs?accountIds="
 
@@ -28,9 +28,11 @@ S1_CONVERSIONS = {
 #[file:hashes.'SHA-256' = '326d05c29c46e6ca7f2f1a9b534d8a2ffb98a13f74f8f26fff2057ad1f8e0ca8']
 
 
+import json
+
 ###remove:
 import time
-import json
+
 
 class IndicatorStreamConnector:
     """
