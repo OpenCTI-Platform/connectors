@@ -9,7 +9,7 @@ from stix2 import (
     Note,
     Relationship,
     UserAccount,
-    utils,
+    #utils,
 )
 
 
@@ -26,6 +26,7 @@ class StixClient:
             name=source_name,
             identity_class="organization",
             description="SentinelOne Incident Connector.",
+            generate_id=True
         )
         self.source = source_identity
 
@@ -65,6 +66,7 @@ class StixClient:
             source_name="SentinelOne",
             url=f"{s1_url}/incidents/threats/{incident_id}/overview",
             description="View Incident In SentinelOne",
+            generate_id=True
         )
 
         incident = Incident(
@@ -81,6 +83,7 @@ class StixClient:
             object_marking_refs=[TLP_RED.id],
             created_by_ref=self.source.id,
             custom_properties={"source": self.source.name},
+            generate_id=True
         )
 
         return [incident, self.source]
@@ -109,6 +112,7 @@ class StixClient:
             user_id="BWPC-PC1-RED",
             object_marking_refs=[TLP_RED.id],
             custom_properties={"description": desc},
+            generate_id=True
         )
 
         endpoint_relationship = self.create_relationship(
@@ -125,6 +129,7 @@ class StixClient:
                 source_name="MITRE ATT&CK",
                 url=technique.get("link"),
                 external_id=technique.get("name"),
+                generate_id=True
             )
             return mitre_ref
 
@@ -150,6 +155,7 @@ class StixClient:
                 name=pattern_name,
                 description=pattern.get("description", ""),
                 object_marking_refs=[TLP_RED.id],
+                generate_id=True
             )
 
             for tactic in pattern.get("tactics", []):
@@ -170,6 +176,7 @@ class StixClient:
                         for technique in tactic.get("techniques", [])
                     ],
                     object_marking_refs=[TLP_RED.id],
+                    generate_id=True
                 )
 
                 attack_patterns.append(sub_pattern)
@@ -197,6 +204,7 @@ class StixClient:
                 + note.get("creator", ""),
                 object_refs=[cti_incident_id],
                 object_marking_refs=[TLP_RED.id],
+                generate_id=True
             )
             incident_notes.append(incident_note)
 
@@ -224,6 +232,7 @@ class StixClient:
                 name="Malicious File Hash Indicator",
                 pattern_type="stix",
                 object_marking_refs=[TLP_RED.id],
+                generate_id=True
             )
             indicators.append(
                 self.create_relationship(cti_incident_id, indicator["id"], "related-to")
@@ -240,5 +249,6 @@ class StixClient:
             source_ref=parent_id,
             target_ref=child_id,
             object_marking_refs=[TLP_RED.id],
+            generate_id=True
         )
         return relationship
