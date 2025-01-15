@@ -3,7 +3,7 @@ import time
 import requests
 
 INCIDENTS_API_LOCATION = "web/api/v2.1/private/threat-groups?limit=50&sortBy=createdAt&sortOrder=desc&accountIds="
-INCIDENT_NOTES_API_LOCATION_TEMPLATE = "web/api/v2.1/threats/{incident_id}/notes"
+INCIDENT_NOTES_API_LOCATION_TEMPLATE = "web/api/v2.1/threats/{incident_id}/notes?limit=1000&sortBy=createdAt&sortOrder=desc"
 INCIDENT_API_LOCATION_TEMPLATE = "web/api/v2.1/private/threats/{incident_id}/analysis"
 
 
