@@ -1,15 +1,12 @@
-import ipaddress
+from ipaddress import ip_address, AddressValueError
 from datetime import datetime
-
-import stix2
 from dateutil.parser import parse
 from pycti import Identity, Indicator, StixCoreRelationship
-import csv
-
-from stix2 import IPv4Address, IPv6Address
+from csv import DictReader
+from stix2 import IPv4Address, IPv6Address, DomainName, Indicator, Identity, Relationship, TLP_GREEN
 
 DEFAULT_CONFIDENCE_LEVEL = 50
-DEFAULT_TLP = stix2.TLP_GREEN
+DEFAULT_TLP = TLP_GREEN
 
 
 class ConverterToStix:
@@ -30,12 +27,12 @@ class ConverterToStix:
         }
 
     @staticmethod
-    def create_author() -> stix2.Identity:
+    def create_author() -> Identity:
         """
         Create Author.
         :return: Author as STIX 2.1 Identity object
         """
-        author = stix2.Identity(
+        author = Identity(
             id=Identity.generate_id(name="Bambenek", identity_class="organization"),
             name="Bambenek",
             identity_class="organization",
@@ -49,11 +46,11 @@ class ConverterToStix:
                                confidence_level: int = DEFAULT_CONFIDENCE_LEVEL,
                                labels: list[str] = None,
                                valid_from: datetime = None,
-                               ) -> stix2.Indicator:
+                               ) -> Indicator:
         """
         Convenience method to return an indicator using common patterns from the Bambenek feeds
         """
-        return stix2.Indicator(
+        return Indicator(
             id=Indicator.generate_id(pattern_value),
             name=name,
             description="",
@@ -75,7 +72,7 @@ class ConverterToStix:
 
     @staticmethod
     def _csv_strings_to_dict(entities: list[str], fieldnames: list[str]) -> list[dict]:
-        reader = csv.DictReader(entities, fieldnames=fieldnames, delimiter=",")
+        reader = DictReader(entities, fieldnames=fieldnames, delimiter=",")
         return list(reader)
 
     def _convert_ip_to_stix(self, ip: str, labels: list[str]) -> tuple[IPv4Address | IPv6Address | None, int | None]:
@@ -96,14 +93,14 @@ class ConverterToStix:
             },
         )
         try:
-            ip_parsed = ipaddress.ip_address(ip)
+            ip_parsed = ip_address(ip)
             if ip_parsed.version == 4:
-                stix_ip_object = stix2.IPv4Address(**stix_values)
+                stix_ip_object = IPv4Address(**stix_values)
                 ip_version = 4
             elif ip_parsed.version == 6:
-                stix_ip_object = stix2.IPv6Address(**stix_values)
+                stix_ip_object = IPv6Address(**stix_values)
                 ip_version = 6
-        except ipaddress.AddressValueError:
+        except AddressValueError:
             self.helper.log_warning(
                 f"Unable to convert IP address, bad format for IP = {ip}"
             )
@@ -112,7 +109,7 @@ class ConverterToStix:
     @staticmethod
     def _create_relation(
             source_id: str, target_id: str, relation: str
-    ) -> stix2.Relationship:
+    ) -> Relationship:
         """
         Create a STIX 2.1 Relationship object.
         :param source_id: STIX 2.1 source object's ID
@@ -120,7 +117,7 @@ class ConverterToStix:
         :param relation: Name of relationship to create
         :return: STIX 2.1 relationship object
         """
-        stix_relationship = stix2.Relationship(
+        stix_relationship = Relationship(
             id=StixCoreRelationship.generate_id(
                 relation,
                 source_id,
@@ -145,7 +142,7 @@ class ConverterToStix:
             cleaned_tag = entity.get("tag").replace("Domain used by ", "")
             # Appears in the tags and is unnecessary
             pattern_value = "[domain-name:value = '" + entity.get("domain") + "']"
-            stix_observable = stix2.DomainName(
+            stix_observable = DomainName(
                 value=entity.get("domain"),
                 object_marking_refs=[DEFAULT_TLP],
                 custom_properties={
