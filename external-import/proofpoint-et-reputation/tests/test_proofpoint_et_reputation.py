@@ -1,11 +1,8 @@
 from unittest.mock import MagicMock
 
 import pytest
-from common_fixtures import (
-    fixture_data_domainrepdata,
-    fixture_data_iprepdata,
-    proofpoint_client,
-)
+from common_fixtures import proofpoint_client  # noqa: F401 pylint:disable=unused-import
+from common_fixtures import fixture_data_domainrepdata, fixture_data_iprepdata
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 
 
@@ -82,6 +79,7 @@ from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
         "--ExceptionError--Failure",
     ],
 )
+@pytest.mark.usefixtures("proofpoint_client")
 def test_fetch_data(
     mocker,
     request,
@@ -103,19 +101,20 @@ def test_fetch_data(
         fixture_data: The name of the fixture containing the test data.
         data_name: The name of the reputation list collection to test ('iprepdata' or 'domainrepdata').
     """
+    client = proofpoint_client
     if side_effect is None:
         data = request.getfixturevalue(fixture_data)
         mock_fetch = mocker.patch(
             "requests.Session.send",
             return_value=MagicMock(status_code=200, json=lambda: data),
         )
-        result = proofpoint_client.fetch_data(reputation_list_entity=data_name)
+        result = client.fetch_data(reputation_list_entity=data_name)
         print(f"Fetched data for {fixture_data}: {result}")
         assert result == data
         mock_fetch.assert_called_once()
     else:
         mock_fetch = mocker.patch("requests.Session.send", side_effect=side_effect)
-        result = proofpoint_client.fetch_data(reputation_list_entity=data_name)
+        result = client.fetch_data(reputation_list_entity=data_name)
         print(f"Exception triggered {result}")
         assert result == expected_result
         mock_fetch.assert_called_once()
