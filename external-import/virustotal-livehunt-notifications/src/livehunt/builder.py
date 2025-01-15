@@ -502,7 +502,7 @@ class LivehuntBuilder:
         # Download the file to a file like object
         file_obj = io.BytesIO()
         self.helper.log_info(f"Downloading {vtobj.sha256}")
-        self.client.retrieve_entities_from_file(vtobj.sha256, file_obj)
+        self.client.download_file(vtobj.sha256, file_obj)
         file_obj.seek(0)
         file_contents = file_obj.read()
 

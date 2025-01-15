@@ -2122,7 +2122,7 @@ class MispFeed:
                 for obj in objects:
                     try:
                         file_name = obj.key.split("/")[-1]
-                        self.s3.retrieve_entities_from_file(obj.key, file_name)
+                        self.s3.download_file(obj.key, file_name)
                         events = json.load(open(file_name, "r"))
                         bundle = self._process_event(events)
                         self._send_bundle(work_id, bundle)
