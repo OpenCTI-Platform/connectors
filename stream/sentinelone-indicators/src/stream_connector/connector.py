@@ -299,7 +299,7 @@ class IndicatorStreamConnector:
             )
             response = requests.post(url, headers=HEADERS, data=payload)
             if response.status_code == 429:
-                if attempts < self.max_api_attempts:
+                if attempts < self.config.max_api_attempts:
                     new_wait_time = calculate_exponential_delay(wait_time)
                     self.helper.log_debug(
                         f"Too many requests to S1, waiting: {new_wait_time} seconds"
