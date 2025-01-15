@@ -11,7 +11,7 @@ from .utils import SUPPORTED_COLLECTIONS
 
 
 
-class ConnectorZvelo:
+class ConnectorBambenek:
     """
     Represents Zvelo external import connector.
     """
