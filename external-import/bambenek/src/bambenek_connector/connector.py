@@ -101,7 +101,7 @@ class ConnectorBambenek:
             )
 
             # Performing the collection of intelligence
-            stix_objects = self._collect_intelligence(from_date=last_run)
+            stix_objects = self._collect_intelligence()
 
             if stix_objects is not None and len(stix_objects) != 0:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)

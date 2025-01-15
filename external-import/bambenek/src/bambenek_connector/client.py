@@ -19,7 +19,7 @@ class ConnectorClient:
         self.config = config
 
         self.base_url = "https://faf.bambenekconsulting.com/feeds/"
-        self.auth = (self.config.username, self.config.password)
+        self.auth = (self.config.bambenek_username, self.config.bambenek_password)
         self.session = requests.Session()
         self.collection_url = {
             "c2_dga": "dga/dga-feed.csv",

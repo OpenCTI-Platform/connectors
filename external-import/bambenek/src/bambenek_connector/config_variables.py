@@ -23,6 +23,7 @@ class ConfigConnector:
         :return: Configuration dictionary
         """
         config_file_path = Path(__file__).parents[1].joinpath("config.yml")
+        print(f"CONFIG FILE PATH = {config_file_path}")
         config = (
             yaml.load(open(config_file_path), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
@@ -36,6 +37,13 @@ class ConfigConnector:
         Connector configuration variables
         :return: None
         """
+        self.duration_period = get_config_variable(
+            env_var="CONNECTOR_DURATION_PERIOD",
+            yaml_path=["connector", "duration_period"],
+            config=self.load,
+            required=True,
+        )
+
         self.bambenek_username = get_config_variable(
             env_var="BAMBENEK_USERNAME",
             yaml_path=["bambenek", "username"],
