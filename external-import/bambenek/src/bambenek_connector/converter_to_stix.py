@@ -1,7 +1,7 @@
 from ipaddress import ip_address, AddressValueError
 from datetime import datetime
 from dateutil.parser import parse
-from pycti import Identity, Indicator, StixCoreRelationship
+from pycti import StixCoreRelationship
 from csv import DictReader
 from stix2 import IPv4Address, IPv6Address, DomainName, Indicator, Identity, Relationship, TLP_GREEN
 
