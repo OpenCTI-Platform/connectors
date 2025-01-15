@@ -1,8 +1,11 @@
 from unittest.mock import MagicMock
 
 import pytest
-from common_fixtures import proofpoint_client  # noqa: F401 pylint:disable=unused-import
-from common_fixtures import fixture_data_domainrepdata, fixture_data_iprepdata
+from common_fixtures import (  # noqa: F401 pylint:disable=unused-import
+    fixture_data_domainrepdata,
+    fixture_data_iprepdata,
+    proofpoint_client,
+)
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 
 
