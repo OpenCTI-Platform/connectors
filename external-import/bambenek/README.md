@@ -29,7 +29,9 @@ The connector supports the ingestion of the following data collections: c2_dga,c
 - [c2_ip](http://osint.bambenekconsulting.com/manual/c2-ipmasterlist.txt): Master feed of known, active and non-sinkholed C&Cs IP Addresses
 - [c2_ip_highconf](http://osint.bambenekconsulting.com/manual/c2-ipmasterlist.txt): High confidence master feed of known, active and non-sinkholed C&Cs IP Addresses
 
-Documentation: For documentation please visit the links provided for the feed. A listing of all available feeds can be found [here](https://faf.bambenekconsulting.com/feeds/) 
+## Documentation
+For documentation please visit the links provided for the feed. A listing of all available feeds can be found [here](https://faf.bambenekconsulting.com/feeds/)
+Information about Bambenek Consulting can be found [here](https://www.bambenekconsulting.com/)
 
 The connector ingests the following entities:
 - Indicators: Malicious Indicators are ingested as Indicators
@@ -135,26 +137,10 @@ download of data by re-running the connector.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+The connector pulls files from Bambenek's server then parses them into stix2 objects depending on the feed
 
 
 ## Debugging
 
 The connector can be debugged by setting the appropriate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
-
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
-
-## Additional information
-
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
