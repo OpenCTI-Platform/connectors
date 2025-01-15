@@ -1,10 +1,9 @@
 import ipaddress
 from datetime import datetime
-from typing import Union, Tuple
 
 import stix2
 from dateutil.parser import parse
-from pycti import Identity, Indicator, Malware, StixCoreRelationship
+from pycti import Identity, Indicator, StixCoreRelationship
 import csv
 
 from stix2 import IPv4Address, IPv6Address

@@ -10,7 +10,6 @@ from .converter_to_stix import ConverterToStix
 from .utils import SUPPORTED_COLLECTIONS
 
 
-
 class ConnectorBambenek:
     """
     Represents Bambenek external import connector.
@@ -129,8 +128,8 @@ class ConnectorBambenek:
             self.helper.set_state(current_state)
 
             message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(current_state_datetime)
+                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                    + str(current_state_datetime)
             )
 
             self.helper.api.work.to_processed(work_id, message)

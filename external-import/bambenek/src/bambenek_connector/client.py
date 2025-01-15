@@ -1,8 +1,3 @@
-import gzip
-import os
-import tempfile
-from typing import Dict
-
 import requests
 
 
