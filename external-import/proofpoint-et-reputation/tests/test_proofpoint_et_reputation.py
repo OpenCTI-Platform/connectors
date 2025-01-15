@@ -82,7 +82,6 @@ from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
         "--ExceptionError--Failure",
     ],
 )
-@pytest.mark.usefixtures("proofpoint_client")
 def test_fetch_data(
     mocker,
     request,
