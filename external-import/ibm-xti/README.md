@@ -133,13 +133,15 @@ download of data by re-running the connector.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+The IBM XTI connector populates the following entity types from the IBM X-Force TAXII server:
+  - Indicators
+  - Reports
+  - Vulnerabilities
+  - Malware
 
+By default, the connector will ingest from all collections your TAXII credentials have access to. If you configure the optional `taxii_collections` setting, then ingestion will be limited to only those specified collections. Once you have configured the required settings, such as the `taxii_server_url`, `taxii_user`, and `taxii_pass`, the connector will ingest from all applicable collections in parallel, so you don't have to wait for each collection to finish ingesting one by one.
+
+Note: some of the collections have a large volume of data. It is expected behavior upon the initial run of the connector for it to run for several hours. After each run, the connector will store information about the last records it retrieved, so upon the next scheduled run of the connector, it will only ingest new records. If the connector runs into any transient issues while ingesting from a collection, it will retry from where it left off. The connector runs every 5 minutes by default, unless otherwise configured; a new run will not start until all ingestion processes have completed.
 
 ## Debugging
 
