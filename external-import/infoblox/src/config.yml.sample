@@ -16,4 +16,4 @@ infoblox:
   url: 'https://csp.infoblox.com/tide/api/data/threats'
   interval: 12 # In hours
   ioc_limit: '10000' # Limit of IOCs to import (for each IOC types)
-  marking_definition: 'TLP:AMBER'
+  marking_definition: 'TLP:AMBER+STRICT'

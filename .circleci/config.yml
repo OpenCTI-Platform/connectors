@@ -113,6 +113,10 @@ jobs:
           name: Build Docker image opencti/connector-diode-import
           command: docker build -t opencti/connector-diode-import:latest . && docker tag opencti/connector-diode-import:latest opencti/connector-diode-import:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/wiz
+          name: Build Docker image opencti/connector-wiz
+          command: docker build -t opencti/connector-wiz:latest . && docker tag opencti/connector-wiz:latest opencti/connector-wiz:${CIRCLE_TAG}          
+      - run:
           working_directory: ~/opencti/external-import/crowdstrike
           name: Build Docker image opencti/connector-crowdstrike
           command: docker build -t opencti/connector-crowdstrike:latest . && docker tag opencti/connector-crowdstrike:latest opencti/connector-crowdstrike:${CIRCLE_TAG}
@@ -408,6 +412,8 @@ jobs:
             docker push opencti/connector-diode-import:${CIRCLE_TAG}
             docker push opencti/connector-alienvault:latest
             docker push opencti/connector-alienvault:${CIRCLE_TAG}
+            docker push opencti/connector-wiz:latest
+            docker push opencti/connector-wiz:${CIRCLE_TAG}
             docker push opencti/connector-crowdstrike:latest
             docker push opencti/connector-crowdstrike:${CIRCLE_TAG}
             docker push opencti/connector-cuckoo:latest
@@ -415,7 +421,7 @@ jobs:
             docker push opencti/connector-cape:latest
             docker push opencti/connector-cape:${CIRCLE_TAG}
             docker push opencti/connector-domaintools:latest
-            docker push opencti/connector-domaintools:${CIRCLE_TAG}            
+            docker push opencti/connector-domaintools:${CIRCLE_TAG}
             docker push opencti/connector-misp:latest
             docker push opencti/connector-misp:${CIRCLE_TAG}
             docker push opencti/connector-mitre:latest
@@ -538,12 +544,14 @@ jobs:
             docker push opencti/connector-shadowtrackr:${CIRCLE_TAG}
             docker push opencti/connector-greynoise-vuln:latest
             docker push opencti/connector-greynoise-vuln:${CIRCLE_TAG}
-            docker push opencti/connector-tenable-vuln-management:latest 
+            docker push opencti/connector-tenable-vuln-management:latest
             docker push opencti/connector-tenable-vuln-management:${CIRCLE_TAG}
             docker push opencti/connector-attribution-tools:latest
             docker push opencti/connector-attribution-tools:${CIRCLE_TAG}
             docker push opencti/connector-tenable-security-center:latest
             docker push opencti/connector-tenable-security-center:${CIRCLE_TAG}
+            docker push opencti/connector-ipsum:latest
+            docker push opencti/connector-ipsum:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -819,6 +827,14 @@ jobs:
           name: Build Docker image opencti/connector-qradar
           command: docker build -t opencti/connector-qradar:latest . && docker tag opencti/connector-qradar:latest opencti/connector-qradar:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/stream/stream-exporter
+          name: Build Docker image opencti/connector-stream-exporter
+          command: docker build -t opencti/connector-stream-exporter:latest . && docker tag opencti/connector-stream-exporter:latest opencti/connector-stream-exporter:${CIRCLE_TAG}
+      - run:
+          working_directory: ~/opencti/external-import/stream-importer
+          name: Build Docker image opencti/connector-stream-importer
+          command: docker build -t opencti/connector-stream-importer:latest . && docker tag opencti/connector-stream-importer:latest opencti/connector-stream-importer:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -952,6 +968,10 @@ jobs:
             docker push opencti/connector-tanium-intel:${CIRCLE_TAG}
             docker push opencti/connector-qradar:latest
             docker push opencti/connector-qradar:${CIRCLE_TAG}
+            docker push opencti/connector-stream-exporter:latest
+            docker push opencti/connector-stream-exporter:${CIRCLE_TAG}
+            docker push opencti/connector-stream-importer:latest
+            docker push opencti/connector-stream-importer:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1053,6 +1073,10 @@ jobs:
           name: Build Docker image opencti/connector-google-secops-siem
           command: docker build -t opencti/connector-google-secops-siem:latest . && docker tag opencti/connector-google-secops-siem:latest opencti/connector-google-secops-siem:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/stream/zscaler
+          name: Build Docker image opencti/connector-zscaler
+          command: docker build -t opencti/connector-zscaler:latest . && docker tag opencti/connector-zscaler:latest opencti/connector-zscaler:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1066,6 +1090,8 @@ jobs:
             docker push opencti/connector-zvelo:${CIRCLE_TAG}            
             docker push opencti/connector-google-secops-siem:latest
             docker push opencti/connector-google-secops-siem:${CIRCLE_TAG}
+            docker push opencti/connector-zscaler:latest
+            docker push opencti/connector-zscaler:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1160,6 +1186,10 @@ jobs:
           working_directory: ~/opencti/external-import/diode-import
           name: Build Docker image opencti/connector-diode-import
           command: docker build -t opencti/connector-diode-import:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/wiz
+          name: Build Docker image opencti/connector-wiz
+          command: docker build -t opencti/connector-wiz:rolling .
       - run:
           working_directory: ~/opencti/external-import/crowdstrike
           name: Build Docker image opencti/connector-crowdstrike
@@ -1429,6 +1459,10 @@ jobs:
           name: Build Docker image opencti/connector-tenable-security-center
           command: docker build -t opencti/connector-tenable-security-center:rolling .
       - run:
+          working_directory: ~/opencti/external-import/ipsum
+          name: Build Docker image opencti/connector-ipsum
+          command: docker build -t opencti/connector-ipsum:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1440,6 +1474,7 @@ jobs:
             docker push opencti/connector-hygiene:rolling
             docker push opencti/connector-alienvault:rolling
             docker push opencti/connector-diode-import:rolling
+            docker push opencti/connector-wiz:rolling
             docker push opencti/connector-crowdstrike:rolling
             docker push opencti/connector-cuckoo:rolling
             docker push opencti/connector-cape:rolling
@@ -1506,6 +1541,7 @@ jobs:
             docker push opencti/connector-tenable-vuln-management:rolling
             docker push opencti/connector-attribution-tools:rolling
             docker push opencti/connector-tenable-security-center:rolling
+            docker push opencti/connector-ipsum:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1789,6 +1825,14 @@ jobs:
           name: Build Docker image opencti/connector-qradar
           command: docker build -t opencti/connector-qradar:rolling .
       - run:
+          working_directory: ~/opencti/stream/stream-exporter
+          name: Build Docker image opencti/connector-stream-exporter
+          command: docker build -t opencti/connector-stream-exporter:rolling .
+      - run:
+          working_directory: ~/opencti/external-import/stream-importer
+          name: Build Docker image opencti/connector-stream-importer
+          command: docker build -t opencti/connector-stream-importer:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1858,6 +1902,8 @@ jobs:
             docker push opencti/connector-tanium-incidents:rolling
             docker push opencti/connector-tanium-intel:rolling
             docker push opencti/connector-qradar:rolling
+            docker push opencti/connector-stream-exporter:rolling
+            docker push opencti/connector-stream-importer:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -1959,6 +2005,10 @@ jobs:
           name: Build Docker image opencti/connector-google-secops-siem
           command: docker build -t opencti/connector-google-secops-siem:rolling .
       - run:
+          working_directory: ~/opencti/stream/zscaler
+          name: Build Docker image opencti/connector-zscaler
+          command: docker build -t opencti/connector-zscaler:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1967,6 +2017,7 @@ jobs:
             docker push opencti/connector-intel471_v2:rolling
             docker push opencti/connector-zvelo:rolling
             docker push opencti/connector-google-secops-siem:rolling
+            docker push opencti/connector-zscaler:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
