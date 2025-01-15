@@ -4,8 +4,15 @@ from ipaddress import AddressValueError, ip_address
 
 from dateutil.parser import parse
 from pycti import StixCoreRelationship
-from stix2 import (TLP_GREEN, DomainName, Identity, Indicator, IPv4Address,
-                   IPv6Address, Relationship)
+from stix2 import (
+    TLP_GREEN,
+    DomainName,
+    Identity,
+    Indicator,
+    IPv4Address,
+    IPv6Address,
+    Relationship,
+)
 
 DEFAULT_CONFIDENCE_LEVEL = 50
 DEFAULT_TLP = TLP_GREEN
