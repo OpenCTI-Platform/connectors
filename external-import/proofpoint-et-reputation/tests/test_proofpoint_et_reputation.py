@@ -4,10 +4,8 @@ import pytest
 from common_fixtures import (
     fixture_data_domainrepdata,
     fixture_data_iprepdata,
-    mock_config,
-    mock_helper,
+    proofpoint_client,
 )
-from connector.services.client_api import ProofpointEtReputationClient
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 
 
@@ -86,32 +84,38 @@ from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 )
 def test_fetch_data(
     mocker,
+    request,
+    proofpoint_client,
     side_effect,
     expected_result,
     fixture_data,
     data_name,
-    request,
-    mock_helper,
-    mock_config,
 ):
     """
     Test fetch_data with different error scenarios and a success case.
-    """
-    client = ProofpointEtReputationClient(mock_helper, mock_config)
 
+    Args:
+        mocker: Pytest mocker object for mocking.
+        request: Pytest fixture for dynamically accessing other fixtures.
+        proofpoint_client: The instance of the Proofpoint client to be tested.
+        side_effect: The exception or error condition to simulate.
+        expected_result: The expected result or error message.
+        fixture_data: The name of the fixture containing the test data.
+        data_name: The name of the reputation list collection to test ('iprepdata' or 'domainrepdata').
+    """
     if side_effect is None:
         data = request.getfixturevalue(fixture_data)
         mock_fetch = mocker.patch(
             "requests.Session.send",
             return_value=MagicMock(status_code=200, json=lambda: data),
         )
-        result = client.fetch_data(reputation_list_entity=data_name)
+        result = proofpoint_client.fetch_data(reputation_list_entity=data_name)
         print(f"Fetched data for {fixture_data}: {result}")
         assert result == data
         mock_fetch.assert_called_once()
     else:
         mock_fetch = mocker.patch("requests.Session.send", side_effect=side_effect)
-        result = client.fetch_data(reputation_list_entity=data_name)
+        result = proofpoint_client.fetch_data(reputation_list_entity=data_name)
         print(f"Exception triggered {result}")
         assert result == expected_result
         mock_fetch.assert_called_once()
