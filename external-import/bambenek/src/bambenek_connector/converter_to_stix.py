@@ -48,14 +48,15 @@ class ConverterToStix:
         )
         return author
 
-    def _create_stix_indicator(self,
-                               pattern_value: str,
-                               name: str,
-                               observable_type: str,
-                               confidence_level: int = DEFAULT_CONFIDENCE_LEVEL,
-                               labels: list[str] = None,
-                               valid_from: datetime = None,
-                               ) -> Indicator:
+    def _create_stix_indicator(
+        self,
+        pattern_value: str,
+        name: str,
+        observable_type: str,
+        confidence_level: int = DEFAULT_CONFIDENCE_LEVEL,
+        labels: list[str] = None,
+        valid_from: datetime = None,
+    ) -> Indicator:
         """
         Convenience method to return an indicator using common patterns from the Bambenek feeds
         """
@@ -84,7 +85,9 @@ class ConverterToStix:
         reader = DictReader(entities, fieldnames=fieldnames, delimiter=",")
         return list(reader)
 
-    def _convert_ip_to_stix(self, ip: str, labels: list[str]) -> tuple[IPv4Address | IPv6Address | None, int | None]:
+    def _convert_ip_to_stix(
+        self, ip: str, labels: list[str]
+    ) -> tuple[IPv4Address | IPv6Address | None, int | None]:
         """
         Convert IOC's associated IPs to STIX 2.1 IPs Observables and link them to the main Observable.
         :param ip: single ip address
@@ -116,9 +119,7 @@ class ConverterToStix:
         return stix_ip_object, ip_version
 
     @staticmethod
-    def _create_relation(
-            source_id: str, target_id: str, relation: str
-    ) -> Relationship:
+    def _create_relation(source_id: str, target_id: str, relation: str) -> Relationship:
         """
         Create a STIX 2.1 Relationship object.
         :param source_id: STIX 2.1 source object's ID
@@ -165,8 +166,7 @@ class ConverterToStix:
                 name=entity.get("domain"),
                 observable_type="Domain",
                 labels=[cleaned_tag, collection],
-                valid_from=parse(entity.get("fetch_date"))
-
+                valid_from=parse(entity.get("fetch_date")),
             )
             # create relation between observable and indicator
             stix_relationship = self._create_relation(
@@ -191,8 +191,9 @@ class ConverterToStix:
             bundle_objects = []
             # Appears in the tags and is unnecessary
             cleaned_tag = entity.get("tag").replace("IP used by ", "")
-            stix_observable, ip_version = self._convert_ip_to_stix(ip=entity.get("ip"),
-                                                                   labels=[cleaned_tag])
+            stix_observable, ip_version = self._convert_ip_to_stix(
+                ip=entity.get("ip"), labels=[cleaned_tag]
+            )
             if not stix_observable:
                 continue
             pattern_value = f"[ipv{ip_version}-addr:value = '" + entity.get("ip") + "']"
@@ -202,7 +203,7 @@ class ConverterToStix:
                 name=entity.get("ip"),
                 observable_type=observable_type,
                 labels=[cleaned_tag, collection],
-                valid_from=parse(entity.get("fetch_date"))
+                valid_from=parse(entity.get("fetch_date")),
             )
             # create relation between observable and indicator
             stix_relationship = self._create_relation(

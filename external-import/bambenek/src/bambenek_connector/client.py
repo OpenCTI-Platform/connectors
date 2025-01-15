@@ -40,5 +40,3 @@ class ConnectorClient:
         # All the bambenek files have a large number of comment lines at the top. This filters those out
         filtered_entries = [entry for entry in resp_ascii if not entry.startswith("#")]
         return filtered_entries
-
-

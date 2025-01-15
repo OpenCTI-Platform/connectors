@@ -53,8 +53,11 @@ class ConnectorBambenek:
 
             # Get entities from external sources
             entities = self.client.get_collections_entities(collection=collection)
-            stix_objects.extend(self.converter_to_stix.convert_collection_to_stix(collection=collection,
-                                                                                  entities=entities))
+            stix_objects.extend(
+                self.converter_to_stix.convert_collection_to_stix(
+                    collection=collection, entities=entities
+                )
+            )
         return stix_objects
 
     def process_message(self) -> None:
@@ -128,8 +131,8 @@ class ConnectorBambenek:
             self.helper.set_state(current_state)
 
             message = (
-                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                    + str(current_state_datetime)
+                f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                + str(current_state_datetime)
             )
 
             self.helper.api.work.to_processed(work_id, message)
