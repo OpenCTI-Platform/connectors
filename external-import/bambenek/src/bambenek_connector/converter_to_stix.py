@@ -1,9 +1,11 @@
-from ipaddress import ip_address, AddressValueError
+from csv import DictReader
 from datetime import datetime
+from ipaddress import AddressValueError, ip_address
+
 from dateutil.parser import parse
 from pycti import StixCoreRelationship
-from csv import DictReader
-from stix2 import IPv4Address, IPv6Address, DomainName, Indicator, Identity, Relationship, TLP_GREEN
+from stix2 import (TLP_GREEN, DomainName, Identity, Indicator, IPv4Address,
+                   IPv6Address, Relationship)
 
 DEFAULT_CONFIDENCE_LEVEL = 50
 DEFAULT_TLP = TLP_GREEN
