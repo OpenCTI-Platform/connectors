@@ -1,10 +1,10 @@
-import json
 from datetime import datetime
 from typing import Generator
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 from pycti import OpenCTIConnectorHelper
+from requests.adapters import HTTPAdapter, Retry
 
 from .config_loader import ConfigLoader
 from ..models.spycloud import BreachCatalog, BreachRecord
@@ -20,18 +20,25 @@ class SpyCloudClient:
         self.helper = helper
         self.config = config
 
-        # Define headers in session and update when needed
-        headers = {
-            "Accept": "application/json",
-            "X-API-KEY": self.config.spycloud.api_key,
-        }
-        self.session = requests.Session()
-        self.session.headers.update(headers)
+        self.session = self._session(
+            headers={
+                "Accept": "application/json",
+                "X-API-KEY": self.config.spycloud.api_key,
+            }
+        )
 
-    def _read_json(self, file_name) -> list[dict]:
-        with open(f"data_samples/{file_name}", encoding="utf-8") as f:
-            data = json.load(f)
-            return data
+    def _session(self, headers: dict = None):
+        session = requests.Session()
+        if headers:
+            session.headers.update(headers)
+
+        retry_strategy = Retry(
+            total=3, backoff_factor=2, status_forcelist=[429, 500, 502, 504]
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount(self.config.spycloud.api_base_url, adapter)
+
+        return session
 
     def _request(self, method: str = "GET", url: str = None, **kwargs):
         """
@@ -40,7 +47,6 @@ class SpyCloudClient:
         :return: Parsed response body
         """
         try:
-            # TODO: implement retry logic
             response = self.session.request(method, url, **kwargs)
             response.raise_for_status()
 
@@ -49,9 +55,18 @@ class SpyCloudClient:
             )
 
             return response.json() if response.content else None
+
+        except requests.exceptions.RetryError as err:
+            self.helper.connector_logger.error(
+                f"[API] Maximum retries exceeded while sending {method.upper()} request: ",
+                {"url": url, "error": err},
+            )
+
         except requests.RequestException as err:
-            error_msg = f"[API] Error while sending {method.upper()} request: "
-            self.helper.connector_logger.error(error_msg, {"url": url, "error": err})
+            self.helper.connector_logger.error(
+                f"[API] Error while sending {method.upper()} request: ",
+                {"url": url, "error": err},
+            )
 
     def get_breach_catalog(self, breach_catalog_id: str = None) -> BreachCatalog:
         """
@@ -64,9 +79,6 @@ class SpyCloudClient:
         )
 
         data = self._request(method="GET", url=url)
-        # data = self._read_json(
-        #     "get_catalog.json"
-        # )  # TODO: remove once spycloud account is re-activated
         if not data:
             return None
 
@@ -101,9 +113,6 @@ class SpyCloudClient:
         cursor = True  # only to enter while loop
         while cursor:
             data = self._request(method="GET", url=url, params=params)
-            # data = self._read_json(
-            #     "all_watchlist.json"
-            # )  # TODO: remove once spycloud account is re-activated
 
             results = data["results"] if data else []
             for result in results:
@@ -112,4 +121,3 @@ class SpyCloudClient:
             cursor = data["cursor"] if data else None
             if cursor:
                 params["cursor"] = cursor
-                # cursor = None  # TODO: remove once spycloud account is re-activated
