@@ -1077,6 +1077,10 @@ jobs:
           name: Build Docker image opencti/connector-zscaler
           command: docker build -t opencti/connector-zscaler:latest . && docker tag opencti/connector-zscaler:latest opencti/connector-zscaler:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/hunt-io
+          name: Build Docker image opencti/connector-hunt-io
+          command: docker build -t opencti/connector-hunt-io:latest . && docker tag opencti/connector-hunt-io:latest opencti/connector-hunt-io:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -1092,6 +1096,8 @@ jobs:
             docker push opencti/connector-google-secops-siem:${CIRCLE_TAG}
             docker push opencti/connector-zscaler:latest
             docker push opencti/connector-zscaler:${CIRCLE_TAG}
+            docker push opencti/connector-hunt-io:latest
+            docker push opencti/connector-hunt-io:${CIRCLE_TAG}
       - slack/notify:
           event: fail
           template: basic_fail_1
@@ -2009,6 +2015,10 @@ jobs:
           name: Build Docker image opencti/connector-zscaler
           command: docker build -t opencti/connector-zscaler:rolling .
       - run:
+          working_directory: ~/opencti/external-import/hunt-io
+          name: Build Docker image opencti/connector-hunt-io
+          command: docker build -t opencti/connector-hunt-io:rolling .
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -2018,6 +2028,7 @@ jobs:
             docker push opencti/connector-zvelo:rolling
             docker push opencti/connector-google-secops-siem:rolling
             docker push opencti/connector-zscaler:rolling
+            docker push opencti/connector-hunt-io:rolling
       - slack/notify:
           event: fail
           template: basic_fail_1
