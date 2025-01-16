@@ -61,7 +61,7 @@ class ConfigConnector:
             "FLASHPOINT_IMPORT_REPORTS",
             ["flashpoint", "import_reports"],
             self.load,
-            default=True
+            default=True,
         )
 
         self.indicators_in_reports = get_config_variable(
@@ -75,28 +75,28 @@ class ConfigConnector:
             "FLASHPOINT_IMPORT_INDICATORS",
             ["flashpoint", "import_indicators"],
             self.load,
-            default=True
+            default=True,
         )
 
         self.import_alerts = get_config_variable(
             "FLASHPOINT_IMPORT_ALERTS",
             ["flashpoint", "import_alerts"],
             self.load,
-            default=True
+            default=True,
         )
 
         self.alert_create_related_entities = get_config_variable(
             "FLASHPOINT_ALERT_CREATE_RELATED_ENTITIES",
             ["flashpoint", "alert_create_related_entities"],
             self.load,
-            default=False
+            default=False,
         )
 
         self.import_communities = get_config_variable(
             "FLASHPOINT_IMPORT_COMMUNITIES",
             ["flashpoint", "import_communities"],
             self.load,
-            default=False
+            default=False,
         )
 
         communities_queries = get_config_variable(
@@ -111,7 +111,7 @@ class ConfigConnector:
             "FLASHPOINT_ALERTS_CREATE_RELATED_ENTITIES",
             ["flashpoint", "alerts_create_related_entities"],
             self.load,
-            default=False
+            default=False,
         )
 
         # deprecated configuration option, use duration_period instead

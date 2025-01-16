@@ -26,7 +26,7 @@ class ConnectorClient:
         :param doc_id:
         :return:
         """
-        url = self.flashpoint_api_url + "/sources/v2/communities/"+doc_id
+        url = self.flashpoint_api_url + "/sources/v2/communities/" + doc_id
         params = {}
         response = self.session.get(url, params=params)
         response.raise_for_status()
@@ -42,9 +42,7 @@ class ConnectorClient:
         page = 0
         body_params = {
             "query": query,
-            "include": {
-                "date": {"start": start_date, "end": ""}
-            },
+            "include": {"date": {"start": start_date, "end": ""}},
             "size": "1000",
             "sort": {"date": "asc"},
             "page": page,
@@ -67,7 +65,7 @@ class ConnectorClient:
         :param doc_id:
         :return:
         """
-        url = self.flashpoint_api_url + "/sources/v2/media/"+doc_id
+        url = self.flashpoint_api_url + "/sources/v2/media/" + doc_id
         params = {}
         response = self.session.get(url, params=params)
         response.raise_for_status()
@@ -131,7 +129,10 @@ class ConnectorClient:
         """
         :return:
         """
-        url = self.flashpoint_api_url + "/technical-intelligence/v1/misp-feed/manifest.json"
+        url = (
+            self.flashpoint_api_url
+            + "/technical-intelligence/v1/misp-feed/manifest.json"
+        )
         response = self.session.get(url)
         response.raise_for_status()
         data = response.json()
@@ -141,7 +142,9 @@ class ConnectorClient:
         """
         :return:
         """
-        url = self.flashpoint_api_url + "/technical-intelligence/v1/misp-feed/"+filename
+        url = (
+            self.flashpoint_api_url + "/technical-intelligence/v1/misp-feed/" + filename
+        )
         response = self.session.get(url)
         response.raise_for_status()
         data = response.json()

@@ -63,7 +63,9 @@ class FlashpointConnector:
         self.helper.connector_logger.info(f"Going to ingest: {len(reports)} reports")
         for report in reports:
             try:
-                stix_report_objects = self.converter_to_stix.convert_flashpoint_report(report)
+                stix_report_objects = self.converter_to_stix.convert_flashpoint_report(
+                    report
+                )
                 bundle = self.helper.stix2_create_bundle(stix_report_objects)
                 self._send_bundle(work_id=work_id, serialized_bundle=bundle)
             except Exception as err:
@@ -81,7 +83,9 @@ class FlashpointConnector:
         now = datetime.datetime.now(datetime.UTC)
 
         # Friendly name will be displayed on OpenCTI platform
-        friendly_name = "Flashpoint Communities Search run @ " + now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        friendly_name = "Flashpoint Communities Search run @ " + now.strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
 
         # Initiate a new work for reports ingestion
         work_id = self.helper.api.work.initiate_work(
@@ -93,11 +97,15 @@ class FlashpointConnector:
             try:
                 results = self.client.communities_search(query, start_date)
             except Exception as err:
-                message = f"An error occurred while searching in communities, error: {err}"
+                message = (
+                    f"An error occurred while searching in communities, error: {err}"
+                )
                 self.helper.connector_logger.error(message)
             for result in results:
                 try:
-                    stix_objects = self.converter_to_stix.convert_communities_search(result)
+                    stix_objects = self.converter_to_stix.convert_communities_search(
+                        result
+                    )
                     bundle = self.helper.stix2_create_bundle(stix_objects)
                     self.helper.send_stix2_bundle(
                         bundle,
@@ -118,17 +126,17 @@ class FlashpointConnector:
             now = datetime.datetime.now(datetime.UTC)
 
             friendly_name = (
-                    "Flashpoint MISP Feed run @ " + now.astimezone(pytz.UTC).isoformat()
+                "Flashpoint MISP Feed run @ " + now.astimezone(pytz.UTC).isoformat()
             )
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
             current_state = self.helper.get_state()
             if (
-                    current_state is not None
-                    and "misp_last_run" in current_state
-                    and "misp_last_event_timestamp" in current_state
-                    and "misp_last_event" in current_state
+                current_state is not None
+                and "misp_last_run" in current_state
+                and "misp_last_event_timestamp" in current_state
+                and "misp_last_event" in current_state
             ):
                 last_run = parse(current_state["misp_last_run"])
                 last_event = parse(current_state["misp_last_event"])
@@ -146,7 +154,8 @@ class FlashpointConnector:
                 last_event = last_run
                 last_event_timestamp = int(last_event.timestamp())
                 self.helper.log_info(
-                    "Connector MISP Feed last run: " + last_run.astimezone(pytz.UTC).isoformat()
+                    "Connector MISP Feed last run: "
+                    + last_run.astimezone(pytz.UTC).isoformat()
                 )
                 self.helper.log_info(
                     "Connector MISP Feed latest event: "
@@ -177,26 +186,32 @@ class FlashpointConnector:
                             + " (date="
                             + item["date"]
                             + ", modified="
-                            + datetime.datetime.fromtimestamp(last_event_timestamp, datetime.UTC)
+                            + datetime.datetime.fromtimestamp(
+                                last_event_timestamp, datetime.UTC
+                            )
                             .astimezone(pytz.UTC)
                             .isoformat()
                             + ")"
                         )
 
-                        misp_event = self.client.get_misp_event_file(item["event_key"] + ".json")
-                        bundle = self.misp_converter_to_stix.convert_misp_event_to_stix(misp_event)
+                        misp_event = self.client.get_misp_event_file(
+                            item["event_key"] + ".json"
+                        )
+                        bundle = self.misp_converter_to_stix.convert_misp_event_to_stix(
+                            misp_event
+                        )
                         self.helper.log_info("Sending event STIX2 bundle...")
                         self._send_bundle(work_id, bundle)
                         number_events = number_events + 1
                         message = (
-                                "Event processed, storing state (misp_last_run="
-                                + now.astimezone(pytz.utc).isoformat()
-                                + ", misp_last_event="
-                                + datetime.datetime.utcfromtimestamp(last_event_timestamp)
-                                .astimezone(pytz.UTC)
-                                .isoformat()
-                                + ", misp_last_event_timestamp="
-                                + str(last_event_timestamp)
+                            "Event processed, storing state (misp_last_run="
+                            + now.astimezone(pytz.utc).isoformat()
+                            + ", misp_last_event="
+                            + datetime.datetime.utcfromtimestamp(last_event_timestamp)
+                            .astimezone(pytz.UTC)
+                            .isoformat()
+                            + ", misp_last_event_timestamp="
+                            + str(last_event_timestamp)
                         )
                         current_state = self.helper.get_state()
                         if current_state is None:
@@ -232,17 +247,17 @@ class FlashpointConnector:
 
             # Store the current timestamp as a last run
             message = (
-                    "Connector successfully run ("
-                    + str(number_events)
-                    + " events have been processed), storing state (misp_last_run="
-                    + now.astimezone(pytz.utc).isoformat()
-                    + ", misp_last_event="
-                    + datetime.datetime.utcfromtimestamp(last_event_timestamp)
-                    .astimezone(pytz.UTC)
-                    .isoformat()
-                    + ", misp_last_event_timestamp="
-                    + str(last_event_timestamp)
-                    + ")"
+                "Connector successfully run ("
+                + str(number_events)
+                + " events have been processed), storing state (misp_last_run="
+                + now.astimezone(pytz.utc).isoformat()
+                + ", misp_last_event="
+                + datetime.datetime.utcfromtimestamp(last_event_timestamp)
+                .astimezone(pytz.UTC)
+                .isoformat()
+                + ", misp_last_event_timestamp="
+                + str(last_event_timestamp)
+                + ")"
             )
             self.helper.log_info(message)
             self.helper.api.work.to_processed(work_id, message)
@@ -281,64 +296,108 @@ class FlashpointConnector:
             try:
                 # common useful alert information
                 if alert.get("source", None) is None:
-                    self.helper.log_warning("Invalid alert data format, alert doesn't contains a 'source' field, skipping it")
+                    self.helper.log_warning(
+                        "Invalid alert data format, alert doesn't contains a 'source' field, skipping it"
+                    )
                     continue
 
                 else:
                     processed_alert = {}
-                    processed_alert["alert_id"] = str(alert.get('id'))
-                    processed_alert["channel_type"] = alert.get("resource", {}).get("site", {}).get("title", "")
-                    processed_alert["channel_name"] = alert.get("resource", {}).get("title") if "title" in alert.get("resource", {}) else processed_alert["channel_type"]
-                    processed_alert["author"] = alert.get("resource", {}).get("site_actor", {}).get("names", {}).get("handle", "")
+                    processed_alert["alert_id"] = str(alert.get("id"))
+                    processed_alert["channel_type"] = (
+                        alert.get("resource", {}).get("site", {}).get("title", "")
+                    )
+                    processed_alert["channel_name"] = (
+                        alert.get("resource", {}).get("title")
+                        if "title" in alert.get("resource", {})
+                        else processed_alert["channel_type"]
+                    )
+                    processed_alert["author"] = (
+                        alert.get("resource", {})
+                        .get("site_actor", {})
+                        .get("names", {})
+                        .get("handle", "")
+                    )
                     processed_alert["created_at"] = alert.get("created_at", "")
-                    processed_alert["alert_status"] = alert.get("status") if alert.get("status") is not None else "None"
+                    processed_alert["alert_status"] = (
+                        alert.get("status")
+                        if alert.get("status") is not None
+                        else "None"
+                    )
                     processed_alert["alert_source"] = alert.get("source")
-                    processed_alert["alert_reason"] = alert.get("reason", {}).get("name", "")
+                    processed_alert["alert_reason"] = alert.get("reason", {}).get(
+                        "name", ""
+                    )
                     processed_alert["highlight_text"] = alert.get("highlight_text", "")
                     processed_alert["document_id"] = alert.get("resource", {}).get("id")
                     processed_alert["flashpoint_url"] = (
-                            "https://app.flashpoint.io/search/context/"
-                            + alert.get("source")
-                            + "/"
-                            + alert.get("resource", {}).get("id")
+                        "https://app.flashpoint.io/search/context/"
+                        + alert.get("source")
+                        + "/"
+                        + alert.get("resource", {}).get("id")
                     )
 
                     if alert.get("source") == "communities":
-                        alert_document = self.client.get_communities_doc(alert.get("resource").get("id"))
-                        processed_alert["channel_aliases"] = alert_document.get("results").get("site_actor_alias", [])
-                        processed_alert["channel_ref"] = alert_document.get("results").get("container_external_uri", None)
+                        alert_document = self.client.get_communities_doc(
+                            alert.get("resource").get("id")
+                        )
+                        processed_alert["channel_aliases"] = alert_document.get(
+                            "results"
+                        ).get("site_actor_alias", [])
+                        processed_alert["channel_ref"] = alert_document.get(
+                            "results"
+                        ).get("container_external_uri", None)
                         stix_alert_objects = self.converter_to_stix.alert_to_incident(
                             alert=processed_alert,
-                            create_related_entities=self.config.alert_create_related_entities
+                            create_related_entities=self.config.alert_create_related_entities,
                         )
 
                     elif alert.get("source") == "media":
-                        alert_document = self.client.get_media_doc(alert.get("resource").get("id"))
+                        alert_document = self.client.get_media_doc(
+                            alert.get("resource").get("id")
+                        )
                         if alert_document.get("storage_uri", None):
-                            media_content, media_type = self.client.get_media(alert_document.get("storage_uri"))
+                            media_content, media_type = self.client.get_media(
+                                alert_document.get("storage_uri")
+                            )
                             if media_content:
-                                guess_file_extension = mimetypes.guess_extension(media_type)
+                                guess_file_extension = mimetypes.guess_extension(
+                                    media_type
+                                )
                                 processed_alert["media_content"] = media_content
                                 processed_alert["media_type"] = media_type
-                                processed_alert["media_name"] = alert_document.get("media_id") + guess_file_extension
+                                processed_alert["media_name"] = (
+                                    alert_document.get("media_id")
+                                    + guess_file_extension
+                                )
 
                         stix_alert_objects = self.converter_to_stix.alert_to_incident(
                             alert=processed_alert,
-                            create_related_entities=self.config.alert_create_related_entities
+                            create_related_entities=self.config.alert_create_related_entities,
                         )
 
                     elif alert.get("source").startswith("data_exposure"):
-                        processed_alert["channel_type"] = alert.get("resource", {}).get("source")
-                        processed_alert["channel_name"] = alert.get("resource", {}).get("repo")
-                        processed_alert["author"] = alert.get("resource", {}).get("owner")
-                        processed_alert["flashpoint_url"] = alert.get("resource", {}).get("url")
+                        processed_alert["channel_type"] = alert.get("resource", {}).get(
+                            "source"
+                        )
+                        processed_alert["channel_name"] = alert.get("resource", {}).get(
+                            "repo"
+                        )
+                        processed_alert["author"] = alert.get("resource", {}).get(
+                            "owner"
+                        )
+                        processed_alert["flashpoint_url"] = alert.get(
+                            "resource", {}
+                        ).get("url")
                         stix_alert_objects = self.converter_to_stix.alert_to_incident(
                             alert=processed_alert,
-                            create_related_entities=self.config.alert_create_related_entities
+                            create_related_entities=self.config.alert_create_related_entities,
                         )
 
                     else:
-                        self.helper.log_warning(f"Unable to process alert data source format: {alert.get("source")}, skipping it")
+                        self.helper.log_warning(
+                            f"Unable to process alert data source format: {alert.get("source")}, skipping it"
+                        )
                         continue
 
                     # pushing STIX alert
@@ -405,7 +464,9 @@ class FlashpointConnector:
             # Performing the collection of intelligence
 
             if self.config.import_alerts:
-                start_date = parse(current_state["last_run"]).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                start_date = parse(current_state["last_run"]).strftime(
+                    "%Y-%m-%dT%H:%M:%S.%fZ"
+                )
                 self.helper.connector_logger.info(
                     f"Import Alerts enable, "
                     f"going to fetch Alerts since: {start_date}"
@@ -429,7 +490,9 @@ class FlashpointConnector:
                 self._import_misp_feed()
 
             if self.config.import_communities:
-                start_date = parse(current_state["last_run"]).strftime("%Y-%m-%dT%H:%M:%SZ")
+                start_date = parse(current_state["last_run"]).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
                 self.helper.connector_logger.info(
                     f"Import Communities Data enable, "
                     f"going to fetch Communities Data since: {start_date}"
@@ -483,7 +546,9 @@ class FlashpointConnector:
                 duration_period=self.config.duration_period,
             )
         else:
-            self.helper.log_warning("'interval' option is deprecated.Please use 'duration_period' instead")
+            self.helper.log_warning(
+                "'interval' option is deprecated.Please use 'duration_period' instead"
+            )
             self.helper.schedule_unit(
                 message_callback=self.process_data,
                 duration_period=self.config.flashpoint_interval,

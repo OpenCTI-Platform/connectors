@@ -106,9 +106,9 @@ class MISPConverterToStix:
             tag_name_lower = tag["name"].lower()
             if self.misp_feed_markings_from_tags:
                 if (
-                        ":" in tag_name
-                        and "=" in tag_name
-                        and tag_name_lower.startswith("marking")
+                    ":" in tag_name
+                    and "=" in tag_name
+                    and tag_name_lower.startswith("marking")
                 ):
                     marking_definition_split = tag_name.split(":")
                     # Check if second part also contains ":"
@@ -116,9 +116,9 @@ class MISPConverterToStix:
                         # Example: marking:PAP=PAP:RED
                         # "PAP=PAP" + "RED"
                         marking_definition = (
-                                marking_definition_split[1]
-                                + ":"
-                                + marking_definition_split[2]
+                            marking_definition_split[1]
+                            + ":"
+                            + marking_definition_split[2]
                         )
                     else:
                         # Example: marking:CLASSIFICATION=DIFFUSION RESTREINTE
@@ -185,43 +185,45 @@ class MISPConverterToStix:
 
         for tag in tags:
             if (
-                    tag["name"] != "tlp:white"
-                    and tag["name"] != "tlp:green"
-                    and tag["name"] != "tlp:amber"
-                    and tag["name"] != "tlp:amber+strict"
-                    and tag["name"] != "tlp:red"
-                    and not tag["name"].startswith("misp-galaxy:threat-actor")
-                    and not tag["name"].startswith("misp-galaxy:mitre-threat-actor")
-                    and not tag["name"].startswith("misp-galaxy:microsoft-activity-group")
-                    and not tag["name"].startswith(
-                "misp-galaxy:mitre-enterprise-attack-threat-actor"
-            )
-                    and not tag["name"].startswith(
-                "misp-galaxy:mitre-mobile-attack-intrusion-set"
-            )
-                    and not tag["name"].startswith("misp-galaxy:mitre-intrusion-set")
-                    and not tag["name"].startswith(
-                "misp-galaxy:mitre-enterprise-attack-intrusion-set"
-            )
-                    and not tag["name"].startswith("misp-galaxy:mitre-malware")
-                    and not tag["name"].startswith(
-                "misp-galaxy:mitre-enterprise-attack-malware"
-            )
-                    and not tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
-                    and not tag["name"].startswith("misp-galaxy:attack-pattern")
-                    and not tag["name"].startswith("misp-galaxy:mitre-enterprise-attack-attack-pattern")
-                    and not tag["name"].startswith("mitre:")
-                    and not tag["name"].startswith("misp-galaxy:mitre-tool")
-                    and not tag["name"].startswith("misp-galaxy:tool")
-                    and not tag["name"].startswith("misp-galaxy:ransomware")
-                    and not tag["name"].startswith("misp-galaxy:malpedia")
-                    and not tag["name"].startswith("misp-galaxy:sector")
-                    and not tag["name"].startswith("misp-galaxy:country")
-                    and not tag["name"].startswith("marking")
-                    and not tag["name"].startswith("creator")
-                    and not tag["name"].startswith("intrusion-set")
-                    and not tag["name"].startswith("malware")
-                    and not tag["name"].startswith("tool")
+                tag["name"] != "tlp:white"
+                and tag["name"] != "tlp:green"
+                and tag["name"] != "tlp:amber"
+                and tag["name"] != "tlp:amber+strict"
+                and tag["name"] != "tlp:red"
+                and not tag["name"].startswith("misp-galaxy:threat-actor")
+                and not tag["name"].startswith("misp-galaxy:mitre-threat-actor")
+                and not tag["name"].startswith("misp-galaxy:microsoft-activity-group")
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-threat-actor"
+                )
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-mobile-attack-intrusion-set"
+                )
+                and not tag["name"].startswith("misp-galaxy:mitre-intrusion-set")
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-intrusion-set"
+                )
+                and not tag["name"].startswith("misp-galaxy:mitre-malware")
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-malware"
+                )
+                and not tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
+                and not tag["name"].startswith("misp-galaxy:attack-pattern")
+                and not tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-attack-pattern"
+                )
+                and not tag["name"].startswith("mitre:")
+                and not tag["name"].startswith("misp-galaxy:mitre-tool")
+                and not tag["name"].startswith("misp-galaxy:tool")
+                and not tag["name"].startswith("misp-galaxy:ransomware")
+                and not tag["name"].startswith("misp-galaxy:malpedia")
+                and not tag["name"].startswith("misp-galaxy:sector")
+                and not tag["name"].startswith("misp-galaxy:country")
+                and not tag["name"].startswith("marking")
+                and not tag["name"].startswith("creator")
+                and not tag["name"].startswith("intrusion-set")
+                and not tag["name"].startswith("malware")
+                and not tag["name"].startswith("tool")
             ):
                 tag_value = tag["name"]
                 if '="' in tag["name"]:
@@ -268,15 +270,15 @@ class MISPConverterToStix:
                 continue
             # Get the linked intrusion sets
             if (
-                    (
-                            galaxy["namespace"] == "mitre-attack"
-                            and galaxy["name"] == "Intrusion Set"
-                    )
-                    or (galaxy["namespace"] == "misp" and galaxy["name"] == "Threat Actor")
-                    or (
+                (
+                    galaxy["namespace"] == "mitre-attack"
+                    and galaxy["name"] == "Intrusion Set"
+                )
+                or (galaxy["namespace"] == "misp" and galaxy["name"] == "Threat Actor")
+                or (
                     galaxy["namespace"] == "misp"
                     and galaxy["name"] == "Microsoft Activity Group actor"
-            )
+                )
             ):
                 for galaxy_entity in galaxy["GalaxyCluster"]:
                     if " - G" in galaxy_entity["value"]:
@@ -330,11 +332,11 @@ class MISPConverterToStix:
                         added_names.append(name)
             # Get the linked malwares
             if (
-                    (galaxy["namespace"] == "mitre-attack" and galaxy["name"] == "Malware")
-                    or (galaxy["namespace"] == "misp" and galaxy["name"] == "Tool")
-                    or (galaxy["namespace"] == "misp" and galaxy["name"] == "Ransomware")
-                    or (galaxy["namespace"] == "misp" and galaxy["name"] == "Android")
-                    or (galaxy["namespace"] == "misp" and galaxy["name"] == "Malpedia")
+                (galaxy["namespace"] == "mitre-attack" and galaxy["name"] == "Malware")
+                or (galaxy["namespace"] == "misp" and galaxy["name"] == "Tool")
+                or (galaxy["namespace"] == "misp" and galaxy["name"] == "Ransomware")
+                or (galaxy["namespace"] == "misp" and galaxy["name"] == "Android")
+                or (galaxy["namespace"] == "misp" and galaxy["name"] == "Malpedia")
             ):
                 for galaxy_entity in galaxy["GalaxyCluster"]:
                     if " - S" in galaxy_entity["value"]:
@@ -362,8 +364,8 @@ class MISPConverterToStix:
                         added_names.append(name)
             # Get the linked attack_patterns
             if (
-                    galaxy["namespace"] == "mitre-attack"
-                    and galaxy["name"] == "Attack Pattern"
+                galaxy["namespace"] == "mitre-attack"
+                and galaxy["name"] == "Attack Pattern"
             ):
                 for galaxy_entity in galaxy["GalaxyCluster"]:
                     if " - T" in galaxy_entity["value"]:
@@ -507,20 +509,20 @@ class MISPConverterToStix:
                             added_names.append(threat["name"])
             # Get the linked intrusion sets
             if (
-                    tag["name"].startswith("misp-galaxy:threat-actor")
-                    or tag["name"].startswith(
-                "misp-galaxy:mitre-mobile-attack-intrusion-set"
-            )
-                    or tag["name"].startswith("misp-galaxy:microsoft-activity-group")
-                    or tag["name"].startswith("misp-galaxy:mitre-threat-actor")
-                    or tag["name"].startswith(
-                "misp-galaxy:mitre-enterprise-attack-threat-actor"
-            )
-                    or tag["name"].startswith("misp-galaxy:mitre-intrusion-set")
-                    or tag["name"].startswith(
-                "misp-galaxy:mitre-enterprise-attack-intrusion-set"
-            )
-                    or tag["name"].startswith("intrusion-set")
+                tag["name"].startswith("misp-galaxy:threat-actor")
+                or tag["name"].startswith(
+                    "misp-galaxy:mitre-mobile-attack-intrusion-set"
+                )
+                or tag["name"].startswith("misp-galaxy:microsoft-activity-group")
+                or tag["name"].startswith("misp-galaxy:mitre-threat-actor")
+                or tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-threat-actor"
+                )
+                or tag["name"].startswith("misp-galaxy:mitre-intrusion-set")
+                or tag["name"].startswith(
+                    "misp-galaxy:mitre-enterprise-attack-intrusion-set"
+                )
+                or tag["name"].startswith("intrusion-set")
             ):
                 if "=" in tag["name"]:
                     tag_value_split = tag["name"].split('="')
@@ -551,9 +553,9 @@ class MISPConverterToStix:
                         added_names.append(name)
             # Get the linked tools
             if (
-                    tag["name"].startswith("misp-galaxy:mitre-tool")
-                    or tag["name"].startswith("misp-galaxy:mitre-enterprise-attack-tool")
-                    or tag["name"].startswith("tool")
+                tag["name"].startswith("misp-galaxy:mitre-tool")
+                or tag["name"].startswith("misp-galaxy:mitre-enterprise-attack-tool")
+                or tag["name"].startswith("tool")
             ):
                 if "=" in tag["name"]:
                     tag_value_split = tag["name"].split('="')
@@ -582,13 +584,13 @@ class MISPConverterToStix:
                         added_names.append(name)
             # Get the linked malwares
             if (
-                    tag["name"].startswith("misp-galaxy:mitre-malware")
-                    or tag["name"].startswith("misp-galaxy:mitre-enterprise-attack-malware")
-                    or tag["name"].startswith("misp-galaxy:misp-ransomware")
-                    or tag["name"].startswith("misp-galaxy:misp-tool")
-                    or tag["name"].startswith("misp-galaxy:misp-android")
-                    or tag["name"].startswith("misp-galaxy:misp-malpedia")
-                    or tag["name"].startswith("malware")
+                tag["name"].startswith("misp-galaxy:mitre-malware")
+                or tag["name"].startswith("misp-galaxy:mitre-enterprise-attack-malware")
+                or tag["name"].startswith("misp-galaxy:misp-ransomware")
+                or tag["name"].startswith("misp-galaxy:misp-tool")
+                or tag["name"].startswith("misp-galaxy:misp-android")
+                or tag["name"].startswith("misp-galaxy:misp-malpedia")
+                or tag["name"].startswith("malware")
             ):
                 if "=" in tag["name"]:
                     tag_value_split = tag["name"].split('="')
@@ -618,10 +620,10 @@ class MISPConverterToStix:
                         added_names.append(name)
             # Get the linked attack_patterns
             if (
-                    tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
-                    or tag["name"].startswith("misp-galaxy:attack-pattern")
-                    or tag["name"].startswith("mitre-attack:attack-pattern")
-                    or tag["name"].startswith("mitre:")
+                tag["name"].startswith("misp-galaxy:mitre-attack-pattern")
+                or tag["name"].startswith("misp-galaxy:attack-pattern")
+                or tag["name"].startswith("mitre-attack:attack-pattern")
+                or tag["name"].startswith("mitre:")
             ):
                 if "=" in tag["name"]:
                     tag_value_split = tag["name"].split('="')
@@ -682,8 +684,8 @@ class MISPConverterToStix:
         :return:
         """
         if re.match(
-                r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}(\/([1-9]|[1-2]\d|3[0-2]))?$",
-                value,
+            r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}(\/([1-9]|[1-2]\d|3[0-2]))?$",
+            value,
         ):
             if type:
                 return "IPv4-Addr"
@@ -829,6 +831,7 @@ class MISPConverterToStix:
         :param bundle_objects:
         :return:
         """
+
         def reformat(match):
             type = match.group(1)
             uuid = match.group(2)
@@ -851,16 +854,16 @@ class MISPConverterToStix:
         return content
 
     def _process_attribute(
-            self,
-            author: stix2.Identity,
-            event_elements,
-            event_markings,
-            event_labels,
-            object_observable,
-            attribute_external_references,
-            attribute,
-            event_threat_level,
-            create_relationships,
+        self,
+        author: stix2.Identity,
+        event_elements,
+        event_markings,
+        event_labels,
+        object_observable,
+        attribute_external_references,
+        attribute,
+        event_threat_level,
+        create_relationships,
     ):
         """
         :param author:
@@ -938,8 +941,8 @@ class MISPConverterToStix:
             elif "path" in OPENCTI_STIX2[observable_resolver]:
                 if "transform" in OPENCTI_STIX2[observable_resolver]:
                     if (
-                            OPENCTI_STIX2[observable_resolver]["transform"]["operation"]
-                            == "remove_string"
+                        OPENCTI_STIX2[observable_resolver]["transform"]["operation"]
+                        == "remove_string"
                     ):
                         observable_value = observable_value.replace(
                             OPENCTI_STIX2[observable_resolver]["transform"]["value"],
@@ -1124,8 +1127,8 @@ class MISPConverterToStix:
                                 custom_properties=custom_properties,
                             )
                         elif (
-                                OPENCTI_STIX2[observable_resolver]["path"][1]
-                                == "serial_number"
+                            OPENCTI_STIX2[observable_resolver]["path"][1]
+                            == "serial_number"
                         ):
                             observable = stix2.File(
                                 serial_number=observable_value,
@@ -1148,7 +1151,9 @@ class MISPConverterToStix:
                             observable = stix2.Identity(
                                 id=Identity.generate_id(
                                     observable_value,
-                                    OPENCTI_STIX2[observable_resolver]["identity_class"],
+                                    OPENCTI_STIX2[observable_resolver][
+                                        "identity_class"
+                                    ],
                                 ),
                                 name=observable_value,
                                 identity_class=OPENCTI_STIX2[observable_resolver][
@@ -1168,8 +1173,8 @@ class MISPConverterToStix:
             if "Sighting" in attribute:
                 for misp_sighting in attribute["Sighting"]:
                     if (
-                            "Organisation" in misp_sighting
-                            and misp_sighting["Organisation"]["name"] != author.name
+                        "Organisation" in misp_sighting
+                        and misp_sighting["Organisation"]["name"] != author.name
                     ):
                         sighted_by = stix2.Identity(
                             id=Identity.generate_id(
@@ -1249,7 +1254,7 @@ class MISPConverterToStix:
                 )
             # Create relationship between MISP attribute (indicator or observable) and MISP object (observable)
             if object_observable is not None and (
-                    indicator is not None or observable is not None
+                indicator is not None or observable is not None
             ):
                 relationships.append(
                     stix2.Relationship(
@@ -1270,9 +1275,9 @@ class MISPConverterToStix:
             # Event threats
             threat_names = {}
             for threat in (
-                    event_elements["intrusion_sets"]
-                    + event_elements["malwares"]
-                    + event_elements["tools"]
+                event_elements["intrusion_sets"]
+                + event_elements["malwares"]
+                + event_elements["tools"]
             ):
                 threat_names[threat.name] = threat.id
                 if indicator is not None:
@@ -1310,9 +1315,9 @@ class MISPConverterToStix:
 
             # Attribute threats
             for threat in (
-                    attribute_elements["intrusion_sets"]
-                    + attribute_elements["malwares"]
-                    + attribute_elements["tools"]
+                attribute_elements["intrusion_sets"]
+                + attribute_elements["malwares"]
+                + attribute_elements["tools"]
             ):
                 if threat.name in threat_names:
                     threat_id = threat_names[threat.name]
@@ -1664,7 +1669,7 @@ class MISPConverterToStix:
             description=event["Event"]["info"],
             external_id=event["Event"]["uuid"],
             url="https://app.flashpoint.io/cti/malware/iocs?query="
-                + event["Event"]["uuid"],
+            + event["Event"]["uuid"],
         )
 
         # Get indicators
@@ -1685,8 +1690,8 @@ class MISPConverterToStix:
                 create_relationships,
             )
             if (
-                    attribute["type"] == "link"
-                    and attribute["category"] == "External analysis"
+                attribute["type"] == "link"
+                and attribute["category"] == "External analysis"
             ):
                 event_external_references.append(
                     stix2.ExternalReference(
@@ -1711,8 +1716,8 @@ class MISPConverterToStix:
             attribute_external_references = []
             for attribute in misp_object["Attribute"]:
                 if (
-                        attribute["type"] == "link"
-                        and attribute["category"] == "External analysis"
+                    attribute["type"] == "link"
+                    and attribute["category"] == "External analysis"
                 ):
                     attribute_external_references.append(
                         stix2.ExternalReference(
@@ -1749,11 +1754,11 @@ class MISPConverterToStix:
                     unique_key = ""
                     if len(misp_object["Attribute"]) > 0:
                         unique_key = (
-                                " ("
-                                + misp_object["Attribute"][0]["type"]
-                                + "="
-                                + misp_object["Attribute"][0]["value"]
-                                + ")"
+                            " ("
+                            + misp_object["Attribute"][0]["type"]
+                            + "="
+                            + misp_object["Attribute"][0]["value"]
+                            + ")"
                         )
                     object_observable = CustomObservableText(
                         value=misp_object["name"] + unique_key,
@@ -1786,10 +1791,12 @@ class MISPConverterToStix:
                 if indicator is not None:
                     indicators.append(indicator)
                     if (
-                            indicator["indicator"] is not None
-                            and misp_object["meta-category"] == "file"
-                            and indicator["indicator"].get("x_opencti_main_observable_type", "Unknown")
-                            in FILETYPES
+                        indicator["indicator"] is not None
+                        and misp_object["meta-category"] == "file"
+                        and indicator["indicator"].get(
+                            "x_opencti_main_observable_type", "Unknown"
+                        )
+                        in FILETYPES
                     ):
                         object_attributes.append(indicator)
             # TODO Extend observable
@@ -1804,12 +1811,12 @@ class MISPConverterToStix:
                 added_markings.append(event_marking["id"])
         # Add event elements
         all_event_elements = (
-                event_elements["intrusion_sets"]
-                + event_elements["malwares"]
-                + event_elements["tools"]
-                + event_elements["attack_patterns"]
-                + event_elements["sectors"]
-                + event_elements["countries"]
+            event_elements["intrusion_sets"]
+            + event_elements["malwares"]
+            + event_elements["tools"]
+            + event_elements["attack_patterns"]
+            + event_elements["sectors"]
+            + event_elements["countries"]
         )
         for event_element in all_event_elements:
             if event_element["id"] not in added_object_refs:
@@ -1852,12 +1859,12 @@ class MISPConverterToStix:
                     added_sightings.append(attribute_sighting["id"])
             # Add attribute elements
             all_attribute_elements = (
-                    indicator["attribute_elements"]["intrusion_sets"]
-                    + indicator["attribute_elements"]["malwares"]
-                    + indicator["attribute_elements"]["tools"]
-                    + indicator["attribute_elements"]["attack_patterns"]
-                    + indicator["attribute_elements"]["sectors"]
-                    + indicator["attribute_elements"]["countries"]
+                indicator["attribute_elements"]["intrusion_sets"]
+                + indicator["attribute_elements"]["malwares"]
+                + indicator["attribute_elements"]["tools"]
+                + indicator["attribute_elements"]["attack_patterns"]
+                + indicator["attribute_elements"]["sectors"]
+                + indicator["attribute_elements"]["countries"]
             )
             for attribute_element in all_attribute_elements:
                 if attribute_element["id"] not in added_object_refs:
@@ -1901,9 +1908,9 @@ class MISPConverterToStix:
                                 relationship_type="related-to",
                                 created_by_ref=author["id"],
                                 description="Original Relationship: "
-                                            + ref["relationship_type"]
-                                            + "  \nComment: "
-                                            + ref["comment"],
+                                + ref["relationship_type"]
+                                + "  \nComment: "
+                                + ref["comment"],
                                 source_ref=src_result["entity"]["id"],
                                 target_ref=target_result["entity"]["id"],
                                 allow_custom=True,
@@ -1912,8 +1919,8 @@ class MISPConverterToStix:
         # Add object_relationships
         for object_relationship in objects_relationships:
             if (
-                    object_relationship["source_ref"] + object_relationship["target_ref"]
-                    not in added_object_refs
+                object_relationship["source_ref"] + object_relationship["target_ref"]
+                not in added_object_refs
             ):
                 object_refs.append(object_relationship)
                 added_object_refs.append(
@@ -1921,8 +1928,8 @@ class MISPConverterToStix:
                     + object_relationship["target_ref"]
                 )
             if (
-                    object_relationship["source_ref"] + object_relationship["target_ref"]
-                    not in added_relationships
+                object_relationship["source_ref"] + object_relationship["target_ref"]
+                not in added_relationships
             ):
                 bundle_objects.append(object_relationship)
                 added_relationships.append(

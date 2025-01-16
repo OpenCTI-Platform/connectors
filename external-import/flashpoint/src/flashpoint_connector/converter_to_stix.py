@@ -52,7 +52,7 @@ class ConverterToStix:
         author = stix2.Identity(
             id=Identity.generate_id(name="Flashpoint", identity_class="organization"),
             name="Flashpoint",
-            identity_class="organization"
+            identity_class="organization",
         )
         return author
 
@@ -65,9 +65,7 @@ class ConverterToStix:
         """
         try:
             relationship = stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    relation, source_id, target_id
-                ),
+                id=StixCoreRelationship.generate_id(relation, source_id, target_id),
                 relationship_type=relation,
                 created_by_ref=self.author,
                 source_ref=source_id,
@@ -213,15 +211,15 @@ class ConverterToStix:
 
                 for attack_pattern in elements["attack_patterns"]:
                     threats = (
-                            elements["threat_actors"]
-                            + elements["intrusion_sets"]
-                            + elements["malwares"]
+                        elements["threat_actors"]
+                        + elements["intrusion_sets"]
+                        + elements["malwares"]
                     )
                     for threat in threats:
                         relationship_uses = self.create_relation(
                             source_id=threat.id,
                             target_id=attack_pattern.id,
-                            relation="uses"
+                            relation="uses",
                         )
                         report_objects.append(relationship_uses)
 
@@ -229,9 +227,7 @@ class ConverterToStix:
                     threats = elements["threat_actors"] + elements["intrusion_sets"]
                     for threat in threats:
                         relationship_uses = self.create_relation(
-                            source_id=threat.id,
-                            target_id=malware.id,
-                            relation="uses"
+                            source_id=threat.id, target_id=malware.id, relation="uses"
                         )
                         report_objects.append(relationship_uses)
 
@@ -239,38 +235,34 @@ class ConverterToStix:
                     threats = elements["threat_actors"] + elements["intrusion_sets"]
                     for threat in threats:
                         relationship_uses = self.create_relation(
-                            source_id=threat.id,
-                            target_id=tool.id,
-                            relation="uses"
+                            source_id=threat.id, target_id=tool.id, relation="uses"
                         )
                         report_objects.append(relationship_uses)
 
                 victims = (
-                        elements["regions"] + elements["countries"] + elements["sectors"]
+                    elements["regions"] + elements["countries"] + elements["sectors"]
                 )
                 for victim in victims:
                     threats = (
-                            elements["threat_actors"]
-                            + elements["intrusion_sets"]
-                            + elements["malwares"]
+                        elements["threat_actors"]
+                        + elements["intrusion_sets"]
+                        + elements["malwares"]
                     )
                     for threat in threats:
                         relationship_uses = self.create_relation(
-                            source_id=threat.id,
-                            target_id=victim.id,
-                            relation="targets"
+                            source_id=threat.id, target_id=victim.id, relation="targets"
                         )
                         report_objects.append(relationship_uses)
                 report_objects = (
-                        report_objects
-                        + elements["regions"]
-                        + elements["countries"]
-                        + elements["sectors"]
-                        + elements["threat_actors"]
-                        + elements["intrusion_sets"]
-                        + elements["tools"]
-                        + elements["malwares"]
-                        + elements["attack_patterns"]
+                    report_objects
+                    + elements["regions"]
+                    + elements["countries"]
+                    + elements["sectors"]
+                    + elements["threat_actors"]
+                    + elements["intrusion_sets"]
+                    + elements["tools"]
+                    + elements["malwares"]
+                    + elements["attack_patterns"]
                 )
         return report_objects
 
@@ -290,21 +282,16 @@ class ConverterToStix:
             object_refs.append(report_object.id)
 
         stix_external_reference = stix2.ExternalReference(
-            source_name="Flashpoint",
-            url=report.get("platform_url")
+            source_name="Flashpoint", url=report.get("platform_url")
         )
 
         # Report in STIX lib must have at least one object_refs
         if len(object_refs) == 0:
             # Put a fake ID in the report
-            object_refs.append(
-                "intrusion-set--fc5ee88d-7987-4c00-991e-a863e9aa8a0e"
-            )
+            object_refs.append("intrusion-set--fc5ee88d-7987-4c00-991e-a863e9aa8a0e")
 
         stix_report = stix2.Report(
-            id=Report.generate_id(
-                report["title"], report["posted_at"]
-            ),
+            id=Report.generate_id(report["title"], report["posted_at"]),
             name=report["title"],
             report_types=["threat-report"],
             published=parse(report["posted_at"]),
@@ -314,9 +301,7 @@ class ConverterToStix:
             created_by_ref=self.author,
             object_marking_refs=[self.marking],
             object_refs=object_refs,
-            custom_properties={
-                "x_opencti_content": report["body"].encode("utf-8")
-            },
+            custom_properties={"x_opencti_content": report["body"].encode("utf-8")},
             allow_custom=True,
         )
         objects.append(stix_report)
@@ -335,8 +320,7 @@ class ConverterToStix:
         external_refs = []
         if channel_ref:
             external_ref = stix2.ExternalReference(
-                source_name=channel_type + " - " + channel_name,
-                url=channel_ref
+                source_name=channel_type + " - " + channel_name, url=channel_ref
             )
             external_refs.append(external_ref)
         channel = CustomObjectChannel(
@@ -344,7 +328,7 @@ class ConverterToStix:
             name=formatted_channel_name,
             aliases=channel_aliases,
             channel_types=[channel_type],
-            external_references=external_refs
+            external_references=external_refs,
         )
         return channel
 
@@ -354,7 +338,7 @@ class ConverterToStix:
         :param alert:
         :return:
         """
-        markdown_content = f'''
+        markdown_content = f"""
 ### Metadata
 - **Alert Id**: {alert.get("alert_id")}
 - **Created**: {alert.get("created_at")}
@@ -370,12 +354,12 @@ class ConverterToStix:
 ```
 {alert.get("highlight_text")}
 ```
-'''
+"""
         if alert.get("media_content", None):
-            media_part = f'''
+            media_part = f"""
 ### Media
 A media attachment ({alert.get("media_name")}) is available in Data section
-'''
+"""
             markdown_content += media_part
         return markdown_content
 
@@ -385,10 +369,16 @@ A media attachment ({alert.get("media_name")}) is available in Data section
         :param alert:
         :return:
         """
-        name = ("Alert: " + alert.get("alert_reason") + " - "
-                + alert.get("channel_type") + " - "
-                + alert.get("channel_name") + " - "
-                + alert.get("alert_id"))
+        name = (
+            "Alert: "
+            + alert.get("alert_reason")
+            + " - "
+            + alert.get("channel_type")
+            + " - "
+            + alert.get("channel_name")
+            + " - "
+            + alert.get("alert_id")
+        )
         return name
 
     @staticmethod
@@ -397,11 +387,13 @@ A media attachment ({alert.get("media_name")}) is available in Data section
         :param alert:
         :return:
         """
-        description = (f"A potential data exposure has been detected in **{alert.get("channel_type")}**. "
-                       f"The alert was triggered on "
-                       f"**{parse(alert.get("created_at")).strftime('%B %d, %Y, at %I:%M %p UTC')}** "
-                       f"by the rule **{alert.get("alert_reason").strip()}**. "
-                       f"For more details about this alert, please consult the Content tab.")
+        description = (
+            f"A potential data exposure has been detected in **{alert.get("channel_type")}**. "
+            f"The alert was triggered on "
+            f"**{parse(alert.get("created_at")).strftime('%B %d, %Y, at %I:%M %p UTC')}** "
+            f"by the rule **{alert.get("alert_reason").strip()}**. "
+            f"For more details about this alert, please consult the Content tab."
+        )
         return description
 
     def alert_to_incident(self, alert, create_related_entities):
@@ -421,19 +413,21 @@ A media attachment ({alert.get("media_name")}) is available in Data section
 
         # generate octi incident id
         incident_id = Incident.generate_id(
-            name=incident_name,
-            created=alert.get("created_at")
+            name=incident_name, created=alert.get("created_at")
         )
 
         # add the origin and source as labels
-        labels = ["rule:" + alert.get("alert_reason").lower(), alert.get("alert_source")]
+        labels = [
+            "rule:" + alert.get("alert_reason").lower(),
+            alert.get("alert_source"),
+        ]
 
         # generate a content based on alert useful information
         markdown_content = self.convert_alert_to_markdown_content(alert)
 
         # add the alert formatted content into a file attached to the incident
         files = []
-        markdown_content_bytes = markdown_content.encode('utf-8')
+        markdown_content_bytes = markdown_content.encode("utf-8")
         base64_bytes = base64.b64encode(markdown_content_bytes)
         files.append(
             {
@@ -460,8 +454,7 @@ A media attachment ({alert.get("media_name")}) is available in Data section
 
         # alert flashpoint reference
         incident_external_reference = stix2.ExternalReference(
-            source_name="Flashpoint",
-            url=alert.get("flashpoint_url")
+            source_name="Flashpoint", url=alert.get("flashpoint_url")
         )
 
         # create the incident
@@ -477,9 +470,7 @@ A media attachment ({alert.get("media_name")}) is available in Data section
             severity="low",
             object_marking_refs=[self.marking],
             source="Flashpoint - " + alert.get("alert_source"),
-            external_references=[
-                incident_external_reference
-            ],
+            external_references=[incident_external_reference],
             custom_properties={"x_opencti_files": files},
         )
         stix_objects.append(stix_incident)
@@ -490,7 +481,7 @@ A media attachment ({alert.get("media_name")}) is available in Data section
                 alert.get("channel_name"),
                 alert.get("channel_aliases"),
                 alert.get("channel_type"),
-                alert.get("channel_ref")
+                alert.get("channel_ref"),
             )
             stix_objects.append(stix_channel)
 
@@ -506,14 +497,14 @@ A media attachment ({alert.get("media_name")}) is available in Data section
                 source_ref=stix_incident.id,
                 target_ref=stix_channel.id,
                 object_marking_refs=[self.marking],
-                allow_custom=True
+                allow_custom=True,
             )
             stix_objects.append(relationship_uses)
 
             stix_media_content = CustomObservableMediaContent(
                 content=alert.get("highlight_text"),
                 url=alert.get("flashpoint_url"),
-                publication_date=parse(alert.get("created_at"))
+                publication_date=parse(alert.get("created_at")),
             )
             stix_objects.append(stix_media_content)
 
@@ -529,7 +520,7 @@ A media attachment ({alert.get("media_name")}) is available in Data section
                 source_ref=stix_media_content.id,
                 target_ref=stix_incident.id,
                 object_marking_refs=[self.marking],
-                allow_custom=True
+                allow_custom=True,
             )
             stix_objects.append(relationship_uses)
 
@@ -573,14 +564,12 @@ A media attachment ({alert.get("media_name")}) is available in Data section
             )
 
         start_time = (
-            parse(data["first_observed_at"])
-            if "first_observed_at" in data
-            else None
+            parse(data["first_observed_at"]) if "first_observed_at" in data else None
         )
         stop_time = (
             parse(data["last_observed_at"])
             if "last_observed_at" in data
-               and parse(data["last_observed_at"]) > start_time
+            and parse(data["last_observed_at"]) > start_time
             else None
         )
 
@@ -613,12 +602,11 @@ A media attachment ({alert.get("media_name")}) is available in Data section
                 if data.get("site_source_uri")
                 else []
             ),
-            )
+        )
         media_content = CustomObservableMediaContent(
             title=title,
             content=data["message"],
-            url="https://app.flashpoint.io/search/context/communities/"
-                + data["id"],
+            url="https://app.flashpoint.io/search/context/communities/" + data["id"],
             publication_date=data["date"],
         )
         # Waiting for FBI PR Persona / Monikers
