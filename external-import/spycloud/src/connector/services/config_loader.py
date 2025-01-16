@@ -113,18 +113,20 @@ class SpyCloudConfig:
         )
 
     @property
-    def breach_severities(self) -> list[str]:
+    def severity_levels(self) -> list[str]:
         # TODO: add enum validation?
-        breach_severities_string = get_config_variable(
-            env_var="SPYCLOUD_BREACH_SEVERITIES",
-            yaml_path=["spycloud", "breach_severities"],
+        severity_levels_string = get_config_variable(
+            env_var="SPYCLOUD_SEVERITY_LEVELS",
+            yaml_path=["spycloud", "severity_levels"],
             config=config_yml,
-            default="2,5,20,25",
+            default="",
             required=False,
         )
         return [
-            string.strip() for string in breach_severities_string.split(",")
-        ]  # TODO parse to int ?
+            string.strip()
+            for string in severity_levels_string.split(",")
+            if len(string.strip())
+        ]
 
     @property
     def watchlist_types(self) -> list[str]:
@@ -133,10 +135,14 @@ class SpyCloudConfig:
             env_var="SPYCLOUD_WATCHLIST_TYPES",
             yaml_path=["spycloud", "watchlist_types"],
             config=config_yml,
-            default="email,domain,subdomain,ip",
+            default="",
             required=False,
         )
-        return [string.strip() for string in watchlist_types_string.split(",")]
+        return [
+            string.strip()
+            for string in watchlist_types_string.split(",")
+            if len(string.strip())
+        ]
 
     @property
     def import_start_date(self) -> datetime:
@@ -181,7 +187,7 @@ class ConfigLoader:
             "spycloud": {
                 "api_base_url": self.spycloud.api_base_url,
                 "api_key": self.spycloud.api_key,
-                "breach_severities": self.spycloud.breach_severities,
+                "severity_levels": self.spycloud.severity_levels,
                 "watchlist_types": self.spycloud.watchlist_types,
                 "import_start_date": self.spycloud.import_start_date,
                 # "marking_definition": self.spycloud.marking_definition,

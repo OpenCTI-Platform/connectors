@@ -92,22 +92,22 @@ class SpyCloudClient:
 
     def get_breach_records(
         self,
-        watchlist_types: list = None,
-        breach_severities: list = None,
+        watchlist_type: str = None,
+        severity_levels: list[str] = None,
         since: datetime = None,
     ) -> Generator[BreachRecord, None, None]:
         """
         Retrieve breach records from Spycloud.
-        :param watchlist_types: Optional query param to filter breach records by watchlist
-        :param breach_severities: Optional query param to filter breach records by severity level
+        :param watchlist_type: Optional query param to filter breach records by watchlist type
+        :param severity_levels: Optional query param to filter breach records by severity levels
         :param since: Optional query param to filter breach records by publish date
         :return: List of breach records
         """
         url = urljoin(self.config.spycloud.api_base_url, "breach/data/watchlist")
         params = {
-            "watchlist_type": ",".join(watchlist_types) if watchlist_types else None,
-            "severity": ",".join(breach_severities) if breach_severities else None,
-            "since": since.isoformat() if since else None,
+            "watchlist_type": watchlist_type if watchlist_type else None,
+            "severity": ",".join(severity_levels) if severity_levels else None,
+            "since": since.strftime("%Y-%m-%d") if since else None,
         }
 
         cursor = True  # only to enter while loop

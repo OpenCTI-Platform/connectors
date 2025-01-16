@@ -29,7 +29,12 @@ class SpyCloudConnector:
         self.client = SpyCloudClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
-    def _collect_intelligence(self) -> list[OCTIBaseModel]:
+    def _collect_intelligence(
+        self,
+        watchlist_type: str = None,
+        severity_levels: list = None,
+        since: datetime = None,
+    ) -> list[OCTIBaseModel]:
         """
         Collect intelligence from the source and convert into OCTI objects
         :return: List of OCTI objects
@@ -37,9 +42,9 @@ class SpyCloudConnector:
         octi_objects = []
 
         breach_records = self.client.get_breach_records(
-            watchlist_types=self.config.spycloud.watchlist_types,
-            breach_severities=self.config.spycloud.breach_severities,
-            since=self.config.spycloud.import_start_date,
+            watchlist_type=watchlist_type,
+            severity_levels=severity_levels,
+            since=since,
         )
         for breach_record in breach_records:
             breach_catalog = self.client.get_breach_catalog(breach_record.source_id)
@@ -102,21 +107,28 @@ class SpyCloudConnector:
             )
 
             self.helper.connector_logger.info(
-                "[CONNECTOR] Running connector...",
+                "[CONNECTOR] Gathering data...",
                 {"connector_name": self.helper.connect_name},
             )
 
-            octi_objects = self._collect_intelligence()
-            if octi_objects:
-                stix_bundle = self._create_stix_bundle(octi_objects)
-                bundles_sent = self.helper.send_stix2_bundle(
-                    stix_bundle, work_id=work_id, cleanup_inconsistent_bundle=True
+            # If no specific watchlist type is set, pass None to ignore watchlist_type filter
+            watchlist_types_arguments = self.config.spycloud.watchlist_types or [None]
+            for watchlist_type_argument in watchlist_types_arguments:
+                octi_objects = self._collect_intelligence(
+                    watchlist_type=watchlist_type_argument,
+                    severity_levels=self.config.spycloud.severity_levels,
+                    since=self.config.spycloud.import_start_date,
                 )
+                if octi_objects:
+                    stix_bundle = self._create_stix_bundle(octi_objects)
+                    bundles_sent = self.helper.send_stix2_bundle(
+                        stix_bundle, work_id=work_id, cleanup_inconsistent_bundle=True
+                    )
 
-                self.helper.connector_logger.info(
-                    "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": len(bundles_sent)},
-                )
+                    self.helper.connector_logger.info(
+                        "Sending STIX objects to OpenCTI...",
+                        {"bundles_sent": len(bundles_sent)},
+                    )
 
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug(
