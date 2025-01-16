@@ -45,12 +45,12 @@ class ConfigConnector:
         # Connector extra parameters
         self.api_base_url = get_config_variable(
             "CONNECTOR_HUNT_UI_API_BASE_URL",
-            ["connector_hunt-io", "api_base_url"],
+            ["connector_hunt_io", "api_base_url"],
             self.load,
         )
 
         self.api_key = get_config_variable(
             "CONNECTOR_HUNT_UI_API_KEY",
-            ["connector_hunt-io", "api_key"],
+            ["connector_hunt_io", "api_key"],
             self.load,
         )
