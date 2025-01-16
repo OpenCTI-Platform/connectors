@@ -7,17 +7,28 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Flashpoint'
   scope: 'flashpoint'
-  run_and_terminate: false
   log_level: 'info'
+  run_and_terminate: false
+  duration_period: 'PT1H' # Interval given for scheduler process in ISO-8601 format
+
+  #============================================#
+  # Optional connector's definition parameters #
+  #============================================#
+  #queue_threshold: 500
+  #run_and_terminate: 'False'
+  #send_to_queue: 'True'
+  #send_to_directory: 'False'
+  #send_to_directory_path: 'ChangeMe'
+  #send_to_directory_retention: 7
 
 flashpoint:
   api_key: 'ChangeMe'
-  import_start_date: '2024-01-01'
-  import_reports: true
+  import_start_date: '2025-01-01'
+  import_alerts: true
+  alert_create_related_entities: false
   import_indicators: true
+  import_reports: true
+  indicators_in_reports: false
   import_communities: false
   communities_queries: 'cybersecurity,cyberattack'
-  import_alerts: true
-  indicators_in_reports: false
-  interval: 5 # In minutes
 
