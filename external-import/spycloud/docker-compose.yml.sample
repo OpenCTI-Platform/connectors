@@ -25,7 +25,7 @@ services:
       # Connector's custom execution parameters
       - SPYCLOUD_API_BASE_URL=CHANGEME
       - SPYCLOUD_API_KEY=CHANGEME
-      - SPYCLOUD_BREACH_SEVERITIES=2,5,20,25
+      - SPYCLOUD_SEVERITY_LEVELS=2,5,20,25
       - SPYCLOUD_WATCHLIST_TYPES=email,domain,subdomain,ip
       - IMPORT_START_DATE=1970-01-01T00:00:00Z
 
