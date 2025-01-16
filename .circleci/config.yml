@@ -3085,7 +3085,7 @@ workflows:
             filters:
               branches:
                 only:
-                  - /release\/.*/
+                  - master
       - build_prerelease_2:
           requires:
             - ensure_formatting
@@ -3094,7 +3094,7 @@ workflows:
           filters:
             branches:
               only:
-                - /release\/.*/
+                - master
       - build_prerelease_3:
           requires:
             - ensure_formatting
@@ -3103,7 +3103,7 @@ workflows:
           filters:
             branches:
               only:
-                - /release\/.*/
+                - master
       - build_prerelease_4:
           requires:
             - ensure_formatting
@@ -3112,7 +3112,7 @@ workflows:
           filters:
             branches:
               only:
-                - /release\/.*/
+                - master
       - notify:
           requires:
             - build_1
