@@ -11,7 +11,7 @@ import requests
 import stix2
 import yaml
 from dateutil.parser import parse
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable, StixCoreRelationship
 
 
 class ReportHub:
@@ -117,6 +117,7 @@ class ReportHub:
             stix_observ = None
         if stix_observ:
             based_on = stix2.v21.Relationship(
+                id=StixCoreRelationship.generate_id("based-on", stix_indicator["id"], stix_observ["id"]),
                 source_ref=stix_indicator["id"],
                 relationship_type="based-on",
                 target_ref=stix_observ["id"],
