@@ -75,7 +75,7 @@ class SpyCloudClient:
         :return: Found breach catalog
         """
         url = urljoin(
-            self.config.spycloud.api_base_url, f"/breach/catalog/{breach_catalog_id}"
+            self.config.spycloud.api_base_url, f"breach/catalog/{breach_catalog_id}"
         )
 
         data = self._request(method="GET", url=url)
@@ -103,7 +103,7 @@ class SpyCloudClient:
         :param since: Optional query param to filter breach records by publish date
         :return: List of breach records
         """
-        url = urljoin(self.config.spycloud.api_base_url, "/breach/data/watchlist")
+        url = urljoin(self.config.spycloud.api_base_url, "breach/data/watchlist")
         params = {
             "watchlist_type": ",".join(watchlist_types) if watchlist_types else None,
             "severity": ",".join(breach_severities) if breach_severities else None,

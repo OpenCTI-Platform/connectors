@@ -95,12 +95,13 @@ class ConnectorConfig:
 class SpyCloudConfig:
     @property
     def api_base_url(self) -> str:  # TODO type as URL ?
-        return get_config_variable(
+        raw_url = get_config_variable(
             env_var="SPYCLOUD_API_BASE_URL",
             yaml_path=["spycloud", "api_base_url"],
             config=config_yml,
             required=True,
         )
+        return raw_url if raw_url.endswith("/") else f"{raw_url}/"
 
     @property
     def api_key(self) -> str:
