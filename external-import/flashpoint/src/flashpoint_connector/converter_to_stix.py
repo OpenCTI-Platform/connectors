@@ -31,7 +31,7 @@ class ConverterToStix:
 
     def __init__(self, helper):
         self.helper = helper
-        self.author = self.create_author()
+        self.author_id = self.create_author()
         self.marking = stix2.MarkingDefinition(
             id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
             definition_type="statement",
@@ -43,18 +43,17 @@ class ConverterToStix:
             },
         )
 
-    @staticmethod
-    def create_author() -> dict:
+    def create_author(self) -> dict:
         """
         Create Author
-        :return: Author in Stix2 object
+        :return: Author ID
         """
-        author = stix2.Identity(
-            id=Identity.generate_id(name="Flashpoint", identity_class="organization"),
+        identity = self.helper.api.identity.create(
+            type="Organization",
             name="Flashpoint",
-            identity_class="organization",
+            description="Flashpoint is a data and intelligence company that empowers our customers to take rapid, decisive action to stop threats and reduce risk.",
         )
-        return author
+        return identity["standard_id"]
 
     def create_relation(self, source_id, target_id, relation):
         """
@@ -67,10 +66,10 @@ class ConverterToStix:
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(relation, source_id, target_id),
                 relationship_type=relation,
-                created_by_ref=self.author,
+                created_by_ref=self.author_id,
                 source_ref=source_id,
                 target_ref=target_id,
-                object_marking_refs=[self.marking],
+                object_marking_refs=[self.marking.get("id")],
                 allow_custom=True,
             )
             return relationship
@@ -298,8 +297,8 @@ class ConverterToStix:
             description=report["summary"],
             external_references=[stix_external_reference],
             labels=report["tags"],
-            created_by_ref=self.author,
-            object_marking_refs=[self.marking],
+            created_by_ref=self.author_id,
+            object_marking_refs=[self.marking.get("id")],
             object_refs=object_refs,
             custom_properties={"x_opencti_content": report["body"].encode("utf-8")},
             allow_custom=True,
@@ -463,12 +462,12 @@ A media attachment ({alert.get("media_name")}) is available in Data section
             name=incident_name,
             created=alert.get("created_at"),
             description=incident_description,
-            created_by_ref=self.author,
+            created_by_ref=self.author_id,
             allow_custom=True,
             incident_type="alert",
             labels=labels,
             severity="low",
-            object_marking_refs=[self.marking],
+            object_marking_refs=[self.marking.get("id")],
             source="Flashpoint - " + alert.get("alert_source"),
             external_references=[incident_external_reference],
             custom_properties={"x_opencti_files": files},
@@ -493,10 +492,10 @@ A media attachment ({alert.get("media_name")}) is available in Data section
                     stix_channel.id,
                 ),
                 relationship_type="uses",
-                created_by_ref=self.author,
+                created_by_ref=self.author_id,
                 source_ref=stix_incident.id,
                 target_ref=stix_channel.id,
-                object_marking_refs=[self.marking],
+                object_marking_refs=[self.marking.get("id")],
                 allow_custom=True,
             )
             stix_objects.append(relationship_uses)
@@ -516,10 +515,10 @@ A media attachment ({alert.get("media_name")}) is available in Data section
                     stix_incident.id,
                 ),
                 relationship_type="related-to",
-                created_by_ref=self.author,
+                created_by_ref=self.author_id,
                 source_ref=stix_media_content.id,
                 target_ref=stix_incident.id,
-                object_marking_refs=[self.marking],
+                object_marking_refs=[self.marking.get("id")],
                 allow_custom=True,
             )
             stix_objects.append(relationship_uses)
@@ -537,11 +536,11 @@ A media attachment ({alert.get("media_name")}) is available in Data section
                     "publishes", stix_channel.id, stix_media_content.id
                 ),
                 relationship_type="publishes",
-                created_by_ref=self.author,
+                created_by_ref=self.author_id,
                 source_ref=stix_channel.id,
                 target_ref=stix_media_content.id,
                 start_time=parse(alert.get("created_at")),
-                object_marking_refs=[self.marking],
+                object_marking_refs=[self.marking.get("id")],
                 allow_custom=True,
             )
             stix_objects.append(relationship_publishes)
@@ -622,7 +621,7 @@ A media attachment ({alert.get("media_name")}) is available in Data section
                 "publishes", channel.id, media_content.id
             ),
             relationship_type="publishes",
-            created_by_ref=self.author,
+            created_by_ref=self.author_id,
             source_ref=channel.id,
             target_ref=media_content.id,
             start_time=start_time,
