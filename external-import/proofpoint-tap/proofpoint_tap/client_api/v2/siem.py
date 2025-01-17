@@ -241,7 +241,7 @@ class ClickEvent(ResponseModel):
     click_time: AwareDatetime = Field(
         ..., alias="clickTime", description="Time the click occurred."
     )
-    guid = Field(..., alias="GUID", description="Unique ID of the click event.")
+    guid: str = Field(..., alias="GUID", description="Unique ID of the click event.")
     message_id: Optional[str] = Field(
         None, alias="messageID", description="Message-ID from headers."
     )
