@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import lru_cache
 from typing import Generator
 from urllib.parse import urljoin, urlparse
 
@@ -68,6 +69,10 @@ class SpyCloudClient:
                 {"url": url, "error": err},
             )
 
+    # Use cache to avoid requesting to the API the same breach catalog over and over.
+    # Cache is never cleared manually as we don't need fresh breach catalogs data (only their title are used).
+    # Default maxsize used (128 entries).
+    @lru_cache
     def get_breach_catalog(self, breach_catalog_id: str = None) -> BreachCatalog:
         """
         Retrieve a breach catalog from Spycloud.
