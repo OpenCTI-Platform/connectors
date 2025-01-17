@@ -66,7 +66,7 @@ class BaseClient(  # noqa: B024 # Even though there is no abstract method, it is
         """Initialize the client.
 
         Args:
-            base_url (str): The base URL of the TAP API.
+            base_url (URL): The base URL of the TAP API.
             principal (str): The principal to authenticate with the API.
             secret (str): The secret to authenticate with the API.
             timeout (timedelta): The timeout for the API requests.
