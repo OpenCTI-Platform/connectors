@@ -37,8 +37,8 @@ from proofpoint_tap.client_api.v2 import CampaignClient
 
 client = CampaignClient(
     base_url=URL("https://tap-api-v2.proofpoint.com"),
-    principal="principal",
-    secret="secret",
+    principal="changeme",
+    secret="changeme",
     timeout=timedelta(seconds=30),
     retry=3,
     backoff=timedelta(seconds=5),
