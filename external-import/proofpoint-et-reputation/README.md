@@ -179,9 +179,8 @@ flowchart TD
     H -- False --> K[Contains only observables]
     L[Contains observables, indicators, and their relationships]
     J --> L
-    K --> M[Send entities in STIX2 format to OpenCTI]
+    K --> M[Sent entities in STIX2 format to OpenCTI]
     L --> M
-    M[Push data to OpenCTI]
 ```
 
 ## Additional information
