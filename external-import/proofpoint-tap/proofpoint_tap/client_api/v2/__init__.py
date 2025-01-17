@@ -7,8 +7,6 @@ from .threat import ThreatClient
 
 __all__ = [
     "CampaignClient",
-    "TAPCompiledCampaignClient",
     "ForensicsClient",
     "ThreatClient",
-    "CampaignCompiledInfo",
 ]
