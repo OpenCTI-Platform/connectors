@@ -63,25 +63,28 @@ class ConverterToStix:
         )
 
     def make_relationship(
-        self, source_id: str, relationship_type: str, target_id: str
+        self,
+        source_object: Indicator,
+        relationship_type: str,
+        target_object: IPAddress | DomainName,
     ) -> Relationship:
         """
         Creates a relationship object and its representation in STIX 2.1 format.
 
         Args:
-            source_id (str): The ID of the source object.
+            source_object (Indicator): The source object.
             relationship_type (str): The type of the relationship.
-            target_id (str): The ID of the target object.
+            target_object (IPAddress | DomainName): The target object.
 
         Returns:
             Relationship: A relationship object and its representation in STIX 2.1 format.
         """
         return Relationship(
             relationship_type=relationship_type,
-            source_ref=source_id,
-            target_ref=target_id,
+            source=source_object,
+            target=target_object,
             markings=[self._tlp_amber_strict],
-            created_by_ref=self._author,
+            created_by=self._author,
         )
 
     def make_observable(
@@ -95,7 +98,7 @@ class ConverterToStix:
         Creates an observable object and its representation in STIX 2.1 format.
 
         Args:
-            value (IPv4Address | str): The value of the observable (IPv4 address or domain name).
+            value (IPv4Address | str): The value of the observable ("IPv4-Addr" or "Domain-Name").
             score (int): The reputation score of the observable.
             categories (list[str]): A list of categories linked to the observable.
             collection (str): The type of the observable ("IPv4-Addr" or "Domain-Name").
@@ -110,8 +113,7 @@ class ConverterToStix:
             markings=[self._tlp_amber_strict],
             x_opencti_score=score,
             x_opencti_labels=categories,
-            x_opencti_created_by_ref=self._author,
-            x_opencti_main_observable_type=collection,
+            x_opencti_created_by=self._author,
         )
 
         if collection == "IPv4-Addr":
@@ -145,7 +147,7 @@ class ConverterToStix:
             Indicator: A indicator object and its representation in STIX 2.1 format.
         """
         return Indicator(
-            created_by_ref=self._author,
+            created_by=self._author,
             name=entity,
             pattern=f"[{collection.lower()}:value='{entity}']",
             pattern_type="Stix",

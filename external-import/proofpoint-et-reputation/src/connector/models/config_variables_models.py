@@ -33,15 +33,15 @@ class ProofpointEtReputationConfigVar(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, str_min_length=1)
 
     duration_period: timedelta = Field(
-        description="Duration in ISO 8601 format", examples=["PT24H", "P1D"]
+        description="Duration period in ISO 8601 format.", examples=["PT24H", "P1D"]
     )
-    api_token: str = Field(description="API token for authentication")
+    api_token: str = Field(description="API token for authentication.")
     create_indicator: bool = Field(
-        description="Variable indicating whether indicators should be created or not"
+        description="Variable indicating whether indicators should be created or not."
     )
     min_score: int = Field(
         PositiveInt,
         ge=20,
         le=100,
-        description="Minimum score for processing, must be higher at 20",
+        description="Minimum score for processing, must be higher at 20.",
     )

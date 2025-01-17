@@ -11,7 +11,7 @@ services:
       - CONNECTOR_NAME=CHANGEME
       - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT24H # ISO8601 format in String, start with 'P...' for Period
+      - CONNECTOR_DURATION_PERIOD=CHANGEME # OPTIONAL default PT24H (ISO 8601 format, start with 'P...' for Period)
 
       # Connector's definition parameters OPTIONAL
       # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
