@@ -6,7 +6,7 @@ from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
 
 
-def make_session(retries: int = 3, backoff_factor: float = 0.3) -> requests.Session:
+def _make_session(retries: int = 3, backoff_factor: float = 0.3) -> requests.Session:
     """
     Create a configured `requests.Session` with retry and backoff policies.
 
@@ -48,7 +48,7 @@ class ProofpointEtReputationClient:
         self.config = config
         self.base_url = "https://rules.emergingthreatspro.com/"
 
-    def build_query_request(self, reputation_list_entity: str) -> requests.Request:
+    def _build_query_request(self, reputation_list_entity: str) -> requests.Request:
         """
          Constructs the full URL for an API request, including the path and query parameters.
 
@@ -77,7 +77,7 @@ class ProofpointEtReputationClient:
             )
             raise ValueError("Failed to build the query request due to an error.")
 
-    def fetch_data(self, reputation_list_entity: str) -> dict:
+    def _fetch_data(self, reputation_list_entity: str) -> dict:
         """
         Fetch reputation data for a specific collection from the ProofPoint ET Reputation API.
 
@@ -92,8 +92,8 @@ class ProofpointEtReputationClient:
             details about the failure.
         """
         try:
-            with make_session() as session:
-                build_query_request = self.build_query_request(reputation_list_entity)
+            with _make_session() as session:
+                build_query_request = self._build_query_request(reputation_list_entity)
                 prepared_request = session.prepare_request(build_query_request)
                 response = session.send(prepared_request)
                 response.raise_for_status()
@@ -132,7 +132,7 @@ class ProofpointEtReputationClient:
         Returns:
             dict: The IP reputation data as a dictionary, or an error dictionary if the request fails.
         """
-        return self.fetch_data(reputation_list)
+        return self._fetch_data(reputation_list)
 
     def proofpoint_get_domains_reputation(self, reputation_list: str) -> dict:
         """
@@ -144,4 +144,4 @@ class ProofpointEtReputationClient:
         Returns:
             dict: The domain reputation data as a dictionary, or an error dictionary if the request fails.
         """
-        return self.fetch_data(reputation_list)
+        return self._fetch_data(reputation_list)

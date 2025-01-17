@@ -25,7 +25,7 @@ class ProofpointEtReputationConnector:
 
     def __init__(self):
         """
-        Initialize the connector with the required configurations
+        Initialize the connector with the required configurations.
         """
 
         # Load configuration file and connection helper
@@ -158,7 +158,7 @@ class ProofpointEtReputationConnector:
                     self._process_send_stix_to_opencti(work_id, prepared_objects)
                 except Exception as err:
                     self.helper.connector_logger.error(
-                        "[ERROR] An unknown error occurred during the reputation handling process",
+                        "[ERROR] An unknown error occurred during the reputation handling process.",
                         {"collection": collection, "error": err},
                     )
                 finally:
@@ -196,8 +196,8 @@ class ProofpointEtReputationConnector:
                 elif collection == "Domain-Name":
                     yield DomainReputationModel(reputation={entity: reputation_score})
             except ValidationError as err:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Model validation: the reputation or reputation score does not conform to the schema. "
+                self.helper.connector_logger.debug(
+                    "[CONNECTOR] Model validation: The entity or reputation score does not conform to the schema. "
                     "The entity has been ignored.",
                     {
                         "collection": collection,
@@ -271,7 +271,7 @@ class ProofpointEtReputationConnector:
 
                 if self.config.min_score > highest_score_converted:
                     self.helper.connector_logger.debug(
-                        "[CONNECTOR] The creation of the entity was ignored due to your configuration of the min_score variable",
+                        "[CONNECTOR] The creation of the entity was ignored due to your configuration of the min_score variable.",
                         {
                             "collection": collection,
                             "min_score_config": self.config.min_score,
@@ -315,15 +315,15 @@ class ProofpointEtReputationConnector:
 
                     # Make relationship object between indicator and observable
                     relationship = self.converter_to_stix.make_relationship(
-                        indicator.id, "based-on", observable.id
+                        indicator, "based-on", observable
                     )
                     self.helper.connector_logger.debug(
-                        "[CONNECTOR] The generation of relationship in stix2 between.",
+                        "[CONNECTOR] The generation of the relationship between the observable and the indicator was a success.",
                         {
                             "relationship_id": relationship.id,
-                            "source_ref": relationship.source_ref,
+                            "source_ref": indicator.id,
                             "relationship_type": relationship.relationship_type,
-                            "target_ref": relationship.target_ref,
+                            "target_ref": observable.id,
                         },
                     )
                     stix_objects.append(relationship)
@@ -369,7 +369,7 @@ class ProofpointEtReputationConnector:
                     sep=" ", timespec="seconds"
                 )
                 self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector last run",
+                    "[CONNECTOR] Connector last run...",
                     {
                         "last_run_timestamp": last_run,
                         "last_run_isoformat": last_run_isoformat,
@@ -387,7 +387,7 @@ class ProofpointEtReputationConnector:
             # Store the current timestamp as a last run of the connector
             connector_stop = self.Utils.get_now(DateTimeFormat.ISO)
             self.helper.connector_logger.info(
-                "[CONNECTOR] Getting current state and update it with last run of the connector",
+                "[CONNECTOR] Getting current state and update it with last run of the connector.",
                 {"current_state": current_state},
             )
 
@@ -398,7 +398,7 @@ class ProofpointEtReputationConnector:
             self.helper.set_state(current_state)
 
             self.helper.connector_logger.info(
-                "[CONNECTOR] The connector has been successfully run, saving the last_run",
+                "[CONNECTOR] The connector has been successfully run, saving the last_run.",
                 {
                     "old_last_run_timestamp": last_run,
                     "new_last_run_timestamp": connector_start_timestamp,

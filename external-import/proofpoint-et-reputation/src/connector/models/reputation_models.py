@@ -5,10 +5,8 @@ from typing import Annotated
 from pydantic import AfterValidator, BaseModel, Field, PositiveInt
 
 # Definition of the compiled regex to validate the domain and subdomain
-# According to RFC 1034 and 1035, the underscore (_) is not permitted.
-# Entities in the proofpoint domain name list will be ignored during the process.
 domain_regex = re.compile(
-    r"^(?!-)(?:[A-Za-z0-9-]{1,63}(?<!-)\.)+(?!-)[A-Za-z0-9-]{2,63}(?<!-)$"
+    r"^(?=.{1,253}$)(?!-)(xn--)?(?:[A-Za-z0-9À-ÿ-_]{1,63}(?<!-)\.)+(?!-)(xn--)?[A-Za-z0-9À-ÿ-_]{2,63}(?<!-)$"
 )
 
 

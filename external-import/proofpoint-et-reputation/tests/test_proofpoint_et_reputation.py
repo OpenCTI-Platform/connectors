@@ -96,13 +96,13 @@ def test_fetch_data(
             "requests.Session.send",
             return_value=MagicMock(status_code=200, json=lambda: data),
         )
-        result = client.fetch_data(reputation_list_entity=data_name)
+        result = client._fetch_data(reputation_list_entity=data_name)
         print(f"Fetched data for {expected_result}: {result}")
         assert result == data
         mock_fetch.assert_called_once()
     else:
         mock_fetch = mocker.patch("requests.Session.send", side_effect=side_effect)
-        result = client.fetch_data(reputation_list_entity=data_name)
+        result = client._fetch_data(reputation_list_entity=data_name)
         print(f"Exception triggered: {result}")
         assert result == expected_result
         mock_fetch.assert_called_once()
