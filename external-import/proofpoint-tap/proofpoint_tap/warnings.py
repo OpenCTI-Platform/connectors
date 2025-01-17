@@ -243,19 +243,3 @@ class PermissiveBaseModel(BaseModel):
                 delattr(self, key)
         return self
 
-
-if __name__ == "__main__":
-
-    class MyModel(PermissiveBaseModel):
-        """Example of a model that allows extra fields and has recommended fields."""
-
-        foo: str = Field(...)
-        bar: Recommended[int] = Field(None)
-        baz: PermissiveLiteral[Literal["a", "b", "c"]] = Field(None)
-
-    my_model_ok = MyModel.model_validate({"foo": "hello", "bar": 123})
-    my_model_warning = MyModel.model_validate({"foo": "hello", "baz": "d", "other": 2})
-    try:
-        my_model_error = MyModel.model_validate({"foo": "hello", "bar": "hello"})
-    except ValidationError as e:
-        print("Validation error in my_model_error:", e)  # noqa: T201
