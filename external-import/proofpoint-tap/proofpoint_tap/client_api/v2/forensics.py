@@ -422,12 +422,12 @@ class ForensicsClient(BaseClient):
                 "Exactly one of 'threat_id' or 'campaign_id' must be provided."
             )
 
+        # jsonify the boolean for URL object (it only handles str and float)
         json_include_campaign_forensics: Optional[str] = None
         if threat_id is not None:
             if include_campaign_forensics is None:
                 json_include_campaign_forensics = "false"
             else:
-                # jsonify the boolean
                 json_include_campaign_forensics = str(
                     include_campaign_forensics
                 ).lower()
