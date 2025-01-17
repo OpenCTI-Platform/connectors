@@ -230,7 +230,7 @@ class ClickEvent(ResponseModel):
     campaign_id: Optional[str] = Field(
         None, alias="campaignId", description="Campaign identifier."
     )
-    classification: PermissiveLiteral[Literal["Malware", "Phish", "Spam"]] = Field(
+    classification: PermissiveLiteral[Literal["malware", "phish", "spam"]] = Field(
         ..., description="Threat classification of the URL."
     )
     click_ip: str = Field(
@@ -241,10 +241,31 @@ class ClickEvent(ResponseModel):
     click_time: AwareDatetime = Field(
         ..., alias="clickTime", description="Time the click occurred."
     )
-    url: str = Field(..., description="The URL clicked by the user.")
-    threats_info_map: list[ThreatInfo] = Field(
-        ..., alias="threatsInfoMap", description="Details about detected threats."
+    guid = Field(..., alias="GUID", description="Unique ID of the click event.")
+    message_id: Optional[str] = Field(
+        None, alias="messageID", description="Message-ID from headers."
     )
+    recipient: str = Field(..., description="Email recipient.")
+    sender: str = Field(..., description="Email sender.")
+    sender_ip: str = Field(..., alias="senderIP", description="Sender's IP address.")
+    threat_id: str = Field(
+        ..., alias="threatID", description="Details about detected threats."
+    )
+    threat_time: AwareDatetime = Field(
+        ..., alias="threatTime", description="Time the threat was identified."
+    )
+    threat_url: str = Field(..., alias="threatUrl", description="Theurl to follow for threat description.")
+    threat_status: Literal["active", "falsepositive", "cleared"] = Field(
+        ..., alias="threatStatus", description="Current state of the threat."
+    )
+    url: str = Field(..., description="The URL clicked by the user.")
+    user_agent: str = Field(..., alias="userAgent", description="User agent of the user who clicked the link.")
+
+    @field_validator("classification", mode="before")
+    @classmethod
+    def _lower(cls, value: str) -> str:
+        """Lower the values to avoid inconsistent API response content."""
+        return value.lower()
 
 
 class SIEMResponse(ResponseModel):
@@ -320,7 +341,7 @@ class SIEMClient(BaseClient):
         ...     base_url=URL(os.environ["TAP_BASE_URL"]),
         ...     principal=os.environ["TAP_PRINCIPAL"],
         ...     secret=os.environ["TAP_SECRET"],
-        ...     timeout=timedela(seconds=float(os.environ["TAP_TIMEOUT"])),
+        ...     timeout=timedelta(seconds=float(os.environ["TAP_TIMEOUT"])),
         ...     retry=int(os.environ["TAP_RETRY"]),
         ...     backoff=timedelta(seconds=float(os.environ["TAP_BACKOFF"])),
         ... )
@@ -349,6 +370,8 @@ class SIEMClient(BaseClient):
             )
 
         if end_time > now_utc:
+            # NOTA BENE: We noticed that sometimes the API still answers 400 error with message
+            # "The requested interval is still current." despite this check.
             raise ProofPointAPIRequestParamsError("The end_time must be in the past.")
 
         if end_time < start_time:
