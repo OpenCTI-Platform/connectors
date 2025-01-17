@@ -393,6 +393,10 @@ jobs:
           name: Build Docker image opencti/connector-tenable-security-center
           command: docker build -t opencti/connector-tenable-security-center:latest . && docker tag opencti/connector-tenable-security-center:latest opencti/connector-tenable-security-center:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/ipsum
+          name: Build Docker image opencti/connector-ipsum
+          command: docker build -t opencti/connector-ipsum:latest . && docker tag opencti/connector-ipsum:latest opencti/connector-ipsum:${CIRCLE_TAG}
+      - run:
           name: Publish Docker Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
