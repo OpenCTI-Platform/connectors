@@ -198,7 +198,9 @@ class ReportProcessor:
     ) -> Generator[tuple["Observable", "Indicator"], Any, Any]:
         """Make an OCTI Observable and Indicator generator from a ProofPoint TAP campaign."""
 
-        def selector(observed_data: "ObservedDataPort") -> Optional[type["Url"]]: # to be completed with other product rules
+        def selector(
+            observed_data: "ObservedDataPort",
+        ) -> Optional[type["Url"]]:  # to be completed with other product rules
             """Select the type of observable to ingest."""
             if observed_data.type_ == "url":
                 return Url

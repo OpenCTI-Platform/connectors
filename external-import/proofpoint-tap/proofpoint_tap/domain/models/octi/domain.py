@@ -482,7 +482,11 @@ class Report(BaseEntity):
             object_marking_refs=[marking.id for marking in self.markings or []],
             # custom
             custom_properties={
-                "x_opencti_reliability": reliability_mapping.get(self.reliabilty) if self.reliabilty else None,
+                "x_opencti_reliability": (
+                    reliability_mapping.get(self.reliabilty)
+                    if self.reliabilty
+                    else None
+                ),
                 "x_opencti_report_status": self.report_status,
             },
             # unused
