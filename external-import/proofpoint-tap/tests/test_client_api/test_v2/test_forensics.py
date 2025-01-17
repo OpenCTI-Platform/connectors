@@ -140,7 +140,7 @@ async def test_fetch_forensics_response_status_error(
         )
     )
     # When calling the fetch_forensics method
-    # Then a ProofpointAPIInvalidResponseError should be raised
+    # Then a ProofpointAPIError should be raised
     with pytest.raises(ProofpointAPIError):
         await forensics_client_instance.fetch_forensics(
             threat_id="blah",

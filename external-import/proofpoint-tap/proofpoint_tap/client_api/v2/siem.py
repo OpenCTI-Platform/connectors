@@ -1,17 +1,15 @@
 """Offer python client and response models for the ProofPoint TAP SIEM API."""
 
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from proofpoint_tap.client_api.common import BaseClient, ResponseModel
-from proofpoint_tap.errors import ProofpointAPIError, ProofPointAPIRequestParamsError
+from proofpoint_tap.errors import ProofPointAPIRequestParamsError
 from proofpoint_tap.warnings import PermissiveLiteral, Recommended
 from pydantic import AwareDatetime, Field, field_validator, model_validator
 
 if TYPE_CHECKING:
-    from datetime import datetime
-
     from yarl import URL
 
 
@@ -254,12 +252,18 @@ class ClickEvent(ResponseModel):
     threat_time: AwareDatetime = Field(
         ..., alias="threatTime", description="Time the threat was identified."
     )
-    threat_url: str = Field(..., alias="threatUrl", description="Theurl to follow for threat description.")
+    threat_url: str = Field(
+        ..., alias="threatUrl", description="Theurl to follow for threat description."
+    )
     threat_status: Literal["active", "falsepositive", "cleared"] = Field(
         ..., alias="threatStatus", description="Current state of the threat."
     )
     url: str = Field(..., description="The URL clicked by the user.")
-    user_agent: str = Field(..., alias="userAgent", description="User agent of the user who clicked the link.")
+    user_agent: str = Field(
+        ...,
+        alias="userAgent",
+        description="User agent of the user who clicked the link.",
+    )
 
     @field_validator("classification", mode="before")
     @classmethod
@@ -359,7 +363,7 @@ class SIEMClient(BaseClient):
     def _format_interval_param(start_time: "datetime", end_time: "datetime") -> str:
         """Format the interval parameter for the query URL."""
         if start_time.tzinfo is None or end_time.tzinfo is None:
-            raise ProofpointAPIError(
+            raise ProofPointAPIRequestParamsError(
                 "Both start_time and end_time must be timezone aware."
             )
 
