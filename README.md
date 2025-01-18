@@ -10,7 +10,7 @@ the [dedicated documentation](https://docs.opencti.io/latest/deployment/connecto
 
 ## Connectors list and statuses
 
-This repository is used to host connectors that are supported by the core development team of OpenCTI. Nevertheless, the
+This repository is used to host c1onnectors that are supported by the core development team of OpenCTI. Nevertheless, the
 community is also developping a lot of connectors, third-parties modules directly linked to OpenCTI. You can find the
 list of all available connectors and plugins in
 the [OpenCTI ecosystem dedicated space](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
