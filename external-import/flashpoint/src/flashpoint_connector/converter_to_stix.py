@@ -270,7 +270,7 @@ class ConverterToStix:
         :param report:
         :return:
         """
-        objects = []
+        objects = [self.marking]
         # Try to resolve
         tags = report["tags"]
         actors = report["actors"]
@@ -402,7 +402,7 @@ A media attachment ({alert.get("media_name")}) is available in Data section
         :param create_related_entities:
         :return:
         """
-        stix_objects = []
+        stix_objects = [self.marking]
 
         # generated incident name
         incident_name = self.generate_incident_name(alert)
@@ -632,6 +632,7 @@ A media attachment ({alert.get("media_name")}) is available in Data section
         # TODO Implement personas after community merge for author
 
         stix_objects = [
+            stix2.TLP_GREEN,
             channel,
             media_content,
             relationship_publishes,
