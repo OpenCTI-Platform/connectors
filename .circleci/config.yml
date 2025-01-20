@@ -1085,6 +1085,10 @@ jobs:
           name: Build Docker image opencti/connector-hunt-io
           command: docker build -t opencti/connector-hunt-io:latest . && docker tag opencti/connector-hunt-io:latest opencti/connector-hunt-io:${CIRCLE_TAG}
       - run:
+          working_directory: ~/opencti/external-import/ibm-xti
+          name: Build Docker image opencti/connector-ibm-xti
+          command: docker build -t opencti/connector-ibm-xti:latest . && docker tag opencti/connector-ibm-xti:latest opencti/connector-ibm-xti:${CIRCLE_TAG}
+      - run:
           working_directory: ~/opencti/internal-enrichment/rst-ioc-lookup
           name: Build Docker image opencti/connector-rst-ioc-lookup
           command: docker build -t opencti/connector-rst-ioc-lookup:latest . && docker tag opencti/connector-rst-ioc-lookup:latest opencti/connector-rst-ioc-lookup:${CIRCLE_TAG}
@@ -1106,6 +1110,8 @@ jobs:
             docker push opencti/connector-zscaler:${CIRCLE_TAG}
             docker push opencti/connector-hunt-io:latest
             docker push opencti/connector-hunt-io:${CIRCLE_TAG}
+            docker push opencti/connector-ibm-xti:latest
+            docker push opencti/connector-ibm-xti:${CIRCLE_TAG}
             docker push opencti/connector-rst-ioc-lookup:latest
             docker push opencti/connector-rst-ioc-lookup:${CIRCLE_TAG}
       - slack/notify:
@@ -2029,6 +2035,10 @@ jobs:
           name: Build Docker image opencti/connector-hunt-io
           command: docker build -t opencti/connector-hunt-io:rolling .
       - run:
+          working_directory: ~/opencti/external-import/ibm-xti
+          name: Build Docker image opencti/connector-ibm-xti
+          command: docker build -t opencti/connector-ibm-xti:rolling .
+      - run:
           working_directory: ~/opencti/internal-enrichment/rst-ioc-lookup
           name: Build Docker image opencti/connector-rst-ioc-lookup
           command: docker build -t opencti/connector-rst-ioc-lookup:rolling .
@@ -2043,6 +2053,7 @@ jobs:
             docker push opencti/connector-google-secops-siem:rolling
             docker push opencti/connector-zscaler:rolling
             docker push opencti/connector-hunt-io:rolling
+            docker push opencti/connector-ibm-xti:rolling
             docker push opencti/connector-rst-ioc-lookup:rolling
       - slack/notify:
           event: fail
