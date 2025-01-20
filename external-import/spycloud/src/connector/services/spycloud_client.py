@@ -13,11 +13,18 @@ from ..utils.constants import SPYCLOUD_SEVERITY_CODES, SPYCLOUD_WATCHLIST_TYPES
 
 
 class SpyCloudClient:
+    """
+    Provides methods to request data from SpyCloud API.
+    """
+
     def __init__(
         self, helper: OpenCTIConnectorHelper = None, config: ConfigLoader = None
     ):
         """
-        Initialize the client with necessary configurations
+        Initialize the client with necessary configurations.
+        Spycloud API documentation: https://spycloud-external.readme.io/sc-enterprise-api/docs/getting-started
+        :param helper: OpenCTIConnectorHelper instance
+        :param config: ConfigLoader instance
         """
         self.helper = helper
         self.config = config

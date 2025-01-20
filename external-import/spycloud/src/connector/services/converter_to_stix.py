@@ -9,12 +9,17 @@ SEVERITY_LEVELS_BY_CODE = {2: "low", 5: "medium", 20: "high", 25: "critical"}
 
 class ConverterToStix:
     """
-    Provides methods for converting SpyCloud objects into OCTI objects following STIX 2.1 specification.
+    Provides methods to convert SpyCloud objects into OCTI objects following STIX 2.1 specification.
     """
 
     def __init__(
         self, helper: OpenCTIConnectorHelper = None, config: ConfigLoader = None
     ):
+        """
+        Initialize ConverterToStix with necessary injections.
+        :param helper: OpenCTIConnectorHelper instance
+        :param config: ConfigLoader instance
+        """
         self.helper = helper
         self.config = config
         self.author = ConverterToStix._create_author(
