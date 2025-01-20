@@ -8,18 +8,13 @@ from .services.config_loader import ConfigLoader
 from .services.converter_to_stix import ConverterToStix
 from .services.spycloud_client import SpyCloudClient
 from .models.opencti import OCTIBaseModel
+from .utils.helpers import dict_to_serialized_list
 from .utils.constants import SPYCLOUD_SEVERITY_CODES, SPYCLOUD_WATCHLIST_TYPES
 
 
 class SpyCloudConnector:
     """
-    Specifications of the external import connector
-
-    This class encapsulates the main actions, expected to be run by any external import connector.
-    Note that the attributes defined below will be complemented per each connector type.
-    This type of connector aim to fetch external data to create STIX bundle and send it in a RabbitMQ queue.
-    The STIX bundle in the queue will be processed by the workers.
-    This type of connector uses the basic methods of the helper.
+    Main class of Spycloud connector orchestrating steps to collect, prepare and send data to OpenCTI.
     """
 
     def __init__(self):
@@ -30,6 +25,48 @@ class SpyCloudConnector:
         self.helper = OpenCTIConnectorHelper(self.config.to_dict())
         self.client = SpyCloudClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
+
+        self.current_state = None
+
+    def _get_last_import_date(
+        self, watchlist_type: Literal[*SPYCLOUD_WATCHLIST_TYPES] = None
+    ) -> datetime:
+        """
+        Get last import datetime from connector's current state. \  
+        It does *not* ping OpenCTI, use self.helper.get_state() to get connector's state from OpenCTI.
+        :param watchlist_type: Optional watchlist_type filter. If not provided, `last_import_date` is returned.
+        :return: Last import datetime or default `import_start_date` from connector's config.
+        """
+        last_import_date = None
+
+        last_import_iso_key = (
+            f"{watchlist_type}_last_import_date"
+            if watchlist_type
+            else "last_import_date"
+        )
+        last_import_iso = self.current_state.get(last_import_iso_key)
+        if last_import_iso:
+            last_import_date = datetime.fromisoformat(last_import_iso)
+
+        return last_import_date or self.config.spycloud.import_start_date
+
+    def _set_last_import_date(
+        self,
+        last_import_date: datetime = None,
+        watchlist_type: Literal[*SPYCLOUD_WATCHLIST_TYPES] = None,
+    ) -> None:
+        """
+        Set last import datetime in connector's current state. \  
+        It does *not* ping OpenCTI, use self.helper.set_state() to force update connector's state on OpenCTI.
+        :param last_import_date: Last import datetime to store
+        :param watchlist_type: Optional watchlist_type filter. If not provided, `last_import_date` is set.
+        """
+        last_import_iso_key = (
+            f"{watchlist_type}_last_import_date"
+            if watchlist_type
+            else "last_import_date"
+        )
+        self.current_state[last_import_iso_key] = last_import_date.isoformat()
 
     def _collect_intelligence(
         self,
@@ -60,122 +97,104 @@ class SpyCloudConnector:
 
         return octi_objects
 
-    def _create_stix_bundle(self, octi_objects: list[OCTIBaseModel] = []) -> str:
+    def _send_stix_bundle(self, work_id: str, octi_objects: list[OCTIBaseModel]) -> str:
         """
-        Create a consistent STIX bundle from OCTI objects.
-        :return: STIX bundle string
+        Create a consistent STIX bundle from OCTI objects and send it to the worker.
+        :return: List of sent STIX bundles
         """
         if not octi_objects:
-            return None
+            return
 
         octi_objects.append(self.converter_to_stix.author)
         stix_objects = [octi_object.to_stix2_object() for octi_object in octi_objects]
 
         stix_bundle = self.helper.stix2_create_bundle(stix_objects)
+        bundles_sent = self.helper.send_stix2_bundle(
+            bundle=stix_bundle, work_id=work_id, cleanup_inconsistent_bundle=True
+        )
 
-        return stix_bundle
+        return bundles_sent
 
     def process_message(self) -> None:
         """
-        Connector main process to collect intelligence
-        :return: None
+        Connector main process to collect intelligence.
         """
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Starting connector...",
-            {"connector_name": self.helper.connect_name},
-        )
+        logger = self.helper.connector_logger
 
         try:
-            # Get the current state
-            now = datetime.now()
-            current_timestamp = int(datetime.timestamp(now))
-            current_state = self.helper.get_state()
+            logger.info(
+                "[CONNECTOR] Starting connector...",
+                {"connector_name": self.helper.connect_name},
+            )
 
-            if current_state is not None and "last_run" in current_state:
-                last_run = current_state["last_run"]
-
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector last run",
-                    {"last_run_datetime": last_run},
-                )
+            self.current_state = self.helper.get_state() or {}
+            if self.current_state:
+                logger.info("[CONNECTOR] Connector current state: ", self.current_state)
             else:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector has never run..."
+                logger.info(
+                    "[CONNECTOR] Connector has never run",
+                    {"import_start_date": self.config.spycloud.import_start_date},
                 )
 
-            # Initiate a new work
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, self.helper.connect_name
             )
 
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Gathering data...",
-                {"connector_name": self.helper.connect_name},
-            )
+            logger.info("[CONNECTOR] Gathering data...")
 
             # If no specific watchlist type is set, pass None to ignore watchlist_type filter
-            watchlist_types_arguments = self.config.spycloud.watchlist_types or [None]
-            for watchlist_type_argument in watchlist_types_arguments:
+            watchlist_types_args = self.config.spycloud.watchlist_types or [None]
+            for watchlist_type_arg in watchlist_types_args:
+                last_import_date = self._get_last_import_date(
+                    watchlist_type=watchlist_type_arg
+                )
+
                 octi_objects = self._collect_intelligence(
-                    watchlist_type=watchlist_type_argument,
+                    watchlist_type=watchlist_type_arg,
                     severity_levels=self.config.spycloud.severity_levels,
-                    since=self.config.spycloud.import_start_date,
+                    since=last_import_date or self.config.spycloud.import_start_date,
                 )
                 if octi_objects:
-                    stix_bundle = self._create_stix_bundle(octi_objects)
-                    bundles_sent = self.helper.send_stix2_bundle(
-                        stix_bundle, work_id=work_id, cleanup_inconsistent_bundle=True
-                    )
-
-                    self.helper.connector_logger.info(
+                    bundles_sent = self._send_stix_bundle(work_id, octi_objects)
+                    logger.info(
                         "Sending STIX objects to OpenCTI...",
                         {"bundles_sent": len(bundles_sent)},
                     )
 
-            # Store the current timestamp as a last run of the connector
-            self.helper.connector_logger.debug(
-                "Getting current state and update it with last run of the connector",
-                {"current_timestamp": current_timestamp},
-            )
-            current_state = self.helper.get_state()
-            current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
-            last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
-            if current_state:
-                current_state["last_run"] = current_state_datetime
-            else:
-                current_state = {"last_run": current_state_datetime}
-            self.helper.set_state(current_state)
+                    self._set_last_import_date(
+                        last_import_date=octi_objects[0].created_at,
+                        watchlist_type=watchlist_type_arg,
+                    )
+
+            logger.debug("Updating connector's state", self.current_state)
+            self.helper.set_state(self.current_state)
 
             message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(last_run_datetime)
+                f"{self.helper.connect_name} connector successfully run, "
+                f"updating connector's state with {dict_to_serialized_list(self.current_state)}"
             )
-
             self.helper.api.work.to_processed(work_id, message)
-            self.helper.connector_logger.info(message)
+            logger.info(message)
 
         except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info(
+            logger.info(
                 "[CONNECTOR] Connector stopped...",
                 {"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            logger.error(str(err))
 
     def run(self) -> None:
         """
-        Run the main process encapsulated in a scheduler
-        It allows you to schedule the process to run at a certain intervals
-        This specific scheduler from the pycti connector helper will also check the queue size of a connector
+        Run the main process encapsulated in a scheduler. \  
+        It allows you to schedule the process to run at a certain intervals. \  
+        This specific scheduler from the pycti connector helper will also check the queue size of a connector. \  
         If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
         the connector's main process will not run until the queue is ingested and reduced sufficiently,
-        allowing it to restart during the next scheduler check. (default is 500MB)
+        allowing it to restart during the next scheduler check. (default is 500MB). \  
         It requires the `duration_period` connector variable in ISO-8601 standard format
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
-        :return: None
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
