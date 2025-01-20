@@ -7,10 +7,9 @@ import json
 from unittest.mock import Mock, patch
 
 import pytest
-from requests import Response
-
 from connector.models.spycloud import BreachCatalog, BreachRecord
 from connector.services.spycloud_client import SpyCloudClient
+from requests import Response
 
 TEST_API_BASE_URL = "http://spycloudtest.com"
 TEST_API_KEY = "<API_KEY>"

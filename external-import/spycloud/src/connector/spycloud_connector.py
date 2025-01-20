@@ -4,12 +4,12 @@ from typing import Literal
 
 from pycti import OpenCTIConnectorHelper
 
+from .models.opencti import OCTIBaseModel
 from .services.config_loader import ConfigLoader
 from .services.converter_to_stix import ConverterToStix
 from .services.spycloud_client import SpyCloudClient
-from .models.opencti import OCTIBaseModel
-from .utils.helpers import dict_to_serialized_list
 from .utils.constants import SPYCLOUD_SEVERITY_CODES, SPYCLOUD_WATCHLIST_TYPES
+from .utils.helpers import dict_to_serialized_list
 
 
 class SpyCloudConnector:

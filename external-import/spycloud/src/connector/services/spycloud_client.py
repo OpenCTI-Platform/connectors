@@ -7,9 +7,9 @@ import requests
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter, Retry
 
-from .config_loader import ConfigLoader
 from ..models.spycloud import BreachCatalog, BreachRecord
 from ..utils.constants import SPYCLOUD_SEVERITY_CODES, SPYCLOUD_WATCHLIST_TYPES
+from .config_loader import ConfigLoader
 
 
 class SpyCloudClient:
