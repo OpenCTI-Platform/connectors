@@ -6,6 +6,8 @@ import pycti
 import stix2
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
+from ..utils.constants import OCTI_SEVERITY_LEVELS
+
 
 class OCTIBaseModel(BaseModel):
     """
@@ -16,32 +18,33 @@ class OCTIBaseModel(BaseModel):
 
     model_config: ConfigDict = ConfigDict(extra="forbid", frozen=True)
 
-    _stix2_representation = PrivateAttr(default=None)
-    _id = PrivateAttr(default=None)
+    _stix2_representation: stix2.v21._DomainObject = PrivateAttr(default=None)
+    _id: str = PrivateAttr(default=None)
 
     def model_post_init(self, _):
         self._stix2_representation = self.to_stix2_object()
         self._id = self._stix2_representation["id"]
 
     @property
-    def id(self):
+    def id(self) -> str:
         return self._id
 
     @property
-    def stix2_representation(self):
+    def stix2_representation(self) -> stix2.v21._DomainObject:
         if self._stix2_representation is None:
             self._stix2_representation = self.to_stix2_object()
         return self._stix2_representation
 
     @abstractmethod
-    def to_stix2_object(self) -> dict:
+    def to_stix2_object(self) -> stix2.v21._DomainObject:
         """Construct STIX 2.1 object (usually from stix2 python lib objects)"""
         ...
 
 
 class Author(OCTIBaseModel):  # TODO complete description
     """
-    Class for OpenCTI authors.
+    Class representing an OpenCTI author.
+    Implements `to_stix2_object` that returns a STIX2 Identity object.
     """
 
     name: str = Field(description="", min_length=1)
@@ -57,22 +60,20 @@ class Author(OCTIBaseModel):  # TODO complete description
         )
 
 
-class Incident(OCTIBaseModel):  # TODO: complete description
+class Incident(OCTIBaseModel):
     """
-    Class for OpenCTI incidents.
+    Class representing an OpenCTI incident.
+    Implements `to_stix2_ojbect` that returns a STIX2 Incident object.
     """
 
     name: str = Field(description="", min_length=1)
     description: str = Field(description="", min_length=1, default=None)
     source: str = Field(description="", min_length=1)
-    severity: Literal["low", "medium", "high", "critical"] = Field(description="")
+    severity: Literal[*OCTI_SEVERITY_LEVELS] = Field(description="")
     incident_type: str = Field(description="")
     author: Author = Field(description="")
     created_at: datetime = Field(description="")
     updated_at: datetime = Field(description="")
-    # object_marking_refs: list[stix2.MarkingDefinition] = Field(
-    #     description="", default=[]
-    # )
     object_marking_refs: list[Any] = Field(description="", default=[])
     external_references: list[dict] = Field(description="", default=[])
 

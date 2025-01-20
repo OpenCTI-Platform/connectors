@@ -1,10 +1,12 @@
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Literal
 
 import yaml
 from pycti import get_config_variable
+
+from ..utils.constants import SPYCLOUD_SEVERITY_CODES, SPYCLOUD_WATCHLIST_TYPES
 
 config_yml_file_path = Path(__file__).parents[2].joinpath("config.yml")
 config_yml = (
@@ -45,13 +47,8 @@ class ConnectorConfig:
         )
 
     @property
-    def type(self) -> str:  # TODO: better typing
-        return get_config_variable(
-            env_var="CONNECTOR_TYPE",
-            yaml_path=["connector", "type"],
-            config=config_yml,
-            required=True,
-        )
+    def type(self) -> Literal["EXTERNAL_IMPORT"]:
+        return "EXTERNAL_IMPORT"
 
     @property
     def name(self) -> str:
