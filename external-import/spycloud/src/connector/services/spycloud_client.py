@@ -1,7 +1,7 @@
 from datetime import datetime
 from functools import lru_cache
-from typing import Generator
-from urllib.parse import urljoin, urlparse
+from typing import Generator, Literal
+from urllib.parse import urljoin
 
 import requests
 from pycti import OpenCTIConnectorHelper
@@ -9,6 +9,7 @@ from requests.adapters import HTTPAdapter, Retry
 
 from .config_loader import ConfigLoader
 from ..models.spycloud import BreachCatalog, BreachRecord
+from ..utils.constants import SPYCLOUD_SEVERITY_CODES, SPYCLOUD_WATCHLIST_TYPES
 
 
 class SpyCloudClient:
@@ -28,7 +29,12 @@ class SpyCloudClient:
             }
         )
 
-    def _session(self, headers: dict = None):
+    def _session(self, headers: dict = None) -> requests.Session:
+        """
+        Internal method to create a session with retriable requests.
+        :param headers: Global headers to attach to session's requests.
+        :return: Session with headers and retry strategy.
+        """
         session = requests.Session()
         if headers:
             session.headers.update(headers)
@@ -41,7 +47,7 @@ class SpyCloudClient:
 
         return session
 
-    def _request(self, method: str = "GET", url: str = None, **kwargs):
+    def _request(self, method: str = "GET", url: str = None, **kwargs) -> dict:
         """
         Internal method to handle API requests.
         :param kwargs: Any arguments accepted by request.request()
@@ -97,8 +103,8 @@ class SpyCloudClient:
 
     def get_breach_records(
         self,
-        watchlist_type: str = None,
-        severity_levels: list[str] = None,
+        watchlist_type: Literal[*SPYCLOUD_WATCHLIST_TYPES] = None,
+        severity_levels: list[Literal[*SPYCLOUD_SEVERITY_CODES]] = None,
         since: datetime = None,
     ) -> Generator[BreachRecord, None, None]:
         """
@@ -111,7 +117,7 @@ class SpyCloudClient:
         url = urljoin(self.config.spycloud.api_base_url, "breach/data/watchlist")
         params = {
             "watchlist_type": watchlist_type if watchlist_type else None,
-            "severity": ",".join(severity_levels) if severity_levels else None,
+            "severity": severity_levels if severity_levels else None,
             "since": since.strftime("%Y-%m-%d") if since else None,
         }
 

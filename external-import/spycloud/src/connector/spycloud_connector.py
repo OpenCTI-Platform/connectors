@@ -1,5 +1,6 @@
 import sys
 from datetime import datetime
+from typing import Literal
 
 from pycti import OpenCTIConnectorHelper
 
@@ -7,6 +8,7 @@ from .services.config_loader import ConfigLoader
 from .services.converter_to_stix import ConverterToStix
 from .services.spycloud_client import SpyCloudClient
 from .models.opencti import OCTIBaseModel
+from .utils.constants import SPYCLOUD_SEVERITY_CODES, SPYCLOUD_WATCHLIST_TYPES
 
 
 class SpyCloudConnector:
@@ -31,12 +33,12 @@ class SpyCloudConnector:
 
     def _collect_intelligence(
         self,
-        watchlist_type: str = None,
-        severity_levels: list = None,
+        watchlist_type: Literal[*SPYCLOUD_WATCHLIST_TYPES] = None,
+        severity_levels: Literal[*SPYCLOUD_SEVERITY_CODES] = None,
         since: datetime = None,
     ) -> list[OCTIBaseModel]:
         """
-        Collect intelligence from the source and convert into OCTI objects
+        Collect intelligence from Spycloud and convert data into OCTI objects.
         :return: List of OCTI objects
         """
         octi_objects = []

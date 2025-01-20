@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..utils.constants import SPYCLOUD_SEVERITY_CODES
+
 
 class BreachCatalog(BaseModel):
     """
@@ -80,7 +82,7 @@ class BreachRecord(BaseModel):
     spycloud_publish_date: datetime = Field(
         description="The date on which this record was ingested into our systems. In ISO 8601 datetime format. This correlates with spycloud_publish_date field in Breach Catalog objects."
     )
-    severity: Literal[2, 5, 20, 25] = Field(
+    severity: Literal[*SPYCLOUD_SEVERITY_CODES] = Field(
         description="Severity is a numeric code representing severity of a breach record. This can be used in API requests to ensure only Breach Records with plaintext password are returned."
     )
 
