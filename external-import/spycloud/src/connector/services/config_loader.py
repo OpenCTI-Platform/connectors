@@ -16,6 +16,30 @@ config_yml = (
 )
 
 
+def validate_value(validate_function: Callable) -> Callable:
+    """
+    Validate config variable value by passing it to `validate_function`.
+    :param validate_function: A function taking value of config variable as only arg and returning `True` if valid, otherwise `False`.
+    :return: Validate decorator
+    """
+
+    def wrapped_decorator(wrapped_function: Callable):
+        def decorator(*args, **kwargs):
+            result = wrapped_function(*args, **kwargs)
+
+            valid_value = validate_function(result)
+            if not valid_value:
+                raise ValueError(
+                    f"Invalid value for '{wrapped_function.__name__}' config variable."
+                )
+
+            return result
+
+        return decorator
+
+    return wrapped_decorator
+
+
 class OpenCTIConfig:
     @property
     def url(self) -> str:
@@ -91,7 +115,7 @@ class ConnectorConfig:
 
 class SpyCloudConfig:
     @property
-    def api_base_url(self) -> str:  # TODO type as URL ?
+    def api_base_url(self) -> str:
         raw_url = get_config_variable(
             env_var="SPYCLOUD_API_BASE_URL",
             yaml_path=["spycloud", "api_base_url"],
@@ -110,8 +134,8 @@ class SpyCloudConfig:
         )
 
     @property
-    def severity_levels(self) -> list[str]:
-        # TODO: add enum validation?
+    @validate_value(lambda values: all(v in SPYCLOUD_SEVERITY_CODES for v in values))
+    def severity_levels(self) -> list[Literal[*SPYCLOUD_SEVERITY_CODES]]:
         severity_levels_string = get_config_variable(
             env_var="SPYCLOUD_SEVERITY_LEVELS",
             yaml_path=["spycloud", "severity_levels"],
@@ -120,14 +144,14 @@ class SpyCloudConfig:
             required=False,
         )
         return [
-            string.strip()
+            int(string.strip())
             for string in severity_levels_string.split(",")
             if len(string.strip())
         ]
 
     @property
-    def watchlist_types(self) -> list[str]:
-        # TODO: add enum validation?
+    @validate_value(lambda values: all(v in SPYCLOUD_WATCHLIST_TYPES for v in values))
+    def watchlist_types(self) -> list[Literal[*SPYCLOUD_WATCHLIST_TYPES]]:
         watchlist_types_string = get_config_variable(
             env_var="SPYCLOUD_WATCHLIST_TYPES",
             yaml_path=["spycloud", "watchlist_types"],
