@@ -22,7 +22,6 @@ class ConnectorZvelo:
         # Load configuration file and connection helper
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.client = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper)
 
     def _collect_intelligence(self, from_date: str) -> list[stix2.v21._STIXBase21]:
@@ -31,6 +30,10 @@ class ConnectorZvelo:
         :param from_date: Minimum Zvelo IOC creation date timestamp
         :return: List of STIX objects
         """
+
+        # init a token
+        api_client = ConnectorClient(self.helper, self.config)
+
         # validate collection configured
         for collection in self.config.zvelo_collections:
             if collection not in SUPPORTED_COLLECTIONS:
@@ -52,9 +55,14 @@ class ConnectorZvelo:
             )
 
             # Get entities from external sources
-            entities = self.client.get_collections_entities(
-                collection=collection, from_date=from_date
-            )
+            try:
+                entities = api_client.get_collections_entities(
+                    collection=collection, from_date=from_date
+                )
+            except Exception as err:
+                message = f"An error occurred while fetching data collection: {collection}, error: {err}"
+                self.helper.connector_logger.error(message)
+                continue
 
             # Convert into STIX2 object and add it on a list
             if collection == "threat":
