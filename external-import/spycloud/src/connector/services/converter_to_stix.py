@@ -2,6 +2,7 @@ from pycti import OpenCTIConnectorHelper
 
 from ..models import opencti, spycloud
 from .config_loader import ConfigLoader
+from ..utils.helpers import dict_to_markdown_table
 
 SEVERITY_LEVELS_BY_CODE = {2: "low", 5: "medium", 20: "high", 25: "critical"}
 
@@ -35,8 +36,19 @@ class ConverterToStix:
         """
         incident_source = breach_catalog.title or "Unknown"
         incident_severity = SEVERITY_LEVELS_BY_CODE.get(breach_record.severity)
-        incident_name = f"Spycloud {incident_severity} alert on {breach_record.email or breach_record.username or breach_record.ip[0] or breach_record.document_id}"
-        incident_description = "a markdown table of breach record's keys/values"
+        incident_name = (
+            f"Spycloud {incident_severity} alert on "
+            f"{breach_record.email or breach_record.username or breach_record.ip[0] or breach_record.document_id}"
+        )
+        incident_description = dict_to_markdown_table(
+            breach_record.model_dump(
+                exclude=[
+                    "source_id",
+                    "severity",
+                    "spycloud_publish_date",
+                ]
+            )
+        )
 
         incident = opencti.Incident(
             name=incident_name,
