@@ -1,8 +1,8 @@
 from pycti import OpenCTIConnectorHelper
 
 from ..models import opencti, spycloud
-from .config_loader import ConfigLoader
 from ..utils.helpers import dict_to_markdown_table
+from .config_loader import ConfigLoader
 
 SEVERITY_LEVELS_BY_CODE = {2: "low", 5: "medium", 20: "high", 25: "critical"}
 
