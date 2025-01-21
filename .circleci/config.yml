@@ -140,6 +140,7 @@ workflows:
  #     - test
       - build:
           name: "Build release images"
+          tags: "latest"
 #          filters:
 #            tags:
 #              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
