@@ -1,0 +1,17 @@
+images:
+  stream_webhook:
+    python: python3-11
+  stream_qradar:
+    python: python3-11
+  stream_splunk:
+    python: python3-11
+  stream_sentinel-intel:
+    python: python3-11
+  stream_sentinel:
+    python: python3-11
+  stream_harfanglab-intel:
+    python: python3-11
+  stream_harfanglab:
+    python: python3-11
+  external-import_harfanglab-incidents:
+    python: python3-11
