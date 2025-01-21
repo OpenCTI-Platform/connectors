@@ -21,8 +21,8 @@ jobs:
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
             {% set image_key = top_dir ~ '_' ~ sub_dir -%}
-            {% if images['images'][image_key] is defined -%}
-            base_image="renizmy/client-python-{{images['images'][image_key].python}}:{{version}}"
+            {% if param['images'][image_key] is defined -%}
+            base_image="renizmy/client-python-{{param['images'][image_key].python}}:{{version}}"
             {% else -%}
             base_image="renizmy/client-python-3-12:{{version}}" #TODO: Moove base_image for future release
             {% endif -%}
