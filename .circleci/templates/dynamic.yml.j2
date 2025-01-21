@@ -18,14 +18,16 @@ jobs:
             CIRCLE_TAG=${CIRCLE_TAG:-latest}
             docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
             docker buildx inspect mybuilder --bootstrap
+
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
             {% set image_key = top_dir ~ '_' ~ sub_dir -%}
             {% if param['images'][image_key] is defined -%}
             base_image="renizmy/client-python-{{param['images'][image_key].python}}:{{version}}"
             {% else -%}
-            base_image="renizmy/client-python-3-12:{{version}}" #TODO: Moove base_image for future release
+            base_image="renizmy/client-python-3-12:{{version}}"
             {% endif -%}
+
             {% if pycti.replace %}
             sed -i 's/^pycti==[0-9.]\+/pycti=={{pycti.version}}/g' ./src/requirements.txt
             cat ./src/requirements.txt
