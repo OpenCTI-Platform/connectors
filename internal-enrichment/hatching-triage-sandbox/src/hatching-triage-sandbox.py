@@ -558,13 +558,16 @@ class HatchingTriageSandboxConnector:
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
-        if entity_type in ["artifact", "url"]:
-            return self._process_observable(observable, entity_type)
+
+        if data.get("event_type"):
+            if entity_type in ["artifact", "url"]:
+                return self._process_observable(observable, entity_type)
+            else:
+                raise ValueError(
+                    f"Failed to process observable, {observable['entity_type']} is not a supported entity type."
+                )
         else:
             self._send_bundle(stix_objects)
-            raise ValueError(
-                f"Failed to process observable, {observable['entity_type']} is not a supported entity type."
-            )
 
     def _wait_for_analysis(self, sample_id):
         """
