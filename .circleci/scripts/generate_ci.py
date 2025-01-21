@@ -57,7 +57,8 @@ def get_pycti() -> dict:
         pycti["version"] = get_latest_pycti_release()
         pycti["replace"] = True
     print(pycti["version"])
-    print(pycti["CIRCLE_TAG"])
+    print(pycti["replace"])
+    print(os.getenv("CIRCLE_TAG"))
     return pycti
 
 # TODO: detect if rolling ==> Fetch last version of pycti // else get CIRCLE-CI-TAG = Version
