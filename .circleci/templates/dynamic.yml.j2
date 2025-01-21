@@ -29,8 +29,9 @@ jobs:
 
             {% if pycti.replace %}
             echo "replace {{ pycti.version }}"
+            ls -alh
             sed -i 's/^pycti==[0-9.]\+/pycti==<new_version>/g' {{top_dir}}/{{sub_dir}}/src/requirements.txt
-            cat /{{top_dir}}/{{sub_dir}}/src/requirements.txt
+            cat {{top_dir}}/{{sub_dir}}/src/requirements.txt
             {% endif -%}
 
             # docker buildx build . \
