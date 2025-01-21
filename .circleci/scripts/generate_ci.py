@@ -83,5 +83,7 @@ def main():
     template = get_template()
     config = template.render(dirs=get_dirs(), param=get_parameters(), pycti=get_pycti(), tags=get_tags())
     write_config(config)
+
+
 if __name__ == "__main__":
     main()
