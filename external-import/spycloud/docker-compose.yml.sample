@@ -25,8 +25,8 @@ services:
       # Connector's custom execution parameters
       - SPYCLOUD_API_BASE_URL=CHANGEME
       - SPYCLOUD_API_KEY=CHANGEME
-      - SPYCLOUD_SEVERITY_LEVELS=2,5,20,25
-      - SPYCLOUD_WATCHLIST_TYPES=email,domain,subdomain,ip
+      - SPYCLOUD_SEVERITY_LEVELS=20,25 # Severities list to filter breach records (allowed values are ['2', '5', '20', '25'])
+      - SPYCLOUD_WATCHLIST_TYPES=domain,subdomain # Watchlist types list to filter breach records (allowed values are ['email', 'domain', 'subdomain', 'ip'])
       - IMPORT_START_DATE=1970-01-01T00:00:00Z
 
       # Add proxy parameters below if needed

@@ -22,6 +22,6 @@ connector:
 spycloud:
   api_base_url: 'ChangeMe'
   api_key: 'ChangeMe'
-  severity_levels: '2,5,20,25' # Severities list to filter breach records (allowed values are ['2', '5', '20', '25'])
-  watchlist_types: 'email,domain,subdomain,ip' # Watchlist types list to filter breach records (allowed values are ['email', 'domain', 'subdomain', 'ip'])
+  severity_levels: '20,25' # Severities list to filter breach records (allowed values are ['2', '5', '20', '25'])
+  watchlist_types: 'domain,subdomain' # Watchlist types list to filter breach records (allowed values are ['email', 'domain', 'subdomain', 'ip'])
   import_start_date: '1970-01-01T00:00:00Z'
