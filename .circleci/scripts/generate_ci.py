@@ -71,6 +71,7 @@ def get_tags() -> list[str]:
     if len(data) == 0:
         print("[ERROR]: At least 1 tag is required")
         exit(1)
+    exit(1)
     return data
 
 # Write the generated config to a CircleCI configuration file
@@ -82,8 +83,8 @@ def write_config(template):
 
 def main():
     template = get_template()
+    get_tags()
     config = template.render(dirs=get_dirs(), param=get_parameters(), pycti=get_pycti())
     write_config(config)
-    exit(1)
 if __name__ == "__main__":
     main()
