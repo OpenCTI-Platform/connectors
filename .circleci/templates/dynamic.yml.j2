@@ -29,13 +29,13 @@ jobs:
             {% if pycti.replace %}
             find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti=={{pycti.version}}|' -i {} \;
             {% endif -%}
-            # docker buildx build . \
-            #  --platform linux/amd64,linux/arm64 \
-            #  --tag renizmy/connector-{{sub_dir}}:{{version}} \
-            #  --tag renizmy/connector-{{sub_dir}}:latest \
-            #  --build-arg BASE_IMAGE=$base_image \
-            #  --cache-to=type=local,dest=connector-{{sub_dir}}.tmp \
-            #  --push
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             {% for tag in tags %}
+             --tag renizmy/connector-{{sub_dir}}:{{tag}} \
+             {% endfor -%}
+             --build-arg BASE_IMAGE=$base_image \
+             --push
       {% endfor %}
 {% endfor %}
 workflows:
