@@ -71,7 +71,6 @@ def get_tags() -> list[str]:
     if len(data) == 0:
         print("[ERROR]: At least 1 tag is required")
         exit(1)
-    exit(1)
     return data
 
 # Write the generated config to a CircleCI configuration file
