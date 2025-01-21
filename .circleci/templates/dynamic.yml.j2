@@ -16,7 +16,7 @@ jobs:
             cd {{top_dir}}/{{sub_dir}}
             docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
             CIRCLE_TAG=${CIRCLE_TAG:-latest}
-            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx create --platform linux/amd64 --use --name mybuilder
             docker buildx inspect mybuilder --bootstrap
             docker pull python:3.12-alpine
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
@@ -30,7 +30,7 @@ jobs:
             find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti=={{pycti.version}}|' -i {} \;
             {% endif -%}
             docker buildx build . \
-             --platform linux/amd64,linux/arm64 \
+             --platform linux/amd64\
              {% for tag in tags -%}
              --tag renizmy/connector-{{sub_dir}}:{{tag}} \
              {% endfor -%}
