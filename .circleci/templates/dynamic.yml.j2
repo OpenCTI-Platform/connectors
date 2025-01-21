@@ -1,0 +1,49 @@
+version: 2.1
+
+jobs:
+{% for top_dir, sub_dirs in dirs.items() -%}
+{% for sub_dir in sub_dirs %}
+  build_{{top_dir}}_{{sub_dir}}:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build {{top_dir}}/{{sub_dir}}
+          command: |
+            echo "Processing {{top_dir}}/{{sub_dir}}"
+            cd {{top_dir}}/{{sub_dir}}
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+
+            {% set image_key = top_dir ~ '_' ~ sub_dir -%}
+            {% if images['images'][image_key] is defined -%}
+            base_image="opencti/client-python-{{images['images'][image_key].python}}:{{version}}"
+            {% else -%}
+            base_image="opencti/client-python-3-12:{{version}}" #TODO: Moove base_image for future release
+            {% endif -%}
+
+             docker buildx build . \
+              --platform linux/amd64,linux/arm64 \
+              --tag opencti/connector-{{sub_dir}}:{{version}} \
+              --tag opencti/connector-{{sub_dir}}:latest \
+              --tag opencti/connector-{{sub_dir}}:rolling \
+              --build-arg BASE_IMAGE=$base_image \
+              --cache-to=type=local,dest=connector-{{sub_dir}}.tmp \
+              --push
+
+      {% endfor %}
+{% endfor %}
+workflows:
+  version: 2
+  build_all:
+    jobs:
+  {%- for top_dir, sub_dirs in dirs.items() -%}
+  {%- for sub_dir in sub_dirs %}
+      - build_{{top_dir}}_{{sub_dir}}
+  {%- endfor -%}
+{% endfor-%}
