@@ -21,6 +21,8 @@ TEMPLATE_DIR = f"{CI_DIR}/templates"
 TEMPLATE_PATH = f"{TEMPLATE_DIR}/dynamic.yml.j2"
 VARS_PATH = f"{CI_DIR}/vars.yml"
 
+REPOSITORY = "renizmy"
+
 def get_latest_pycti_release() -> str:
     url = "https://api.github.com/repos/OpenCTI-Platform/client-python/releases/latest"
     headers = {"Accept": "application/vnd.github.v3+json"}
@@ -81,7 +83,7 @@ def write_config(template):
 
 def main():
     template = get_template()
-    config = template.render(dirs=get_dirs(), param=get_parameters(), pycti=get_pycti(), tags=get_tags())
+    config = template.render(dirs=get_dirs(), param=get_parameters(), pycti=get_pycti(), tags=get_tags(),repo=REPOSITORY)
     write_config(config)
 
 

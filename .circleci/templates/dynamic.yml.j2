@@ -16,23 +16,22 @@ jobs:
             cd {{top_dir}}/{{sub_dir}}
             docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
             CIRCLE_TAG=${CIRCLE_TAG:-latest}
-            docker buildx create --platform linux/amd64 --use --name mybuilder
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
             docker buildx inspect mybuilder --bootstrap
-            docker pull python:3.12-alpine
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             {% set image_key = top_dir ~ '_' ~ sub_dir -%}
             {% if param['images'][image_key] is defined -%}
-            base_image="renizmy/client-python-{{param['images'][image_key].python}}:{{version}}"
+            base_image="{{repo}}/client-python-{{param['images'][image_key].python}}:{{version}}"
             {% else -%}
-            base_image="renizmy/client-python-3-12:{{version}}"
+            base_image="{{repo}}/client-python-3-12:{{version}}"
             {% endif -%}
             {% if pycti.replace -%}
             find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti=={{pycti.version}}|' -i {} \;
             {% endif -%}
             docker buildx build . \
-             --platform linux/amd64\
+             --platform linux/amd64,linux/arm64 \
              {% for tag in tags -%}
-             --tag renizmy/connector-{{sub_dir}}:{{tag}} \
+             --tag {{repo}}/connector-{{sub_dir}}:{{tag}} \
              {% endfor -%}
              --build-arg BASE_IMAGE=$base_image \
              --push
