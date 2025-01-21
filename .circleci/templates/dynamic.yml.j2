@@ -31,6 +31,8 @@ jobs:
             echo "replace {{ pycti.version }}"
             {% endif -%}
 
+            echo "replace {{pycti.replace}} {{ pycti.version }}"
+
 
             # docker buildx build . \
             #  --platform linux/amd64,linux/arm64 \
