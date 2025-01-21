@@ -154,7 +154,7 @@ workflows:
 #              ignore: /.*/
       - build:
           name: "Build rolling images"
-          tags: "rolling,latest,pre-release"
+          tags: "rolling,latest"
 #          requires:
 #            - ensure_formatting
 #            - base_linter

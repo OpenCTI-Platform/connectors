@@ -27,7 +27,7 @@ jobs:
             {% endif -%}
 
             {% if pycti.replace %}
-            sed -i 's/^pycti==[0-9.]\+/pycti=={{pycti.version}}/g' ./src/requirements.txt
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti=={{pycti.version}}|' -i {} \;
             cat ./src/requirements.txt
             {% endif -%}
             # docker buildx build . \
