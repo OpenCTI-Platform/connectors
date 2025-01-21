@@ -72,8 +72,10 @@ def get_tags() -> list[str]:
     tags = os.getenv("BUILD_TAGS")
     if tags:
         data.extend(tags.split(","))
-    if os.getenv("CIRCLE_TAG"):
-        data.append(os.getenv("CIRCLE_TAG"))
+
+    circle_tag = os.getenv("CIRCLE_TAG")
+    if circle_tag:
+        data.append(circle_tag)
     if len(data) == 0:
         print("[ERROR]: At least 1 tag is required")
         exit(1)
