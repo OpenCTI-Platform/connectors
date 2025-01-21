@@ -7,8 +7,10 @@ import requests
 # Define the top-level directories
 TOP_LEVEL_DIRS = [
     "external-import",
-    "internal-enrichment" "internal-export-file",
-    "internal-import-file" "stream",
+    "internal-enrichment",
+    "internal-export-file",
+    "internal-import-file",
+    "stream",
 ]
 
 CI_DIR = ".circleci"

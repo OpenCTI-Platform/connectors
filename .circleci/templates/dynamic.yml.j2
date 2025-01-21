@@ -20,11 +20,13 @@ jobs:
             docker buildx inspect mybuilder --bootstrap
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             {% set image_key = top_dir ~ '_' ~ sub_dir -%}
+
             {% if param['images'][image_key] is defined -%}
             base_image="{{repo}}/client-python-{{param['images'][image_key].python}}:{{version}}"
             {% else -%}
             base_image="{{repo}}/client-python-3-12:{{version}}"
             {% endif -%}
+
             {% if pycti.replace -%}
             find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti=={{pycti.version}}|' -i {} \;
             {% endif -%}
@@ -35,6 +37,17 @@ jobs:
              {% endfor -%}
              --build-arg BASE_IMAGE=$base_image \
              --push
+
+             {% if param['images'][image_key] is defined and param['images'][image_key]['fips'] == true -%}
+            docker buildx build -f Dockerfile_fips \
+             --platform linux/amd64,linux/arm64 \
+             {% for tag in tags -%}
+             --tag {{repo}}/connector-{{sub_dir}}:{{tag}}-fips \
+             {% endfor -%}
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+             {% endif -%}
+
       {% endfor %}
 {% endfor %}
 workflows:
