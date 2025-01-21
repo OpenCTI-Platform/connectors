@@ -162,15 +162,15 @@ workflows:
             branches:
               only:
                 - master
-      - build_fips_rolling:
-          requires:
-            - ensure_formatting
-            - base_linter
-            - linter
-          filters:
-            branches:
-              only:
-                - master
+#      - build_fips_rolling:
+#          requires:
+#            - ensure_formatting
+#            - base_linter
+#            - linter
+#          filters:
+#            branches:
+#              only:
+#                - master
 #      - notify_rolling:
 #          requires:
 #            - build_rolling # TODO: Fix it
