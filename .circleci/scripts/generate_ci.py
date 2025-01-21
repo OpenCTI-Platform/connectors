@@ -17,7 +17,7 @@ TOP_LEVEL_DIRS = [
 CI_DIR = ".circleci"
 TEMPLATE_DIR = f"{CI_DIR}/templates"
 TEMPLATE_PATH = f"{TEMPLATE_DIR}/dynamic.yml.j2"
-VARS_PATH = "{CI_DIR}/vars.yml"
+VARS_PATH = f"{CI_DIR}/vars.yml"
 
 def get_latest_pycti_release() -> str:
     url = "https://api.github.com/repos/OpenCTI-Platform/client-python/releases/latest"
@@ -64,7 +64,6 @@ def write_config(template):
     with open(output_path, "w") as file:
         file.write(template)
     print(f"Generated CircleCI config at {output_path}")
-# TAGS: Take ${CIRCLE_TAG} + tags (rolling / latest)
 
 def main():
     template = get_template()
