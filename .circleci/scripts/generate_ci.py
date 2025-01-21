@@ -56,16 +56,7 @@ def get_pycti() -> dict:
     else:
         pycti["version"] = get_latest_pycti_release()
         pycti["replace"] = True
-    print(pycti["version"])
-    print(pycti["replace"])
-    print(os.getenv("CIRCLE_TAG"))
     return pycti
-
-# TODO: detect if rolling ==> Fetch last version of pycti // else get CIRCLE-CI-TAG = Version
-
-def get_replace_pycti_in_requirements():
-
-    return "TODO"
 
 # Write the generated config to a CircleCI configuration file
 def write_config(template):

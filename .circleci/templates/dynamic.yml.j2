@@ -26,13 +26,10 @@ jobs:
             {% else -%}
             base_image="renizmy/client-python-3-12:{{version}}" #TODO: Moove base_image for future release
             {% endif -%}
-
             {% if pycti.replace %}
-            echo "replace {{ pycti.version }}"
             sed -i 's/^pycti==[0-9.]\+/pycti=={{pycti.version}}/g' ./src/requirements.txt
             cat ./src/requirements.txt
             {% endif -%}
-
             # docker buildx build . \
             #  --platform linux/amd64,linux/arm64 \
             #  --tag renizmy/connector-{{sub_dir}}:{{version}} \
