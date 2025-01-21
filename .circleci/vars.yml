@@ -15,3 +15,13 @@ images:
     python: python3-11
   external-import_harfanglab-incidents:
     python: python3-11
+  internal-import-file_import-file-stix:
+    fips: true
+  internal-import-file_import-document:
+    fips: true
+  internal-export-file_export-file-stix:
+    fips: true
+  internal-export-file_export-file-csv:
+    fips: true
+  internal-export-file_export-file-txt:
+    fips: true
