@@ -51,7 +51,7 @@ def get_template() -> Template:
 
 def get_pycti() -> dict:
     pycti = {"version": os.getenv("CIRCLE_TAG")}
-    if not pycti["version"]:
+    if pycti["version"]:
         pycti["replace"] = False
     else:
         pycti["version"] = get_latest_pycti_release()
