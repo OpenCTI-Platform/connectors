@@ -38,6 +38,7 @@ def get_dirs() -> dir:
             dirs[top_dir] = [
                 sub_dir for sub_dir in os.listdir(top_dir) if os.path.isdir(os.path.join(top_dir, sub_dir))
             ]
+    return dirs
 
 # Load the Jinja template
 def get_parameters() -> dict:
