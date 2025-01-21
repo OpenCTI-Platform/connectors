@@ -18,6 +18,7 @@ jobs:
             CIRCLE_TAG=${CIRCLE_TAG:-latest}
             docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
             docker buildx inspect mybuilder --bootstrap
+            docker pull python:3.12-alpine
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             {% set image_key = top_dir ~ '_' ~ sub_dir -%}
             {% if param['images'][image_key] is defined -%}
