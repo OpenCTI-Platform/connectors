@@ -1,0 +1,2284 @@
+version: 2.1
+
+jobs:
+
+  build_external-import_comlaude:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/comlaude
+          command: |
+            echo "Processing external-import/comlaude"
+            cd external-import/comlaude
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-comlaude:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_shadowserver:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/shadowserver
+          command: |
+            echo "Processing external-import/shadowserver"
+            cd external-import/shadowserver
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-shadowserver:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_tweetfeed:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/tweetfeed
+          command: |
+            echo "Processing external-import/tweetfeed"
+            cd external-import/tweetfeed
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-tweetfeed:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_lastinfosec:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/lastinfosec
+          command: |
+            echo "Processing external-import/lastinfosec"
+            cd external-import/lastinfosec
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-lastinfosec:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_stream-importer:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/stream-importer
+          command: |
+            echo "Processing external-import/stream-importer"
+            cd external-import/stream-importer
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-stream-importer:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_sentinelone-threats:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/sentinelone-threats
+          command: |
+            echo "Processing external-import/sentinelone-threats"
+            cd external-import/sentinelone-threats
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-sentinelone-threats:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_citalid:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/citalid
+          command: |
+            echo "Processing external-import/citalid"
+            cd external-import/citalid
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-citalid:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_malcore:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/malcore
+          command: |
+            echo "Processing external-import/malcore"
+            cd external-import/malcore
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-malcore:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_hunt-io:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/hunt-io
+          command: |
+            echo "Processing external-import/hunt-io"
+            cd external-import/hunt-io
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-hunt-io:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_rst-report-hub:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/rst-report-hub
+          command: |
+            echo "Processing external-import/rst-report-hub"
+            cd external-import/rst-report-hub
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-rst-report-hub:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_malpedia:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/malpedia
+          command: |
+            echo "Processing external-import/malpedia"
+            cd external-import/malpedia
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-malpedia:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_cyber-campaign-collection:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/cyber-campaign-collection
+          command: |
+            echo "Processing external-import/cyber-campaign-collection"
+            cd external-import/cyber-campaign-collection
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-cyber-campaign-collection:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_abuse-ssl:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/abuse-ssl
+          command: |
+            echo "Processing external-import/abuse-ssl"
+            cd external-import/abuse-ssl
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-abuse-ssl:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_lia-file-feed:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/lia-file-feed
+          command: |
+            echo "Processing external-import/lia-file-feed"
+            cd external-import/lia-file-feed
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-lia-file-feed:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_urlhaus-recent-payloads:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/urlhaus-recent-payloads
+          command: |
+            echo "Processing external-import/urlhaus-recent-payloads"
+            cd external-import/urlhaus-recent-payloads
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-urlhaus-recent-payloads:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_crits:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/crits
+          command: |
+            echo "Processing external-import/crits"
+            cd external-import/crits
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-crits:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_wiz:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/wiz
+          command: |
+            echo "Processing external-import/wiz"
+            cd external-import/wiz
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-wiz:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_sentinel-incidents:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/sentinel-incidents
+          command: |
+            echo "Processing external-import/sentinel-incidents"
+            cd external-import/sentinel-incidents
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-sentinel-incidents:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_urlhaus:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/urlhaus
+          command: |
+            echo "Processing external-import/urlhaus"
+            cd external-import/urlhaus
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-urlhaus:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_mwdb:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/mwdb
+          command: |
+            echo "Processing external-import/mwdb"
+            cd external-import/mwdb
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-mwdb:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_cve:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/cve
+          command: |
+            echo "Processing external-import/cve"
+            cd external-import/cve
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-cve:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_malwarebazaar-recent-additions:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/malwarebazaar-recent-additions
+          command: |
+            echo "Processing external-import/malwarebazaar-recent-additions"
+            cd external-import/malwarebazaar-recent-additions
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-malwarebazaar-recent-additions:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_mandiant:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/mandiant
+          command: |
+            echo "Processing external-import/mandiant"
+            cd external-import/mandiant
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-mandiant:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_cybersixgill:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/cybersixgill
+          command: |
+            echo "Processing external-import/cybersixgill"
+            cd external-import/cybersixgill
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-cybersixgill:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_phishunt:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/phishunt
+          command: |
+            echo "Processing external-import/phishunt"
+            cd external-import/phishunt
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-phishunt:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_disarm-framework:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/disarm-framework
+          command: |
+            echo "Processing external-import/disarm-framework"
+            cd external-import/disarm-framework
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-disarm-framework:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_opencsam:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/opencsam
+          command: |
+            echo "Processing external-import/opencsam"
+            cd external-import/opencsam
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-opencsam:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_crowdstrike:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/crowdstrike
+          command: |
+            echo "Processing external-import/crowdstrike"
+            cd external-import/crowdstrike
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-crowdstrike:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_cisa-known-exploited-vulnerabilities:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/cisa-known-exploited-vulnerabilities
+          command: |
+            echo "Processing external-import/cisa-known-exploited-vulnerabilities"
+            cd external-import/cisa-known-exploited-vulnerabilities
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-cisa-known-exploited-vulnerabilities:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_opencti:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/opencti
+          command: |
+            echo "Processing external-import/opencti"
+            cd external-import/opencti
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-opencti:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_cluster25:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/cluster25
+          command: |
+            echo "Processing external-import/cluster25"
+            cd external-import/cluster25
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-cluster25:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_maltiverse:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/maltiverse
+          command: |
+            echo "Processing external-import/maltiverse"
+            cd external-import/maltiverse
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-maltiverse:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_threatfox:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/threatfox
+          command: |
+            echo "Processing external-import/threatfox"
+            cd external-import/threatfox
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-threatfox:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_taxii2:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/taxii2
+          command: |
+            echo "Processing external-import/taxii2"
+            cd external-import/taxii2
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-taxii2:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_thehive:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/thehive
+          command: |
+            echo "Processing external-import/thehive"
+            cd external-import/thehive
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-thehive:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_google-drive:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/google-drive
+          command: |
+            echo "Processing external-import/google-drive"
+            cd external-import/google-drive
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-google-drive:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_ipsum:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/ipsum
+          command: |
+            echo "Processing external-import/ipsum"
+            cd external-import/ipsum
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-ipsum:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_cisco-sma:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/cisco-sma
+          command: |
+            echo "Processing external-import/cisco-sma"
+            cd external-import/cisco-sma
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-cisco-sma:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_valhalla:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/valhalla
+          command: |
+            echo "Processing external-import/valhalla"
+            cd external-import/valhalla
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-valhalla:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_kaspersky:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/kaspersky
+          command: |
+            echo "Processing external-import/kaspersky"
+            cd external-import/kaspersky
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-kaspersky:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_obstracts:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/obstracts
+          command: |
+            echo "Processing external-import/obstracts"
+            cd external-import/obstracts
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-obstracts:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_red-flag-domains:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/red-flag-domains
+          command: |
+            echo "Processing external-import/red-flag-domains"
+            cd external-import/red-flag-domains
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-red-flag-domains:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_stopforumspam:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/stopforumspam
+          command: |
+            echo "Processing external-import/stopforumspam"
+            cd external-import/stopforumspam
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-stopforumspam:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_flashpoint:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/flashpoint
+          command: |
+            echo "Processing external-import/flashpoint"
+            cd external-import/flashpoint
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-flashpoint:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_mitre-atlas:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/mitre-atlas
+          command: |
+            echo "Processing external-import/mitre-atlas"
+            cd external-import/mitre-atlas
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-mitre-atlas:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_chapsvision:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/chapsvision
+          command: |
+            echo "Processing external-import/chapsvision"
+            cd external-import/chapsvision
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-chapsvision:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_fortinet-ti:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/fortinet-ti
+          command: |
+            echo "Processing external-import/fortinet-ti"
+            cd external-import/fortinet-ti
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-fortinet-ti:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_tanium-incidents:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/tanium-incidents
+          command: |
+            echo "Processing external-import/tanium-incidents"
+            cd external-import/tanium-incidents
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-tanium-incidents:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_tenable-vuln-management:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/tenable-vuln-management
+          command: |
+            echo "Processing external-import/tenable-vuln-management"
+            cd external-import/tenable-vuln-management
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-tenable-vuln-management:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_intelfinder:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/intelfinder
+          command: |
+            echo "Processing external-import/intelfinder"
+            cd external-import/intelfinder
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-intelfinder:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_intel471:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/intel471
+          command: |
+            echo "Processing external-import/intel471"
+            cd external-import/intel471
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-intel471:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_misp:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/misp
+          command: |
+            echo "Processing external-import/misp"
+            cd external-import/misp
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-misp:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_ibm-xti:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/ibm-xti
+          command: |
+            echo "Processing external-import/ibm-xti"
+            cd external-import/ibm-xti
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-ibm-xti:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_misp-feed:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/misp-feed
+          command: |
+            echo "Processing external-import/misp-feed"
+            cd external-import/misp-feed
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-misp-feed:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_eset:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/eset
+          command: |
+            echo "Processing external-import/eset"
+            cd external-import/eset
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-eset:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_greynoise-feed:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/greynoise-feed
+          command: |
+            echo "Processing external-import/greynoise-feed"
+            cd external-import/greynoise-feed
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-greynoise-feed:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_recorded-future:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/recorded-future
+          command: |
+            echo "Processing external-import/recorded-future"
+            cd external-import/recorded-future
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-recorded-future:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_riskiq:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/riskiq
+          command: |
+            echo "Processing external-import/riskiq"
+            cd external-import/riskiq
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-riskiq:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_group-ib:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/group-ib
+          command: |
+            echo "Processing external-import/group-ib"
+            cd external-import/group-ib
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-group-ib:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_harfanglab-incidents:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/harfanglab-incidents
+          command: |
+            echo "Processing external-import/harfanglab-incidents"
+            cd external-import/harfanglab-incidents
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-python3-11:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-harfanglab-incidents:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_silobreaker:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/silobreaker
+          command: |
+            echo "Processing external-import/silobreaker"
+            cd external-import/silobreaker
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-silobreaker:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_alienvault:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/alienvault
+          command: |
+            echo "Processing external-import/alienvault"
+            cd external-import/alienvault
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-alienvault:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_zerofox:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/zerofox
+          command: |
+            echo "Processing external-import/zerofox"
+            cd external-import/zerofox
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-zerofox:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_cuckoo:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/cuckoo
+          command: |
+            echo "Processing external-import/cuckoo"
+            cd external-import/cuckoo
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-cuckoo:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_cpe:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/cpe
+          command: |
+            echo "Processing external-import/cpe"
+            cd external-import/cpe
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-cpe:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_restore-files:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/restore-files
+          command: |
+            echo "Processing external-import/restore-files"
+            cd external-import/restore-files
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-restore-files:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_stixify:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/stixify
+          command: |
+            echo "Processing external-import/stixify"
+            cd external-import/stixify
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-stixify:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_orange-cyberdefense:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/orange-cyberdefense
+          command: |
+            echo "Processing external-import/orange-cyberdefense"
+            cd external-import/orange-cyberdefense
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-orange-cyberdefense:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_abuseipdb-ipblacklist:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/abuseipdb-ipblacklist
+          command: |
+            echo "Processing external-import/abuseipdb-ipblacklist"
+            cd external-import/abuseipdb-ipblacklist
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-abuseipdb-ipblacklist:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_sekoia:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/sekoia
+          command: |
+            echo "Processing external-import/sekoia"
+            cd external-import/sekoia
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-sekoia:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_vxvault:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/vxvault
+          command: |
+            echo "Processing external-import/vxvault"
+            cd external-import/vxvault
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-vxvault:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_mitre:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/mitre
+          command: |
+            echo "Processing external-import/mitre"
+            cd external-import/mitre
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-mitre:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_crtsh:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/crtsh
+          command: |
+            echo "Processing external-import/crtsh"
+            cd external-import/crtsh
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-crtsh:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_virustotal-livehunt-notifications:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/virustotal-livehunt-notifications
+          command: |
+            echo "Processing external-import/virustotal-livehunt-notifications"
+            cd external-import/virustotal-livehunt-notifications
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-virustotal-livehunt-notifications:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_infoblox:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/infoblox
+          command: |
+            echo "Processing external-import/infoblox"
+            cd external-import/infoblox
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-infoblox:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_cofense:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/cofense
+          command: |
+            echo "Processing external-import/cofense"
+            cd external-import/cofense
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-cofense:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_rst-threat-feed:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/rst-threat-feed
+          command: |
+            echo "Processing external-import/rst-threat-feed"
+            cd external-import/rst-threat-feed
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-rst-threat-feed:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_tenable-security-center:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/tenable-security-center
+          command: |
+            echo "Processing external-import/tenable-security-center"
+            cd external-import/tenable-security-center
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-tenable-security-center:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_intel471_v2:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/intel471_v2
+          command: |
+            echo "Processing external-import/intel471_v2"
+            cd external-import/intel471_v2
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-intel471_v2:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_siemrules:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/siemrules
+          command: |
+            echo "Processing external-import/siemrules"
+            cd external-import/siemrules
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-siemrules:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_cape:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/cape
+          command: |
+            echo "Processing external-import/cape"
+            cd external-import/cape
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-cape:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_ironnet:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/ironnet
+          command: |
+            echo "Processing external-import/ironnet"
+            cd external-import/ironnet
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-ironnet:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_urlscan:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/urlscan
+          command: |
+            echo "Processing external-import/urlscan"
+            cd external-import/urlscan
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-urlscan:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_zvelo:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/zvelo
+          command: |
+            echo "Processing external-import/zvelo"
+            cd external-import/zvelo
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-zvelo:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_anyrun-feed:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/anyrun-feed
+          command: |
+            echo "Processing external-import/anyrun-feed"
+            cd external-import/anyrun-feed
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-anyrun-feed:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_ransomwarelive:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/ransomwarelive
+          command: |
+            echo "Processing external-import/ransomwarelive"
+            cd external-import/ransomwarelive
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-ransomwarelive:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_feedly:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/feedly
+          command: |
+            echo "Processing external-import/feedly"
+            cd external-import/feedly
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-feedly:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_socprime:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/socprime
+          command: |
+            echo "Processing external-import/socprime"
+            cd external-import/socprime
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-socprime:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_diode-import:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/diode-import
+          command: |
+            echo "Processing external-import/diode-import"
+            cd external-import/diode-import
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-diode-import:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_threatmatch:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/threatmatch
+          command: |
+            echo "Processing external-import/threatmatch"
+            cd external-import/threatmatch
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-threatmatch:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+  build_external-import_vulmatch:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build external-import/vulmatch
+          command: |
+            echo "Processing external-import/vulmatch"
+            cd external-import/vulmatch
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            base_image="renizmy/client-python-3-12:"
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti==6.4.8|' -i {} \;
+            docker buildx build . \
+             --platform linux/amd64,linux/arm64 \
+             --tag renizmy/connector-vulmatch:latest \
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+      
+
+workflows:
+  version: 2
+  build_all:
+    jobs:
+      - build_external-import_comlaude
+      - build_external-import_shadowserver
+      - build_external-import_tweetfeed
+      - build_external-import_lastinfosec
+      - build_external-import_stream-importer
+      - build_external-import_sentinelone-threats
+      - build_external-import_citalid
+      - build_external-import_malcore
+      - build_external-import_hunt-io
+      - build_external-import_rst-report-hub
+      - build_external-import_malpedia
+      - build_external-import_cyber-campaign-collection
+      - build_external-import_abuse-ssl
+      - build_external-import_lia-file-feed
+      - build_external-import_urlhaus-recent-payloads
+      - build_external-import_crits
+      - build_external-import_wiz
+      - build_external-import_sentinel-incidents
+      - build_external-import_urlhaus
+      - build_external-import_mwdb
+      - build_external-import_cve
+      - build_external-import_malwarebazaar-recent-additions
+      - build_external-import_mandiant
+      - build_external-import_cybersixgill
+      - build_external-import_phishunt
+      - build_external-import_disarm-framework
+      - build_external-import_opencsam
+      - build_external-import_crowdstrike
+      - build_external-import_cisa-known-exploited-vulnerabilities
+      - build_external-import_opencti
+      - build_external-import_cluster25
+      - build_external-import_maltiverse
+      - build_external-import_threatfox
+      - build_external-import_taxii2
+      - build_external-import_thehive
+      - build_external-import_google-drive
+      - build_external-import_ipsum
+      - build_external-import_cisco-sma
+      - build_external-import_valhalla
+      - build_external-import_kaspersky
+      - build_external-import_obstracts
+      - build_external-import_red-flag-domains
+      - build_external-import_stopforumspam
+      - build_external-import_flashpoint
+      - build_external-import_mitre-atlas
+      - build_external-import_chapsvision
+      - build_external-import_fortinet-ti
+      - build_external-import_tanium-incidents
+      - build_external-import_tenable-vuln-management
+      - build_external-import_intelfinder
+      - build_external-import_intel471
+      - build_external-import_misp
+      - build_external-import_ibm-xti
+      - build_external-import_misp-feed
+      - build_external-import_eset
+      - build_external-import_greynoise-feed
+      - build_external-import_recorded-future
+      - build_external-import_riskiq
+      - build_external-import_group-ib
+      - build_external-import_harfanglab-incidents
+      - build_external-import_silobreaker
+      - build_external-import_alienvault
+      - build_external-import_zerofox
+      - build_external-import_cuckoo
+      - build_external-import_cpe
+      - build_external-import_restore-files
+      - build_external-import_stixify
+      - build_external-import_orange-cyberdefense
+      - build_external-import_abuseipdb-ipblacklist
+      - build_external-import_sekoia
+      - build_external-import_vxvault
+      - build_external-import_mitre
+      - build_external-import_crtsh
+      - build_external-import_virustotal-livehunt-notifications
+      - build_external-import_infoblox
+      - build_external-import_cofense
+      - build_external-import_rst-threat-feed
+      - build_external-import_tenable-security-center
+      - build_external-import_intel471_v2
+      - build_external-import_siemrules
+      - build_external-import_cape
+      - build_external-import_ironnet
+      - build_external-import_urlscan
+      - build_external-import_zvelo
+      - build_external-import_anyrun-feed
+      - build_external-import_ransomwarelive
+      - build_external-import_feedly
+      - build_external-import_socprime
+      - build_external-import_diode-import
+      - build_external-import_threatmatch
+      - build_external-import_vulmatch
