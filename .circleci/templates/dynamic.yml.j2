@@ -29,7 +29,7 @@ jobs:
 
             {% if pycti.replace %}
             echo "replace {{ pycti.version }}"
-            sed -i 's/^pycti==[0-9.]\+/pycti==<new_version>/g' ./src/requirements.txt
+            sed -i 's/^pycti==[0-9.]\+/pycti=={{pycti.version}}/g' ./src/requirements.txt
             cat ./src/requirements.txt
             {% endif -%}
 
