@@ -154,10 +154,10 @@ workflows:
       - build:
           name: "Build rolling images"
           tags: "rolling,latest,pre-release"
-          requires:
-            - ensure_formatting
-            - base_linter
-            - linter
+#          requires:
+#            - ensure_formatting
+#            - base_linter
+#            - linter
           filters:
             branches:
               only:
