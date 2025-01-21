@@ -101,12 +101,12 @@ jobs:
       - continuation/continue:
           configuration_path: dynamic.yml
 
-      - slack/notify:
-          event: fail
-          template: basic_fail_1
-      - ms-teams/report:
-          only_on_fail: true
-          webhook_url: $MS_TEAMS_WEBHOOK_URL
+#      - slack/notify:
+#          event: fail
+#          template: basic_fail_1
+#      - ms-teams/report:
+#          only_on_fail: true
+#          webhook_url: $MS_TEAMS_WEBHOOK_URL
 
   notify_rolling:
     docker:

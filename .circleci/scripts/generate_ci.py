@@ -34,6 +34,8 @@ with open(template_path, "r") as file:
 
 tag = os.getenv("CIRCLE_TAG")
 
+if not tag:
+    version = "rolling"
 # TODO: detect if rolling ==> Fetch last version of pycti // else get CIRCLE-CI-TAG = Version
 
 # Render the template with collected directories

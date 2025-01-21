@@ -22,16 +22,15 @@ jobs:
 
             {% set image_key = top_dir ~ '_' ~ sub_dir -%}
             {% if images['images'][image_key] is defined -%}
-            base_image="opencti/client-python-{{images['images'][image_key].python}}:{{version}}"
+            base_image="renizmy/client-python-{{images['images'][image_key].python}}:{{version}}"
             {% else -%}
-            base_image="opencti/client-python-3-12:{{version}}" #TODO: Moove base_image for future release
+            base_image="renizmy/client-python-3-12:{{version}}" #TODO: Moove base_image for future release
             {% endif -%}
 
              docker buildx build . \
               --platform linux/amd64,linux/arm64 \
-              --tag opencti/connector-{{sub_dir}}:{{version}} \
-              --tag opencti/connector-{{sub_dir}}:latest \
-              --tag opencti/connector-{{sub_dir}}:rolling \
+              --tag renizmy/connector-{{sub_dir}}:{{version}} \
+              --tag renizmy/connector-{{sub_dir}}:latest \
               --build-arg BASE_IMAGE=$base_image \
               --cache-to=type=local,dest=connector-{{sub_dir}}.tmp \
               --push
