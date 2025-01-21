@@ -64,7 +64,7 @@ def get_tags() -> list[str]:
     data = []
     tags = os.getenv("BUILD_TAGS")
     if tags:
-        data.append(tags.split(","))
+        data.extend(tags.split(","))
     if os.getenv("CIRCLE_TAG"):
         data.append(os.getenv("CIRCLE_TAG"))
     pprint(data)
