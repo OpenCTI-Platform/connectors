@@ -28,7 +28,6 @@ jobs:
 
             {% if pycti.replace %}
             find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti=={{pycti.version}}|' -i {} \;
-            cat ./src/requirements.txt
             {% endif -%}
             # docker buildx build . \
             #  --platform linux/amd64,linux/arm64 \
