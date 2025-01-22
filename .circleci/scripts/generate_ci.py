@@ -18,7 +18,7 @@ TEMPLATE_DIR = f"{CI_DIR}/templates"
 TEMPLATE_PATH = f"{TEMPLATE_DIR}/dynamic.yml.j2"
 VARS_PATH = f"{CI_DIR}/vars.yml"
 
-REPOSITORY = "connectors"
+REPOSITORY = "opencti"
 
 
 def get_latest_pycti_release() -> str:
