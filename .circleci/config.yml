@@ -3,7 +3,7 @@ setup: true
 orbs:
   slack: circleci/slack@4.15.0
   ms-teams: cloudradar-monitoring/ms-teams@0.0.1
-  continuation: circleci/continuation@1
+  continuation: circleci/continuation@1.1.0
 
 jobs:
   ensure_formatting:
@@ -79,57 +79,57 @@ jobs:
       - run:
           name: Run tests
           command: bash run_test.sh
-  build:
-    parameters:
-      tags:
-        type: string
-        default: "latest,rolling"
-        description: Image tags
-    docker:
-      - image: cimg/python:3.10
-    steps:
-      - checkout
-      - run:
-          name: Install dependencies
-          command: pip install -r .circleci/scripts/requirements.txt
-      - run:
-          name: Execute Python Script
-          environment:
-            BUILD_TAGS: <<parameters.tags>>
-          command: python .circleci/scripts/generate_ci.py
+#  build:
+#    parameters:
+#      tags:
+#        type: string
+#        default: "latest,rolling"
+#        description: Image tags
+#    docker:
+#      - image: cimg/python:3.10
+#    steps:
+#      - checkout
+#      - run:
+#          name: Install dependencies
+#          command: pip install -r .circleci/scripts/requirements.txt
+#      - run:
+#          name: Execute Python Script
+#          environment:
+#            BUILD_TAGS: <<parameters.tags>>
+#          command: python .circleci/scripts/generate_ci.py
+#
+#      - continuation/continue:
+#          configuration_path: dynamic.yml
+#
+#      - slack/notify:
+#          event: fail
+#          template: basic_fail_1
+#      - ms-teams/report:
+#          only_on_fail: true
+#          webhook_url: $MS_TEAMS_WEBHOOK_URL
 
-      - continuation/continue:
-          configuration_path: dynamic.yml
-
-      - slack/notify:
-          event: fail
-          template: basic_fail_1
-      - ms-teams/report:
-          only_on_fail: true
-          webhook_url: $MS_TEAMS_WEBHOOK_URL
-
-  notify_rolling:
-    docker:
-      - image: "cimg/base:stable"
-    steps:
-      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
-      - slack/notify:
-          event: pass
-          template: basic_success_1
-      - ms-teams/report:
-          only_on_fail: false
-          webhook_url: $MS_TEAMS_WEBHOOK_URL
-  notify:
-    docker:
-      - image: "cimg/base:stable"
-    steps:
-      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
-      - slack/notify:
-          event: pass
-          template: basic_success_1
-      - ms-teams/report:
-          only_on_fail: false
-          webhook_url: $MS_TEAMS_WEBHOOK_URL
+#  notify_rolling:
+#    docker:
+#      - image: "cimg/base:stable"
+#    steps:
+#      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
+#      - slack/notify:
+#          event: pass
+#          template: basic_success_1
+#      - ms-teams/report:
+#          only_on_fail: false
+#          webhook_url: $MS_TEAMS_WEBHOOK_URL
+#  notify:
+#    docker:
+#      - image: "cimg/base:stable"
+#    steps:
+#      - run: sudo apt-get update -qq && sudo apt install curl gettext-base
+#      - slack/notify:
+#          event: pass
+#          template: basic_success_1
+#      - ms-teams/report:
+#          only_on_fail: false
+#          webhook_url: $MS_TEAMS_WEBHOOK_URL
 workflows:
   version: 2
   opencti:
@@ -138,50 +138,50 @@ workflows:
       - base_linter
       - linter
       - test
-      - build:
-          name: "Build release images"
-          tags: "latest"
-          filters:
-            tags:
-              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
-            branches:
-              ignore: /.*/
-      - build_fips:
-          filters:
-            tags:
-              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
-            branches:
-              ignore: /.*/
-      - build:
-          name: "Build rolling images"
-          tags: "rolling,latest"
-          requires:
-            - ensure_formatting
-            - base_linter
-            - linter
-          filters:
-            branches:
-              only:
-                - master
-      - build_fips_rolling:
-          requires:
-            - ensure_formatting
-            - base_linter
-            - linter
-          filters:
-            branches:
-              only:
-                - master
-      - notify_rolling:
-          requires:
-            - build_rolling # TODO: Fix it
-            - build_fips_rolling
-      - notify:
-          requires:
-            - build
-            - build_fips
-          filters:
-            tags:
-              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
-            branches:
-              ignore: /.*/#
+#      - build:
+#          name: "Build release images"
+#          tags: "latest"
+#          filters:
+#            tags:
+#              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+#            branches:
+#              ignore: /.*/
+#      - build_fips:
+#          filters:
+#            tags:
+#              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+#            branches:
+#              ignore: /.*/
+#      - build:
+#          name: "Build rolling images"
+#          tags: "rolling,latest"
+#          requires:
+#            - ensure_formatting
+#            - base_linter
+#            - linter
+#          filters:
+#            branches:
+#              only:
+#                - master
+#      - build_fips_rolling:
+#          requires:
+#            - ensure_formatting
+#            - base_linter
+#            - linter
+#          filters:
+#            branches:
+#              only:
+#                - master
+#      - notify_rolling:
+#          requires:
+#            - build_rolling # TODO: Fix it
+#            - build_fips_rolling
+#      - notify:
+#          requires:
+#            - build
+#            - build_fips
+#          filters:
+#            tags:
+#              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+#            branches:
+#              ignore: /.*/#
