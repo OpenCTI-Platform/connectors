@@ -1,0 +1,24 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'RST IoC Lookup'
+  scope: 'IPv4-Addr,Domain-Name,Url,StixFile,indicator'
+  auto: false # Enable/disable auto-enrichment of observables
+  log_level: 'info'
+
+rst-ioc-lookup:
+  base_url: 'https://api.rstcloud.net/v1'
+  api_key: 'ChangeMe'
+  timeout: 10
+  max_tlp: 'TLP:AMBER+STRICT'
+  update_confidence: true
+  update_score: true
+  update_valid_from: true
+  score_type: last
+  update_description_action: overwrite
+  detection_flag_threshold: 45
+  label_format: short

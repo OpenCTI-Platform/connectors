@@ -7,7 +7,6 @@ connector:
   type: "EXTERNAL_IMPORT"
   name: "RST Threat Feed"
   scope: "application/json" # MIME type or SCO
-  update_existing_data: true
   log_level: "info"
 
 rst-threat-feed:
@@ -17,13 +16,13 @@ rst-threat-feed:
   readtimeout: 30
   retry: 5
   interval: 300
-  min_score_import: 45
-  # sets x_opencti_detection for each indicator type to True or False if more than the specified threshold
-  min_score_detection_ip: 50
+  min_score_import: 20
+  # sets x_opencti_detection for each indicator type to true or false if more than the specified threshold
+  min_score_detection_ip: 45
   min_score_detection_domain: 45
-  min_score_detection_url: 30
-  min_score_detection_hash: 25
+  min_score_detection_url: 45
+  min_score_detection_hash: 45
   only_new: true
-  only_attributed: true
+  only_attributed: false
   dirs_tmp: "./"
   dirs_state: "./"
