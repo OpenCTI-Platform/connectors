@@ -318,6 +318,9 @@ class SentinelIncidentsConnector:
                 {"connector_name": self.helper.connect_name},
             )
 
+            # A token is valid for 1 hour so we get a fresh one on every run
+            self.client.set_oauth_token()
+
             incidents = self.client.get_incidents(last_incident_timestamp)
             # Incidents are listed from oldest to most recent.
             for incident in reversed(incidents):
