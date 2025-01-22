@@ -1,8 +1,8 @@
 import os
 
-from jinja2 import Template
-import yaml
 import requests
+import yaml
+from jinja2 import Template
 
 # Define the top-level directories
 TOP_LEVEL_DIRS = [
