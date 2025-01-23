@@ -38,7 +38,7 @@ jobs:
              --build-arg BASE_IMAGE=$base_image \
 
              {% if param['images'][image_key] is defined and param['images'][image_key]['fips'] == true -%}
-            docker buildx create --platform linux/amd64 --use --name fipsbuilder \
+            docker buildx create --platform linux/amd64,linux/arm64 --use --name fipsbuilder \
             docker buildx build -f Dockerfile_fips \
              --platform linux/amd64,linux/arm64 \
              {% for tag in tags -%}
