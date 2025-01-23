@@ -39,6 +39,7 @@ jobs:
 
              {% if param['images'][image_key] is defined and param['images'][image_key]['fips'] == true -%}
             docker buildx build -f Dockerfile_fips \
+             --platform linux/arm64 \
              {% for tag in tags -%}
              --tag {{repo}}/connector-{{sub_dir}}:{{tag}}-fips \
              {% endfor -%}
