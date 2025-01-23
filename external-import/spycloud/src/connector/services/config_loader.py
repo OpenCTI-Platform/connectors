@@ -7,6 +7,7 @@ import yaml
 from pycti import get_config_variable
 
 from ..utils.constants import SPYCLOUD_SEVERITY_CODES, SPYCLOUD_WATCHLIST_TYPES
+from ..utils.types import SpycloudSeverityType, SpycloudWatchlistTypeType
 
 config_yml_file_path = Path(__file__).parents[2].joinpath("config.yml")
 config_yml = (
@@ -135,7 +136,7 @@ class SpyCloudConfig:
 
     @property
     @validate_value(lambda values: all(v in SPYCLOUD_SEVERITY_CODES for v in values))
-    def severity_levels(self) -> list[Literal[*SPYCLOUD_SEVERITY_CODES]]:
+    def severity_levels(self) -> list[SpycloudSeverityType]:
         severity_levels_string = get_config_variable(
             env_var="SPYCLOUD_SEVERITY_LEVELS",
             yaml_path=["spycloud", "severity_levels"],
@@ -151,7 +152,7 @@ class SpyCloudConfig:
 
     @property
     @validate_value(lambda values: all(v in SPYCLOUD_WATCHLIST_TYPES for v in values))
-    def watchlist_types(self) -> list[Literal[*SPYCLOUD_WATCHLIST_TYPES]]:
+    def watchlist_types(self) -> list[SpycloudWatchlistTypeType]:
         watchlist_types_string = get_config_variable(
             env_var="SPYCLOUD_WATCHLIST_TYPES",
             yaml_path=["spycloud", "watchlist_types"],
