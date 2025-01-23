@@ -1,12 +1,12 @@
 from abc import abstractmethod
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any
 
 import pycti
 import stix2
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-from ..utils.constants import OCTI_SEVERITY_LEVELS
+from ..utils.types import OCTISeverityType
 
 
 class OCTIBaseModel(BaseModel):
@@ -69,7 +69,7 @@ class Incident(OCTIBaseModel):
     name: str = Field(description="", min_length=1)
     description: str = Field(description="", min_length=1, default=None)
     source: str = Field(description="", min_length=1)
-    severity: Literal[*OCTI_SEVERITY_LEVELS] = Field(description="")
+    severity: OCTISeverityType = Field(description="")
     incident_type: str = Field(description="")
     author: Author = Field(description="")
     created_at: datetime = Field(description="")

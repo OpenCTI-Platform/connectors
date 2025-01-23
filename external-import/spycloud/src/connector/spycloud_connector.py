@@ -1,6 +1,5 @@
 import sys
 from datetime import datetime
-from typing import Literal
 
 from pycti import OpenCTIConnectorHelper
 
@@ -8,8 +7,8 @@ from .models.opencti import OCTIBaseModel
 from .services.config_loader import ConfigLoader
 from .services.converter_to_stix import ConverterToStix
 from .services.spycloud_client import SpyCloudClient
-from .utils.constants import SPYCLOUD_SEVERITY_CODES, SPYCLOUD_WATCHLIST_TYPES
 from .utils.helpers import dict_to_serialized_list
+from .utils.types import SpycloudSeverityType, SpycloudWatchlistTypeType
 
 
 class SpyCloudConnector:
@@ -29,7 +28,7 @@ class SpyCloudConnector:
         self.current_state = None
 
     def _get_last_import_date(
-        self, watchlist_type: Literal[*SPYCLOUD_WATCHLIST_TYPES] = None
+        self, watchlist_type: SpycloudWatchlistTypeType = None
     ) -> datetime:
         """
         Get last import datetime from connector's current state. \  
@@ -53,7 +52,7 @@ class SpyCloudConnector:
     def _set_last_import_date(
         self,
         last_import_date: datetime = None,
-        watchlist_type: Literal[*SPYCLOUD_WATCHLIST_TYPES] = None,
+        watchlist_type: SpycloudWatchlistTypeType = None,
     ) -> None:
         """
         Set last import datetime in connector's current state. \  
@@ -70,8 +69,8 @@ class SpyCloudConnector:
 
     def _collect_intelligence(
         self,
-        watchlist_type: Literal[*SPYCLOUD_WATCHLIST_TYPES] = None,
-        severity_levels: Literal[*SPYCLOUD_SEVERITY_CODES] = None,
+        watchlist_type: SpycloudWatchlistTypeType = None,
+        severity_levels: SpycloudSeverityType = None,
         since: datetime = None,
     ) -> list[OCTIBaseModel]:
         """
