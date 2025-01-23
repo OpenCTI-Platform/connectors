@@ -39,7 +39,7 @@ jobs:
 
              {% if param['images'][image_key] is defined and param['images'][image_key]['fips'] == true -%}
             docker buildx create --platform linux/amd64 --use --name fipsbuilder
-            docker buildx inspect mybuilder --bootstrap
+            docker buildx inspect fipsbuilder --bootstrap
             docker buildx build -f Dockerfile_fips \
              --platform linux/amd64 \
              {% for tag in tags -%}
