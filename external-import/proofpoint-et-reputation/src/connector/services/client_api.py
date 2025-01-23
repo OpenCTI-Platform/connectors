@@ -56,7 +56,7 @@ class ProofpointEtReputationClient:
          constructs a complete URL, and prepares the request for sending. The request is
          then returned as a `PreparedRequest` object, which can be sent using the `session`.
 
-         The method combines the `base_url`,`api_token`, the `path`, and any query parameters provided to build a
+         The method combines the `base_url`,`extra_api_token`, the `path`, and any query parameters provided to build a
          complete API request and returns a prepared request ready to be executed.
 
         Args:
@@ -68,7 +68,7 @@ class ProofpointEtReputationClient:
         try:
             return requests.Request(
                 "GET",
-                f"{self.base_url}{self.config.api_token}/reputation/{reputation_list_entity}.json",
+                f"{self.base_url}{self.config.extra_api_token}/reputation/{reputation_list_entity}.json",
             )
         except Exception as e:
             self.helper.connector_logger.error(

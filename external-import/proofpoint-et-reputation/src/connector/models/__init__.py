@@ -8,16 +8,16 @@ from connector.models.opencti_converter_models import (
     Relationship,
 )
 from connector.models.reputation_models import (
+    BaseReputation,
     DomainReputationModel,
     IPReputationModel,
-    ReputationScore,
 )
 
 __all__ = [
     "ProofpointEtReputationConfigVar",
     "IPReputationModel",
     "DomainReputationModel",
-    "ReputationScore",
+    "BaseReputation",
     "Author",
     "MarkingDefinition",
     "Relationship",

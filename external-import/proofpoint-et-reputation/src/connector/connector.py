@@ -2,9 +2,9 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Generator
 
-from connector.models import DomainReputationModel, IPReputationModel, ReputationScore
+from connector.models import BaseReputation, DomainReputationModel, IPReputationModel
 from connector.services import (
     ConverterToStix,
     DateTimeFormat,
@@ -33,7 +33,7 @@ class ProofpointEtReputationConnector:
         self.helper = OpenCTIConnectorHelper(self.config.load)
         self.client = ProofpointEtReputationClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper)
-        self.Utils = Utils()
+        self.utils = Utils()
 
     def _process_initiate_work(self, collection: str, now_isoformat: str) -> str:
         """
@@ -51,7 +51,10 @@ class ProofpointEtReputationConnector:
             "[CONNECTOR] Starting work collection...",
             {"collection": collection, "isoformat": now_isoformat},
         )
-        friendly_name = f"ProofPoint ET Reputation - {collection} run @ {now_isoformat}"
+        source_collection = (
+            "iprepdata" if collection == "IPv4-Addr" else "domainrepdata"
+        )
+        friendly_name = f"ProofPoint ET Reputation - {collection} ({source_collection}) run @ {now_isoformat}"
         return self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
 
     def _process_send_stix_to_opencti(
@@ -70,16 +73,14 @@ class ProofpointEtReputationConnector:
             None
         """
         if prepared_objects is not None and len(prepared_objects) != 0:
-            unique_id_objects = list(
-                {
-                    getattr(obj, "id", None): obj
-                    for obj in prepared_objects
-                    if hasattr(obj, "id")
-                }.values()
-            )
+            # Filters objects to retain only those with a unique ID, preventing duplication in the final list.
+            unique_ids = set()
             get_stix_representation_objects = [
-                getattr(item, "stix2_representation") for item in unique_id_objects
+                obj.stix2_representation
+                for obj in prepared_objects
+                if obj.id not in unique_ids and not unique_ids.add(obj.id)
             ]
+
             stix_objects_bundle = self.helper.stix2_create_bundle(
                 get_stix_representation_objects
             )
@@ -122,8 +123,8 @@ class ProofpointEtReputationConnector:
         them to OpenCTI. This method also ensures that the work is always completed if it was initialized correctly.
 
         The tasks are as follows
-            - Recover IP address reputation from Proofpoint ET Reputation.
-            - Recover domain reputation from Proofpoint ET Reputation.
+            - Recover IP address reputation from ProofPoint ET Reputation.
+            - Recover domain reputation from ProofPoint ET Reputation.
 
         Returns:
             None
@@ -140,20 +141,20 @@ class ProofpointEtReputationConnector:
                 ): "Domain-Name",
             }
 
-            for future in as_completed(tasks):
-                collection = tasks[future]
-                future_result = future.result()
-                if future_result.get("error"):
+            for completed_task in as_completed(tasks):
+                collection = tasks[completed_task]
+                task_result = completed_task.result()
+                if task_result.get("error"):
                     self.helper.connector_logger.error(
-                        future_result.get("message"),
-                        {"collection": collection, "error": future_result.get("error")},
+                        task_result.get("message"),
+                        {"collection": collection, "error": task_result.get("error")},
                     )
                     continue
-                now_isoformat = self.Utils.get_now(DateTimeFormat.ISO)
+                now_isoformat = self.utils.get_now(DateTimeFormat.ISO)
                 work_id = self._process_initiate_work(collection, now_isoformat)
                 try:
                     prepared_objects = self._generate_stix_from_reputation_data(
-                        future_result, collection
+                        task_result, collection
                     )
                     self._process_send_stix_to_opencti(work_id, prepared_objects)
                 except Exception as err:
@@ -167,7 +168,7 @@ class ProofpointEtReputationConnector:
 
     def _generate_reputation_model(
         self, data_list: dict[str, dict[str, str]], collection: str
-    ) -> IPReputationModel | DomainReputationModel | None:
+    ) -> Generator[IPReputationModel | DomainReputationModel | None, None, None]:
         """
         Generates reputation models from a list of data.
 
@@ -182,19 +183,15 @@ class ProofpointEtReputationConnector:
             collection (str): The type of collection being processed ("IPv4-Addr" or "Domain-Name").
 
         Returns:
-            IPReputationModel | DomainReputationModel | None: A reputation model object for each valid entity,
-            or `None` if the model generation fails.
+            Generator[IPReputationModel | DomainReputationModel | None, None, None]: A reputation model object for each
+            valid entity, or `None` if the model generation fails.
         """
-
         for entity, scores in data_list.items():
             try:
-                reputation_score = ReputationScore(
-                    scores={category: value for category, value in scores.items()}
-                )
                 if collection == "IPv4-Addr":
-                    yield IPReputationModel(reputation={entity: reputation_score})
+                    yield IPReputationModel(value=entity, score_by_category=scores)
                 elif collection == "Domain-Name":
-                    yield DomainReputationModel(reputation={entity: reputation_score})
+                    yield DomainReputationModel(value=entity, score_by_category=scores)
             except ValidationError as err:
                 self.helper.connector_logger.debug(
                     "[CONNECTOR] Model validation: The entity or reputation score does not conform to the schema. "
@@ -240,7 +237,6 @@ class ProofpointEtReputationConnector:
 
         Returns:
             list: A list of generated objects, including author, marking, observables, indicators, and relationships.
-
         """
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting the generation of stix objects from the ProofPoint ET Reputation database for the collection...",
@@ -259,81 +255,81 @@ class ProofpointEtReputationConnector:
         stix_objects.append(marking_definition)
 
         for model in self._generate_reputation_model(data_list, collection):
-            for entity_value, categories in model.reputation.items():
+            # Recovery of the highest value in the scores
+            highest_score = max(model.score_by_category.values())
 
-                # Recovery of the highest value in the scores
-                highest_score = max(categories.scores.values())
-                # Given that the maximum score for OpenCTI is 100, we have decided to limit all higher scores,
-                # as defined by Proofpoint ET Reputation, to 100.
-                highest_score_converted = 100 if highest_score > 100 else highest_score
-                # All categories will be used to generate labels
-                list_categories = list(categories.scores.keys())
+            # Given that the maximum score for OpenCTI is 100, we have decided to limit all higher scores,
+            # as defined by ProofPoint ET Reputation, to 100.
+            highest_score_converted = 100 if highest_score > 100 else highest_score
 
-                if self.config.min_score > highest_score_converted:
-                    self.helper.connector_logger.debug(
-                        "[CONNECTOR] The creation of the entity was ignored due to your configuration of the min_score variable.",
-                        {
-                            "collection": collection,
-                            "min_score_config": self.config.min_score,
-                            "entity": entity_value,
-                            "entity_score": highest_score_converted,
-                        },
-                    )
-                    continue
+            # All categories will be used to generate labels
+            list_categories = list(model.score_by_category.keys())
 
-                # Make observable object
-                observable = self.converter_to_stix.make_observable(
-                    entity_value, highest_score_converted, list_categories, collection
-                )
-                if observable is None:
-                    continue
+            if self.config.extra_min_score > highest_score_converted:
                 self.helper.connector_logger.debug(
-                    "[CONNECTOR] The generation of observable in stix2 from reputation data has been a success.",
+                    "[CONNECTOR] The creation of the entity was ignored due to your configuration of the min_score variable.",
                     {
-                        "observable_id": observable.id,
-                        "observable_value": observable.value,
+                        "collection": collection,
+                        "min_score_config": self.config.extra_min_score,
+                        "entity": model.value,
+                        "entity_score": highest_score_converted,
                     },
                 )
-                stix_objects.append(observable)
+                continue
 
-                if self.config.create_indicator:
-                    # Make indicator object
-                    indicator = self.converter_to_stix.make_indicator(
-                        entity_value,
-                        highest_score_converted,
-                        list_categories,
-                        collection,
-                    )
-                    self.helper.connector_logger.debug(
-                        "[CONNECTOR] The generation of indicator in stix2 from reputation data has been a success.",
-                        {
-                            "indicator_id": indicator.id,
-                            "indicator_name": indicator.name,
-                        },
-                    )
-                    stix_objects.append(indicator)
+            # Make observable object
+            observable = self.converter_to_stix.make_observable(
+                model.value, highest_score_converted, list_categories, collection
+            )
+            if observable is None:
+                continue
+            self.helper.connector_logger.debug(
+                "[CONNECTOR] The generation of observable in stix2 from reputation data has been a success.",
+                {
+                    "observable_id": observable.id,
+                    "observable_value": observable.value,
+                },
+            )
+            stix_objects.append(observable)
 
-                    # Make relationship object between indicator and observable
-                    relationship = self.converter_to_stix.make_relationship(
-                        indicator, "based-on", observable
-                    )
-                    self.helper.connector_logger.debug(
-                        "[CONNECTOR] The generation of the relationship between the observable and the indicator was a success.",
-                        {
-                            "relationship_id": relationship.id,
-                            "source_ref": indicator.id,
-                            "relationship_type": relationship.relationship_type,
-                            "target_ref": observable.id,
-                        },
-                    )
-                    stix_objects.append(relationship)
+            if self.config.extra_create_indicator:
+                # Make indicator object
+                indicator = self.converter_to_stix.make_indicator(
+                    model.value,
+                    highest_score_converted,
+                    list_categories,
+                    collection,
+                )
+                self.helper.connector_logger.debug(
+                    "[CONNECTOR] The generation of indicator in stix2 from reputation data has been a success.",
+                    {
+                        "indicator_id": indicator.id,
+                        "indicator_name": indicator.name,
+                    },
+                )
+                stix_objects.append(indicator)
+
+                # Make relationship object between indicator and observable
+                relationship = self.converter_to_stix.make_relationship(
+                    indicator, "based-on", observable
+                )
+                self.helper.connector_logger.debug(
+                    "[CONNECTOR] The generation of the relationship between the observable and the indicator was a success.",
+                    {
+                        "relationship_id": relationship.id,
+                        "source_ref": indicator.id,
+                        "relationship_type": relationship.relationship_type,
+                        "target_ref": observable.id,
+                    },
+                )
+                stix_objects.append(relationship)
 
         self.helper.connector_logger.info(
             "[CONNECTOR] Finalisation of the generation of stix objects from the ProofPoint ET Reputation database for the collection...",
             {
                 "collection": collection,
                 "generated_entities": len(stix_objects),
-                "config_min_score": self.config.min_score,
+                "config_min_score": self.config.extra_min_score,
             },
         )
         return stix_objects
@@ -348,7 +344,7 @@ class ProofpointEtReputationConnector:
             None
         """
         try:
-            get_now = self.Utils.get_now()
+            get_now = self.utils.get_now()
             connector_start_timestamp = get_now.get("now_timestamp")
             connector_start_isoformat = get_now.get("now_isoformat")
 
@@ -385,7 +381,7 @@ class ProofpointEtReputationConnector:
             self._process_reputation_tasks()
 
             # Store the current timestamp as a last run of the connector
-            connector_stop = self.Utils.get_now(DateTimeFormat.ISO)
+            connector_stop = self.utils.get_now(DateTimeFormat.ISO)
             self.helper.connector_logger.info(
                 "[CONNECTOR] Getting current state and update it with last run of the connector.",
                 {"current_state": current_state},
@@ -426,5 +422,5 @@ class ProofpointEtReputationConnector:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector_duration_period,
         )
