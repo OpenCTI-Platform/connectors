@@ -45,8 +45,8 @@ jobs:
              --build-arg BASE_IMAGE=$base_image \
              --load
             {% endif -%}
-            echo "Check tags for images in builder : "
-            docker images --format {% raw %} "{{.Repository}}: {{.Tag}}" {% endraw %}
+            echo -e "\n Check tags for images in builder : \n"
+            docker images --format {% raw %} "table {{.Repository}}\t{{.Tag}}" {% endraw %}
 
       {% endfor %}
 {% endfor %}
