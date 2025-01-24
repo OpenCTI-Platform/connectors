@@ -8,8 +8,7 @@ jobs:
       - image: cimg/base:stable-20.04
     steps:
       - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
+      - setup_remote_docker
       - run:
           name: Build {{top_dir}}/{{sub_dir}}
           command: |
@@ -45,6 +44,7 @@ jobs:
              --build-arg BASE_IMAGE=$base_image
             {% endif -%}
             docker image list
+            docker buildx inspect builder-connector-{{sub_dir}}
 
       {% endfor %}
 {% endfor %}
