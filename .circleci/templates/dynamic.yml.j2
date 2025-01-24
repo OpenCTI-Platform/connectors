@@ -45,8 +45,8 @@ jobs:
              --build-arg BASE_IMAGE=$base_image \
              --load
             {% endif -%}
-            docker image list
-            docker buildx inspect builder-connector-{{sub_dir}}
+            echo "Check tags for images in builder : "
+            docker images --format {% raw %} "{{.Repository}}: {{.Tag}}" {% endraw %}
 
       {% endfor %}
 {% endfor %}
