@@ -140,12 +140,16 @@ workflows:
       - test
       - build:
           name: "Build rolling and latest images"
-          tags: "test"
+          tags: "latest,rolling"
           requires:
             - ensure_formatting
             - base_linter
             - linter
             - test
+          filters:
+            branches:
+              only:
+                - pull/3328
 #            branches:
 #              ignore: /.*/
 #      - build_fips:
