@@ -33,7 +33,7 @@ jobs:
             {% endif -%}
             docker buildx build . \
              {% for tag in tags -%}
-             --tag {{repo}}/connector-{{sub_dir}}:{{tag}} \
+             --tag {{repo}}/connector-{{sub_dir}}:{{tag}}
              {% endfor -%}
             docker buildx imagetools inspect {{repo}}/connector-{{sub_dir}}
 
