@@ -43,7 +43,7 @@ jobs:
              --tag {{repo}}/connector-{{sub_dir}}:{{tag}}-fips \
              {% endfor -%}
              --build-arg BASE_IMAGE=$base_image
-            docker images --format {% raw %} "{{.Repository}}: {{.Tag}}" {% endraw %}
+            docker buildx imagetools inspect {{repo}}/connector-{{sub_dir}} --format {% raw %} "{{.Name}}" {% endraw %}
             {% endif -%}
 
       {% endfor %}
