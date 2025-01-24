@@ -35,6 +35,7 @@ jobs:
              {% for tag in tags -%}
              --tag {{repo}}/connector-{{sub_dir}}:{{tag}} \
              {% endfor -%}
+            docker buildx imagetools inspect {{repo}}/connector-{{sub_dir}}
 
              {% if param['images'][image_key] is defined and param['images'][image_key]['fips'] == true -%}
             docker buildx build -f Dockerfile_fips . \
@@ -42,8 +43,8 @@ jobs:
              --tag {{repo}}/connector-{{sub_dir}}:{{tag}}-fips \
              {% endfor -%}
              --build-arg BASE_IMAGE=$base_image
-             {% endif -%}
             docker buildx imagetools inspect {{repo}}/connector-{{sub_dir}}
+             {% endif -%}
 
       {% endfor %}
 {% endfor %}
