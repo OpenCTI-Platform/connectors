@@ -17,8 +17,8 @@ jobs:
             cd {{top_dir}}/{{sub_dir}}
             docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
             CIRCLE_TAG=${CIRCLE_TAG:-latest}
-            docker buildx create --use --name builder-connector-{{sub_dir}}
-            docker buildx inspect builder-connector-{{sub_dir}} --bootstrap
+            docker buildx create --use --name mybuilder
+            docker buildx inspect mybuilder --bootstrap
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             {% set image_key = top_dir ~ '_' ~ sub_dir -%}
 
@@ -35,9 +35,6 @@ jobs:
              {% for tag in tags -%}
              --tag {{repo}}/connector-{{sub_dir}}:{{tag}} \
              {% endfor -%}
-             --build-arg BASE_IMAGE=$base_image
-            echo "Image built :"
-            docker buildx imagetools inspect {{repo}}/connector-{{sub_dir}} --format "{{.Name}}"
 
              {% if param['images'][image_key] is defined and param['images'][image_key]['fips'] == true -%}
             docker buildx build -f Dockerfile_fips . \
@@ -45,9 +42,8 @@ jobs:
              --tag {{repo}}/connector-{{sub_dir}}:{{tag}}-fips \
              {% endfor -%}
              --build-arg BASE_IMAGE=$base_image
-            echo "Image built :"
-            docker buildx imagetools inspect {{repo}}/connector-{{sub_dir}} --format "{{.Name}}"
              {% endif -%}
+            docker buildx imagetools inspect {{repo}}/connector-{{sub_dir}} --format '{{Name}}'
 
       {% endfor %}
 {% endfor %}
