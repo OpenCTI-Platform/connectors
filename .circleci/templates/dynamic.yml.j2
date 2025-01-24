@@ -17,8 +17,8 @@ jobs:
             cd {{top_dir}}/{{sub_dir}}
             docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
             CIRCLE_TAG=${CIRCLE_TAG:-latest}
-            docker buildx create --use --name mybuilder
-            docker buildx inspect mybuilder --bootstrap
+            docker buildx create --use --name builder-connector-{{sub_dir}}
+            docker buildx inspect builder-connector-{{sub_dir}} --bootstrap
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             {% set image_key = top_dir ~ '_' ~ sub_dir -%}
 
@@ -43,7 +43,7 @@ jobs:
              {% endfor -%}
              --build-arg BASE_IMAGE=$base_image
              {% endif -%}
-            docker buildx imagetools inspect {{repo}}/connector-{{sub_dir}} --format '{{Name}}'
+            docker buildx imagetools inspect {{repo}}/connector-{{sub_dir}} --format '{{.Name}}'
 
       {% endfor %}
 {% endfor %}
