@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Generator
 
-from connector.models import BaseReputation, DomainReputationModel, IPReputationModel
+from connector.models import DomainReputationModel, IPReputationModel
 from connector.services import (
     ConverterToStix,
     DateTimeFormat,
