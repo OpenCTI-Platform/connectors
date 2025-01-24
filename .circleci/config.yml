@@ -149,7 +149,7 @@ workflows:
           filters:
             branches:
               only:
-                - pull/3328
+                - master
 #            branches:
 #              ignore: /.*/
 #      - build_fips:
