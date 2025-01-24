@@ -138,13 +138,18 @@ workflows:
       - base_linter
       - linter
       - test
-      - build
-#      - build_fips:
-#          filters:
-#            tags:
-#              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+      - build:
+          name: "Build rolling and latest images"
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
+          filters:
+            tags: "test"
 #            branches:
 #              ignore: /.*/
+#      - build_fips:
 #      - build:
 #          name: "Build rolling images"
 #          tags: "rolling,latest"
