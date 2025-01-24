@@ -86,10 +86,17 @@ class SpyCloudConnector:
         )
         for breach_record in breach_records:
             breach_catalog = self.client.get_breach_catalog(breach_record.source_id)
+
             octi_indicent = self.converter_to_stix.create_incident(
-                breach_record=breach_record, breach_catalog=breach_catalog
+                breach_record=breach_record,
+                breach_catalog=breach_catalog,
             )
             octi_objects.append(octi_indicent)
+
+            octi_observables = self.converter_to_stix.create_observables(
+                breach_record=breach_record
+            )
+            octi_objects.extend(octi_observables)
 
         if octi_objects:
             octi_objects.append(self.converter_to_stix.author)
@@ -109,7 +116,9 @@ class SpyCloudConnector:
 
         stix_bundle = self.helper.stix2_create_bundle(stix_objects)
         bundles_sent = self.helper.send_stix2_bundle(
-            bundle=stix_bundle, work_id=work_id, cleanup_inconsistent_bundle=True
+            bundle=stix_bundle,
+            work_id=work_id,
+            cleanup_inconsistent_bundle=True,
         )
 
         return bundles_sent
