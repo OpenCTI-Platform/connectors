@@ -103,7 +103,7 @@ jobs:
       ci_executor:
         type: executor
         description: Executor to use for this job.
-    executor: << parameters.e >>
+    executor: << parameters.ci_executor >>
     docker:
       - image: cimg/python:3.11
     steps:
@@ -165,10 +165,10 @@ workflows:
             - base_linter
             - linter
             - test
-          filters:
-            branches:
-              only:
-                - master
+#          filters:
+#            branches:
+#              only:
+#                - master
       - build:
           name: "Build on release"
           ci_executor:
