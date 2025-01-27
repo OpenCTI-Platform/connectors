@@ -188,6 +188,11 @@ class ReportProcessor:
                 author=self.author,
                 external_references=None,
                 is_family=False,
+                # unused
+                types=None,
+                architecture_execution_env=None,
+                implementation_languages=None,
+                kill_chain_phases=None,
             )
 
         for malware in campaign.malware_names:
@@ -198,27 +203,26 @@ class ReportProcessor:
     ) -> Generator[tuple["Observable", "Indicator"], Any, Any]:
         """Make an OCTI Observable and Indicator generator from a ProofPoint TAP campaign."""
 
-        def selector(
-            observed_data: "ObservedDataPort",
-        ) -> Optional[type["Url"]]:  # to be completed with other product rules
-            """Select the type of observable to ingest."""
-            if observed_data.type_ == "url":
-                return Url
-            return None
-
         def make_observable_and_indicator(
             observed_data: "ObservedDataPort",
         ) -> Optional[tuple["Observable", "Indicator"]]:
             """Make an OCTI Observable and Indicator from a proofpoint TAP  campaign observed data."""
-            observable_type = selector(observed_data)
-            if observable_type is None:
+            if observed_data.type_ == "url":
+                observable = Url(
+                    value=observed_data.value,
+                    description=None,
+                    labels=None,
+                    external_references=None,
+                    markings=[self.tlp_marking],
+                    author=self.author,
+                    # unused
+                    score=None,
+                )
+                indicator = observable.to_indicator(
+                    valid_from=observed_data.observed_at
+                )
+            else:
                 return None
-            observable = observable_type(
-                value=observed_data.value,
-                markings=[self.tlp_marking],
-                author=self.author,
-            )
-            indicator = observable.to_indicator(valid_from=observed_data.observed_at)
             return observable, indicator
 
         for observed_data in campaign.observed_data:
@@ -269,6 +273,14 @@ class ReportProcessor:
                 source=intrusion_set,
                 target=targeted_organization,
                 markings=[self.tlp_marking],
+                # unused
+                created=None,
+                modified=None,
+                description=None,
+                start_time=None,
+                stop_time=None,
+                confidence=None,
+                external_references=None,
             )
 
     def make_intrusion_set_uses_malwares_relationship(
@@ -281,6 +293,14 @@ class ReportProcessor:
                 source=intrusion_set,
                 target=malware,
                 markings=[self.tlp_marking],
+                # unused
+                created=None,
+                modified=None,
+                description=None,
+                start_time=None,
+                stop_time=None,
+                confidence=None,
+                external_references=None,
             )
 
     def make_intrusion_set_uses_attack_patterns_relationship(
@@ -295,6 +315,14 @@ class ReportProcessor:
                 source=intrusion_set,
                 target=attack_pattern,
                 markings=[self.tlp_marking],
+                # unused
+                created=None,
+                modified=None,
+                description=None,
+                start_time=None,
+                stop_time=None,
+                confidence=None,
+                external_references=None,
             )
 
     def make_indicators_indicates_malwares_relationship(
@@ -307,6 +335,14 @@ class ReportProcessor:
                 source=indicator,
                 target=malware,
                 markings=[self.tlp_marking],
+                # unused
+                created=None,
+                modified=None,
+                description=None,
+                start_time=None,
+                stop_time=None,
+                confidence=None,
+                external_references=None,
             )
 
     def make_indicators_indicates_intrusion_sets_relationship(
@@ -319,6 +355,14 @@ class ReportProcessor:
                 source=indicator,
                 target=intrusion_set,
                 markings=[self.tlp_marking],
+                # unused
+                created=None,
+                modified=None,
+                description=None,
+                start_time=None,
+                stop_time=None,
+                confidence=None,
+                external_references=None,
             )
 
     def make_report(
@@ -335,6 +379,10 @@ class ReportProcessor:
             external_references=None,
             objects=related_objetcs,
             report_status="New",
+            # unused
+            report_types=None,
+            reliabilty=None,
+            content=None,
         )
 
     def run_on(self, tap_campaign: "CampaignPort") -> list["BaseEntity"]:
