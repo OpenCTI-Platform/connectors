@@ -28,7 +28,7 @@ jobs:
             {% endif -%}
 
             {% if pycti.replace -%}
-            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti=={{pycti.version}}|' -i {} \;
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|' -i {} \;
             {% endif -%}
             docker buildx build . \
              {% for tag in tags -%}
