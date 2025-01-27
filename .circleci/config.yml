@@ -1,3 +1,4 @@
+#file: noinspection YAMLSchemaValidation
 version: 2.1
 setup: true
 orbs:
@@ -139,8 +140,8 @@ workflows:
       - linter
       - test
       - build:
-          name: "Build rolling and latest images"
-          tags: "latest,rolling"
+          name: "Build rolling images"
+          tags: "rolling"
           requires:
             - ensure_formatting
             - base_linter
@@ -150,6 +151,21 @@ workflows:
             branches:
               only:
                 - master
+      - build:
+          name: "Build on release"
+          tags: "latest"
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
+#          filters:
+#            tags:
+#              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+#            branches:
+#              ignore: /.*/
+
+
 #            branches:
 #              ignore: /.*/
 #      - build_fips:

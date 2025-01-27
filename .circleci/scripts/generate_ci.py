@@ -21,18 +21,6 @@ VARS_PATH = f"{CI_DIR}/vars.yml"
 REPOSITORY = "opencti"
 
 
-def get_latest_pycti_release() -> str:
-    url = "https://api.github.com/repos/OpenCTI-Platform/client-python/releases/latest"
-    headers = {"Accept": "application/vnd.github.v3+json"}
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        data = response.json()
-        return data.get("tag_name")  # Return the tag name of the latest release
-    else:
-        print("Failed to fetch the release info")
-        exit(1)
-
-
 def get_dirs() -> dir:
     # Collect subdirectories for each top-level directory
     dirs = {}
@@ -58,11 +46,17 @@ def get_template() -> Template:
 
 
 def get_pycti() -> dict:
+    """
+    Retrieve the pycti configuration, including its version and whether it should be replaced.
+
+    This function checks the environment for a `CIRCLE_TAG` variable to determine the pycti version.
+    `CIRCLE_TAG` only exists when release is done
+    :return: pycti version
+    """
     pycti = {"version": os.getenv("CIRCLE_TAG")}
     if pycti["version"]:
         pycti["replace"] = False
     else:
-        pycti["version"] = get_latest_pycti_release()
         pycti["replace"] = True
     return pycti
 
