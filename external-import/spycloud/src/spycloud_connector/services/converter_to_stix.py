@@ -2,9 +2,9 @@ import ipaddress
 
 from pycti import OpenCTIConnectorHelper
 
-from ..models import opencti, spycloud
-from ..utils.helpers import dict_to_markdown_table
-from .config_loader import ConfigLoader
+from spycloud_connector.models import opencti, spycloud
+from spycloud_connector.utils.helpers import dict_to_markdown_table
+from spycloud_connector.services import ConfigLoader
 
 SEVERITY_LEVELS_BY_CODE = {2: "low", 5: "medium", 20: "high", 25: "critical"}
 
@@ -32,7 +32,7 @@ class ConverterToStix:
         self,
         breach_record: spycloud.BreachRecord,
         breach_catalog: spycloud.BreachCatalog = None,
-    ) -> opencti.domain.Incident:
+    ) -> opencti.Incident:
         """
         Create an Incident from given breach record and its catalog.
         :param breach_record: SpyCloud breach record
@@ -55,7 +55,7 @@ class ConverterToStix:
             )
         )
 
-        incident = opencti.domain.Incident(
+        incident = opencti.Incident(
             name=incident_name,
             description=incident_description,
             source=incident_source,
@@ -71,7 +71,7 @@ class ConverterToStix:
     def create_observables(
         self,
         breach_record: spycloud.BreachRecord,
-    ) -> list[opencti.observables.ObservableBaseModel]:
+    ) -> list[opencti.ObservableBaseModel]:
         """
         Create all found observables from given breach record.
         :param breach_record: SpyCloud breach record
@@ -146,82 +146,78 @@ class ConverterToStix:
         name: str,
         identity_class: str,
         description: str = None,
-    ) -> opencti.common.Author:
+    ) -> opencti.Author:
         """Create an OpenCTI Author."""
-        return opencti.common.Author(
+        return opencti.Author(
             name=name,
             identity_class=identity_class,
             description=description,
         )
 
-    def _create_domain_name(self, value: str) -> opencti.observables.DomainName:
+    def _create_domain_name(self, value: str) -> opencti.DomainName:
         """Create an OpenCTI DomainName observable."""
         if value:
-            return opencti.observables.DomainName(value=value, author=self.author)
+            return opencti.DomainName(value=value, author=self.author)
 
     def _create_email_address(
         self,
         value: str,
         display_name: str = None,
         belongs_to_ref: str = None,
-    ) -> opencti.observables.EmailAddress:
+    ) -> opencti.EmailAddress:
         """Create an OpenCTI EmailAddress observable."""
         if value:
-            return opencti.observables.EmailAddress(
+            return opencti.EmailAddress(
                 value=value,
                 display_name=display_name,
                 belongs_to_ref=belongs_to_ref,
                 author=self.author,
             )
 
-    def _create_file(self, name: str) -> opencti.observables.File:
+    def _create_file(self, name: str) -> opencti.File:
         """Create an OpenCTI File observable."""
         if name:
-            return opencti.observables.File(name=name, author=self.author)
+            return opencti.File(name=name, author=self.author)
 
     def _create_ip_address(
         self, value: str
-    ) -> opencti.observables.IPV4Address | opencti.observables.IPV6Address:
+    ) -> opencti.IPV4Address | opencti.IPV6Address:
         """Create an OpenCTI IPv4Address or IPv6Address observable."""
         try:
             ip_address_version = ipaddress.ip_address(value).version
             if ip_address_version == 4:
-                ip_address = opencti.observables.IPV4Address(
-                    value=value, author=self.author
-                )
+                ip_address = opencti.IPV4Address(value=value, author=self.author)
                 return ip_address
             if ip_address_version == 6:
-                ip_address = opencti.observables.IPV6Address(
-                    value=value, author=self.author
-                )
+                ip_address = opencti.IPV6Address(value=value, author=self.author)
                 return ip_address
         except ValueError:
             return None
 
-    def _create_mac_address(self, value: str) -> opencti.observables.MACAddress:
+    def _create_mac_address(self, value: str) -> opencti.MACAddress:
         """Create an OpenCTI MACAddress observable."""
         if value:
-            return opencti.observables.MACAddress(value=value, author=self.author)
+            return opencti.MACAddress(value=value, author=self.author)
 
-    def _create_url(self, value: str) -> opencti.observables.Url:
+    def _create_url(self, value: str) -> opencti.Url:
         """Create en OpenCTI Url observable."""
         if value:
-            return opencti.observables.Url(value=value, author=self.author)
+            return opencti.Url(value=value, author=self.author)
 
     def _create_user_account(
         self,
         account_login: str = None,
         account_type: str = None,
-    ) -> opencti.observables.UserAccount:
+    ) -> opencti.UserAccount:
         """Create an OpenCTI UserAccount observable."""
         if account_login:
-            return opencti.observables.UserAccount(
+            return opencti.UserAccount(
                 account_login=account_login,
                 account_type=account_type,
                 author=self.author,
             )
 
-    def _create_user_agent(self, value: str) -> opencti.observables.UserAgent:
+    def _create_user_agent(self, value: str) -> opencti.UserAgent:
         """Create an OpenCTI UserAgent observable."""
         if value:
-            return opencti.observables.UserAgent(value=value, author=self.author)
+            return opencti.UserAgent(value=value, author=self.author)

@@ -3,12 +3,13 @@ from datetime import datetime
 
 from pycti import OpenCTIConnectorHelper
 
-from .models.opencti import OCTIBaseModel
-from .services.config_loader import ConfigLoader
-from .services.converter_to_stix import ConverterToStix
-from .services.spycloud_client import SpyCloudClient
-from .utils.helpers import dict_to_serialized_list
-from .utils.types import SpycloudSeverityType, SpycloudWatchlistTypeType
+from spycloud_connector.models.opencti import OCTIBaseModel
+from spycloud_connector.services import ConfigLoader, ConverterToStix, SpycloudClient
+from spycloud_connector.utils.helpers import dict_to_serialized_list
+from spycloud_connector.utils.types import (
+    SpycloudSeverityType,
+    SpycloudWatchlistTypeType,
+)
 
 
 class SpyCloudConnector:
@@ -22,7 +23,7 @@ class SpyCloudConnector:
         """
         self.config = ConfigLoader()
         self.helper = OpenCTIConnectorHelper(self.config.to_dict())
-        self.client = SpyCloudClient(self.helper, self.config)
+        self.client = SpycloudClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
         self.current_state = None

@@ -6,8 +6,14 @@ from typing import Any, Callable, Literal
 import yaml
 from pycti import get_config_variable
 
-from ..utils.constants import SPYCLOUD_SEVERITY_CODES, SPYCLOUD_WATCHLIST_TYPES
-from ..utils.types import SpycloudSeverityType, SpycloudWatchlistTypeType
+from spycloud_connector.utils.constants import (
+    SPYCLOUD_SEVERITY_CODES,
+    SPYCLOUD_WATCHLIST_TYPES,
+)
+from spycloud_connector.utils.types import (
+    SpycloudSeverityType,
+    SpycloudWatchlistTypeType,
+)
 
 config_yml_file_path = Path(__file__).parents[2].joinpath("config.yml")
 config_yml = (

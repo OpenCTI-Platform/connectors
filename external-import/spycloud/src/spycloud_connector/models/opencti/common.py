@@ -5,7 +5,7 @@ import pycti
 import stix2
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-from ...utils.types import OCTIIdentityClassType, OCTITLPLevelType
+from spycloud_connector.utils.types import OCTIIdentityClassType, OCTITLPLevelType
 
 
 class OCTIBaseModel(BaseModel):

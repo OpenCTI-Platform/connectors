@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.append(str((Path(__file__).resolve().parent.parent.parent / "src")))
 
 import pytest
-from connector.models.spycloud import BreachCatalog, BreachRecord
+from spycloud_connector.models.spycloud import BreachCatalog, BreachRecord
 from pydantic import ValidationError
 
 

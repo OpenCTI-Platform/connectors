@@ -5,7 +5,7 @@ import pycti
 import stix2
 from pydantic import Field
 
-from .common import OCTIBaseModel, Author, TLPMarking
+from spycloud_connector.models.opencti import OCTIBaseModel, Author, TLPMarking
 
 
 class ObservableBaseModel(OCTIBaseModel):

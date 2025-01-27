@@ -7,8 +7,8 @@ sys.path.append(str((Path(__file__).resolve().parent.parent.parent / "src")))
 from unittest.mock import Mock
 
 import pytest
-from connector.models.spycloud import BreachCatalog, BreachRecord
-from connector.services.converter_to_stix import ConverterToStix
+from spycloud_connector.models.spycloud import BreachCatalog, BreachRecord
+from spycloud_connector.services import ConverterToStix
 
 
 @pytest.fixture

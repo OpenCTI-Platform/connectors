@@ -7,8 +7,8 @@ import json
 from unittest.mock import Mock, patch
 
 import pytest
-from connector.models.spycloud import BreachCatalog, BreachRecord
-from connector.services.spycloud_client import SpyCloudClient
+from spycloud_connector.models.spycloud import BreachCatalog, BreachRecord
+from spycloud_connector.services import SpycloudClient
 from requests import Response
 
 TEST_API_BASE_URL = "http://spycloudtest.com"
@@ -30,7 +30,7 @@ def mock_spycloud_client():
     config.spycloud.api_base_url = TEST_API_BASE_URL
     config.spycloud.api_key = TEST_API_KEY
 
-    return SpyCloudClient(helper=helper, config=config)
+    return SpycloudClient(helper=helper, config=config)
 
 
 def mock_response(status_code: int, body: dict = None):
@@ -42,7 +42,7 @@ def mock_response(status_code: int, body: dict = None):
 
 
 def test_spycloud_client_session(mock_spycloud_client):
-    # Given a SpyCloudClient instance
+    # Given a SpycloudClient instance
     # When accessing session attribute
     # Then a valid Author should be returned
     assert mock_spycloud_client.session is not None
@@ -73,7 +73,7 @@ def test_spycloud_client_session(mock_spycloud_client):
     ],
 )
 def test_spycloud_client_request_should_return_data(mock_spycloud_client, mock_request):
-    # Given a SpyCloudClient instance
+    # Given a SpycloudClient instance
     # When calling _request
     with patch(
         "requests.Session.request",
@@ -108,7 +108,7 @@ def test_spycloud_client_request_should_return_data(mock_spycloud_client, mock_r
 def test_spycloud_client_request_should_handle_exceptions(
     mock_spycloud_client, mock_request
 ):
-    # Given a SpyCloudClient instance
+    # Given a SpycloudClient instance
     # When calling _request
     with patch(
         "requests.Session.request",
@@ -121,7 +121,7 @@ def test_spycloud_client_request_should_handle_exceptions(
 
 
 def test_spycloud_client_get_breach_catalog(mock_spycloud_client):
-    # Given a SpyCloudClient instance
+    # Given a SpycloudClient instance
     # When calling get_breach_catalog method
     with patch(
         "requests.Session.request",
@@ -137,7 +137,7 @@ def test_spycloud_client_get_breach_catalog(mock_spycloud_client):
 
 
 def test_spycloud_client_get_breach_records(mock_spycloud_client):
-    # Given a SpyCloudClient instance
+    # Given a SpycloudClient instance
     # When calling get_breach_records method
     with patch(
         "requests.Session.request",

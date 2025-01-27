@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..utils.types import SpycloudSeverityType
+from spycloud_connector.utils.types import SpycloudSeverityType
 
 
 class BreachCatalog(BaseModel):

@@ -5,8 +5,8 @@ import stix2
 import pycti
 from pydantic import Field
 
-from .common import OCTIBaseModel, Author, TLPMarking
-from ...utils.types import OCTISeverityType
+from spycloud_connector.models.opencti import OCTIBaseModel, Author, TLPMarking
+from spycloud_connector.utils.types import OCTISeverityType
 
 
 class Incident(OCTIBaseModel):  # TODO: complete description
