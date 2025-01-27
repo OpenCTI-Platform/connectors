@@ -16,7 +16,7 @@ executors:
     environment:
       BUILD_TAGS: <<parameters.tags>>
     docker:
-      - image: ubuntu:rolling
+      - image: cimg/python:3.11
   release:
     parameters:
       tags:
@@ -26,7 +26,7 @@ executors:
     environment:
       BUILD_TAGS: <<parameters.tags>>
     docker:
-      - image: ubuntu:release
+      - image: cimg/python:3.11
 
 jobs:
   ensure_formatting:
@@ -108,8 +108,6 @@ jobs:
         type: executor
         description: Executor to use for this job.
     executor: << parameters.ci_executor >>
-    docker:
-      - image: cimg/python:3.11
     steps:
       - checkout
       - run:
@@ -152,7 +150,7 @@ jobs:
 #          only_on_fail: false
 #          webhook_url: $MS_TEAMS_WEBHOOK_URL
 workflows:
-  version: 2
+  version: 2.1
   opencti:
     jobs:
       - ensure_formatting
