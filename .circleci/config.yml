@@ -15,6 +15,8 @@ executors:
         description: Image tags
     environment:
       BUILD_TAGS: <<parameters.tags>>
+    docker:
+      - image: ubuntu:rolling
   release:
     parameters:
       tags:
@@ -23,6 +25,8 @@ executors:
         description: Image tags
     environment:
       BUILD_TAGS: <<parameters.tags>>
+    docker:
+      - image: ubuntu:release
 
 jobs:
   ensure_formatting:
@@ -156,7 +160,7 @@ workflows:
       - linter
       - test
       - build:
-          name: "Build rolling images"
+          name: "Build rolling Docker images"
           ci_executor:
             name: rolling
             tags: "rolling"
@@ -170,7 +174,7 @@ workflows:
 #              only:
 #                - master
       - build:
-          name: "Build on release"
+          name: "Build release and latest Docker images"
           ci_executor:
             name: release
             tags: "latest"
