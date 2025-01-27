@@ -6,6 +6,24 @@ orbs:
   ms-teams: cloudradar-monitoring/ms-teams@0.0.1
   continuation: circleci/continuation@1.1.0
 
+executors:
+  rolling:
+    parameters:
+      tags:
+        type: string
+        default: "rolling"
+        description: Image tags
+    environment:
+      BUILD_TAGS: <<parameters.tags>>
+  release:
+    parameters:
+      tags:
+        type: string
+        default: "latest"
+        description: Image tags
+    environment:
+      BUILD_TAGS: <<parameters.tags>>
+
 jobs:
   ensure_formatting:
     docker:
@@ -82,10 +100,10 @@ jobs:
           command: bash run_test.sh
   build:
     parameters:
-      tags:
-        type: string
-        default: "latest,rolling"
-        description: Image tags
+      ci_executor:
+        type: executor
+        description: Executor to use for this job.
+    executor: << parameters.e >>
     docker:
       - image: cimg/python:3.11
     steps:
@@ -95,8 +113,6 @@ jobs:
           command: pip install -r .circleci/scripts/requirements.txt
       - run:
           name: Execute Python Script
-          environment:
-            BUILD_TAGS: <<parameters.tags>>
           command: python .circleci/scripts/generate_ci.py
 
       - continuation/continue:
@@ -141,19 +157,23 @@ workflows:
       - test
       - build:
           name: "Build rolling images"
-          tags: "rolling"
+          ci_executor:
+            name: rolling
+            tags: "rolling"
           requires:
             - ensure_formatting
             - base_linter
             - linter
             - test
-#          filters:
-#            branches:
-#              only:
-#                - master
+          filters:
+            branches:
+              only:
+                - master
       - build:
           name: "Build on release"
-          tags: "latest"
+          ci_executor:
+            name: release
+            tags: "latest"
           requires:
             - ensure_formatting
             - base_linter
