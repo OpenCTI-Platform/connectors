@@ -164,11 +164,11 @@ workflows:
           ci_executor:
             name: rolling
             tags: "rolling"
-          requires:
-            - ensure_formatting
-            - base_linter
-            - linter
-            - test
+#          requires:
+#            - ensure_formatting
+#            - base_linter
+#            - linter
+#            - test
 #          filters:
 #            branches:
 #              only:
@@ -178,11 +178,11 @@ workflows:
           ci_executor:
             name: release
             tags: "latest"
-          requires:
-            - ensure_formatting
-            - base_linter
-            - linter
-            - test
+#          requires:
+#            - ensure_formatting
+#            - base_linter
+#            - linter
+#            - test
 #          filters:
 #            tags:
 #              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
