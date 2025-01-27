@@ -147,10 +147,10 @@ workflows:
             - base_linter
             - linter
             - test
-          filters:
-            branches:
-              only:
-                - master
+#          filters:
+#            branches:
+#              only:
+#                - master
       - build:
           name: "Build on release"
           tags: "latest"
