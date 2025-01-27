@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 class ReportProcessor:
     """Process simply the data from a ProofPoint Campaign.
 
-    Exemples:
+    Examples:
         >>> from proofpoint_tap.ports.campaign import CampaignPort, ObservedDataPort
         >>> from proofpoint_tap.domain.models.octi import TLPMarking
         >>> from datetime import datetime, timezone
