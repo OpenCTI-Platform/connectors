@@ -7,21 +7,11 @@ orbs:
   continuation: circleci/continuation@1.1.0
 
 executors:
-  rolling:
+  ci_environment:
     parameters:
       tags:
         type: string
         default: "rolling"
-        description: Image tags
-    environment:
-      BUILD_TAGS: <<parameters.tags>>
-    docker:
-      - image: cimg/python:3.11
-  release:
-    parameters:
-      tags:
-        type: string
-        default: "latest"
         description: Image tags
     environment:
       BUILD_TAGS: <<parameters.tags>>
@@ -153,16 +143,17 @@ jobs:
 workflows:
   version: 2.1
   opencti_rolling:
-    when: << pipeline.git.tag >>
+    when:
+      not: << pipeline.git.tag >>
     jobs:
       - ensure_formatting
       - base_linter
       - linter
       - test
       - build:
-          name: "Build rolling Docker images"
+          name: "Build and push rolling Docker images"
           ci_executor:
-            name: rolling
+            name: ci_environment
             tags: "rolling"
           requires:
             - ensure_formatting
@@ -176,31 +167,43 @@ workflows:
 #      - notify_rolling:
 #          requires:
 #            - build
+      - build:
+          name: "Build and push pre-release Docker images"
+          ci_executor:
+            name: ci_environment
+            tags: "prerelease"
+#          requires:
+#            - ensure_formatting
+#            - base_linter
+#            - linter
+#            - test
+          filters:
+            branches:
+              only:
+                - pull/3328
 
   opencti_release:
-#    when: << pipeline.git.tag >>
-    when:
-      not: << pipeline.git.tag >>
+    when: << pipeline.git.tag >>
     jobs:
       - ensure_formatting
       - base_linter
       - linter
       - test
       - build:
-          name: "Build release and latest Docker images"
+          name: "Build and push release and latest Docker images"
           ci_executor:
-            name: release
+            name: ci_environment
             tags: "latest"
-#          requires:
-#            - ensure_formatting
-#            - base_linter
-#            - linter
-#            - test
-#          filters:
-#            tags:
-#              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
-#            branches:
-#              ignore: /.*/
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
 #      - notify:
 #          requires:
 #            - build
