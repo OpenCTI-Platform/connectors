@@ -177,7 +177,7 @@ workflows:
 #            - test
           filters:
             tags:
-              ignore: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
             branches:
               only:
                 - pull/3328
@@ -196,10 +196,12 @@ workflows:
             tags: "latest"
           filters:
             tags:
-              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+              ignore: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
             branches:
               only:
                 - pull/3328
+#            branches:
+#              ignore: /.*/
 
 #      - notify_rolling:
 #          requires:
