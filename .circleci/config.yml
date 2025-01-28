@@ -177,8 +177,8 @@ workflows:
             tags:
               only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
             branches:
-              only:
-                - pull/3328
+              ignore:
+                - master
       - build:
           name: "Build release and latest Docker images"
           ci_executor:
@@ -188,8 +188,8 @@ workflows:
             tags:
               ignore: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
             branches:
-              only:
-                - pull/3328
+              ignore:
+                - master
 #  opencti_release:
 #    jobs:
 #      - ensure_formatting
