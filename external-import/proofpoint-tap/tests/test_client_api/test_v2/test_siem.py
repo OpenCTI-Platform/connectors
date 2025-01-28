@@ -131,8 +131,8 @@ async def test_success_cases(client_instance: SIEMClient, method_name: str) -> N
     # When calling the public method
     public_method = getattr(client_instance, method_name)
     response = await public_method(
-        start_time=datetime.now(timezone.utc) - timedelta(hours=48),
-        end_time=datetime.now(timezone.utc) - timedelta(hours=47),
+        start_time=datetime.now(timezone.utc) - timedelta(minutes=60),
+        end_time=datetime.now(timezone.utc) - timedelta(minutes=30),
     )
     # Then the response should be a SIEMResponse instance
     assert isinstance(  # noqa: S101 # We indeed call assert in unit tests.
