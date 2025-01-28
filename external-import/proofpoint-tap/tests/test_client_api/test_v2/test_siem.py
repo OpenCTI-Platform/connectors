@@ -194,6 +194,6 @@ async def test_model_responses(client_instance: SIEMClient, method_name: str) ->
     # Then a ProofpointAPIInvalidResponseError should be raised
     with pytest.raises(ProofpointAPIInvalidResponseError):
         _ = await getattr(client_instance, method_name)(
-            start_time=datetime.now(timezone.utc) - timedelta(hours=48),
-            end_time=datetime.now(timezone.utc) - timedelta(hours=47),
+            start_time=datetime.now(timezone.utc) - timedelta(minutes=60),
+            end_time=datetime.now(timezone.utc) - timedelta(minutes=30),
         )
