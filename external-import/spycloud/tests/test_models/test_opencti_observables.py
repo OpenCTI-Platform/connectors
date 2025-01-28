@@ -35,13 +35,6 @@ def mock_valid_markings():
                 "author": mock_valid_author(),
                 "markings": mock_valid_markings(),
             },
-            id="full_valid_data",
-        ),
-        pytest.param(
-            {
-                "path": "c:/example",
-                "author": mock_valid_author(),
-            },
             id="minimal_valid_data",
         ),
     ],
@@ -102,13 +95,6 @@ def test_directory_class_should_not_accept_invalid_input(input_data, error_field
                 "value": "example.com",
                 "author": mock_valid_author(),
                 "markings": mock_valid_markings(),
-            },
-            id="full_valid_data",
-        ),
-        pytest.param(
-            {
-                "value": "example.com",
-                "author": mock_valid_author(),
             },
             id="minimal_valid_data",
         ),
@@ -171,13 +157,6 @@ def test_domain_name_class_should_not_accept_invalid_input(input_data, error_fie
                 "author": mock_valid_author(),
                 "markings": mock_valid_markings(),
             },
-            id="full_valid_data",
-        ),
-        pytest.param(
-            {
-                "value": "user@example.com",
-                "author": mock_valid_author(),
-            },
             id="minimal_valid_data",
         ),
     ],
@@ -218,7 +197,7 @@ def test_email_address_class_should_accept_valid_input(input_data):
         ),
         pytest.param(
             {
-                "value": ["username@example.com"],
+                "value": "invalid_email",
                 "author": mock_valid_author(),
                 "markings": mock_valid_markings(),
             },
@@ -255,6 +234,7 @@ def test_email_address_class_should_not_accept_invalid_input(input_data, error_f
             {
                 "name": "example.txt",
                 "author": mock_valid_author(),
+                "markings": mock_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -317,13 +297,6 @@ def test_file_class_should_not_accept_invalid_input(input_data, error_field):
                 "value": "192.168.0.1",
                 "author": mock_valid_author(),
                 "markings": mock_valid_markings(),
-            },
-            id="full_valid_data",
-        ),
-        pytest.param(
-            {
-                "value": "192.168.0.1",
-                "author": mock_valid_author(),
             },
             id="minimal_valid_data",
         ),
@@ -395,13 +368,6 @@ def test_ipv4address_class_should_not_accept_invalid_input(input_data, error_fie
                 "author": mock_valid_author(),
                 "markings": mock_valid_markings(),
             },
-            id="full_valid_data",
-        ),
-        pytest.param(
-            {
-                "value": "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
-                "author": mock_valid_author(),
-            },
             id="minimal_valid_data",
         ),
     ],
@@ -472,13 +438,6 @@ def test_ipv6address_class_should_not_accept_invalid_input(input_data, error_fie
                 "author": mock_valid_author(),
                 "markings": mock_valid_markings(),
             },
-            id="full_valid_data",
-        ),
-        pytest.param(
-            {
-                "value": "00:1B:44:11:3A:B7",
-                "author": mock_valid_author(),
-            },
             id="minimal_valid_data",
         ),
     ],
@@ -548,13 +507,6 @@ def test_mac_address_class_should_not_accept_invalid_input(input_data, error_fie
                 "value": "https://example.com",
                 "author": mock_valid_author(),
                 "markings": mock_valid_markings(),
-            },
-            id="full_valid_data",
-        ),
-        pytest.param(
-            {
-                "value": "https://example.com",
-                "author": mock_valid_author(),
             },
             id="minimal_valid_data",
         ),
@@ -633,6 +585,7 @@ def test_url_class_should_not_accept_invalid_input(input_data, error_field):
             {
                 "account_login": "user_login",
                 "author": mock_valid_author(),
+                "markings": mock_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -695,13 +648,6 @@ def test_user_account_class_should_not_accept_invalid_input(input_data, error_fi
                 "value": "Mozilla/5.0",
                 "author": mock_valid_author(),
                 "markings": mock_valid_markings(),
-            },
-            id="full_valid_data",
-        ),
-        pytest.param(
-            {
-                "value": "Mozilla/5.0",
-                "author": mock_valid_author(),
             },
             id="minimal_valid_data",
         ),

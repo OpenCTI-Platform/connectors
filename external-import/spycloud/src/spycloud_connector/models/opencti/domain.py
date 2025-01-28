@@ -37,7 +37,7 @@ class Incident(OCTIBaseModel):  # TODO: complete description
     )
     markings: list[TLPMarking] = Field(
         description="References for object markings.",
-        default=[],
+        min_length=1,
     )
 
     def to_stix2_object(self) -> stix2.Incident:

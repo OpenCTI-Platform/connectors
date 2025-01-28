@@ -16,9 +16,9 @@ class ObservableBaseModel(OCTIBaseModel):
     """
 
     author: Author = Field(description="The Author reporting this observable.")
-    markings: Optional[list[TLPMarking]] = Field(
+    markings: list[TLPMarking] = Field(
         description="References for object marking.",
-        default=[],
+        min_length=1,
     )
 
     @model_validator(mode="before")

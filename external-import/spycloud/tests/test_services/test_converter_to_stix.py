@@ -13,6 +13,7 @@ def mock_converter_to_stix():
     helper.connect_name = "Spycloud Test"
 
     config = Mock()
+    config.spycloud.tlp_level = "red"
 
     return ConverterToStix(helper=helper, config=config)
 

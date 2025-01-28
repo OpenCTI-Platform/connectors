@@ -3,12 +3,12 @@ from pathlib import Path
 from typing import Callable
 
 from pycti import OpenCTIConnectorHelper
-from pydantic import ValidationError as PydanticValidationError
-from validators import ValidationError
+from pydantic import ValidationError
 
 from spycloud_connector.models import opencti, spycloud
 from spycloud_connector.utils.helpers import dict_to_markdown_table
 from spycloud_connector.services import ConfigLoader
+from spycloud_connector.utils.types import OCTITLPLevelType
 
 SEVERITY_LEVELS_BY_CODE = {2: "low", 5: "medium", 20: "high", 25: "critical"}
 
@@ -23,7 +23,7 @@ def handle_validation_error(decorated_function: Callable):
     def decorator(self: "ConverterToStix", *args, **kwargs):
         try:
             return decorated_function(self, *args, **kwargs)
-        except PydanticValidationError as e:
+        except ValidationError as e:
             self.helper.connector_logger.error(str(e))
             return None
 
@@ -47,6 +47,9 @@ class ConverterToStix:
             name=self.helper.connect_name,
             identity_class="organization",
             description="SpyCloud external import connector",
+        )
+        self.tlp_marking = ConverterToStix._create_tlp_marking(
+            level=self.config.spycloud.tlp_level
         )
 
     @handle_validation_error
@@ -86,13 +89,12 @@ class ConverterToStix:
             author=self.author,
             created_at=breach_record.spycloud_publish_date,
             updated_at=breach_record.spycloud_publish_date,
-            markings=[],
+            markings=[self.tlp_marking],
         )
         return incident
 
     def create_observables(
-        self,
-        breach_record: spycloud.BreachRecord,
+        self, breach_record: spycloud.BreachRecord
     ) -> list[opencti.ObservableBaseModel]:
         """
         Create all found observables from given breach record.
@@ -172,9 +174,7 @@ class ConverterToStix:
 
     @staticmethod
     def _create_author(
-        name: str,
-        identity_class: str,
-        description: str = None,
+        name: str, identity_class: str, description: str = None
     ) -> opencti.Author:
         """Create an OpenCTI Author."""
         return opencti.Author(
@@ -183,24 +183,34 @@ class ConverterToStix:
             description=description,
         )
 
+    @staticmethod
+    def _create_tlp_marking(level: OCTITLPLevelType) -> opencti.TLPMarking:
+        """Create an OpenCTI TLP Marking."""
+        return opencti.TLPMarking(level=level)
+
     @handle_validation_error
     def _create_directory(self, path: str) -> opencti.Directory:
         """Create an OpenCTI Directory observable."""
         if path:
-            return opencti.Directory(path=path, author=self.author)
+            return opencti.Directory(
+                path=path,
+                author=self.author,
+                markings=[self.tlp_marking],
+            )
 
     @handle_validation_error
     def _create_domain_name(self, value: str) -> opencti.DomainName:
         """Create an OpenCTI DomainName observable."""
         if value:
-            return opencti.DomainName(value=value, author=self.author)
+            return opencti.DomainName(
+                value=value,
+                author=self.author,
+                markings=[self.tlp_marking],
+            )
 
     @handle_validation_error
     def _create_email_address(
-        self,
-        value: str,
-        display_name: str = None,
-        belongs_to_ref: str = None,
+        self, value: str, display_name: str = None, belongs_to_ref: str = None
     ) -> opencti.EmailAddress:
         """Create an OpenCTI EmailAddress observable."""
         if value:
@@ -209,13 +219,18 @@ class ConverterToStix:
                 display_name=display_name,
                 belongs_to_ref=belongs_to_ref,
                 author=self.author,
+                markings=[self.tlp_marking],
             )
 
     @handle_validation_error
     def _create_file(self, name: str) -> opencti.File:
         """Create an OpenCTI File observable."""
         if name:
-            return opencti.File(name=name, author=self.author)
+            return opencti.File(
+                name=name,
+                author=self.author,
+                markings=[self.tlp_marking],
+            )
 
     @handle_validation_error
     def _create_ip_address(
@@ -230,29 +245,41 @@ class ConverterToStix:
             return None
 
         if ip_address_version == 4:
-            ip_address = opencti.IPv4Address(value=value, author=self.author)
-            return ip_address
+            return opencti.IPv4Address(
+                value=value,
+                author=self.author,
+                markings=[self.tlp_marking],
+            )
         if ip_address_version == 6:
-            ip_address = opencti.IPv6Address(value=value, author=self.author)
-            return ip_address
+            return opencti.IPv6Address(
+                value=value,
+                author=self.author,
+                markings=[self.tlp_marking],
+            )
 
     @handle_validation_error
     def _create_mac_address(self, value: str) -> opencti.MACAddress:
         """Create an OpenCTI MACAddress observable."""
         if value:
-            return opencti.MACAddress(value=value, author=self.author)
+            return opencti.MACAddress(
+                value=value,
+                author=self.author,
+                markings=[self.tlp_marking],
+            )
 
     @handle_validation_error
     def _create_url(self, value: str) -> opencti.URL:
         """Create en OpenCTI URL observable."""
         if value:
-            return opencti.URL(value=value, author=self.author)
+            return opencti.URL(
+                value=value,
+                author=self.author,
+                markings=[self.tlp_marking],
+            )
 
     @handle_validation_error
     def _create_user_account(
-        self,
-        account_login: str = None,
-        account_type: str = None,
+        self, account_login: str = None, account_type: str = None
     ) -> opencti.UserAccount:
         """Create an OpenCTI UserAccount observable."""
         if account_login:
@@ -260,10 +287,15 @@ class ConverterToStix:
                 account_login=account_login,
                 account_type=account_type,
                 author=self.author,
+                markings=[self.tlp_marking],
             )
 
     @handle_validation_error
     def _create_user_agent(self, value: str) -> opencti.UserAgent:
         """Create an OpenCTI UserAgent observable."""
         if value:
-            return opencti.UserAgent(value=value, author=self.author)
+            return opencti.UserAgent(
+                value=value,
+                author=self.author,
+                markings=[self.tlp_marking],
+            )

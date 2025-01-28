@@ -7,10 +7,12 @@ import yaml
 from pycti import get_config_variable
 
 from spycloud_connector.utils.constants import (
+    OCTI_TLP_LEVELS,
     SPYCLOUD_SEVERITY_CODES,
     SPYCLOUD_WATCHLIST_TYPES,
 )
 from spycloud_connector.utils.types import (
+    OCTITLPLevelType,
     SpycloudSeverityType,
     SpycloudWatchlistTypeType,
 )
@@ -30,14 +32,14 @@ def validate_value(validate_function: Callable) -> Callable:
     :return: Validate decorator
     """
 
-    def wrapped_decorator(wrapped_function: Callable):
+    def wrapped_decorator(decorated_function: Callable):
         def decorator(*args, **kwargs):
-            result = wrapped_function(*args, **kwargs)
+            result = decorated_function(*args, **kwargs)
 
             valid_value = validate_function(result)
             if not valid_value:
                 raise ValueError(
-                    f"Invalid value for '{wrapped_function.__name__}' config variable."
+                    f"Invalid value for '{decorated_function.__name__}' config variable."
                 )
 
             return result
@@ -171,6 +173,17 @@ class SpyCloudConfig:
             for string in watchlist_types_string.split(",")
             if len(string.strip())
         ]
+
+    @property
+    @validate_value(lambda value: value in OCTI_TLP_LEVELS)
+    def tlp_level(self) -> OCTITLPLevelType:
+        return get_config_variable(
+            env_var="SPYCLOUD_TLP_LEVEL",
+            yaml_path=["spycloud", "tlp_level"],
+            config=config_yml,
+            default="amber+strict",
+            required=False,
+        )
 
     @property
     def import_start_date(self) -> datetime:
