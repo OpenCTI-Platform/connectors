@@ -175,12 +175,12 @@ workflows:
             branches:
               only:
                 - pull/3328
-      - notify:
-          name: "Send notifications"
-          notification_executor:
-            name: ci_notifications
-          requires:
-            - build
+#      - notify:
+#          name: "Send notifications"
+#          notification_executor:
+#            name: ci_notifications
+#          requires:
+#            - build
 
   opencti_release:
     when: << pipeline.git.tag >>
