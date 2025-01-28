@@ -139,7 +139,7 @@ jobs:
 
 workflows:
   version: 2.1
-  opencti:
+  connectors:
     when:
       not: << pipeline.git.tag >>
     jobs:
@@ -183,7 +183,7 @@ workflows:
             - build_rolling
             - build_prerelease
 
-  opencti_release:
+  connectors_release:
     when: << pipeline.git.tag >>
     jobs:
       - ensure_formatting
