@@ -240,7 +240,7 @@ class Malware(BaseEntity):
             ]
         ]
     ] = Field(None, description="Types of the malware.")
-    is_family: bool = Field(None, description="Is the malware a family?")
+    is_family: bool = Field(..., description="Is the malware a family?")
     description: Optional[str] = Field(None, description="Description of the malware.")
     architecture_execution_env: Optional[
         list[
@@ -447,7 +447,7 @@ class Report(BaseEntity):
         None, description="External references of the report."
     )
     objects: list[BaseEntity] = Field(
-        None, description="Objects of the report.", min_length=1
+        ..., description="Objects of the report.", min_length=1
     )
 
     def to_stix2_object(self) -> stix2.v21.Report:

@@ -1,28 +1,28 @@
 """Define the OpenCTI Relationships."""
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import Any, Literal, Optional
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
-from proofpoint_tap.domain.models.octi.common import BaseEntity
+
+# Note: We need to import the models (even if used for typing purpose) for pydantic to work.
+# Else we get a pydantic.errors.PydanticUserError: `Model` is not fully defined.
+from proofpoint_tap.domain.models.octi.common import (
+    Author,
+    BaseEntity,
+    ExternalReference,
+    TLPMarking,
+)
+from proofpoint_tap.domain.models.octi.domain import (
+    AttackPattern,
+    Campaign,
+    IntrusionSet,
+    Malware,
+    TargetedOrganization,
+)
+from proofpoint_tap.domain.models.octi.observables import Indicator
 from pydantic import Field, PrivateAttr
-
-if TYPE_CHECKING:
-
-    from proofpoint_tap.domain.models.octi.common import (
-        Author,
-        ExternalReference,
-        TLPMarking,
-    )
-    from proofpoint_tap.domain.models.octi.domain import (
-        AttackPattern,
-        Campaign,
-        IntrusionSet,
-        Malware,
-        TargetedOrganization,
-    )
-    from proofpoint_tap.domain.models.octi.observables import Indicator
 
 
 class BaseRelationship(BaseEntity):
@@ -64,7 +64,7 @@ class BaseRelationship(BaseEntity):
         description="External references",
     )
 
-    _relationship_type: str = PrivateAttr(...)
+    _relationship_type: str = PrivateAttr("")
 
     def to_stix2_object(self) -> stix2.v21.Relationship:
         """Make stix object."""
@@ -93,11 +93,9 @@ class BaseRelationship(BaseEntity):
             start_time=self.start_time,
             stop_time=self.stop_time,
             confidence=self.confidence,
-            object_marking_refs=self.markings,
+            object_marking_refs=[marking.id for marking in self.markings or []],
             external_references=(
-                [ref.to_stix2_object() for ref in self.external_references]
-                if self.external_references
-                else None
+                [ref.to_stix2_object() for ref in self.external_references or []]
             ),
         )
 
@@ -174,8 +172,8 @@ class CampaignTargetsOrganization(BaseRelationship):
     _relationship_type: Literal["targets"] = "targets"
 
 
-class IntrusionSetTargetsOrganizations(BaseRelationship):
-    """Represents a relationship indicating that an intrusion set targets organizations."""
+class IntrusionSetTargetsOrganization(BaseRelationship):
+    """Represents a relationship indicating that an intrusion set targets organization."""
 
     # Override BaseRelationship
     source: "IntrusionSet" = Field(

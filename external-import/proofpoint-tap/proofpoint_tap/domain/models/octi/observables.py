@@ -72,7 +72,7 @@ class Indicator(BaseEntity):
         "suricata",
         "tanium-signal",
         "yara",
-    ] = Field(None, description="Pattern type.")
+    ] = Field(..., description="Pattern type.")
     pattern: str = Field(
         ...,
         description="Pattern. See Stix2.1 for instance : https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_me3pzm77qfnf",
@@ -255,7 +255,7 @@ class Url(Observable):
             author=self.author,
             markings=self.markings,
             external_references=self.external_references,
-            observable_type="url",
+            observable_type="Url",
             score=self.score,
         )
 
