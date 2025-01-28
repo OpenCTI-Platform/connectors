@@ -157,7 +157,7 @@ jobs:
 #          webhook_url: $MS_TEAMS_WEBHOOK_URL
 workflows:
   version: 2.1
-  opencti_rolling:
+  opencti:
     jobs:
       - ensure_formatting
       - base_linter
@@ -179,12 +179,6 @@ workflows:
             branches:
               only:
                 - pull/3328
-  opencti_release:
-    jobs:
-      - ensure_formatting
-      - base_linter
-      - linter
-      - test
       - build:
           name: "Build release and latest Docker images"
           ci_executor:
@@ -196,6 +190,23 @@ workflows:
             branches:
               only:
                 - pull/3328
+#  opencti_release:
+#    jobs:
+#      - ensure_formatting
+#      - base_linter
+#      - linter
+#      - test
+#      - build:
+#          name: "Build release and latest Docker images"
+#          ci_executor:
+#            name: release
+#            tags: "latest"
+#          filters:
+#            tags:
+#              ignore: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+#            branches:
+#              only:
+#                - pull/3328
 #            branches:
 #              ignore: /.*/
 
