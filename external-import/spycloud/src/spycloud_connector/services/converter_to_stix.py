@@ -1,12 +1,33 @@
 import ipaddress
+from pathlib import Path
+from typing import Callable
 
 from pycti import OpenCTIConnectorHelper
+from pydantic import ValidationError as PydanticValidationError
+from validators import ValidationError
 
 from spycloud_connector.models import opencti, spycloud
 from spycloud_connector.utils.helpers import dict_to_markdown_table
 from spycloud_connector.services import ConfigLoader
 
 SEVERITY_LEVELS_BY_CODE = {2: "low", 5: "medium", 20: "high", 25: "critical"}
+
+
+def handle_validation_error(decorated_function: Callable):
+    """
+    Handle Pydantic's ValidationErrors during models instanciation.
+    :param decorated_function: An instance method instanciating a Pydantic model.
+    :return: Decorator
+    """
+
+    def decorator(self: "ConverterToStix", *args, **kwargs):
+        try:
+            return decorated_function(self, *args, **kwargs)
+        except PydanticValidationError as e:
+            self.helper.connector_logger.error(str(e))
+            return None
+
+    return decorator
 
 
 class ConverterToStix:
@@ -28,6 +49,7 @@ class ConverterToStix:
             description="SpyCloud external import connector",
         )
 
+    @handle_validation_error
     def create_incident(
         self,
         breach_record: spycloud.BreachRecord,
@@ -43,7 +65,7 @@ class ConverterToStix:
         incident_severity = SEVERITY_LEVELS_BY_CODE.get(breach_record.severity)
         incident_name = (
             f"Spycloud {incident_severity} alert on "
-            f"{breach_record.email or breach_record.username or breach_record.ip[0] or breach_record.document_id}"
+            f"{breach_record.email or breach_record.username or breach_record.ip_addresses[0] or breach_record.document_id}"
         )
         incident_description = dict_to_markdown_table(
             breach_record.model_dump(
@@ -64,7 +86,7 @@ class ConverterToStix:
             author=self.author,
             created_at=breach_record.spycloud_publish_date,
             updated_at=breach_record.spycloud_publish_date,
-            object_marking_refs=[],
+            markings=[],
         )
         return incident
 
@@ -94,21 +116,6 @@ class ConverterToStix:
         if user_account:
             observables.append(user_account)
 
-        domain_name_value = breach_record_fields.get("target_domain")
-        domain_name = self._create_domain_name(domain_name_value)
-        if domain_name:
-            observables.append(domain_name)
-
-        subdomain_name_value = breach_record_fields.get("target_subdomain")
-        domain_name = self._create_domain_name(subdomain_name_value)
-        if domain_name:
-            observables.append(domain_name)
-
-        ip_address_value = breach_record_fields.get("ip_addresses", [])[0]
-        ip_address = self._create_ip_address(ip_address_value)
-        if ip_address:
-            observables.append(ip_address)
-
         email_value = breach_record_fields.get("email")
         email_display_name = breach_record_fields.get("full_name")
         email_address = self._create_email_address(
@@ -124,15 +131,37 @@ class ConverterToStix:
         if url:
             observables.append(url)
 
+        domain_name_value = breach_record_fields.get("target_domain")
+        domain_name = self._create_domain_name(domain_name_value)
+        if domain_name:
+            observables.append(domain_name)
+
+        subdomain_name_value = breach_record_fields.get("target_subdomain")
+        domain_name = self._create_domain_name(subdomain_name_value)
+        if domain_name:
+            observables.append(domain_name)
+
         mac_address_value = breach_record_fields.get("mac_address")
         mac_address = self._create_mac_address(mac_address_value)
         if mac_address:
             observables.append(mac_address)
 
-        file_name = breach_record_fields.get("infected_path")
-        file = self._create_file(file_name)
-        if file:
-            observables.append(file)
+        for ip_address_value in breach_record_fields.get("ip_addresses", []):
+            ip_address = self._create_ip_address(ip_address_value)
+            if ip_address:
+                observables.append(ip_address)
+
+        file_path = breach_record_fields.get("infected_path")
+        if file_path:
+            file_path = Path(file_path)
+
+            file = self._create_file(str(file_path))
+            if file:
+                observables.append(file)
+
+            directory = self._create_directory(str(file_path.parent))
+            if directory:
+                observables.append(directory)
 
         user_agent_value = breach_record_fields.get("user_agent")
         user_agent = self._create_user_agent(user_agent_value)
@@ -154,11 +183,19 @@ class ConverterToStix:
             description=description,
         )
 
+    @handle_validation_error
+    def _create_directory(self, path: str) -> opencti.Directory:
+        """Create an OpenCTI Directory observable."""
+        if path:
+            return opencti.Directory(path=path, author=self.author)
+
+    @handle_validation_error
     def _create_domain_name(self, value: str) -> opencti.DomainName:
         """Create an OpenCTI DomainName observable."""
         if value:
             return opencti.DomainName(value=value, author=self.author)
 
+    @handle_validation_error
     def _create_email_address(
         self,
         value: str,
@@ -174,36 +211,44 @@ class ConverterToStix:
                 author=self.author,
             )
 
+    @handle_validation_error
     def _create_file(self, name: str) -> opencti.File:
         """Create an OpenCTI File observable."""
         if name:
             return opencti.File(name=name, author=self.author)
 
+    @handle_validation_error
     def _create_ip_address(
         self, value: str
-    ) -> opencti.IPV4Address | opencti.IPV6Address:
+    ) -> opencti.IPv4Address | opencti.IPv6Address:
         """Create an OpenCTI IPv4Address or IPv6Address observable."""
+        ip_address_version = None
         try:
             ip_address_version = ipaddress.ip_address(value).version
-            if ip_address_version == 4:
-                ip_address = opencti.IPV4Address(value=value, author=self.author)
-                return ip_address
-            if ip_address_version == 6:
-                ip_address = opencti.IPV6Address(value=value, author=self.author)
-                return ip_address
-        except ValueError:
+        except ValueError as e:
+            self.helper.connector_logger.error(str(e))
             return None
 
+        if ip_address_version == 4:
+            ip_address = opencti.IPv4Address(value=value, author=self.author)
+            return ip_address
+        if ip_address_version == 6:
+            ip_address = opencti.IPv6Address(value=value, author=self.author)
+            return ip_address
+
+    @handle_validation_error
     def _create_mac_address(self, value: str) -> opencti.MACAddress:
         """Create an OpenCTI MACAddress observable."""
         if value:
             return opencti.MACAddress(value=value, author=self.author)
 
-    def _create_url(self, value: str) -> opencti.Url:
-        """Create en OpenCTI Url observable."""
+    @handle_validation_error
+    def _create_url(self, value: str) -> opencti.URL:
+        """Create en OpenCTI URL observable."""
         if value:
-            return opencti.Url(value=value, author=self.author)
+            return opencti.URL(value=value, author=self.author)
 
+    @handle_validation_error
     def _create_user_account(
         self,
         account_login: str = None,
@@ -217,6 +262,7 @@ class ConverterToStix:
                 author=self.author,
             )
 
+    @handle_validation_error
     def _create_user_agent(self, value: str) -> opencti.UserAgent:
         """Create an OpenCTI UserAgent observable."""
         if value:

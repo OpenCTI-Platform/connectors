@@ -7,4 +7,4 @@ OCTIIdentityClassType = Literal[
     "individual", "group", "system", "organization", "class", "unknown"
 ]
 OCTISeverityType = Literal["low", "medium", "high", "critical"]
-OCTITLPLevelType = Literal["white", "green", "amber", "amber+strict" "red"]
+OCTITLPLevelType = Literal["white", "green", "amber", "amber+strict", "red"]

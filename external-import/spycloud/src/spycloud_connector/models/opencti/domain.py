@@ -35,7 +35,7 @@ class Incident(OCTIBaseModel):  # TODO: complete description
         description="Must be set when creating a new version of an object if the created property was set.",
         default=None,
     )
-    object_marking_refs: list[TLPMarking] = Field(
+    markings: list[TLPMarking] = Field(
         description="References for object markings.",
         default=[],
     )
@@ -47,7 +47,7 @@ class Incident(OCTIBaseModel):  # TODO: complete description
             description=self.description,
             created=self.created_at,
             created_by_ref=self.author.id,
-            object_marking_refs=self.object_marking_refs,
+            object_marking_refs=[marking.id for marking in self.markings],
             custom_properties={
                 "x_opencti_source": self.source,
                 "x_opencti_severity": self.severity,

@@ -3,7 +3,8 @@ from typing import Optional
 
 import pycti
 import stix2
-from pydantic import Field
+import validators
+from pydantic import Field, model_validator
 
 from spycloud_connector.models.opencti import OCTIBaseModel, Author, TLPMarking
 
@@ -14,15 +15,46 @@ class ObservableBaseModel(OCTIBaseModel):
     NOTA BENE: Observables do not need determinitic stix id generation. STIX python lib handles it.
     """
 
+    author: Author = Field(description="The Author reporting this observable.")
     markings: Optional[list[TLPMarking]] = Field(
         description="References for object marking.",
         default=[],
     )
-    author: Author = Field(description="The Author reporting this observable.")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_model_before_init(cls, data: dict) -> dict:
+        """Validate the model before initialization. Automatically called by pydantic."""
+        if isinstance(data, dict):
+            return cls._validate_model_input(data)
+        return data
+
+    @classmethod
+    def _validate_model_input(cls, data: dict) -> dict:
+        """Validate the model input. Should be overwritten in subclasses to implement validation logic."""
+        return data
 
     @abstractmethod
     def to_stix2_object(self) -> stix2.v21._Observable:
         """Make stix object."""
+
+
+class Directory(ObservableBaseModel):
+    """Represent a directory observable in OpenCTI."""
+
+    path: str = Field(
+        description="Specifies the path of the directory.",
+        min_length=1,
+    )
+
+    def to_stix2_object(self) -> stix2.Directory:
+        return stix2.Directory(
+            path=self.path,
+            object_marking_refs=[marking.id for marking in self.markings],
+            custom_properties={
+                "x_opencti_created_by_ref": self.author.id,
+            },
+        )
 
 
 class DomainName(ObservableBaseModel):
@@ -33,10 +65,16 @@ class DomainName(ObservableBaseModel):
         min_length=1,
     )
 
+    @classmethod
+    def _validate_model_input(cls, data: dict) -> dict:
+        if not validators.domain(data.get("value")):
+            raise ValueError("The provided domain name is not a valid domain name.")
+        return data
+
     def to_stix2_object(self) -> stix2.DomainName:
         return stix2.DomainName(
             value=self.value,
-            object_marking_refs=self.markings,
+            object_marking_refs=[marking.id for marking in self.markings],
             custom_properties={
                 "x_opencti_created_by_ref": self.author.id,
             },
@@ -60,12 +98,18 @@ class EmailAddress(ObservableBaseModel):
         default=None,
     )
 
+    @classmethod
+    def _validate_model_input(cls, data: dict) -> dict:
+        if not validators.email(data.get("value")):
+            raise ValueError("The provided email address is not a valid email address.")
+        return data
+
     def to_stix2_object(self) -> stix2.EmailAddress:
         return stix2.EmailAddress(
             value=self.value,
             display_name=self.display_name,
             belongs_to_ref=self.belongs_to_ref,
-            object_marking_refs=self.markings,
+            object_marking_refs=[marking.id for marking in self.markings],
             custom_properties={
                 "x_opencti_created_by_ref": self.author.id,
             },
@@ -85,18 +129,26 @@ class File(ObservableBaseModel):
         default=None,
     )
 
+    @classmethod
+    def _validate_model_input(cls, data: dict) -> dict:
+        if not data.get("name") and not data.get("hashes"):
+            raise ValueError(
+                "At least one of the fields 'name' or 'hashes' must be provided."
+            )
+        return data
+
     def to_stix2_object(self) -> stix2.File:
         return stix2.File(
             name=self.name,
             hashes=self.hashes,
-            object_marking_refs=self.markings,
+            object_marking_refs=[marking.id for marking in self.markings],
             custom_properties={
                 "x_opencti_created_by_ref": self.author.id,
             },
         )
 
 
-class IPV4Address(ObservableBaseModel):
+class IPv4Address(ObservableBaseModel):
     """Represent an IP address observable."""
 
     value: str = Field(
@@ -104,29 +156,25 @@ class IPV4Address(ObservableBaseModel):
         min_length=1,
     )
 
-    # @field_validator("value", mode="before")
-    # @classmethod
-    # def validate_value(cls, value: str) -> str:
-    #     """Validate the value of the IP V4 address."""
-    #     try:
-    #         IPv4Address(value)
-    #     except ValueError:
-    #         raise ValueError(f"Invalid IP V4 address {value}") from None
-    #     return value
+    @classmethod
+    def _validate_model_input(cls, data: dict) -> dict:
+        if not validators.ipv4(data.get("value")):
+            raise ValueError("The provided IP address is not a valid IPv4 address.")
+        return data
 
     def to_stix2_object(self) -> stix2.v21.IPv4Address:
         if self._stix2_representation is not None:
             return self._stix2_representation
         return stix2.IPv4Address(
             value=self.value,
-            object_marking_refs=self.markings,
+            object_marking_refs=[marking.id for marking in self.markings],
             custom_properties={
                 "x_opencti_created_by_ref": self.author.id,
             },
         )
 
 
-class IPV6Address(ObservableBaseModel):
+class IPv6Address(ObservableBaseModel):
     """Represent an IP address observable."""
 
     value: str = Field(
@@ -134,22 +182,18 @@ class IPV6Address(ObservableBaseModel):
         min_length=1,
     )
 
-    # @field_validator("value", mode="before")
-    # @classmethod
-    # def validate_value(cls, value: str) -> str:
-    #     """Validate the value of the IP V4 address."""
-    #     try:
-    #         IPv4Address(value)
-    #     except ValueError:
-    #         raise ValueError(f"Invalid IP V4 address {value}") from None
-    #     return value
+    @classmethod
+    def _validate_model_input(cls, data: dict) -> dict:
+        if not validators.ipv6(data.get("value")):
+            raise ValueError("The provided IP address is not a valid IPv6 address.")
+        return data
 
     def to_stix2_object(self) -> stix2.v21.IPv6Address:
         if self._stix2_representation is not None:
             return self._stix2_representation
         return stix2.IPv6Address(
             value=self.value,
-            object_marking_refs=self.markings,
+            object_marking_refs=[marking.id for marking in self.markings],
             custom_properties={
                 "x_opencti_created_by_ref": self.author.id,
             },
@@ -164,17 +208,23 @@ class MACAddress(ObservableBaseModel):
         min_length=1,
     )
 
+    @classmethod
+    def _validate_model_input(cls, data: dict) -> dict:
+        if not validators.mac_address(data.get("value")):
+            raise ValueError("The provided MAC address is not a valid MAC address.")
+        return data
+
     def to_stix2_object(self) -> stix2.MACAddress:
         return stix2.MACAddress(
             value=self.value,
-            object_marking_refs=self.markings,
+            object_marking_refs=[marking.id for marking in self.markings],
             custom_properties={
                 "x_opencti_created_by_ref": self.author.id,
             },
         )
 
 
-class Url(ObservableBaseModel):
+class URL(ObservableBaseModel):
     """Represent a URL observable in OpenCTI."""
 
     value: str = Field(
@@ -182,10 +232,16 @@ class Url(ObservableBaseModel):
         min_length=1,
     )
 
+    @classmethod
+    def _validate_model_input(cls, data: dict) -> dict:
+        if not validators.url(data.get("value")):
+            raise ValueError("The provided URL is not a valid URL.")
+        return data
+
     def to_stix2_object(self) -> stix2.URL:
         return stix2.URL(
             value=self.value,
-            object_marking_refs=self.markings,
+            object_marking_refs=[marking.id for marking in self.markings],
             custom_properties={
                 "x_opencti_created_by_ref": self.author.id,
             },
@@ -206,11 +262,19 @@ class UserAccount(ObservableBaseModel):
         default=None,
     )
 
+    @classmethod
+    def _validate_model_input(cls, data: dict) -> dict:
+        if not data.get("account_login") and not data.get("account_type"):
+            raise ValueError(
+                "At least one of the fields 'account_login' or 'account_type' must be provided."
+            )
+        return data
+
     def to_stix2_object(self) -> stix2.UserAccount:
         return stix2.UserAccount(
             account_login=self.account_login,
             account_type=self.account_type,
-            object_marking_refs=self.markings,
+            object_marking_refs=[marking.id for marking in self.markings],
             custom_properties={
                 "x_opencti_created_by_ref": self.author.id,
             },
@@ -228,7 +292,7 @@ class UserAgent(ObservableBaseModel):
     def to_stix2_object(self) -> pycti.CustomObservableUserAgent:
         return pycti.CustomObservableUserAgent(
             value=self.value,
-            object_marking_refs=self.markings,
+            object_marking_refs=[marking.id for marking in self.markings],
             custom_properties={
                 "x_opencti_created_by_ref": self.author.id,
             },
