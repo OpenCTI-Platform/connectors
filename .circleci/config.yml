@@ -139,7 +139,7 @@ jobs:
 
 workflows:
   version: 2.1
-  opencti_rolling:
+  opencti:
     when:
       not: << pipeline.git.tag >>
     jobs:

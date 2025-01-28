@@ -56,7 +56,7 @@ jobs:
 {% endfor %}
 workflows:
   version: 2.1
-  build_all:
+  build_connectors:
     jobs:
   {%- for top_dir, sub_dirs in dirs.items() -%}
   {%- for sub_dir in sub_dirs %}
