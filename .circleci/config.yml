@@ -101,7 +101,7 @@ jobs:
       ci_executor:
         type: executor
         description: Executor to use for this job.
-      default: ci_environment
+        default: ci_environment
     executor: << parameters.ci_executor >>
     steps:
       - checkout
