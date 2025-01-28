@@ -159,12 +159,13 @@ The retrieved data are mapped as follows:
 graph LR
     subgraph ProofpointTAP
         direction TB
-        TAPCampaign[Campaign]
-        TAPActors[Actors]
-        TAPMalware[Malware]
-        TAPTechniques[Techniques]
-        TAPBrands[Brands]
-        TAPCampaignMembers[CampaignMembers]
+        subgraph TAPCampaign[Campaign]
+            TAPActors[Actors]
+            TAPMalware[Malware]
+            TAPTechniques[Techniques]
+            TAPBrands[Brands]
+            TAPCampaignMembers[CampaignMembers]
+        end
     end
 
     subgraph OpenCTI
