@@ -148,7 +148,7 @@ workflows:
       - linter
       - test
       - build:
-          name: "Build and push rolling Docker images"
+          name: "build_rolling"
           ci_executor:
             name: ci_environment
             tags: "rolling"
@@ -162,7 +162,7 @@ workflows:
               only:
                 - master
       - build:
-          name: "Build and push pre-release Docker images"
+          name: "build_prerelease"
           ci_executor:
             name: ci_environment
             tags: "prerelease"
@@ -175,12 +175,13 @@ workflows:
             branches:
               only:
                 - pull/3328
-#      - notify:
-#          name: "Send notifications"
-#          notification_executor:
-#            name: ci_notifications
-#          requires:
-#            - build
+      - notify:
+          name: "Send notifications"
+          notification_executor:
+            name: ci_notifications
+          requires:
+            - build_rolling
+            - build_prerelease
 
   opencti_release:
     when: << pipeline.git.tag >>
