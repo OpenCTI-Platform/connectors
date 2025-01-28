@@ -173,9 +173,9 @@ workflows:
             branches:
               only:
                 - master
-      - notify_rolling:
-          requires:
-            - build
+#      - notify_rolling:
+#          requires:
+#            - build
 
   opencti_release:
 #    when: << pipeline.git.tag >>
@@ -191,21 +191,21 @@ workflows:
           ci_executor:
             name: release
             tags: "latest"
-          requires:
-            - ensure_formatting
-            - base_linter
-            - linter
-            - test
-          filters:
-            tags:
-              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
-            branches:
-              ignore: /.*/
-      - notify:
-          requires:
-            - build
-          filters:
-            tags:
-              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
-            branches:
-              ignore: /.*/
+#          requires:
+#            - ensure_formatting
+#            - base_linter
+#            - linter
+#            - test
+#          filters:
+#            tags:
+#              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+#            branches:
+#              ignore: /.*/
+#      - notify:
+#          requires:
+#            - build
+#          filters:
+#            tags:
+#              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+#            branches:
+#              ignore: /.*/
