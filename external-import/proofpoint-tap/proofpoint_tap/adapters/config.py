@@ -479,11 +479,3 @@ class ConfigLoaderConfigYaml(
             config_loader_connector=_ConfigLoaderConnectorConfigYaml(filepath),
             config_loader_tap=_ConfigLoaderTAPConfigYaml(filepath),
         )
-
-
-if __name__ == "__main__":
-    # test environment variables
-    from dotenv import load_dotenv
-
-    _ = load_dotenv()
-    config_env = ConfigLoaderEnv()

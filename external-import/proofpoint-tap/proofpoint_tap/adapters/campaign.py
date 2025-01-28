@@ -15,7 +15,7 @@ from proofpoint_tap.errors import ProofpointAPI404Error, ProofpointAPI404NoReaso
 from proofpoint_tap.ports.campaign import CampaignPort, CampaignsPort, ObservedDataPort
 
 if TYPE_CHECKING:
-    from datetime import datetime, timedelta
+    from datetime import datetime
 
     from pydantic import SecretStr
     from yarl import URL
