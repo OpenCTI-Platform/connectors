@@ -177,7 +177,7 @@ workflows:
                 - pull/3328
       - notify:
           name: "Send notifications"
-          ci_executor:
+          notification_executor:
             name: ci_notifications
           requires:
             - build
@@ -206,7 +206,7 @@ workflows:
               ignore: /.*/
       - notify:
           name: "Send notifications"
-          ci_executor:
+          notification_executor:
             name: ci_notifications
           filters:
             tags:
