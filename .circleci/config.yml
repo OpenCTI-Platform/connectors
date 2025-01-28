@@ -170,11 +170,11 @@ workflows:
           ci_executor:
             name: rolling
             tags: "rolling"
-          requires:
-            - ensure_formatting
-            - base_linter
-            - linter
-            - test
+#          requires:
+#            - ensure_formatting
+#            - base_linter
+#            - linter
+#            - test
           filters:
             tags:
               ignore: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
@@ -200,56 +200,7 @@ workflows:
             branches:
               only:
                 - pull/3328
-#          requires:
-#            - ensure_formatting
-#            - base_linter
-#            - linter
-#            - test
-#          filters:
-#            tags:
-#              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
-#            branches:
-#              ignore: /.*/
-#      - build:
-#          name: "Build release and latest Docker images"
-#          ci_executor:
-#            name: release
-#            tags: "latest"
-#          requires:
-#            - ensure_formatting
-#            - base_linter
-#            - linter
-#            - test
-#          filters:
-#            tags:
-#              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
-#            branches:
-#              ignore: /.*/
 
-
-#            branches:
-#              ignore: /.*/
-#      - build_fips:
-#      - build:
-#          name: "Build rolling images"
-#          tags: "rolling,latest"
-#          requires:
-#            - ensure_formatting
-#            - base_linter
-#            - linter
-#          filters:
-#            branches:
-#              only:
-#                - master
-#      - build_fips_rolling:
-#          requires:
-#            - ensure_formatting
-#            - base_linter
-#            - linter
-#          filters:
-#            branches:
-#              only:
-#                - master
 #      - notify_rolling:
 #          requires:
 #            - build_rolling # TODO: Fix it
