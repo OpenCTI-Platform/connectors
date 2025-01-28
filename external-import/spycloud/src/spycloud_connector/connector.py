@@ -2,7 +2,6 @@ import sys
 from datetime import datetime
 
 from pycti import OpenCTIConnectorHelper
-
 from spycloud_connector.models.opencti import OCTIBaseModel
 from spycloud_connector.services import ConfigLoader, ConverterToStix, SpycloudClient
 from spycloud_connector.utils.helpers import dict_to_serialized_list
@@ -98,6 +97,13 @@ class SpyCloudConnector:
                 breach_record=breach_record
             )
             octi_objects.extend(octi_observables)
+
+            for octi_observable in octi_observables:
+                relationship = self.converter_to_stix.create_related_to_relationship(
+                    source=octi_observable,
+                    target=octi_indicent,
+                )
+                octi_objects.append(relationship)
 
         if octi_objects:
             octi_objects.append(self.converter_to_stix.author)

@@ -4,10 +4,9 @@ from typing import Callable
 
 from pycti import OpenCTIConnectorHelper
 from pydantic import ValidationError
-
 from spycloud_connector.models import opencti, spycloud
-from spycloud_connector.utils.helpers import dict_to_markdown_table
 from spycloud_connector.services import ConfigLoader
+from spycloud_connector.utils.helpers import dict_to_markdown_table
 from spycloud_connector.utils.types import OCTITLPLevelType
 
 SEVERITY_LEVELS_BY_CODE = {2: "low", 5: "medium", 20: "high", 25: "critical"}
@@ -51,6 +50,22 @@ class ConverterToStix:
         self.tlp_marking = ConverterToStix._create_tlp_marking(
             level=self.config.spycloud.tlp_level
         )
+
+    @staticmethod
+    def _create_author(
+        name: str, identity_class: str, description: str = None
+    ) -> opencti.Author:
+        """Create an OpenCTI Author."""
+        return opencti.Author(
+            name=name,
+            identity_class=identity_class,
+            description=description,
+        )
+
+    @staticmethod
+    def _create_tlp_marking(level: OCTITLPLevelType) -> opencti.TLPMarking:
+        """Create an OpenCTI TLP Marking."""
+        return opencti.TLPMarking(level=level)
 
     @handle_validation_error
     def create_incident(
@@ -172,21 +187,21 @@ class ConverterToStix:
 
         return observables
 
-    @staticmethod
-    def _create_author(
-        name: str, identity_class: str, description: str = None
-    ) -> opencti.Author:
-        """Create an OpenCTI Author."""
-        return opencti.Author(
-            name=name,
-            identity_class=identity_class,
-            description=description,
+    def create_related_to_relationship(
+        self, source: opencti.ObservableBaseModel, target: opencti.Incident
+    ) -> opencti.RelatedTo:
+        """
+        Create a relationship of type "related-to" between an observable and an Incident.
+        :param source: Source (observable)
+        :param target: Target (incident)
+        :return: OpenCTI RelatedTo relationship
+        """
+        return opencti.RelatedTo(
+            source=source,
+            target=target,
+            author=self.author,
+            markings=[self.tlp_marking],
         )
-
-    @staticmethod
-    def _create_tlp_marking(level: OCTITLPLevelType) -> opencti.TLPMarking:
-        """Create an OpenCTI TLP Marking."""
-        return opencti.TLPMarking(level=level)
 
     @handle_validation_error
     def _create_directory(self, path: str) -> opencti.Directory:

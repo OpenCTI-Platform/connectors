@@ -4,7 +4,6 @@ from typing import Optional
 import pycti
 import stix2
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
-
 from spycloud_connector.utils.types import OCTIIdentityClassType, OCTITLPLevelType
 
 
