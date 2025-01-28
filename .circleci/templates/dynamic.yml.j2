@@ -29,7 +29,7 @@ jobs:
 
             {% if pycti.replace -%}
                 {% if "prerelease" in tags %}
-            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@release/6.5.0|' -i {} \;
+            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@$CIRCLE_BRANCH|' -i {} \;
                 {% else %}
             find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|' -i {} \;
                 {% endif %}
