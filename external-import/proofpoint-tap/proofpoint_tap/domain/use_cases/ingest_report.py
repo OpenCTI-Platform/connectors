@@ -1,8 +1,9 @@
 """Offer tools to ingest Report and related entities from TAP Campaigns."""
 
 from itertools import product
-from typing import TYPE_CHECKING, Any, Generator, Iterable, Optional
+from typing import TYPE_CHECKING, Any, Generator, Iterable, Literal, Optional
 
+from proofpoint_tap.domain.models.octi.common import TLPMarking
 from proofpoint_tap.domain.models.octi.domain import (
     AttackPattern,
     IntrusionSet,
@@ -15,13 +16,13 @@ from proofpoint_tap.domain.models.octi.observables import Url
 from proofpoint_tap.domain.models.octi.relationships import (
     IndicatorIndicatesIntrusionSet,
     IndicatorIndicatesMalware,
-    IntrusionSetTargetsOrganizations,
+    IntrusionSetTargetsOrganization,
     IntrusionSetUsesAttackPattern,
     IntrusionSetUsesMalware,
 )
 
 if TYPE_CHECKING:
-    from proofpoint_tap.domain.models.octi import BaseEntity, TLPMarking
+    from proofpoint_tap.domain.models.octi import BaseEntity
     from proofpoint_tap.domain.models.octi.observables import Indicator, Observable
     from proofpoint_tap.ports.campaign import CampaignPort, ObservedDataPort
 
@@ -103,7 +104,10 @@ class ReportProcessor:
 
     """
 
-    def __init__(self, tlp_marking: "TLPMarking"):
+    def __init__(
+        self,
+        tlp_marking_name: Literal["white", "green", "amber", "amber+strict", "red"],
+    ):
         """Initialize the ReportProcessor with author and TLP marking."""
         # Directly implementing Author in the use case for now.
         # This may be factorized in the application layer to serve several use cases later.
@@ -121,7 +125,7 @@ class ReportProcessor:
             reliability=None,
             aliases=None,
         )
-        self.tlp_marking = tlp_marking
+        self.tlp_marking = TLPMarking(level=tlp_marking_name)
 
     def make_intrusion_sets(
         self, campaign: "CampaignPort"
@@ -263,12 +267,12 @@ class ReportProcessor:
         self,
         intrusion_sets: Iterable[IntrusionSet],
         targeted_organizations: Iterable[TargetedOrganization],
-    ) -> Generator[IntrusionSetTargetsOrganizations, Any, Any]:
+    ) -> Generator[IntrusionSetTargetsOrganization, Any, Any]:
         """Make an OCTI IntrusionSetTargetsOrganizations relationship from IntrusionSet and TargetedOrganization."""
         for intrusion_set, targeted_organization in product(
-            intrusion_sets, targeted_organizations
+            list(intrusion_sets), list(targeted_organizations)
         ):
-            yield IntrusionSetTargetsOrganizations(
+            yield IntrusionSetTargetsOrganization(
                 author=self.author,
                 source=intrusion_set,
                 target=targeted_organization,
@@ -390,21 +394,20 @@ class ReportProcessor:
         entities: list["BaseEntity"] = []  # result holder
 
         # Process associated actors
-        intrusion_sets = self.make_intrusion_sets(tap_campaign)
+        intrusion_sets = list(self.make_intrusion_sets(tap_campaign))
 
         # Process associated malware
-        malwares = self.make_malwares(tap_campaign)
+        malwares = list(self.make_malwares(tap_campaign))
 
         # Process associated techniques
-        attack_patterns = self.make_attach_patterns(tap_campaign)
+        attack_patterns = list(self.make_attach_patterns(tap_campaign))
 
         # Process associated brands
-        targeted_organizations = self.make_targeted_organizations(tap_campaign)
+        targeted_organizations = list(self.make_targeted_organizations(tap_campaign))
 
         # process observed data
-        observables, indicators = zip(
-            *self.make_observables_and_indicators(tap_campaign), strict=True
-        )
+        o_i = list(self.make_observables_and_indicators(tap_campaign))
+        observables, indicators = zip(*o_i, strict=True) if o_i else ((), ())
 
         # add to entities
         entities.extend(intrusion_sets)
