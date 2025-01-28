@@ -158,8 +158,6 @@ jobs:
 workflows:
   version: 2.1
   opencti_rolling:
-    when:
-      equal: [ opencti_rolling, << pipeline.parameters.action >> ]
     jobs:
       - ensure_formatting
       - base_linter
@@ -182,8 +180,6 @@ workflows:
               only:
                 - pull/3328
   opencti_release:
-    when:
-      equal: [ opencti_release, << pipeline.parameters.action >> ]
     jobs:
       - ensure_formatting
       - base_linter

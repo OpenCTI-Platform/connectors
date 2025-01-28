@@ -52,7 +52,7 @@ def get_pycti() -> dict:
     `CIRCLE_TAG` only exists when release is done
     :return: pycti version
     """
-    pycti = {"version": "2.0.0"}
+    pycti = {"version": os.getenv("CIRCLE_TAG")}
     if pycti["version"]:
         pycti["replace"] = False
     else:
@@ -66,7 +66,7 @@ def get_tags() -> list[str]:
     if tags:
         data.extend(tags.split(","))
 
-    circle_tag = "2.0.0"
+    circle_tag = os.getenv("CIRCLE_TAG")
     if circle_tag:
         data.append(circle_tag)
     if len(data) == 0:
