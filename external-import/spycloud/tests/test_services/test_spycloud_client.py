@@ -1,12 +1,11 @@
-from pathlib import Path
-
 import json
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+from requests import Response
 from spycloud_connector.models.spycloud import BreachCatalog, BreachRecord
 from spycloud_connector.services import SpycloudClient
-from requests import Response
 
 TEST_API_BASE_URL = "http://spycloudtest.com"
 TEST_API_KEY = "<API_KEY>"

@@ -1,11 +1,10 @@
 from datetime import datetime
 from typing import Optional
 
-import stix2
 import pycti
+import stix2
 from pydantic import Field
-
-from spycloud_connector.models.opencti import OCTIBaseModel, Author, TLPMarking
+from spycloud_connector.models.opencti import Author, OCTIBaseModel, TLPMarking
 from spycloud_connector.utils.types import OCTISeverityType
 
 

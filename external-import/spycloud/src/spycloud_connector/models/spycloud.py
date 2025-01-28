@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
-
 from spycloud_connector.utils.types import SpycloudSeverityType
 
 

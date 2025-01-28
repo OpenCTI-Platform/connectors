@@ -6,7 +6,6 @@ from urllib.parse import urljoin
 import requests
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter, Retry
-
 from spycloud_connector.models.spycloud import BreachCatalog, BreachRecord
 from spycloud_connector.services import ConfigLoader
 from spycloud_connector.utils.types import (

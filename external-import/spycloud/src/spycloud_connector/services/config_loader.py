@@ -5,7 +5,6 @@ from typing import Any, Callable, Literal
 
 import yaml
 from pycti import get_config_variable
-
 from spycloud_connector.utils.constants import (
     OCTI_TLP_LEVELS,
     SPYCLOUD_SEVERITY_CODES,

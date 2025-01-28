@@ -1,17 +1,16 @@
 import pytest
 from pydantic import ValidationError
-
 from spycloud_connector.models.opencti import (
-    Author,
-    TLPMarking,
-    IPv6Address,
-    MACAddress,
     URL,
+    Author,
     Directory,
     DomainName,
     EmailAddress,
     File,
     IPv4Address,
+    IPv6Address,
+    MACAddress,
+    TLPMarking,
     UserAccount,
     UserAgent,
 )

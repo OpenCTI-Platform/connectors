@@ -1,8 +1,8 @@
 from datetime import datetime
 
 import pytest
-from spycloud_connector.models.spycloud import BreachCatalog, BreachRecord
 from pydantic import ValidationError
+from spycloud_connector.models.spycloud import BreachCatalog, BreachRecord
 
 
 # Valid Input Test

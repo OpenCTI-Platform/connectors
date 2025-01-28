@@ -1,6 +1,5 @@
 import pytest
 from pydantic import ValidationError
-
 from spycloud_connector.models.opencti import Author, TLPMarking
 
 

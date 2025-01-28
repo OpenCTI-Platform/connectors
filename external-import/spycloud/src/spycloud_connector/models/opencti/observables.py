@@ -5,8 +5,7 @@ import pycti
 import stix2
 import validators
 from pydantic import Field, model_validator
-
-from spycloud_connector.models.opencti import OCTIBaseModel, Author, TLPMarking
+from spycloud_connector.models.opencti import Author, OCTIBaseModel, TLPMarking
 
 
 class ObservableBaseModel(OCTIBaseModel):
@@ -23,7 +22,7 @@ class ObservableBaseModel(OCTIBaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _validate_model_before_init(cls, data: dict) -> dict:
+    def _validate_input_before_init(cls, data: dict) -> dict:
         """Validate the model before initialization. Automatically called by pydantic."""
         if isinstance(data, dict):
             return cls._validate_model_input(data)

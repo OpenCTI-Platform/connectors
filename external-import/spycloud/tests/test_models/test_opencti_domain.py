@@ -1,8 +1,8 @@
 from datetime import datetime
 
 import pytest
-from spycloud_connector.models.opencti import Author, Incident, TLPMarking
 from pydantic import ValidationError
+from spycloud_connector.models.opencti import Author, Incident, TLPMarking
 
 
 def mock_valid_author():
