@@ -6,6 +6,12 @@ orbs:
   ms-teams: cloudradar-monitoring/ms-teams@0.0.1
   continuation: circleci/continuation@1.1.0
 
+parameters:
+  action:
+    type: enum
+    enum: [opencti_rolling, opencti_release]
+    default: opencti_rolling
+
 executors:
   rolling:
     parameters:
@@ -151,7 +157,9 @@ jobs:
 #          webhook_url: $MS_TEAMS_WEBHOOK_URL
 workflows:
   version: 2.1
-  opencti:
+  opencti_rolling:
+    when:
+      equal: [ opencti_rolling, << pipeline.parameters.action >> ]
     jobs:
       - ensure_formatting
       - base_linter
@@ -162,20 +170,51 @@ workflows:
           ci_executor:
             name: rolling
             tags: "rolling"
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
+          filters:
+            tags:
+              ignore: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+            branches:
+              only:
+                - pull/3328
+  opencti_release:
+    when:
+      equal: [ opencti_release, << pipeline.parameters.action >> ]
+    jobs:
+      - ensure_formatting
+      - base_linter
+      - linter
+      - test
+      - build:
+          name: "Build release and latest Docker images"
+          ci_executor:
+            name: release
+            tags: "latest"
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+            branches:
+              only:
+                - pull/3328
 #          requires:
 #            - ensure_formatting
 #            - base_linter
 #            - linter
 #            - test
 #          filters:
+#            tags:
+#              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
 #            branches:
-#              only:
-#                - master
-      - build:
-          name: "Build release and latest Docker images"
-          ci_executor:
-            name: release
-            tags: "latest"
+#              ignore: /.*/
+#      - build:
+#          name: "Build release and latest Docker images"
+#          ci_executor:
+#            name: release
+#            tags: "latest"
 #          requires:
 #            - ensure_formatting
 #            - base_linter
