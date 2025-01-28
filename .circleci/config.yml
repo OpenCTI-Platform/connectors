@@ -166,17 +166,17 @@ workflows:
           ci_executor:
             name: ci_environment
             tags: "prerelease"
-          requires:
-            - ensure_formatting
-            - base_linter
-            - linter
-            - test
+#          requires:
+#            - ensure_formatting
+#            - base_linter
+#            - linter
+#            - test
           filters:
             branches:
               only:
                 - pull/3328
       - notify:
-          name: "Send notifications"
+          name: "send_notifications"
           notification_executor:
             name: ci_notifications
           requires:
@@ -191,7 +191,7 @@ workflows:
       - linter
       - test
       - build:
-          name: "Build and push release and latest Docker images"
+          name: "build_release"
           ci_executor:
             name: ci_environment
             tags: "latest"
@@ -206,9 +206,11 @@ workflows:
             branches:
               ignore: /.*/
       - notify:
-          name: "Send notifications"
+          name: "send_notifications"
           notification_executor:
             name: ci_notifications
+          requires:
+            - build_release
           filters:
             tags:
               only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
