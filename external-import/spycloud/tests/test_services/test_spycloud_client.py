@@ -1,7 +1,4 @@
-import sys
 from pathlib import Path
-
-sys.path.append(str((Path(__file__).resolve().parent.parent.parent / "src")))
 
 import json
 from unittest.mock import Mock, patch
@@ -19,7 +16,7 @@ def get_data_sample(file_name):
     file_path = Path(__file__).parents[1].joinpath("data_samples", file_name)
     with open(file_path, encoding="utf-8") as f:
         data = json.load(f)
-        return data
+    return data
 
 
 @pytest.fixture

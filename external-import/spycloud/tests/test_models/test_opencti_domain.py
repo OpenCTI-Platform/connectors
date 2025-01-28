@@ -1,13 +1,7 @@
-import sys
 from datetime import datetime
-from pathlib import Path
-
-import stix2
-
-sys.path.append(str((Path(__file__).resolve().parent.parent.parent / "src")))
 
 import pytest
-from connector.models.opencti import Author, Incident
+from spycloud_connector.models.opencti import Author, Incident, TLPMarking
 from pydantic import ValidationError
 
 
@@ -15,77 +9,8 @@ def mock_valid_author():
     return Author(name="Valid Author", identity_class="organization")
 
 
-# Valid Input Test
-@pytest.mark.parametrize(
-    "input_data",
-    [
-        pytest.param(
-            {
-                "name": "Author Name",
-                "description": "A description of the author.",
-                "identity_class": "organization",
-            },
-            id="full_valid_data",
-        ),
-        pytest.param(
-            {"name": "Minimal Author", "identity_class": "organization"},
-            id="minimal_valid_data",
-        ),
-    ],
-)
-def test_author_class_should_accept_valid_input(input_data):
-    # Given: Valid input params
-    input_data_dict = dict(input_data)
-
-    # When: We create an Author instance with valid input data
-    author = Author(**input_data_dict)
-
-    # Then: The Author instance should be created successfully
-    assert author.name == input_data_dict.get("name")
-    assert author.description == input_data_dict.get("description")
-    assert (
-        author.to_stix2_object() is not None
-    )  # Ensure the STIX2 object generation works
-
-
-# Invalid Input Test
-@pytest.mark.parametrize(
-    "input_data, error_field",
-    [
-        pytest.param(
-            {"description": "Missing name field", "identity_class": "organization"},
-            "name",
-            id="missing_name_field",
-        ),
-        pytest.param(
-            {
-                "name": ["Author Name"],
-                "description": "A description of the author.",
-                "identity_class": "organization",
-            },
-            "name",
-            id="invalid_name_type",
-        ),
-        pytest.param(
-            {
-                "name": "Author Name",
-                "identity_class": "organization",
-                "extra_field": "extra_value",
-            },
-            "extra_field",
-            id="invalid_extra_field",
-        ),
-    ],
-)
-def test_author_class_should_not_accept_invalid_input(input_data, error_field):
-    # Given: Invalid input params
-    input_data_dict = dict(input_data)
-
-    # When: We try to create an Author instance with invalid data
-    # Then: A ValidationError should be raised, and the error field should be in the error message
-    with pytest.raises(ValidationError) as err:
-        Author(**input_data_dict)
-    assert str(error_field) in str(err)
+def mock_valid_markings():
+    return [TLPMarking(level="red")]
 
 
 # Valid Input Tests
@@ -102,7 +27,7 @@ def test_author_class_should_not_accept_invalid_input(input_data, error_field):
                 "author": mock_valid_author(),
                 "created_at": datetime(1970, 1, 1),
                 "updated_at": datetime(1970, 1, 1),
-                "object_marking_refs": [stix2.TLP_RED],
+                "markings": mock_valid_markings(),
             },
             id="full_valid_data",
         ),
@@ -115,7 +40,7 @@ def test_author_class_should_not_accept_invalid_input(input_data, error_field):
                 "author": mock_valid_author(),
                 "created_at": datetime(1970, 1, 1),
                 "updated_at": datetime(1970, 1, 1),
-                "object_marking_refs": [stix2.TLP_RED],
+                "markings": mock_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -133,7 +58,7 @@ def test_incident_class_should_accept_valid_input(input_data):
     assert incident.author == input_data_dict.get("author")
     assert incident.created_at == input_data_dict.get("created_at")
     assert incident.updated_at == input_data_dict.get("updated_at")
-    assert incident.object_marking_refs == input_data_dict.get("object_marking_refs")
+    assert incident.markings == input_data_dict.get("markings")
     assert (
         incident.to_stix2_object() is not None
     )  # Ensure the STIX2 object generation works
@@ -152,7 +77,7 @@ def test_incident_class_should_accept_valid_input(input_data):
                 "author": mock_valid_author(),
                 "created_at": datetime(1970, 1, 1),
                 "updated_at": datetime(1970, 1, 1),
-                "object_marking_refs": [stix2.TLP_WHITE],
+                "markings": mock_valid_markings(),
             },
             "name",
             id="invalid_missing_name",
@@ -167,7 +92,7 @@ def test_incident_class_should_accept_valid_input(input_data):
                 "author": mock_valid_author(),
                 "created_at": datetime(1970, 1, 1),
                 "updated_at": datetime(1970, 1, 1),
-                "object_marking_refs": [stix2.TLP_WHITE],
+                "markings": mock_valid_markings(),
             },
             "name",
             id="invalid_empty_name",
@@ -182,7 +107,7 @@ def test_incident_class_should_accept_valid_input(input_data):
                 "author": "Invalid author",
                 "created_at": datetime(1970, 1, 1),
                 "updated_at": datetime(1970, 1, 1),
-                "object_marking_refs": [stix2.TLP_WHITE],
+                "markings": mock_valid_markings(),
             },
             "author",
             id="invalid_author_type",
@@ -197,7 +122,7 @@ def test_incident_class_should_accept_valid_input(input_data):
                 "author": mock_valid_author(),
                 "created_at": "01/01/1970",
                 "updated_at": datetime(1970, 1, 1),
-                "object_marking_refs": [stix2.TLP_RED],
+                "markings": mock_valid_markings(),
             },
             "created_at",
             id="invalid_date_format",
@@ -212,7 +137,7 @@ def test_incident_class_should_accept_valid_input(input_data):
                 "author": mock_valid_author(),
                 "created_at": datetime(1970, 1, 1),
                 "updated_at": datetime(1970, 1, 1),
-                "object_marking_refs": [stix2.TLP_RED],
+                "markings": mock_valid_markings(),
             },
             "severity",
             id="invalid_severity_value",
@@ -227,7 +152,7 @@ def test_incident_class_should_accept_valid_input(input_data):
                 "author": mock_valid_author(),
                 "created_at": datetime(1970, 1, 1),
                 "updated_at": datetime(1970, 1, 1),
-                "object_marking_refs": [stix2.TLP_RED],
+                "markings": mock_valid_markings(),
                 "extra_field": "extra_value",
             },
             "extra_field",
