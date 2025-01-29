@@ -251,7 +251,20 @@ def test_ingest_campaign_use_case_success():
         )
         == 4
     )
+    # - 1 Indicator Based on Observable relationships (only URL handled for now)
+    assert (  # noqa: S101
+        len(
+            [
+                entity
+                for entity in entities
+                if entity.__class__.__name__ == "IndicatorBasedOnObservable"
+            ]
+        )
+        == 1
+    )
 
+    # 29 entities total
+    assert len(entities) == 29 # noqa: S101
     # all stix2 lib object
     assert all(  # noqa: S101
         isinstance(entity.to_stix2_object(), _STIXBase21) for entity in entities

@@ -14,11 +14,13 @@ from proofpoint_tap.domain.models.octi.domain import (
 )
 from proofpoint_tap.domain.models.octi.observables import Url
 from proofpoint_tap.domain.models.octi.relationships import (
+    IndicatorBasedOnObservable,
     IndicatorIndicatesIntrusionSet,
     IndicatorIndicatesMalware,
     IntrusionSetTargetsOrganization,
     IntrusionSetUsesAttackPattern,
     IntrusionSetUsesMalware,
+
 )
 
 if TYPE_CHECKING:
@@ -369,6 +371,26 @@ class ReportProcessor:
                 external_references=None,
             )
 
+    def make_indicator_indicates_observable_relationship(
+        self, indicator: "Indicator", observable:"Observable"
+    ) -> IndicatorBasedOnObservable:
+        """Make an OCTI IndicatorBasedOnObservable relationship from Indicator and Observable."""
+        return IndicatorBasedOnObservable(
+            author=self.author,
+            source=indicator,
+            target=observable,
+            markings=[self.tlp_marking],
+            # unused
+            created=None,
+            modified=None,
+            description=None,
+            start_time=None,
+            stop_time=None,
+            confidence=None,
+            external_references=None,
+        )
+
+
     def make_report(
         self, campaign: "CampaignPort", related_objetcs: list["BaseEntity"]
     ) -> Report:
@@ -452,6 +474,17 @@ class ReportProcessor:
                 indicators=indicators,
                 intrusion_sets=intrusion_sets,
             )
+        )
+
+        ## pairs of Indicators and Observables
+        entities.extend(
+            [
+                self.make_indicator_indicates_observable_relationship(
+                    indicator=indicator,
+                    observable=observable,
+                )
+                for observable, indicator in (o_i if o_i else ((), ()))
+            ]
         )
 
         # Only append Report and Author if at least one entity is present
