@@ -19,6 +19,7 @@ jobs:
             docker buildx create --use --name builder-connector-{{sub_dir}}
             docker buildx inspect builder-connector-{{sub_dir}} --bootstrap
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            echo "$GHCR_PASS" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
             {% set image_key = top_dir ~ '_' ~ sub_dir -%}
 
             {% if param['images'][image_key] is defined -%}
@@ -37,6 +38,7 @@ jobs:
             docker buildx build . \
              {% for tag in tags -%}
              --tag {{repo}}/connector-{{sub_dir}}:{{tag}} \
+             --tag ghcr.io/opencti-platform/{{repo}}/connector-{{sub_dir}}:{{tag}} \
              {% endfor -%}
              --build-arg BASE_IMAGE=$base_image \
              --load
@@ -45,6 +47,7 @@ jobs:
             docker buildx build -f Dockerfile_fips . \
              {% for tag in tags -%}
              --tag {{repo}}/connector-{{sub_dir}}:{{tag}}-fips \
+             --tag ghcr.io/opencti-platform/{{repo}}/connector-{{sub_dir}}:{{tag}}-fips \
              {% endfor -%}
              --build-arg BASE_IMAGE=$base_image \
              --load
