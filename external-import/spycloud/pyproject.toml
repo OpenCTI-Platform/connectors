@@ -29,8 +29,8 @@ all = [
     "spycloud[test]"
 ]
 
-[tool.setuptools]
-package-dir = {"" = "src"}
+[tool.setuptools.packages.find]
+where = ["."]
 
 [tool.setuptools.dynamic]
 version = {attr = "spycloud_connector.__version__"}
