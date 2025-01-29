@@ -1,2 +1,2 @@
-pycti==6.4.9
+pycti==6.4.10
 cofense-intelligence==5.2.0
