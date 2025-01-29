@@ -1,6 +1,6 @@
 from datetime import datetime
 from functools import lru_cache
-from typing import Generator
+from typing import TYPE_CHECKING, Generator
 from urllib.parse import urljoin
 
 import requests
@@ -8,10 +8,12 @@ from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter, Retry
 from spycloud_connector.models.spycloud import BreachCatalog, BreachRecord
 from spycloud_connector.services import ConfigLoader
-from spycloud_connector.utils.types import (
-    SpycloudSeverityType,
-    SpycloudWatchlistTypeType,
-)
+
+if TYPE_CHECKING:
+    from spycloud_connector.models.spycloud import (
+        BreachRecordSeverity,
+        BreachRecordWatchlistType,
+    )
 
 
 class SpycloudClient:
@@ -112,8 +114,8 @@ class SpycloudClient:
 
     def get_breach_records(
         self,
-        watchlist_type: SpycloudWatchlistTypeType = None,
-        severity_levels: list[SpycloudSeverityType] = None,
+        watchlist_type: "BreachRecordWatchlistType" = None,
+        severity_levels: list["BreachRecordSeverity"] = None,
         since: datetime = None,
     ) -> Generator[BreachRecord, None, None]:
         """

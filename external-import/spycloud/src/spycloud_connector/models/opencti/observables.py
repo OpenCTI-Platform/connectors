@@ -14,11 +14,13 @@ class ObservableBaseModel(OCTIBaseModel):
     NOTA BENE: Observables do not need determinitic stix id generation. STIX python lib handles it.
     """
 
-    author: Author = Field(description="The Author reporting this observable.")
+    author: Author = Field(
+        description="The Author reporting this observable.",
+    )
     markings: list[TLPMarking] = Field(
         description="References for object marking.",
         min_length=1,
-    )
+    )  # optional in STIX2 spec, but required for use case
 
     @model_validator(mode="before")
     @classmethod
@@ -94,6 +96,7 @@ class EmailAddress(ObservableBaseModel):
     )
     belongs_to_ref: Optional[str] = Field(
         description="Specifies the user account that the email address belongs to, as a reference to a User Account object.",
+        min_length=1,
         default=None,
     )
 
@@ -118,28 +121,14 @@ class EmailAddress(ObservableBaseModel):
 class File(ObservableBaseModel):
     """Represent a file observable in OpenCTI."""
 
-    name: Optional[str] = Field(
+    name: str = Field(
         description="Specifies the name of the file.",
         min_length=1,
-        default=None,
-    )
-    hashes: Optional[dict] = Field(
-        description="Specifies a dictionary of hashes for the file.",
-        default=None,
-    )
-
-    @classmethod
-    def _validate_model_input(cls, data: dict) -> dict:
-        if not data.get("name") and not data.get("hashes"):
-            raise ValueError(
-                "At least one of the fields 'name' or 'hashes' must be provided."
-            )
-        return data
+    )  # optional in STIX2 spec, but required for use case
 
     def to_stix2_object(self) -> stix2.File:
         return stix2.File(
             name=self.name,
-            hashes=self.hashes,
             object_marking_refs=[marking.id for marking in self.markings],
             custom_properties={
                 "x_opencti_created_by_ref": self.author.id,

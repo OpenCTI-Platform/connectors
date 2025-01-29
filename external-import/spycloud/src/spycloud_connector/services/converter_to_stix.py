@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from spycloud_connector.models import opencti, spycloud
 from spycloud_connector.services import ConfigLoader
 from spycloud_connector.utils.helpers import dict_to_markdown_table
-from spycloud_connector.utils.types import OCTITLPLevelType
+
 
 SEVERITY_LEVELS_BY_CODE = {2: "low", 5: "medium", 20: "high", 25: "critical"}
 
@@ -63,7 +63,7 @@ class ConverterToStix:
         )
 
     @staticmethod
-    def _create_tlp_marking(level: OCTITLPLevelType) -> opencti.TLPMarking:
+    def _create_tlp_marking(level: opencti.TLPMarkingLevel) -> opencti.TLPMarking:
         """Create an OpenCTI TLP Marking."""
         return opencti.TLPMarking(level=level)
 
@@ -98,13 +98,13 @@ class ConverterToStix:
         incident = opencti.Incident(
             name=incident_name,
             description=incident_description,
+            author=self.author,
+            created_at=breach_record.spycloud_publish_date,
+            markings=[self.tlp_marking],
             source=incident_source,
             severity=incident_severity,
             incident_type="data-breach",
-            author=self.author,
-            created_at=breach_record.spycloud_publish_date,
-            updated_at=breach_record.spycloud_publish_date,
-            markings=[self.tlp_marking],
+            first_seen=breach_record.spycloud_publish_date,
         )
         return incident
 

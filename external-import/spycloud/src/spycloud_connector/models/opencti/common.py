@@ -1,10 +1,15 @@
 from abc import abstractmethod
-from typing import Optional
+from typing import Literal, Optional
 
 import pycti
 import stix2
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
-from spycloud_connector.utils.types import OCTIIdentityClassType, OCTITLPLevelType
+
+
+AuthorIdentityClass = Literal[
+    "individual", "group", "system", "organization", "class", "unknown"
+]
+TLPMarkingLevel = Literal["white", "green", "amber", "amber+strict", "red"]
 
 
 class OCTIBaseModel(BaseModel):
@@ -49,8 +54,8 @@ class Author(OCTIBaseModel):  # TODO complete description
         description="The name of the author referring to a specific entity (e.g., an individual or organization)",
         min_length=1,
     )
-    identity_class: OCTIIdentityClassType = Field(
-        description="The type of entity that the author describes, e.g., an individual or organization."
+    identity_class: AuthorIdentityClass = Field(
+        description="The type of entity that the author describes, e.g., an individual or organization.",
     )
     description: Optional[str] = Field(
         description="A human readable description of the entity represented byt the author",
@@ -73,7 +78,9 @@ class TLPMarking(OCTIBaseModel):
     Implements `to_stix2_object` that returns a STIX2 MarkingDefinition object.
     """
 
-    level: OCTITLPLevelType = Field(description="The level of the marking.")
+    level: TLPMarkingLevel = Field(
+        description="The level of the marking.",
+    )
 
     def to_stix2_object(self) -> stix2.v21.MarkingDefinition:
         mapping = {

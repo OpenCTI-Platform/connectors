@@ -1,14 +1,16 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 import pycti
 import stix2
 from pydantic import Field
 from spycloud_connector.models.opencti import Author, OCTIBaseModel, TLPMarking
-from spycloud_connector.utils.types import OCTISeverityType
 
 
-class Incident(OCTIBaseModel):  # TODO: complete description
+IncidentSeverity = Literal["low", "medium", "high", "critical"]
+
+
+class Incident(OCTIBaseModel):
     """
     Class representing an OpenCTI incident.
     Implements `to_stix2_ojbect` that returns a STIX2 Incident object.
@@ -23,10 +25,9 @@ class Incident(OCTIBaseModel):  # TODO: complete description
         min_length=1,
         default=None,
     )
-    source: str = Field(description="", min_length=1)
-    severity: OCTISeverityType = Field(description="")
-    incident_type: str = Field(description="")
-    author: Author = Field(description="The author reporting this incident.")
+    author: Author = Field(
+        description="The author reporting this incident.",
+    )
     created_at: datetime = Field(
         description="Represents the time at which the incident was originally reported."
     )
@@ -37,6 +38,24 @@ class Incident(OCTIBaseModel):  # TODO: complete description
     markings: list[TLPMarking] = Field(
         description="References for object markings.",
         min_length=1,
+    )  # optional in STIX2 spec, but required for use case
+    source: str = Field(
+        description="Name of the source incident has been detected from.",
+        min_length=1,
+    )
+    severity: IncidentSeverity = Field(
+        description="Level of incident's severity",
+    )
+    incident_type: str = Field(
+        description="A type that describes the incident.",
+        min_length=1,
+    )
+    first_seen: datetime = Field(
+        description="Represents the time at which the incident was first detected.",
+    )
+    last_seen: Optional[datetime] = Field(
+        description="Represents the time at which the incident was last detected.",
+        default=None,
     )
 
     def to_stix2_object(self) -> stix2.Incident:
@@ -51,7 +70,7 @@ class Incident(OCTIBaseModel):  # TODO: complete description
                 "x_opencti_source": self.source,
                 "x_opencti_severity": self.severity,
                 "x_opencti_incident_type": self.incident_type,
-                "x_opencti_first_seen": self.created_at,
-                "x_opencti_last_seen": self.updated_at,
+                "x_opencti_first_seen": self.first_seen,
+                "x_opencti_last_seen": self.last_seen,
             },
         )

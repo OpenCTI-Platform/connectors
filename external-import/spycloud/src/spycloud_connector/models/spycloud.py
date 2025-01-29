@@ -2,7 +2,13 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
-from spycloud_connector.utils.types import SpycloudSeverityType
+
+
+BreachCatalogType = Literal["PRIVATE", "PUBLIC"]
+BreachCatalogConfidence = Literal[1, 2, 3]
+BreachCatalogMainCategory = Literal["combolist", "breach", "malware"]
+BreachRecordSeverity = Literal[2, 5, 20, 25]
+BreachRecordWatchlistType = Literal["email", "domain", "subdomain", "ip"]
 
 
 class BreachCatalog(BaseModel):
@@ -26,7 +32,7 @@ class BreachCatalog(BaseModel):
     description: str = Field(
         description="Breach description. For each ingested breach our security research team documents a breach description. This is only available when we can disclose the breach details, otherwise it will have a generic description.",
     )
-    type: Literal["PRIVATE", "PUBLIC"] = Field(
+    type: BreachCatalogType = Field(
         description="Denotes if a breach is considered public or private. A public breach is one that is easily found on the internet, while a private breach is often exclusive to SpyCloud.",
     )
     num_records: int = Field(
@@ -41,24 +47,26 @@ class BreachCatalog(BaseModel):
     assets: dict = Field(
         description="Dictionary field. A mapping of assets to count for this particular breach.",
     )
-    confidence: Literal[1, 2, 3] = Field(
+    confidence: BreachCatalogConfidence = Field(
         description="Numerical score representing the confidence in the source of the breach.",
     )
-    breach_main_category: Literal["combolist", "breach", "malware"] = Field(
+    breach_main_category: BreachCatalogMainCategory = Field(
         description="Categorizes breach into combolist, breach, or malware."
     )
-    breach_category: str = Field(description="Categorizes how the data was breached.")
+    breach_category: str = Field(
+        description="Categorizes how the data was breached.",
+    )
     sensitive_source: bool = Field(
-        description="Indicates whether a breach source is sensitive or not."
+        description="Indicates whether a breach source is sensitive or not.",
     )
     consumer_category: str = Field(
-        description="Categorization for consumer product mapping."
+        description="Categorization for consumer product mapping.",
     )
     tlp: str = Field(
         description="Traffic light protocol. TLP is a set of designations used to ensure that sensitive information is shared with the appropriate audience.",
     )
     short_title: str = Field(
-        description="Shortened version of title field when necessary."
+        description="Shortened version of title field when necessary.",
     )
 
 
@@ -81,7 +89,7 @@ class BreachRecord(BaseModel):
     spycloud_publish_date: datetime = Field(
         description="The date on which this record was ingested into our systems. In ISO 8601 datetime format. This correlates with spycloud_publish_date field in Breach Catalog objects."
     )
-    severity: SpycloudSeverityType = Field(
+    severity: BreachRecordSeverity = Field(
         description="Severity is a numeric code representing severity of a breach record. This can be used in API requests to ensure only Breach Records with plaintext password are returned."
     )
 

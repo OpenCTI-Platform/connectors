@@ -1,20 +1,23 @@
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import yaml
 from pycti import get_config_variable
-from spycloud_connector.utils.constants import (
-    OCTI_TLP_LEVELS,
-    SPYCLOUD_SEVERITY_CODES,
-    SPYCLOUD_WATCHLIST_TYPES,
-)
-from spycloud_connector.utils.types import (
-    OCTITLPLevelType,
-    SpycloudSeverityType,
-    SpycloudWatchlistTypeType,
-)
+
+if TYPE_CHECKING:
+    from spycloud_connector.models.opencti import TLPMarkingLevel
+    from spycloud_connector.models.spycloud import (
+        BreachRecordSeverity,
+        BreachRecordWatchlistType,
+    )
+
+
+SPYCLOUD_SEVERITY_CODES = [2, 5, 20, 25]
+SPYCLOUD_WATCHLIST_TYPES = ["email", "domain", "subdomain", "ip"]
+OCTI_TLP_LEVELS = ["white", "green", "amber", "amber+strict", "red"]
+
 
 config_yml_file_path = Path(__file__).parents[2].joinpath("config.yml")
 config_yml = (
@@ -143,7 +146,7 @@ class SpyCloudConfig:
 
     @property
     @validate_value(lambda values: all(v in SPYCLOUD_SEVERITY_CODES for v in values))
-    def severity_levels(self) -> list[SpycloudSeverityType]:
+    def severity_levels(self) -> list["BreachRecordSeverity"]:
         severity_levels_string = get_config_variable(
             env_var="SPYCLOUD_SEVERITY_LEVELS",
             yaml_path=["spycloud", "severity_levels"],
@@ -159,7 +162,7 @@ class SpyCloudConfig:
 
     @property
     @validate_value(lambda values: all(v in SPYCLOUD_WATCHLIST_TYPES for v in values))
-    def watchlist_types(self) -> list[SpycloudWatchlistTypeType]:
+    def watchlist_types(self) -> list["BreachRecordWatchlistType"]:
         watchlist_types_string = get_config_variable(
             env_var="SPYCLOUD_WATCHLIST_TYPES",
             yaml_path=["spycloud", "watchlist_types"],
@@ -175,7 +178,7 @@ class SpyCloudConfig:
 
     @property
     @validate_value(lambda value: value in OCTI_TLP_LEVELS)
-    def tlp_level(self) -> OCTITLPLevelType:
+    def tlp_level(self) -> "TLPMarkingLevel":
         return get_config_variable(
             env_var="SPYCLOUD_TLP_LEVEL",
             yaml_path=["spycloud", "tlp_level"],
@@ -230,6 +233,6 @@ class ConfigLoader:
                 "severity_levels": self.spycloud.severity_levels,
                 "watchlist_types": self.spycloud.watchlist_types,
                 "import_start_date": self.spycloud.import_start_date,
-                # "marking_definition": self.spycloud.marking_definition,
+                "tlp_level": self.spycloud.tlp_level,
             },
         }

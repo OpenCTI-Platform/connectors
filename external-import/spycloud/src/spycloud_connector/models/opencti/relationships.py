@@ -1,9 +1,9 @@
 from datetime import datetime
-from typing import Any, Literal, Optional
+from typing import Literal, Optional
 
 import pycti
 import stix2
-from pydantic import Field, model_validator
+from pydantic import Field, model_validator, PrivateAttr
 from spycloud_connector.models.opencti import (
     Author,
     Incident,
@@ -16,11 +16,11 @@ from spycloud_connector.models.opencti import (
 class BaseRelationship(OCTIBaseModel):
     """Represents a Base relationship."""
 
-    relationship_type: str = Field(
-        description="The name used to identify the type of Relationship",
-    )
+    _relationship_type: str = PrivateAttr(default=None)
+
     description: Optional[str] = Field(
         description="Description of the relationship.",
+        min_length=1,
         default=None,
     )
     source: OCTIBaseModel = Field(
@@ -42,7 +42,7 @@ class BaseRelationship(OCTIBaseModel):
     )
     markings: list[TLPMarking] = Field(
         description="References for object marking",
-    )
+    )  # optional in STIX2 spec, but required for use case
 
     @model_validator(mode="before")
     @classmethod
@@ -61,11 +61,11 @@ class BaseRelationship(OCTIBaseModel):
         """Make stix object."""
         return stix2.Relationship(
             id=pycti.StixCoreRelationship.generate_id(
-                relationship_type=self.relationship_type,
+                relationship_type=self._relationship_type,
                 source_ref=self.source.id,
                 target_ref=self.target.id,
             ),
-            relationship_type=self.relationship_type,
+            relationship_type=self._relationship_type,
             source_ref=self.source.id,
             target_ref=self.target.id,
             description=self.description,
@@ -79,7 +79,7 @@ class BaseRelationship(OCTIBaseModel):
 class RelatedTo(BaseRelationship):
     """Represents a relationship indicating that an observable is related to an incident."""
 
-    relationship_type: Literal["related-to"] = "related-to"
+    _relationship_type: Literal["related-to"] = "related-to"
 
     @classmethod
     def _validate_model_input(cls, data: dict) -> dict:
