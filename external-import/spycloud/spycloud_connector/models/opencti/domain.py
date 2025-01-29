@@ -6,7 +6,6 @@ import stix2
 from pydantic import Field
 from spycloud_connector.models.opencti import Author, OCTIBaseModel, TLPMarking
 
-
 IncidentSeverity = Literal["low", "medium", "high", "critical"]
 
 

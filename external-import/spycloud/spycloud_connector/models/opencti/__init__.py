@@ -7,7 +7,7 @@ from .common import (
 )
 from .domain import Incident, IncidentSeverity
 from .observables import (
-    ObservableBaseModel,
+    URL,
     Directory,
     DomainName,
     EmailAddress,
@@ -15,12 +15,11 @@ from .observables import (
     IPv4Address,
     IPv6Address,
     MACAddress,
-    URL,
+    ObservableBaseModel,
     UserAccount,
     UserAgent,
 )
 from .relationships import RelatedTo
-
 
 __all__ = [
     # typing

@@ -5,7 +5,6 @@ import pycti
 import stix2
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-
 AuthorIdentityClass = Literal[
     "individual", "group", "system", "organization", "class", "unknown"
 ]

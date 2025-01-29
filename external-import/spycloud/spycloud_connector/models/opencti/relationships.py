@@ -3,7 +3,7 @@ from typing import Literal, Optional
 
 import pycti
 import stix2
-from pydantic import Field, model_validator, PrivateAttr
+from pydantic import Field, PrivateAttr, model_validator
 from spycloud_connector.models.opencti import (
     Author,
     Incident,

@@ -3,7 +3,6 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 BreachCatalogType = Literal["PRIVATE", "PUBLIC"]
 BreachCatalogConfidence = Literal[1, 2, 3]
 BreachCatalogMainCategory = Literal["combolist", "breach", "malware"]

@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 from pycti import OpenCTIConnectorHelper
 from spycloud_connector.models import opencti, spycloud
 from spycloud_connector.services import ConfigLoader
-from spycloud_connector.utils.helpers import dict_to_markdown_table
 from spycloud_connector.utils.decorators import handle_pydantic_validation_error
+from spycloud_connector.utils.helpers import dict_to_markdown_table
 
 if TYPE_CHECKING:
     from spycloud_connector.models.opencti import AuthorIdentityClass, IncidentSeverity
