@@ -1,32 +1,14 @@
 import ipaddress
 from pathlib import Path
-from typing import Callable
 
 from pycti import OpenCTIConnectorHelper
-from pydantic import ValidationError
 from spycloud_connector.models import opencti, spycloud
 from spycloud_connector.services import ConfigLoader
 from spycloud_connector.utils.helpers import dict_to_markdown_table
+from spycloud_connector.utils.decorators import handle_pydantic_validation_error
 
 
 SEVERITY_LEVELS_BY_CODE = {2: "low", 5: "medium", 20: "high", 25: "critical"}
-
-
-def handle_validation_error(decorated_function: Callable):
-    """
-    Handle Pydantic's ValidationErrors during models instanciation.
-    :param decorated_function: An instance method instanciating a Pydantic model.
-    :return: Decorator
-    """
-
-    def decorator(self: "ConverterToStix", *args, **kwargs):
-        try:
-            return decorated_function(self, *args, **kwargs)
-        except ValidationError as e:
-            self.helper.connector_logger.error(str(e))
-            return None
-
-    return decorator
 
 
 class ConverterToStix:
@@ -67,7 +49,7 @@ class ConverterToStix:
         """Create an OpenCTI TLP Marking."""
         return opencti.TLPMarking(level=level)
 
-    @handle_validation_error
+    @handle_pydantic_validation_error
     def create_incident(
         self,
         breach_record: spycloud.BreachRecord,
@@ -203,7 +185,7 @@ class ConverterToStix:
             markings=[self.tlp_marking],
         )
 
-    @handle_validation_error
+    @handle_pydantic_validation_error
     def _create_directory(self, path: str) -> opencti.Directory:
         """Create an OpenCTI Directory observable."""
         if path:
@@ -213,7 +195,7 @@ class ConverterToStix:
                 markings=[self.tlp_marking],
             )
 
-    @handle_validation_error
+    @handle_pydantic_validation_error
     def _create_domain_name(self, value: str) -> opencti.DomainName:
         """Create an OpenCTI DomainName observable."""
         if value:
@@ -223,7 +205,7 @@ class ConverterToStix:
                 markings=[self.tlp_marking],
             )
 
-    @handle_validation_error
+    @handle_pydantic_validation_error
     def _create_email_address(
         self, value: str, display_name: str = None, belongs_to_ref: str = None
     ) -> opencti.EmailAddress:
@@ -237,7 +219,7 @@ class ConverterToStix:
                 markings=[self.tlp_marking],
             )
 
-    @handle_validation_error
+    @handle_pydantic_validation_error
     def _create_file(self, name: str) -> opencti.File:
         """Create an OpenCTI File observable."""
         if name:
@@ -247,7 +229,7 @@ class ConverterToStix:
                 markings=[self.tlp_marking],
             )
 
-    @handle_validation_error
+    @handle_pydantic_validation_error
     def _create_ip_address(
         self, value: str
     ) -> opencti.IPv4Address | opencti.IPv6Address:
@@ -272,7 +254,7 @@ class ConverterToStix:
                 markings=[self.tlp_marking],
             )
 
-    @handle_validation_error
+    @handle_pydantic_validation_error
     def _create_mac_address(self, value: str) -> opencti.MACAddress:
         """Create an OpenCTI MACAddress observable."""
         if value:
@@ -282,7 +264,7 @@ class ConverterToStix:
                 markings=[self.tlp_marking],
             )
 
-    @handle_validation_error
+    @handle_pydantic_validation_error
     def _create_url(self, value: str) -> opencti.URL:
         """Create en OpenCTI URL observable."""
         if value:
@@ -292,7 +274,7 @@ class ConverterToStix:
                 markings=[self.tlp_marking],
             )
 
-    @handle_validation_error
+    @handle_pydantic_validation_error
     def _create_user_account(
         self, account_login: str = None, account_type: str = None
     ) -> opencti.UserAccount:
@@ -305,7 +287,7 @@ class ConverterToStix:
                 markings=[self.tlp_marking],
             )
 
-    @handle_validation_error
+    @handle_pydantic_validation_error
     def _create_user_agent(self, value: str) -> opencti.UserAgent:
         """Create an OpenCTI UserAgent observable."""
         if value:

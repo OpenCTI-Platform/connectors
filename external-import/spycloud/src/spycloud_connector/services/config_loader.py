@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal
 
 import yaml
 from pycti import get_config_variable
+from spycloud_connector.utils.decorators import validate_return_value
 
 if TYPE_CHECKING:
     from spycloud_connector.models.opencti import TLPMarkingLevel
@@ -25,30 +26,6 @@ config_yml = (
     if os.path.isfile(config_yml_file_path)
     else {}
 )
-
-
-def validate_value(validate_function: Callable) -> Callable:
-    """
-    Validate config variable value by passing it to `validate_function`.
-    :param validate_function: A function taking value of config variable as only arg and returning `True` if valid, otherwise `False`.
-    :return: Validate decorator
-    """
-
-    def wrapped_decorator(decorated_function: Callable):
-        def decorator(*args, **kwargs):
-            result = decorated_function(*args, **kwargs)
-
-            valid_value = validate_function(result)
-            if not valid_value:
-                raise ValueError(
-                    f"Invalid value for '{decorated_function.__name__}' config variable."
-                )
-
-            return result
-
-        return decorator
-
-    return wrapped_decorator
 
 
 class OpenCTIConfig:
@@ -145,7 +122,9 @@ class SpyCloudConfig:
         )
 
     @property
-    @validate_value(lambda values: all(v in SPYCLOUD_SEVERITY_CODES for v in values))
+    @validate_return_value(
+        lambda values: all(v in SPYCLOUD_SEVERITY_CODES for v in values)
+    )
     def severity_levels(self) -> list["BreachRecordSeverity"]:
         severity_levels_string = get_config_variable(
             env_var="SPYCLOUD_SEVERITY_LEVELS",
@@ -161,7 +140,9 @@ class SpyCloudConfig:
         ]
 
     @property
-    @validate_value(lambda values: all(v in SPYCLOUD_WATCHLIST_TYPES for v in values))
+    @validate_return_value(
+        lambda values: all(v in SPYCLOUD_WATCHLIST_TYPES for v in values)
+    )
     def watchlist_types(self) -> list["BreachRecordWatchlistType"]:
         watchlist_types_string = get_config_variable(
             env_var="SPYCLOUD_WATCHLIST_TYPES",
@@ -177,7 +158,7 @@ class SpyCloudConfig:
         ]
 
     @property
-    @validate_value(lambda value: value in OCTI_TLP_LEVELS)
+    @validate_return_value(lambda value: value in OCTI_TLP_LEVELS)
     def tlp_level(self) -> "TLPMarkingLevel":
         return get_config_variable(
             env_var="SPYCLOUD_TLP_LEVEL",
