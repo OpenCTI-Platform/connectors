@@ -264,7 +264,7 @@ def test_ingest_campaign_use_case_success():
     )
 
     # 29 entities total
-    assert len(entities) == 29 # noqa: S101
+    assert len(entities) == 29  # noqa: S101
     # all stix2 lib object
     assert all(  # noqa: S101
         isinstance(entity.to_stix2_object(), _STIXBase21) for entity in entities

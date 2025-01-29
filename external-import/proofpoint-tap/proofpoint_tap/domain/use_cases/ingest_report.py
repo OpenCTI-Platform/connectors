@@ -20,7 +20,6 @@ from proofpoint_tap.domain.models.octi.relationships import (
     IntrusionSetTargetsOrganization,
     IntrusionSetUsesAttackPattern,
     IntrusionSetUsesMalware,
-
 )
 
 if TYPE_CHECKING:
@@ -372,7 +371,7 @@ class ReportProcessor:
             )
 
     def make_indicator_indicates_observable_relationship(
-        self, indicator: "Indicator", observable:"Observable"
+        self, indicator: "Indicator", observable: "Observable"
     ) -> IndicatorBasedOnObservable:
         """Make an OCTI IndicatorBasedOnObservable relationship from Indicator and Observable."""
         return IndicatorBasedOnObservable(
@@ -389,7 +388,6 @@ class ReportProcessor:
             confidence=None,
             external_references=None,
         )
-
 
     def make_report(
         self, campaign: "CampaignPort", related_objetcs: list["BaseEntity"]
@@ -483,7 +481,7 @@ class ReportProcessor:
                     indicator=indicator,
                     observable=observable,
                 )
-                for observable, indicator in (o_i if o_i else ((), ()))
+                for observable, indicator in (o_i if o_i else [])
             ]
         )
 

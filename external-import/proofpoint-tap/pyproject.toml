@@ -36,7 +36,7 @@ test= [
     "pytest-asyncio >=0.16, <1",
 ]
 dev = [
-    "black >=24.10, <25",  # Code formatter
+    "black >=25.1, <26",  # Code formatter
     "isort >=6, <7",  # Import sorter
     "ruff >=0.7.2, <1",  # linter
     "mypy >=1.13.0, <2",  # Type validator
