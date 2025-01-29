@@ -58,7 +58,7 @@ class SpycloudClient:
 
         return session
 
-    def _request(self, method: str = "GET", url: str = None, **kwargs) -> dict:
+    def _request(self, method: str = "GET", url: str = None, **kwargs) -> dict | None:
         """
         Internal method to handle API requests.
         :param kwargs: Any arguments accepted by request.request()
@@ -90,7 +90,7 @@ class SpycloudClient:
     # Cache is never cleared manually as we don't need fresh breach catalogs data (only their title are used).
     # Default maxsize used (128 entries).
     @lru_cache
-    def get_breach_catalog(self, breach_catalog_id: str = None) -> BreachCatalog:
+    def get_breach_catalog(self, breach_catalog_id: int) -> BreachCatalog | None:
         """
         Retrieve a breach catalog from Spycloud.
         :param breach_catalog_id: ID of breach catalog to retrieve

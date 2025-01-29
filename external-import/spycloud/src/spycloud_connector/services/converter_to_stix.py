@@ -1,5 +1,6 @@
 import ipaddress
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pycti import OpenCTIConnectorHelper
 from spycloud_connector.models import opencti, spycloud
@@ -7,8 +8,17 @@ from spycloud_connector.services import ConfigLoader
 from spycloud_connector.utils.helpers import dict_to_markdown_table
 from spycloud_connector.utils.decorators import handle_pydantic_validation_error
 
+if TYPE_CHECKING:
+    from spycloud_connector.models.opencti import AuthorIdentityClass, IncidentSeverity
+    from spycloud_connector.models.spycloud import BreachRecordSeverity
 
-SEVERITY_LEVELS_BY_CODE = {2: "low", 5: "medium", 20: "high", 25: "critical"}
+
+SEVERITY_LEVELS_BY_CODE: dict["BreachRecordSeverity", "IncidentSeverity"] = {
+    2: "low",
+    5: "medium",
+    20: "high",
+    25: "critical",
+}
 
 
 class ConverterToStix:
@@ -35,7 +45,7 @@ class ConverterToStix:
 
     @staticmethod
     def _create_author(
-        name: str, identity_class: str, description: str = None
+        name: str, identity_class: "AuthorIdentityClass", description: str = None
     ) -> opencti.Author:
         """Create an OpenCTI Author."""
         return opencti.Author(
@@ -176,7 +186,7 @@ class ConverterToStix:
         )
 
     @handle_pydantic_validation_error
-    def _create_directory(self, path: str) -> opencti.Directory:
+    def _create_directory(self, path: str) -> opencti.Directory | None:
         """Create an OpenCTI Directory observable."""
         if path:
             return opencti.Directory(
@@ -186,7 +196,7 @@ class ConverterToStix:
             )
 
     @handle_pydantic_validation_error
-    def _create_domain_name(self, value: str) -> opencti.DomainName:
+    def _create_domain_name(self, value: str) -> opencti.DomainName | None:
         """Create an OpenCTI DomainName observable."""
         if value:
             return opencti.DomainName(
@@ -198,7 +208,7 @@ class ConverterToStix:
     @handle_pydantic_validation_error
     def _create_email_address(
         self, value: str, display_name: str = None, belongs_to_ref: str = None
-    ) -> opencti.EmailAddress:
+    ) -> opencti.EmailAddress | None:
         """Create an OpenCTI EmailAddress observable."""
         if value:
             return opencti.EmailAddress(
@@ -210,7 +220,7 @@ class ConverterToStix:
             )
 
     @handle_pydantic_validation_error
-    def _create_file(self, name: str) -> opencti.File:
+    def _create_file(self, name: str) -> opencti.File | None:
         """Create an OpenCTI File observable."""
         if name:
             return opencti.File(
@@ -222,9 +232,8 @@ class ConverterToStix:
     @handle_pydantic_validation_error
     def _create_ip_address(
         self, value: str
-    ) -> opencti.IPv4Address | opencti.IPv6Address:
+    ) -> opencti.IPv4Address | None | opencti.IPv6Address:
         """Create an OpenCTI IPv4Address or IPv6Address observable."""
-        ip_address_version = None
         try:
             ip_address_version = ipaddress.ip_address(value).version
         except ValueError as e:
@@ -245,7 +254,7 @@ class ConverterToStix:
             )
 
     @handle_pydantic_validation_error
-    def _create_mac_address(self, value: str) -> opencti.MACAddress:
+    def _create_mac_address(self, value: str) -> opencti.MACAddress | None:
         """Create an OpenCTI MACAddress observable."""
         if value:
             return opencti.MACAddress(
@@ -255,7 +264,7 @@ class ConverterToStix:
             )
 
     @handle_pydantic_validation_error
-    def _create_url(self, value: str) -> opencti.URL:
+    def _create_url(self, value: str) -> opencti.URL | None:
         """Create en OpenCTI URL observable."""
         if value:
             return opencti.URL(
@@ -267,7 +276,7 @@ class ConverterToStix:
     @handle_pydantic_validation_error
     def _create_user_account(
         self, account_login: str = None, account_type: str = None
-    ) -> opencti.UserAccount:
+    ) -> opencti.UserAccount | None:
         """Create an OpenCTI UserAccount observable."""
         if account_login:
             return opencti.UserAccount(
@@ -278,7 +287,7 @@ class ConverterToStix:
             )
 
     @handle_pydantic_validation_error
-    def _create_user_agent(self, value: str) -> opencti.UserAgent:
+    def _create_user_agent(self, value: str) -> opencti.UserAgent | None:
         """Create an OpenCTI UserAgent observable."""
         if value:
             return opencti.UserAgent(

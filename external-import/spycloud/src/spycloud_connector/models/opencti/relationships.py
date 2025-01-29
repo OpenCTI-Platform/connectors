@@ -16,7 +16,7 @@ from spycloud_connector.models.opencti import (
 class BaseRelationship(OCTIBaseModel):
     """Represents a Base relationship."""
 
-    _relationship_type: str = PrivateAttr(default=None)
+    _relationship_type: str = PrivateAttr(...)
 
     description: Optional[str] = Field(
         description="Description of the relationship.",

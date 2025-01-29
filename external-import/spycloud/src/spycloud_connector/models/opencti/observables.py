@@ -220,12 +220,6 @@ class URL(ObservableBaseModel):
         min_length=1,
     )
 
-    @classmethod
-    def _validate_model_input(cls, data: dict) -> dict:
-        if not validators.url(data.get("value")):
-            raise ValueError("The provided URL is not a valid URL.")
-        return data
-
     def to_stix2_object(self) -> stix2.URL:
         return stix2.URL(
             value=self.value,

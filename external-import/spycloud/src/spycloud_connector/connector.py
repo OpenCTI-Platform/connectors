@@ -34,7 +34,7 @@ class SpyCloudConnector:
         self, watchlist_type: "BreachRecordWatchlistType" = None
     ) -> datetime:
         """
-        Get last import datetime from connector's current state. \  
+        Get last import datetime from connector's current state.
         It does *not* ping OpenCTI, use self.helper.get_state() to get connector's state from OpenCTI.
         :param watchlist_type: Optional watchlist_type filter. If not provided, `last_import_date` is returned.
         :return: Last import datetime or default `import_start_date` from connector's config.
@@ -58,7 +58,7 @@ class SpyCloudConnector:
         watchlist_type: "BreachRecordWatchlistType" = None,
     ) -> None:
         """
-        Set last import datetime in connector's current state. \  
+        Set last import datetime in connector's current state.
         It does *not* ping OpenCTI, use self.helper.set_state() to force update connector's state on OpenCTI.
         :param last_import_date: Last import datetime to store
         :param watchlist_type: Optional watchlist_type filter. If not provided, `last_import_date` is set.
@@ -113,13 +113,15 @@ class SpyCloudConnector:
 
         return octi_objects
 
-    def _send_stix_bundle(self, work_id: str, octi_objects: list[OCTIBaseModel]) -> str:
+    def _send_stix_bundle(
+        self, work_id: str, octi_objects: list[OCTIBaseModel]
+    ) -> list | None:
         """
         Create a consistent STIX bundle from OCTI objects and send it to the worker.
         :return: List of sent STIX bundles
         """
         if not octi_objects:
-            return
+            return None
 
         octi_objects.append(self.converter_to_stix.author)
         stix_objects = [octi_object.to_stix2_object() for octi_object in octi_objects]
@@ -205,12 +207,12 @@ class SpyCloudConnector:
 
     def run(self) -> None:
         """
-        Run the main process encapsulated in a scheduler. \  
-        It allows you to schedule the process to run at a certain intervals. \  
-        This specific scheduler from the pycti connector helper will also check the queue size of a connector. \  
+        Run the main process encapsulated in a scheduler.
+        It allows you to schedule the process to run at a certain intervals.
+        This specific scheduler from the pycti connector helper will also check the queue size of a connector.
         If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
         the connector's main process will not run until the queue is ingested and reduced sufficiently,
-        allowing it to restart during the next scheduler check. (default is 500MB). \  
+        allowing it to restart during the next scheduler check. (default is 500MB).
         It requires the `duration_period` connector variable in ISO-8601 standard format
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
         """
