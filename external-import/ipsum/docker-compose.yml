@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-ipsum:
-    image: opencti/connector-ipsum:6.4.8
+    image: opencti/connector-ipsum:6.4.9
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
