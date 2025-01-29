@@ -23,7 +23,7 @@ Table of Contents
 This connector allows organizations to feed OpenCTI using **Spycloud** knowledge.
 
 Spycloud monitors and tracks compromised data, such as login credentials and personal information, across the web and other sources.
-This connector imports such data, aka _breach records_, from Spycloud into OpenCTI as incidents.
+This connector imports such data, aka _breach records_, from Spycloud into OpenCTI as incidents and observables.
 
 [Documentation about Spycloud API](https://spycloud-external.readme.io/sc-enterprise-api/docs/getting-started) is available on their platform.
 
@@ -70,6 +70,7 @@ Below are the parameters you'll need to set for the connector:
 | API key           | api_key           | `SPYCLOUD_API_KEY`           | /                   | Yes       | Spycloud API key                                                                                                                                                |
 | Severity levels   | severity_levels   | `SPYCLOUD_SEVERITY_LEVELS`   | /                   | No        | List of severity levels to filter breach records by. Allowed values are ["2", "5", "20", "25"]. If not set, all breach records will be returned                 |
 | Watchlist types   | watchlist_types   | `SPYCLOUD_WATCHLIST_TYPES`   | /                   | No        | List of watchlist types to filter breach records by. Allowed values are ["email", "domain", "subdomain", "ip"]. If not set, all breach records will be returned |
+| TLP Level         | tlp_level         | `SPYCLOUD_TLP_LEVEL`         | "amber+strict"      | No        | TLP level to set on imported entities (allowed values are ['white', 'green', 'amber', 'amber+strict', 'red'])                                                   |
 | Import start date | import_start_date | `SPYCLOUD_IMPORT_START_DATE` | "1970-01-01T00:00Z" | No        | Date to start import from (in ISO-8601 format) if connector's state doesn't contain last imported incident(s) datetime.                                         |
 
 Please find further details about Spycloud filters in their [API documentation](https://spycloud-external.readme.io/sc-enterprise-api/reference/data-watchlist)
@@ -141,7 +142,7 @@ Describe how the connector functions:
 
 ### General
 
-This connector leverages OpenCTI connector _scheduler_, so it imports Spycloud breach records and create corresponding incidents in OpenCTI at a defined periodicity.
+This connector leverages OpenCTI connector _scheduler_, so it imports Spycloud breach records and create corresponding incidents and their related observables in OpenCTI at a defined periodicity.
 
 ```mermaid
 flowchart LR
@@ -162,7 +163,7 @@ In order to authenticate the connector and access Spycloud API, an account with 
 The graph below describes all the different entities that can be created and/or updated by the connector in OpenCTI from
 Spycloud's breach records.
 
-| As each breach record can contain a lot of heterogeneous information, all fields are gathered into incident's description as a markdown table.  
+| As each breach record can contain a lot of heterogeneous information, all fields are gathered into incident's description as a markdown table.
 | These fields are saved as they are returned by Spycloud API.
 
 ```mermaid
@@ -178,13 +179,16 @@ graph LR
         subgraph Events
             direction TB
             OpenCTIIncident[Incident]
+            OpenCTIObservable[Observable]
         end
     end
 
 %% BreachCatalog includes BreachRecord
     SpycloudBreachCatalog -.->|has many| SpycloudBreachRecord
 %% BreachRecord generates Incident
-    SpycloudBreachRecord ==>|looping over found records| OpenCTIIncident
+    SpycloudBreachRecord ==>|looping over found records| OpenCTIIncident & OpenCTIObservable
+%% Observables are related-to Incident
+    OpenCTIObservable -.->|related-to| OpenCTIIncident
 
 ```
 
