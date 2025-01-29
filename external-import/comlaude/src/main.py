@@ -1,6 +1,6 @@
-""" Comlaude main integration.
+"""Comlaude main integration.
 
-   isort:skip_file
+isort:skip_file
 """
 
 import datetime

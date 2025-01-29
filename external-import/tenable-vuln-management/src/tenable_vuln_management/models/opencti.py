@@ -1,26 +1,26 @@
 """
-    Define a set of classes representing different entities and observables within OPenCTI.
-    Each entity (e.g., `Author`, `System`, `Vulnerability`, etc.) corresponds to an object that can be converted into
-    STIX 2.0 format.
+Define a set of classes representing different entities and observables within OPenCTI.
+Each entity (e.g., `Author`, `System`, `Vulnerability`, etc.) corresponds to an object that can be converted into
+STIX 2.0 format.
 
-    These entities are designed to be frozen Pydantic models, ensuring immutability post-instantiation.
+These entities are designed to be frozen Pydantic models, ensuring immutability post-instantiation.
 
-    Classes:
-        - BaseEntity: Abstract base class for all entities. Provides common attributes and methods
-        such as the generation of STIX 2 object representation and unique IDs.
-        - Author: Represents an identity, typically an organization, involved in reporting a threat.
-        - System: Represents a system or device, such as a network device or host.
-        - Observable: Base class for observables, which are characteristics associated with entities like
-        systems or assets.
-        - MACAddress: Represents a MAC address observable.
-        - IPAddress: Represents an IP address observable, with support for IPv4 and IPv6.
-        - DomainName: Represents a domain name observable.
-        - Hostname: Represents a hostname observable.
-        - Software: Represents software installed on a system, usually targeted by a vulnerability.
-        - OperatingSystem: Represents an operating system installed on a system.
-        - Vulnerability: Represents a vulnerability, including details like CVSS score and severity.
-        - RelatedToRelationship: Represents relationships between entities, specifically indicating
-        that one entity is related to another.
+Classes:
+    - BaseEntity: Abstract base class for all entities. Provides common attributes and methods
+    such as the generation of STIX 2 object representation and unique IDs.
+    - Author: Represents an identity, typically an organization, involved in reporting a threat.
+    - System: Represents a system or device, such as a network device or host.
+    - Observable: Base class for observables, which are characteristics associated with entities like
+    systems or assets.
+    - MACAddress: Represents a MAC address observable.
+    - IPAddress: Represents an IP address observable, with support for IPv4 and IPv6.
+    - DomainName: Represents a domain name observable.
+    - Hostname: Represents a hostname observable.
+    - Software: Represents software installed on a system, usually targeted by a vulnerability.
+    - OperatingSystem: Represents an operating system installed on a system.
+    - Vulnerability: Represents a vulnerability, including details like CVSS score and severity.
+    - RelatedToRelationship: Represents relationships between entities, specifically indicating
+    that one entity is related to another.
 """
 
 from abc import abstractmethod
