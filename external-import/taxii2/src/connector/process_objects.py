@@ -287,6 +287,18 @@ class ProcessObjects:
                 stix_objects.append(note)
         return stix_objects
 
+    def change_report_status(self, stix_objects: list) -> list:
+        """
+        Lets you change the status of the report on ingestion
+        :return: List of STIX objects
+        """
+        for obj in stix_objects:
+            if obj["type"] == "report":
+                obj["x_opencti_workflow_id"] = (
+                    self.config.change_report_status_x_opencti_workflow_id
+                )
+        return stix_objects
+
     def objects(self, stix_objects: list) -> list:
         """
         Used to process stix_objects and make modifications
@@ -338,5 +350,8 @@ class ProcessObjects:
 
         if self.config.save_original_indicator_id_to_note:
             stix_objects = self.save_original_indicator_id_to_note(stix_objects)
+
+        if self.config.change_report_status:
+            stix_objects = self.change_report_status(stix_objects)
 
         return stix_objects

@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-recorded-future:
-    image: opencti/connector-recorded-future:6.4.5
+    image: opencti/connector-recorded-future:6.4.9
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
@@ -16,7 +16,7 @@ services:
       - RECORDED_FUTURE_PULL_ANALYST_NOTES=True
       - RECORDED_FUTURE_LAST_PUBLISHED_NOTES=24 #required, in hours
       - RECORDED_FUTURE_TOPIC=ChangeMe #optional, can remove
-      - RECORDED_FUTURE_TLP=White # required
+      - RECORDED_FUTURE_TLP=Red # required
       - RECORDED_FUTURE_INSIKT_ONLY=True #optional, can remove
       - RECORDED_FUTURE_PULL_SIGNATURES=False #optional, can remove
       - RECORDED_FUTURE_PERSON_TO_TA=False #optional, can remove

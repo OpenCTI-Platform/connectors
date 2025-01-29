@@ -11,7 +11,9 @@ def make_markdown_table(array):
 
     markdown += nl
     for entry in array[1:]:
-        markdown += f"| {' | '.join(entry)} |{nl}"
+        entry_has_list = any(isinstance(x, list) for x in entry)
+        if not entry_has_list:
+            markdown += f"| {' | '.join(entry)} |{nl}"
 
     markdown += nl
     markdown += "> "

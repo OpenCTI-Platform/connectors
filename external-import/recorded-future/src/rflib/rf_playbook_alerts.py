@@ -131,7 +131,6 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                             + playbook_alert["data"]["playbook_alert_id"]
                         )
                 except Exception as err:
-                    print(err)
                     self.helper.log_error(err)
                 self.update_state(plb_alert.category)
 
@@ -190,12 +189,13 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         )
         stix_incident = stix2.Incident(
             id=pycti.Incident.generate_id(
-                playbook_alert_name, playbook_alert["data"]["panel_status"]["updated"]
+                playbook_alert_name, playbook_alert["data"]["panel_status"]["created"]
             ),
             name=playbook_alert_name,
             object_marking_refs=self.tlp,
             description=playbook_alert_description,
-            created=playbook_alert["data"]["panel_status"]["updated"],
+            created=playbook_alert["data"]["panel_status"]["created"],
+            modified=playbook_alert["data"]["panel_status"]["updated"],
             allow_custom=True,
             severity=self.severity_links[
                 playbook_alert["data"]["panel_status"]["priority"]
@@ -327,12 +327,13 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         )
         stix_incident = stix2.Incident(
             id=pycti.Incident.generate_id(
-                playbook_alert_name, playbook_alert["data"]["panel_status"]["updated"]
+                playbook_alert_name, playbook_alert["data"]["panel_status"]["created"]
             ),
             name=playbook_alert_name,
             object_marking_refs=self.tlp,
             description=playbook_alert_description,
-            created=playbook_alert["data"]["panel_status"]["updated"],
+            created=playbook_alert["data"]["panel_status"]["created"],
+            modified=playbook_alert["data"]["panel_status"]["updated"],
             allow_custom=True,
             severity=self.severity_links[
                 playbook_alert["data"]["panel_status"]["priority"]
@@ -542,12 +543,13 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
 
         stix_incident = stix2.Incident(
             id=pycti.Incident.generate_id(
-                playbook_alert_name, playbook_alert["data"]["panel_status"]["updated"]
+                playbook_alert_name, playbook_alert["data"]["panel_status"]["created"]
             ),
             name=playbook_alert_name,
             object_marking_refs=self.tlp,
             description=playbook_alert_description,
-            created=playbook_alert["data"]["panel_status"]["updated"],
+            created=playbook_alert["data"]["panel_status"]["created"],
+            modified=playbook_alert["data"]["panel_status"]["updated"],
             allow_custom=True,
             severity=self.severity_links[
                 playbook_alert["data"]["panel_status"]["priority"]
