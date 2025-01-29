@@ -223,15 +223,6 @@ def test_email_address_class_should_not_accept_invalid_input(input_data, error_f
         pytest.param(
             {
                 "name": "example.txt",
-                "hashes": {"MD5": "d41d8cd98f00b204e9800998ecf8427e"},
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
-            },
-            id="full_valid_data",
-        ),
-        pytest.param(
-            {
-                "name": "example.txt",
                 "author": mock_valid_author(),
                 "markings": mock_valid_markings(),
             },
@@ -247,7 +238,6 @@ def test_file_class_should_accept_valid_input(input_data):
 
     # Then: the File instance should be created successfully
     assert file.name == input_data_dict.get("name")
-    assert file.hashes == input_data_dict.get("hashes")
     assert file.author == input_data_dict.get("author")
     assert file.markings == input_data_dict.get("markings", [])
     assert file.to_stix2_object() is not None

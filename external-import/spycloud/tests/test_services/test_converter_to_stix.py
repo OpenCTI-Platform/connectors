@@ -105,12 +105,12 @@ def test_converter_to_stix_create_incident(mock_converter_to_stix):
     # Then a valid Incident should be returned
     assert incident.name is not None
     assert incident.description is not None
+    assert incident.author == mock_converter_to_stix.author
+    assert incident.created_at == datetime.fromisoformat("2024-12-04T00:00:00Z")
     assert incident.source == "Telegram Combo Cloudxurl"
     assert incident.severity == "high"
     assert incident.incident_type == "data-breach"
-    assert incident.author == mock_converter_to_stix.author
-    assert incident.created_at == datetime.fromisoformat("2024-12-04T00:00:00Z")
-    assert incident.updated_at == datetime.fromisoformat("2024-12-04T00:00:00Z")
+    assert incident.first_seen == datetime.fromisoformat("2024-12-04T00:00:00Z")
 
 
 def test_converter_to_stix_create_observables(mock_converter_to_stix):

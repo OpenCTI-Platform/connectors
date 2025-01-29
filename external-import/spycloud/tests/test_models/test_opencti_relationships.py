@@ -30,13 +30,13 @@ def mock_valid_email_observable():
 def mock_valid_incident():
     return Incident(
         name="Valid Incident",
+        author=mock_valid_author(),
+        created_at=datetime(1970, 1, 1),
+        markings=mock_valid_markings(),
         source="Unknown",
         severity="low",
         incident_type="data-breach",
-        author=mock_valid_author(),
-        created_at=datetime(1970, 1, 1),
-        updated_at=datetime(1970, 1, 1),
-        markings=mock_valid_markings(),
+        first_seen=datetime(1970, 1, 1),
     )
 
 
@@ -77,7 +77,7 @@ def test_related_to_class_should_accept_valid_input(input_data):
     relationship = RelatedTo(**input_data_dict)
 
     # Then: the RelatedTo instance should be created successfully
-    assert relationship.relationship_type == "related-to"
+    assert relationship._relationship_type == "related-to"
     assert relationship.description == input_data_dict.get("description")
     assert relationship.source == input_data_dict.get("source")
     assert relationship.target == input_data_dict.get("target")
