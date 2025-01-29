@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -81,16 +81,65 @@ class BreachRecord(BaseModel):
     model_config: ConfigDict = ConfigDict(extra="allow", frozen=True)
 
     document_id: str = Field(
-        description="UUID v4 string which uniquely identifies this breach record in our data set."
+        description="UUID v4 string which uniquely identifies this breach record in our data set.",
     )
     source_id: int = Field(
-        description="Numerical breach ID. This correlates directly with the id field in Breach Catalog objects."
+        description="Numerical breach ID. This correlates directly with the id field in Breach Catalog objects.",
     )
     spycloud_publish_date: datetime = Field(
-        description="The date on which this record was ingested into our systems. In ISO 8601 datetime format. This correlates with spycloud_publish_date field in Breach Catalog objects."
+        description="The date on which this record was ingested into our systems. In ISO 8601 datetime format. This correlates with spycloud_publish_date field in Breach Catalog objects.",
     )
     severity: BreachRecordSeverity = Field(
-        description="Severity is a numeric code representing severity of a breach record. This can be used in API requests to ensure only Breach Records with plaintext password are returned."
+        description="Severity is a numeric code representing severity of a breach record. This can be used in API requests to ensure only Breach Records with plaintext password are returned.",
     )
 
-    # TODO: add optional fields during STIX observables implementation
+    email: Optional[str] = Field(
+        description="User email address.",
+        default=None,
+    )
+    full_name: Optional[str] = Field(
+        description="User full name.",
+        default=None,
+    )
+    ip_addresses: Optional[list[str]] = Field(
+        description="List of one or more IP addresses in alphanumeric format. Both IPV4 and IPv6 addresses are supported.",
+        default=None,
+    )
+    infected_path: Optional[str] = Field(
+        description="The local path to the malicious software installed on the infected user's system.",
+        default=None,
+    )
+    mac_address: Optional[str] = Field(
+        description="A unique, 12-character alphanumeric attribute used to identify individual electronic devices on a network.",
+        default=None,
+    )
+    target_domain: Optional[str] = Field(
+        description="SLD extracted from 'target_url' field.",
+        default=None,
+    )
+    target_subdomain: Optional[str] = Field(
+        description="Subdomain and SLD extracted from 'target_url' field.",
+        default=None,
+    )
+    target_url: Optional[str] = Field(
+        description="URL extracted from Botnet data. This is the URL that is captured from a key logger installed on an infected user's system.",
+        default=None,
+    )
+    user_agent: Optional[str] = Field(
+        description="Browser agent string.",
+        default=None,
+    )
+    user_hostname: Optional[str] = Field(
+        description="System hostname. This usually comes from Botnet data.",
+        default=None,
+    )
+    user_os: Optional[str] = Field(
+        description="System OS name. This usually comes from Botnet data.",
+        default=None,
+    )
+    username: Optional[str] = Field(
+        description="Username.",
+        default=None,
+    )
+
+    # more optional fields are available in API response but not described here.

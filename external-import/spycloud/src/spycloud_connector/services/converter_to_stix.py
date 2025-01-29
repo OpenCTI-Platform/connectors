@@ -62,18 +62,19 @@ class ConverterToStix:
         :return: OpenCTI Incident
         """
         incident_source = breach_catalog.title or "Unknown"
-        incident_severity = SEVERITY_LEVELS_BY_CODE.get(breach_record.severity)
+        incident_severity = SEVERITY_LEVELS_BY_CODE[breach_record.severity]
         incident_name = (
             f"Spycloud {incident_severity} alert on "
             f"{breach_record.email or breach_record.username or breach_record.ip_addresses[0] or breach_record.document_id}"
         )
         incident_description = dict_to_markdown_table(
             breach_record.model_dump(
+                exclude_none=True,
                 exclude=[
                     "source_id",
                     "severity",
                     "spycloud_publish_date",
-                ]
+                ],
             )
         )
 
@@ -100,72 +101,61 @@ class ConverterToStix:
         """
         observables = []
 
-        breach_record_fields = breach_record.model_extra
-
-        user_account_login = breach_record_fields.get("user_hostname")
-        user_account_type = breach_record_fields.get("user_os")
         user_account = self._create_user_account(
-            account_login=user_account_login, account_type=user_account_type
+            account_login=breach_record.user_hostname,
+            account_type=breach_record.user_os,
         )
         if user_account:
             observables.append(user_account)
 
-        user_account_login = breach_record_fields.get("username")
-        user_account = self._create_user_account(account_login=user_account_login)
+        user_account = self._create_user_account(account_login=breach_record.username)
         if user_account:
             observables.append(user_account)
 
-        email_value = breach_record_fields.get("email")
-        email_display_name = breach_record_fields.get("full_name")
         email_address = self._create_email_address(
-            value=email_value,
-            display_name=email_display_name,
+            value=breach_record.email,
+            display_name=breach_record.full_name,
             belongs_to_ref=user_account.id if user_account else None,
         )
         if email_address:
             observables.append(email_address)
 
-        url_value = breach_record_fields.get("target_url")
-        url = self._create_url(url_value)
+        url = self._create_url(value=breach_record.target_url)
         if url:
             observables.append(url)
 
-        domain_name_value = breach_record_fields.get("target_domain")
-        domain_name = self._create_domain_name(domain_name_value)
+        domain_name = self._create_domain_name(value=breach_record.target_domain)
         if domain_name:
             observables.append(domain_name)
 
-        subdomain_name_value = breach_record_fields.get("target_subdomain")
-        domain_name = self._create_domain_name(subdomain_name_value)
+        domain_name = self._create_domain_name(value=breach_record.target_subdomain)
         if domain_name:
             observables.append(domain_name)
 
-        mac_address_value = breach_record_fields.get("mac_address")
-        mac_address = self._create_mac_address(mac_address_value)
+        mac_address = self._create_mac_address(value=breach_record.mac_address)
         if mac_address:
             observables.append(mac_address)
 
-        for ip_address_value in breach_record_fields.get("ip_addresses", []):
-            ip_address = self._create_ip_address(ip_address_value)
-            if ip_address:
-                observables.append(ip_address)
+        user_agent = self._create_user_agent(value=breach_record.user_agent)
+        if user_agent:
+            observables.append(user_agent)
 
-        file_path = breach_record_fields.get("infected_path")
-        if file_path:
-            file_path = Path(file_path)
+        if breach_record.ip_addresses:
+            for ip_address_value in breach_record.ip_addresses:
+                ip_address = self._create_ip_address(ip_address_value)
+                if ip_address:
+                    observables.append(ip_address)
 
-            file = self._create_file(str(file_path))
+        if breach_record.infected_path:
+            file_path = Path(breach_record.infected_path)
+
+            file = self._create_file(name=str(file_path))
             if file:
                 observables.append(file)
 
-            directory = self._create_directory(str(file_path.parent))
+            directory = self._create_directory(path=str(file_path.parent))
             if directory:
                 observables.append(directory)
-
-        user_agent_value = breach_record_fields.get("user_agent")
-        user_agent = self._create_user_agent(user_agent_value)
-        if user_agent:
-            observables.append(user_agent)
 
         return observables
 
