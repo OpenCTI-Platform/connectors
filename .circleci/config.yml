@@ -130,12 +130,12 @@ jobs:
     executor: << parameters.notification_executor >>
     steps:
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
-#      - slack/notify:
-#          event: pass
-#          template: basic_success_1
-#      - ms-teams/report:
-#          only_on_fail: false
-#          webhook_url: $MS_TEAMS_WEBHOOK_URL
+      - slack/notify:
+          event: pass
+          template: basic_success_1
+      - ms-teams/report:
+          only_on_fail: false
+          webhook_url: $MS_TEAMS_WEBHOOK_URL
 
 workflows:
   version: 2.1
