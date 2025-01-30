@@ -47,9 +47,12 @@ def get_template() -> Template:
 def get_pycti() -> dict:
     """
     Retrieve the pycti configuration, including its version and whether it should be replaced.
-
+    
     This function checks the environment for a `CIRCLE_TAG` variable to determine the pycti version.
     `CIRCLE_TAG` only exists when release is done
+    
+    If 'replace' flag is set to true, we will pull the pycti dependency from a specific branch rather than from the pypi registry
+    
     :return: pycti version
     """
     pycti = {"version": os.getenv("CIRCLE_TAG")}
