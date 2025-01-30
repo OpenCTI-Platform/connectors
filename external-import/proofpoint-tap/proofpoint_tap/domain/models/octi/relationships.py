@@ -17,11 +17,17 @@ from proofpoint_tap.domain.models.octi.common import (
 from proofpoint_tap.domain.models.octi.domain import (
     AttackPattern,
     Campaign,
+    Incident,
     IntrusionSet,
     Malware,
     TargetedOrganization,
 )
-from proofpoint_tap.domain.models.octi.observables import Indicator, Observable
+from proofpoint_tap.domain.models.octi.observables import (
+    EmailAddress,
+    EmailMessage,
+    Indicator,
+    Observable,
+)
 from pydantic import Field, PrivateAttr
 
 
@@ -259,3 +265,31 @@ class IndicatorBasedOnObservable(BaseRelationship):
         description="Reference to the target entity of the relationship. Here an Indicator.",
     )
     _relationship_type: Literal["based-on"] = "based-on"
+
+
+class EmailAddressRelatedToIncident(BaseRelationship):
+    """Represent a relationship indicating that an email address is related to incidents."""
+
+    source: "EmailAddress" = Field(
+        ...,
+        description="Reference to the source entity of the relationship. Here an EmailAddress.",
+    )
+    target: "Incident" = Field(
+        ...,
+        description="Reference to the target entity of the relationship. Here an Incident.",
+    )
+    _relationship_type: Literal["related-to"] = "related-to"
+
+
+class EmailMessageRelatedToIncident(BaseRelationship):
+    """Represent a relationship indicating that an email message is related to incidents."""
+
+    source: "EmailMessage" = Field(
+        ...,
+        description="Reference to the source entity of the relationship. Here an EmailMessage.",
+    )
+    target: "Incident" = Field(
+        ...,
+        description="Reference to the target entity of the relationship. Here an Incident.",
+    )
+    _relationship_type: Literal["related-to"] = "related-to"

@@ -1,14 +1,12 @@
 """Offer tools to ingest Report and related entities from TAP Campaigns."""
 
 from itertools import product
-from typing import TYPE_CHECKING, Any, Generator, Iterable, Literal, Optional
+from typing import TYPE_CHECKING, Any, Generator, Iterable, Optional
 
-from proofpoint_tap.domain.models.octi.common import TLPMarking
 from proofpoint_tap.domain.models.octi.domain import (
     AttackPattern,
     IntrusionSet,
     Malware,
-    OrganizationAuthor,
     Report,
     TargetedOrganization,
 )
@@ -21,6 +19,7 @@ from proofpoint_tap.domain.models.octi.relationships import (
     IntrusionSetUsesAttackPattern,
     IntrusionSetUsesMalware,
 )
+from proofpoint_tap.domain.use_cases.common import BaseUseCase
 
 if TYPE_CHECKING:
     from proofpoint_tap.domain.models.octi import BaseEntity
@@ -28,7 +27,7 @@ if TYPE_CHECKING:
     from proofpoint_tap.ports.campaign import CampaignPort, ObservedDataPort
 
 
-class ReportProcessor:
+class ReportProcessor(BaseUseCase):
     """Process simply the data from a ProofPoint Campaign.
 
     Examples:
@@ -104,29 +103,6 @@ class ReportProcessor:
 
 
     """
-
-    def __init__(
-        self,
-        tlp_marking_name: Literal["white", "green", "amber", "amber+strict", "red"],
-    ):
-        """Initialize the ReportProcessor with author and TLP marking."""
-        # Directly implementing Author in the use case for now.
-        # This may be factorized in the application layer to serve several use cases later.
-        self.author = OrganizationAuthor(
-            name="ProofPoint TAP",
-            description="Proofpoint Targeted Attack Protection (TAP) offers an innovative "
-            "approach to detecting, analysing and blocking advanced threats that target the employees.",
-            confidence=None,
-            author=None,
-            labels=None,
-            markings=None,
-            external_references=None,
-            contact_information="https://www.proofpoint.com/us/contact",
-            organization_type="vendor",
-            reliability=None,
-            aliases=None,
-        )
-        self.tlp_marking = TLPMarking(level=tlp_marking_name)
 
     def make_intrusion_sets(
         self, campaign: "CampaignPort"
