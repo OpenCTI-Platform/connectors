@@ -1,3 +1,5 @@
+# List of images with a different configuration than the default one 
+# default is  a base python image 3.12,  built with tag "rolling" or release semantic version
 images:
   stream_webhook:
     python: python3-11
