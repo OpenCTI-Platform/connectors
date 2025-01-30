@@ -350,8 +350,13 @@ class ConverterToStix:
         :param evidence: A dictionary containing evidence related to the directory.
         :return: A STIX 2.1 Directory object representing the directory described in the evidence.
         """
+        # ! Sometimes Sentinel returns an empty string for the file path but stix2 lib doesn't check strings length
+        file_path = evidence.get("filePath")
+        if not file_path:
+            return None
+
         stix_directory = stix2.Directory(
-            path=evidence.get("filePath"),
+            path=file_path,
             object_marking_refs=[self.tlp_marking],
             custom_properties={
                 "created_by_ref": self.author["id"],
