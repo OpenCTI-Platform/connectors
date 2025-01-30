@@ -25,4 +25,7 @@ tap:
   api_timeout: 'PT30S'
   api_backoff: 'PT5S'
   api_retries: 5
-  marking_definition: "white"
+  marking_definition: 'white'
+  export_campaigns: true
+  export_events: true
+  events_type: 'issues'
