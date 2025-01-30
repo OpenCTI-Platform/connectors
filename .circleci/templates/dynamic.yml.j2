@@ -41,7 +41,6 @@ jobs:
              --tag ghcr.io/opencti-platform/{{repo}}/connector-{{sub_dir}}:{{tag}} \
              {% endfor -%}
              --build-arg BASE_IMAGE=$base_image \
-             --load \
              --push
 
             {% if param['images'][image_key] is defined and param['images'][image_key]['fips'] == true -%}
@@ -51,7 +50,6 @@ jobs:
              --tag ghcr.io/opencti-platform/{{repo}}/connector-{{sub_dir}}:{{tag}}-fips \
              {% endfor -%}
              --build-arg BASE_IMAGE=$base_image \
-             --load \
              --push
             {% endif -%}
             echo -e "\nCheck tags for images in builder : \n"
