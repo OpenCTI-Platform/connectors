@@ -102,8 +102,10 @@ Below are the parameters you'll need to set for the connector:
 | API timeout                            | `TAP_API_TIMEOUT`                 |         | Yes       | Timeout for API requests in ISO8601                                                          |
 | API backoff                            | `TAP_API_BACKOFF`                 |         | Yes       | Backoff time in ISO8601 for API retries                                                         |
 | API retries                            | `TAP_API_RETRIES`                 |         | Yes       | Number of retries for API requests                                                              |
-| Export since                           | `TAP_EXPORT_SINCE`                |         | Yes       | Export data since this date, in ISO8601 format. This will be overwritten after the first successful run. |
 | Marking definition                     | `TAP_MARKING_DEFINITION`          |         | Yes       | Marking definition for exported data (Should be one of  "white", "green", "amber", "amber+strict", "red")                                                           |
+| Export Campaigns                        | `TAP_EXPORT_CAMPAIGNS`           | False   | No        | Export campaigns to OpenCTI                                                  |
+| Export Events                          | `TAP_EXPORT_EVENTS`               | False   | No        | Export events to OpenCTI                                                     |
+| Events type                           | `TAP_EVENTS_TYPE  `                |         | No        | Events types to export (all, issues,messages_blocked,messages_delivered,clicks_blocked,clicks_permitted ) |
 
 
 ## Deployment
@@ -201,7 +203,42 @@ graph LR
     OpenCTIIntrusionSet -.-> |"Uses"| OpenCTIAttackPattern
     Indicators -.-> |"Indicates"| OpenCTIMalware
     Indicators -.-> |"Indicates"| OpenCTIIntrusionSet  
+    Indicators -.-> |"Based on"| Observables
     OpenCTIIntrusionSet -.-> |"Targets"| OpenCTITargetedOrganization
+
+```
+
+```mermaid
+graph LR
+    subgraph ProofpointTAP
+        direction TB
+        subgraph TAPEvent[Event]
+        end
+    end
+
+    subgraph OpenCTI
+        direction LR
+        subgraph DomainObjects
+            direction TB
+            OpenCTIIncident[Incident]
+        end
+        subgraph Observables
+            OpenCTIEmailMessage[Email Message]
+            OpenCTIEmailAddresses[Email Addresses]
+        end
+        
+    end
+
+    %% TAP Event generates OpenCTI entities
+    TAPEvent ==> OpenCTIIncident
+    TAPEvent ==> |looping over each recipients| OpenCTIEmailAddresses
+    TAPEvent ==> |looping over each senders| OpenCTIEmailAddresses
+    TAPEvent ==> OpenCTIEmailMessage
+    
+    %% Relationships between entities
+
+    OpenCTIEmailAddresses -.-> |"Related to"| OpenCTIIncident
+    OpenCTIEmailMessage -.-> |"Related to"| OpenCTIIncident
 
 ```
 
