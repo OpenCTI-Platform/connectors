@@ -94,7 +94,7 @@ class Connector:
             self.logger.warning(
                 "[CONNECTOR] Connector acquisition SINCE parameter overwritten",
                 {
-                    "previous": str(self.config.tap.export_since),
+                    # "previous": str(self.config.tap.export_since),
                     "current": last_ingested_campaign_start_time_str,
                 },
             )
@@ -103,7 +103,14 @@ class Connector:
             )
         else:
             self.logger.info("[CONNECTOR] Connector has never run successfully...")
-            self.campaign_since_datetime = self.config.tap.export_since
+            # Today at midnight UTC
+            self.campaign_since_datetime = datetime.now(timezone.utc).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            self.logger.info(
+                "[CONNECTOR] Connector campaign acquisition SINCE parameter set to",
+                {"current": self.campaign_since_datetime.isoformat()},
+            )
 
         # Initiate a new work
         self.work_id = self.helper.api.work.initiate_work(

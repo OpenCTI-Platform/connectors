@@ -453,16 +453,17 @@ class _ConfigLoaderTAPConfigYaml(ConfigLoaderTAPPort, _BaseLoaderConfigYaml):
             )
         )
 
-    @property
-    def _export_since(self) -> datetime.datetime:
-        export_since_str = str(
-            _get_yaml_value(
-                yaml_path=["tap", "export_since"],
-                yaml_file=self.filepath,
-                required=True,
-            )
-        )
-        return TypeAdapter(datetime.datetime).validate_strings(export_since_str)
+    # Commented until the product team confirms if it's needed
+    # @property
+    # def _export_since(self) -> datetime.datetime:
+    #     export_since_str = str(
+    #         _get_yaml_value(
+    #             yaml_path=["tap", "export_since"],
+    #             yaml_file=self.filepath,
+    #             required=True,
+    #         )
+    #     )
+    #     return TypeAdapter(datetime.datetime).validate_strings(export_since_str)
 
 
 class ConfigLoaderConfigYaml(

@@ -304,24 +304,25 @@ class ConfigLoaderTAPPort(ABC):
             )
         return definition  # type: ignore[return-value] # Literal is ensure with the if statement above
 
-    @property
-    @abstractmethod
-    def _export_since(self) -> datetime.datetime: ...
+    # Commented until the product team confirms if it's needed
+    # @property
+    # @abstractmethod
+    # def _export_since(self) -> datetime.datetime: ...
 
-    @property
-    @_make_error_handler("Unable to retrieve export since in config")
-    def export_since(self) -> datetime.datetime:
-        """Export since datetime."""
-        # add utc timezone if naive datetime
-        dt = self._export_since
-        if dt.tzinfo is None:
-            dt = datetime.datetime(
-                dt.year, dt.month, dt.day, tzinfo=datetime.timezone.utc
-            )
-        # compare if datetime in the future
-        if dt > datetime.datetime.now(datetime.timezone.utc):
-            raise ValueError("Export since datetime cannot be in the future")
-        return dt
+    # @property
+    # @_make_error_handler("Unable to retrieve export since in config")
+    # def export_since(self) -> datetime.datetime:
+    #     """Export since datetime."""
+    #     # add utc timezone if naive datetime
+    #     dt = self._export_since
+    #     if dt.tzinfo is None:
+    #         dt = datetime.datetime(
+    #             dt.year, dt.month, dt.day, tzinfo=datetime.timezone.utc
+    #         )
+    #     # compare if datetime in the future
+    #     if dt > datetime.datetime.now(datetime.timezone.utc):
+    #         raise ValueError("Export since datetime cannot be in the future")
+    #     return dt
 
 
 # we assume the abstract is already implemented to keep interface/port paradigm.
