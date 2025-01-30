@@ -568,7 +568,10 @@ class openCTIInterface:
             AttackPatterns = []
 
         if self.report.detections:
-            Malware = self.Get_Malware(self.report.detections)
+            detection = ""
+            if len(self.report.detections) > 0:
+                detection = self.report.detections[0]["family"]
+            Malware = self.Get_Malware(detection)
         else:
             Malware = None
 
