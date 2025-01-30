@@ -463,7 +463,9 @@ class openCTIInterface:
 
         if not MalwareX:
             MalwareX = Malware(
-                id=pyctiMalware.generate_id(name=Detection), name=Detection, is_family=False
+                id=pyctiMalware.generate_id(name=Detection),
+                name=Detection,
+                is_family=False,
             )
 
         return MalwareX
