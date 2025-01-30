@@ -152,15 +152,15 @@ workflows:
           ci_executor:
             name: ci_environment
             tags: "rolling"
-#          requires:
-#            - ensure_formatting
-#            - base_linter
-#            - linter
-#            - test
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
           filters:
             branches:
               only:
-                - pull/3328
+                - master
       - build:
           name: "build_prerelease"
           ci_executor:
