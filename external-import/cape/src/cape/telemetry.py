@@ -12,10 +12,10 @@ from cape.cape import (
     cuckooReportTTP,
     cuckooTarget,
 )
+from pycti import Indicator as pyctiIndicator
+from pycti import Malware as pyctiMalware
 from pycti import Note as pyctiNote
 from pycti import Report as pyctiReport
-from pycti import Malware as pyctiMalware
-from pycti import Indicator as pyctiIndicator
 from pycti import StixCoreRelationship
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2.v21 import (
