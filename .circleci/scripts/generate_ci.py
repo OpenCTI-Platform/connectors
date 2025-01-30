@@ -35,6 +35,23 @@ def get_dirs() -> dir:
 
 # Load the Jinja template
 def get_parameters() -> dict:
+    """Load the parameters contained in a yaml file
+    
+    The loaded dictionary describes image-specific details that deviate from the default case.
+    { 
+        "images": 
+        {
+            <name_of_the_image>: 
+            { 
+                "python" : specific python version
+                "fips": boolean to tell the pipeline to build an image with "fips" tag
+            },
+            ...
+        }
+    }
+    """
+        
+    
     with open(f"{CI_DIR}/vars.yml", "r") as yaml_file:
         return yaml.safe_load(yaml_file)
 
