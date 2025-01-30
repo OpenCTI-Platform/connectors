@@ -31,7 +31,7 @@ jobs:
             {% if pycti.replace -%}
                 {% if "prerelease" in tags %}
             find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@$CIRCLE_BRANCH|' -i {} \;
-                {% else %}
+                {% elif "rolling" in tags %}
             find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|' -i {} \;
                 {% endif %}
             {% endif -%}
@@ -42,6 +42,7 @@ jobs:
              {% endfor -%}
              --build-arg BASE_IMAGE=$base_image \
              --load
+             --push
 
             {% if param['images'][image_key] is defined and param['images'][image_key]['fips'] == true -%}
             docker buildx build -f Dockerfile_fips . \
@@ -51,6 +52,7 @@ jobs:
              {% endfor -%}
              --build-arg BASE_IMAGE=$base_image \
              --load
+             --push
             {% endif -%}
             echo -e "\nCheck tags for images in builder : \n"
             docker images --format {% raw %} "table {{.Repository}}\t{{.Tag}}" {% endraw %}
