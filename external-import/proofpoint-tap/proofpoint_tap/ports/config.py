@@ -125,6 +125,10 @@ class ConfigLoaderConnectorPort(ABC):
     @_make_error_handler("Unable to retrieve connector log level in config")
     def log_level(self) -> Literal["debug", "info", "warn", "error"]:
         """Connector log level."""
+        if self._log_level not in ["debug", "info", "warn", "error"]:
+            raise ValueError(
+                f"Invalid log level: {self._log_level}. Must be one of 'debug', 'info', 'warn', 'error'"
+            )
         return self._log_level
 
     @property
@@ -324,6 +328,73 @@ class ConfigLoaderTAPPort(ABC):
     #         raise ValueError("Export since datetime cannot be in the future")
     #     return dt
 
+    @property
+    @abstractmethod
+    def _export_campaigns(self) -> bool: ...
+
+    @property
+    @_make_error_handler("Unable to retrieve export campaigns in config")
+    def export_campaigns(self) -> bool:
+        """Export campaigns flag."""
+        # check one of the export flags is set to True
+        if not self._export_campaigns and not self._export_events:
+            raise ValueError("At least one of the export flags must be set to True")
+
+        return self._export_campaigns
+
+    @property
+    @abstractmethod
+    def _export_events(self) -> bool: ...
+
+    @property
+    @_make_error_handler("Unable to retrieve export events in config")
+    def export_events(self) -> bool:
+        """Export events flag."""
+        if not self._export_campaigns and not self._export_events:
+            raise ValueError("At least one of the export flags must be set to True")
+        return self._export_events
+
+    @property
+    @abstractmethod
+    def _events_type(self) -> Optional[
+        Literal[
+            "all",
+            "issues",
+            "messages_blocked",
+            "messages_delivered",
+            "clicks_blocked",
+            "clicks_permitted",
+        ]
+    ]: ...
+
+    @property
+    @_make_error_handler("Unable to retrieve events type in config")
+    def events_type(self) -> Optional[
+        Literal[
+            "all",
+            "issues",
+            "messages_blocked",
+            "messages_delivered",
+            "clicks_blocked",
+            "clicks_permitted",
+        ]
+    ]:
+        """Events type to export."""
+        if self.export_events and not self._events_type:
+            raise ValueError("Events type must be set when exporting events")
+        if self._events_type not in [
+            "all",
+            "issues",
+            "messages_blocked",
+            "messages_delivered",
+            "clicks_blocked",
+            "clicks_permitted",
+        ]:
+            raise ValueError(
+                f"Invalid events type: {self._events_type}. Must be one of 'all', 'issues', 'messages_blocked', 'messages_delivered', 'clicks_blocked', 'clicks_permitted'"
+            )
+        return self._events_type
+
 
 # we assume the abstract is already implemented to keep interface/port paradigm.
 class ConfigLoaderPort(ABC):  # noqa: B024
@@ -372,5 +443,8 @@ class ConfigLoaderPort(ABC):  # noqa: B024
                 "api_backoff": self.tap.api_backoff,
                 "api_retries": self.tap.api_retries,
                 "marking_definition": self.tap.marking_definition,
+                "export_campaigns": self.tap.export_campaigns,
+                "export_events": self.tap.export_events,
+                "events_type": self.tap.events_type,
             },
         }

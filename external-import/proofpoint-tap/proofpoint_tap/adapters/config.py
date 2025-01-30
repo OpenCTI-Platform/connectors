@@ -7,7 +7,6 @@ Classes:
 
 """
 import datetime
-from functools import partial
 import pathlib
 from typing import Any, Literal, Optional
 
@@ -27,7 +26,13 @@ from proofpoint_tap.ports.config import (
     ConfigLoaderTAPPort,
 )
 
-_get_config_variable_env = partial(get_config_variable, yaml_path=["", ""])
+
+def _get_config_variable_env(env_var: str, required: bool = False) -> Any:
+    value = get_config_variable(env_var=env_var, yaml_path=["", ""])
+    if value is None and required:
+        raise ValueError(f"Environment variable {env_var} is required but not set.")
+    # see https://github.com/OpenCTI-Platform/client-python/issues/817
+    return value
 
 
 def _int_none(value: Any) -> Optional[int]:
@@ -106,7 +111,7 @@ class _ConfigLoaderConnectorEnv(ConfigLoaderConnectorPort, _BaseLoaderEnv):
     def _queue_threshold(self) -> Optional[int]:
         return _int_none(
             _get_config_variable_env(
-                env_var="CONNECTOR_QUEUE_THRESHOLD", isNumber=True, required=False
+                env_var="CONNECTOR_QUEUE_THRESHOLD", required=False
             )
         )  # isNumber option might return float
 
@@ -211,15 +216,53 @@ class _ConfigLoaderTAPEnv(ConfigLoaderTAPPort, _BaseLoaderEnv):
             )
         )
 
+    # Commented until the product team confirms if it's needed
+    # @property
+    # def _export_campaign_since(self) -> datetime.datetime:
+    #     export_since_str = str(
+    #         _get_config_variable_env(
+    #             env_var="TAP_EXPORT_SINCE",
+    #             required=True,
+    #         )
+    #     )
+    #     return TypeAdapter(datetime.datetime).validate_strings(export_since_str)
+
     @property
-    def _export_since(self) -> datetime.datetime:
-        export_since_str = str(
+    def _export_campaigns(self) -> bool:
+        flag = _bool_none(
             _get_config_variable_env(
-                env_var="TAP_EXPORT_SINCE",
-                required=True,
+                env_var="TAP_EXPORT_CAMPAIGNS",
             )
         )
-        return TypeAdapter(datetime.datetime).validate_strings(export_since_str)
+        if not flag:
+            return False
+        return flag
+
+    @property
+    def _export_events(self) -> bool:
+        flag = _bool_none(
+            _get_config_variable_env(
+                env_var="TAP_EXPORT_EVENTS",
+            )
+        )
+        if not flag:
+            return False
+        return flag
+
+    @property
+    def _events_type(self) -> Optional[
+        Literal[
+            "all",
+            "issues",
+            "messages_blocked",
+            "messages_delivered",
+            "clicks_blocked",
+            "clicks_permitted",
+        ]
+    ]:
+        return _get_config_variable_env(  # type: ignore[no-any-return]
+            env_var="TAP_EVENTS_TYPE",
+        )
 
 
 class ConfigLoaderEnv(
@@ -239,12 +282,13 @@ class ConfigLoaderEnv(
         )
 
 
-### CONFIG YAML ###
+### CONFIG YAML FOR DEV PURPOSE ###
 
 
 def _get_yaml_value(
-    yaml_path: list[str], yaml_file: pathlib.Path, required: bool
+    yaml_file: pathlib.Path, yaml_path: list[str], required: bool
 ) -> Any:
+    # see https://github.com/OpenCTI-Platform/client-python/issues/817
     with open(yaml_file, "r") as file:
         yaml_data = yaml.safe_load(file)
         try:
@@ -455,15 +499,58 @@ class _ConfigLoaderTAPConfigYaml(ConfigLoaderTAPPort, _BaseLoaderConfigYaml):
 
     # Commented until the product team confirms if it's needed
     # @property
-    # def _export_since(self) -> datetime.datetime:
+    # def _export_campaign_since(self) -> datetime.datetime:
     #     export_since_str = str(
     #         _get_yaml_value(
-    #             yaml_path=["tap", "export_since"],
+    #             yaml_path=["tap", "export_campaign_since"],
     #             yaml_file=self.filepath,
     #             required=True,
     #         )
     #     )
     #     return TypeAdapter(datetime.datetime).validate_strings(export_since_str)
+
+    @property
+    def _export_campaigns(self) -> bool:
+        flag = _bool_none(
+            _get_yaml_value(
+                yaml_path=["tap", "export_campaigns"],
+                yaml_file=self.filepath,
+                required=False,
+            )
+        )
+        if not flag:
+            return False
+        return flag
+
+    @property
+    def _export_events(self) -> bool:
+        flag = _bool_none(
+            _get_yaml_value(
+                yaml_path=["tap", "export_events"],
+                yaml_file=self.filepath,
+                required=False,
+            )
+        )
+        if not flag:
+            return False
+        return flag
+
+    @property
+    def _events_type(self) -> Optional[
+        Literal[
+            "all",
+            "issues",
+            "messages_blocked",
+            "messages_delivered",
+            "clicks_blocked",
+            "clicks_permitted",
+        ]
+    ]:
+        return _get_yaml_value(  # type: ignore[no-any-return]
+            yaml_path=["tap", "events_type"],
+            yaml_file=self.filepath,
+            required=False,
+        )
 
 
 class ConfigLoaderConfigYaml(
