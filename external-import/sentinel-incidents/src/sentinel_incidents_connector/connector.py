@@ -85,11 +85,11 @@ class SentinelIncidentsConnector:
         else:
             self.helper.set_state({"last_incident_timestamp": incident_timestamp})
 
-    def _extract_intelligence(self, incident) -> list[object]:
+    def _extract_intelligence(self, incident: dict) -> list[object]:
         """
         Extract intelligence from incident and convert it to STIX 2.1 objects.
         :param incident: Incident to extract intelligence from
-        :return: STIX 2.1 objects:
+        :return: STIX 2.1 objects.
         """
         stix_objects = []
 
@@ -301,7 +301,7 @@ class SentinelIncidentsConnector:
             if last_incident_timestamp:
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Connector last imported incident timestamp:",
-                    {"last_incident_datetime": last_incident_timestamp},
+                    {"last_incident_timestamp": last_incident_timestamp},
                 )
             else:
                 self.helper.connector_logger.info(

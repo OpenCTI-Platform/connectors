@@ -47,7 +47,7 @@ class ConverterToStix:
         self.author = self.create_author_identity(
             name=helper.connect_name,
             identity_class="organization",
-            description="Import Indicents according to alerts found in Microsoft Sentinel",
+            description="Import incidents according to alerts found in Microsoft Sentinel",
         )
         self.all_hashes = set()
 
@@ -177,7 +177,7 @@ class ConverterToStix:
         return user_account
 
     @handle_stix2_error
-    def create_evidence_ipv4(self, evidence: dict) -> stix2.IPv4Address:
+    def create_evidence_ipv4(self, evidence: dict) -> stix2.IPv4Address | None:
         """
         Create STIX 2.1 IPv4 Address object
         :param evidence: Evidence to create IPv4 from
@@ -201,7 +201,7 @@ class ConverterToStix:
         return ipv4
 
     @handle_stix2_error
-    def create_evidence_url(self, evidence: dict) -> stix2.URL:
+    def create_evidence_url(self, evidence: dict) -> stix2.URL | None:
         """
         Create STIX 2.1 User Account object
         :param evidence: Evidence to create User Account from
@@ -278,7 +278,7 @@ class ConverterToStix:
     @handle_stix2_error
     def create_evidence_custom_observable_hostname(
         self, evidence: dict
-    ) -> CustomObservableHostname:
+    ) -> CustomObservableHostname | None:
         """
         Create STIX 2.1 Custom Observable Hostname object
         :param evidence: Evidence to create Observable Hostname from
@@ -294,7 +294,7 @@ class ConverterToStix:
         return stix_hostname
 
     @handle_stix2_error
-    def create_mitre_attack_pattern(self, technique: str) -> stix2.AttackPattern:
+    def create_mitre_attack_pattern(self, technique: str) -> stix2.AttackPattern | None:
         """
         Create STIX 2.1 Attack Pattern object
         :param technique: Mitre Attack Pattern name
@@ -314,7 +314,7 @@ class ConverterToStix:
     @handle_stix2_error
     def create_evidence_malware(
         self, evidence: dict, sample_refs: list
-    ) -> stix2.Malware:
+    ) -> stix2.Malware | None:
         """
         Create a STIX 2.1 Malware object based on the provided evidence.
         Evidence type: malwareEvidence
@@ -342,7 +342,7 @@ class ConverterToStix:
         return stix_malware
 
     @handle_stix2_error
-    def create_evidence_directory(self, evidence: dict) -> stix2.Directory:
+    def create_evidence_directory(self, evidence: dict) -> stix2.Directory | None:
         """
         Create a STIX 2.1 Directory object based on the provided evidence.
         Evidence type: processEvidence, fileEvidence and malwareEvidence
@@ -367,7 +367,7 @@ class ConverterToStix:
     @handle_stix2_error
     def create_relationship(
         self, source_id=None, target_id=None, relationship_type=None
-    ) -> stix2.Relationship:
+    ) -> stix2.Relationship | None:
         """
         Creates Relationship object
         :param source_id: ID of source in string
