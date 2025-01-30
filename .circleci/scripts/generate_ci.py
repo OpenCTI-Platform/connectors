@@ -36,13 +36,13 @@ def get_dirs() -> dir:
 # Load the Jinja template
 def get_parameters() -> dict:
     """Load the parameters contained in a yaml file
-    
+
     The loaded dictionary describes image-specific details that deviate from the default case.
-    { 
-        "images": 
+    {
+        "images":
         {
-            <name_of_the_image>: 
-            { 
+            <name_of_the_image>:
+            {
                 "python" : specific python version
                 "fips": boolean to tell the pipeline to build an image with "fips" tag
             },
@@ -50,8 +50,7 @@ def get_parameters() -> dict:
         }
     }
     """
-        
-    
+
     with open(f"{CI_DIR}/vars.yml", "r") as yaml_file:
         return yaml.safe_load(yaml_file)
 
@@ -61,15 +60,15 @@ def get_template() -> Template:
         return Template(template_file.read())
 
 
-def get_pycti() -> dict:[str, str | bool]:
+def get_pycti() -> dict:
     """
     Retrieve the pycti configuration, including its version and whether it should be replaced.
-    
+
     This function checks the environment for a `CIRCLE_TAG` variable to determine the pycti version.
     `CIRCLE_TAG` only exists when release is done
-    
+
     If 'replace' flag is set to true, we will pull the pycti dependency from a specific branch rather than from the pypi registry
-    
+
     :return: pycti version
     """
     pycti = {"version": os.getenv("CIRCLE_TAG")}
