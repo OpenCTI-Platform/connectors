@@ -61,7 +61,7 @@ def get_template() -> Template:
         return Template(template_file.read())
 
 
-def get_pycti() -> dict:
+def get_pycti() -> dict:[str, str | bool]:
     """
     Retrieve the pycti configuration, including its version and whether it should be replaced.
     
