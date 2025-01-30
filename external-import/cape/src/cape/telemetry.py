@@ -14,6 +14,7 @@ from cape.cape import (
 )
 from pycti import Note as pyctiNote
 from pycti import Report as pyctiReport
+from pycti import Malware as pyctiMalware
 from pycti import StixCoreRelationship
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2.v21 import (
@@ -461,7 +462,7 @@ class openCTIInterface:
 
         if not MalwareX:
             MalwareX = Malware(
-                id=Malware.generate_id(name=Detection), name=Detection, is_family=False
+                id=pyctiMalware.generate_id(name=Detection), name=Detection, is_family=False
             )
 
         return MalwareX
