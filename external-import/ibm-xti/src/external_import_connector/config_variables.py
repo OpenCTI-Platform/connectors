@@ -41,6 +41,7 @@ class ConfigConnector:
             "CONNECTOR_DURATION_PERIOD",
             ["connector", "duration_period"],
             self.load,
+            default="PT5M"
         )
 
         # Connector extra parameters

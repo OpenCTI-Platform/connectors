@@ -1,6 +1,6 @@
 import re
 from base64 import b64encode
-from typing import Any
+from typing import Any, TypedDict
 
 from cvss import CVSS3
 from markdown_it import MarkdownIt
@@ -10,6 +10,11 @@ md = MarkdownIt(
     options_update={"options": {"html": True, "linkify": True, "typographer": True}}
 ).enable('table')
 
+class VulnerabilityPlatform(TypedDict):
+    vendor: str
+    product: str
+    affected: bool
+    cpe: str
 
 class OpenCTISTIXFormatter:
     __helper: OpenCTIConnectorHelper
@@ -51,7 +56,8 @@ class OpenCTISTIXFormatter:
         )
         obj["labels"].append(alias)
 
-    def format_indicator(self, obj: dict[str, Any]):
+    # unused argument to match other format functions so that dynamic function call arg list can be simplified
+    def format_indicator(self, obj: dict[str, Any], _alias: str):
         if not obj.get("external_references"):
             obj["external_references"] = []
 
@@ -119,10 +125,22 @@ class OpenCTISTIXFormatter:
         obj["x_opencti_epss_score"] = None
         obj["x_opencti_epss_percentile"] = None
 
-    def format_vulnerability(self, obj: dict[str, Any]):
+    def __parse_platform(self, obj: dict[str, Any], platform: VulnerabilityPlatform):
+        if not platform["affected"]:
+            return
+
+        obj["labels"].append(f"{platform['vendor']} {platform['product']}")
+
+    def format_vulnerability(self, obj: dict[str, Any], alias: str):
         # set CVE as the vulnerability name
         xfid = ""
         name = obj["name"]
+
+        if not obj.get("labels"):
+            obj["labels"] = []
+
+        if alias == "otvulnerability":
+            obj["labels"].append("ot")
 
         for reference in obj["external_references"]:
             if reference["source_name"] == "xfid":
@@ -145,11 +163,13 @@ class OpenCTISTIXFormatter:
         extensions = obj["extensions"]
         for key in extensions.keys():
             if key.startswith("extension-definition"):
+                ext = extensions[key]
+
                 # enrich the vulnerability with the x_opencti_cvss info
-                for entry in extensions[key]["cvss"]:
+                for entry in ext["cvss"]:
                     self.__parse_cvss(obj, entry)
 
-                for entry in extensions[key]["reference"]:
+                for entry in ext["reference"]:
                     obj["external_references"].append(
                         {
                             "source_name": "reference",
@@ -161,4 +181,7 @@ class OpenCTISTIXFormatter:
                     if entry.get("kev_guidance"):
                         obj["x_opencti_cisa_kev"] = True
 
-                del extensions[key]["reference"]
+                del ext["reference"]
+
+                for platform in ext["platform"]:
+                    self.__parse_platform(obj, platform)

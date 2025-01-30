@@ -48,12 +48,8 @@ class ConnectorClient:
         obj["x_opencti_created_by_ref"] = self.__identity["standard_id"]
         typ = obj["type"]
 
-        args: list[Any] = [obj]
-        if typ == "report":
-            args.append(alias)
-
         if typ in ["report", "indicator", "vulnerability"]:
-            getattr(self.__formatter, f"format_{typ}")(*args)
+            getattr(self.__formatter, f"format_{typ}")(obj, alias)
 
     def __process_object(
         self, obj: dict[str, Any], alias: str, col_type: str, stix_objects: list[Any]
