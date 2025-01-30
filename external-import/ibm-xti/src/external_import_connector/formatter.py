@@ -8,7 +8,7 @@ from pycti import OpenCTIConnectorHelper
 
 md = MarkdownIt(
     options_update={"options": {"html": True, "linkify": True, "typographer": True}}
-)
+).enable('table')
 
 
 class OpenCTISTIXFormatter:
