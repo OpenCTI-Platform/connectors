@@ -15,6 +15,7 @@ from cape.cape import (
 from pycti import Note as pyctiNote
 from pycti import Report as pyctiReport
 from pycti import Malware as pyctiMalware
+from pycti import Indicator as pyctiIndicator
 from pycti import StixCoreRelationship
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2.v21 import (
@@ -131,7 +132,7 @@ class openCTIInterface:
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(host.ip, "ipv4")
                 IPind = Indicator(
-                    id=Indicator.generate_id(STIXPattern),
+                    id=pyctiIndicator.generate_id(STIXPattern),
                     name=host.ip,
                     pattern=STIXPattern,
                     pattern_type="stix",
@@ -160,14 +161,14 @@ class openCTIInterface:
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(host.domain, "FQDN")
                 DNSind = Indicator(
-                    id=Indicator.generate_id(STIXPattern),
+                    id=pyctiIndicator.generate_id(STIXPattern),
                     name=host.domain,
                     pattern=STIXPattern,
                     pattern_type="stix",
                 )
                 STIXPattern = self.getStixPattern(host.ip, "ipv4")
                 IPind = Indicator(
-                    id=Indicator.generate_id(STIXPattern),
+                    id=pyctiIndicator.generate_id(STIXPattern),
                     name=host.ip,
                     pattern=STIXPattern,
                     pattern_type="stix",
@@ -318,7 +319,7 @@ class openCTIInterface:
             mime_type=file.type,
         )
         ind = Indicator(
-            id=Indicator.generate_id(STIXPattern),
+            id=pyctiIndicator.generate_id(STIXPattern),
             name=file.name,
             pattern=STIXPattern,
             pattern_type="stix",
@@ -357,7 +358,7 @@ class openCTIInterface:
             if self.CreateIndicator:
                 STIXPattern = self.getStixPattern(file.sha256.upper(), "sha256")
                 fileind = Indicator(
-                    id=Indicator.generate_id(STIXPattern),
+                    id=pyctiIndicator.generate_id(STIXPattern),
                     name=file.name,
                     pattern=STIXPattern,
                     pattern_type="stix",
