@@ -468,5 +468,6 @@ class ReportProcessor(BaseUseCase):
         if entities:
             entities.append(self.make_report(tap_campaign, entities))
             entities.append(self.author)
+            entities.append(self.tlp_marking)
 
         return entities

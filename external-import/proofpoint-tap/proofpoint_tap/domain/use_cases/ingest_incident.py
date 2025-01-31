@@ -216,4 +216,5 @@ class IncidentProcessor(BaseUseCase):
 
         if entities:
             entities.append(self.author)
+            entities.append(self.tlp_marking)
         return entities
