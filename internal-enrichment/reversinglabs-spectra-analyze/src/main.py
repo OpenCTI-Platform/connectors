@@ -199,26 +199,39 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             file_mime_type = "None"
             is_archive = False
 
-            try:
+            try: 
                 response = self.a1000client.get_detailed_report_v2(
                     sample_hashes=self.hash,
-                    retry=True,
+                    retry=False,
                 )
-
-                if response.status_code == 200:
-                    analysis_report = json.loads(response.text)
-                else:
-                    raise Exception(
-                        f"{self.helper.connect_name}: There was issue with getting report from Spectra Analyze. HTTP Status code {str(response.status_code)}"
-                    )
             except Exception as err:
+                return analysis_report # debug
                 raise ValueError(
                     f"{self.helper.connect_name}: Looks like the sample you are trying to access may not be available on your Spectra Analyze instance. On Spectra Analyze run fetch and analyze on the sample."
                 ) from err
+
+            if response.status_code == 200:
+                analysis_report = json.loads(response.text)
+            else:
+                raise Exception(
+                    f"{self.helper.connect_name}: There was issue with getting report from Spectra Analyze. HTTP Status code {str(response.status_code)}"
+                )
         else:
             raise ValueError(
                 f"{self.helper.connect_name}: Unsupported type provided for analysis result retrieval!"
             )
+
+        return analysis_report
+
+    def _submit_file_for_classification(self, stix_entity, opencti_entity, hash):
+
+        response = self.a1000client.get_classification_v3(
+            sample_hash=self.hash,
+            local_only=False,
+            av_scanners=False
+        )
+        
+        analysis_report = json.loads(response.text)
 
         return analysis_report
 
@@ -324,6 +337,51 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         self._upsert_observable(results)
 
         return results
+
+    def _process_file_classification_results(
+        self, stix_objects, stix_entity, opencti_entity, analysis_result
+    ):
+        self.stix_objects = stix_objects
+        self.stix_entity = stix_entity
+        self.opencti_entity = opencti_entity
+        self.analysis_result = analysis_result
+
+        results = {}
+        results["labels"] = []
+
+        try:
+            results["sample_name"] = self.analysis_result["sha1"]
+            results["classification"] = self.analysis_result["classification"]
+            results["sha256"] = self.analysis_result["sha256"]
+            if results["classification"] in ("suspicious", "malicious"):
+                threat_name = self.analysis_result["classification_result"].split(".")
+                results["threat_name"] = threat_name
+                results["platform"] = threat_name[0]
+                results["threat_type"] = threat_name[1]
+                results["malware_family_name"] = threat_name[2]
+                # Creating label out of malware type and family
+                results["labels"].append(results["threat_type"])
+                results["labels"].append(results["malware_family_name"])
+            results["risk_score"] = self.analysis_result["riskscore"]
+            results["score"] = results["risk_score"] * 10
+            results["description"] = (
+                "Sample was processed by Spectra Analyze! Sample is classified as "
+                + results["classification"]
+            )
+            
+            # Creating label out of classification
+            results["labels"].append(results["classification"])
+
+        except Exception as err:
+            raise ValueError(
+                f"{self.helper.connect_name}: INFO: Fetching analysis data failed. Please try again shortly!"
+            ) from err
+
+        # Add score and description to the Observable
+        self._upsert_observable(results)
+
+        return results
+
 
     def _process_url_analysis_result(
         self, stix_objects, stix_entity, opencti_entity, analysis_result
@@ -1321,17 +1379,27 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             # Submit File sample for analysis
             analysis_result = self._submit_file_for_analysis(
                 stix_entity, opencti_entity, hash, hash_type
-            )
+            ) 
 
             if not analysis_result:
-                raise ValueError(
-                    f"{self.helper.connect_name}: Provided sample does not exist on the appliance. Try to upload it first and re-run!"
+
+                analysis_result = self._submit_file_for_classification(
+                    stix_entity, opencti_entity, hash
+                )
+
+                self.helper.log_info(
+                    f"{self.helper.connect_name}: DEBUGGING {analysis_result}"
                 )
 
             # Integrate analysis results with OpenCTI
-            results = self._process_file_analysis_result(
-                stix_objects, stix_entity, opencti_entity, analysis_result
-            )
+            if "results" in analysis_result:
+                results = self._process_file_analysis_result(
+                    stix_objects, stix_entity, opencti_entity, analysis_result
+                )
+            else:
+                results = self._process_file_classification_results(
+                    stix_objects, stix_entity, opencti_entity, analysis_result
+                )
 
             if (results["classification"] == "malicious") or (
                 results["classification"] == "suspicious"
