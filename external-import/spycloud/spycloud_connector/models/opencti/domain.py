@@ -66,10 +66,11 @@ class Incident(OCTIBaseModel):
             created_by_ref=self.author.id,
             object_marking_refs=[marking.id for marking in self.markings],
             custom_properties={
-                "x_opencti_source": self.source,
-                "x_opencti_severity": self.severity,
-                "x_opencti_incident_type": self.incident_type,
-                "x_opencti_first_seen": self.first_seen,
-                "x_opencti_last_seen": self.last_seen,
+                # ! No prefix 'x_opencti' for incident's properties (not supported by OpenCTI)
+                "source": self.source,
+                "severity": self.severity,
+                "incident_type": self.incident_type,
+                "first_seen": self.first_seen,
+                "last_seen": self.last_seen,
             },
         )
