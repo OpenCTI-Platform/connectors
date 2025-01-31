@@ -108,22 +108,22 @@ class SpyCloudConnector:
                 )
                 octi_objects.append(relationship)
 
-        if octi_objects:
-            octi_objects.append(self.converter_to_stix.author)
-
         return octi_objects
 
     def _send_stix_bundle(
         self, work_id: str, octi_objects: list[OCTIBaseModel]
-    ) -> list | None:
+    ) -> list:
         """
         Create a consistent STIX bundle from OCTI objects and send it to the worker.
         :return: List of sent STIX bundles
         """
         if not octi_objects:
-            return None
+            return []
 
+        # Ensure consistent bundle
         octi_objects.append(self.converter_to_stix.author)
+        octi_objects.append(self.converter_to_stix.tlp_marking)
+
         stix_objects = [octi_object.to_stix2_object() for octi_object in octi_objects]
 
         stix_bundle = self.helper.stix2_create_bundle(stix_objects)

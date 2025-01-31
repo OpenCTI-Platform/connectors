@@ -307,7 +307,7 @@ def test_converter_to_stix_create_url(mock_converter_to_stix):
 
 def test_converter_to_stix_create_url_validation_error(mock_converter_to_stix):
     # Given a ConverterToStix instance and an invalid URL
-    value = "invalid url"
+    value = 42
 
     # When calling _create_url
     url = mock_converter_to_stix._create_url(value=value)

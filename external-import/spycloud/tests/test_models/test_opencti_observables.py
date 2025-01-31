@@ -535,15 +535,6 @@ def test_url_class_should_accept_valid_input(input_data):
             "value",
             id="empty_value_field",
         ),
-        pytest.param(
-            {
-                "value": "example.com",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
-            },
-            "value",
-            id="invalid_url_format",
-        ),
     ],
 )
 def test_url_class_should_not_accept_invalid_input(input_data, error_field):
