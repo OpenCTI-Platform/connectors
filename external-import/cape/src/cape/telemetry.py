@@ -392,7 +392,8 @@ class openCTIInterface:
             reportLabels.append("Malicious")
 
         if report.detections:
-            reportLabels.append(report.detections)
+            for detection in report.detections:
+                reportLabels.append(detection["family"])
 
         labelIDs = []
         for labelx in reportLabels:
