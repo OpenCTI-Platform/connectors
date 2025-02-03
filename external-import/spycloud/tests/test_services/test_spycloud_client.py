@@ -88,15 +88,15 @@ def test_spycloud_client_request_should_return_data(mock_spycloud_client, reques
     "request_data",
     [
         pytest.param(
-            {"url": TEST_API_BASE_URL, "status_code": 403},
+            {"status_code": 403},
             id="forbidden",
         ),
         pytest.param(
-            {"url": TEST_API_BASE_URL, "status_code": 404},
+            {"status_code": 404},
             id="not_found",
         ),
         pytest.param(
-            {"url": TEST_API_BASE_URL, "status_code": 429},
+            {"status_code": 429},
             id="too_many_requests",
         ),
     ],
@@ -110,7 +110,7 @@ def test_spycloud_client_request_should_handle_exceptions(
         "requests.Session.request",
         return_value=mock_response(status_code=request_data["status_code"]),
     ):
-        data = mock_spycloud_client._request(method="GET", url=request_data["url"])
+        data = mock_spycloud_client._request(method="GET")
 
     # Then None should be returned
     assert data is None
