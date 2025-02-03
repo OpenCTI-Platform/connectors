@@ -428,9 +428,16 @@ class HatchingTriageSandboxConnector:
                         object_marking_refs=[stix2.TLP_WHITE],
                         allow_custom=True,
                     )
+
+                    relationship_type = (
+                        "uses" if entity_type == "artifact" else "related-to"
+                    )
+
                     relationship = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
-                            "uses", observable["standard_id"], attack_pattern.id
+                            relationship_type,
+                            observable["standard_id"],
+                            attack_pattern.id,
                         ),
                         relationship_type="uses",
                         created_by_ref=self.identity,
@@ -443,7 +450,7 @@ class HatchingTriageSandboxConnector:
                     bundle_objects.append(relationship)
         # Serialize and send all bundles
         if bundle_objects:
-            self._send_bundle(bundle_objects)
+            return self._send_bundle(bundle_objects)
         else:
             return "Nothing to attach"
 
