@@ -42,7 +42,7 @@ def test_directory_class_should_accept_valid_input(input_data):
     # Given: valid input data for the Directory class
     input_data_dict = dict(input_data)
     # When: we create a Directory instance
-    domain_name = Directory(**input_data_dict)
+    domain_name = Directory.model_validate(input_data_dict)
 
     # Then: the Directory instance should be created successfully
     assert domain_name.path == input_data_dict.get("path")
@@ -81,7 +81,7 @@ def test_directory_class_should_not_accept_invalid_input(input_data, error_field
     # When: we try to create a Directory instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:
-        Directory(**input_data_dict)
+        Directory.model_validate(input_data_dict)
     assert str(error_field) in str(err)
 
 
@@ -103,7 +103,7 @@ def test_domain_name_class_should_accept_valid_input(input_data):
     # Given: valid input data for the DomainName class
     input_data_dict = dict(input_data)
     # When: we create a DomainName instance
-    domain_name = DomainName(**input_data_dict)
+    domain_name = DomainName.model_validate(input_data_dict)
 
     # Then: the DomainName instance should be created successfully
     assert domain_name.value == input_data_dict.get("value")
@@ -142,7 +142,7 @@ def test_domain_name_class_should_not_accept_invalid_input(input_data, error_fie
     # When: we try to create a DomainName instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:
-        DomainName(**input_data_dict)
+        DomainName.model_validate(input_data_dict)
     assert str(error_field) in str(err)
 
 
@@ -164,7 +164,7 @@ def test_email_address_class_should_accept_valid_input(input_data):
     # Given: valid input data for the EmailAddress class
     input_data_dict = dict(input_data)
     # When: we create a EmailAddress instance
-    email_address = EmailAddress(**input_data_dict)
+    email_address = EmailAddress.model_validate(input_data_dict)
 
     # Then: the EmailAddress instance should be created successfully
     assert email_address.value == input_data_dict.get("value")
@@ -212,7 +212,7 @@ def test_email_address_class_should_not_accept_invalid_input(input_data, error_f
     # When: we try to create a EmailAddress instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:
-        EmailAddress(**input_data_dict)
+        EmailAddress.model_validate(input_data_dict)
     assert str(error_field) in str(err)
 
 
@@ -234,7 +234,7 @@ def test_file_class_should_accept_valid_input(input_data):
     # Given: valid input data for the File class
     input_data_dict = dict(input_data)
     # When: we create a File instance
-    file = File(**input_data_dict)
+    file = File.model_validate(input_data_dict)
 
     # Then: the File instance should be created successfully
     assert file.name == input_data_dict.get("name")
@@ -273,7 +273,7 @@ def test_file_class_should_not_accept_invalid_input(input_data, error_field):
     # When: we try to create a File instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:
-        File(**input_data_dict)
+        File.model_validate(input_data_dict)
     assert str(error_field) in str(err)
 
 
@@ -295,7 +295,7 @@ def test_ipv4address_class_should_accept_valid_input(input_data):
     # Given: valid input data for the IPv4Address class
     input_data_dict = dict(input_data)
     # When: we create a IPv4Address instance
-    ipv4_address = IPv4Address(**input_data_dict)
+    ipv4_address = IPv4Address.model_validate(input_data_dict)
 
     # Then: the IPv4Address instance should be created successfully
     assert ipv4_address.value == input_data_dict.get("value")
@@ -343,7 +343,7 @@ def test_ipv4address_class_should_not_accept_invalid_input(input_data, error_fie
     # When: we try to create a IPv4Address instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:
-        IPv4Address(**input_data_dict)
+        IPv4Address.model_validate(input_data_dict)
     assert str(error_field) in str(err)
 
 
@@ -365,7 +365,7 @@ def test_ipv6address_class_should_accept_valid_input(input_data):
     # Given: valid input data for the IPv6Address class
     input_data_dict = dict(input_data)
     # When: we create a IPv6Address instance
-    ipv6_address = IPv6Address(**input_data_dict)
+    ipv6_address = IPv6Address.model_validate(input_data_dict)
 
     # Then: the IPv6Address instance should be created successfully
     assert ipv6_address.value == input_data_dict.get("value")
@@ -413,7 +413,7 @@ def test_ipv6address_class_should_not_accept_invalid_input(input_data, error_fie
     # When: we try to create a IPv6Address instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:
-        IPv6Address(**input_data_dict)
+        IPv6Address.model_validate(input_data_dict)
     assert str(error_field) in str(err)
 
 
@@ -435,7 +435,7 @@ def test_mac_address_class_should_accept_valid_input(input_data):
     # Given: valid input data for the MACAddress class
     input_data_dict = dict(input_data)
     # When: we create a MACAddress instance
-    mac_address = MACAddress(**input_data_dict)
+    mac_address = MACAddress.model_validate(input_data_dict)
 
     # Then: the MACAddress instance should be created successfully
     assert mac_address.value == input_data_dict.get("value")
@@ -483,7 +483,7 @@ def test_mac_address_class_should_not_accept_invalid_input(input_data, error_fie
     # When: we try to create a MACAddress instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:
-        MACAddress(**input_data_dict)
+        MACAddress.model_validate(input_data_dict)
     assert str(error_field) in str(err)
 
 
@@ -505,7 +505,7 @@ def test_url_class_should_accept_valid_input(input_data):
     # Given: valid input data for the URL class
     input_data_dict = dict(input_data)
     # When: we create a URL instance
-    url = URL(**input_data_dict)
+    url = URL.model_validate(input_data_dict)
 
     # Then: the URL instance should be created successfully
     assert url.value == input_data_dict.get("value")
@@ -544,7 +544,7 @@ def test_url_class_should_not_accept_invalid_input(input_data, error_field):
     # When: we try to create a URL instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:
-        URL(**input_data_dict)
+        URL.model_validate(input_data_dict)
     assert str(error_field) in str(err)
 
 
@@ -575,7 +575,7 @@ def test_user_account_class_should_accept_valid_input(input_data):
     # Given: valid input data for the UserAccount class
     input_data_dict = dict(input_data)
     # When: we create a UserAccount instance
-    user_account = UserAccount(**input_data_dict)
+    user_account = UserAccount.model_validate(input_data_dict)
 
     # Then: the UserAccount instance should be created successfully
     assert user_account.account_login == input_data_dict.get("account_login")
@@ -615,7 +615,7 @@ def test_user_account_class_should_not_accept_invalid_input(input_data, error_fi
     # When: we try to create a UserAccount instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:
-        UserAccount(**input_data_dict)
+        UserAccount.model_validate(input_data_dict)
     assert str(error_field) in str(err)
 
 
@@ -637,7 +637,7 @@ def test_user_agent_class_should_accept_valid_input(input_data):
     # Given: valid input data for the UserAgent class
     input_data_dict = dict(input_data)
     # When: we create a UserAgent instance
-    user_agent = UserAgent(**input_data_dict)
+    user_agent = UserAgent.model_validate(input_data_dict)
 
     # Then: the UserAgent instance should be created successfully
     assert user_agent.value == input_data_dict.get("value")
@@ -676,5 +676,5 @@ def test_user_agent_class_should_not_accept_invalid_input(input_data, error_fiel
     # When: we try to create a UserAgent instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:
-        UserAgent(**input_data_dict)
+        UserAgent.model_validate(input_data_dict)
     assert str(error_field) in str(err)

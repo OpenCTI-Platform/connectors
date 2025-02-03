@@ -26,7 +26,7 @@ def test_author_class_should_accept_valid_input(input_data):
     input_data_dict = dict(input_data)
 
     # When: We create an Author instance with valid input data
-    author = Author(**input_data_dict)
+    author = Author.model_validate(input_data_dict)
 
     # Then: The Author instance should be created successfully
     assert author.name == input_data_dict.get("name")
@@ -72,7 +72,7 @@ def test_author_class_should_not_accept_invalid_input(input_data, error_field):
     # When: We try to create an Author instance with invalid data
     # Then: A ValidationError should be raised, and the error field should be in the error message
     with pytest.raises(ValidationError) as err:
-        Author(**input_data_dict)
+        Author.model_validate(input_data_dict)
     assert str(error_field) in str(err)
 
 
@@ -97,7 +97,7 @@ def test_tlp_marking_class_should_accept_valid_input(input_data):
     input_data_dict = dict(input_data)
 
     # When: We create a TLPMarking instance with valid input data
-    tlp_marking = TLPMarking(**input_data_dict)
+    tlp_marking = TLPMarking.model_validate(input_data_dict)
 
     # Then: The TLPMarking instance should be created successfully
     assert tlp_marking.level == input_data_dict.get("level")
@@ -139,5 +139,5 @@ def test_tlp_marking_class_should_not_accept_invalid_input(input_data, error_fie
     # When: We try to create a TLPMarking instance with invalid data
     # Then: A ValidationError should be raised, and the error field should be in the error message
     with pytest.raises(ValidationError) as err:
-        TLPMarking(**input_data_dict)
+        TLPMarking.model_validate(input_data_dict)
     assert str(error_field) in str(err)

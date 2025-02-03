@@ -50,7 +50,7 @@ def test_incident_class_should_accept_valid_input(input_data):
     # Given: valid input data for the Incident class
     input_data_dict = dict(input_data)
     # When: we create a Incident instance
-    incident = Incident(**input_data_dict)
+    incident = Incident.model_validate(input_data_dict)
 
     # Then: the Incident instance should be created successfully
     assert incident.name == input_data_dict["name"]
@@ -167,5 +167,5 @@ def test_incident_class_should_not_accept_invalid_input(input_data, error_field)
     # When: we try to create a Incident instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:
-        Incident(**input_data_dict)
+        Incident.model_validate(input_data_dict)
     assert str(error_field) in str(err)

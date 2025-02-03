@@ -76,7 +76,7 @@ def test_breach_catalog_class_should_accept_valid_input(input_data):
     input_data_dict = dict(input_data)
 
     # When: We create an BreachCatalog instance with valid input data
-    breach_catalog = BreachCatalog(**input_data_dict)
+    breach_catalog = BreachCatalog.model_validate(input_data_dict)
 
     # Then: The BreachCatalog instance should be created successfully
     # Required fields should be present
@@ -260,7 +260,7 @@ def test_breach_catalog_class_should_not_accept_invalid_input(input_data, error_
     # When: We try to create an BreachCatalog instance with invalid data
     # Then: A ValidationError should be raised, and the error field should be in the error message
     with pytest.raises(ValidationError) as err:
-        BreachCatalog(**input_data_dict)
+        BreachCatalog.model_validate(input_data_dict)
     assert str(error_field) in str(err)
 
 
@@ -307,7 +307,7 @@ def test_breach_record_class_should_accept_valid_input(input_data):
     input_data_dict = dict(input_data)
 
     # When: We create an BreachRecord instance with valid input data
-    breach_record = BreachRecord(**input_data_dict)
+    breach_record = BreachRecord.model_validate(input_data_dict)
 
     # Then: The BreachRecord instance should be created successfully
     # Required fields should be present
@@ -374,5 +374,5 @@ def test_breach_record_class_should_not_accept_invalid_input(input_data, error_f
     # When: we try to create a Vulnerability instance
     # Then: a ValidationError should be raised, and the error field should be in the error message
     with pytest.raises(ValidationError) as err:
-        BreachRecord(**input_data_dct)
+        BreachRecord.model_validate(input_data_dct)
     assert str(error_field) in str(err)

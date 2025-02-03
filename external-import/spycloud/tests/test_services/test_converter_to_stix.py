@@ -45,8 +45,8 @@ def test_converter_to_stix_create_author(mock_converter_to_stix):
 
 def test_converter_to_stix_create_incident(mock_converter_to_stix):
     # Given a ConverterToStix instance and Spycloud breach catalog + breach record
-    breach_catalog = BreachCatalog(
-        **{
+    breach_catalog = BreachCatalog.model_validate(
+        {
             # Required fields
             "id": 67701,
             "uuid": "8d0edaea-56e4-4731-9ceb-a8f00d23b788",
@@ -76,8 +76,8 @@ def test_converter_to_stix_create_incident(mock_converter_to_stix):
             "site": "n/a",
         }
     )
-    breach_record = BreachRecord(
-        **{
+    breach_record = BreachRecord.model_validate(
+        {
             # Required fields
             "document_id": "0812cbe0-62d6-47b3-af9f-d5ed0aae6e3f",
             "source_id": 67701,
@@ -115,8 +115,8 @@ def test_converter_to_stix_create_incident(mock_converter_to_stix):
 
 def test_converter_to_stix_create_observables(mock_converter_to_stix):
     # Given a ConverterToStix instance and Spycloud breach record
-    breach_record = BreachRecord(
-        **{
+    breach_record = BreachRecord.model_validate(
+        {
             "document_id": "0812cbe0-62d6-47b3-af9f-d5ed0aae6e3f",
             "source_id": 67701,
             "spycloud_publish_date": "2024-12-04T00:00:00Z",

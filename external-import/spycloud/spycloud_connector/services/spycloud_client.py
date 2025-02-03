@@ -110,7 +110,7 @@ class SpycloudClient:
 
         result = results[0]
 
-        return BreachCatalog(**result)
+        return BreachCatalog.model_validate(result)
 
     def get_breach_records(
         self,
@@ -138,7 +138,7 @@ class SpycloudClient:
 
             results = data["results"] if data else []
             for result in results:
-                yield BreachRecord(**result)
+                yield BreachRecord.model_validate(result)
 
             cursor = data["cursor"] if data else None
             if cursor:

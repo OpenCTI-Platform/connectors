@@ -74,7 +74,7 @@ def test_related_to_class_should_accept_valid_input(input_data):
     input_data_dict = dict(input_data)
 
     # When: we create a RelatedTo instance
-    relationship = RelatedTo(**input_data_dict)
+    relationship = RelatedTo.model_validate(input_data_dict)
 
     # Then: the RelatedTo instance should be created successfully
     assert relationship._relationship_type == "related-to"
@@ -162,5 +162,5 @@ def test_related_to_class_should_not_accept_invalid_input(input_data, error_fiel
     # When: we try to create a RelatedTo instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:
-        RelatedTo(**input_data_dict)
+        RelatedTo.model_validate(input_data_dict)
     assert str(error_field) in str(err)
