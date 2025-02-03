@@ -21,6 +21,8 @@ images:
     fips: true
   internal-import-file_import-document:
     fips: true
+  internal-import-file_import-file-yara:
+    fips: true
   internal-export-file_export-file-stix:
     fips: true
   internal-export-file_export-file-csv:
