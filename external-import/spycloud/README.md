@@ -110,13 +110,13 @@ you environment.
 Install the required python dependencies (preferably in a virtual environment):
 
 ```shell
-pip3 install -r requirements.txt
+pip install .
 ```
 
 Then, start the connector from recorded-future/src:
 
 ```shell
-python3 main.py
+python main.py
 ```
 
 ## Usage
@@ -142,17 +142,8 @@ Describe how the connector functions:
 
 ### General
 
-This connector leverages OpenCTI connector _scheduler_, so it imports Spycloud breach records and create corresponding incidents and their related observables in OpenCTI at a defined periodicity.
-
-```mermaid
-flowchart LR
-    A[Spycloud] -->|get data periodically| B(Connector)
-    B --> C{Process breach records}
-    C -->|convert to| D1[STIX bundle]
-    C -->|convert to| D2[STIX bundle]
-    C -->|convert to| D3[STIX bundle]
-    D1 & D2 & D3 -->|send to| E(OpenCTI)
-```
+This connector leverages OpenCTI connector _scheduler_, so it imports Spycloud breach records and create corresponding incidents and their related observables in OpenCTI at a defined periodicity.  
+General documentation about connectors and the scheduler can be found on [Filigran's official doc](https://filigran.io/auto-backpressue-control-octi-connectors/#h-purpose-of-the-scheduler).
 
 ### Authentication
 
