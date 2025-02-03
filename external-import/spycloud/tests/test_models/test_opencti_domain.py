@@ -5,11 +5,11 @@ from pydantic import ValidationError
 from spycloud_connector.models.opencti import Author, Incident, TLPMarking
 
 
-def mock_valid_author():
+def fake_valid_author():
     return Author(name="Valid Author", identity_class="organization")
 
 
-def mock_valid_markings():
+def fake_valid_markings():
     return [TLPMarking(level="red")]
 
 
@@ -21,9 +21,9 @@ def mock_valid_markings():
             {
                 "name": "Incident with Author",
                 "description": "Incident Description",
-                "author": mock_valid_author(),
+                "author": fake_valid_author(),
                 "created_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
                 "source": "Unknown",
                 "severity": "low",
                 "incident_type": "data-breach",
@@ -34,9 +34,9 @@ def mock_valid_markings():
         pytest.param(
             {
                 "name": "Valid Incident",
-                "author": mock_valid_author(),
+                "author": fake_valid_author(),
                 "created_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
                 "source": "Unknown",
                 "severity": "low",
                 "incident_type": "data-breach",
@@ -71,9 +71,9 @@ def test_incident_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "description": "Incident description",
-                "author": mock_valid_author(),
+                "author": fake_valid_author(),
                 "created_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
                 "source": "Unknown",
                 "severity": "low",
                 "incident_type": "data-breach",
@@ -86,9 +86,9 @@ def test_incident_class_should_accept_valid_input(input_data):
             {
                 "name": "",
                 "description": "Incident description",
-                "author": mock_valid_author(),
+                "author": fake_valid_author(),
                 "created_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
                 "source": "Unknown",
                 "severity": "low",
                 "incident_type": "data-breach",
@@ -103,7 +103,7 @@ def test_incident_class_should_accept_valid_input(input_data):
                 "description": "Incident description",
                 "author": "Invalid author",
                 "created_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
                 "source": "Unknown",
                 "severity": "low",
                 "incident_type": "data-breach",
@@ -116,9 +116,9 @@ def test_incident_class_should_accept_valid_input(input_data):
             {
                 "name": "Incident name",
                 "description": "Incident description",
-                "author": mock_valid_author(),
+                "author": fake_valid_author(),
                 "created_at": "01/01/1970",
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
                 "source": "Unknown",
                 "severity": "low",
                 "incident_type": "data-breach",
@@ -131,9 +131,9 @@ def test_incident_class_should_accept_valid_input(input_data):
             {
                 "name": "Incident with Author",
                 "description": "Incident Description",
-                "author": mock_valid_author(),
+                "author": fake_valid_author(),
                 "created_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
                 "source": "Unknown",
                 "severity": "invalid value",
                 "incident_type": "data-breach",
@@ -146,9 +146,9 @@ def test_incident_class_should_accept_valid_input(input_data):
             {
                 "name": "Incident with Author",
                 "description": "Incident Description",
-                "author": mock_valid_author(),
+                "author": fake_valid_author(),
                 "created_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
                 "source": "Unknown",
                 "severity": "low",
                 "incident_type": "data-breach",

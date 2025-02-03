@@ -48,7 +48,7 @@ def test_spycloud_client_session(mock_spycloud_client):
 
 # Valid Input Test
 @pytest.mark.parametrize(
-    "mock_request",
+    "request_data",
     [
         pytest.param(
             {
@@ -68,14 +68,14 @@ def test_spycloud_client_session(mock_spycloud_client):
         ),
     ],
 )
-def test_spycloud_client_request_should_return_data(mock_spycloud_client, mock_request):
+def test_spycloud_client_request_should_return_data(mock_spycloud_client, request_data):
     # Given a SpycloudClient instance
     # When calling _request
     with patch(
         "requests.Session.request",
-        return_value=mock_response(status_code=200, body=mock_request["response_body"]),
+        return_value=mock_response(status_code=200, body=request_data["response_body"]),
     ):
-        data = mock_spycloud_client._request(method="GET", url=mock_request["url"])
+        data = mock_spycloud_client._request(method="GET", url=request_data["url"])
 
     # Then a valid response body should be returned
     assert isinstance(data["cursor"], str) is True
@@ -85,7 +85,7 @@ def test_spycloud_client_request_should_return_data(mock_spycloud_client, mock_r
 
 # Invalid Input Test
 @pytest.mark.parametrize(
-    "mock_request",
+    "request_data",
     [
         pytest.param(
             {"url": TEST_API_BASE_URL, "status_code": 403},
@@ -102,15 +102,15 @@ def test_spycloud_client_request_should_return_data(mock_spycloud_client, mock_r
     ],
 )
 def test_spycloud_client_request_should_handle_exceptions(
-    mock_spycloud_client, mock_request
+    mock_spycloud_client, request_data
 ):
     # Given a SpycloudClient instance
     # When calling _request
     with patch(
         "requests.Session.request",
-        return_value=mock_response(status_code=mock_request["status_code"]),
+        return_value=mock_response(status_code=request_data["status_code"]),
     ):
-        data = mock_spycloud_client._request(method="GET", url=mock_request["url"])
+        data = mock_spycloud_client._request(method="GET", url=request_data["url"])
 
     # Then None should be returned
     assert data is None

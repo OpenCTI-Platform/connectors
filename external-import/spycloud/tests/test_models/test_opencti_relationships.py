@@ -11,28 +11,28 @@ from spycloud_connector.models.opencti import (
 )
 
 
-def mock_valid_author():
+def fake_valid_author():
     return Author(name="Valid Author", identity_class="organization")
 
 
-def mock_valid_markings():
+def fake_valid_markings():
     return [TLPMarking(level="red")]
 
 
-def mock_valid_email_observable():
+def fake_valid_email_observable():
     return EmailAddress(
         value="username@example.com",
-        author=mock_valid_author(),
-        markings=mock_valid_markings(),
+        author=fake_valid_author(),
+        markings=fake_valid_markings(),
     )
 
 
-def mock_valid_incident():
+def fake_valid_incident():
     return Incident(
         name="Valid Incident",
-        author=mock_valid_author(),
+        author=fake_valid_author(),
         created_at=datetime(1970, 1, 1),
-        markings=mock_valid_markings(),
+        markings=fake_valid_markings(),
         source="Unknown",
         severity="low",
         incident_type="data-breach",
@@ -47,23 +47,23 @@ def mock_valid_incident():
         pytest.param(
             {
                 "description": "Relationship Description",
-                "source": mock_valid_email_observable(),
-                "target": mock_valid_incident(),
-                "author": mock_valid_author(),
+                "source": fake_valid_email_observable(),
+                "target": fake_valid_incident(),
+                "author": fake_valid_author(),
                 "created_at": datetime(1970, 1, 1),
                 "modified_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
             },
             id="full_valid_data",
         ),
         pytest.param(
             {
-                "source": mock_valid_email_observable(),
-                "target": mock_valid_incident(),
-                "author": mock_valid_author(),
+                "source": fake_valid_email_observable(),
+                "target": fake_valid_incident(),
+                "author": fake_valid_author(),
                 "created_at": datetime(1970, 1, 1),
                 "modified_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -96,58 +96,58 @@ def test_related_to_class_should_accept_valid_input(input_data):
     [
         pytest.param(
             {
-                "target": mock_valid_incident(),
-                "author": mock_valid_author(),
+                "target": fake_valid_incident(),
+                "author": fake_valid_author(),
                 "created_at": datetime(1970, 1, 1),
                 "modified_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
             },
             "source",
             id="invalid_missing_source",
         ),
         pytest.param(
             {
-                "source": mock_valid_email_observable(),
-                "author": mock_valid_author(),
+                "source": fake_valid_email_observable(),
+                "author": fake_valid_author(),
                 "created_at": datetime(1970, 1, 1),
                 "modified_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
             },
             "target",
             id="invalid_missing_target",
         ),
         pytest.param(
             {
-                "source": mock_valid_incident(),
-                "target": mock_valid_incident(),
-                "author": mock_valid_author(),
+                "source": fake_valid_incident(),
+                "target": fake_valid_incident(),
+                "author": fake_valid_author(),
                 "created_at": datetime(1970, 1, 1),
                 "modified_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
             },
             "source",
             id="invalid_source_type",
         ),
         pytest.param(
             {
-                "source": mock_valid_email_observable(),
-                "target": mock_valid_email_observable(),
-                "author": mock_valid_author(),
+                "source": fake_valid_email_observable(),
+                "target": fake_valid_email_observable(),
+                "author": fake_valid_author(),
                 "created_at": datetime(1970, 1, 1),
                 "modified_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
             },
             "target",
             id="invalid_target_type",
         ),
         pytest.param(
             {
-                "source": mock_valid_email_observable(),
-                "target": mock_valid_incident(),
-                "author": mock_valid_author(),
+                "source": fake_valid_email_observable(),
+                "target": fake_valid_incident(),
+                "author": fake_valid_author(),
                 "created_at": datetime(1970, 1, 1),
                 "modified_at": datetime(1970, 1, 1),
-                "markings": mock_valid_markings(),
+                "markings": fake_valid_markings(),
                 "extra_field": "extra_value",
             },
             "extra_field",

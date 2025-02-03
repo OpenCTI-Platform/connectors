@@ -16,11 +16,11 @@ from spycloud_connector.models.opencti import (
 )
 
 
-def mock_valid_author():
+def fake_valid_author():
     return Author(name="Valid Author", identity_class="organization")
 
 
-def mock_valid_markings():
+def fake_valid_markings():
     return [TLPMarking(level="white")]
 
 
@@ -31,8 +31,8 @@ def mock_valid_markings():
         pytest.param(
             {
                 "path": "c:/example",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -57,8 +57,8 @@ def test_directory_class_should_accept_valid_input(input_data):
     [
         pytest.param(
             {
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "path",
             id="missing_path_field",
@@ -66,8 +66,8 @@ def test_directory_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "path": "",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "path",
             id="empty_path_field",
@@ -92,8 +92,8 @@ def test_directory_class_should_not_accept_invalid_input(input_data, error_field
         pytest.param(
             {
                 "value": "example.com",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -118,8 +118,8 @@ def test_domain_name_class_should_accept_valid_input(input_data):
     [
         pytest.param(
             {
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="missing_value_field",
@@ -127,8 +127,8 @@ def test_domain_name_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "value": "",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="empty_value_field",
@@ -153,8 +153,8 @@ def test_domain_name_class_should_not_accept_invalid_input(input_data, error_fie
         pytest.param(
             {
                 "value": "user@example.com",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -179,8 +179,8 @@ def test_email_address_class_should_accept_valid_input(input_data):
     [
         pytest.param(
             {
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="missing_value_field",
@@ -188,8 +188,8 @@ def test_email_address_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "value": "",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="empty_value_field",
@@ -197,8 +197,8 @@ def test_email_address_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "value": "invalid_email",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="invalid_email_format",
@@ -223,8 +223,8 @@ def test_email_address_class_should_not_accept_invalid_input(input_data, error_f
         pytest.param(
             {
                 "name": "example.txt",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -249,8 +249,8 @@ def test_file_class_should_accept_valid_input(input_data):
     [
         pytest.param(
             {
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "name",
             id="missing_name_field",
@@ -258,8 +258,8 @@ def test_file_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "name": "",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "name",
             id="empty_name_field",
@@ -284,8 +284,8 @@ def test_file_class_should_not_accept_invalid_input(input_data, error_field):
         pytest.param(
             {
                 "value": "192.168.0.1",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -310,8 +310,8 @@ def test_ipv4address_class_should_accept_valid_input(input_data):
     [
         pytest.param(
             {
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="missing_value_field",
@@ -319,8 +319,8 @@ def test_ipv4address_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "value": "",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="empty_value_field",
@@ -328,8 +328,8 @@ def test_ipv4address_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "value": "XXX.XXX.X.X",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="invalid_ip_format",
@@ -354,8 +354,8 @@ def test_ipv4address_class_should_not_accept_invalid_input(input_data, error_fie
         pytest.param(
             {
                 "value": "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -380,8 +380,8 @@ def test_ipv6address_class_should_accept_valid_input(input_data):
     [
         pytest.param(
             {
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="missing_value_field",
@@ -389,8 +389,8 @@ def test_ipv6address_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "value": "",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="empty_value_field",
@@ -398,8 +398,8 @@ def test_ipv6address_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "value": "xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="invalid_ip_format",
@@ -424,8 +424,8 @@ def test_ipv6address_class_should_not_accept_invalid_input(input_data, error_fie
         pytest.param(
             {
                 "value": "00:1B:44:11:3A:B7",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -450,8 +450,8 @@ def test_mac_address_class_should_accept_valid_input(input_data):
     [
         pytest.param(
             {
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="missing_value_field",
@@ -459,8 +459,8 @@ def test_mac_address_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "value": "",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="empty_value_field",
@@ -468,8 +468,8 @@ def test_mac_address_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "value": "XX:XX:XX:XX:XX:XX",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="invalid_mac_format",
@@ -494,8 +494,8 @@ def test_mac_address_class_should_not_accept_invalid_input(input_data, error_fie
         pytest.param(
             {
                 "value": "https://example.com",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -520,8 +520,8 @@ def test_url_class_should_accept_valid_input(input_data):
     [
         pytest.param(
             {
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="missing_value_field",
@@ -529,8 +529,8 @@ def test_url_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "value": "",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="empty_value_field",
@@ -556,16 +556,16 @@ def test_url_class_should_not_accept_invalid_input(input_data, error_field):
             {
                 "account_login": "user_login",
                 "account_type": "type",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             id="full_valid_data",
         ),
         pytest.param(
             {
                 "account_login": "user_login",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -591,8 +591,8 @@ def test_user_account_class_should_accept_valid_input(input_data):
     [
         pytest.param(
             {
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "account_login",
             id="missing_account_login_field",
@@ -600,8 +600,8 @@ def test_user_account_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "account_login": "",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "account_login",
             id="empty_account_login_field",
@@ -626,8 +626,8 @@ def test_user_account_class_should_not_accept_invalid_input(input_data, error_fi
         pytest.param(
             {
                 "value": "Mozilla/5.0",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             id="minimal_valid_data",
         ),
@@ -652,8 +652,8 @@ def test_user_agent_class_should_accept_valid_input(input_data):
     [
         pytest.param(
             {
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="missing_value_field",
@@ -661,8 +661,8 @@ def test_user_agent_class_should_accept_valid_input(input_data):
         pytest.param(
             {
                 "value": "",
-                "author": mock_valid_author(),
-                "markings": mock_valid_markings(),
+                "author": fake_valid_author(),
+                "markings": fake_valid_markings(),
             },
             "value",
             id="empty_value_field",
