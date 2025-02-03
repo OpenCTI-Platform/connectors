@@ -30,9 +30,9 @@ jobs:
 
             {% if pycti.replace -%}
                 {% if "prerelease" in tags %}
-            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@$CIRCLE_BRANCH|' -i {} \;
+            find . -name requirements.txt -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@$CIRCLE_BRANCH|" -i {} \;
                 {% elif "rolling" in tags %}
-            find . -name requirements.txt -exec sed 's|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|' -i {} \;
+            find . -name requirements.txt -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|" -i {} \;
                 {% endif %}
             {% endif -%}
             docker buildx build . \
