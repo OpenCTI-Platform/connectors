@@ -103,6 +103,7 @@ class ConfigLoaderConnectorPort(ABC):
     @abstractmethod
     def _name(self) -> str: ...
 
+    @property
     @_make_error_handler("Unable to retrieve connector name in config")
     def name(self) -> str:
         """Connector name."""
@@ -112,6 +113,7 @@ class ConfigLoaderConnectorPort(ABC):
     @abstractmethod
     def _scope(self) -> str: ...
 
+    @property
     @_make_error_handler("Unable to retrieve connector scope in config")
     def scope(self) -> str:
         """Connector scope."""
