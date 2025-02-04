@@ -1,15 +1,15 @@
+# pragma: no cover # do not include tests modules in coverage metrics
 """Test the ingest report use case."""
 
 from datetime import datetime, timezone
 
-from proofpoint_tap.domain.models.octi import TLPMarking
 from proofpoint_tap.domain.use_cases.ingest_report import ReportProcessor
 from proofpoint_tap.ports.campaign import CampaignPort, ObservedDataPort
 from stix2.v21.base import _STIXBase21
 
 
-class DummyObservedData(ObservedDataPort):
-    """Dummy observed data implementation."""
+class FakeObservedData(ObservedDataPort):
+    """Fake observed data implementation."""
 
     def __init__(self, type_: str, value: str, observed_at: datetime):
         """Initialize a dummy observed data instance."""
@@ -44,7 +44,7 @@ class DummyCampaign(CampaignPort):
         actor_names: list[str],
         malware_names: list[str],
         technique_names: list[str],
-        observed_data: list[DummyObservedData],
+        observed_data: list[FakeObservedData],
         targeted_brand_names: list[str],
     ):
         """Initialize a dummy campaign instance."""
@@ -98,7 +98,7 @@ class DummyCampaign(CampaignPort):
         return self._targeted_brand_names
 
     @property
-    def observed_data(self) -> list[DummyObservedData]:
+    def observed_data(self) -> list[FakeObservedData]:
         """Get the observed data of the campaign."""
         return self._observed_data
 
@@ -115,19 +115,19 @@ def test_ingest_campaign_use_case_success():
         malware_names=["malware1", "malware2"],
         technique_names=["technique1", "technique2"],
         observed_data=[
-            DummyObservedData(
+            FakeObservedData(
                 type_="url",
                 value="http://example.com",
                 observed_at=datetime.now(timezone.utc),
             ),
-            DummyObservedData(
+            FakeObservedData(
                 type_="ip", value="127.0.0.1", observed_at=datetime.now(timezone.utc)
             ),
         ],
         targeted_brand_names=["brand1", "brand2"],
     )
     # When running the report processor on the campaign
-    processor = ReportProcessor(tlp_marking=TLPMarking(level="white"))
+    processor = ReportProcessor(tlp_marking_name="white")
     entities = processor.run_on(campaign)
 
     # Then expected generated entities should be returned and stix serializable
@@ -193,6 +193,85 @@ def test_ingest_campaign_use_case_success():
         )
         == 1  # noqa: S101
     )
+    # 4 - IntrusionSetUsesMalwareRelationship
+    assert (  # noqa: S101
+        len(
+            [
+                entity
+                for entity in entities
+                if entity.__class__.__name__ == "IntrusionSetUsesMalware"
+            ]
+        )
+        == 4
+    )
+    # - 4 IntrusionSetUsesAttackPattern relationships
+    assert (  # noqa: S101
+        len(
+            [
+                entity
+                for entity in entities
+                if entity.__class__.__name__ == "IntrusionSetUsesAttackPattern"
+            ]
+        )
+        == 4
+    )
+
+    # - 2 IndicatorIndicatesMalware relationships
+    assert (  # noqa: S101
+        len(
+            [
+                entity
+                for entity in entities
+                if entity.__class__.__name__ == "IndicatorIndicatesMalware"
+            ]
+        )
+        == 2
+    )
+
+    # - 2 IndicatorIndicatesIntrusionSet relationships
+    assert (  # noqa: S101
+        len(
+            [
+                entity
+                for entity in entities
+                if entity.__class__.__name__ == "IndicatorIndicatesIntrusionSet"
+            ]
+        )
+        == 2
+    )
+
+    # - 4 IntrusionSetTargetsOrganization relationships
+    assert (  # noqa: S101
+        len(
+            [
+                entity
+                for entity in entities
+                if entity.__class__.__name__ == "IntrusionSetTargetsOrganization"
+            ]
+        )
+        == 4
+    )
+    # - 1 Indicator Based on Observable relationships (only URL handled for now)
+    assert (  # noqa: S101
+        len(
+            [
+                entity
+                for entity in entities
+                if entity.__class__.__name__ == "IndicatorBasedOnObservable"
+            ]
+        )
+        == 1
+    )
+    # - 1 TlpMarking Entity
+    assert (  # noqa: S101
+        len(
+            [entity for entity in entities if entity.__class__.__name__ == "TLPMarking"]
+        )
+        == 1
+    )
+
+    # 30 entities total
+    assert len(entities) == 30  # noqa: S101
     # all stix2 lib object
     assert all(  # noqa: S101
         isinstance(entity.to_stix2_object(), _STIXBase21) for entity in entities
