@@ -356,7 +356,7 @@ if __name__ == "__main__":
     # Configuration
     try:
         config = ConfigLoaderEnv()
-        helper = OpenCTIConnectorHelper(config=config.to_dict())
+        helper = OpenCTIConnectorHelper(config=config.to_dict(token_as_plaintext=True))
         campaigns = CampaignsAPIV2(
             base_url=config.tap.api_base_url,
             principal=config.tap.api_principal_key,

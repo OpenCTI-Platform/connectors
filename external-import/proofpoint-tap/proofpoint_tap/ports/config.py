@@ -414,13 +414,13 @@ class ConfigLoaderPort(ABC):  # noqa: B024
         # run to check mandatory vars are retrieved
         _ = self.to_dict()
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self, token_as_plaintext: bool = False) -> dict[str, Any]:
         """Gather configuration settings and return them as a dictionary."""
         return {
             "opencti": {
                 "url": self.opencti.url,
-                "token": self.opencti.token,
-            },
+                "token": self.opencti.token.get_secret_value() if token_as_plaintext else self.opencti.token,
+                },
             "connector": {
                 "id": self.connector.id,
                 "type": self.connector.type,
