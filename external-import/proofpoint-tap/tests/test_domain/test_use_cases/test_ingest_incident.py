@@ -277,8 +277,19 @@ def test_incident_processor_can_prcoess_click_event():
         )
         == 1
     )
-    ## Total 8 entities
-    assert len(entities) == 8  # noqa: S101
+    # - 1 TLP Marking 
+    assert (  # noqa: S101
+        len(
+            [
+                entity
+                for entity in entities
+                if entity.__class__.__name__ == "TLPMarking"
+            ]
+        )
+        == 1
+    )
+    ## Total 9 entities
+    assert len(entities) == 9  # noqa: S101
 
     ## Than can all be converted to stix object
     # all stix2 lib object
@@ -355,8 +366,19 @@ def test_incident_processor_can_prcoess_message_event():
         )
         == 1
     )
-    ## Total 22 entities
-    assert len(entities) == 22  # noqa: S101
+    ## - 1 TLP Marking
+    assert (  # noqa: S101
+        len(
+            [
+                entity
+                for entity in entities
+                if entity.__class__.__name__ == "TLPMarking"
+            ]
+        )
+        == 1
+    )
+    ## Total 23 entities
+    assert len(entities) == 23  # noqa: S101
 
     ## Than can all be converted to stix object
     # all stix2 lib object
