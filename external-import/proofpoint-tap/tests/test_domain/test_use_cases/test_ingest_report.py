@@ -264,7 +264,9 @@ def test_ingest_campaign_use_case_success():
     )
     # - 1 TlpMarking Entity
     assert (  # noqa: S101
-        len([entity for entity in entities if entity.__class__.__name__ == "TLPMarking"])
+        len(
+            [entity for entity in entities if entity.__class__.__name__ == "TLPMarking"]
+        )
         == 1
     )
 

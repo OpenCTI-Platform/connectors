@@ -277,14 +277,10 @@ def test_incident_processor_can_prcoess_click_event():
         )
         == 1
     )
-    # - 1 TLP Marking 
+    # - 1 TLP Marking
     assert (  # noqa: S101
         len(
-            [
-                entity
-                for entity in entities
-                if entity.__class__.__name__ == "TLPMarking"
-            ]
+            [entity for entity in entities if entity.__class__.__name__ == "TLPMarking"]
         )
         == 1
     )
@@ -369,11 +365,7 @@ def test_incident_processor_can_prcoess_message_event():
     ## - 1 TLP Marking
     assert (  # noqa: S101
         len(
-            [
-                entity
-                for entity in entities
-                if entity.__class__.__name__ == "TLPMarking"
-            ]
+            [entity for entity in entities if entity.__class__.__name__ == "TLPMarking"]
         )
         == 1
     )

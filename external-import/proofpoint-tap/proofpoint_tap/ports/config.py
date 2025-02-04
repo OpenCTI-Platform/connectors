@@ -421,8 +421,12 @@ class ConfigLoaderPort(ABC):  # noqa: B024
         return {
             "opencti": {
                 "url": self.opencti.url,
-                "token": self.opencti.token.get_secret_value() if token_as_plaintext else self.opencti.token,
-                },
+                "token": (
+                    self.opencti.token.get_secret_value()
+                    if token_as_plaintext
+                    else self.opencti.token
+                ),
+            },
             "connector": {
                 "id": self.connector.id,
                 "type": self.connector.type,
