@@ -1,4 +1,4 @@
-pycti==6.4.7
+pycti==6.4.11
 markdownify
 validators
 pandas==2.2.3

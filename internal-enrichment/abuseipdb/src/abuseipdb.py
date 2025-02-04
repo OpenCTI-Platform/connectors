@@ -1,4 +1,5 @@
 import os
+import traceback
 from collections import defaultdict
 from typing import Dict
 
@@ -193,5 +194,9 @@ class AbuseIPDBConnector:
 
 
 if __name__ == "__main__":
-    abuseIPDBInstance = AbuseIPDBConnector()
-    abuseIPDBInstance.start()
+    try:
+        abuseIPDBInstance = AbuseIPDBConnector()
+        abuseIPDBInstance.start()
+    except Exception:
+        traceback.print_exc()
+        exit(1)
