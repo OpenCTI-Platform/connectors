@@ -116,7 +116,6 @@ class Connector:
                 self._logger.warning(
                     "[CONNECTOR] Connector acquisition SINCE parameter overwritten",
                     {
-                        # "previous": str(self.config.tap.export_since),
                         "current": last_ingested_datetime_str,
                     },
                 )
