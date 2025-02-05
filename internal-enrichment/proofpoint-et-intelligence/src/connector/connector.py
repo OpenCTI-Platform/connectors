@@ -911,7 +911,7 @@ class ProofpointEtIntelligenceConnector:
                 return message
 
             else:
-                if is_playbook:
+                if self.is_playbook:
                     # If the entity is not in scope and the event_type is not present in the triggered entity,
                     # this indicates a trigger initiated by the playbook.
                     # In this case we return the triggered entity initiated by the playbook.

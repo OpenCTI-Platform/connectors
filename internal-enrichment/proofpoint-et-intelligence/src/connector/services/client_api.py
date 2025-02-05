@@ -1,12 +1,4 @@
-from aiohttp import (
-    ClientConnectionError,
-    ClientPayloadError,
-    ClientResponseError,
-    ClientSession,
-    InvalidURL,
-    NonHttpUrlClientError,
-    RedirectClientError,
-)
+from aiohttp import ClientConnectionError, ClientResponseError, ClientSession
 from connector.services.config_variables import ProofpointEtIntelligenceConfig
 from pycti import OpenCTIConnectorHelper
 from tenacity import retry, stop_after_attempt, wait_exponential_jitter
