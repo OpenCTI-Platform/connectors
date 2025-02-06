@@ -38,6 +38,7 @@ class SentinelApiHandler:
         """
         Get an OAuth access token and set it as Authorization header in headers.
         """
+        response_json = {}
         try:
             url = f"https://login.microsoftonline.com/{self.config.tenant_id}/oauth2/v2.0/token"
             body = {
@@ -48,16 +49,23 @@ class SentinelApiHandler:
             }
             response = requests.post(url, data=body)
             response_json = response.json()
+            response.raise_for_status()
 
             oauth_token = response_json["access_token"]
-            oauth_expired = response_json["expires_in"]  # time in seconds
+            oauth_expired = float(response_json["expires_in"])  # time in seconds
             self.session.headers.update({"Authorization": oauth_token})
             self._expiration_token_date = datetime.now() + timedelta(
                 seconds=int(oauth_expired * 0.9)
             )
-
-        except Exception as e:
-            raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
+        except (requests.exceptions.HTTPError, KeyError) as e:
+            error_description = response_json.get("error_description", "Unknown error")
+            error_message = (
+                f"[ERROR] Failed generating oauth token: {error_description}"
+            )
+            self.helper.connector_logger.error(
+                error_message, {"response": response_json}
+            )
+            raise e
 
     def retries_builder(self) -> None:
         """
