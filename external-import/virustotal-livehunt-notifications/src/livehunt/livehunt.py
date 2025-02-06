@@ -315,7 +315,6 @@ class VirustotalLivehuntNotifications:
             except Exception as e:
                 self.helper.metric.inc("error_count")
                 self.helper.log_error(str(e))
-                sys.exit(0)
 
             if self.helper.connect_run_and_terminate:
                 self.helper.metric.state("stopped")
