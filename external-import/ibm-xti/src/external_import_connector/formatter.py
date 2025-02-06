@@ -84,7 +84,7 @@ class OpenCTISTIXFormatter:
         return "Unknown"
 
     def __parse_cvss(self, obj: dict[str, Any], entry: Any):
-        cvss: str = entry["string"]
+        cvss: str = entry.get("string")
 
         if not cvss:
             self.__helper.connector_logger.warning(f"{obj['id']}: No CVSS string found")
