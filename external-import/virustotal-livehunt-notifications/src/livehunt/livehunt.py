@@ -4,6 +4,7 @@ import os
 import sys
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Mapping, Optional
 
 import vt
@@ -28,7 +29,7 @@ class VirustotalLivehuntNotifications:
 
     def __init__(self):
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        config_file_path = Path(__file__).parents[1].joinpath("config.yml")
         config = (
             yaml.load(open(config_file_path, encoding="utf-8"), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
