@@ -90,15 +90,15 @@ class ProofpointEtIntelligenceConnector:
 
         """
 
-        initiate_work = self._process_initiate_work(entity_type, entity_value)
-        bundle_sent = self._process_send_intelligence(
-            stix_object, (None if self.is_playbook else initiate_work)
+        work_id = self._initiate_work(entity_type, entity_value)
+        bundle_sent = self._send_intelligence(
+            stix_object, (None if self.is_playbook else work_id)
         )
-        self._process_complete_work(entity_type, entity_value, initiate_work)
+        self._complete_work(entity_type, entity_value, work_id)
 
         return bundle_sent
 
-    def _process_initiate_work(self, entity_type: str, entity_value: str) -> str:
+    def _initiate_work(self, entity_type: str, entity_value: str) -> str:
         """
         Starts a work enrichment process. only one work per entity.
         Sends a request to the API with the initiate_work method to initialize the work.
@@ -125,9 +125,7 @@ class ProofpointEtIntelligenceConnector:
         )
         return self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
 
-    def _process_send_intelligence(
-        self, stix_objects: list[dict], work_id: str = None
-    ) -> int:
+    def _send_intelligence(self, stix_objects: list[dict], work_id: str = None) -> int:
         """Send the transformed intelligence data to OpenCTI.
 
         This method prepares and sends unique STIX objects to OpenCTI.
@@ -156,9 +154,7 @@ class ProofpointEtIntelligenceConnector:
         )
         return len_bundle_sent
 
-    def _process_complete_work(
-        self, entity_type: str, entity_value: str, work_id: str
-    ) -> None:
+    def _complete_work(self, entity_type: str, entity_value: str, work_id: str) -> None:
         """
         Marks the work process as complete.
         This method logs the completion of the work for a specific work ID.
@@ -467,12 +463,12 @@ class ProofpointEtIntelligenceConnector:
 
                 task_response_model, task_parameter_model = task_models[task_name]
                 try:
-                    response_model = task_response_model.model_validate(results)
+                    validated_model = task_response_model.model_validate(results)
 
-                    if isinstance(response_model.response, list):
+                    if isinstance(validated_model.payload, list):
                         validated_entries = []
 
-                        for item in response_model.response:
+                        for item in validated_model.payload:
                             try:
                                 validated_item = task_parameter_model.model_validate(
                                     item
@@ -495,12 +491,12 @@ class ProofpointEtIntelligenceConnector:
                             valided_intelligence[task_name] = None
 
                     elif isinstance(
-                        response_model.response,
+                        validated_model.payload,
                         (AsnParameterModel | FileDetailsParameterModel),
                     ):
                         try:
                             validated_item = task_parameter_model.model_validate(
-                                response_model.response
+                                validated_model.payload
                             )
                             valided_intelligence[task_name] = (
                                 validated_item.model_dump()
@@ -510,7 +506,7 @@ class ProofpointEtIntelligenceConnector:
                                 "[VALIDATION] A validation error has been encountered, this validation will be skipped.",
                                 {
                                     "task_name": task_name,
-                                    "source_error": response_model.response,
+                                    "source_error": validated_model.payload,
                                     "error": err,
                                 },
                             )
@@ -520,7 +516,7 @@ class ProofpointEtIntelligenceConnector:
                             "[SKIPPED] An unknown source has been encountered, this validation will be skipped.",
                             {
                                 "task_name": task_name,
-                                "source.": response_model.response,
+                                "source.": validated_model.payload,
                             },
                         )
                         continue
@@ -769,27 +765,28 @@ class ProofpointEtIntelligenceConnector:
         highest_tlp_entity = None
         entity_marking = opencti_entity.get("objectMarking", [])
 
-        # Define TLP hierarchy for comparison
-        tlp_hierarchy = {
-            "TLP:WHITE": 1,
-            "TLP:CLEAR": 2,
-            "TLP:GREEN": 3,
-            "TLP:AMBER": 4,
-            "TLP:AMBER+STRICT": 5,
-            "TLP:RED": 6,
-        }
+        ordered_tlp_levels = [
+            "TLP:WHITE",
+            "TLP:CLEAR",
+            "TLP:GREEN",
+            "TLP:AMBER",
+            "TLP:AMBER+STRICT",
+            "TLP:RED",
+        ]
 
-        if len(entity_marking) != 0:
-            for marking_definition in entity_marking:
-                if marking_definition.get("definition_type") == "TLP":
-                    current_tlp = marking_definition.get("definition")
-                    if current_tlp in tlp_hierarchy:
-                        if (
-                            highest_tlp_entity is None
-                            or tlp_hierarchy[current_tlp]
-                            > tlp_hierarchy[highest_tlp_entity]
-                        ):
-                            highest_tlp_entity = current_tlp
+        for marking_definition in entity_marking:
+            if marking_definition.get("definition_type") != "TLP":
+                continue
+
+            current_tlp = marking_definition.get("definition")
+            current_tlp_index = ordered_tlp_levels.index(current_tlp)
+            highest_tlp_index = (
+                ordered_tlp_levels.index(highest_tlp_entity)
+                if highest_tlp_entity in ordered_tlp_levels
+                else -1
+            )
+            if current_tlp_index > highest_tlp_index:
+                highest_tlp_entity = current_tlp
 
         valid_max_tlp = self.helper.check_max_tlp(
             highest_tlp_entity, self.config.extra_max_tlp
@@ -915,7 +912,7 @@ class ProofpointEtIntelligenceConnector:
                     # If the entity is not in scope and the event_type is not present in the triggered entity,
                     # this indicates a trigger initiated by the playbook.
                     # In this case we return the triggered entity initiated by the playbook.
-                    self._process_send_intelligence(self.stix_objects)
+                    self._send_intelligence(self.stix_objects)
                 else:
                     message = (
                         "[CONNECTOR] Skip the following entity as it does not concern "

@@ -162,9 +162,9 @@ class AsnParameterModel(BaseModel):
 
 class BaseResponseModel(BaseModel, Generic[T]):
     success: bool = Field(..., description="Indicates if the request was successful.")
-    response: T = Field(..., description="Response payload.")
+    payload: T = Field(..., alias="response", description="Response payload.")
     message: Optional[str] = Field(
-        default=None, description="Indicates an error message in certain cases"
+        default=None, description="Indicates an error message in certain cases."
     )
 
 

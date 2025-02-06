@@ -1,7 +1,17 @@
 from datetime import timedelta
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import AnyUrl, BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import (
+    AnyUrl,
+    BaseModel,
+    ConfigDict,
+    Field,
+    HttpUrl,
+    PlainSerializer,
+    field_validator,
+)
+
+AnyUrlToString = Annotated[AnyUrl, PlainSerializer(str, return_type=str)]
 
 
 class ProofpointEtIntelligenceConfigVar(BaseModel):
@@ -45,7 +55,7 @@ class ProofpointEtIntelligenceConfigVar(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, str_min_length=1)
 
     # OpenCTI configurations
-    opencti_url: AnyUrl = Field(..., description="The OpenCTI platform URL.")
+    opencti_url: AnyUrlToString = Field(..., description="The OpenCTI platform URL.")
     opencti_token: str = Field(
         ..., description="The API token for authentication to the OpenCTI platform."
     )
