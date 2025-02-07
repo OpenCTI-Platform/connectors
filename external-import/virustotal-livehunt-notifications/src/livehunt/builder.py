@@ -82,7 +82,9 @@ class LivehuntBuilder:
             "descriptors_only": "False",
             "filter": filter,
         }
-        self.helper.connector_logger.info(f"Url for notifications: {url} / params: {params}")
+        self.helper.connector_logger.info(
+            f"Url for notifications: {url} / params: {params}"
+        )
 
         files_iterator = self.client.iterator(url, params=params)
 
@@ -208,7 +210,9 @@ class LivehuntBuilder:
         )
         alert = self.helper.api.incident.read(id=incident_id)
         if alert:
-            self.helper.connector_logger.info(f"Alert {alert['id']} already exists, skipping")
+            self.helper.connector_logger.info(
+                f"Alert {alert['id']} already exists, skipping"
+            )
             return None
         incident = stix2.Incident(
             id=incident_id,
@@ -276,7 +280,9 @@ class LivehuntBuilder:
                 vt_score = self._compute_score(vtobj.last_analysis_stats)
         except ZeroDivisionError as e:
             self.helper.metric.inc("error_count")
-            self.helper.connector_logger.error(f"Unable to compute score of file, err = {e}")
+            self.helper.connector_logger.error(
+                f"Unable to compute score of file, err = {e}"
+            )
 
         external_reference = self.create_external_reference(
             f"https://www.virustotal.com/gui/file/{vtobj.sha256}",
