@@ -153,7 +153,7 @@ class ImportFileYARA:
             bypass_validation=bypass_validation,
             file_name=data["file_id"] + ".json",
             entity_id=entity_id,
-            file_markings=file_markings
+            file_markings=file_markings,
         )
         if self.helper.get_validate_before_import() and not bypass_validation:
             return "Generated bundle sent for validation"
