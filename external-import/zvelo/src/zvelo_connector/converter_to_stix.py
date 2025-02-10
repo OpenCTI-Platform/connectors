@@ -14,7 +14,7 @@ class ConverterError(Exception):
 
 
 def known_converter_error(
-    func: callable[["ConverterToStix", ...], stix2.v21._STIXBase21]
+    func: callable[["ConverterToStix", ...], stix2.v21._STIXBase21],
 ) -> callable[["ConverterToStix", ...], stix2.v21._STIXBase21]:
     """
     Decorator to catch known conversion errors and raise custom exception.
