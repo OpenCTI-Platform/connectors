@@ -40,7 +40,7 @@ dev = [
     "types-requests",  # stubs for requests lib
     "types-PyYAML",  # stubs for PyYAML lib
     "python-dotenv~=1.0.1",
-    "pip-audit~=2.7.3"
+    "pip-audit~=2.8.0"
 ]
 all = [
     "tenable_security_center[test,dev]"
