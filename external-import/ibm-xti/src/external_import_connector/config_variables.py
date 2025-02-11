@@ -94,7 +94,7 @@ class ConfigConnector:
         )
 
         self.create_observables = cast(
-            str,
+            Optional[str],
             get_config_variable(
                 "CONNECTOR_IBM_XTI_CREATE_OBSERVABLES",
                 ["connector_ibm_xti", "create_observables"],
