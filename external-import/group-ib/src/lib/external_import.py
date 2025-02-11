@@ -99,7 +99,7 @@ class ExternalImportConnector:
             enable = self.cfg.get_collection_settings(collection_name, "enable")
             if enable == True:
                 self.enabled_collections.append(slached_collection_name)
-
+        self.helper.log_info(f"Enabled Collections: {self.enabled_collections}")
         # TI API initialization
         self.ti_adapter = TIAdapter(
             ti_creds_dict={

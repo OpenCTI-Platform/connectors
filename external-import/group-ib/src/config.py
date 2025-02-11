@@ -48,7 +48,6 @@ class ConfigConnector:
         """
         Initialize the connector with necessary configurations
         """
-        # Load configuration file
         self.load = self._load_config()
         self.setting_varibles_names_for_env = self._get_setting_varibles_names_for_env(
             data=self.load
@@ -63,23 +62,81 @@ class ConfigConnector:
 
     def _load_config(self) -> dict:
         """
-        Load the configuration from the YAML file
-        :return: Configuration dictionary
-        """
+        Loads the configuration from `config.yml` or falls back to `config.yml.sample` if `config.yml` does not exist.
 
-        config_file_path = (
-            Path(__file__).parents[1].joinpath("src").joinpath("config.yml")
-        )
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        return config
+        This function reads the `config.yml` file located in the `src` directory and 
+        parses it into a dictionary. If `config.yml` does not exist, it tries to load `config.yml.sample`.
+        If neither file exists, it returns an empty dictionary.
+
+        Returns:
+            dict: A dictionary containing the parsed configuration settings.
+
+        Raises:
+            yaml.YAMLError: If an error occurs while parsing the YAML file.
+        """
+        config_dir = Path(__file__).parents[1].joinpath("src")
+        config_file_path = config_dir.joinpath("config.yml")
+        sample_config_file_path = config_dir.joinpath("config.yml.sample")
+
+        for file_path in [config_file_path, sample_config_file_path]:
+            if file_path.is_file():
+                with open(file_path, "r", encoding="utf-8") as file:
+                    return yaml.load(file, Loader=yaml.FullLoader)
+        
+        return {}
 
     def _get_setting_varibles_names_for_env(
         self, data: dict[str, int | str, bool | dict] | Any
     ) -> list[str]:
+        """
+        Recursively collects keys from a given configuration dictionary and formats them into a standardized 
+        format suitable for retrieving values from a `.env` file.
+
+        The function:
+        - Converts dictionary keys to uppercase.
+        - Replaces forward slashes (`/`) in keys with underscores (`_`).
+        - Recursively processes nested dictionaries, appending child keys to parent keys.
+        - Uses different delimiters for specific top-level keys (`OPENCTI` and `CONNECTOR` use a single underscore `_`, 
+        while others use a double underscore `__`).
+
+        Args:
+            data (dict[str, int | str, bool | dict] | Any): 
+                A dictionary representing configuration settings, where keys are setting names and 
+                values may be nested dictionaries or primitive types.
+
+        Returns:
+            list[str]: 
+                A list of formatted environment variable names derived from the input dictionary.
+
+        Example:
+            Given the following `config.yml` structure:
+
+            ```yaml
+            opencti:
+                url: "http://example.com"
+                token: "my_token"
+            connector:
+                name: "my_connector"
+                active: true
+            database:
+                host: "localhost"
+                port: 5432
+            ```
+
+            Calling `_get_setting_varibles_names_for_env(config_data)` would return:
+
+            ```python
+            [
+                "OPENCTI_URL",
+                "OPENCTI_TOKEN",
+                "CONNECTOR_NAME",
+                "CONNECTOR_ACTIVE",
+                "DATABASE__HOST",
+                "DATABASE__PORT"
+            ]
+            ```
+        """
+        
         keys = []
         if isinstance(data, dict):
             for key, value in data.items():
@@ -99,6 +156,50 @@ class ConfigConnector:
         return keys
 
     def _get_setting_varibles_names_for_yml(self, data: list[str]) -> dict:
+        """
+        Converts environment variable names into a format that represents the corresponding key path in `config.yml`.
+
+        This function is used to retrieve the path needed to access values from `config.yml`. 
+        It splits environment variable names into their components using different delimiters:
+        - If the variable contains `"OPENCTI"` or `"CONNECTOR"`, it is split using `_` (a single underscore).
+        - Otherwise, it is split using `__` (a double underscore).
+
+        Additionally, if the third element in the key path is `"collections"`, the fourth element is replaced 
+        with its mapped value from `self.collection_map`.
+
+        Args:
+            data (list[str]): 
+                A list of environment variable names, e.g., `["OPENCTI_URL", "DATABASE__HOST"]`.
+
+        Returns:
+            dict: 
+                A dictionary where:
+                - The key is the original environment variable name.
+                - The value is a list of strings representing the corresponding path in `config.yml`.
+
+        Example:
+            Input:
+            ```python
+            data = [
+                "OPENCTI_URL",
+                "CONNECTOR_NAME",
+                "DATABASE__HOST",
+                "DATABASE__PORT",
+                "OPENCTI_COLLECTIONS__THREATS"
+            ]
+            ```
+
+            Output:
+            ```python
+            {
+                "OPENCTI_URL": ["opencti", "url"],
+                "CONNECTOR_NAME": ["connector", "name"],
+                "DATABASE__HOST": ["database", "host"],
+                "DATABASE__PORT": ["database", "port"],
+                "OPENCTI_COLLECTIONS__THREATS": ["opencti", "collections", "mapped_value"]
+            }
+            ```
+        """
         keys = {}
         for env_key in data:
             if "OPENCTI" in env_key or "CONNECTOR" in env_key:
