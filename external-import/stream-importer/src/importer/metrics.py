@@ -7,25 +7,37 @@ class Metrics:
     The http server is already started by the OpenCTI connector helper.
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, namespace: str, subsystem: str):
         self.name = name
 
         self._sent_messages_total = Counter(
-            "sent_messages_total", "Number of messages sent to RabbitMQ", ["name"]
+            "sent_messages_total",
+            "Number of messages sent to RabbitMQ",
+            ["name"],
+            namespace=namespace,
+            subsystem=subsystem,
         )
         self._sent_errors_total = Counter(
             "sent_errors_total",
             "Number of errors sending messages to RabbitMQ",
             ["name"],
+            namespace=namespace,
+            subsystem=subsystem,
         )
 
         self._read_files_total = Counter(
-            "read_files_total", "Number of files read from minio", ["name"]
+            "read_files_total",
+            "Number of files read from minio",
+            ["name"],
+            namespace=namespace,
+            subsystem=subsystem,
         )
         self._import_up = Gauge(
             "import_up",
             "Set to 1 if import is successfully running, 0 in case of issues (either incorrect file number or malformatted data)",
             ["name"],
+            namespace=namespace,
+            subsystem=subsystem,
         )
 
     def send(self):
