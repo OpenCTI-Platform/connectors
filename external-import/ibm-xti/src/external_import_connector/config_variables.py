@@ -41,7 +41,7 @@ class ConfigConnector:
             "CONNECTOR_DURATION_PERIOD",
             ["connector", "duration_period"],
             self.load,
-            default="PT5M"
+            default="PT5M",
         )
 
         # Connector extra parameters
@@ -89,6 +89,15 @@ class ConfigConnector:
             get_config_variable(
                 "CONNECTOR_IBM_XTI_DEBUG",
                 ["connector_ibm_xti", "debug"],
+                self.load,
+            ),
+        )
+
+        self.create_observables = cast(
+            str,
+            get_config_variable(
+                "CONNECTOR_IBM_XTI_CREATE_OBSERVABLES",
+                ["connector_ibm_xti", "create_observables"],
                 self.load,
             ),
         )

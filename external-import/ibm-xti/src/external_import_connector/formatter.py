@@ -6,9 +6,12 @@ from cvss import CVSS3
 from markdown_it import MarkdownIt
 from pycti import OpenCTIConnectorHelper
 
+from .config_variables import ConfigConnector
+
 md = MarkdownIt(
     options_update={"options": {"html": True, "linkify": True, "typographer": True}}
-).enable('table')
+).enable("table")
+
 
 class VulnerabilityPlatform(TypedDict):
     vendor: str
@@ -16,11 +19,14 @@ class VulnerabilityPlatform(TypedDict):
     affected: bool
     cpe: str
 
+
 class OpenCTISTIXFormatter:
     __helper: OpenCTIConnectorHelper
+    __config: ConfigConnector
 
-    def __init__(self, helper: OpenCTIConnectorHelper):
+    def __init__(self, helper: OpenCTIConnectorHelper, config):
         self.__helper = helper
+        self.__config = config
 
     def format_report(self, obj: dict[str, Any], alias: str):
         if not obj.get("external_references"):
@@ -64,6 +70,22 @@ class OpenCTISTIXFormatter:
         obj["external_references"].append(
             {"source_name": "x_force_stix_id", "external_id": obj["id"]}
         )
+
+        obj["x_opencti_create_observables"] = self.__config.create_observables
+        match = re.search(r"\[(.*?):.*'(.*?)\'\]", obj["pattern"])
+        if match is not None:
+            if match[1] == "ipv4-addr":
+                obj["x_opencti_main_observable_type"] = "IPv4-Addr"
+            elif match[1] == "ipv6-addr":
+                obj["x_opencti_main_observable_type"] = "IPv6-Addr"
+            elif match[1] == "file":
+                obj["x_opencti_main_observable_type"] = "StixFile"
+            elif match[1] == "domain-name":
+                obj["x_opencti_main_observable_type"] = "Domain-Name"
+            elif match[1] == "url":
+                obj["x_opencti_main_observable_type"] = "Url"
+            elif match[1] == "email-addr":
+                obj["x_opencti_main_observable_type"] = "Email-Addr"
 
     def __cvss_severity(self, score: float):
         if not score:

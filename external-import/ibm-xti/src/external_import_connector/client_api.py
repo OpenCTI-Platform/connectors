@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from external_import_connector.formatter import OpenCTISTIXFormatter
 from pycti import OpenCTIConnectorHelper
 from stix2 import TAXIICollectionSource
 from stix2.parsing import parse
 from taxii2client.v21 import Server, as_pages
+
+from external_import_connector.formatter import OpenCTISTIXFormatter
 
 from .config_variables import ConfigConnector
 
@@ -21,7 +22,7 @@ class ConnectorClient:
         Initialize the client with necessary configurations
         """
         self.__helper = helper
-        self.__formatter = OpenCTISTIXFormatter(helper)
+        self.__formatter = OpenCTISTIXFormatter(helper, config)
 
         self.__taxii_server = Server(
             config.taxii_server_url, user=config.taxii_user, password=config.taxii_pass
