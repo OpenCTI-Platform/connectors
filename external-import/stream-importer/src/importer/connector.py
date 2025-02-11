@@ -35,7 +35,11 @@ class StreamImporterConnector(ExternalImportConnector):
         """Initialization of the connector"""
         super().__init__()
 
-        self.metrics = Metrics(self.helper.connect_name)
+        self.metrics = Metrics(
+            self.helper.connect_name,
+            os.environ.get("METRICS_NAMESPACE"),
+            os.environ.get("METRICS_SUBSYTEM"),
+        )
 
         minio_endpoint = os.environ.get("MINIO_ENDPOINT")
 
@@ -88,7 +92,7 @@ class StreamImporterConnector(ExternalImportConnector):
         # Read objects from minio, each object contains multiple events.
         for obj in self.minio_client.list_objects(
             self.minio_bucket,
-            start_after=self.minio_folder,
+            prefix=self.minio_folder,
             recursive=True,
         ):
             self.metrics.read()
