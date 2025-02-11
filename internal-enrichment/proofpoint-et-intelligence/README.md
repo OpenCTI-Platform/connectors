@@ -123,14 +123,7 @@ python3 main.py
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
-
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
-
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+To enrich an observable, first click on it in the Observations->Observables tab of the OpenCTI platform (or navigate to an observable another way). Click on the cloud in the upper right, and under "Enrichment Connectors", select the Proofpoint ET enrichment connector. Depending on your configuraiton, the connector may have already run automatically.
 
 ## Behavior
 
