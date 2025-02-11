@@ -1,15 +1,7 @@
-# OpenCTI Internal Enrichment Connector Template
+# ProofPoint ET Enrichment Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
-* Please find an example of expected documentation below
-* REQUIRED CHANGES => Check https://docs.opencti.io/latest/development/connectors/
--->
+> **Note**
+> Documentation and tests are still in progress.
 
 Table of Contents
 
@@ -31,11 +23,21 @@ Table of Contents
 
 ## Introduction
 
+The connector enriches individual OpenCTI Observables by collecting intelligence data from the ProofPoint ET Intelligence API. 
+
+It processes 
+
+- IP addresses, 
+- domain names, 
+- files. 
+
+The enriched data is then sent back to the OpenCTI platform for further analysis and integration. The connector supports both manual and automatic enrichment.
+
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 
+- OpenCTI Platform >= 6..3
 
 ## Configuration variables
 
@@ -68,10 +70,12 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
+| Parameter                        | config.yml                                   | Docker environment variable                                 | Default                           | Mandatory | Description                                                                                  |
+|----------------------------------|---------------------------------------------|-------------------------------------------------------------|-----------------------------------|-----------|------------------------------------------------------------------------------------------------|
+| API base URL                     | api_base_url                                | `PROOFPOINT_ET_INTELLIGENCE_API_BASE_URL`                   | https://api.emergingthreats.net/v1/ | Yes       | The base URL for the ProofPoint ET Intelligence API.                                          |
+| API key                          | api_key                                     | `PROOFPOINT_ET_INTELLIGENCE_API_KEY`                        |                                   | Yes       | The API key for authenticating with the ProofPoint ET Intelligence API.                       |
+| Max TLP                          | max_tlp                                     | `PROOFPOINT_ET_INTELLIGENCE_MAX_TLP`                        | TLP:AMBER+STRICT                  | No        | The maximum TLP marking level for data to be imported.                       |
+| Import last seen time window     | import_last_seen_time_window                | `PROOFPOINT_ET_INTELLIGENCE_IMPORT_LAST_SEEN_TIME_WINDOW`   | P30D                              | No        | The time window for importing data based on the last seen timestamp, in ISO 8601 duration format. |
 
 ## Deployment
 
@@ -130,13 +134,44 @@ download of data by re-running the connector.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
 
+```mermaid
+graph LR
+    subgraph P_ET["Proofpoint ET Intelligence"]
+    direction TB
+    ProofpointET_IP["IP"]
+    ProofpointET_Domain["Domain"]
+    ProofpointET_Sample["Samples"]
+    ProofpointET_Geoloc["Geoloc"]
+    ProofpointET_ASN["ASN"]
+
+    end  
+
+    subgraph OCTI
+        direction TB
+        subgraph Observables
+            direction TB
+            OCTI_IP[IP Address]
+            OCTI_Domain[Domain Name]
+            OCTI_File[File]
+            OCTI_Location[Location]
+            OCTI_AS[Autonomous System]
+        end
+        OCTI_Domain -.->|"resolve-to"| OCTI_IP
+        OCTI_File -.->|"communicates-with"| OCTI_IP
+        OCTI_IP -.->|"located-at"| OCTI_Location
+        OCTI_IP -.->|"belongs-to"| OCTI_AS
+    end
+
+    P_ET~~~OCTI
+
+    ProofpointET_Domain ==> OCTI_Domain
+    ProofpointET_IP ==> OCTI_IP
+    ProofpointET_Sample ==> OCTI_File
+    ProofpointET_Geoloc ==> OCTI_Location
+    ProofpointET_ASN ==> OCTI_AS
+
+```
 
 ## Debugging
 
