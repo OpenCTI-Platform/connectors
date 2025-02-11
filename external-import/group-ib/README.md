@@ -30,28 +30,31 @@ access the interface.
 
 ## **Content**
 
-* [Content](#content)
-* [Installation](#installation)
-  * [Common environment variables](#common-environment-variables)
-  * [OpenCTI environment variables](#opencti-environment-variables)
-  * [Threat Intelligence API environment variables](#threat-intelligence-api-environment-variables)
-  * [Docker Deployment](#docker-deployment)
-  * [Manual Deployment](#manual-deployment)
-* [Configuration](#configuration)
-  * [Enable required collections](#enable-required-collections)
-  * [Date format](#date-format)
-  * [Notes](#notes)
-* [Extra settings](#extra-settings)
-  * [Tags](#tags-in-development)
-  * [Options](#options)
-* [Examples](#examples)
-* [Task scheduling automation](#task-scheduling-automation)
-  * [Cron](#cron)
-  * [Task Scheduler](#task-scheduler)
-* [Troubleshooting](#troubleshooting)
-* [FAQ](#faq)
-  * [Debugging](#debugging)
-  * [Additional information](#additional-information)
+- [OpenCTI Group-IB Connector](#opencti-group-ib-connector)
+  - [**Content**](#content)
+  - [**Installation**](#installation)
+    - [Requirements](#requirements)
+    - [Common environment variables](#common-environment-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Threat Intelligence API environment variables](#threat-intelligence-api-environment-variables)
+    - [Threat Intelligence API environment variables](#threat-intelligence-api-environment-variables-1)
+    - [Environment variables sample](#environment-variables-sample)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+    - [Enable required collections](#enable-required-collections)
+    - [Date format](#date-format)
+    - [Notes](#notes)
+  - [Extra settings](#extra-settings)
+    - [Tags (in development)](#tags-in-development)
+    - [Options](#options)
+  - [Examples](#examples)
+  - [**Task scheduling automation**](#task-scheduling-automation)
+    - [Cron:](#cron)
+    - [Task Scheduler:](#task-scheduler)
+  - [Troubleshooting](#troubleshooting)
+  - [FAQ](#faq)
+    - [Debugging](#debugging)
+    - [Additional information](#additional-information)
 
 
 
@@ -69,68 +72,68 @@ access the interface.
 
 ### Common environment variables
 
-Configuration parameters are provided using environment variables as described below.
-Some of them are placed directly in the `docker-compose.yml` since they are not expected to be modified by final
-users once that they have been defined by the developer of the connector.
+Configuration parameters are set in the .env or config.yml file, depending on the type of integration run:
+- .env file is used when running with docker This file is included in the `.gitignore` (to avoid leaking sensitive data). 
+- config.yml is used when running locally without docker, as if you were running a regular python script.
+All integration values are duplicated between .env and config.yml
 
 Note that the values that follow can be grabbed within Python code using `self.helper.{PARAMETER}`, i. e., `self.helper.connector_name`.
 
 Expected environment variables to be set in the  `docker-compose.yml` that describe the connector itself.
 Most of the time, these values are NOT expected to be changed.
 
-| Parameter                | Docker envvar         | Mandatory | Description                                                       |
-|--------------------------|-----------------------|-----------|-------------------------------------------------------------------|
-| `connector_name`         | `CONNECTOR_NAME`      | Yes       | A connector name to be shown in OpenCTI.                          |
-| `connector_scope`        | `CONNECTOR_SCOPE`     | Yes       | Supported scope. E. g., `text/html`.                              |
-| `connector_id`           | `CONNECTOR_ID`        | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector. |
+| Parameter                | Mandatory | Description                                                       |
+|--------------------------|-----------|-------------------------------------------------------------------|
+| `CONNECTOR_NAME`         | Yes       | A connector name to be shown in OpenCTI.                          |
+| `CONNECTOR_SCOPE`        |  Yes       | Supported scope. E. g., `text/html`.                              |
+| `CONNECTOR_ID`           | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector. |
 
 However, there are other values which are expected to be configured by end users.
 The following values are expected to be defined in the `.env` file.
-This file is included in the `.gitignore` (to avoid leaking sensitive data). 
 Note that the `.env.sample` file can be used as a reference.
 
 The ones that follow are connector's generic execution parameters expected to be added for export connectors.
 
-| Parameter                    | Docker envvar                    | Mandatory | Description                                                                                                                                                                   |
-|------------------------------|----------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL`     | Yes       | The default confidence level for created sightings (a number between 1 and 4).                                                                                                |
-| `connector_log_level`        | `CONNECTOR_LOG_LEVEL`            | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                 |
-| `interval`                   | `CONNECTOR__DURATION_PERIOD`            | Yes       | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day. |
-| `update_existing_data`       | `CONNECTOR_UPDATE_EXISTING_DATA` | Yes       | Whether to update known existing data.                                                                                                                                        |
+| Parameter                    | Mandatory | Description                                                                                                                                                                   |
+|------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `CONNECTOR_CONFIDENCE_LEVEL` | Yes       | The default confidence level for created sightings (a number between 1 and 4).                                                                                                |
+| `CONNECTOR_LOG_LEVEL`        | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                 |
+| `CONNECTOR__DURATION_PERIOD`            | Yes       | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day. |
+| `CONNECTOR_UPDATE_EXISTING_DATA`       | Yes       | Whether to update known existing data.                                                                                                                                        |
 
 
 ### OpenCTI environment variables
 
 Below are the parameters you'll need to set for OpenCTI:
 
-| Parameter               | Docker envvar         | Mandatory | Description                                                                                                      |
-|-------------------------|-----------------------|-----------|------------------------------------------------------------------------------------------------------------------|
-| `opencti_url`           | `OPENCTI_URL`         | Yes       | The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`     |
-| `opencti_token`         | `OPENCTI_TOKEN`       | Yes       | The default admin token configured in the OpenCTI platform parameters file.                                      |
+| Parameter               | Mandatory | Description                                                                                                      |
+|-------------------------|-----------|------------------------------------------------------------------------------------------------------------------|
+| `OPENCTI_URL`           | Yes       | The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`     |
+| `OPENCTI_TOKEN`         | Yes       | The default admin token configured in the OpenCTI platform parameters file.                                      |
 
 
 ### Threat Intelligence API environment variables
 
 Below are the parameters you'll need to set for Threat Intelligence API:
 
-| Parameter            | Docker envvar             | Mandatory | Description                                    |
-|----------------------|---------------------------|-----------|------------------------------------------------|
-| `ti_api_url`         | `TI_API_URL`              | Yes       | Threat Intelligence API URL.                   |
-| `ti_api_username`    | `TI_API_USERNAME`         | Yes       | Threat Intelligence Portal profile email.      |
-| `ti_api_token`       | `TI_API_TOKEN`            | Yes       | Threat Intelligence API Token.                 |
+| Parameter            |  Mandatory | Description                                    |
+|----------------------|------------|-------------------------------------------------|
+| `TI_API__URL`        |  Yes       | Threat Intelligence API URL.                   |
+| `TI_API__USERNAME`   |  Yes       | Threat Intelligence Portal profile email.      |
+| `TI_API__TOKEN`      |  Yes       | Threat Intelligence API Token.                 |
 
 
 ### Threat Intelligence API environment variables
 
 Below are the parameters you'll need to set if you have proxy server (if necessary):
 
-| Parameter                | Docker envvar      | Mandatory | Description     |
-|--------------------------|--------------------|-----------|-----------------|
-| `proxy_ip`               | `PROXY_IP`         | No        | Proxy IP.       |
-| `proxy_port`             | `PROXY_PORT`       | No        | Proxy port.     |
-| `proxy_protocol`         | `PROXY_PROTOCOL`   | No        | Proxy protocol. |
-| `proxy_username`         | `PROXY_USERNAME`   | No        | Proxy username. |
-| `proxy_password`         | `PROXY_PASSWORD`   | No        | Proxy password. |
+| Parameter                | Mandatory | Description     |
+|--------------------------|-----------|-----------------|
+| `PROXY_IP`               |  No       | Proxy IP.       |
+| `PROXY_PORT`             |  No       | Proxy port.     |
+| `PROXY_PROTOCOL`         |  No       | Proxy protocol. |
+| `PROXY_USERNAME`         |  No       | Proxy username. |
+| `PROXY_PASSWORD`         |  No       | Proxy password. |
 
 
 ### Environment variables sample
@@ -183,44 +186,47 @@ python3 main.py
 <br/>
 
 
-
-## Configuration
-
-Open ```docs/configs/endpoints_config.yaml``` file and fill in missing fields. 
-Before proceed, please check the [Starting Guide](https://tap.group-ib.com/hc/api?scope=integrations&q=en%2FIntegrations%2FStarting%20Guide%2FStarting%20Guide) 
-at our TI portal.
-
-
 ### Enable required collections
 
 The parameter ```default_date``` is used for initial start only. 
 After the download process begins it will not be used anymore.
-Instead of ```default_date``` we will use ```seqUpdate``` parameter to iterate over the next portion. 
-It is technical field.
-If you need fresh initial start based on the ```default_date```, please set ```seqUpdate``` parameter to ```null```.
+After the first startup, the sequpdate field starts to be used instead of default_date, and its values for all collections are stored in the state of OpenCTI itself. 
+If you need a fresh startup based on ``default_date`` then:
+1. stop the integration
+2. Clear the state in OpenCTI that relates to our integration
+3. Set a new date in ``default_date``. 
+4. Restart the integration
 
-To start download process for any collection, you need to enable it first. 
-Set ```enable``` parameter to ```true```.
-Set ```default_date``` parameter in single quotes, if needed or leave it as ```null```.
-By default, it is set to 3 days back to the present time. 
+To start download process for any collection:
+  1. You need to enable it first - Set ```enable``` parameter to ```true```.
+  2. Set ```default_date``` parameter in single quotes, if needed or leave it as ```null```. 
 
+Example configuration in config.yml:
 ```yaml
 
 collections:
     attacks/ddos:
         default_date: '2021-08-01'
         enable: true
-        seqUpdate: null
     attacks/phishing_group:
         default_date: '2021-08-01'
         enable: true
-        seqUpdate: null
     ioc/common:
         default_date: '2021-08-01'
         enable: true
-        seqUpdate: 16747401659568
 ...
 ```
+Example configuration in .env:
+```
+TI_API__COLLECTIONS__APT_THREAT__DEFAULT_DATE='2021-08-01'
+TI_API__COLLECTIONS__APT_THREAT__ENABLE=false
+TI_API__COLLECTIONS__APT_THREAT__LOCAL_CUSTOM_TAG=null
+TI_API__COLLECTIONS__APT_THREAT__TTL=90
+
+...
+```
+
+
 
 ### Date format
 
@@ -261,12 +267,10 @@ collections:
     attacks/ddos:
         default_date: '2021-08-01'
         enable: true
-        seqUpdate: null
         local_custom_tag: 'my_ddos_tag'
     attacks/phishing_group:
         default_date: '2021-08-01'
         enable: true
-        seqUpdate: null
         local_custom_tag: 'my_phishing_tag'
 ...
 ```
