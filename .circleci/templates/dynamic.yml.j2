@@ -1,0 +1,69 @@
+version: 2.1
+
+jobs:
+{% for top_dir, sub_dirs in dirs.items() -%}
+{% for sub_dir in sub_dirs %}
+  build_{{top_dir}}_{{sub_dir}}:
+    docker:
+      - image: cimg/base:stable-20.04
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build {{top_dir}}/{{sub_dir}}
+          command: |
+            echo "Processing {{top_dir}}/{{sub_dir}}"
+            cd {{top_dir}}/{{sub_dir}}
+            docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
+            CIRCLE_TAG=${CIRCLE_TAG:-latest}
+            docker buildx create --use --name builder-connector-{{sub_dir}}
+            docker buildx inspect builder-connector-{{sub_dir}} --bootstrap
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            echo "$GHCR_PASS" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            {% set image_key = top_dir ~ '_' ~ sub_dir -%}
+
+            {% if param['images'][image_key] is defined -%}
+            base_image="{{repo}}/client-python-{{param['images'][image_key].python}}:{{version}}"
+            {% else -%}
+            base_image="{{repo}}/client-python-3-12:{{version}}"
+            {% endif -%}
+
+            {% if pycti.replace -%}
+                {% if "prerelease" in tags %}
+            find . -name requirements.txt -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@$CIRCLE_BRANCH|" -i {} \;
+                {% elif "rolling" in tags %}
+            find . -name requirements.txt -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/client-python@master|" -i {} \;
+                {% endif %}
+            {% endif -%}
+            docker buildx build . \
+             {% for tag in tags -%}
+             --tag {{repo}}/connector-{{sub_dir}}:{{tag}} \
+             --tag ghcr.io/opencti-platform/{{repo}}/connector-{{sub_dir}}:{{tag}} \
+             {% endfor -%}
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+
+            {% if param['images'][image_key] is defined and param['images'][image_key]['fips'] == true -%}
+            docker buildx build -f Dockerfile_fips . \
+             {% for tag in tags -%}
+             --tag {{repo}}/connector-{{sub_dir}}:{{tag}}-fips \
+             --tag ghcr.io/opencti-platform/{{repo}}/connector-{{sub_dir}}:{{tag}}-fips \
+             {% endfor -%}
+             --build-arg BASE_IMAGE=$base_image \
+             --push
+            {% endif -%}
+
+      {% endfor %}
+{% endfor %}
+workflows:
+  version: 2.1
+  build_connectors:
+    jobs:
+  {%- for top_dir, sub_dirs in dirs.items() -%}
+  {%- for sub_dir in sub_dirs %}
+      - build_{{top_dir}}_{{sub_dir}}:
+          filters:
+            tags:
+              only: /.*/
+  {%- endfor -%}
+{% endfor-%}

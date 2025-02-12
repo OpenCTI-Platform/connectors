@@ -1,0 +1,24 @@
+services:
+  connector-stream-exporter:
+    image: opencti/connector-stream-exporter:6.5.1
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=false
+      - CONNECTOR_NAME=StreamExporterConnector
+      - CONNECTOR_SCOPE=stream
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_BUCKET=opencti-export
+      - MINIO_FOLDER=opencti-stream
+      - MINIO_ACCESS_KEY=opencti
+      - MINIO_SECRET_KEY=ChangeMe
+      - MINIO_SECURE=false
+      - MINIO_CERT_CHECK=false
+      - WRITE_EVERY_SEC=10
+    restart: always

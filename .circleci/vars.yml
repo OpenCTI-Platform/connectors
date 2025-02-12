@@ -1,0 +1,31 @@
+# List of images with a different configuration than the default one 
+# default is  a base python image 3.12,  built with tag "rolling" or release semantic version
+images:
+  stream_webhook:
+    python: python3-11
+  stream_qradar:
+    python: python3-11
+  stream_splunk:
+    python: python3-11
+  stream_sentinel-intel:
+    python: python3-11
+  stream_sentinel:
+    python: python3-11
+  stream_harfanglab-intel:
+    python: python3-11
+  stream_harfanglab:
+    python: python3-11
+  external-import_harfanglab-incidents:
+    python: python3-11
+  internal-import-file_import-file-stix:
+    fips: true
+  internal-import-file_import-document:
+    fips: true
+  internal-import-file_import-file-yara:
+    fips: true
+  internal-export-file_export-file-stix:
+    fips: true
+  internal-export-file_export-file-csv:
+    fips: true
+  internal-export-file_export-file-txt:
+    fips: true

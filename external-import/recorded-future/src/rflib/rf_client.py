@@ -77,8 +77,12 @@ class RFClient:
             if pull_signatures and "attachment" in attributes:
                 try:
                     result = self.get_attachment(note["id"])
-                    attributes["attachment_content"] = result["rules"][0]["content"]
-                    attributes["attachment_type"] = result["type"]
+                    if result:
+                        attributes["attachment_content"] = result["rules"][0]["content"]
+                        attributes["attachment_type"] = result["type"]
+                    else:
+                        msg = "[ANALYST NOTES] No attachment found"
+                        self.helper.log_error(msg)
                 except requests.exceptions.HTTPError as err:
                     if "403" in str(err):
                         msg = "[ANALYST NOTES] Your API token does not have permission to pull Detection Rules"
@@ -123,7 +127,7 @@ class RFClient:
 
         res = self.session.post(DETECTION_SEARCH, json=query)
         res.raise_for_status()
-        return res.json()["result"][0]
+        return res.json()["result"][0] if len(res.json()["result"]) > 0 else None
 
     def get_fusion_file(self, path: str) -> str:
         """Gets a fusion file provided a path
@@ -192,11 +196,19 @@ class RFClient:
         return threat_map_data
 
     def get_entities_links(self, entities_id: list):
-        entities_params = {"entities": entities_id}
+        try:
+            entities_params = {"entities": entities_id}
 
-        res = self.session.post(LINKS_PATH, json=entities_params)
-        res.raise_for_status()
+            res = self.session.post(LINKS_PATH, json=entities_params)
+            res.raise_for_status()
 
-        entity_links = res.json()["data"]
+            entity_links = res.json()["data"]
 
-        return entity_links
+            return entity_links
+        except requests.RequestException as err:
+            error_msg = f"[API] Error while fetching data from {LINKS_PATH}: {str(err)}"
+            error_response = err.response.json()
+            self.helper.log_error(
+                error_msg, {"error_response": str(error_response["message"])}
+            )
+            return None

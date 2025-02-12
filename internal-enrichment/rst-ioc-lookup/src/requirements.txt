@@ -1,0 +1,5 @@
+pycti==6.5.1
+python-dateutil==2.9.0.post0
+pytz==2025.1
+PyYAML==6.0.2
+requests>=2.31.0,<2.32.3

@@ -1,0 +1,25 @@
+version: '3'
+services:
+  connector-rst-ioc-lookup:
+    image: opencti/connector-rst-ioc-lookup:6.5.1
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=3582c335-cea7-45ec-b2a2-f46130762712
+      - CONNECTOR_NAME=RST IoC Lookup
+      - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name,Url,StixFile,indicator
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_LOG_LEVEL=info
+      - RST_IOC_LOOKUP_BASE_URL=https://api.rstcloud.net/v1/
+      - RST_IOC_LOOKUP_API_KEY=${RST_IOC_LOOKUP_API_KEY}
+      - RST_IOC_LOOKUP_MAX_TLP=TLP:AMBER+STRICT
+      - RST_IOC_LOOKUP_UPDATE_CONFIDENCE=true
+      - RST_IOC_LOOKUP_UPDATE_SCORE=true
+      - RST_IOC_LOOKUP_UPDATE_VALID_FROM=true
+      - RST_IOC_LOOKUP_LABEL_FORMAT=short
+      - RST_IOC_LOOKUP_SCORE_TYPE=last
+      - RST_IOC_LOOKUP_UPDATE_DESCRIPTION_ACTION=overwrite
+      - RST_IOC_LOOKUP_DETECTION_FLAG_THRESHOLD=45
+      - RST_IOC_LOOKUP_TIMEOUT=10
+    depends_on:
+      - opencti

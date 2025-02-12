@@ -1,20 +1,23 @@
-from pycti import (
+import pycountry
+import pycti
+from stix2 import (
+    TLP_AMBER,
+    ExternalReference,
     Indicator,
     Infrastructure,
     Location,
     Malware,
-    StixCoreRelationship,
+    Relationship,
     Tool,
     Vulnerability,
 )
-from stix2 import TLP_AMBER, ExternalReference
-from stix2 import Indicator as stixIndicator
-from stix2 import Infrastructure as stixInfra
-from stix2 import Location as stixLocation
-from stix2 import Malware as stixMalware
-from stix2 import Relationship
-from stix2 import Tool as stixTool
-from stix2 import Vulnerability as stixVulnerability
+
+
+def _get_country_name(country_code: str) -> str:
+    try:
+        return pycountry.countries.get(alpha_2=country_code).name
+    except Exception:
+        return country_code
 
 
 def _additional_kwargs(created_by) -> dict:
@@ -31,15 +34,19 @@ def indicator(
     pattern: str,
     pattern_type: str,
     indicator_types: list,
+    observable_type: str,
 ):
-    return stixIndicator(
-        id=Indicator.generate_id(pattern=pattern),
+    return Indicator(
+        id=pycti.Indicator.generate_id(pattern=pattern),
         name=name,
         valid_from=valid_from,
         pattern=pattern,
         pattern_type=pattern_type,
         indicator_types=indicator_types,
         **_additional_kwargs(created_by),
+        custom_properties={
+            "x_opencti_main_observable_type": observable_type,
+        },
     )
 
 
@@ -52,8 +59,8 @@ def infrastructure(
     labels=None,
     **kwargs,
 ):
-    return stixInfra(
-        id=Infrastructure.generate_id(name=name),
+    return Infrastructure(
+        id=pycti.Infrastructure.generate_id(name=name),
         created=created,
         name=name,
         first_seen=first_seen,
@@ -70,9 +77,9 @@ def location(
     postal_code: str | None,
     created_by: str,
 ):
-    name = f"{country} - {postal_code}"
-    return stixLocation(
-        id=Location.generate_id(name=name, x_opencti_location_type="Country"),
+    name = _get_country_name(country)
+    return Location(
+        id=pycti.Location.generate_id(name=name, x_opencti_location_type="Country"),
         name=name,
         created=created,
         country=country,
@@ -83,15 +90,14 @@ def location(
 
 def malware(
     created_by: str,
-    family: str,
     name: str = None,
+    is_family: bool = True,
     **kwargs,
 ):
-    name = name or family
-    return stixMalware(
-        id=Malware.generate_id(name=family),
+    return Malware(
+        id=pycti.Malware.generate_id(name=name),
         name=name,
-        is_family=True,
+        is_family=is_family,
         **kwargs,
         **_additional_kwargs(created_by),
     )
@@ -104,8 +110,8 @@ def tool(
     urls: list,
     tool_types: list,
 ):
-    return stixTool(
-        id=Tool.generate_id(name=description),
+    return Tool(
+        id=pycti.Tool.generate_id(name=description),
         created=created,
         description=description,
         external_references=[
@@ -123,8 +129,8 @@ def vulnerability(
     modified,
     description="",
 ):
-    return stixVulnerability(
-        id=Vulnerability.generate_id(name=cve),
+    return Vulnerability(
+        id=pycti.Vulnerability.generate_id(name=cve),
         name=cve,
         description=description,
         external_references=[ExternalReference(source_name="cve", external_id=cve)],
@@ -134,10 +140,11 @@ def vulnerability(
     )
 
 
-def relationship(source: str, target: str, type: str):
+def relationship(source: str, target: str, type: str, start_time: str = None):
     return Relationship(
-        id=StixCoreRelationship.generate_id(type, source, target),
+        id=pycti.StixCoreRelationship.generate_id(type, source, target, start_time),
         source_ref=source,
         target_ref=target,
         relationship_type=type,
+        start_time=start_time,
     )

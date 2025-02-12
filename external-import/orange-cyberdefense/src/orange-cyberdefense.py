@@ -1,4 +1,3 @@
-import base64
 import datetime
 import json
 import logging
@@ -9,17 +8,14 @@ import zipfile
 from html.parser import HTMLParser
 from io import StringIO
 from typing import Iterable, TypeVar
-from urllib import request
 
 import html2text
 import requests
 import stix2
 import yaml
-from bs4 import BeautifulSoup
 from datalake import Datalake, Output
 from dateutil.parser import parse
 from pycti import (
-    Incident,
     Note,
     OpenCTIConnectorHelper,
     Report,
@@ -81,9 +77,15 @@ def keep_first(iterable: Iterable[T], key=None):
 
     """
     if key is None:
-        func = lambda x: x
+
+        def func(x):
+            return x
+
     elif isinstance(key, str):
-        func = lambda x: x[key]
+
+        def func(x):
+            return x[key]
+
     elif callable(key):
         func = key
     else:
@@ -95,10 +97,6 @@ def keep_first(iterable: Iterable[T], key=None):
             continue
         seen.add(k)
         yield elem
-
-
-def _parse_date(date: str) -> str:
-    return parse(date).astimezone().isoformat()
 
 
 def iter_stix_bs_results(zip_file_path):
@@ -171,7 +169,7 @@ def generate_markdown_table(data):
 
 
 def extract_datalake_query_hash(url: str):
-    logging.info("Extracting query hash from URL: " + url)
+    logging.info("Extracting query hash from URL: %s", url)
     # Find the starting position of 'query_hash='
     start_pos = url.find("query_hash=")
     if start_pos == -1:
@@ -222,21 +220,11 @@ class OrangeCyberDefense:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
-        self.ocd_portal_api_url = "https://api-tdc.cert.orangecyberdefense.com/v1"
         self.ocd_datalake_api_url = (
             "https://datalake.cert.orangecyberdefense.com/api/v2"
         )
-        self.ocd_portal_api_login = get_config_variable(
-            "OCD_PORTAL_API_LOGIN", ["ocd", "portal_api_login"], config
-        )
-        self.ocd_portal_api_key = get_config_variable(
-            "OCD_PORTAL_API_KEY", ["ocd", "portal_api_key"], config
-        )
-        self.ocd_datalake_login = get_config_variable(
-            "OCD_DATALAKE_LOGIN", ["ocd", "datalake_login"], config
-        )
-        self.ocd_datalake_password = get_config_variable(
-            "OCD_DATALAKE_PASSWORD", ["ocd", "datalake_password"], config
+        self.ocd_datalake_token = get_config_variable(
+            "OCD_DATALAKE_TOKEN", ["ocd", "datalake_token"], config
         )
         self.ocd_datalake_zip_file_path = get_config_variable(
             "OCD_DATALAKE_ZIP_FILE_PATH",
@@ -257,14 +245,6 @@ class OrangeCyberDefense:
             ["ocd", "import_worldwatch_start_date"],
             config,
         )
-        self.ocd_import_cybercrime = get_config_variable(
-            "OCD_IMPORT_CYBERCRIME", ["ocd", "import_cybercrime"], config, default=False
-        )
-        self.ocd_import_cybercrime_start_date = get_config_variable(
-            "OCD_IMPORT_CYBERCRIME_START_DATE",
-            ["ocd", "import_cybercrime_start_date"],
-            config,
-        )
         self.ocd_import_threat_library = get_config_variable(
             "OCD_IMPORT_THREAT_LIBRARY",
             ["ocd", "import_threat_library"],
@@ -274,22 +254,12 @@ class OrangeCyberDefense:
         self.ocd_import_datalake = get_config_variable(
             "OCD_IMPORT_DATALAKE", ["ocd", "import_datalake"], config, default=True
         )
-        self.ocd_import_datalake_atom_types = get_config_variable(
-            "OCD_IMPORT_DATALAKE_ATOM_TYPES",
-            ["ocd", "import_datalake_atom_types"],
-            config,
-        ).split(",")
-        self.ocd_import_datalake_threat_types = get_config_variable(
-            "OCD_IMPORT_DATALAKE_THREAT_TYPES",
-            ["ocd", "import_datalake_threat_types"],
-            config,
-        ).split(",")
-        self.ocd_import_datalake_minimum_risk_score = get_config_variable(
-            "OCD_IMPORT_DATALAKE_MINIMUM_RISK_SCORE",
-            ["ocd", "import_datalake_minimum_risk_score"],
-            config,
-            isNumber=True,
-            default=90,
+        self.ocd_datalake_queries = json.loads(
+            get_config_variable(
+                "OCD_DATALAKE_QUERIES",
+                ["ocd", "datalake_queries"],
+                config,
+            )
         )
         self.ocd_create_observables = get_config_variable(
             "OCD_CREATE_OBSERVABLES",
@@ -325,7 +295,8 @@ class OrangeCyberDefense:
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name="Orange Cyberdefense",
-            description="Orange Cyberdefense is the expert cybersecurity business unit of the Orange Group, providing consulting, solutions and services to organizations around the globe.",
+            description="""Orange Cyberdefense is the expert cybersecurity business unit of the Orange Group,
+            providing consulting, solutions and services to organizations around the globe.""",
         )
         self.marking = self.helper.api.marking_definition.create(
             definition_type="COMMERCIAL",
@@ -333,50 +304,44 @@ class OrangeCyberDefense:
             x_opencti_order=99,
             x_opencti_color="#ff7900",
         )
-        self.portal_auth_token = None
-        self.datalake_instance = Datalake(
-            username=self.ocd_datalake_login, password=self.ocd_datalake_password
-        )
+        self.datalake_instance = Datalake(longterm_token=self.ocd_datalake_token)
         self.cache = {}
 
-    def _get_portal_token(self):
-        data = str.encode(
-            '{"username": "'
-            + self.ocd_portal_api_login
-            + '", "password": "'
-            + self.ocd_portal_api_key
-            + '"}',
-            "utf-8",
-            "escape",
+    def _generate_indicator_note(self, indicator_object):
+        creation_date = indicator_object.get("created", {})
+        technical_md = generate_markdown_table(indicator_object)
+        note_stix = stix2.Note(
+            id=Note.generate_id(creation_date, technical_md),
+            confidence=self.helper.connect_confidence_level,
+            abstract="OCD-CERT Datalake additional informations",
+            content=technical_md,
+            created=creation_date,
+            modified=indicator_object["modified"],
+            created_by_ref=self.identity["standard_id"],
+            object_marking_refs=[self.marking["standard_id"]],
+            object_refs=[indicator_object.get("id")],
         )
-        query = request.Request(
-            self.ocd_portal_api_url + "/auth/",
-            method="POST",
-            data=data,
-            headers={"Content-Type": "application/json"},
-        )
-        with request.urlopen(query) as response:
-            content = json.loads(response.read().decode("utf-8"))
-        self.portal_auth_token = content["token"]
+        return note_stix
+
+    def _get_ranged_scored(self, score: int):
+        if score == 100:
+            return 90
+        return (score // 10) * 10
 
     def _process_object(self, object):
+
+        dict_label_to_object_marking_refs = {
+            "tlp:clear": [stix2.TLP_WHITE.get("id")],
+            "tlp:white": [stix2.TLP_WHITE.get("id")],
+            "tlp:green": [stix2.TLP_GREEN.get("id")],
+            "tlp:amber": [stix2.TLP_AMBER.get("id"), self.marking["standard_id"]],
+            "tlp:red": [stix2.TLP_RED.get("id"), self.marking["standard_id"]],
+        }
         if "labels" in object:
             for label in object["labels"]:
-                if label == "tlp:clear":
-                    object["object_marking_refs"] = [stix2.TLP_WHITE.get("id")]
-                if label == "tlp:white":
-                    object["object_marking_refs"] = [stix2.TLP_WHITE.get("id")]
-                if label == "tlp:green":
-                    object["object_marking_refs"] = [stix2.TLP_GREEN.get("id")]
-                if label == "tlp:amber":
-                    object["object_marking_refs"] = [
-                        stix2.TLP_AMBER.get("id"),
-                        self.marking["standard_id"],
-                    ]
-                if label == "tlp:red":
-                    object["object_marking_refs"] = [
-                        stix2.TLP_RED.get("id"),
-                        self.marking["standard_id"],
+                if label in dict_label_to_object_marking_refs.keys():
+                    object["object_marking_refs"] = dict_label_to_object_marking_refs[
+                        label
                     ]
         if "labels" in object and self.ocd_curate_labels:
             object["labels"] = _curate_labels(object["labels"])
@@ -406,8 +371,8 @@ class OrangeCyberDefense:
                 else:
                     external_references.append(external_reference)
             object["external_references"] = external_references
-        if object["type"] == "indicator" and self.ocd_create_observables:
-            object["x_opencti_create_observables"] = True
+
+        # Type specific operations
         if object["type"] == "threat-actor" and self.ocd_threat_actor_as_intrusion_set:
             object["type"] = "intrusion-set"
             object["id"] = object["id"].replace("threat-actor", "intrusion-set")
@@ -426,15 +391,15 @@ class OrangeCyberDefense:
                     "threat-actor", "intrusion-set"
                 )
         if object["type"] == "indicator":
+            if self.ocd_create_observables:
+                object["x_opencti_create_observables"] = True
             threat_scores = object.get("x_datalake_score", {})
             for threat_type, score in threat_scores.items():
-                if (
-                    threat_type in self.ocd_import_datalake_threat_types
-                    and score >= self.ocd_import_datalake_minimum_risk_score
-                ):
-                    new_label = f"dtl_{threat_type}_{self.ocd_import_datalake_minimum_risk_score}"
-                    if "labels" in object:
-                        object["labels"].append(new_label)
+                ranged_score = self._get_ranged_scored(score)
+                new_label = f"dtl_{threat_type}_{ranged_score}"
+                if not "labels" in object:
+                    object["labels"] = []
+                object["labels"].append(new_label)
         return object
 
     def _get_report_iocs(self, datalake_query_hash: str):
@@ -464,7 +429,10 @@ class OrangeCyberDefense:
                     output=Output.STIX,
                 )
             except Exception as e:
-                self.helper.log_error(str(e))
+                self.helper.log_error(
+                    f"ERROR: unable to get offset={str(offset)} with limit={str(limit)} for query_hash={datalake_query_hash}. "
+                    f"Error message: {str(e)}"
+                )
                 break
             if offset + limit >= 10000 or "objects" not in data:
                 break
@@ -472,6 +440,9 @@ class OrangeCyberDefense:
             for object in data["objects"]:
                 processed_object = self._process_object(object)
                 objects.append(processed_object)
+                if processed_object["type"] == "indicator":
+                    stix2_note = self._generate_indicator_note(processed_object)
+                    objects.append(stix2_note)
             offset += limit
 
         # we remove duplicates, after processing because processing may affect id
@@ -486,58 +457,53 @@ class OrangeCyberDefense:
         self.helper.log_info(
             "Getting datalake report entities for WorldWatch with tags " + str(tags)
         )
-        try:
-            for tag in tags:
-                try:
-                    url = "https://datalake.cert.orangecyberdefense.com/api/v2/mrti/tag-subcategory/filtered/"
-                    payload = json.dumps(
-                        {
-                            "limit": "5000",
-                            "offset": "0",
-                            "tag": tag,
-                        }
-                    )
-                    headers = {
-                        "Accept": "application/stix+json",
-                        "Content-Type": "application/json",
-                        "Authorization": "Token " + self.get_datalake_auth_token(),
+
+        for tag in tags:
+            try:
+                url = "https://datalake.cert.orangecyberdefense.com/api/v2/mrti/tag-subcategory/filtered/"
+                payload = json.dumps(
+                    {
+                        "limit": "5000",
+                        "offset": "0",
+                        "tag": tag,
                     }
-                    response = requests.post(url, headers=headers, data=payload)
-                    data = response.json()
-                except Exception as e:
-                    self.helper.log_error(
-                        "This tag cannot be found in Datalake: " + tag + "\n" + str(e)
-                    )
-                    continue
-                if "objects" in data:
-                    for stix_object in data["objects"]:
-                        label: str
-                        for label in stix_object["labels"]:
-                            if tag.lower() in label.lower():
-                                processed_object = self._process_object(stix_object)
-                                objects.append(processed_object)
-                                break
-                else:
-                    self.helper.log_info("No objects found for tag " + tag)
-        except Exception as e:
-            self.helper.log_error("Error encountered in get report entites " + str(e))
+                )
+                headers = {
+                    "Accept": "application/stix+json",
+                    "Content-Type": "application/json",
+                    "Authorization": "Token " + self.ocd_datalake_token,
+                }
+                response = requests.post(url, headers=headers, data=payload)
+                data = response.json()
+            except Exception as e:
+                self.helper.log_error(
+                    "This tag cannot be found in Datalake: " + tag + "\n" + str(e)
+                )
+                continue
+            if "objects" in data:
+                for stix_object in data["objects"]:
+                    label: str
+                    for label in stix_object["labels"]:
+                        if tag.lower() == label.lower():
+                            processed_object = self._process_object(stix_object)
+                            objects.append(processed_object)
+                            break
+            else:
+                self.helper.log_info("No objects found for tag " + tag)
         return objects
 
-    def get_html_content_block(self, content_block_id) -> str | None:
-        try:
-            url = (
-                "https://api-ww.cert.orangecyberdefense.com/api/content_block/"
-                + str(content_block_id)
-                + "/html"
-            )
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": self.ocd_import_worldwatch_api_key,
-            }
-            response = requests.get(url, headers=headers)
-            return response.json()["html"]
-        except Exception as e:
-            self.helper.log_error(str(e))
+    def get_html_content_block(self, content_block_id):
+        url = (
+            "https://api-ww.cert.orangecyberdefense.com/api/content_block/"
+            + str(content_block_id)
+            + "/html"
+        )
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": self.ocd_import_worldwatch_api_key,
+        }
+        response = requests.get(url, headers=headers)
+        return response.json().get("html")
 
     def _create_report_relationships(self, objects, date, markings):
         """
@@ -617,6 +583,14 @@ class OrangeCyberDefense:
         # Managing external references
         self.helper.log_info("Processing external references...")
         external_references = []
+        # Add external reference to advisory on CERT Portal
+        external_reference = stix2.ExternalReference(
+            source_name="Orange Cyberdefense WorldWatch advisory",
+            url=f"https://portal.cert.orangecyberdefense.com/worldwatch/advisory/{report['advisory']}",
+            description=report["title"],
+        )
+        external_references.append(external_reference)
+
         if report.get("sources") is not None:
             for source in report["sources"]:
                 external_reference = stix2.ExternalReference(
@@ -669,7 +643,9 @@ class OrangeCyberDefense:
         # Generate relationships (stix objects) between threat entities
         self.helper.log_info("Generating relationships for threat entities...")
         report_relationships = self._create_report_relationships(
-            report_entities, report["timestamp_updated"], report_object_marking_refs
+            report_entities,
+            parse(report["timestamp_updated"]),
+            report_object_marking_refs,
         )
         self.helper.log_info(f"Generated {len(report_relationships)} relations.")
 
@@ -691,7 +667,9 @@ class OrangeCyberDefense:
         report_md = text_maker.handle(html_content)
 
         report_object_refs = (
-            [x["id"] for x in report_iocs]  # ids from "indicator" iocs
+            [
+                x["id"] for x in report_iocs if x["type"] == "indicator"
+            ]  # ids from "indicator" iocs
             + [x["id"] for x in report_entities]  # ids from threat entities
             + [  # ids from threat entities relations
                 x["id"] for x in report_relationships
@@ -726,7 +704,7 @@ class OrangeCyberDefense:
     def get_content_block_list(self, start_date: datetime.datetime):
         url = (
             "https://api-ww.cert.orangecyberdefense.com/api/content_block/"
-            "?sort_by=timestamp_updated&sort_order=asc&limit=50"
+            "?sort_by=timestamp_updated&sort_order=asc&limit=5000"
             "&updated_after=" + start_date.strftime("%Y-%m-%dT%H:%M:%S")
         )
         headers = {
@@ -736,20 +714,17 @@ class OrangeCyberDefense:
         response = requests.get(url, headers=headers)
         return response.json()["items"]
 
-    def _import_worldwatch(self, current_state: dict):
-        try:
-            if current_state.get("worldwatch") is None:
-                raise ValueError("worldwatch state is missing or None")
+    def _import_worldwatch(self):
+        current_state = self.helper.get_state()
 
-            world_watch_date = datetime.datetime.fromisoformat(
-                current_state["worldwatch"]
-            )
+        content_block_list = self.get_content_block_list(
+            datetime.datetime.fromisoformat(current_state["worldwatch"])
+        )
 
-            content_block_list = self.get_content_block_list(world_watch_date)
-
-            for content_block in content_block_list:
+        for content_block in content_block_list:
+            try:
                 self.helper.log_info(
-                    f"----------------------------------Content_block {content_block['id']}-------------------------------------------"
+                    f"---------------------------------- WorldWatch -> {content_block['id']}-------------------------------------------"
                 )
                 content_block_objects = self._generate_report(content_block)
                 if content_block_objects:
@@ -763,392 +738,130 @@ class OrangeCyberDefense:
                         work_id=self.work_id,
                     )
                     self._log_and_terminate_work()
-                current_state["worldwatch"] = content_block["timestamp_updated"]
-                self.helper.set_state(current_state)
-        except Exception as e:
-            self.helper.log_error("Error during world watch import: " + str(e))
-        return current_state
-
-    def _gen_severity(self, severity):
-        if severity == 1:
-            return "low"
-        if severity == 2:
-            return "medium"
-        if severity == 3:
-            return "medium"
-        if severity == 4:
-            return "high"
-        if severity == 5:
-            return "critical"
-
-    def _generate_incident(self, incident):
-        objects = []
-        curated_title = strip_tags(
-            incident["title"].replace("Updated - ", "").replace("MAJ - ", "")
-        )
-        self.helper.log_info(
-            'Genearing incident "'
-            + curated_title
-            + '" ('
-            + incident["timestamp_updated"]
-            + ")"
-        )
-        external_references = []
-        external_reference = stix2.ExternalReference(
-            source_name="Orange Cyberdefense",
-            url="https://portal.cert.orangecyberdefense.com/cybercrime/"
-            + str(incident["id"]),
-        )
-        external_references.append(external_reference)
-        analysis_blocks = [
-            x for x in incident["incident_blocks"] if x["type"] == "analysis"
-        ][::-1]
-        technical_blocks = [
-            x
-            for x in incident["incident_blocks"]
-            if x["type"] == "technical_information"
-        ][::-1]
-        if len(analysis_blocks) == 0:
-            return []
-        analysis_html = ""
-        for block in analysis_blocks:
-            analysis_html = analysis_html + block["content"]
-        technical_html = ""
-        for block in technical_blocks:
-            technical_html = technical_html + block["content"]
-        text_maker = html2text.HTML2Text()
-        text_maker.body_width = 0
-        text_maker.ignore_links = False
-        text_maker.ignore_images = False
-        text_maker.ignore_tables = False
-        text_maker.ignore_emphasis = False
-        text_maker.skip_internal_links = False
-        text_maker.inline_links = True
-        text_maker.protect_links = True
-        text_maker.mark_code = True
-        analysis_md = text_maker.handle(analysis_html)
-        analysis_md = analysis_md.replace("](//", "](https://")
-        technical_md = text_maker.handle(technical_html)
-        technical_md = technical_md.replace("](//", "](https://")
-        soup = BeautifulSoup(technical_html, features="lxml")
-        links = soup.find_all("a")
-        for tag in links:
-            link = tag.get("href", None)
-            if link is not None and "orangecyberdefense.com" not in link:
-                external_reference = stix2.ExternalReference(
-                    source_name=incident["source_name"], url=link
-                )
-                external_references.append(external_reference)
-        file_analysis = {
-            "name": "analysis.html",
-            "mime_type": "text/html",
-            "data": base64.b64encode(analysis_html.encode("utf-8")).decode("utf-8"),
-        }
-        file_technical = {
-            "name": "technical_appendix.html",
-            "mime_type": "text/html",
-            "data": base64.b64encode(technical_html.encode("utf-8")).decode("utf-8"),
-        }
-        labels = [incident["services"][0]["name"], incident["risk"]]
-        incident_stix = stix2.Incident(
-            id=Incident.generate_id(
-                curated_title, parse(incident["timestamp_detected"])
-            ),
-            name=curated_title,
-            incident_type=incident["services"][0]["offer_name"],
-            description=analysis_md,
-            created_by_ref=self.identity["standard_id"],
-            confidence=self.helper.connect_confidence_level,
-            external_references=external_references,
-            created=parse(incident["timestamp_detected"]),
-            modified=parse(incident["timestamp_updated"]),
-            first_seen=parse(incident["timestamp_detected"]),
-            last_seen=parse(incident["timestamp_updated"]),
-            source=incident["source_name"],
-            severity=self._gen_severity(incident["severity"]),
-            labels=labels,
-            allow_custom=True,
-            object_marking_refs=[
-                stix2.TLP_GREEN.get("id"),
-                self.marking["standard_id"],
-            ],
-            x_opencti_files=[file_analysis, file_technical],
-        )
-        objects.append(incident_stix)
-        custom_properties = {
-            "description": "Observable related to an incident.",
-            "x_opencti_score": incident["severity"] * 20,
-            "labels": labels,
-            "created_by_ref": self.identity["standard_id"],
-            "external_references": external_references,
-        }
-        url_stix = None
-        if (
-            "url" in incident
-            and incident["url"] is not None
-            and len(incident["url"]) > 0
-        ):
-            url_stix = stix2.URL(
-                value=incident["url"],
-                object_marking_refs=[
-                    stix2.TLP_GREEN.get("id"),
-                    self.marking["standard_id"],
-                ],
-                custom_properties=custom_properties,
-            )
-            objects.append(url_stix)
-        if url_stix is not None:
-            incident_url_relation = stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "related-to", url_stix.get("id"), incident_stix.get("id")
-                ),
-                relationship_type="related-to",
-                created_by_ref=self.identity["standard_id"],
-                confidence=self.helper.connect_confidence_level,
-                source_ref=url_stix.get("id"),
-                target_ref=incident_stix.get("id"),
-                object_marking_refs=[
-                    stix2.TLP_GREEN.get("id"),
-                    self.marking["standard_id"],
-                ],
-                allow_custom=True,
-            )
-            objects.append(incident_url_relation)
-
-        detection_date = parse(incident["timestamp_detected"])
-        detection_date = detection_date.replace(
-            hour=0, minute=0, second=0, microsecond=0
-        ) - datetime.timedelta(days=detection_date.weekday())
-        report_stix = stix2.Report(
-            id=Report.generate_id(curated_title, detection_date),
-            name="Weekly cybercrime alerts and incidents ("
-            + detection_date.strftime("%Y-%m-%d")
-            + ")",
-            report_types=["threat-report"],
-            created_by_ref=self.identity["standard_id"],
-            confidence=self.helper.connect_confidence_level,
-            created=detection_date,
-            published=detection_date,
-            modified=detection_date,
-            object_refs=[x["id"] for x in objects],
-            labels=["cybercrime", "ocd"],
-            allow_custom=True,
-            object_marking_refs=[
-                stix2.TLP_GREEN.get("id"),
-                self.marking["standard_id"],
-            ],
-        )
-        objects.append(report_stix)
-        if len(technical_md) > 2:
-            note_stix = stix2.Note(
-                id=Note.generate_id(detection_date, technical_md),
-                abstract="Technical information about this alert.",
-                content=technical_md,
-                created=detection_date,
-                modified=detection_date,
-                created_by_ref=self.identity["standard_id"],
-                object_marking_refs=[
-                    stix2.TLP_GREEN.get("id"),
-                    self.marking["standard_id"],
-                ],
-                object_refs=[incident_stix.get("id")],
-            )
-            objects.append(note_stix)
-        return objects
-
-    def _import_cybercrime(self, current_state):
-        # Get the token
-        self._get_portal_token()
-        # Query params
-        url = self.ocd_portal_api_url + "/cybalerts/"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": "Token " + self.portal_auth_token,
-        }
-        params = (
-            ("timestamp_updated_since", current_state["cybercrime"]),
-            ("ordering", "timestamp_updated"),
-        )
-        self.helper.log_info("Iterating " + url)
-        self.helper.log_info(str(params))
-        response = requests.get(url, headers=headers, params=params)
-        data = json.loads(response.content)
-        while data["next"] is not None:
-            self.helper.log_info("Iterating " + data["next"])
-            for report in data["results"]:
-                service = report["services"][0]["name"]
-                date = parse(report["timestamp_updated"]).date()
-                last_report_time = report["timestamp_updated"]
-                if date > datetime.datetime.now().date() or service == "World Watch":
-                    continue
-                try:
-                    incident_objects = self._generate_incident(report)
-                    if incident_objects:
-                        self._log_and_initiate_work("Cybercrime")
-                        self.helper.send_stix2_bundle(
-                            stix2.Bundle(
-                                objects=incident_objects, allow_custom=True
-                            ).serialize(),
-                            update=self.update_existing_data,
-                            work_id=self.work_id,
-                        )
-                        self._log_and_terminate_work()
-                except Exception as e:
-                    self.helper.log_error(str(e))
-                current_state["cybercrime"] = last_report_time
-                self.helper.set_state(current_state)
-            url = str(data["next"])
-            response = requests.get(url, headers=headers)
-            if response.status_code == 200:
-                data = json.loads(response.content)
-            if "next" not in data:
-                data["next"] = None
-        for report in data["results"]:
-            service = report["services"][0]["name"]
-            last_report_time = report["timestamp_updated"]
-            date = parse(report["timestamp_updated"]).date()
-            if date > datetime.datetime.now().date() or service == "World Watch":
-                continue
-            try:
-                incident_objects = self._generate_incident(report)
-                if incident_objects:
-                    self._log_and_initiate_work("Cybercrime")
-                    self.helper.send_stix2_bundle(
-                        stix2.Bundle(
-                            objects=incident_objects, allow_custom=True
-                        ).serialize(),
-                        update=self.update_existing_data,
-                        work_id=self.work_id,
+                # Update state timestamp if content block is newer than the current state and not in future
+                if (
+                    parse(content_block["timestamp_updated"])
+                    <= datetime.datetime.now(tz=datetime.timezone.utc)
+                ) and (
+                    parse(content_block["timestamp_updated"])
+                    >= parse(current_state["worldwatch"])
+                ):
+                    current_state["worldwatch"] = (
+                        parse(content_block["timestamp_updated"])
+                        .astimezone()
+                        .isoformat()
                     )
-                    self._log_and_terminate_work()
+                    self.helper.set_state(current_state)
             except Exception as e:
-                self.helper.log_error(str(e))
-            last_report_timestamp = parse(last_report_time).timestamp() + 1
-            current_state["cybercrime"] = (
-                datetime.datetime.fromtimestamp(last_report_timestamp)
-                .astimezone()
-                .isoformat()
-            )
-            self.helper.set_state(current_state)
-        return current_state
+                self.helper.log_error(
+                    f"Error while importing WorldWatch advisory {content_block['id']}: {str(e)} "
+                )
+                continue
 
-    def _import_datalake(self, current_state):
+    def _import_datalake(self):
+        current_state = self.helper.get_state()
         # Define query parameters
         calculated_interval = (int(self.ocd_interval) + 15) * 60
-        query_body = {
+
+        # Filter by last updated date query body object
+        filter_by_last_updated_date_query_body = {
             "AND": [
                 {
-                    "AND": [
-                        # Filter by atom type
-                        {
-                            "field": "atom_type",
-                            "multi_values": self.ocd_import_datalake_atom_types,
-                            "type": "filter",
-                        },
-                        # Filter by last updated date
-                        {
-                            "field": "system_last_updated",
-                            "type": "filter",
-                            "value": calculated_interval,
-                        },
-                        # Filter by threats types & risk score
-                        {
-                            "field": "risk",
-                            "inner_params": {
-                                "threat_types": self.ocd_import_datalake_threat_types
-                            },
-                            "range": {
-                                "gt": self.ocd_import_datalake_minimum_risk_score
-                            },
-                            "type": "filter",
-                        },
-                    ]
+                    "field": "system_last_updated",
+                    "type": "filter",
+                    "value": calculated_interval,
                 }
             ]
         }
-        self.helper.log_info(
-            f"Creating Bulk Search in Datalake with the following body:\n{query_body}"
-        )
-        # Create the bulk search task
-        task = self.datalake_instance.BulkSearch.create_task(
-            for_stix_export=True, query_body=query_body
-        )
 
-        self.helper.log_info(f"Waiting for Bulk Search {task.uuid}...")
-        # Download the data as STIX_ZIP
-        zip_file_path = self.ocd_datalake_zip_file_path + "/data.zip"
-        task.download_sync_stream_to_file(
-            output=Output.STIX_ZIP, timeout=60 * 60, output_path=zip_file_path
-        )
+        for query in self.ocd_datalake_queries:
 
-        self.helper.log_info("Processing Bulk Search results...")
-        objects = []
-        for object in iter_stix_bs_results(zip_file_path):
-            processed_object = self._process_object(object)
-            if processed_object["type"] == "indicator":
-                creation_date = processed_object.get("created", {})
-                technical_md = generate_markdown_table(processed_object)
-                note_stix = stix2.Note(
-                    id=Note.generate_id(creation_date, technical_md),
-                    confidence=self.helper.connect_confidence_level,
-                    abstract="OCD-CERT Datalake additional informations",
-                    content=technical_md,
-                    created=creation_date,
-                    modified=processed_object["modified"],
-                    created_by_ref=self.identity["standard_id"],
-                    object_marking_refs=[self.marking["standard_id"]],
-                    object_refs=[processed_object.get("id")],
-                )
-                objects.append(note_stix)
-            objects.append(processed_object)
-
-        # Cleanup the temporary files
-        if os.path.exists(zip_file_path):
             try:
-                os.remove(zip_file_path)
-            except OSError as e:
-                logging.error(f"Error removing {zip_file_path}: {e}")
+                adv_search = self.datalake_instance.AdvancedSearch.advanced_search_from_query_hash(
+                    query["query_hash"], limit=0
+                )
+                query_body = adv_search["query_body"]
+            except Exception as e:
+                self.helper.log_error(
+                    f"Could not extract query_body for the following Bulk search : '{query['label']}', error : '{str(e)}'"
+                )
+                continue
 
-        # we remove duplicates, after processing because processing may affect id
-        objects = list(keep_first(objects, "id"))
+            if len(query_body.keys()) > 0 and list(query_body.keys())[0] == "AND":
+                query_body["AND"].append(filter_by_last_updated_date_query_body)
+            else:
+                self.helper.log_info(
+                    f"""Bulk search {query['label']} doesn't use a main 'AND' operator
+                      -> unable to filter on last {self.ocd_interval} minutes data."""
+                )
 
-        # Create a bundle of the processed objects
-        if objects:
-            self._log_and_initiate_work("Datalake")
-            # Send the created bundle
-            self.helper.send_stix2_bundle(
-                stix2.Bundle(objects=objects, allow_custom=True).serialize(),
-                update=self.update_existing_data,
-                work_id=self.work_id,
+            self.helper.log_info(
+                f"Creating Bulk Search with label '{query['label']}' in Datalake with the following query hash '{query['query_hash']}'"
             )
-            self._log_and_terminate_work()
+
+            # Create the bulk search task
+            task = self.datalake_instance.BulkSearch.create_task(
+                for_stix_export=True, query_body=query_body
+            )
+
+            self.helper.log_info(f"Waiting for Bulk Search {task.uuid}...")
+            # Download the data as STIX_ZIP
+            zip_file_path = self.ocd_datalake_zip_file_path + "/data.zip"
+            task.download_sync_stream_to_file(
+                output=Output.STIX_ZIP, timeout=60 * 60, output_path=zip_file_path
+            )
+
+            self.helper.log_info("Processing Bulk Search results...")
+            objects = []
+            for object in iter_stix_bs_results(zip_file_path):
+                processed_object = self._process_object(object)
+                if processed_object["type"] == "indicator":
+                    if not "labels" in processed_object:
+                        processed_object["labels"] = []
+                    processed_object["labels"].append(f"dtl_{query['label']}")
+                    note_stix = self._generate_indicator_note(processed_object)
+                    objects.append(note_stix)
+                objects.append(processed_object)
+
+            # Cleanup the temporary files
+            if os.path.exists(zip_file_path):
+                try:
+                    os.remove(zip_file_path)
+                except OSError as e:
+                    logging.error(f"Error removing {zip_file_path}: {e}")
+
+            # we remove duplicates, after processing because processing may affect id
+            objects = list(keep_first(objects, "id"))
+
+            # Create a bundle of the processed objects
+            if objects:
+                self.helper.log_info(
+                    f"Got {len(objects)} stix objects from query \"{query['label']}\"."
+                )
+                self._log_and_initiate_work(f"Datalake query {query['label']}")
+                # Send the created bundle
+                self.helper.send_stix2_bundle(
+                    stix2.Bundle(objects=objects, allow_custom=True).serialize(),
+                    update=self.update_existing_data,
+                    work_id=self.work_id,
+                )
+                self._log_and_terminate_work()
 
         # Update the state if 'modified' field is present
-        current_state["datalake"] = datetime.datetime.now().astimezone().isoformat()
+        current_state["datalake"] = (
+            datetime.datetime.now(tz=datetime.timezone.utc).astimezone().isoformat()
+        )
         self.helper.set_state(current_state)
 
-        # Return the updated state
-        return current_state
+    def _import_threat_library(self):
+        current_state = self.helper.get_state()
 
-    def get_datalake_auth_token(self):
-        url = "https://datalake.cert.orangecyberdefense.com/api/v2/auth/token/"
-        payload = json.dumps(
-            {"email": self.ocd_datalake_login, "password": self.ocd_datalake_password}
-        )
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "*/*",
-        }
-        stix_bundle = requests.request("POST", url, headers=headers, data=payload)
-        return stix_bundle.json()["access_token"]
-
-    def _import_threat_library(self, current_state):
         url = "https://datalake.cert.orangecyberdefense.com/api/v2/mrti/tag-subcategory/filtered/"
         payload = json.dumps({"limit": "500", "offset": "0", "ordering": "-updated_at"})
         headers = {
             "Accept": "application/stix+json",
             "Content-Type": "application/json",
-            "Authorization": "Token " + self.get_datalake_auth_token(),
+            "Authorization": "Token " + self.ocd_datalake_token,
         }
         threat_stix_bundle = requests.request(
             "POST", url, headers=headers, data=payload
@@ -1166,16 +879,18 @@ class OrangeCyberDefense:
                 work_id=self.work_id,
             )
             self._log_and_terminate_work()
-            current_state["threat_library"] = _parse_date(
-                datetime.datetime.today().isoformat()
+            current_state["threat_library"] = (
+                datetime.datetime.now(tz=datetime.timezone.utc).astimezone().isoformat()
             )
-        self.helper.set_state(current_state)
-        return current_state
+            self.helper.set_state(current_state)
+            return True
+
+        return False
 
     def _log_and_initiate_work(self, name):
-        self.helper.log_info("Synchronizing with Orange Cyberdefense APIs...")
+        self.helper.log_info("Pushing data to OpenCTI APIs...")
         now = datetime.datetime.now(tz=datetime.timezone.utc)
-        friendly_name = f"Orange Cyberdefense {name} service run @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
+        friendly_name = f"Orange Cyberdefense \"{name}\" service run @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
         self.work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
@@ -1184,45 +899,14 @@ class OrangeCyberDefense:
         self.helper.api.work.to_processed(self.work_id, "End of synchronization")
         self.helper.log_info("End of synchronization")
 
-    def process_and_update_state(self, current_state, key):
-        update_methods = {
-            "worldwatch": self._import_worldwatch,
-            "cybercrime": self._import_cybercrime,
-            "datalake": self._import_datalake,
-            "threat_library": self._import_threat_library,
-        }
-
-        if key not in update_methods:
-            logging.error(f"Unknown key {key}")
-            return
-
-        # we check that the current category is activated in the config
-        if not getattr(self, f"ocd_import_{key}", None):
-            logging.info(f"Skipping {key} import")
-            return
-
-        log_message = f"Get {key} alerts since {current_state[key]}"
-        if key == "datalake":
-            log_message += f" with the interval of {self.ocd_interval} minutes"
-
-        self.helper.log_info(log_message)
-        new_state = update_methods[key](current_state)
-        self.helper.log_info(f"Setting new state {new_state}")
-        self.helper.set_state(new_state)
-
     def _set_initial_state(self):
         logging.info("Setting initial state")
         initial_state = {
-            "worldwatch": _parse_date(
-                self.ocd_import_worldwatch_start_date
-                or datetime.datetime.today().isoformat()
-            ),
-            "cybercrime": _parse_date(
-                self.ocd_import_cybercrime_start_date
-                or datetime.datetime.today().isoformat()
-            ),
-            "datalake": _parse_date(datetime.datetime.today().isoformat()),
-            "threat_library": _parse_date(datetime.datetime.today().isoformat()),
+            "worldwatch": parse(self.ocd_import_worldwatch_start_date)
+            .astimezone()
+            .isoformat(),
+            "datalake": "",
+            "threat_library": "",
         }
         self.helper.set_state(initial_state)
         logging.info(f"Initial state set: {initial_state}")
@@ -1235,19 +919,10 @@ class OrangeCyberDefense:
         """
         if state is None:
             return False
-        try:
-            if all(
-                [  # all values must be isoformat datetime string
-                    datetime.datetime.fromisoformat(state["worldwatch"]),
-                    datetime.datetime.fromisoformat(state["cybercrime"]),
-                    datetime.datetime.fromisoformat(state["datalake"]),
-                    datetime.datetime.fromisoformat(state["threat_library"]),
-                ]
-            ):
-                return True
-        except Exception:
-            return False
-        return False
+
+        return all(
+            key in state.keys() for key in ["worldwatch", "datalake", "threat_library"]
+        )
 
     def run(self):
         if self.ocd_reset_state:
@@ -1268,28 +943,37 @@ class OrangeCyberDefense:
 
         while True:
             try:
-                current_state = self.helper.get_state()
-                if not self._validate_state(current_state):
-                    raise RuntimeError(
-                        "OpencCTI instance returned an invalid connector state"
-                    )
-
-                for key in ["worldwatch", "cybercrime", "datalake", "threat_library"]:
+                if self.ocd_import_worldwatch:
                     try:
-                        self.helper.log_info(f"Processing {key}")
-                        self.process_and_update_state(current_state, key)
+                        self._import_worldwatch()
                     except Exception as ex:
                         self.helper.log_error(
-                            f"Encountered an error while processing {key}: {ex}"
+                            f"Encountered an error while ingesting WorldWatch: {str(ex)}"
                         )
-                        time.sleep(60)
+                if self.ocd_import_threat_library:
+                    try:
+                        if self._import_threat_library():
+                            self.helper.log_info("Threat Library successfully updated")
+                        else:
+                            self.helper.log_info(
+                                "No updates available for Threat Library"
+                            )
+                    except Exception as ex:
+                        self.helper.log_error(
+                            f"Encountered an error while updating ThreatLibrary: {str(ex)}"
+                        )
+                if self.ocd_import_datalake:
+                    try:
+                        self._import_datalake()
+                    except Exception as ex:
+                        self.helper.log_error(
+                            f"Encountered an error while ingesting Datalake: {str(ex)}"
+                        )
+
                 logging.info(f"Sleeping for {self.ocd_interval} minutes")
                 time.sleep(int(self.ocd_interval) * 60)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
-                exit(0)
-            except Exception as e:  # Consider catching more specific exceptions
-                self.helper.log_error(str(e))
                 exit(0)
 
 

@@ -40,8 +40,9 @@ class BaseRFConnector:
 
         # Extra config
         self.rf_token = get_config_variable(
-            "RECORDED_FUTURE_TOKEN", ["rf", "token"], config
+            "RECORDED_FUTURE_TOKEN", ["rf", "token"], config, required=True
         )
+
         self.rf_initial_lookback = get_config_variable(
             "RECORDED_FUTURE_INITIAL_LOOKBACK",
             ["rf", "initial_lookback"],
@@ -50,7 +51,7 @@ class BaseRFConnector:
         )
 
         self.tlp = get_config_variable(
-            "RECORDED_FUTURE_TLP", ["rf", "TLP"], config
+            "RECORDED_FUTURE_TLP", ["rf", "TLP"], config, required=True, default="red"
         ).lower()
 
         self.rf_pull_signatures = get_config_variable(
@@ -261,6 +262,11 @@ class RFNotes:
             self.helper.log_error(str(e))
 
         self.helper.set_state({"last_run": timestamp})
+        message = (
+            f"{self.helper.connect_name} connector successfully run, storing last_run for Analyst Notes as "
+            + str(timestamp)
+        )
+        self.helper.api.work.to_processed(work_id, message)
 
     def convert_and_send(self, published, tas, work_id):
         """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""
@@ -294,7 +300,6 @@ class RFNotes:
                     self.helper,
                     tas,
                     self.rfapi,
-                    self.tlp,
                     self.rf_person_to_TA,
                     self.rf_TA_to_intrusion_set,
                     self.risk_as_score,

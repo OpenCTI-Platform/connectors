@@ -1,0 +1,2 @@
+pycti==6.5.1
+google-auth==2.38.0

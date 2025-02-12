@@ -228,7 +228,7 @@ class CrowdstrikeClient:
         ioc_cs = self._search_indicator(ioc_value)
 
         # If IOC doesn't exist, create the IOC into Crowdstrike
-        if len(ioc_cs) == 0:
+        if ioc_cs is not None and len(ioc_cs) == 0:
             body = self._generate_indicator_body(data, ioc_value)
 
             if body is not None:
@@ -270,7 +270,7 @@ class CrowdstrikeClient:
         ioc_cs = self._search_indicator(ioc_value)
 
         # If IOC exists, update the IOC into Crowdstrike
-        if len(ioc_cs) != 0:
+        if ioc_cs is not None and len(ioc_cs) != 0:
 
             # In case of permanent_delete is False
             # Update data with label TO_DELETE for Crowdstrike
@@ -311,7 +311,7 @@ class CrowdstrikeClient:
         ioc_cs = self._search_indicator(ioc_value)
 
         # If IOC exists and permanent_delete is True, delete the IOC into Crowdstrike
-        if len(ioc_cs) != 0:
+        if ioc_cs is not None and len(ioc_cs) != 0:
             ioc_id = ioc_cs[0]
             response = self.cs.indicator_delete(ioc_id)
             self._handle_api_error(response)

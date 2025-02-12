@@ -1,0 +1,61 @@
+{
+  "confidence": 100,
+  "created": "2024-12-10T09:19:46.549Z",
+  "description": "Fake description",
+  "extensions": {
+    "extension-definition--322b8f77-262a-4cb8-a915-1e441e00329b": {
+      "extension_type": "property-extension"
+    },
+    "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba": {
+      "created_at": "2024-12-10T09:19:46.549Z",
+      "creator_ids": [
+        "88ec0c6a-13ce-5e39-b486-354fe4a7084f"
+      ],
+      "detection": "False",
+      "extension_type": "property-extension",
+      "id": "52dfd627-a875-4c05-bb21-12302ed66220",
+      "is_inferred": "False",
+      "labels_ids": [
+        "e10d0023-29d6-44dc-8409-bfb8a217fc89"
+      ],
+      "main_observable_type": "StixFile",
+      "observable_values": [
+        {
+          "hashes": {
+            "md5": "946d53360ef6e553b90d826a018bc546"
+          },
+          "type": "StixFile"
+        },
+        {
+          "hashes": {
+            "sha1": "ef1faa3a55cca05d84187c8cd15ceed9066c0f19"
+          },
+          "type": "StixFile"
+        },
+        {
+          "hashes": {
+            "sha256": "e67538748476070016be140e73625dcb4f9b953f5c1806ac8e08a49b45e7d1cd"
+          },
+          "type": "StixFile"
+        }
+      ],
+      "score": 35,
+      "type": "Indicator",
+      "updated_at": "2024-12-11T10:31:42.787Z"
+    }
+  },
+  "id": "indicator--f2a0f638-a65b-5283-9c34-4e6140f51e15",
+  "labels": [
+    "chronicle"
+  ],
+  "lang": "en",
+  "modified": "2024-12-11T10:31:42.787Z",
+  "name": "ioc chronicle",
+  "pattern": "[file:hashes.md5 = '946d53360ef6e553b90d826a018bc546' OR file:hashes.sha1 = 'ef1faa3a55cca05d84187c8cd15ceed9066c0f19' OR file:hashes.sha256 = 'e67538748476070016be140e73625dcb4f9b953f5c1806ac8e08a49b45e7d1cd']",
+  "pattern_type": "stix",
+  "revoked": "False",
+  "spec_version": "2.1",
+  "type": "indicator",
+  "valid_from": "2024-12-10T09:19:46.528Z",
+  "valid_until": "2025-07-13T09:14:20.754Z"
+}

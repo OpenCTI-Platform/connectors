@@ -1253,9 +1253,7 @@ class MispImportFile:
                             last_seen=datetime.utcfromtimestamp(
                                 int(misp_sighting["date_sighting"]) + 3600
                             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                            where_sighted_refs=(
-                                [sighted_by] if sighted_by is not None else None
-                            ),
+                            where_sighted_refs=[sighted_by],
                         )
                         sightings.append(sighting)
                     # if observable is not None:
@@ -2053,13 +2051,7 @@ class MispImportFile:
             if entity_id:
                 self.helper.log_info("Contextual import.")
                 bundle = json.loads(bundle_json)["objects"]
-                if self._contains_container(bundle):
-                    self.helper.log_info("Bundle contains container.")
-                else:
-                    self.helper.log_info(
-                        "No container in Stix file. Updating current container"
-                    )
-                    bundle = self._update_container(bundle, entity_id)
+                bundle = self._update_container(bundle, entity_id)
                 bundle_json = self.helper.stix2_create_bundle(bundle)
             bundles_sent_event = self.helper.send_stix2_bundle(
                 bundle_json,
@@ -2077,18 +2069,21 @@ class MispImportFile:
         self.helper.listen(self._process_message)
 
     @staticmethod
-    def _contains_container(bundle):
+    def _is_container(element_type: str):
+        return (
+            element_type == "report"
+            or element_type == "grouping"
+            or element_type == "observed-data"
+            or element_type == "x-opencti-case-incident"
+            or element_type == "x-opencti-case-rfi"
+            or element_type == "x-opencti-case-rft"
+            or element_type == "x-opencti-task"
+            or element_type == "x-opencti-feedback"
+        )
+
+    def _contains_container(self, bundle) -> bool:
         for elem in bundle:
-            if (
-                elem.get("type") == "report"
-                or elem.get("type") == "grouping"
-                or elem.get("type") == "observed-data"
-                or elem.get("type") == "x-opencti-case-incident"
-                or elem.get("type") == "x-opencti-case-rfi"
-                or elem.get("type") == "x-opencti-case-rft"
-                or elem.get("type") == "x-opencti-task"
-                or elem.get("type") == "x-opencti-feedback"
-            ):
+            if self._is_container(elem.get("type")):
                 return True
         return False
 
@@ -2106,8 +2101,22 @@ class MispImportFile:
                 if "x_opencti_id" in object
                 and object["x_opencti_id"] == container["id"]
             ][0]
-            container_stix["object_refs"] = [object["id"] for object in bundle]
-            bundle.append(container_stix)
+            if self._is_container(container_stix.get("type")):
+                if self._contains_container(bundle):
+                    self.helper.log_info("Bundle contains container.")
+                    container_stix["object_refs"] = []
+                    for elem in bundle:
+                        if self._is_container(elem.get("type")):
+                            container_stix["object_refs"].append(elem["id"])
+                            if "object_refs" in elem:
+                                for object_id in elem.get("object_refs"):
+                                    container_stix["object_refs"].append(object_id)
+                else:
+                    self.helper.log_info(
+                        "No container in Stix file. Updating current container"
+                    )
+                    container_stix["object_refs"] = [object["id"] for object in bundle]
+                bundle.append(container_stix)
         return bundle
 
 

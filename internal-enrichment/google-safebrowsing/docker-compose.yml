@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-google-safebrowsing:
+    image: opencti/connector-google-safebrowsing:6.5.1
+    environment:
+      # Connector's definition parameters:
+      - CONNECTOR_NAME=Google Safe Browsing
+      - CONNECTOR_SCOPE=Url,Domain-Name,Hostname
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      # Connector's generic execution parameters:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN= # Your Connector's token
+      - CONNECTOR_ID= # Your connector UUID
+      - CONNECTOR_LOG_LEVEL=info 
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      # Connector's custom execution parameters:
+      - GOOGLE_SAFE_BROWSING_API_KEY= # Your Google Safe Browsing API key
+    restart: always
+
+
