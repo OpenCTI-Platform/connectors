@@ -1347,6 +1347,10 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             results["classification"] == "suspicious"
         ):
 
+            self.helper.log_info(
+                f"{self.helper.connect_name}: Create STIX objects for malicious sample results!"
+            )
+
             # Create indicators based on result
             self._create_indicators(results)
 
@@ -1401,13 +1405,9 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 stix_entity, opencti_entity, hash
             )
 
-            self.helper.log_info(
-                f"{self.helper.connect_name}: CLASSIFICATION {analysis_result}"
-            )
- 
             if not analysis_result:
                 self.helper.log_info(
-                    f"{self.helper.connect_name}: DEBUGGING NO INFO ON SAMPLE"
+                    f"{self.helper.connect_name}: There is no analysis result for provided sample!"
                 )
 
             # Integrate classification analysis results with OpenCTI
