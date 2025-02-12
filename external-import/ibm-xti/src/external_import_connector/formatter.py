@@ -72,20 +72,21 @@ class OpenCTISTIXFormatter:
         )
 
         obj["x_opencti_create_observables"] = self.__config.create_observables
-        match = re.search(r"\[(.*?):.*'(.*?)\'\]", obj["pattern"])
-        if match is not None:
-            if match[1] == "ipv4-addr":
-                obj["x_opencti_main_observable_type"] = "IPv4-Addr"
-            elif match[1] == "ipv6-addr":
-                obj["x_opencti_main_observable_type"] = "IPv6-Addr"
-            elif match[1] == "file":
-                obj["x_opencti_main_observable_type"] = "StixFile"
-            elif match[1] == "domain-name":
-                obj["x_opencti_main_observable_type"] = "Domain-Name"
-            elif match[1] == "url":
-                obj["x_opencti_main_observable_type"] = "Url"
-            elif match[1] == "email-addr":
-                obj["x_opencti_main_observable_type"] = "Email-Addr"
+        if obj["x_opencti_create_observables"]:
+            match = re.search(r"\[(.*?):.*'(.*?)\'\]", obj["pattern"])
+            if match is not None:
+                if match[1] == "ipv4-addr":
+                    obj["x_opencti_main_observable_type"] = "IPv4-Addr"
+                elif match[1] == "ipv6-addr":
+                    obj["x_opencti_main_observable_type"] = "IPv6-Addr"
+                elif match[1] == "file":
+                    obj["x_opencti_main_observable_type"] = "StixFile"
+                elif match[1] == "domain-name":
+                    obj["x_opencti_main_observable_type"] = "Domain-Name"
+                elif match[1] == "url":
+                    obj["x_opencti_main_observable_type"] = "Url"
+                elif match[1] == "email-addr":
+                    obj["x_opencti_main_observable_type"] = "Email-Addr"
 
     def __cvss_severity(self, score: float):
         if not score:
