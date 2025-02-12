@@ -1,5 +1,6 @@
 import functools
 import ipaddress
+from typing import Callable
 
 import stix2
 from dateutil.parser import parse
@@ -14,8 +15,8 @@ class ConverterError(Exception):
 
 
 def known_converter_error(
-    func: callable([["ConverterToStix", ...], stix2.v21._STIXBase21]),
-) -> callable([["ConverterToStix", ...], stix2.v21._STIXBase21]):
+    func: Callable[["ConverterToStix", ...], stix2.v21._STIXBase21],
+) -> Callable[["ConverterToStix", ...], stix2.v21._STIXBase21]:
     """
     Decorator to catch known conversion errors and raise custom exception.
     Args:
