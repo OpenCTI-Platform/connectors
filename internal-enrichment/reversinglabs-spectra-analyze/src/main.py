@@ -199,13 +199,13 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             file_mime_type = "None"
             is_archive = False
 
-            try: 
+            try:
                 response = self.a1000client.get_detailed_report_v2(
                     sample_hashes=self.hash,
                     retry=False,
                 )
             except Exception as err:
-                return analysis_report # debug
+                return analysis_report  # debug
                 raise ValueError(
                     f"{self.helper.connect_name}: Looks like the sample you are trying to access may not be available on your Spectra Analyze instance. On Spectra Analyze run fetch and analyze on the sample."
                 ) from err
@@ -226,11 +226,9 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
     def _submit_file_for_classification(self, stix_entity, opencti_entity, hash):
 
         response = self.a1000client.get_classification_v3(
-            sample_hash=hash,
-            local_only=False,
-            av_scanners=False
+            sample_hash=hash, local_only=False, av_scanners=False
         )
-        
+
         analysis_report = json.loads(response.text)
 
         return analysis_report
@@ -368,7 +366,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 "Sample was processed by Spectra Analyze! Sample is classified as "
                 + results["classification"]
             )
-            
+
             # Creating label out of classification
             results["labels"].append(results["classification"])
 
@@ -381,7 +379,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         self._upsert_observable(results)
 
         return results
-
 
     def _process_url_analysis_result(
         self, stix_objects, stix_entity, opencti_entity, analysis_result
@@ -1363,7 +1360,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
             self.helper.log_info(
                 f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
-            ) 
+            )
 
     def _process_message(self, data: Dict):
         stix_objects = data["stix_objects"]
@@ -1399,7 +1396,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                     hash = ent_hash["hash"]
                     hash_type = ent_hash["algorithm"]
 
-
             # Get file classification
             analysis_result = self._submit_file_for_classification(
                 stix_entity, opencti_entity, hash
@@ -1422,15 +1418,14 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             # Submit File sample for analysis
             analysis_result = self._submit_file_for_analysis(
                 stix_entity, opencti_entity, hash, hash_type
-            ) 
-                
+            )
+
             # Integrate file analysis results with OpenCTI
             if "results" in analysis_result:
                 results = self._process_file_analysis_result(
                     stix_objects, stix_entity, opencti_entity, analysis_result
                 )
                 self._process_malicious(stix_objects, stix_entity, results)
- 
 
         elif opencti_type == "Url":
             url_sample = stix_entity["value"]
@@ -1460,7 +1455,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             results = self._process_url_analysis_result(
                 stix_objects, stix_entity, opencti_entity, analysis_result
             )
-            
+
             self._process_malicious(stix_objects, stix_entity, results)
 
         elif opencti_type == "IPv4-Addr":
