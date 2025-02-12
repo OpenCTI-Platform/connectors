@@ -205,7 +205,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                     retry=False,
                 )
             except Exception as err:
-                return analysis_report  # debug
                 raise ValueError(
                     f"{self.helper.connect_name}: Looks like the sample you are trying to access may not be available on your Spectra Analyze instance. On Spectra Analyze run fetch and analyze on the sample."
                 ) from err
