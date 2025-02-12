@@ -69,7 +69,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         )
 
         self.reversinglabs_spectra_user_agent = (
-            "ReversingLabs Spectra Analyze OpenCTI v1.1.0"
+            "ReversingLabs Spectra Analyze OpenCTI v1.2.0"
         )
 
     """
@@ -226,7 +226,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
     def _submit_file_for_classification(self, stix_entity, opencti_entity, hash):
 
         response = self.a1000client.get_classification_v3(
-            sample_hash=self.hash,
+            sample_hash=hash,
             local_only=False,
             av_scanners=False
         )
@@ -1342,6 +1342,25 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             f"{self.helper.connect_name}: Number of stix bundles sent to workers round 1: {str(len(bundles_sent))}"
         )
 
+    def _process_malicious(self, stix_objects, stix_entity, results):
+        if (results["classification"] == "malicious") or (
+            results["classification"] == "suspicious"
+        ):
+
+            # Create indicators based on result
+            self._create_indicators(results)
+
+            # Create Malware and add relationship to artifact
+            self._generate_stix_malware(results)
+
+            # Create Stix Bundle and send it to OpenCTI
+            bundle = self._generate_stix_bundle(stix_objects, stix_entity)
+            bundles_sent = self.helper.send_stix2_bundle(bundle)
+
+            self.helper.log_info(
+                f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
+            ) 
+
     def _process_message(self, data: Dict):
         stix_objects = data["stix_objects"]
         stix_entity = data["stix_entity"]
@@ -1376,48 +1395,42 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                     hash = ent_hash["hash"]
                     hash_type = ent_hash["algorithm"]
 
-            # Submit File sample for analysis
-            analysis_result = self._submit_file_for_analysis(
-                stix_entity, opencti_entity, hash, hash_type
-            ) 
 
+            # Get file classification
+            analysis_result = self._submit_file_for_classification(
+                stix_entity, opencti_entity, hash
+            )
+
+            self.helper.log_info(
+                f"{self.helper.connect_name}: CLASSIFICATION {analysis_result}"
+            )
+ 
             if not analysis_result:
-
-                analysis_result = self._submit_file_for_classification(
-                    stix_entity, opencti_entity, hash
-                )
-
                 self.helper.log_info(
-                    f"{self.helper.connect_name}: DEBUGGING {analysis_result}"
+                    f"{self.helper.connect_name}: DEBUGGING NO INFO ON SAMPLE"
                 )
 
-            # Integrate analysis results with OpenCTI
-            if "results" in analysis_result:
-                results = self._process_file_analysis_result(
-                    stix_objects, stix_entity, opencti_entity, analysis_result
-                )
-            else:
+            # Integrate classification analysis results with OpenCTI
+            if "results" not in analysis_result:
+
                 results = self._process_file_classification_results(
                     stix_objects, stix_entity, opencti_entity, analysis_result
                 )
 
-            if (results["classification"] == "malicious") or (
-                results["classification"] == "suspicious"
-            ):
+                self._process_malicious(stix_objects, stix_entity, results)
 
-                # Create indicators based on result
-                self._create_indicators(results)
-
-                # Create Malware and add relationship to artifact
-                self._generate_stix_malware(results)
-
-                # Create Stix Bundle and send it to OpenCTI
-                bundle = self._generate_stix_bundle(stix_objects, stix_entity)
-                bundles_sent = self.helper.send_stix2_bundle(bundle)
-
-                self.helper.log_info(
-                    f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
+            # Submit File sample for analysis
+            analysis_result = self._submit_file_for_analysis(
+                stix_entity, opencti_entity, hash, hash_type
+            ) 
+                
+            # Integrate file analysis results with OpenCTI
+            if "results" in analysis_result:
+                results = self._process_file_analysis_result(
+                    stix_objects, stix_entity, opencti_entity, analysis_result
                 )
+                self._process_malicious(stix_objects, stix_entity, results)
+ 
 
         elif opencti_type == "Url":
             url_sample = stix_entity["value"]
@@ -1447,24 +1460,8 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             results = self._process_url_analysis_result(
                 stix_objects, stix_entity, opencti_entity, analysis_result
             )
-
-            if (results["classification"] == "malicious") or (
-                results["classification"] == "suspicious"
-            ):
-
-                # Create indicators based on result
-                self._create_indicators(results)
-
-                # Create Malware and add relationship to artifact
-                self._generate_stix_malware(results)
-
-                # Create Stix Bundle and send it to OpenCTI
-                bundle = self._generate_stix_bundle(stix_objects, stix_entity)
-                bundles_sent = self.helper.send_stix2_bundle(bundle)
-
-                self.helper.log_info(
-                    f"{self.helper.connect_name}: Number of stix bundles sent to workers round 1: {str(len(bundles_sent))}"
-                )
+            
+            self._process_malicious(stix_objects, stix_entity, results)
 
         elif opencti_type == "IPv4-Addr":
             ip_sample = stix_entity["value"]
