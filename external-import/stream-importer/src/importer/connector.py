@@ -35,7 +35,11 @@ class StreamImporterConnector(ExternalImportConnector):
         """Initialization of the connector"""
         super().__init__()
 
-        self.metrics = Metrics(self.helper.connect_name)
+        self.metrics = Metrics(
+            self.helper.connect_name,
+            os.environ.get("METRICS_NAMESPACE"),
+            os.environ.get("METRICS_SUBSYTEM"),
+        )
 
         minio_endpoint = os.environ.get("MINIO_ENDPOINT")
 
@@ -49,7 +53,7 @@ class StreamImporterConnector(ExternalImportConnector):
         minio_cert_check = str_to_bool(
             os.environ.get("MINIO_CERT_CHECK", default="true")
         )
-        self.perfect_sync = str_to_bool(os.environ.get("PERFECT_SYNC", default="true"))
+        self.perfect_sync = str_to_bool(os.environ.get("PERFECT_SYNC", default="false"))
         self.helper.log_info(f"Perfect synchronization: {self.perfect_sync}")
 
         self.helper.log_info(f"Minio endpoint: {minio_endpoint}:{minio_port}")
@@ -88,7 +92,7 @@ class StreamImporterConnector(ExternalImportConnector):
         # Read objects from minio, each object contains multiple events.
         for obj in self.minio_client.list_objects(
             self.minio_bucket,
-            start_after=self.minio_folder,
+            prefix=self.minio_folder,
             recursive=True,
         ):
             self.metrics.read()
@@ -96,7 +100,7 @@ class StreamImporterConnector(ExternalImportConnector):
             state = self.helper.get_state() or {}
             expected_file_number = state.get("file_count", 0) + 1
             if expected_file_number != file_number:
-                self.metrics.wrong_file_order()
+                self.metrics.import_down()
                 raise WrongFileOrder(obj.object_name, expected_file_number)
             try:
                 response = self.minio_client.get_object(
@@ -109,6 +113,11 @@ class StreamImporterConnector(ExternalImportConnector):
                 # Update the state
                 state["file_count"] = expected_file_number
                 self.helper.set_state(state)
+            except json.decoder.JSONDecodeError as e:
+                self.metrics.import_down()
+                self.helper.log_error(
+                    f"File {obj.object_name} is malformatted, not processing: {e}"
+                )
             finally:
                 response.close()
                 response.release_conn()
