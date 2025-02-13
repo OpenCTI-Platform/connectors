@@ -122,7 +122,6 @@ class IPQSBuilder:
         pattern : str
             Stix pattern for the indicator.
         """
-        now_time = datetime.utcnow()
 
         # Create an Indicator if positive hits >= ip_indicator_create_positives specified in config
 
@@ -136,7 +135,6 @@ class IPQSBuilder:
             confidence=self.helper.connect_confidence_level,
             pattern=pattern,
             pattern_type="stix",
-            valid_from=self.helper.api.stix2.format_date(now_time),
             # valid_until=self.helper.api.stix2.format_date(valid_until),
             custom_properties={
                 "x_opencti_score": self.score,

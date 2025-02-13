@@ -199,7 +199,6 @@ class UrlscanConverter:
         """
 
         stix_indicator_with_relationship = []
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         x_opencti_type = stix_entity.get("x_opencti_type", None)
 
         if stix_entity["type"] == "url":
@@ -224,7 +223,6 @@ class UrlscanConverter:
             labels=labels,
             created_by_ref=self.identity["id"],
             external_references=external_reference,
-            valid_from=now,
             pattern_type="stix",
             custom_properties={
                 "x_opencti_main_observable_type": x_opencti_type,
