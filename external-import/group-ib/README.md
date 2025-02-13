@@ -24,8 +24,8 @@ investigating high-tech crimes and responding to complex, multi-stage attacks wo
 on threat actors, domains, IPs, and infrastructure collected over the past 22 years, including those that criminals 
 have attempted to take down.
 
-To use the integration, please make sure that you have an active Threat Intelligence license to 
-access the interface.
+To use the integration, please ensure that you have an active Threat Intelligence license to access the 
+interface and that it covers the API endpoints you wish to reach. Documentation can be found here - https://tap.group-ib.com/hc/api?scope=integrations&q=en%2FIntegrations%2FCollections%20Info%2FCollections%20Details%2FCollections%20Details
 
 
 ## **Content**
@@ -192,7 +192,7 @@ The parameter ```default_date``` is used for initial start only.
 After the download process begins it will not be used anymore.
 After the first startup, the sequpdate field starts to be used instead of default_date, and its values for all collections are stored in the state of OpenCTI itself. 
 If you need a fresh startup based on ``default_date`` then:
-1. stop the integration
+1. Stop the integration
 2. Clear the state in OpenCTI that relates to our integration
 3. Set a new date in ``default_date``. 
 4. Restart the integration
