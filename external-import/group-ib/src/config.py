@@ -64,7 +64,7 @@ class ConfigConnector:
         """
         Loads the configuration from `config.yml` or falls back to `config.yml.sample` if `config.yml` does not exist.
 
-        This function reads the `config.yml` file located in the `src` directory and 
+        This function reads the `config.yml` file located in the `src` directory and
         parses it into a dictionary. If `config.yml` does not exist, it tries to load `config.yml.sample`.
         If neither file exists, it returns an empty dictionary.
 
@@ -82,30 +82,30 @@ class ConfigConnector:
             if file_path.is_file():
                 with open(file_path, "r", encoding="utf-8") as file:
                     return yaml.load(file, Loader=yaml.FullLoader)
-        
+
         return {}
 
     def _get_setting_varibles_names_for_env(
         self, data: dict[str, int | str, bool | dict] | Any
     ) -> list[str]:
         """
-        Recursively collects keys from a given configuration dictionary and formats them into a standardized 
+        Recursively collects keys from a given configuration dictionary and formats them into a standardized
         format suitable for retrieving values from a `.env` file.
 
         The function:
         - Converts dictionary keys to uppercase.
         - Replaces forward slashes (`/`) in keys with underscores (`_`).
         - Recursively processes nested dictionaries, appending child keys to parent keys.
-        - Uses different delimiters for specific top-level keys (`OPENCTI` and `CONNECTOR` use a single underscore `_`, 
+        - Uses different delimiters for specific top-level keys (`OPENCTI` and `CONNECTOR` use a single underscore `_`,
         while others use a double underscore `__`).
 
         Args:
-            data (dict[str, int | str, bool | dict] | Any): 
-                A dictionary representing configuration settings, where keys are setting names and 
+            data (dict[str, int | str, bool | dict] | Any):
+                A dictionary representing configuration settings, where keys are setting names and
                 values may be nested dictionaries or primitive types.
 
         Returns:
-            list[str]: 
+            list[str]:
                 A list of formatted environment variable names derived from the input dictionary.
 
         Example:
@@ -136,7 +136,7 @@ class ConfigConnector:
             ]
             ```
         """
-        
+
         keys = []
         if isinstance(data, dict):
             for key, value in data.items():
@@ -159,20 +159,20 @@ class ConfigConnector:
         """
         Converts environment variable names into a format that represents the corresponding key path in `config.yml`.
 
-        This function is used to retrieve the path needed to access values from `config.yml`. 
+        This function is used to retrieve the path needed to access values from `config.yml`.
         It splits environment variable names into their components using different delimiters:
         - If the variable contains `"OPENCTI"` or `"CONNECTOR"`, it is split using `_` (a single underscore).
         - Otherwise, it is split using `__` (a double underscore).
 
-        Additionally, if the third element in the key path is `"collections"`, the fourth element is replaced 
+        Additionally, if the third element in the key path is `"collections"`, the fourth element is replaced
         with its mapped value from `self.collection_map`.
 
         Args:
-            data (list[str]): 
+            data (list[str]):
                 A list of environment variable names, e.g., `["OPENCTI_URL", "DATABASE__HOST"]`.
 
         Returns:
-            dict: 
+            dict:
                 A dictionary where:
                 - The key is the original environment variable name.
                 - The value is a list of strings representing the corresponding path in `config.yml`.
