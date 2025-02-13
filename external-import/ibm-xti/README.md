@@ -75,7 +75,7 @@ Below are the parameters you'll need to set for the connector:
 | TAXII Server URL  | taxii_server_url   | `CONNECTOR_IBM_XTI_TAXII_SERVER_URL`  |                            | Yes       | The base URL of the IBM X-Force PTI TAXII Server                 |
 | TAXII User        | taxii_user         | `CONNECTOR_IBM_XTI_TAXII_USER`        |                            | Yes       | Your TAXII Server username                                       |
 | TAXII Password    | taxii_pass         | `CONNECTOR_IBM_XTI_TAXII_PASS`        |                            | Yes       | Your TAXII Server password                                       |
-| TAXII Collections | taxii_collections  | `CONNECTOR_IBM_XTI_TAXII_COLLECTIONS` | All authorized collections | No        | Optionally limit ingestion to specified TAXII collections only   |
+| TAXII Collections | taxii_collections | `CONNECTOR_IBM_XTI_TAXII_COLLECTIONS` | All authorized collections | No        | Optionally limit ingestion to specified TAXII collections only. This should be a comma-separated list (spaces allowed) of collection IDs, not the names or aliases |
 | Observables       | create_observables | `CONNECTOR_IBM_XTI_CREATE_OBSERVABLES`|                            | No        | Optionally control whether to define observables from indicators |
 
 ## Deployment
