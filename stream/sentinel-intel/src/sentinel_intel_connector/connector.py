@@ -88,6 +88,14 @@ class SentinelIntelConnector:
                         observable_data["type"] = "file"
                         observable_data["hashes"] = {"SHA-256": result["value"]}
                         observables.append(observable_data)
+                    elif result["attribute"] == "file:hashes.'SHA-1'":
+                        observable_data["type"] = "file"
+                        observable_data["hashes"] = {"SHA-1": result["value"]}
+                        observables.append(observable_data)
+                    elif result["attribute"] == "file:hashes.MD5":
+                        observable_data["type"] = "file"
+                        observable_data["hashes"] = {"MD5": result["value"]}
+                        observables.append(observable_data)
             return observables
         except:
             indicator_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
