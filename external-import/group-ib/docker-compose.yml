@@ -6,27 +6,8 @@ services:
     image: opencti/connector-group-ib:6.3.1
     volumes:
       - ./docs/:/opt/connector/docs/
-    environment:
-      # Connector's definition parameters:
-      - CONNECTOR_NAME=${CONNECTOR_NAME}
-      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE}
-      # Connector's generic execution parameters:
-      - OPENCTI_URL=${OPENCTI_URL}
-      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_ID}
-      - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_CONFIDENCE_LEVEL} # From 0 (Unknown) to 100 (Fully trusted).
-      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL}
-      - CONNECTOR_DURATION_PERIOD=${CONNECTOR_DURATION_PERIOD}
-      # Connector's TI API execution parameters:
-      - TI_API__URL=${TI_API__URL}
-      - TI_API__USERNAME=${TI_API__USERNAME}
-      - TI_API__TOKEN=${TI_API__TOKEN}
-      # Connector's proxy parameters:
-      - TI_API__PROXY__IP=${TI_API__PROXY__IP}
-      - TI_API__PROXY__PORT=${TI_API__PROXY__PORT}
-      - TI_API__PROXY__PROTOCOL=${TI_API__PROXY__PROTOCOL}
-      - TI_API__PROXY__USERNAME=${TI_API__PROXY__USERNAME}
-      - TI_API__PROXY__PASSWORD=${TI_API__PROXY__PASSWORD}
+    env_file:
+      .env
     restart: always
 
 networks:
