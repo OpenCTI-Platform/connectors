@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import stix2
 from pycti import CustomObservableHostname, Identity, Indicator, StixCoreRelationship
 

@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """IPQS builder module."""
 
-from datetime import datetime
-
 import pycti
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship
 from stix2 import (
