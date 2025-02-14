@@ -203,7 +203,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             incident_type=playbook_alert["data"]["panel_status"]["case_rule_label"],
             labels=[str(playbook_alert["data"]["panel_status"]["case_rule_label"])],
             external_references=[stix_external_ref],
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
         )
         bundle_objects.append(stix_incident)
 
@@ -288,7 +288,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             abstract="# Evidence summary panel",
             content=summary_content,
             object_refs=[stix_incident.id],
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
         )
         bundle_objects.append(stix_note)
         bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
@@ -340,7 +340,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             ],
             incident_type=playbook_alert["data"]["panel_status"]["case_rule_label"],
             labels=["Identity Novel Exposures"],
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
         )
         bundle_objects.append(stix_incident)
         summary_content = ""
@@ -456,7 +456,9 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                                 "infrastructure"
                             ][subkey],
                             object_marking_refs=self.tlp,
-                            custom_properties={"x_opencti_created_by_ref": self.author},
+                            custom_properties={
+                                "x_opencti_created_by_ref": self.author["id"]
+                            },
                         )
                         stix_relationship = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
@@ -465,7 +467,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                             relationship_type="related-to",
                             source_ref=stix_incident.id,
                             target_ref=stix_ipv4address.id,
-                            created_by_ref=self.author,
+                            created_by_ref=self.author["id"],
                             object_marking_refs=self.tlp,
                         )
                         bundle_objects.append(stix_ipv4address)
@@ -512,7 +514,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             abstract="# Evidence summary panel",
             content=summary_content,
             object_refs=[stix_incident.id],
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
         )
         bundle_objects.append(stix_note)
         bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
@@ -556,7 +558,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             ],
             incident_type=playbook_alert["data"]["panel_status"]["case_rule_label"],
             labels=["Domain Abuse"],
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
         )
         bundle_objects.append(stix_incident)
         stix_url = stix2.DomainName(
@@ -570,7 +572,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             relationship_type="related-to",
             source_ref=stix_incident.id,
             target_ref=stix_url.id,
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
             object_marking_refs=self.tlp,
         )
         bundle_objects.append(stix_url)
@@ -598,7 +600,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 abstract="# Evidence WhoIs panel",
                 content=evidence_whois_content,
                 object_refs=[stix_incident.id],
-                created_by_ref=self.author,
+                created_by_ref=self.author["id"],
             )
             bundle_objects.append(stix_note)
         if len(playbook_alert["data"]["panel_evidence_dns"]) > 0 and (
@@ -627,7 +629,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                     relationship_type="related-to",
                     source_ref=stix_incident.id,
                     target_ref=stix_ipv4address.id,
-                    created_by_ref=self.author,
+                    created_by_ref=self.author["id"],
                     object_marking_refs=self.tlp,
                 )
                 bundle_objects.append(stix_ipv4address)
@@ -661,7 +663,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                     relationship_type="related-to",
                     source_ref=stix_incident.id,
                     target_ref=stix_domain.id,
-                    created_by_ref=self.author,
+                    created_by_ref=self.author["id"],
                     object_marking_refs=self.tlp,
                 )
                 bundle_objects.append(stix_domain)
@@ -677,7 +679,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 abstract="# Evidence DNS panel",
                 content=evidence_dns_content,
                 object_refs=[stix_incident.id],
-                created_by_ref=self.author,
+                created_by_ref=self.author["id"],
             )
             bundle_objects.append(stix_note)
         evidence_summary_content = ""
