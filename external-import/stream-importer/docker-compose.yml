@@ -17,9 +17,8 @@ services:
       - PERFECT_SYNC=false
       - MINIO_ENDPOINT=minio
       - MINIO_PORT=9000
-      - MINIO_BUCKET=opencti-export
-      - MINIO_FOLDER=opencti-stream
-      - MINIO_BUCKET_DONE=opencti-export-done
+      - MINIO_SRC_PATH=opencti-export/opencti-stream
+      - MINIO_DST_PATH=opencti-export-done
       - MINIO_ACCESS_KEY=opencti
       - MINIO_SECRET_KEY=ChangeMe
       - MINIO_SECURE=false
