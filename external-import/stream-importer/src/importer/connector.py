@@ -44,9 +44,13 @@ class StreamImporterConnector(ExternalImportConnector):
         minio_endpoint = os.environ.get("MINIO_ENDPOINT")
 
         minio_port = os.environ.get("MINIO_PORT")
-        self.minio_bucket = os.environ.get("MINIO_BUCKET")
-        self.minio_folder = os.environ.get("MINIO_FOLDER")
-        self.minio_bucket_done = os.environ.get("MINIO_BUCKET_DONE")
+        # Extract the bucket and the path for the source and the destination.
+        self.minio_src_bucket, self.minio_src_path = os.environ.get(
+            "MINIO_SRC_PATH"
+        ).split("/", 1)
+        self.minio_dst_bucket, self.minio_dst_path = os.environ.get(
+            "MINIO_DST_PATH"
+        ).split("/", 1)
         minio_access_key = os.environ.get("MINIO_ACCESS_KEY")
         minio_secret_key = os.environ.get("MINIO_SECRET_KEY")
         minio_secure = str_to_bool(os.environ.get("MINIO_SECURE", default="true"))
@@ -58,9 +62,11 @@ class StreamImporterConnector(ExternalImportConnector):
 
         self.helper.log_info(f"Minio endpoint: {minio_endpoint}:{minio_port}")
         self.helper.log_info(
-            f"Bucket to fetch the stream: {self.minio_bucket}/{self.minio_folder}"
+            f"Bucket to fetch the stream: {self.minio_src_bucket}/{self.minio_src_path}"
         )
-        self.helper.log_info(f"Bucket to put processed files: {self.minio_bucket_done}")
+        self.helper.log_info(
+            f"Bucket to put processed files: {self.minio_dst_bucket}/{self.minio_dst_path}"
+        )
 
         self.minio_client = Minio(
             f"{minio_endpoint}:{minio_port}",
@@ -72,12 +78,9 @@ class StreamImporterConnector(ExternalImportConnector):
         self.helper.log_info(f"Minio: {self.minio_client._base_url}")
 
         # Create the destination bucket if it does not exist.
-        self.helper.log_info(
-            f"Minio bucket to use: src={self.minio_bucket} / done={self.minio_bucket_done}"
-        )
-        if not self.minio_client.bucket_exists(self.minio_bucket_done):
-            self.minio_client.make_bucket(self.minio_bucket_done)
-            self.helper.log_info(f"Minio bucket {self.minio_bucket_done} created")
+        if not self.minio_client.bucket_exists(self.minio_dst_bucket):
+            self.minio_client.make_bucket(self.minio_dst_bucket)
+            self.helper.log_info(f"Minio bucket {self.minio_dst_bucket} created")
 
         self.helper.log_info("Stream importer connector initialized")
 
@@ -91,8 +94,8 @@ class StreamImporterConnector(ExternalImportConnector):
         )
         # Read objects from minio, each object contains multiple events.
         for obj in self.minio_client.list_objects(
-            self.minio_bucket,
-            prefix=self.minio_folder,
+            self.minio_src_bucket,
+            prefix=self.minio_src_path,
             recursive=True,
         ):
             self.metrics.read()
@@ -173,12 +176,12 @@ class StreamImporterConnector(ExternalImportConnector):
 
         # The event is processed, the file can be moved (well, copied and deleted...).
         self.minio_client.copy_object(
-            self.minio_bucket_done,
-            event.path,
-            CopySource(self.minio_bucket, event.path),
+            self.minio_dst_bucket,
+            os.path.join(self.minio_dst_path, event.path),
+            CopySource(self.minio_src_bucket, event.path),
         )
-        self.minio_client.remove_object(self.minio_bucket, event.path)
-        self.helper.log_info(f"File {event.path} moved to {self.minio_bucket_done}")
+        self.minio_client.remove_object(self.minio_src_bucket, os.path.join(self.minio_src_path, event.path))
+        self.helper.log_info(f"File {event.path} moved to {os.path.join(self.minio_dst_bucket, self.minio_dst_path)}")
 
     def _send_event(self, channel, event: str) -> None:
         """Send the content of the event to RabbitMQ.
