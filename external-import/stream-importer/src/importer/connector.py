@@ -45,12 +45,16 @@ class StreamImporterConnector(ExternalImportConnector):
 
         minio_port = os.environ.get("MINIO_PORT")
         # Extract the bucket and the path for the source and the destination.
-        self.minio_src_bucket, self.minio_src_path = os.environ.get(
-            "MINIO_SRC_PATH"
-        ).split("/", 1)
-        self.minio_dst_bucket, self.minio_dst_path = os.environ.get(
-            "MINIO_DST_PATH"
-        ).split("/", 1)
+        self.minio_src_bucket, self.minio_src_path = (
+            os.environ.get("MINIO_SRC_PATH").split("/", 1)
+            if "/" in os.environ.get("MINIO_SRC_PATH")
+            else (os.environ.get("MINIO_SRC_PATH"), "")
+        )
+        self.minio_dst_bucket, self.minio_dst_path = (
+            os.environ.get("MINIO_DST_PATH").split("/", 1)
+            if "/" in os.environ.get("MINIO_DST_PATH")
+            else (os.environ.get("MINIO_DST_PATH"), "")
+        )
         minio_access_key = os.environ.get("MINIO_ACCESS_KEY")
         minio_secret_key = os.environ.get("MINIO_SECRET_KEY")
         minio_secure = str_to_bool(os.environ.get("MINIO_SECURE", default="true"))
@@ -181,7 +185,8 @@ class StreamImporterConnector(ExternalImportConnector):
             CopySource(self.minio_src_bucket, event.path),
         )
         self.minio_client.remove_object(
-            self.minio_src_bucket, os.path.join(self.minio_src_path, event.path)
+            self.minio_src_bucket,
+            event.path,
         )
         self.helper.log_info(
             f"File {event.path} moved to {os.path.join(self.minio_dst_bucket, self.minio_dst_path)}"
