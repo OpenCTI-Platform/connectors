@@ -1,6 +1,10 @@
 import traceback
 
-from stream_connector import IndicatorStreamConnector
+from stream_connector import IndicatorConnector
+
+
+CREATING_INDICATORS = False
+
 
 if __name__ == "__main__":
     """
@@ -12,8 +16,9 @@ if __name__ == "__main__":
     - exit(1): effective way to terminate a Python program when an error is encountered.
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
+
     try:
-        connector = IndicatorStreamConnector()
+        connector = IndicatorConnector()
         connector.run()
     except Exception:
         traceback.print_exc()

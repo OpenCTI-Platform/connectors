@@ -1,23 +1,23 @@
-version: '3'
 services:
-  connector-template:
-    image: opencti/connector-sentinelone-indicators:1.0.0
+  sentinelone-indicator-stream-connector:
+    #image: opencti/connector-template:6.5.1
+    build: .
+
     environment:
-      - OPENCTI_URL=http://localhost
+      - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGEME
 
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=CHANGEME
+      - CONNECTOR_NAME=SentinelOne Indicator Stream Connector
       - CONNECTOR_SCOPE=CHANGEME
-      - CONNECTOR_LOG_LEVEL=error
-
-      - CONNECTOR_LIVE_STREAM_ID=live
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
 
-      - SENTINELONE_URL=changeMeEndingIn/
-      - SENTINELONE_API_KEY=changeMe
-      - SENTINELONE_ACCOUNT_ID=changeMe
-      - SENTINELONE_MAX_API_ATTEMPTS=5
+      - S1_URL=CHANGEME
+      - S1_API_KEY=CHANGEME
+      - MAX_API_ATTEMPTS=5
+      - LOG_S1_RESPONSE=true
 
     restart: always

@@ -1,3 +1,3 @@
-from .connector import IndicatorStreamConnector
+from .connector import IndicatorConnector
 
-__all__ = ["IndicatorStreamConnector"]
+__all__ = ["IndicatorConnector"]

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Go to the directory in the container
-cd /opt/connector-sentinel-one-indicator
+cd /opt/sentinelone-indicator-stream-connector
 
 # Launch the connector
 python3 main.py
