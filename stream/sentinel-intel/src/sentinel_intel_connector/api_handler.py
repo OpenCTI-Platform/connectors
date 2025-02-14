@@ -181,13 +181,14 @@ class SentinelApiHandler:
         elif observable["type"] == "file":
             body["fileHashType"] = get_hash_type(observable)
             body["fileHashValue"] = get_hash_value(observable)
-            body["fileName"] = observable.get("name", None)
-            body["fileSize"] = observable.get("size", 0)
-            body["fileCreatedDateTime"] = (
-                OpenCTIConnectorHelper.get_attribute_in_extension(
-                    "created_at", observable
-                )
-            )
+            # https://github.com/OpenCTI-Platform/connectors/issues/3424
+            # body["fileName"] = observable.get("name", None)
+            # body["fileSize"] = observable.get("size", 0)
+            # body["fileCreatedDateTime"] = (
+            #    OpenCTIConnectorHelper.get_attribute_in_extension(
+            #        "created_at", observable
+            #    )
+            # )
         else:
             body = {}
         return body
@@ -220,7 +221,7 @@ class SentinelApiHandler:
         """
         Create a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
         :param observable: OpenCTI observable to create Threat Intelligence Indicator for
-        :return: Threat Intelligence Indicator if request is succesful, None otherwise
+        :return: Threat Intelligence Indicator if request is successful, None otherwise
         """
         request_body = self._build_request_body(observable)
         if not request_body:
