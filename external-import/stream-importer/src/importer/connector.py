@@ -180,8 +180,12 @@ class StreamImporterConnector(ExternalImportConnector):
             os.path.join(self.minio_dst_path, event.path),
             CopySource(self.minio_src_bucket, event.path),
         )
-        self.minio_client.remove_object(self.minio_src_bucket, os.path.join(self.minio_src_path, event.path))
-        self.helper.log_info(f"File {event.path} moved to {os.path.join(self.minio_dst_bucket, self.minio_dst_path)}")
+        self.minio_client.remove_object(
+            self.minio_src_bucket, os.path.join(self.minio_src_path, event.path)
+        )
+        self.helper.log_info(
+            f"File {event.path} moved to {os.path.join(self.minio_dst_bucket, self.minio_dst_path)}"
+        )
 
     def _send_event(self, channel, event: str) -> None:
         """Send the content of the event to RabbitMQ.
