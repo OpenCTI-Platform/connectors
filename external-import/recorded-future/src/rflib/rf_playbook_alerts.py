@@ -462,11 +462,11 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                         )
                         stix_relationship = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
-                                "related-to", stix_incident.id, stix_ipv4address.id
+                                "related-to", stix_ipv4address.id, stix_incident.id
                             ),
                             relationship_type="related-to",
-                            source_ref=stix_incident.id,
-                            target_ref=stix_ipv4address.id,
+                            source_ref=stix_ipv4address.id,
+                            target_ref=stix_incident.id,
                             created_by_ref=self.author["id"],
                             object_marking_refs=self.tlp,
                         )
@@ -567,11 +567,11 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         )
         stix_relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
-                "related-to", stix_incident.id, stix_url.id
+                "related-to", stix_url.id, stix_incident.id
             ),
             relationship_type="related-to",
-            source_ref=stix_incident.id,
-            target_ref=stix_url.id,
+            source_ref=stix_url.id,
+            target_ref=stix_incident.id,
             created_by_ref=self.author["id"],
             object_marking_refs=self.tlp,
         )
@@ -624,11 +624,11 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 )
                 stix_relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "related-to", stix_incident.id, stix_ipv4address.id
+                        "related-to", stix_ipv4address.id, stix_incident.id
                     ),
                     relationship_type="related-to",
-                    source_ref=stix_incident.id,
-                    target_ref=stix_ipv4address.id,
+                    source_ref=stix_ipv4address.id,
+                    target_ref=stix_incident.id,
                     created_by_ref=self.author["id"],
                     object_marking_refs=self.tlp,
                 )
@@ -658,11 +658,11 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 )
                 stix_relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "related-to", stix_incident.id, stix_domain.id
+                        "related-to", stix_domain.id, stix_incident.id
                     ),
                     relationship_type="related-to",
-                    source_ref=stix_incident.id,
-                    target_ref=stix_domain.id,
+                    source_ref=stix_domain.id,
+                    target_ref=stix_incident.id,
                     created_by_ref=self.author["id"],
                     object_marking_refs=self.tlp,
                 )

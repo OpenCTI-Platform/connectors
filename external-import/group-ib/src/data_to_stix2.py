@@ -132,7 +132,7 @@ class BaseEntity(_CommonUtils):
         self.is_ioc = False
         self.description = ""
 
-        self.valid_from: datetime = datetime.now()
+        self.valid_from = None
         self.valid_until: datetime = datetime.now()
 
         # defined in self._setup

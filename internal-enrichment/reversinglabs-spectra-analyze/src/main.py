@@ -544,7 +544,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         relationship,
     ):
         stix_indicator_with_relationship = []
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         rl_threat_platform = results["platform"]
 
         # Create indicator
@@ -555,7 +554,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             labels=results["labels"],
             pattern=indicator_pattern,
             created_by_ref=self.reversinglabs_identity["standard_id"],
-            valid_from=now,
             object_marking_refs=[stix2.TLP_AMBER],
             custom_properties={
                 "pattern_type": "stix",
@@ -629,7 +627,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 name=sha1,
                 description=description,
                 labels=labels,
-                valid_from=now,
                 pattern=f"[file:hashes. 'SHA-1' = '{sha1}']",
                 created_by_ref=self.reversinglabs_identity["standard_id"],
                 object_marking_refs=[stix2.TLP_AMBER],
@@ -648,7 +645,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 name=download_url,
                 description=description,
                 labels=labels,
-                valid_from=now,
                 pattern=f"[url:value = '{download_url}']",
                 created_by_ref=self.reversinglabs_identity["standard_id"],
                 object_marking_refs=[stix2.TLP_AMBER],
@@ -853,7 +849,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 name=one_domain.get("requested_domain"),
                 description="Created from Spectra Analyze Domain report.",
                 labels=labels,
-                valid_from=now,
                 pattern=f"[domain-name:value = '{one_domain.get('requested_domain')}']",
                 created_by_ref=self.reversinglabs_identity["standard_id"],
                 object_marking_refs=[stix2.TLP_AMBER],
@@ -990,7 +985,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 name=one_url.get("requested_url"),
                 description="Created from Spectra Analyze URL report.",
                 labels=labels,
-                valid_from=now,
                 pattern=f"[url:value = '{one_url.get('requested_url')}']",
                 created_by_ref=self.reversinglabs_identity["standard_id"],
                 object_marking_refs=[stix2.TLP_AMBER],
@@ -1118,7 +1112,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             name=self.domain_sample,
             description="Created from Spectra Analyze Domain report.",
             labels=labels,
-            valid_from=now,
             pattern=f"[domain-name:value = '{self.domain_sample}']",
             created_by_ref=self.reversinglabs_identity["standard_id"],
             object_marking_refs=[stix2.TLP_AMBER],
@@ -1249,7 +1242,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             name=self.url_sample,
             description="Created from Spectra Analyze URL report.",
             labels=labels,
-            valid_from=now,
             pattern=f"[url:value = '{self.url_sample}']",
             created_by_ref=self.reversinglabs_identity["standard_id"],
             object_marking_refs=[stix2.TLP_AMBER],

@@ -51,7 +51,10 @@ class RiskList(threading.Thread):
                         )
                         continue
                 # Convert into stix object
-                indicator = risk_list_type["class"](row["Name"], key, tlp=self.tlp)
+                first_seen = row["FirstSeen"] if row["FirstSeen"] else None
+                indicator = risk_list_type["class"](
+                    row["Name"], key, tlp=self.tlp, first_seen=first_seen
+                )
 
                 rule_criticality_list = row["RuleCriticality"].strip("][").split(",")
                 risk_rules_list_str = row["RiskRules"].strip("][")

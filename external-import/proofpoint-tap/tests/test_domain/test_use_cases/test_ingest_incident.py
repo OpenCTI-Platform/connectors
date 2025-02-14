@@ -6,11 +6,7 @@ from datetime import datetime, timezone
 from typing import Literal, Optional
 
 from proofpoint_tap.domain.use_cases.ingest_incident import IncidentProcessor
-from proofpoint_tap.ports.event import (
-    ClickEventPort,
-    EventThreatPort,
-    MessageEventPort,
-)
+from proofpoint_tap.ports.event import ClickEventPort, EventThreatPort, MessageEventPort
 from stix2.v21.base import _STIXBase21
 
 
