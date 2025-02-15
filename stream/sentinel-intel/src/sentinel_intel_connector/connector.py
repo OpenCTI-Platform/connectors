@@ -5,7 +5,7 @@ from stix_shifter.stix_translation import stix_translation
 
 from .api_handler import SentinelApiHandler
 from .config_variables import ConfigConnector
-from .utils import is_observable, is_stix_indicator
+from .utils import is_observable, is_stix_indicator, get_ioc_type, get_hash_type, get_hash_value
 
 
 class SentinelIntelConnector:
@@ -117,7 +117,8 @@ class SentinelIntelConnector:
                 "id", observable_data
             )
             self.helper.connector_logger.info(
-                "[CREATE] ID {" + observable_opencti_id + " Success }"
+                "[CREATE] Indicator created",
+                {"sentinel_id": result["id"], "opencti_id": observable_opencti_id}
             )
 
             # Update OpenCTI SDO external references
@@ -145,35 +146,65 @@ class SentinelIntelConnector:
         :param observable_data: OpenCTI observable data
         :return: True if the indicator has been successfully updated, False otherwise
         """
-        result = self.api.patch_indicator(observable_data)
-        if result:
-            observable_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
-                "id", observable_data
-            )
-            self.helper.connector_logger.info(
-                "[UPDATE] ID {" + observable_opencti_id + " Success }"
-            )
-        return result
+        indicator_id = OpenCTIConnectorHelper.get_attribute_in_extension(
+            "id", observable_data
+        )
+        sentinel_indicators = self.api.search_indicator(opencti_id=indicator_id)
+        if len(sentinel_indicators) == 1:
+            sentinel_indicator_id = sentinel_indicators[0]["id"]
+
+            result = self.api.patch_indicator(observable_data, sentinel_indicator_id)
+            if result:
+                self.helper.connector_logger.info(
+                    "[UPDATE] Indicator updated",
+                    {"sentinel_id": sentinel_indicator_id, "opencti_id": indicator_id}
+                )
+            return result
+
+        else:
+            # case of an OpenCTI composed STIX indicator divided into multiple Sentinel indicator
+            sentinel_indicator_id = None
+            for sentinel_indicator in sentinel_indicators:
+                sentinel_ioc_type = get_ioc_type(observable_data)
+                if sentinel_ioc_type == "file" and observable_data.get("type") == "file":
+                    if (sentinel_indicator["fileHashType"] == get_hash_type(observable_data)
+                            and sentinel_indicator["fileHashValue"].lower() == get_hash_value(observable_data).lower()):
+                        sentinel_indicator_id = sentinel_indicator["id"]
+                        break
+
+                if (sentinel_indicator.get(sentinel_ioc_type, None) and
+                        sentinel_indicator.get(sentinel_ioc_type) == observable_data["value"]):
+                    sentinel_indicator_id = sentinel_indicator["id"]
+                    break
+
+            result = self.api.patch_indicator(observable_data, sentinel_indicator_id)
+            if result:
+                self.helper.connector_logger.info(
+                    "[UPDATE] Indicator updated",
+                    {"sentinel_id": sentinel_indicator_id, "opencti_id": indicator_id}
+                )
+                return result
 
     def _delete_sentinel_indicator(self, observable_data) -> bool:
         """
-        Delete Threat Intelligence Indicators on Sentinal corresponding to an OpenCTI observable.
+        Delete Threat Intelligence Indicators on Sentinel corresponding to an OpenCTI observable.
         :param observable_data: OpenCTI observable data
         :return: True if the indicators have been successfully deleted, False otherwise
         """
         did_delete = False
 
-        observable_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
+        opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
             "id", observable_data
         )
-        indicators_data = self.api.get_indicators()
+        indicators_data = self.api.search_indicator(opencti_id=opencti_id)
         for indicator_data in indicators_data:
-            if indicator_data["externalId"] == observable_opencti_id:
+            if indicator_data["externalId"] == opencti_id:
                 result = self.api.delete_indicator(indicator_data["id"])
                 # TODO: should we delete external references on OpenCTI too?
                 if result:
                     self.helper.connector_logger.info(
-                        "[DELETE] ID {" + observable_opencti_id + "} Success"
+                        "[UPDATE] Indicator deleted",
+                        {"sentinel_id": indicator_data["id"], "opencti_id": opencti_id}
                     )
                 did_delete = result
         return did_delete
@@ -183,13 +214,6 @@ class SentinelIntelConnector:
         Handle create event by trying to create the corresponding Threat Intelligence Indicator on Sentinel.
         :param data: Streamed data (representing either an observable or an indicator)
         """
-        observable_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
-            "id", data
-        )
-        self.helper.connector_logger.info(
-            "[CREATE] Sentinel Indicator", {"external_id": observable_opencti_id}
-        )
-
         if is_stix_indicator(data):
             observables = self._convert_indicator_to_observables(data)
             for observable in observables:
@@ -205,9 +229,6 @@ class SentinelIntelConnector:
         observable_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
             "id", data
         )
-        self.helper.connector_logger.info(
-            "[UPDATE] Sentinel Indicator", {"external_id": observable_opencti_id}
-        )
 
         if is_stix_indicator(data):
             observables = self._convert_indicator_to_observables(data)
@@ -221,24 +242,15 @@ class SentinelIntelConnector:
         Handle delete event by trying to delete the corresponding Threat Intelligence Indicators on Sentinel.
         :param data: Streamed data (representing either an observable or an indicator)
         """
-        observable_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
+        opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
             "id", data
         )
-        self.helper.connector_logger.info(
-            "[DELETE] Sentinel Indicator", {"external_id": observable_opencti_id}
-        )
-
         did_delete = self._delete_sentinel_indicator(data)
-        if did_delete:
+        if not did_delete:
             self.helper.connector_logger.info(
-                "[DELETE] ID {" + observable_opencti_id + "} Success"
-            )
-        else:
-            self.helper.connector_logger.info(
-                "[DELETE] ID {"
-                + observable_opencti_id
-                + "} Not found on "
-                + self.config.target_product.replace("Azure", "Microsoft")
+                "[DELETE] Indicator not found on "
+                + self.config.target_product.replace("Azure", "Microsoft"),
+                {"opencti_id": opencti_id}
             )
 
     def process_message(self, msg) -> None:
