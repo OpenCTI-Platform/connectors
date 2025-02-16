@@ -27,6 +27,7 @@ class ExternalImportHelper:
 
             return interval  # Return the validated ISO-8601 duration string
         except Exception as ex:
+            interval = cfg.connector_duration_period
             msg = (
                 f"Error ({ex}) when grabbing CONNECTOR__DURATION_PERIOD environment variable: '{interval}'. "
                 "It SHOULD be a valid ISO-8601 duration string (e.g., 'P7D', 'PT12H', 'PT10M', 'PT30S')."

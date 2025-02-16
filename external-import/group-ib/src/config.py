@@ -4,57 +4,20 @@ from typing import Any
 
 import yaml
 from cyberintegrations.utils import FileHandler
+from dotenv import load_dotenv
 from pycti import get_config_variable
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 from stix2.v21.vocab import MALWARE_TYPE
 
 
 class ConfigConnector:
-    collection_map = {
-        "apt_threat": "apt/threat",
-        "apt_threat_actor": "apt/threat_actor",
-        "attacks_ddos": "attacks/ddos",
-        "attacks_deface": "attacks/deface",
-        "attacks_phishing_group": "attacks/phishing_group",
-        "attacks_phishing_kit": "attacks/phishing_kit",
-        "compromised_access": "compromised/access",
-        "compromised_account_group": "compromised/account_group",
-        "compromised_bank_card_group": "compromised/bank_card_group",
-        "compromised_discord": "compromised/discord",
-        "compromised_imei": "compromised/imei",
-        "compromised_masked_card": "compromised/masked_card",
-        "compromised_messenger": "compromised/messenger",
-        "compromised_mule": "compromised/mule",
-        "hi_open_threats": "hi/open_threats",
-        "hi_threat": "hi/threat",
-        "hi_threat_actor": "hi/threat_actor",
-        "ioc_common": "ioc/common",
-        "malware_cnc": "malware/cnc",
-        "malware_config": "malware/config",
-        "malware_malware": "malware/malware",
-        "malware_signature": "malware/signature",
-        "malware_yara": "malware/yara",
-        "osi_git_repository": "osi/git_repository",
-        "osi_public_leak": "osi/public_leak",
-        "osi_vulnerability": "osi/vulnerability",
-        "suspicious_ip_open_proxy": "suspicious_ip/open_proxy",
-        "suspicious_ip_scanner": "suspicious_ip/scanner",
-        "suspicious_ip_socks_proxy": "suspicious_ip/socks_proxy",
-        "suspicious_ip_tor_node": "suspicious_ip/tor_node",
-        "suspicious_ip_vpn": "suspicious_ip/vpn",
-    }
 
     def __init__(self):
         """
         Initialize the connector with necessary configurations
         """
         self.load = self._load_config()
-        self.setting_varibles_names_for_env = self._get_setting_varibles_names_for_env(
-            data=self.load
-        )
-        self.setting_varibles_names_for_yml = self._get_setting_varibles_names_for_yml(
-            data=self.setting_varibles_names_for_env
-        )
+        self.env_keys = self._load_env_keys()
         self._initialize_configurations()
         self.collection_mapping_config = FileHandler().read_json_config(
             self.CONFIG_JSON
@@ -62,169 +25,82 @@ class ConfigConnector:
 
     def _load_config(self) -> dict:
         """
-        Loads the configuration from `config.yml` or falls back to `config.yml.sample` if `config.yml` does not exist.
-
-        This function reads the `config.yml` file located in the `src` directory and
-        parses it into a dictionary. If `config.yml` does not exist, it tries to load `config.yml.sample`.
-        If neither file exists, it returns an empty dictionary.
-
-        Returns:
-            dict: A dictionary containing the parsed configuration settings.
-
-        Raises:
-            yaml.YAMLError: If an error occurs while parsing the YAML file.
+        Loads the configuration from `config.yml`. If `config.yml` does not exist, returns an empty dictionary.
         """
         config_dir = Path(__file__).parents[1].joinpath("src")
         config_file_path = config_dir.joinpath("config.yml")
-        sample_config_file_path = config_dir.joinpath("config.yml.sample")
 
-        for file_path in [config_file_path, sample_config_file_path]:
-            if file_path.is_file():
-                with open(file_path, "r", encoding="utf-8") as file:
-                    return yaml.load(file, Loader=yaml.FullLoader)
+        if config_file_path.is_file():
+            with open(config_file_path, "r", encoding="utf-8") as file:
+                return yaml.load(file, Loader=yaml.FullLoader)
 
         return {}
+    
+    def _load_env_keys(self) -> list[str]:
+        load_dotenv()
+        return os.environ.keys()
+    
+    def _extract_config_keys(self, data, parent_keys=None):
+        if parent_keys is None:
+            parent_keys = []
 
-    def _get_setting_varibles_names_for_env(
-        self, data: dict[str, int | str, bool | dict] | Any
-    ) -> list[str]:
-        """
-        Recursively collects keys from a given configuration dictionary and formats them into a standardized
-        format suitable for retrieving values from a `.env` file.
-
-        The function:
-        - Converts dictionary keys to uppercase.
-        - Replaces forward slashes (`/`) in keys with underscores (`_`).
-        - Recursively processes nested dictionaries, appending child keys to parent keys.
-        - Uses different delimiters for specific top-level keys (`OPENCTI` and `CONNECTOR` use a single underscore `_`,
-        while others use a double underscore `__`).
-
-        Args:
-            data (dict[str, int | str, bool | dict] | Any):
-                A dictionary representing configuration settings, where keys are setting names and
-                values may be nested dictionaries or primitive types.
-
-        Returns:
-            list[str]:
-                A list of formatted environment variable names derived from the input dictionary.
-
-        Example:
-            Given the following `config.yml` structure:
-
-            ```yaml
-            opencti:
-                url: "http://example.com"
-                token: "my_token"
-            connector:
-                name: "my_connector"
-                active: true
-            database:
-                host: "localhost"
-                port: 5432
-            ```
-
-            Calling `_get_setting_varibles_names_for_env(config_data)` would return:
-
-            ```python
-            [
-                "OPENCTI_URL",
-                "OPENCTI_TOKEN",
-                "CONNECTOR_NAME",
-                "CONNECTOR_ACTIVE",
-                "DATABASE__HOST",
-                "DATABASE__PORT"
-            ]
-            ```
-        """
-
-        keys = []
+        keys_list = []
         if isinstance(data, dict):
             for key, value in data.items():
-
-                formated_key = key.upper().replace("/", "_")
+                new_keys = parent_keys + [key]
                 if isinstance(value, dict):
-                    list_formated_keys = self._get_setting_varibles_names_for_env(
-                        data=value
-                    )
-                    for item_formatted_keys in list_formated_keys:
-                        if formated_key in ("OPENCTI", "CONNECTOR"):
-                            keys.append(f"{formated_key}_{item_formatted_keys}")
-                        else:
-                            keys.append(f"{formated_key}__{item_formatted_keys}")
+                    keys_list.extend(self._extract_config_keys(value, new_keys))
                 else:
-                    keys.append(formated_key)
-        return keys
+                    keys_list.append(new_keys)
+        return keys_list
+    
+    def _converting_keys_to_environment_keys(self, key):
+        if not key or not isinstance(key, list):
+            return None
 
-    def _get_setting_varibles_names_for_yml(self, data: list[str]) -> dict:
-        """
-        Converts environment variable names into a format that represents the corresponding key path in `config.yml`.
+        key = [str(k).upper().replace("-", "_") for k in key]
 
-        This function is used to retrieve the path needed to access values from `config.yml`.
-        It splits environment variable names into their components using different delimiters:
-        - If the variable contains `"OPENCTI"` or `"CONNECTOR"`, it is split using `_` (a single underscore).
-        - Otherwise, it is split using `__` (a double underscore).
+        if key[0] in ["OPENCTI", "CONNECTOR"]:
+            return "_".join(key)  
+        
+        if key[0] == "TI_API":
+            if len(key) > 1 and key[1] == "COLLECTIONS":
+                modified_key = key[2:]
+                modified_key = [part.replace("/", "_") for part in modified_key]
+                return f"{key[0]}__{key[1]}__{'__'.join(modified_key)}" if modified_key else f"{key[0]}__{key[1]}"
+            return "__".join(key)  
 
-        Additionally, if the third element in the key path is `"collections"`, the fourth element is replaced
-        with its mapped value from `self.collection_map`.
+        return "_".join(key)
 
-        Args:
-            data (list[str]):
-                A list of environment variable names, e.g., `["OPENCTI_URL", "DATABASE__HOST"]`.
-
-        Returns:
-            dict:
-                A dictionary where:
-                - The key is the original environment variable name.
-                - The value is a list of strings representing the corresponding path in `config.yml`.
-
-        Example:
-            Input:
-            ```python
-            data = [
-                "OPENCTI_URL",
-                "CONNECTOR_NAME",
-                "DATABASE__HOST",
-                "DATABASE__PORT",
-                "OPENCTI_COLLECTIONS__THREATS"
-            ]
-            ```
-
-            Output:
-            ```python
-            {
-                "OPENCTI_URL": ["opencti", "url"],
-                "CONNECTOR_NAME": ["connector", "name"],
-                "DATABASE__HOST": ["database", "host"],
-                "DATABASE__PORT": ["database", "port"],
-                "OPENCTI_COLLECTIONS__THREATS": ["opencti", "collections", "mapped_value"]
-            }
-            ```
-        """
-        keys = {}
-        for env_key in data:
-            if "OPENCTI" in env_key or "CONNECTOR" in env_key:
-                formated_keys = env_key.lower().split("_")
-            else:
-                formated_keys = env_key.lower().split("__")
-            if len(formated_keys) > 2 and formated_keys[2] == "collections":
-                formated_keys[3] = self.collection_map.get(formated_keys[3])
-            keys.update({env_key: formated_keys})
-        return keys
-
+       
     def _initialize_configurations(self) -> None:
         """
         Connector configuration variables
         :return: None
         """
-
-        for setting_variable in self.setting_varibles_names_for_env:
-            attr_name = setting_variable.lower().replace("__", "_")
-            attr_value = get_config_variable(
-                env_var=setting_variable,
-                yaml_path=setting_variable.split("__"),
-                config=self.load,
-            )
-            setattr(self, attr_name, attr_value)
+        if self.load:
+            for key in self._extract_config_keys(self.load):
+                print('key:', key)
+                if len(key) > 2 and key[1] == 'collections':
+                    key[2] = key[2].replace("/", "_")
+                env_var = self._converting_keys_to_environment_keys(key)
+                print('env_var:', env_var)
+                attr_name = "__".join(key).lower().replace("__", "_")
+                attr_value = get_config_variable(
+                    env_var=env_var,
+                    yaml_path=key,
+                    config=self.load,
+                )
+                setattr(self, attr_name, attr_value)
+        else:
+            for env_key in self.env_keys:
+                attr_name = env_key.lower().replace("__", "_")
+                attr_value = get_config_variable(
+                    env_var=env_key,
+                    yaml_path=None,
+                    config=None,
+                )
+                setattr(self, attr_name, attr_value)
 
     def get_collection_settings(self, collection, setting_name) -> Any:
         collection_attr_name = f"ti_api_collections_{collection}_{setting_name}"
@@ -552,4 +428,37 @@ class ConfigConnector:
         "attack_pattern": "indicates",
         "malware": "indicates",
         "threat_actor": "indicates",
+    }
+    COLLECTION_MAP = {
+        "apt_threat": "apt/threat",
+        "apt_threat_actor": "apt/threat_actor",
+        "attacks_ddos": "attacks/ddos",
+        "attacks_deface": "attacks/deface",
+        "attacks_phishing_group": "attacks/phishing_group",
+        "attacks_phishing_kit": "attacks/phishing_kit",
+        "compromised_access": "compromised/access",
+        "compromised_account_group": "compromised/account_group",
+        "compromised_bank_card_group": "compromised/bank_card_group",
+        "compromised_discord": "compromised/discord",
+        "compromised_imei": "compromised/imei",
+        "compromised_masked_card": "compromised/masked_card",
+        "compromised_messenger": "compromised/messenger",
+        "compromised_mule": "compromised/mule",
+        "hi_open_threats": "hi/open_threats",
+        "hi_threat": "hi/threat",
+        "hi_threat_actor": "hi/threat_actor",
+        "ioc_common": "ioc/common",
+        "malware_cnc": "malware/cnc",
+        "malware_config": "malware/config",
+        "malware_malware": "malware/malware",
+        "malware_signature": "malware/signature",
+        "malware_yara": "malware/yara",
+        "osi_git_repository": "osi/git_repository",
+        "osi_public_leak": "osi/public_leak",
+        "osi_vulnerability": "osi/vulnerability",
+        "suspicious_ip_open_proxy": "suspicious_ip/open_proxy",
+        "suspicious_ip_scanner": "suspicious_ip/scanner",
+        "suspicious_ip_socks_proxy": "suspicious_ip/socks_proxy",
+        "suspicious_ip_tor_node": "suspicious_ip/tor_node",
+        "suspicious_ip_vpn": "suspicious_ip/vpn",
     }
