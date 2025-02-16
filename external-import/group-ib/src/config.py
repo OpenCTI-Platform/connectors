@@ -35,11 +35,11 @@ class ConfigConnector:
                 return yaml.load(file, Loader=yaml.FullLoader)
 
         return {}
-    
+
     def _load_env_keys(self) -> list[str]:
         load_dotenv()
         return os.environ.keys()
-    
+
     def _extract_config_keys(self, data, parent_keys=None):
         if parent_keys is None:
             parent_keys = []
@@ -53,7 +53,7 @@ class ConfigConnector:
                 else:
                     keys_list.append(new_keys)
         return keys_list
-    
+
     def _converting_keys_to_environment_keys(self, key):
         if not key or not isinstance(key, list):
             return None
@@ -61,18 +61,21 @@ class ConfigConnector:
         key = [str(k).upper().replace("-", "_") for k in key]
 
         if key[0] in ["OPENCTI", "CONNECTOR"]:
-            return "_".join(key)  
-        
+            return "_".join(key)
+
         if key[0] == "TI_API":
             if len(key) > 1 and key[1] == "COLLECTIONS":
                 modified_key = key[2:]
                 modified_key = [part.replace("/", "_") for part in modified_key]
-                return f"{key[0]}__{key[1]}__{'__'.join(modified_key)}" if modified_key else f"{key[0]}__{key[1]}"
-            return "__".join(key)  
+                return (
+                    f"{key[0]}__{key[1]}__{'__'.join(modified_key)}"
+                    if modified_key
+                    else f"{key[0]}__{key[1]}"
+                )
+            return "__".join(key)
 
         return "_".join(key)
 
-       
     def _initialize_configurations(self) -> None:
         """
         Connector configuration variables
@@ -80,7 +83,7 @@ class ConfigConnector:
         """
         if self.load:
             for key in self._extract_config_keys(self.load):
-                if len(key) > 2 and key[1] == 'collections':
+                if len(key) > 2 and key[1] == "collections":
                     key[2] = key[2].replace("/", "_")
                 env_var = self._converting_keys_to_environment_keys(key)
                 attr_name = "__".join(key).lower().replace("__", "_")
