@@ -80,11 +80,9 @@ class ConfigConnector:
         """
         if self.load:
             for key in self._extract_config_keys(self.load):
-                print('key:', key)
                 if len(key) > 2 and key[1] == 'collections':
                     key[2] = key[2].replace("/", "_")
                 env_var = self._converting_keys_to_environment_keys(key)
-                print('env_var:', env_var)
                 attr_name = "__".join(key).lower().replace("__", "_")
                 attr_value = get_config_variable(
                     env_var=env_var,
