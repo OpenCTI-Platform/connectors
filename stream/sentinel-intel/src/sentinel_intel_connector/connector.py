@@ -242,9 +242,6 @@ class SentinelIntelConnector:
         Handle update event by trying to update the corresponding Threat Intelligence Indicator on Sentinel.
         :param data: Streamed data (representing either an observable or an indicator)
         """
-        observable_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
-            "id", data
-        )
 
         if is_stix_indicator(data):
             observables = self._convert_indicator_to_observables(data)
