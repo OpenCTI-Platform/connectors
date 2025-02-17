@@ -124,7 +124,7 @@ class SentinelIntelConnector:
             )
             self.helper.connector_logger.info(
                 "[CREATE] Indicator created",
-                {"sentinel_id": result["id"], "opencti_id": observable_opencti_id}
+                {"sentinel_id": result["id"], "opencti_id": observable_opencti_id},
             )
 
             # Update OpenCTI SDO external references
@@ -163,7 +163,7 @@ class SentinelIntelConnector:
             if result:
                 self.helper.connector_logger.info(
                     "[UPDATE] Indicator updated",
-                    {"sentinel_id": sentinel_indicator_id, "opencti_id": indicator_id}
+                    {"sentinel_id": sentinel_indicator_id, "opencti_id": indicator_id},
                 )
             return result
 
@@ -172,14 +172,24 @@ class SentinelIntelConnector:
             sentinel_indicator_id = None
             for sentinel_indicator in sentinel_indicators:
                 sentinel_ioc_type = get_ioc_type(observable_data)
-                if sentinel_ioc_type == "file" and observable_data.get("type") == "file":
-                    if (sentinel_indicator["fileHashType"] == get_hash_type(observable_data)
-                            and sentinel_indicator["fileHashValue"].lower() == get_hash_value(observable_data).lower()):
+                if (
+                    sentinel_ioc_type == "file"
+                    and observable_data.get("type") == "file"
+                ):
+                    if (
+                        sentinel_indicator["fileHashType"]
+                        == get_hash_type(observable_data)
+                        and sentinel_indicator["fileHashValue"].lower()
+                        == get_hash_value(observable_data).lower()
+                    ):
                         sentinel_indicator_id = sentinel_indicator["id"]
                         break
 
-                if (sentinel_indicator.get(sentinel_ioc_type, None) and
-                        sentinel_indicator.get(sentinel_ioc_type) == observable_data["value"]):
+                if (
+                    sentinel_indicator.get(sentinel_ioc_type, None)
+                    and sentinel_indicator.get(sentinel_ioc_type)
+                    == observable_data["value"]
+                ):
                     sentinel_indicator_id = sentinel_indicator["id"]
                     break
 
@@ -187,7 +197,7 @@ class SentinelIntelConnector:
             if result:
                 self.helper.connector_logger.info(
                     "[UPDATE] Indicator updated",
-                    {"sentinel_id": sentinel_indicator_id, "opencti_id": indicator_id}
+                    {"sentinel_id": sentinel_indicator_id, "opencti_id": indicator_id},
                 )
                 return result
 
@@ -210,7 +220,7 @@ class SentinelIntelConnector:
                 if result:
                     self.helper.connector_logger.info(
                         "[UPDATE] Indicator deleted",
-                        {"sentinel_id": indicator_data["id"], "opencti_id": opencti_id}
+                        {"sentinel_id": indicator_data["id"], "opencti_id": opencti_id},
                     )
                 did_delete = result
         return did_delete
@@ -248,15 +258,13 @@ class SentinelIntelConnector:
         Handle delete event by trying to delete the corresponding Threat Intelligence Indicators on Sentinel.
         :param data: Streamed data (representing either an observable or an indicator)
         """
-        opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
-            "id", data
-        )
+        opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         did_delete = self._delete_sentinel_indicator(data)
         if not did_delete:
             self.helper.connector_logger.info(
                 "[DELETE] Indicator not found on "
                 + self.config.target_product.replace("Azure", "Microsoft"),
-                {"opencti_id": opencti_id}
+                {"opencti_id": opencti_id},
             )
 
     def process_message(self, msg) -> None:
