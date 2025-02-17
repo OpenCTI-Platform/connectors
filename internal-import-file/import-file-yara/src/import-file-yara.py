@@ -78,9 +78,6 @@ class ImportFileYARA:
             object_marking_refs=[],
             external_references=external_references,
             created=datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            valid_from=datetime.datetime.now(datetime.UTC).strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-            ),
             custom_properties={
                 "x_opencti_main_observable_type": "StixFile",
                 "x_opencti_score": 100,

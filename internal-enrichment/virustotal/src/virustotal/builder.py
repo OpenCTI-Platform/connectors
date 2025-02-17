@@ -213,7 +213,6 @@ class VirusTotalBuilder:
                 confidence=self.helper.connect_confidence_level,
                 pattern=pattern,
                 pattern_type="stix",
-                valid_from=self.helper.api.stix2.format_date(now_time),
                 valid_until=self.helper.api.stix2.format_date(valid_until),
                 external_references=(
                     [self.external_reference]
