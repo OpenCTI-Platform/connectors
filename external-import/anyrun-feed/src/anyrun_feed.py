@@ -11,7 +11,8 @@ class AnyrunFeed(ExternalImportConnector):
     def __init__(self):
         super().__init__()
         self.token = os.environ.get("ANYRUN_TI_TOKEN", "")
-        self.ti_url = os.environ.get("ANYRUN_TI_URL", "https://api.any.run/v1/feeds/stix.json")
+        self.ti_url = os.environ.get("ANYRUN_TI_URL",
+                                     "https://api.any.run/v1/feeds/stix.json")
 
     def get_feed(self):
         response = requests.get(
