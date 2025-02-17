@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-wiz:
-    image: opencti/connector-wiz:6.5.2
+    image: opencti/connector-wiz:6.5.1
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
@@ -12,7 +12,7 @@ services:
       - CONNECTOR_SCOPE=CHANGEME
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=CHANGEME # ISO8601 format in String, start with 'P...' for Period
-
+      - WIZ_THREAT_ACTOR_AS_INTRUSION_SET=False
       # Connector's definition parameters OPTIONAL
       # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
       # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
