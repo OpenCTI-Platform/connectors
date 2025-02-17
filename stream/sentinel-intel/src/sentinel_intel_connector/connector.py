@@ -162,7 +162,7 @@ class SentinelIntelConnector:
             return result
 
         else:
-            # case of an OpenCTI composed STIX indicator divided into multiple Sentinel indicator
+            # case of a composite STIX indicator divided into multiple Sentinel indicator
             sentinel_indicator_id = None
             for sentinel_indicator in sentinel_indicators:
                 sentinel_ioc_type = get_ioc_type(observable_data)
