@@ -48,13 +48,23 @@ class ConnectorWiz:
                 ):
                     del entities[i]["malware_types"]
 
-            if entity["type"] == "threat-actor" and self.config.threat_actor_to_intrusion_set:
+            if (
+                entity["type"] == "threat-actor"
+                and self.config.threat_actor_to_intrusion_set
+            ):
                 entity["type"] = "intrusion-set"
                 entity["id"] = entity["id"].replace("threat-actor", "intrusion-set")
 
-            if entity["type"] == "relationship" and self.config.threat_actor_to_intrusion_set:
-                entity["source_ref"] = entity["source_ref"].replace("threat-actor", "intrusion-set")
-                entity["target_ref"] = entity["target_ref"].replace("threat-actor", "intrusion-set")
+            if (
+                entity["type"] == "relationship"
+                and self.config.threat_actor_to_intrusion_set
+            ):
+                entity["source_ref"] = entity["source_ref"].replace(
+                    "threat-actor", "intrusion-set"
+                )
+                entity["target_ref"] = entity["target_ref"].replace(
+                    "threat-actor", "intrusion-set"
+                )
             i += 1
 
         return entities
