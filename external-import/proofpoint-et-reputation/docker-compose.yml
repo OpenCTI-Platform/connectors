@@ -1,0 +1,40 @@
+version: '3'
+services:
+  connector-proofpoint-et-reputation:
+    image: opencti/connector-proofpoint-et-reputation:6.5.1
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=CHANGEME
+      - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=CHANGEME # OPTIONAL default PT24H (ISO 8601 format, start with 'P...' for Period)
+
+      # Connector's definition parameters OPTIONAL
+      # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
+      # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
+      # - CONNECTOR_SEND_TO_QUEUE=True # Default True
+      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False 
+      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+      # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
+
+      # Connector's custom execution parameters
+      - PROOFPOINT_ET_REPUTATION_API_TOKEN=CHANGEME # REQUIRED
+      - PROOFPOINT_ET_REPUTATION_CREATE_INDICATOR=CHANGEME # OPTIONAL default True
+      - PROOFPOINT_ET_REPUTATION_MIN_SCORE=CHANGEME # OPTIONAL default 20
+
+      # Add proxy parameters below if needed
+      # - HTTP_PROXY=CHANGEME
+      # - HTTPS_PROXY=CHANGEME
+      # - NO_PROXY=CHANGEME
+    restart: always
+    # networks:
+    #   - docker_default
+
+# networks:
+#   default:
+#     external: true
+#     name: docker_default
