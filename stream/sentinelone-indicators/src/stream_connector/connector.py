@@ -49,7 +49,7 @@ class IndicatorConnector:
         self.helper = OpenCTIConnectorHelper(self.config.load)
 
         # FOR DEVELOPMENT ONLY:
-        self._setup_development_environment(self.helper)
+        #self._setup_development_environment(self.helper)
 
         self.s1_client = SentinelOneClient(self.helper.connector_logger, self.config)
         self.indicator_creation_identifier = INDICATOR_CREATION_SUBSTRING

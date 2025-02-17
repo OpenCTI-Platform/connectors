@@ -2,8 +2,6 @@ import traceback
 
 from stream_connector import IndicatorConnector
 
-CREATING_INDICATORS = False
-
 
 if __name__ == "__main__":
     """
