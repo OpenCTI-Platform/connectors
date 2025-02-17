@@ -5,7 +5,13 @@ from stix_shifter.stix_translation import stix_translation
 
 from .api_handler import SentinelApiHandler
 from .config_variables import ConfigConnector
-from .utils import is_observable, is_stix_indicator, get_ioc_type, get_hash_type, get_hash_value
+from .utils import (
+    get_hash_type,
+    get_hash_value,
+    get_ioc_type,
+    is_observable,
+    is_stix_indicator,
+)
 
 
 class SentinelIntelConnector:
