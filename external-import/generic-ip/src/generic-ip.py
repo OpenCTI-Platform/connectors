@@ -46,8 +46,7 @@ class GenericCSVIPImport:
         self.update_existing_data = (
             True  # os.getenv("CONNECTOR_UPDATE_EXISTING_DATA") or True
         )
-        org_name = os.getenv("ORG_NAME")
-
+        
         if not self.csv_url:
             raise Exception("An URL must be set")
 
