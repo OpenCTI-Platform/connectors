@@ -2,7 +2,8 @@ import os
 from pathlib import Path
 
 import yaml
-from pycti import get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable
+from utils import SUPPORTED_COLLECTIONS
 
 
 class ConfigConnector:
@@ -14,6 +15,7 @@ class ConfigConnector:
 
         # Load configuration file
         self.load = self._load_config()
+        self.helper = OpenCTIConnectorHelper(self.load)
         self._initialize_configurations()
 
     @staticmethod
@@ -22,6 +24,7 @@ class ConfigConnector:
         Load the configuration from the YAML file
         :return: Configuration dictionary
         """
+
         config_file_path = Path(__file__).parents[1].joinpath("config.yml")
         print(f"CONFIG FILE PATH = {config_file_path}")
         config = (
@@ -42,6 +45,7 @@ class ConfigConnector:
             yaml_path=["connector", "duration_period"],
             config=self.load,
             required=True,
+            default="PT1H",
         )
 
         self.bambenek_username = get_config_variable(
@@ -58,11 +62,21 @@ class ConfigConnector:
             required=True,
         )
 
-        bambenek_collections = get_config_variable(
+        bambenek_collections_string = get_config_variable(
             env_var="BAMBENEK_COLLECTIONS",
             yaml_path=["bambenek", "collections"],
             config=self.load,
             required=True,
-            default="phish,malicious,threat",
+            default="c2_dga,c2_dga_high_conf,c2_domain,c2_domain_highconf,c2_ip,c2_ip_highconf",
         )
-        self.bambenek_collections = [x.strip() for x in bambenek_collections.split(",")]
+        bambenek_collections_list = [
+            x.strip() for x in bambenek_collections_string.split(",")
+        ]
+
+        # validate collection configured
+        for collection in bambenek_collections_list:
+            if collection not in SUPPORTED_COLLECTIONS:
+                self.helper.log_error(f"Unsupported collection: {collection}")
+                bambenek_collections_list.remove(collection)
+
+        self.bambenek_collections = bambenek_collections_list

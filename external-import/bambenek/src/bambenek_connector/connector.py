@@ -7,7 +7,6 @@ from pycti import OpenCTIConnectorHelper
 from .client import ConnectorClient
 from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
-from .utils import SUPPORTED_COLLECTIONS
 
 
 class ConnectorBambenek:
@@ -31,13 +30,6 @@ class ConnectorBambenek:
         :param from_date: Minimum Bambenek IOC creation date timestamp
         :return: List of STIX objects
         """
-        # validate collection configured
-        for collection in self.config.bambenek_collections:
-            if collection not in SUPPORTED_COLLECTIONS:
-                self.helper.connector_logger.error(
-                    f"Unsupported configured: {collection}"
-                )
-                self.config.bambenek_collections.remove(collection)
 
         self.helper.connector_logger.debug(
             f"Collections configured: {self.config.bambenek_collections}"
@@ -87,7 +79,6 @@ class ConnectorBambenek:
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Connector has never run..."
                 )
-                last_run = None
 
             # Friendly name will be displayed on OpenCTI platform
             friendly_name = self.helper.connect_name
@@ -122,7 +113,7 @@ class ConnectorBambenek:
                 {"current_timestamp": current_timestamp},
             )
             current_state = self.helper.get_state()
-            current_state_datetime = now_utc.strftime("%Y-%m-%dT%H:%M:%S")
+            current_state_datetime = now_utc.isoformat()
 
             if current_state:
                 current_state["last_run"] = current_state_datetime
@@ -130,10 +121,7 @@ class ConnectorBambenek:
                 current_state = {"last_run": current_state_datetime}
             self.helper.set_state(current_state)
 
-            message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(current_state_datetime)
-            )
+            message = f"{self.helper.connect_name} connector successfully run, storing last_run as {current_state_datetime}"
 
             self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)

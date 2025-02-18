@@ -1,5 +1,5 @@
 from csv import DictReader
-from datetime import datetime
+from datetime import datetime, timezone
 from ipaddress import AddressValueError, ip_address
 
 from dateutil.parser import parse
@@ -26,14 +26,16 @@ class ConverterToStix:
     def __init__(self, helper):
         self.helper = helper
         self.author = self.create_author()
-        self.collection_to_stix_function = {
-            "c2_dga": self.convert_domain_ioc_to_stix,
-            "c2_dga_high_conf": self.convert_domain_ioc_to_stix,
-            "c2_domain": self.convert_domain_ioc_to_stix,
-            "c2_domain_highconf": self.convert_domain_ioc_to_stix,
-            "c2_ip": self.convert_ip_ioc_to_stix,
-            "c2_ip_highconf": self.convert_ip_ioc_to_stix,
-        }
+        self.collection_to_stix_function = (
+            {  # Any new collections must have there converter function mapped here
+                "c2_dga": self.convert_domain_ioc_to_stix,
+                "c2_dga_high_conf": self.convert_domain_ioc_to_stix,
+                "c2_domain": self.convert_domain_ioc_to_stix,
+                "c2_domain_highconf": self.convert_domain_ioc_to_stix,
+                "c2_ip": self.convert_ip_ioc_to_stix,
+                "c2_ip_highconf": self.convert_ip_ioc_to_stix,
+            }
+        )
 
     @staticmethod
     def create_author() -> Identity:
@@ -148,9 +150,13 @@ class ConverterToStix:
         entities_as_dict = self._csv_strings_to_dict(entities, domain_schema)
         stix_objects = []
         for entity in entities_as_dict:
+            if "domain" not in entity.keys():
+                self.helper.log_warning(f"Missing domain for {entity}")
+                continue
             bundle_objects = []
-            cleaned_tag = entity.get("tag").replace("Domain used by ", "")
-            # Appears in the tags and is unnecessary
+            cleaned_tag = entity.get("tag", "").replace(
+                "Domain used by ", ""
+            )  # Appears in the tags and is unnecessary
             pattern_value = "[domain-name:value = '" + entity.get("domain") + "']"
             stix_observable = DomainName(
                 value=entity.get("domain"),
@@ -166,7 +172,9 @@ class ConverterToStix:
                 name=entity.get("domain"),
                 observable_type="Domain",
                 labels=[cleaned_tag, collection],
-                valid_from=parse(entity.get("fetch_date")),
+                valid_from=parse(
+                    entity.get("fetch_date", datetime.now(timezone.utc).isoformat())
+                ),
             )
             # create relation between observable and indicator
             stix_relationship = self._create_relation(
@@ -188,9 +196,13 @@ class ConverterToStix:
         entities_as_dict = self._csv_strings_to_dict(entities, ip_schema)
         stix_objects = []
         for entity in entities_as_dict:
+            if "ip" not in entity.keys():
+                self.helper.log_warning(f"Missing ip for {entity}")
+                continue
             bundle_objects = []
-            # Appears in the tags and is unnecessary
-            cleaned_tag = entity.get("tag").replace("IP used by ", "")
+            cleaned_tag = entity.get("tag", "").replace(
+                "IP used by ", ""
+            )  # Appears in the tags and is unnecessary
             stix_observable, ip_version = self._convert_ip_to_stix(
                 ip=entity.get("ip"), labels=[cleaned_tag]
             )
@@ -203,7 +215,9 @@ class ConverterToStix:
                 name=entity.get("ip"),
                 observable_type=observable_type,
                 labels=[cleaned_tag, collection],
-                valid_from=parse(entity.get("fetch_date")),
+                valid_from=parse(
+                    entity.get("fetch_date", datetime.now(timezone.utc).isoformat())
+                ),
             )
             # create relation between observable and indicator
             stix_relationship = self._create_relation(
