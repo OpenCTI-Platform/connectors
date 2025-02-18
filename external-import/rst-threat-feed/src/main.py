@@ -13,14 +13,8 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-from rstcloud import (
-    FeedDownloader,
-    FeedType,
-    ThreatTypes,
-    feed_converter,
-    read_state,
-    write_state,
-)
+
+from rstcloud import FeedFetch, FeedType, ThreatTypes, feed_converter
 
 
 class RSTThreatFeed:
@@ -43,11 +37,19 @@ class RSTThreatFeed:
             "contimeout": int(self.get_config("contimeout", config, 30)),
             "readtimeout": int(self.get_config("readtimeout", config, 60)),
             "retry": int(self.get_config("retry", config, 5)),
-            "delete_gz": True,
-            "feeds": {"filetype": "json"},
-            "dirs": {"tmp": self.get_config("dirs_tmp", config, "./")},
+            "ssl_verify": bool(self.get_config("ssl_verify", config, True)),
+            "latest": str(self.get_config("latest", config, "day")),
+            "time_range": ["day", "1h", "4h", "12h"],
+            "feeds": {
+                "filetype": "json",
+                "ioctype": {
+                    "ip": bool(self.get_config("ip", config, True)),
+                    "domain": bool(self.get_config("domain", config, True)),
+                    "url": bool(self.get_config("url", config, True)),
+                    "hash": bool(self.get_config("hash", config, True)),
+                },
+            },
         }
-        self._state_dir = self.get_config("dirs_tmp", config, "./")
         self._min_score_import = int(self.get_config("min_score_import", config, 20))
         self._min_score_detection = {
             "IPv4-Addr": self.get_config(
@@ -81,6 +83,13 @@ class RSTThreatFeed:
                 default=True,
             )
         )
+        if (
+            self._downloader_config["latest"]
+            not in self._downloader_config["time_range"]
+        ):
+            raise ValueError(
+                f"Incorrect time range. Use one of {self._downloader_config['time_range']}"
+            )
 
     @staticmethod
     def get_config(name: str, config, default=None):
@@ -93,6 +102,20 @@ class RSTThreatFeed:
 
     def get_interval(self) -> int:
         return int(self.interval)
+
+    def feed_enabled(self, ioc_type: str) -> bool:
+        config = self._downloader_config
+        if "feeds" in config and "ioctype" in config["feeds"]:
+            feed_types = [FeedType.IP, FeedType.DOMAIN, FeedType.URL, FeedType.HASH]
+            if ioc_type not in feed_types:
+                raise ValueError(f"Only {feed_types} values supported")
+            else:
+                if ioc_type in config["feeds"]["ioctype"]:
+                    return config["feeds"]["ioctype"][ioc_type]
+                else:
+                    return True
+        else:
+            return True
 
     def run(self):
         self.helper.log_info("Starting RST Threat Feed connector")
@@ -112,15 +135,23 @@ class RSTThreatFeed:
                     self.helper.log_info("Connector's first run")
 
                 if last_run is None or ((timestamp - last_run) > self.get_interval()):
-                    self._process_feed(FeedType.IP)
-                    self._process_feed(FeedType.DOMAIN)
-                    self._process_feed(FeedType.URL)
-                    self._process_feed(FeedType.HASH)
+                    for ioc_feed_type in [
+                        FeedType.IP,
+                        FeedType.DOMAIN,
+                        FeedType.URL,
+                        FeedType.HASH,
+                    ]:
+                        # if not specified all feeds are enabled by default
+                        # a user can select what type of feed to consume
+                        if self.feed_enabled(ioc_feed_type):
+                            self._process_feed(ioc_feed_type)
                     self.helper.set_state({"last_run": timestamp})
                 else:
-                    new_interval = self.get_interval() - (timestamp - last_run)
+                    new_interval = round(
+                        self.get_interval() - (timestamp - last_run), 2
+                    )
                     self.helper.log_info(
-                        f"Connector will not run. Next run in: {round(new_interval, 2)} seconds."
+                        f"Connector will not run. Next run in: {new_interval} seconds."
                     )
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stopped")
@@ -137,26 +168,19 @@ class RSTThreatFeed:
             time.sleep(60)
 
     def _process_feed(self, feed_type):
-        state = read_state(self._state_dir, feed_type)
-        downloader = FeedDownloader(self._downloader_config, state, feed_type)
-        downloader.set_current_day()
-        downloader.init_connection()
-        new_state = downloader.download_feed()
+        downloader = FeedFetch.Downloader(self._downloader_config)
+        result = downloader.get_feed(feed_type)
+        if result["status"] == "ok":
+            stix_bundle = self._create_stix_bundle(result["message"], feed_type)
+            self._batch_send(stix_bundle, feed_type)
+        else:
+            raise Exception(result)
 
-        if downloader.already_processed:
-            return
-
-        stix_bundle = self._create_stix_bundle(new_state, feed_type)
-        self._batch_send(stix_bundle, feed_type)
-
-        write_state(self._state_dir, feed_type, new_state)
-
-    def _create_stix_bundle(self, new_state, feed_type):
-        self.helper.log_info(f"Parsing IOCs from Feed. State {new_state}")
+    def _create_stix_bundle(self, filepath, feed_type):
+        self.helper.log_info(f"Parsing IOCs from {filepath}")
 
         iocs, threats, mapping = feed_converter(
-            self._downloader_config["dirs"]["tmp"],
-            new_state,
+            filepath,
             feed_type,
             self._min_score_import,
             self._only_new,
@@ -193,6 +217,7 @@ class RSTThreatFeed:
                 self.helper.log_info(
                     f"Error while checking x_opencti_detection for {ioc['name']}. {ex}"
                 )
+
             # indicator
             indicator = stix2.v21.Indicator(
                 id=ioc_id,
@@ -337,6 +362,7 @@ class RSTThreatFeed:
                     f"stop_time {collect} must be later than start_time {fseen}. Fixing"
                 )
                 fseen = collect
+
             relation = stix2.v21.Relationship(
                 id=StixCoreRelationship.generate_id(
                     relationship_type, indicator_id, threat_id, collect, collect
@@ -364,16 +390,21 @@ class RSTThreatFeed:
         now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
         friendly_name = f"Run for {feed_type} @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
         self.helper.log_debug(f"Start uploading of the objects: {len(stix_bundle)}")
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, friendly_name
-        )
+        try:
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
 
-        bundle = stix2.v21.Bundle(objects=stix_bundle, allow_custom=True)
-        self.helper.send_stix2_bundle(
-            bundle=bundle.serialize(),
-            update=self.update_existing_data,
-            work_id=work_id,
-        )
+            bundle = stix2.v21.Bundle(objects=stix_bundle, allow_custom=True)
+            self.helper.send_stix2_bundle(
+                bundle=bundle.serialize(),
+                update=self.update_existing_data,
+                work_id=work_id,
+            )
+        except Exception as e:
+            self.helper.log_error("Communication issue with opencti %s", e)
+            raise e
+
         # Finish the work
         self.helper.log_info(
             f"Connector ran successfully, saving last_run as {str(timestamp)}"

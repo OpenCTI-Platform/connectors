@@ -11,7 +11,7 @@ import requests
 import stix2
 import yaml
 from dateutil.parser import parse
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class ReportHub:
@@ -53,6 +53,14 @@ class ReportHub:
             "create_custom_ttps": bool(
                 self.get_config("create_custom_ttps", config, True)
             ),
+            "report_labels_disabled": list(
+                self.labels_format_check(
+                    self.get_config("report_labels_disabled", config, "")
+                )
+            ),
+            "set_detection_flag": bool(
+                self.get_config("set_detection_flag", config, False)
+            ),
         }
         self.update_existing_data = bool(
             get_config_variable(
@@ -71,6 +79,19 @@ class ReportHub:
             return result
         else:
             return default
+
+    def labels_format_check(self, labels_str: str):
+        labels = labels_str.split(",")
+        # Ensures the label contains only lowercase letters, numbers, or underscores
+        label_pattern = re.compile(r"^[a-z0-9_]+$")
+        valid_labels = []
+        for label in labels:
+            label = label.strip()  # Remove any surrounding whitespace
+            if label_pattern.fullmatch(label):  # Check if the label matches the pattern
+                valid_labels.append(label)
+            else:
+                self.helper.log_warning(f"Invalid label format. Skipping: '{label}'")
+        return valid_labels
 
     def extract_file_hashes(self, pattern: str):
         hashes = {}
@@ -117,9 +138,6 @@ class ReportHub:
             stix_observ = None
         if stix_observ:
             based_on = stix2.v21.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "based-on", stix_indicator["id"], stix_observ["id"]
-                ),
                 source_ref=stix_indicator["id"],
                 relationship_type="based-on",
                 target_ref=stix_observ["id"],
@@ -140,7 +158,7 @@ class ReportHub:
         removed_ids = []
         for entry in parsed_bundle.get("objects", []):
             # create an observable for every indicator
-            # if user selects that option
+            # if a user selects that option
             if (
                 entry.get("type", "") == "indicator"
                 and self._downloader_config["create_observables"]
@@ -151,8 +169,14 @@ class ReportHub:
                     observ_ids.append(observ_obj.id)
                     stix_bundle_main.append(based_on)
                     observ_rel_ids.append(based_on.id)
+            # set x_opencti_detection flag to true for indicators if selected in the config
+            elif (
+                entry.get("type", "") == "indicator"
+                and self._downloader_config["set_detection_flag"]
+            ):
+                entry["x_opencti_detection"] = True
             # remove related-to relationships from the bundle
-            # if user selects that option
+            # if a user selects that option
             elif (
                 entry.get("type", "") == "relationship"
                 and entry.get("relationship_type", "") == "related-to"
@@ -172,6 +196,12 @@ class ReportHub:
                 continue
             # attach a pdf
             elif entry.get("type", "") == "report":
+                # Remove disabled labels from entry['lables']
+                entry["labels"] = [
+                    label
+                    for label in entry.get("labels", [])
+                    if label not in self._downloader_config["report_labels_disabled"]
+                ]
                 if x_opencti_file:
                     entry["x_opencti_files"] = [x_opencti_file]
                 else:
