@@ -19,6 +19,12 @@ from .utils import (
 )
 
 
+class SentinelApiHandlerError(Exception):
+    def __init__(self, msg, metadata):
+        self.msg = msg
+        self.metadata = metadata
+
+
 class SentinelApiHandler:
     def __init__(self, helper, config):
         """
@@ -107,40 +113,11 @@ class SentinelApiHandler:
             if response.content:
                 return response.json()
 
-        except RetryError as err:
-            self.helper.connector_logger.error(
-                "A retry error occurred, maximum retries exceeded for url",
-                {"url_path": f"{method.upper()} {url}", "error": str(err)},
-            )
-            return None
-
-        except HTTPError as err:
-            self.helper.connector_logger.error(
-                "[API] A HTTP error occurred",
-                {"url_path": f"{method.upper()} {url}", "error": str(err)},
-            )
-            return None
-
-        except Timeout as err:
-            self.helper.connector_logger.error(
-                "[API] A timeout error occurred",
-                {"url_path": f"{method.upper()} {url}", "error": str(err)},
-            )
-            return None
-
-        except ConnectionError as err:
-            self.helper.connector_logger.error(
-                "[API] A connection error occurred",
-                {"url_path": f"{method.upper()} {url}", "error": str(err)},
-            )
-            return None
-
-        except Exception as err:
-            self.helper.connector_logger.error(
-                "[API] An unexpected error occurred",
-                {"url_path": f"{method.upper()} {url}", "error": str(err)},
-            )
-            return None
+        except (RetryError, HTTPError, Timeout, ConnectionError) as err:
+            raise SentinelApiHandlerError(
+                "[API] An error occured during request",
+                {"url_path": f"{method.upper()} {url}"},
+            ) from err
 
     def _build_request_body(self, observable: dict) -> dict:
         """
