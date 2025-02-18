@@ -78,7 +78,7 @@ class ConverterToStix:
         incident_labels = [alert.get("category")] if alert.get("category") else None
         incident_description = (
             alert.get("description", "")
-            + "\n\nRecommanded Actions:\n\n"
+            + "\n\nRecommended Actions:\n\n"
             + alert.get("recommendedActions", "")
         )
 
