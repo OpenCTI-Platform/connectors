@@ -111,7 +111,7 @@ class Connector:
                 self.taxii2.filters["added_after"] = dt_format
             else:
                 added_after = datetime.now() - timedelta(
-                    hours=self.config.initial_history
+                    hours=int(self.config.initial_history)
                 )
                 self.taxii2.filters["added_after"] = added_after
 
