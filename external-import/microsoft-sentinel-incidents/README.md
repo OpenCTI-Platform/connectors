@@ -36,12 +36,16 @@ In the Microsoft Entra portal, you need to set :
 Home > Application Registration > OpenCTI (your name) > API Permissions on the *Log Analytics API*
 
 and enable the permissions named :  
-- "Data.Read Read Log Analytics data"
+- "Log Analytics API - Data.Read - Read Log Analytics data"
+- "Log Analytics API - Data.Read - Read Log Analytics data as user"
+- "Azure Resource Manager - user_impersonation - Access Azure Resource Manager as organization users"
+- "Microsoft Graph - User.Read"
+
+![Sentinel_permissions](./doc/permissions.png)
 
 For more information, visit:
 
 - [Microsoft Security-Authorization](https://learn.microsoft.com/en-us/graph/security-authorization)
-- [Microsoft Connect-Threat-Intelligence-Tip](https://learn.microsoft.com/en-us/azure/sentinel/connect-threat-intelligence-tip)
 
 Another interesting link:
 
