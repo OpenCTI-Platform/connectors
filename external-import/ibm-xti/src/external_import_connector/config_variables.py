@@ -85,7 +85,7 @@ class ConfigConnector:
         )
 
         self.debug = cast(
-            Optional[str],
+            Optional[bool],
             get_config_variable(
                 "CONNECTOR_IBM_XTI_DEBUG",
                 ["connector_ibm_xti", "debug"],
