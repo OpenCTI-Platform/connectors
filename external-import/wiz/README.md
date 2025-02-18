@@ -25,7 +25,7 @@ The list of imported entities (with their relationships) :
 
 - **Incidents** : A historical collection of past cloud security incidents and campaigns, offering insights into targeting patterns, initial access methods, and effective impact.
 
-- **Actors** : Profiles of threat actors involved in cloud security incidents, shedding light on their potential motivations and victimology, to aid in risk assessment and threat modeling.
+- **Actors** : Profiles of threat actors involved in cloud security incidents, shedding light on their potential motivations and victimology, to aid in risk assessment and threat modeling. NB: These can be modeled as either Threat Actor or Intrusion Set objects, depending on the configuration variable. See `threat_actor_as_intrusion_set` in [Configuration variables](#configuration-variables).
 
 - **Techniques** : An overview of attack techniques used by threat actors in cloud security incidents, aligned with the MITRE ATT&CK matrix framework for additional context.
 
