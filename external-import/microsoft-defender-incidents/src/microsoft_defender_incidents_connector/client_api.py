@@ -65,7 +65,7 @@ class ConnectorClient:
         """
         base_url = self.config.api_base_url
         incident_path = self.config.incident_path
-        params = {"$expand": "alerts", "$filter": f"lastUpdateDateTime ge {date_str}"}
+        params = {"$expand": "alerts", "$filter": f"lastUpdateDateTime gt {date_str}"}
         return requests.Request(
             "GET", f"{base_url}{incident_path}", params=params
         ).prepare()
