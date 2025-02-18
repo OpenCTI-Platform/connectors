@@ -1,4 +1,3 @@
-import ipaddress
 from datetime import datetime
 
 import stix2
