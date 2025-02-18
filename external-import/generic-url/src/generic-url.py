@@ -44,7 +44,6 @@ class GenericCSVUrlImport:
 
         self.update_existing_data = True  # ou configuration selon vos besoins
         # Optionnel : récupérer l'organization name si nécessaire
-        org_name = os.getenv("ORG_NAME")
 
         if not self.csv_url:
             raise Exception("Une URL doit être spécifiée pour le flux CSV.")
