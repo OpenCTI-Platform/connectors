@@ -384,6 +384,47 @@ class Incident(BaseModel):
         )
 
 
+class Identity(BaseModel):
+    """
+    Represent an Identity in OpenCTI.
+    """
+
+    def __init__(
+        self,
+        identity_class: str | None = None,
+        name: str | None = None,
+        description: str | None = None,
+        author: Author | None = None,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
+        object_marking_refs: list[
+            stix2.MarkingDefinition
+        ] = DEFAULT_MARKING_DEFINITIONS,
+        external_references: list[dict] | None = None,
+    ):
+        self.identity_class = identity_class
+        self.name = name
+        self.description = description
+        self.author = author
+        self.created_at = created_at
+        self.updated_at = updated_at
+        self.object_marking_refs = object_marking_refs
+        self.external_references = external_references
+        self.__post_init__()
+
+    def to_stix2_object(self) -> stix2.Identity:
+        return stix2.Identity(
+            id=PyCTIIdentity.generate_id(self.name, self.identity_class),
+            identity_class=self.identity_class,
+            name=self.name,
+            description=self.description,
+            created=self.created_at,
+            created_by_ref=self.author.id,
+            object_marking_refs=self.object_marking_refs,
+            external_references=self.external_references,
+        )
+
+
 class Indicator(BaseModel):
     """
     Represent an Indicator in OpenCTI.

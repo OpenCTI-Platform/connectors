@@ -1,0 +1,29 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Microsoft Sentinel Incidents'
+  scope: 'sentinel'
+  log_level: 'info'
+  duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
+  #============================================#
+  # Optional connector's definition parameters #
+  #============================================#
+  #queue_threshold: 500
+  #run_and_terminate: 'False'
+  #send_to_queue: 'True'
+  #send_to_directory: 'False'
+  #send_to_directory_path: 'ChangeMe'
+  #send_to_directory_retention: 7
+
+microsoft_sentinel_incidents:
+  tenant_id: 'ChangeMe'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  subscription_id: 'ChangeMe'
+  resource_group: 'ChangeMe'
+  workspace_id: 'ChangeMe'
+  import_start_date: '2025-01-01T00:00:00Z'
