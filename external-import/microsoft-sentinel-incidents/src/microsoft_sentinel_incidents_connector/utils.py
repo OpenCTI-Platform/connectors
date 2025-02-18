@@ -39,19 +39,6 @@ def format_date(date: str) -> int:
     return int(round(incident_last_update_timestamp))
 
 
-def is_ipv4(value: str) -> bool:
-    """
-    Determine whether the provided IP string is IPv4 or not
-    :param value: Value in string
-    :return: True is value is a valid IP address, otherwise False
-    """
-    try:
-        ipaddress.IPv4Address(value)
-        return True
-    except ipaddress.AddressValueError:
-        return False
-
-
 def find_matching_file_ids(malware_name: str, stix_objects: list) -> list | None:
     """
     Find and return the list of STIX 2.1 File objects that match the given malware name.

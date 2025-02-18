@@ -13,7 +13,7 @@ from pycti import (
     StixCoreRelationship,
 )
 
-from .utils import CASE_INCIDENT_PRIORITIES, format_datetime, is_ipv4
+from .utils import CASE_INCIDENT_PRIORITIES, format_datetime
 
 
 def handle_stix2_error(decorated_function):
