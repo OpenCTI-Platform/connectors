@@ -2,7 +2,6 @@ import traceback
 
 from stream_connector import IndicatorConnector
 
-
 if __name__ == "__main__":
     """
     Entry point of the script
