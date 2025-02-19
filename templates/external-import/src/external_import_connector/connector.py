@@ -4,7 +4,7 @@ from datetime import datetime
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
+from .config_loader import ConfigConnector
 from .converter_to_stix import ConverterToStix
 
 
@@ -53,14 +53,19 @@ class ConnectorTemplate:
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
         self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper)
+        self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
     def _collect_intelligence(self) -> list:
         """
         Collect intelligence from the source and convert into STIX object
         :return: List of STIX objects
         """
-        stix_objects = []
+
+        # Ensure consistent bundle by adding the author and TLP marking
+        stix_objects = [
+            self.converter_to_stix.author,
+            self.converter_to_stix.tlp_marking,
+        ]
 
         # ===========================
         # === Add your code below ===
@@ -130,7 +135,9 @@ class ConnectorTemplate:
             if stix_objects is not None and len(stix_objects) != 0:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
-                    stix_objects_bundle, work_id=work_id
+                    stix_objects_bundle,
+                    work_id=work_id,
+                    cleanup_inconsistent_bundle=True,
                 )
 
                 self.helper.connector_logger.info(

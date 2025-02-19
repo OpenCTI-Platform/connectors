@@ -24,6 +24,7 @@ services:
       # Connector's custom execution parameters
       - CONNECTOR_TEMPLATE_API_BASE_URL=CHANGEME
       - CONNECTOR_TEMPLATE_API_KEY=CHANGEME
+      - CONNECTOR_TEMPLATE_TLP_LEVEL=CHANGEME # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME
