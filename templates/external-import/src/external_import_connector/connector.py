@@ -60,12 +60,7 @@ class ConnectorTemplate:
         Collect intelligence from the source and convert into STIX object
         :return: List of STIX objects
         """
-
-        # Ensure consistent bundle by adding the author and TLP marking
-        stix_objects = [
-            self.converter_to_stix.author,
-            self.converter_to_stix.tlp_marking,
-        ]
+        stix_objects = []
 
         # ===========================
         # === Add your code below ===
@@ -79,11 +74,16 @@ class ConnectorTemplate:
             entity_to_stix = self.converter_to_stix.create_obs(entity["value"])
             stix_objects.append(entity_to_stix)
 
-        return stix_objects
-
         # ===========================
         # === Add your code above ===
         # ===========================
+
+        # Ensure consistent bundle by adding the author and TLP marking
+        if len(stix_objects):
+            stix_objects.append(self.converter_to_stix.author)
+            stix_objects.append(self.converter_to_stix.tlp_marking)
+
+        return stix_objects
 
     def process_message(self) -> None:
         """
@@ -132,7 +132,7 @@ class ConnectorTemplate:
             # ===========================
             stix_objects = self._collect_intelligence()
 
-            if stix_objects is not None and len(stix_objects) != 0:
+            if len(stix_objects):
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
                     stix_objects_bundle,

@@ -160,7 +160,7 @@ class ConnectorTemplate:
                 # EXAMPLE Collect intelligence and enrich current STIX object
                 stix_objects = self._collect_intelligence(obs_value, obs_standard_id)
 
-                if stix_objects is not None and len(stix_objects) is not None:
+                if stix_objects is not None and len(stix_objects):
                     return self._send_bundle(stix_objects)
                 else:
                     info_msg = "[CONNECTOR] No information found"
