@@ -105,7 +105,7 @@ class Connector:
                 dt_format = dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
             if self.config.enable_url_query_limit and self.config.taxii2v21:
-                self.taxii2.filters["limit"] = self.config.url_query_limit
+                self.taxii2.filters["limit"] = int(self.config.url_query_limit)
             # Set added_after to either last run or initial history
             if current_state is not None and "last_run" in current_state:
                 self.taxii2.filters["added_after"] = dt_format
