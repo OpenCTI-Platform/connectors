@@ -26,6 +26,7 @@ class ExportFileTxt:
         export_scope = data["export_scope"]
         main_filter = data.get("main_filter")
         access_filter = data.get("access_filter")
+        export_type = data.get("export_type")
 
         if export_scope == "single":
             raise ValueError("This connector only supports list exports")
@@ -119,6 +120,11 @@ class ExportFileTxt:
                     if entity_type == "Malware-Analysis":
                         for entity in entities_list:
                             entity["name"] = entity["result_name"]
+                    # Pattern Type Export
+                    if entity_type == "Indicator" and export_type == "pattern":
+                        for entity in entities_list:
+                            entity["name"] = entity["pattern"]
+
                     entities_values = [f["name"] for f in entities_list if "name" in f]
                     entities_values_bytes = "\n".join(entities_values)
                     self.helper.api.stix_domain_object.push_list_export(
