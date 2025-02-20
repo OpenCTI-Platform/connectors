@@ -24,15 +24,16 @@ class RiskList(threading.Thread):
         self.risklist_related_entities = risklist_related_entities
 
     def run(self):
+        timestamp = int(time.time())
         for key, risk_list_type in RISK_LIST_TYPE_MAPPER.items():
             self.helper.log_info(f"[RISK LISTS] Pulling {key} risk lists")
 
             csv_file = self.rfapi.get_risk_list_CSV(risk_list_type["path"])
-            timestamp = int(time.time())
             now = datetime.utcfromtimestamp(timestamp)
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id,
-                "Recorded Future Risk List run @ " + now.strftime("%Y-%m-%d %H:%M:%S"),
+                f"Recorded Future Risk List {key} run @ "
+                + now.strftime("%Y-%m-%d %H:%M:%S"),
             )
             reader = csv.DictReader(csv_file)
             for row in reader:
@@ -50,7 +51,10 @@ class RiskList(threading.Thread):
                         )
                         continue
                 # Convert into stix object
-                indicator = risk_list_type["class"](row["Name"], key, tlp=self.tlp)
+                first_seen = row["FirstSeen"] if row["FirstSeen"] else None
+                indicator = risk_list_type["class"](
+                    row["Name"], key, tlp=self.tlp, first_seen=first_seen
+                )
 
                 rule_criticality_list = row["RuleCriticality"].strip("][").split(",")
                 risk_rules_list_str = row["RiskRules"].strip("][")
@@ -98,4 +102,6 @@ class RiskList(threading.Thread):
                     bundle.serialize(),
                     work_id=work_id,
                 )
+            message = f"{self.helper.connect_name} connector successfully run for Risk List {key}."
+            self.helper.api.work.to_processed(work_id, message)
         self.helper.set_state({"last_risk_list_run": timestamp})

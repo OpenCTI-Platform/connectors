@@ -1,5 +1,6 @@
 import json
 import os
+import textwrap
 import time
 from datetime import datetime
 from typing import Dict
@@ -11,6 +12,7 @@ from pycti import (
     Identity,
     Indicator,
     Malware,
+    Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
@@ -67,7 +69,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         )
 
         self.reversinglabs_spectra_user_agent = (
-            "ReversingLabs Spectra Analyze OpenCTI v1.0.0"
+            "ReversingLabs Spectra Analyze OpenCTI v1.2.0"
         )
 
     """
@@ -200,23 +202,33 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             try:
                 response = self.a1000client.get_detailed_report_v2(
                     sample_hashes=self.hash,
-                    retry=True,
+                    retry=False,
                 )
-
-                if response.status_code == 200:
-                    analysis_report = json.loads(response.text)
-                else:
-                    raise Exception(
-                        f"{self.helper.connect_name}: There was issue with getting report from Spectra Analyze. HTTP Status code {str(response.status_code)}"
-                    )
             except Exception as err:
                 raise ValueError(
                     f"{self.helper.connect_name}: Looks like the sample you are trying to access may not be available on your Spectra Analyze instance. On Spectra Analyze run fetch and analyze on the sample."
                 ) from err
+
+            if response.status_code == 200:
+                analysis_report = json.loads(response.text)
+            else:
+                raise Exception(
+                    f"{self.helper.connect_name}: There was issue with getting report from Spectra Analyze. HTTP Status code {str(response.status_code)}"
+                )
         else:
             raise ValueError(
                 f"{self.helper.connect_name}: Unsupported type provided for analysis result retrieval!"
             )
+
+        return analysis_report
+
+    def _submit_file_for_classification(self, stix_entity, opencti_entity, hash):
+
+        response = self.a1000client.get_classification_v3(
+            sample_hash=hash, local_only=False, av_scanners=False
+        )
+
+        analysis_report = json.loads(response.text)
 
         return analysis_report
 
@@ -285,10 +297,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             results["sample_name"] = self.analysis_result["aliases"][0]
             results["classification"] = self.analysis_result["classification"]
             results["sha256"] = self.analysis_result["sha256"]
-            if (
-                results["classification"] == "suspicious"
-                or results["classification"] == "malicious"
-            ):
+            if results["classification"] in ("suspicious", "malicious"):
                 threat_name = self.analysis_result["classification_result"].split(".")
                 results["threat_name"] = threat_name
                 results["platform"] = threat_name[0]
@@ -311,6 +320,50 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 + str(results["file_size"])
                 + " B. "
                 + results["story"]
+            )
+
+            # Creating label out of classification
+            results["labels"].append(results["classification"])
+
+        except Exception as err:
+            raise ValueError(
+                f"{self.helper.connect_name}: INFO: Fetching analysis data failed. Please try again shortly!"
+            ) from err
+
+        # Add score and description to the Observable
+        self._upsert_observable(results)
+
+        return results
+
+    def _process_file_classification_results(
+        self, stix_objects, stix_entity, opencti_entity, analysis_result
+    ):
+        self.stix_objects = stix_objects
+        self.stix_entity = stix_entity
+        self.opencti_entity = opencti_entity
+        self.analysis_result = analysis_result
+
+        results = {}
+        results["labels"] = []
+
+        try:
+            results["sample_name"] = self.analysis_result["sha1"]
+            results["classification"] = self.analysis_result["classification"]
+            results["sha256"] = self.analysis_result["sha256"]
+            if results["classification"] in ("suspicious", "malicious"):
+                threat_name = self.analysis_result["classification_result"].split(".")
+                results["threat_name"] = threat_name
+                results["platform"] = threat_name[0]
+                results["threat_type"] = threat_name[1]
+                results["malware_family_name"] = threat_name[2]
+                # Creating label out of malware type and family
+                results["labels"].append(results["threat_type"])
+                results["labels"].append(results["malware_family_name"])
+            results["risk_score"] = self.analysis_result["riskscore"]
+            results["score"] = results["risk_score"] * 10
+            results["description"] = (
+                "Sample was processed by Spectra Analyze! Sample is classified as "
+                + results["classification"]
             )
 
             # Creating label out of classification
@@ -491,7 +544,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         relationship,
     ):
         stix_indicator_with_relationship = []
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         rl_threat_platform = results["platform"]
 
         # Create indicator
@@ -502,7 +554,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             labels=results["labels"],
             pattern=indicator_pattern,
             created_by_ref=self.reversinglabs_identity["standard_id"],
-            valid_from=now,
             object_marking_refs=[stix2.TLP_AMBER],
             custom_properties={
                 "pattern_type": "stix",
@@ -538,6 +589,770 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             object_marking_refs=[stix2.TLP_AMBER],
         )
 
+    def _files_from_ip(self):
+        self.helper.log_info(f"{self.helper.connect_name}: Getting files from IP")
+
+        file_list = self.a1000client.network_files_from_ip_aggregated(
+            ip_addr=self.ip_sample, classification="MALICIOUS", max_results=20
+        )
+
+        if not file_list:
+            file_list = self.a1000client.network_files_from_ip_aggregated(
+                ip_addr=self.ip_sample, max_results=20
+            )
+
+        for one_file in file_list:
+            sha1 = one_file.get("sha1")
+            download_url = one_file.get("last_download_url")
+            classification = one_file.get("classification")
+            malware_family = one_file.get("malware_family")
+            malware_type = one_file.get("malware_type")
+            labels = [
+                label
+                for label in (classification, malware_family, malware_type)
+                if label
+            ]
+            now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+            platform = one_file.get("platform", "")
+            risk_score = int(one_file.get("risk_score")) * 10
+            description = (
+                f"Created from files downloaded from an IP address by Spectra Analyze. The indicator is"
+                f"classified as {classification}."
+            )
+            if classification in ("MALICIOUS", "SUSPICIOUS"):
+                description += f" Threat name is {one_file.get('threat_name')}"
+
+            indicator_sha1 = stix2.Indicator(
+                id=Indicator.generate_id(sha1),
+                name=sha1,
+                description=description,
+                labels=labels,
+                pattern=f"[file:hashes. 'SHA-1' = '{sha1}']",
+                created_by_ref=self.reversinglabs_identity["standard_id"],
+                object_marking_refs=[stix2.TLP_AMBER],
+                custom_properties={
+                    "pattern_type": "stix",
+                    "x_opencti_score": risk_score,
+                    "x_opencti_main_observable_type": "IPv4-Addr",
+                    "x_mitre_platforms": f"{platform}",
+                    "detection": True,
+                },
+            )
+            self.stix_objects.append(indicator_sha1)
+
+            indicator_download_url = stix2.Indicator(
+                id=Indicator.generate_id(download_url),
+                name=download_url,
+                description=description,
+                labels=labels,
+                pattern=f"[url:value = '{download_url}']",
+                created_by_ref=self.reversinglabs_identity["standard_id"],
+                object_marking_refs=[stix2.TLP_AMBER],
+                custom_properties={
+                    "pattern_type": "stix",
+                    "x_opencti_score": risk_score,
+                    "x_opencti_main_observable_type": "IPv4-Addr",
+                    "x_mitre_platforms": f"{platform}",
+                    "detection": True,
+                },
+            )
+            self.stix_objects.append(indicator_download_url)
+
+            sha1_to_observable = self._generate_stix_relationship(
+                source_ref=indicator_sha1.id,
+                stix_core_relationship_type="based-on",
+                target_ref=self.stix_entity["id"],
+            )
+            self.stix_objects.append(sha1_to_observable)
+
+            download_url_to_observable = self._generate_stix_relationship(
+                source_ref=indicator_download_url.id,
+                stix_core_relationship_type="based-on",
+                target_ref=self.stix_entity["id"],
+            )
+            self.stix_objects.append(download_url_to_observable)
+
+            sha1_to_download_url = self._generate_stix_relationship(
+                source_ref=indicator_sha1.id,
+                stix_core_relationship_type="related-to",
+                target_ref=indicator_download_url.id,
+            )
+            self.stix_objects.append(sha1_to_download_url)
+
+            if classification in ("MALICIOUS", "SUSPICIOUS"):
+                malware = stix2.Malware(
+                    id=Malware.generate_id(malware_family),
+                    name=malware_family,
+                    created=now,
+                    description="ReversingLabs",
+                    malware_types=[malware_type],
+                    is_family="false",
+                    created_by_ref=self.reversinglabs_identity["standard_id"],
+                )
+                self.stix_objects.append(malware)
+
+                sha1_to_malware = self._generate_stix_relationship(
+                    source_ref=indicator_sha1.id,
+                    stix_core_relationship_type="related-to",
+                    target_ref=malware.id,
+                )
+                self.stix_objects.append(sha1_to_malware)
+
+                download_url_to_malware = self._generate_stix_relationship(
+                    source_ref=indicator_download_url.id,
+                    stix_core_relationship_type="related-to",
+                    target_ref=malware.id,
+                )
+                self.stix_objects.append(download_url_to_malware)
+
+    def _ip_report(self):
+        self.helper.log_info(f"{self.helper.connect_name}: Getting IP report")
+
+        response = self.a1000client.network_ip_addr_report(ip_addr=self.ip_sample)
+
+        resp_json = response.json()
+
+        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        tp_statistics = resp_json.get("third_party_reputations", {}).get(
+            "statistics", {}
+        )
+        dl_files_statistics = resp_json.get("downloaded_files_statistics", {})
+        abstract = "ReversingLabs Spectra Analyze IP address report"
+
+        content = textwrap.dedent(
+            f"""
+        ## ReversingLabs Spectra Analyze IP address report for {self.ip_sample}
+        Third party statistics
+        | Status        |  Amount         |
+        | ------------- | --------------- |
+        | MALICIOUS     | {tp_statistics.get('malicious')} |
+        | CLEAN         | {tp_statistics.get('clean')} |
+        | SUSPICIOUS    | {tp_statistics.get('suspicious')} |
+        | UNDETECTED    | {tp_statistics.get('undetected')} |
+        | TOTAL         | {tp_statistics.get('total')} |
+        
+        Downloaded files statistics
+        | Status        |  Amount         |
+        | ------------- | --------------- |
+        | MALICIOUS     | {dl_files_statistics.get('malicious')} |
+        | GOODWARE      | {dl_files_statistics.get('goodware')} |
+        | SUSPICIOUS    | {dl_files_statistics.get('suspicious')} |
+        | UNKNOWN       | {dl_files_statistics.get('unknown')} |
+        | TOTAL         | {dl_files_statistics.get('total')} |
+        """
+        )
+
+        note = stix2.Note(
+            id=Note.generate_id(now, content),
+            abstract=abstract,
+            content=content,
+            created_by_ref=self.reversinglabs_identity["standard_id"],
+            object_refs=[self.stix_entity["id"]],
+            object_marking_refs=[stix2.TLP_AMBER],
+            custom_properties={"note_types": ["external"]},
+        )
+        self.stix_objects.append(note)
+
+        self.helper.api.stix_cyber_observable.update_field(
+            id=self.stix_entity["id"],
+            input={
+                "key": "x_opencti_description",
+                "value": "This is an IP address observable enriched by Spectra Analyze.",
+            },
+        )
+
+    @staticmethod
+    def is_ip(address):
+        return address.replace(".", "").isnumeric()
+
+    def _domain_reports(self, domain_list):
+        self.helper.log_info(f"{self.helper.connect_name}: Getting domain reports")
+
+        malicious_domains = []
+        benign_domains = []
+        malware_list = []
+        malicious_exist = False
+
+        for domain_obj in domain_list:
+            domain = domain_obj.get("host_name")
+
+            if self.is_ip(domain):
+                continue
+
+            response = self.a1000client.network_domain_report(domain=domain)
+            resp_json = response.json()
+
+            top_threats = resp_json.get("top_threats")
+            dl_files_stats = resp_json.get("downloaded_files_statistics", {})
+            tp_stats = resp_json.get("third_party_reputations", {}).get(
+                "statistics", {}
+            )
+
+            if (
+                top_threats
+                or dl_files_stats.get("malicious") >= 3
+                or tp_stats.get("malicious") >= 3
+            ):
+                malicious_domains.append(resp_json)
+
+                if len(malicious_domains) >= 20:
+                    break
+
+                malicious_exist = True
+
+            else:
+                if not malicious_exist:
+                    benign_domains.append(resp_json)
+
+                    if len(benign_domains) >= 20:
+                        break
+
+        if malicious_exist:
+            selected_domains = malicious_domains
+            del benign_domains
+
+        else:
+            selected_domains = benign_domains
+            del malicious_domains
+
+        for one_domain in selected_domains:
+            top_threats = one_domain.get("top_threats")
+            now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+            labels = []
+
+            if malicious_exist:
+                if top_threats:
+                    for threat in top_threats:
+                        threat_name_split = threat.get("threat_name").split(".")
+                        labels = [threat_name_split[1], threat_name_split[2]]
+
+                        for label in labels:
+                            lbl = self.helper.api.label.create(value=label)
+                            self.helper.api.stix_cyber_observable.add_label(
+                                id=self.stix_entity["id"], label_id=lbl["id"]
+                            )
+
+                        malware = stix2.Malware(
+                            id=Malware.generate_id(threat_name_split[2]),
+                            name=threat_name_split[2],
+                            created=now,
+                            description="ReversingLabs",
+                            malware_types=[threat_name_split[1]],
+                            is_family="false",
+                            created_by_ref=self.reversinglabs_identity["standard_id"],
+                        )
+                        malware_list.append(malware)
+                        self.stix_objects.append(malware)
+
+            indicator_domain = stix2.Indicator(
+                id=Indicator.generate_id(one_domain.get("requested_domain")),
+                name=one_domain.get("requested_domain"),
+                description="Created from Spectra Analyze Domain report.",
+                labels=labels,
+                pattern=f"[domain-name:value = '{one_domain.get('requested_domain')}']",
+                created_by_ref=self.reversinglabs_identity["standard_id"],
+                object_marking_refs=[stix2.TLP_AMBER],
+                custom_properties={
+                    "pattern_type": "stix",
+                    "x_opencti_main_observable_type": "IPv4-Addr",
+                    "detection": True,
+                },
+            )
+            self.stix_objects.append(indicator_domain)
+
+            indicator_to_observable = self._generate_stix_relationship(
+                source_ref=indicator_domain.id,
+                stix_core_relationship_type="based-on",
+                target_ref=self.stix_entity["id"],
+            )
+            self.stix_objects.append(indicator_to_observable)
+
+            for mal in malware_list:
+                indicator_to_malware = self._generate_stix_relationship(
+                    source_ref=indicator_domain.id,
+                    stix_core_relationship_type="related-to",
+                    target_ref=mal.id,
+                )
+                self.stix_objects.append(indicator_to_malware)
+
+        if selected_domains:
+            abstract = "ReversingLabs Spectra Analyze domain statistics"
+
+            accumulated_content = textwrap.dedent(
+                """
+            ## ReversingLabs Spectra Analyze domain statistics
+            | Domain        |  Third party statistics Malicious/Total | Downloaded files statistics Malicious/Total |
+            | ------------- | --------------- | --------------- |
+            """
+            )
+
+            for one_domain in selected_domains:
+                domain_name = one_domain.get("requested_domain")
+                tp_stats = one_domain.get("third_party_reputations", {}).get(
+                    "statistics", {}
+                )
+                dl_stats = one_domain.get("downloaded_files_statistics", {})
+
+                accumulated_content = accumulated_content + textwrap.dedent(
+                    f"| {domain_name} | {tp_stats['malicious']}/{tp_stats['total']} | {dl_stats['malicious']}/{dl_stats['total']} |\n"
+                )
+
+            content = accumulated_content
+
+            now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+            note = stix2.Note(
+                id=Note.generate_id(now, content),
+                abstract=abstract,
+                content=content,
+                created_by_ref=self.reversinglabs_identity["standard_id"],
+                object_refs=[self.stix_entity["id"]],
+                object_marking_refs=[stix2.TLP_AMBER],
+                custom_properties={"note_types": ["external"]},
+            )
+            self.stix_objects.append(note)
+
+    def _url_reports(self, url_list):
+        self.helper.log_info(f"{self.helper.connect_name}: Getting URL reports")
+
+        malicious_urls = []
+        benign_urls = []
+        malware_list = []
+        malicious_exist = False
+
+        for url_obj in url_list:
+            url = url_obj.get("url")
+
+            response = self.a1000client.network_url_report(requested_url=url)
+            resp_json = response.json()
+
+            classification = resp_json.get("classification")
+
+            if classification == "malicious":
+                malicious_urls.append(resp_json)
+
+                if len(malicious_urls) >= 20:
+                    break
+
+                malicious_exist = True
+
+            else:
+                if not malicious_exist:
+                    benign_urls.append(resp_json)
+
+                    if len(benign_urls) >= 20:
+                        break
+
+        if malicious_exist:
+            selected_urls = malicious_urls
+            del benign_urls
+
+        else:
+            selected_urls = benign_urls
+            del malicious_urls
+
+        for one_url in selected_urls:
+            top_threats = one_url.get("analysis").get("top_threats")
+            now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+            labels = []
+
+            if malicious_exist:
+                if top_threats:
+                    for threat in top_threats:
+                        threat_name_split = threat.get("threat_name").split(".")
+                        labels = [threat_name_split[1], threat_name_split[2]]
+
+                        for label in labels:
+                            lbl = self.helper.api.label.create(value=label)
+                            self.helper.api.stix_cyber_observable.add_label(
+                                id=self.stix_entity["id"], label_id=lbl["id"]
+                            )
+
+                        malware = stix2.Malware(
+                            id=Malware.generate_id(threat_name_split[2]),
+                            name=threat_name_split[2],
+                            created=now,
+                            description="ReversingLabs",
+                            malware_types=[threat_name_split[1]],
+                            is_family="false",
+                            created_by_ref=self.reversinglabs_identity["standard_id"],
+                        )
+                        malware_list.append(malware)
+                        self.stix_objects.append(malware)
+
+            indicator_url = stix2.Indicator(
+                id=Indicator.generate_id(one_url.get("requested_url")),
+                name=one_url.get("requested_url"),
+                description="Created from Spectra Analyze URL report.",
+                labels=labels,
+                pattern=f"[url:value = '{one_url.get('requested_url')}']",
+                created_by_ref=self.reversinglabs_identity["standard_id"],
+                object_marking_refs=[stix2.TLP_AMBER],
+                custom_properties={
+                    "pattern_type": "stix",
+                    "x_opencti_main_observable_type": "IPv4-Addr",
+                    "detection": True,
+                },
+            )
+            self.stix_objects.append(indicator_url)
+
+            indicator_to_observable = self._generate_stix_relationship(
+                source_ref=indicator_url.id,
+                stix_core_relationship_type="based-on",
+                target_ref=self.stix_entity["id"],
+            )
+            self.stix_objects.append(indicator_to_observable)
+
+            for mal in malware_list:
+                indicator_to_malware = self._generate_stix_relationship(
+                    source_ref=indicator_url.id,
+                    stix_core_relationship_type="related-to",
+                    target_ref=mal.id,
+                )
+                self.stix_objects.append(indicator_to_malware)
+
+        if selected_urls:
+            abstract = "ReversingLabs Spectra Analyze URL statistics"
+
+            accumulated_content = textwrap.dedent(
+                """
+            ## ReversingLabs Spectra Analyze URL statistics
+            | URL        |  Third party statistics Malicious/Total | Analysis statistics Malicious/Total |
+            | ------------- | --------------- | --------------- |
+            """
+            )
+
+            for one_url in selected_urls:
+                url_name = one_url.get("requested_url")
+                tp_stats = one_url.get("third_party_reputations", {}).get(
+                    "statistics", {}
+                )
+                analysis_stats = one_url.get("analysis", {}).get("statistics", {})
+
+                accumulated_content = accumulated_content + textwrap.dedent(
+                    f"| `{url_name}` | {tp_stats['malicious']}/{tp_stats['total']} | {analysis_stats['malicious']}/{analysis_stats['total']} |\n"
+                )
+
+            content = accumulated_content
+            now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+            note = stix2.Note(
+                id=Note.generate_id(now, content),
+                abstract=abstract,
+                content=content,
+                created_by_ref=self.reversinglabs_identity["standard_id"],
+                object_refs=[self.stix_entity["id"]],
+                object_marking_refs=[stix2.TLP_AMBER],
+                custom_properties={"note_types": ["external"]},
+            )
+            self.stix_objects.append(note)
+
+    def _ip_report_flow(self, stix_entity, opencti_entity, ip_sample):
+        self.stix_entity = stix_entity
+        self.opencti_entity = opencti_entity
+        self.ip_sample = ip_sample
+
+        self._files_from_ip()
+
+        self._ip_report()
+
+        domain_list = self.a1000client.network_ip_to_domain_aggregated(
+            ip_addr=self.ip_sample, max_results=100
+        )
+
+        self._domain_reports(domain_list=domain_list)
+
+        url_list = self.a1000client.network_urls_from_ip_aggregated(
+            ip_addr=self.ip_sample, max_results=100
+        )
+
+        self._url_reports(url_list=url_list)
+
+        self.helper.log_info(f"{self.helper.connect_name}: Creating bundle for IP")
+
+        bundle = self._generate_stix_bundle(
+            stix_objects=self.stix_objects, stix_entity=self.stix_entity
+        )
+        bundles_sent = self.helper.send_stix2_bundle(bundle)
+
+        self.helper.log_info(
+            f"{self.helper.connect_name}: Number of stix bundles sent to workers: {str(len(bundles_sent))}"
+        )
+
+    def _domain_report(self):
+        self.helper.log_info(f"{self.helper.connect_name}: Getting domain report")
+
+        response = self.a1000client.network_domain_report(domain=self.domain_sample)
+        resp_json = response.json()
+
+        top_threats = resp_json.get("top_threats")
+        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        malware_list = []
+        labels = []
+
+        if top_threats:
+            for threat in top_threats:
+                threat_name_split = threat.get("threat_name").split(".")
+                labels = [threat_name_split[1], threat_name_split[2]]
+
+                malware = stix2.Malware(
+                    id=Malware.generate_id(threat_name_split[2]),
+                    name=threat_name_split[2],
+                    created=now,
+                    description="ReversingLabs",
+                    malware_types=[threat_name_split[1]],
+                    is_family="false",
+                    created_by_ref=self.reversinglabs_identity["standard_id"],
+                )
+                malware_list.append(malware)
+                self.stix_objects.append(malware)
+
+        indicator_domain = stix2.Indicator(
+            id=Indicator.generate_id(self.domain_sample),
+            name=self.domain_sample,
+            description="Created from Spectra Analyze Domain report.",
+            labels=labels,
+            pattern=f"[domain-name:value = '{self.domain_sample}']",
+            created_by_ref=self.reversinglabs_identity["standard_id"],
+            object_marking_refs=[stix2.TLP_AMBER],
+            custom_properties={
+                "pattern_type": "stix",
+                "x_opencti_main_observable_type": "Domain-Name",
+                "detection": True,
+            },
+        )
+        self.stix_objects.append(indicator_domain)
+
+        indicator_to_observable = self._generate_stix_relationship(
+            source_ref=indicator_domain.id,
+            stix_core_relationship_type="based-on",
+            target_ref=self.stix_entity["id"],
+        )
+        self.stix_objects.append(indicator_to_observable)
+
+        for mal in malware_list:
+            indicator_to_malware = self._generate_stix_relationship(
+                source_ref=indicator_domain.id,
+                stix_core_relationship_type="related-to",
+                target_ref=mal.id,
+            )
+            self.stix_objects.append(indicator_to_malware)
+
+        abstract = "ReversingLabs Spectra Analyze domain report"
+
+        tp_statistics = resp_json.get("third_party_reputations", {}).get(
+            "statistics", {}
+        )
+        dl_files_statistics = resp_json.get("downloaded_files_statistics", {})
+
+        content = textwrap.dedent(
+            f"""
+        ## ReversingLabs Spectra Analyze domain report for `{self.domain_sample}`
+        Third party statistics
+        | Status        |  Amount         |
+        | ------------- | --------------- |
+        | MALICIOUS     | {tp_statistics.get('malicious')} |
+        | CLEAN         | {tp_statistics.get('clean')} |
+        | SUSPICIOUS    | {tp_statistics.get('suspicious')} |
+        | UNDETECTED    | {tp_statistics.get('undetected')} |
+        | TOTAL         | {tp_statistics.get('total')} |
+        
+        Downloaded files statistics
+        | Status        |  Amount         |
+        | ------------- | --------------- |
+        | MALICIOUS     | {dl_files_statistics.get('malicious')} |
+        | GOODWARE      | {dl_files_statistics.get('goodware')} |
+        | SUSPICIOUS    | {dl_files_statistics.get('suspicious')} |
+        | UNKNOWN       | {dl_files_statistics.get('unknown')} |
+        | TOTAL         | {dl_files_statistics.get('total')} |
+        """
+        )
+
+        note = stix2.Note(
+            id=Note.generate_id(now, content),
+            abstract=abstract,
+            content=content,
+            created_by_ref=self.reversinglabs_identity["standard_id"],
+            object_refs=[self.stix_entity["id"]],
+            object_marking_refs=[stix2.TLP_AMBER],
+            custom_properties={"note_types": ["external"]},
+        )
+        self.stix_objects.append(note)
+
+        self.helper.api.stix_cyber_observable.update_field(
+            id=self.stix_entity["id"],
+            input={
+                "key": "x_opencti_description",
+                "value": "This is a domain name observable enriched by Spectra Analyze.",
+            },
+        )
+
+    def _domain_analysis_flow(self, stix_entity, opencti_entity, domain_sample):
+        self.stix_entity = stix_entity
+        self.opencti_entity = opencti_entity
+        self.domain_sample = domain_sample
+
+        self.helper.log_info(
+            f"{self.helper.connect_name}: Starting Domain report for {self.domain_sample}"
+        )
+
+        self._domain_report()
+
+        self.helper.log_info(f"{self.helper.connect_name}: Creating bundle for domain")
+
+        bundle = self._generate_stix_bundle(
+            stix_objects=self.stix_objects, stix_entity=self.stix_entity
+        )
+        bundles_sent = self.helper.send_stix2_bundle(bundle)
+
+        self.helper.log_info(
+            f"{self.helper.connect_name}: Number of stix bundles sent to workers: {str(len(bundles_sent))}"
+        )
+
+    def _url_report(self):
+        self.helper.log_info(f"{self.helper.connect_name}: Getting URL report")
+
+        response = self.a1000client.network_url_report(requested_url=self.url_sample)
+        resp_json = response.json()
+
+        top_threats = resp_json.get("analysis", {}).get("top_threats")
+        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        malware_list = []
+        labels = []
+
+        if top_threats:
+            for threat in top_threats:
+                threat_name_split = threat.get("threat_name").split(".")
+                labels = [threat_name_split[1], threat_name_split[2]]
+
+                malware = stix2.Malware(
+                    id=Malware.generate_id(threat_name_split[2]),
+                    name=threat_name_split[2],
+                    created=now,
+                    description="ReversingLabs",
+                    malware_types=[threat_name_split[1]],
+                    is_family="false",
+                    created_by_ref=self.reversinglabs_identity["standard_id"],
+                )
+                malware_list.append(malware)
+                self.stix_objects.append(malware)
+
+        indicator_url = stix2.Indicator(
+            id=Indicator.generate_id(self.url_sample),
+            name=self.url_sample,
+            description="Created from Spectra Analyze URL report.",
+            labels=labels,
+            pattern=f"[url:value = '{self.url_sample}']",
+            created_by_ref=self.reversinglabs_identity["standard_id"],
+            object_marking_refs=[stix2.TLP_AMBER],
+            custom_properties={
+                "pattern_type": "stix",
+                "x_opencti_main_observable_type": "Url",
+                "detection": True,
+            },
+        )
+        self.stix_objects.append(indicator_url)
+
+        indicator_to_observable = self._generate_stix_relationship(
+            source_ref=indicator_url.id,
+            stix_core_relationship_type="based-on",
+            target_ref=self.stix_entity["id"],
+        )
+        self.stix_objects.append(indicator_to_observable)
+
+        for mal in malware_list:
+            indicator_to_malware = self._generate_stix_relationship(
+                source_ref=indicator_url.id,
+                stix_core_relationship_type="related-to",
+                target_ref=mal.id,
+            )
+            self.stix_objects.append(indicator_to_malware)
+
+        abstract = "ReversingLabs Spectra Analyze URL report"
+
+        analysis_stats = resp_json.get("analysis", {}).get("statistics", {})
+        tp_stats = resp_json.get("third_party_reputations", {}).get("statistics", {})
+
+        content = textwrap.dedent(
+            f"""
+        ## ReversingLabs Spectra Analyze URL report for `{self.url_sample}`
+
+        Third party statistics
+        | Status        |  Amount         |
+        | ------------- | --------------- |
+        | MALICIOUS     | {tp_stats.get('malicious')} |
+        | CLEAN         | {tp_stats.get('clean')} |
+        | SUSPICIOUS    | {tp_stats.get('suspicious')} |
+        | UNDETECTED    | {tp_stats.get('undetected')} |
+        | TOTAL         | {tp_stats.get('total')} |
+        
+        Analysis statistics
+        | Status        |  Amount         |
+        | ------------- | --------------- |
+        | MALICIOUS     | {analysis_stats.get('malicious')} |
+        | GOODWARE      | {analysis_stats.get('goodware')} |
+        | SUSPICIOUS    | {analysis_stats.get('suspicious')} |
+        | UNKNOWN       | {analysis_stats.get('unknown')} |
+        | TOTAL         | {analysis_stats.get('total')} |
+        """
+        )
+
+        note = stix2.Note(
+            id=Note.generate_id(now, content),
+            abstract=abstract,
+            content=content,
+            created_by_ref=self.reversinglabs_identity["standard_id"],
+            object_refs=[self.stix_entity["id"]],
+            object_marking_refs=[stix2.TLP_AMBER],
+            custom_properties={"note_types": ["external"]},
+        )
+        self.stix_objects.append(note)
+
+    def _url_report_flow(self, stix_entity, opencti_entity, url_sample):
+        self.stix_entity = stix_entity
+        self.opencti_entity = opencti_entity
+        self.url_sample = url_sample
+
+        self.helper.log_info(
+            f"{self.helper.connect_name}: Starting URL report for {self.url_sample}"
+        )
+
+        self._url_report()
+
+        self.helper.log_info(f"{self.helper.connect_name}: Creating bundle for URL")
+
+        bundle = self._generate_stix_bundle(
+            stix_objects=self.stix_objects, stix_entity=self.stix_entity
+        )
+        bundles_sent = self.helper.send_stix2_bundle(bundle)
+
+        self.helper.log_info(
+            f"{self.helper.connect_name}: Number of stix bundles sent to workers round 1: {str(len(bundles_sent))}"
+        )
+
+    def _process_malicious(self, stix_objects, stix_entity, results):
+        if (results["classification"] == "malicious") or (
+            results["classification"] == "suspicious"
+        ):
+
+            self.helper.log_info(
+                f"{self.helper.connect_name}: Create STIX objects for malicious sample results!"
+            )
+
+            # Create indicators based on result
+            self._create_indicators(results)
+
+            # Create Malware and add relationship to artifact
+            self._generate_stix_malware(results)
+
+            # Create Stix Bundle and send it to OpenCTI
+            bundle = self._generate_stix_bundle(stix_objects, stix_entity)
+            bundles_sent = self.helper.send_stix2_bundle(bundle)
+
+            self.helper.log_info(
+                f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
+            )
+
     def _process_message(self, data: Dict):
         stix_objects = data["stix_objects"]
         stix_entity = data["stix_entity"]
@@ -561,8 +1376,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             verify=False,
         )
 
-        results = {}
-
         if opencti_type in FILE_SAMPLE:
             # Extract hash type and value from entity {[md5], [sha1], [sha256]}
             hashes = opencti_entity.get("hashes")
@@ -574,26 +1387,49 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                     hash = ent_hash["hash"]
                     hash_type = ent_hash["algorithm"]
 
+            # Get file classification
+            analysis_result = self._submit_file_for_classification(
+                stix_entity, opencti_entity, hash
+            )
+
+            if not analysis_result:
+                self.helper.log_info(
+                    f"{self.helper.connect_name}: There is no analysis result for provided sample!"
+                )
+
+            # Integrate classification analysis results with OpenCTI
+            if "results" not in analysis_result:
+
+                results = self._process_file_classification_results(
+                    stix_objects, stix_entity, opencti_entity, analysis_result
+                )
+
+                self._process_malicious(stix_objects, stix_entity, results)
+
             # Submit File sample for analysis
             analysis_result = self._submit_file_for_analysis(
                 stix_entity, opencti_entity, hash, hash_type
             )
 
-            if not analysis_result:
-                raise ValueError(
-                    f"{self.helper.connect_name}: Provided sample does not exist on the appliance. Try to upload it first and re-run!"
+            # Integrate file analysis results with OpenCTI
+            if "results" in analysis_result:
+                results = self._process_file_analysis_result(
+                    stix_objects, stix_entity, opencti_entity, analysis_result
                 )
-
-            # Integrate analysis results with OpenCTI
-            results = self._process_file_analysis_result(
-                stix_objects, stix_entity, opencti_entity, analysis_result
-            )
+                self._process_malicious(stix_objects, stix_entity, results)
 
         elif opencti_type == "Url":
             url_sample = stix_entity["value"]
             self.helper.log_info(
                 f"{self.helper.connect_name}: Submit URL sample for analysis on Spectra Analyze!"
             )
+
+            self._url_report_flow(
+                stix_entity=stix_entity,
+                opencti_entity=opencti_entity,
+                url_sample=url_sample,
+            )
+
             # Submit URL sample for analysis on Spectra Analyze
             analysis_result = self._submit_url_for_analysis(
                 stix_entity,
@@ -611,27 +1447,35 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 stix_objects, stix_entity, opencti_entity, analysis_result
             )
 
+            self._process_malicious(stix_objects, stix_entity, results)
+
+        elif opencti_type == "IPv4-Addr":
+            ip_sample = stix_entity["value"]
+            self.helper.log_info(
+                f"{self.helper.connect_name}: Starting IPv4 sample analysis on Spectra Analyze! Sample value: {str(ip_sample)}"
+            )
+
+            self._ip_report_flow(
+                stix_entity=stix_entity,
+                opencti_entity=opencti_entity,
+                ip_sample=ip_sample,
+            )
+
+        elif opencti_type == "Domain-Name":
+            domain_sample = stix_entity["value"]
+            self.helper.log_info(
+                f"{self.helper.connect_name}: Starting Domain sample analysis on Spectra Analyze! Sample value: {str(domain_sample)}"
+            )
+
+            self._domain_analysis_flow(
+                stix_entity=stix_entity,
+                opencti_entity=opencti_entity,
+                domain_sample=domain_sample,
+            )
+
         else:
             raise ValueError(
                 f"{self.helper.connect_name}: Connector is not registered to work with provided {str(opencti_type)} type!"
-            )
-
-        if (results["classification"] == "malicious") or (
-            results["classification"] == "suspicious"
-        ):
-
-            # Create indicators based on result
-            self._create_indicators(results)
-
-            # Create Malware and add relationship to artifact
-            self._generate_stix_malware(results)
-
-            # Create Stix Bundle and send it to OpenCTI
-            bundle = self._generate_stix_bundle(stix_objects, stix_entity)
-            bundles_sent = self.helper.send_stix2_bundle(bundle)
-
-            self.helper.log_info(
-                f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
             )
 
 

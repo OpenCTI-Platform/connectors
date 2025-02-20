@@ -153,11 +153,10 @@ class HiveObservableTransform:
         )
 
     def create_file(self):
-        hash_type = check_hash_type(
-            self.observable.get("attachment", {}).get("hashes")[0]
-        )
+        _hash = self.observable.get("attachment", {}).get("hashes", [""])[0]
+        hash_type = check_hash_type(_hash)
         return File(
-            hashes={hash_type: self.observable.get("attachment", {}).get("hashes")[0]},
+            hashes={hash_type: _hash},
             object_marking_refs=self.markings,
             name=self.observable.get("attachment", {}).get("names"),
             custom_properties=self.create_custom_properties(),

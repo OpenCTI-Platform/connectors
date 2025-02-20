@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-zscaler:
+    image: opencti/connector-zscaler:6.4.2  
+      - OPENCTI_URL=ChangeMe
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=STREAM
+      - CONNECTOR_NAME=ZscalerConnector
+      - CONNECTOR_SCOPE=domain-name
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - ZSCALER_API_KEY=ChangeMe
+      - ZSCALER_USERNAME=ChangeMe
+      - ZSCALER_PASSWORD=ChangeMe
+      - ZSCALER_BLACKLIST_NAME=ChangeMe #Add name of your Zscaler blacklist
+    networks:
+      - opencti_network
+
+

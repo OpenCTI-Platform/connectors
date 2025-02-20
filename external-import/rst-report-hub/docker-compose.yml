@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-rst-report-hub:
-    image: opencti/connector-rst-report-hub:6.4.0
+    image: opencti/connector-rst-report-hub:6.5.2
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -18,6 +18,9 @@ services:
       - RST_REPORT_HUB_IMPORT_START_DATE=${RST_REPORT_HUB_STARTDATE}
       - RST_REPORT_HUB_FETCH_INTERVAL=300
       - RST_REPORT_HUB_LANGUAGE=eng
+      - RST_REPORT_HUB_CREATE_OBSERVABLES=false
+      - RST_REPORT_HUB_CREATE_RELATED_TO=true
+      - RST_REPORT_HUB_CREATE_CUSTOM_TTPS=true
     restart: always
     depends_on:
       - opencti

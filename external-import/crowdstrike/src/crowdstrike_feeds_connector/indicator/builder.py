@@ -33,7 +33,10 @@ from crowdstrike_feeds_services.utils import (
     create_vulnerability_external_references,
     timestamp_to_datetime,
 )
-from stix2 import Bundle, Identity
+from stix2 import (
+    Bundle,
+    Identity,
+)
 from stix2 import Indicator as STIXIndicator  # type: ignore
 from stix2 import (
     IntrusionSet,

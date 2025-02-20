@@ -4,7 +4,7 @@ services:
     image: opencti/connector-reversinglabs-spectra-analyze
     environment:
       - CONNECTOR_NAME=ReversingLabs Spectra Analyze
-      - CONNECTOR_SCOPE=Artifact,Url,StixFile,File
+      - CONNECTOR_SCOPE=Artifact,Url,StixFile,File,IPv4-Addr,Domain-Name
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=Changeme
       - CONNECTOR_ID=Changeme

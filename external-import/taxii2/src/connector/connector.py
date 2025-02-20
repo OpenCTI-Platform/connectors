@@ -42,14 +42,17 @@ class Connector:
                 else:
                     root = self.taxii2._get_root(root_path)
                     coll = self.taxii2._get_collection(root, coll_title)
-                    stix_objects = self.taxii2.poll(coll)
+                    obj = self.taxii2.poll(coll)
+                    if len(obj) > 0:
+                        stix_objects.extend(iter(obj))
             except (TAXIIServiceException, HTTPError) as err:
                 self.helper.log_error("Error connecting to TAXII server")
                 self.helper.log_error(err)
                 continue
 
         # If further processing of objects is needed
-        stix_objects = self.process.objects(stix_objects)
+        if stix_objects is not None and len(stix_objects) > 0:
+            stix_objects = self.process.objects(stix_objects)
 
         return stix_objects
 
@@ -99,7 +102,7 @@ class Connector:
             dt_format = ""
             if current_state is not None and "last_run" in current_state:
                 dt = datetime.fromtimestamp(last_run, tz=timezone.utc)
-                dt_format = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                dt_format = dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
             if self.config.enable_url_query_limit and self.config.taxii2v21:
                 self.taxii2.filters["limit"] = self.config.url_query_limit
@@ -133,7 +136,7 @@ class Connector:
             current_state = self.helper.get_state()
             current_state_datetime = int(now.timestamp())
             last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
-                "%Y-%m-%d %H:%M:%S"
+                "%Y-%m-%d %H:%M:%S.%f"
             )
             if current_state:
                 current_state["last_run"] = current_state_datetime
