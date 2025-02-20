@@ -54,3 +54,10 @@ class ConfigConnector:
             ["connector_template", "api_key"],
             self.load,
         )
+
+        self.tlp_level = get_config_variable(
+            "CONNECTOR_TEMPLATE_TLP_LEVEL",
+            ["connector_template", "tlp_level"],
+            self.load,
+            default="clear",
+        )
