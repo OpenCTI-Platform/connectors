@@ -9,6 +9,9 @@ Table of Contents
       - [Docker Compose Basics](#docker-compose-basics)
     - [Local Environment](#local-environment)
   - [How to create a new connector](#how-to-create-a-new-connector)
+    - [Create a new connector using the script](#create-a-new-connector-using-the-script)
+    - [Manual creation](#manual-creation)
+      - [Changing the template](#changing-the-template)
     - [Files and folder structure](#files-and-folder-structure)
     - [Development](#development)
       - [Common](#common)
@@ -108,7 +111,22 @@ INFO:root:Starting ping alive thread
 
 ## How to create a new connector
 
-First, identify what type of connector you need.
+First, identify what type of connector you need. To develop a connector, you have to start by defining the use case—ask yourself, "What do I want to achieve with this connector?"
+
+### Create a new connector using the script
+
+You MUST be on templates folder.
+You can create a new connector by simply running the following command:
+
+```commandline
+sh create_connector_dir.sh -t <TYPE> -n <NAME>
+```
+
+Where `<TYPE>` is the type of connector you want to create (`external-import`,`internal-enrichment`,`stream`, `internal-import-file`, `internal-export-file`) and `<NAME>` is the name of the connector.
+
+
+### Manual creation
+
 Copy the folder contents of the corresponding template in the suitable folder:
 
 ```
@@ -129,7 +147,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-### Changing the template
+#### Changing the template
 
 There are a few files in the template we need to change for our connector to be unique. You can check for all places you need to change you connector name with the following command (the output will look similar):
 
@@ -170,7 +188,6 @@ Required changes:
    - INTERNAL_IMPORT_FILE
    - STREAM
 
-
 ### Files and folder structure
 
 Below is an example of a straightforward structure:
@@ -179,7 +196,7 @@ Below is an example of a straightforward structure:
 - **tests**: Folder containing test cases.
 - **connector**: Folder holding the main logic of the connector.
 - **connector.py**: The core process of the connector.
-- **config_variables.py**: Contains all necessary configuration variables.
+- **config_loader.py**: Contains all necessary configuration variables.
 - **client_api.py**: Manages API calls.
 - **converter_to_stix.py**: Converts imported data into STIX objects.
 
@@ -191,7 +208,7 @@ external-import
     ├── external_import_connector
     │   ├── __init__.py
     │   ├── client_api.py
-    │   ├── config_variables.py
+    │   ├── config_loader.py
     │   ├── connector.py
     │   ├── converter_to_stix.py
     │   └── utils.py
@@ -265,6 +282,40 @@ indicator = stix2.Indicator(
   custom_properties="custom_properties",
 ) 
 ```
+
+⚠️ Any connector **should be validated** through pylint for linter. Example of commands:
+
+Install necessary dependencies:
+
+```shell
+cd shared/pylint_plugins/check_stix_plugin
+pip install -r requirements.txt
+```
+
+You can directly run it in CLI to lint a dedicated directory or python module :
+
+```shell
+cd shared/pylint_plugins/check_stix_plugin
+PYTHONPATH=. python -m pylint <path_to_my_code> --load-plugins linter_stix_id_generator
+```
+
+If you only want to test the custom module :
+
+```shell
+cd shared/pylint_plugins/check_stix_plugin
+PYTHONPATH=. python -m pylint <path_to_my_code> --disable=all --enable=no_generated_id_stix,no-value-for-parameter,unused-import --load-plugins linter_stix_id_generator
+```
+
+Note: no_generated_id_stix is a custom checker available in [shared tools](../shared/README.md)
+
+⚠️ Any connector **should be formatted** through black and isort:
+
+```commandline
+black .
+isort --profile black . 
+```
+
+⚠️ Any commits **should be signed and verified** through GPG signature.
 
 #### External import connectors specifications
 
