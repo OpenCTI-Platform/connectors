@@ -36,8 +36,8 @@ class Indicator(ABC, FrozenBaseModel):
     type: Literal[
         "ip", "domain", "sha1", "sha256", "url" # indicator types are supposed to be known !
     ] = Field(..., description="The Dragos Indicator type.", )
-    first_seen = AwareDatetime = Field(..., description="The Dragos Indicator first seen date.")
-    last_seen = AwareDatetime = Field(..., description="The Dragos Indicator last seen date.")
+    first_seen: AwareDatetime = Field(..., description="The Dragos Indicator first seen date.")
+    last_seen: AwareDatetime = Field(..., description="The Dragos Indicator last seen date.")
     # Unused : kill_chain, confidence, severity, attack_techniques, products
 
     def __init__(self):
