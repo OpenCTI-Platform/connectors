@@ -13,7 +13,7 @@ RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-de
 
 # Expose and entrypoint
 COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh && chown -R :root /opt/opencti-connector-import-file-yara && chmod -R g+rwX /opt/opencti-connector-import-file-yara
+RUN chmod +x /entrypoint.sh && chmod -R 0777 /opt/opencti-connector-import-file-yara
 WORKDIR /opt/opencti-connector-import-file-yara
 ENV HOME=/opt/opencti-connector-import-file-yara
 ENTRYPOINT ["/entrypoint.sh"]
