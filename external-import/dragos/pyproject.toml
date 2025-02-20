@@ -44,6 +44,11 @@ all = [
 [tool.setuptools.packages.find]
 where = ["."]
 
+[tool.pytest]
+testpaths = [
+    ";/tests",
+]
+
 
 [tool.isort]
 profile = "black"
