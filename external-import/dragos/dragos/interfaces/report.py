@@ -1,11 +1,14 @@
 """Define the interface for Dragos Product."""
 
 from abc import ABC, abstractmethod
-from typing import Iterable, Literal
+from typing import TYPE_CHECKING, Iterable, Literal
 
 from pydantic import AwareDatetime, Field
 
 from dragos.interfaces.common import FrozenBaseModel
+
+if TYPE_CHECKING:
+    import datetime
 
 
 class Tag(ABC, FrozenBaseModel):
@@ -15,32 +18,44 @@ class Tag(ABC, FrozenBaseModel):
     type: str = Field(..., description="The Dragos Tag type.", min_length=1)
     value: str = Field(..., description="The Dragos Tag value.", min_length=1)
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the Tag."""
         FrozenBaseModel.__init__(self, type=self._type, value=self._value)
 
     @property
     @abstractmethod
-    def _type(self):
+    def _type(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _value(self):
+    def _value(self) -> str:
         pass
+
 
 class Indicator(ABC, FrozenBaseModel):
     """Interface for Dragos Indicator."""
 
     value: str = Field(..., description="The Dragos Indicator value.", min_length=1)
     type: Literal[
-        "ip", "domain", "sha1", "sha256", "url" # indicator types are supposed to be known !
-    ] = Field(..., description="The Dragos Indicator type.", )
-    first_seen: AwareDatetime = Field(..., description="The Dragos Indicator first seen date.")
-    last_seen: AwareDatetime = Field(..., description="The Dragos Indicator last seen date.")
+        "ip",
+        "domain",
+        "sha1",
+        "sha256",
+        "url",  # indicator types are supposed to be known !
+    ] = Field(
+        ...,
+        description="The Dragos Indicator type.",
+    )
+    first_seen: AwareDatetime = Field(
+        ..., description="The Dragos Indicator first seen date."
+    )
+    last_seen: AwareDatetime = Field(
+        ..., description="The Dragos Indicator last seen date."
+    )
     # Unused : kill_chain, confidence, severity, attack_techniques, products
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the Indicator."""
         FrozenBaseModel.__init__(
             self,
@@ -48,41 +63,50 @@ class Indicator(ABC, FrozenBaseModel):
             type=self._type,
             first_seen=self._first_seen,
             last_seen=self._last_seen,
-            )
+        )
 
     @property
     @abstractmethod
-    def _value(self):
+    def _value(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _type(self):
+    def _type(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _first_seen(self):
+    def _first_seen(self) -> "datetime.datetime":
         pass
 
     @property
     @abstractmethod
-    def _last_seen(self):
+    def _last_seen(self) -> "datetime.datetime":
         pass
+
 
 class Report(ABC, FrozenBaseModel):
     """Interface for Dragos Report."""
 
     serial: str = Field(..., description="The Dragos Report ID.", min_length=1)
-    title : str = Field(..., description="The Dragos Report title.", min_length=1)
-    created_at: AwareDatetime = Field(..., description="The Dragos Report creation date.")
-    updated_at: AwareDatetime = Field(..., description="The Dragos Report last update date.")
+    title: str = Field(..., description="The Dragos Report title.", min_length=1)
+    created_at: AwareDatetime = Field(
+        ..., description="The Dragos Report creation date."
+    )
+    updated_at: AwareDatetime = Field(
+        ..., description="The Dragos Report last update date."
+    )
     summary: str = Field(..., description="The Dragos Report executive_summary.")
 
-    related_tags: list[Tag] = Field(..., description="The Dragos Report related tags.")
-    related_indicators: Iterable[Indicator] = Field(..., description="The Dragos Report related indicators.")
+    related_tags: Iterable[Tag] = Field(
+        ..., description="The Dragos Report related tags."
+    )
+    related_indicators: Iterable[Indicator] = Field(
+        ..., description="The Dragos Report related indicators."
+    )
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the Report."""
         FrozenBaseModel.__init__(
             self,
@@ -97,38 +121,39 @@ class Report(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _serial(self):
+    def _serial(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _title(self):
+    def _title(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _created_at(self):
+    def _created_at(self) -> "datetime.datetime":
         pass
 
     @property
     @abstractmethod
-    def _updated_at(self):
+    def _updated_at(self) -> "datetime.datetime":
         pass
 
     @property
     @abstractmethod
-    def _summary(self):
+    def _summary(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _related_tags(self):
+    def _related_tags(self) -> Iterable[Tag]:
         pass
 
     @property
     @abstractmethod
-    def _related_indicators(self):
+    def _related_indicators(self) -> Iterable[Indicator]:
         pass
+
 
 class Reports(ABC):
     """Interface for Dragos Reports Retrieval."""
