@@ -85,22 +85,20 @@ class SentinelIntelConnector:
                         "ipv6-addr:value",
                         "url:value",
                     ]
+                    file_attributes = [
+                        "file:hashes.'SHA-256'",
+                        "file:hashes.'SHA-1'",
+                        "file:hashes.MD5",
+                    ]
                     if result["attribute"] in network_attributes:
                         stix_type = result["attribute"].replace(":value", "")
                         observable_data["type"] = stix_type
                         observable_data["value"] = result["value"]
                         observables.append(observable_data)
-                    elif result["attribute"] == "file:hashes.'SHA-256'":
+                    elif result["attribute"] in file_attributes:
+                        hash_type = result["attribute"].split(".")[1].replace("'", "")
                         observable_data["type"] = "file"
-                        observable_data["hashes"] = {"SHA-256": result["value"]}
-                        observables.append(observable_data)
-                    elif result["attribute"] == "file:hashes.'SHA-1'":
-                        observable_data["type"] = "file"
-                        observable_data["hashes"] = {"SHA-1": result["value"]}
-                        observables.append(observable_data)
-                    elif result["attribute"] == "file:hashes.MD5":
-                        observable_data["type"] = "file"
-                        observable_data["hashes"] = {"MD5": result["value"]}
+                        observable_data["hashes"] = {hash_type: result["value"]}
                         observables.append(observable_data)
             return observables
         except:
@@ -146,60 +144,54 @@ class SentinelIntelConnector:
                 )
         return result
 
+    def _find_sentinel_indicator(self, observable_data: dict) -> dict | None:
+        """
+        Find a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
+        :param observable_data: OpenCTI observable data
+        :return: Found Sentinel indicator or None
+        """
+        opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
+            "id", observable_data
+        )
+        indicators_data = self.api.search_indicators(opencti_id=opencti_id)
+        for indicator_data in indicators_data:
+            if observable_data["type"] == "file":
+                observable_hash_type = get_hash_type(observable_data)
+                observable_hash_value = get_hash_value(observable_data).lower()
+                indicator_hash_type = indicator_data.get("fileHashType")
+                indicator_hash_value = indicator_data.get("fileHashValue", "").lower()
+                if (
+                        indicator_hash_type == observable_hash_type
+                        and indicator_hash_value == observable_hash_value
+                ):
+                    return indicator_data
+            else:
+                observable_type = get_ioc_type(observable_data)
+                observable_value = observable_data["value"]
+                indicator_value = indicator_data.get(observable_type)
+                if indicator_value == observable_value:
+                    return indicator_data
+        return None
+
     def _update_sentinel_indicator(self, observable_data) -> bool:
         """
         Update a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
         :param observable_data: OpenCTI observable data
         :return: True if the indicator has been successfully updated, False otherwise
         """
-        indicator_id = OpenCTIConnectorHelper.get_attribute_in_extension(
-            "id", observable_data
-        )
-        sentinel_indicators = self.api.search_indicator(opencti_id=indicator_id)
-        if len(sentinel_indicators) == 1:
-            sentinel_indicator_id = sentinel_indicators[0]["id"]
+        indicator_data = self._find_sentinel_indicator(observable_data)
+        if indicator_data is None:
+            return False
 
-            result = self.api.patch_indicator(observable_data, sentinel_indicator_id)
-            if result:
-                self.helper.connector_logger.info(
-                    "[UPDATE] Indicator updated",
-                    {"sentinel_id": sentinel_indicator_id, "opencti_id": indicator_id},
-                )
-            return result
-
-        else:
-            # case of a composite STIX indicator divided into multiple Sentinel indicator
-            sentinel_indicator_id = None
-            for sentinel_indicator in sentinel_indicators:
-                sentinel_ioc_type = get_ioc_type(observable_data)
-                if (
-                    sentinel_ioc_type == "file"
-                    and observable_data.get("type") == "file"
-                ):
-                    if (
-                        sentinel_indicator["fileHashType"]
-                        == get_hash_type(observable_data)
-                        and sentinel_indicator["fileHashValue"].lower()
-                        == get_hash_value(observable_data).lower()
-                    ):
-                        sentinel_indicator_id = sentinel_indicator["id"]
-                        break
-
-                if (
-                    sentinel_indicator.get(sentinel_ioc_type, None)
-                    and sentinel_indicator.get(sentinel_ioc_type)
-                    == observable_data["value"]
-                ):
-                    sentinel_indicator_id = sentinel_indicator["id"]
-                    break
-
-            result = self.api.patch_indicator(observable_data, sentinel_indicator_id)
-            if result:
-                self.helper.connector_logger.info(
-                    "[UPDATE] Indicator updated",
-                    {"sentinel_id": sentinel_indicator_id, "opencti_id": indicator_id},
-                )
-                return result
+        updated = self.api.patch_indicator(observable_data, indicator_data["id"])
+        if updated:
+            self.helper.connector_logger.info(
+                "[UPDATE] Indicator updated",
+                {
+                    "sentinel_id": indicator_data["id"],
+                    "opencti_id": indicator_data["externalId"],
+                },
+            )
 
     def _delete_sentinel_indicator(self, observable_data) -> bool:
         """
@@ -212,14 +204,14 @@ class SentinelIntelConnector:
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
             "id", observable_data
         )
-        indicators_data = self.api.search_indicator(opencti_id=opencti_id)
+        indicators_data = self.api.search_indicators(opencti_id=opencti_id)
         for indicator_data in indicators_data:
             if indicator_data["externalId"] == opencti_id:
                 result = self.api.delete_indicator(indicator_data["id"])
                 # TODO: should we delete external references on OpenCTI too?
                 if result:
                     self.helper.connector_logger.info(
-                        "[UPDATE] Indicator deleted",
+                        "[DELETE] Indicator deleted",
                         {"sentinel_id": indicator_data["id"], "opencti_id": opencti_id},
                     )
                 did_delete = result
