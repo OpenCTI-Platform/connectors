@@ -14,21 +14,6 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Create a non-privileged user that the app will run under.
-# See https://docs.docker.com/go/dockerfile-user-best-practices/
-ARG UID=10001
-RUN adduser \
-  --disabled-password \
-  --gecos "" \
-  --home "/nonexistent" \
-  --shell "/sbin/nologin" \
-  --no-create-home \
-  --uid "${UID}" \
-  appuser
-
-# Give the appuser permisions to manipulate the workdir
-RUN chown appuser /app
-
 # Install dependencies
 RUN apk update && apk upgrade && \
   apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
@@ -40,9 +25,6 @@ RUN --mount=type=bind,source=src/requirements.txt,target=requirements.txt \
 
 # Remove dependencies for pip installing after completed
 RUN apk del git build-base
-
-# Switch to the non-privileged user to run the application.
-USER appuser
 
 # Copy the connector
 COPY src .
