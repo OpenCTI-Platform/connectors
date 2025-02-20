@@ -401,9 +401,10 @@ class RSTThreatFeed:
                 update=self.update_existing_data,
                 work_id=work_id,
             )
-        except Exception as e:
-            self.helper.log_error("Communication issue with opencti %s", e)
-            raise e
+        except Exception as ex:
+            error_message = f"Communication issue with opencti {ex}"
+            self.helper.log_error(error_message)
+            raise ConnectionError(error_message) from ex
 
         # Finish the work
         self.helper.log_info(
