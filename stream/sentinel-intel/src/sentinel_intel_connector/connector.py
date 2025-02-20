@@ -161,8 +161,8 @@ class SentinelIntelConnector:
                 indicator_hash_type = indicator_data.get("fileHashType")
                 indicator_hash_value = indicator_data.get("fileHashValue", "").lower()
                 if (
-                        indicator_hash_type == observable_hash_type
-                        and indicator_hash_value == observable_hash_value
+                    indicator_hash_type == observable_hash_type
+                    and indicator_hash_value == observable_hash_value
                 ):
                     return indicator_data
             else:
