@@ -1,4 +1,5 @@
 import ipaddress
+
 import stix2
 from pycti import Identity, StixCoreRelationship
 
