@@ -33,7 +33,7 @@ class ConverterToStix:
         return [external_reference]
 
     @staticmethod
-    def create_author() -> dict:
+    def create_author() -> stix2.Identity:
         """
         Create Author
         :return: Author in Stix2 object
