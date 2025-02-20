@@ -3,7 +3,7 @@ import json
 from pycti import OpenCTIConnectorHelper
 from stix_shifter.stix_translation import stix_translation
 
-from .api_handler import SentinelApiHandler
+from .api_handler import SentinelApiHandler, SentinelApiHandlerError
 from .config_variables import ConfigConnector
 from .utils import (
     get_hash_type,
@@ -269,11 +269,11 @@ class SentinelIntelConnector:
 
             try:
                 data = json.loads(msg.data)["data"]
-            except:
+            except json.JSONDecodeError:
                 self.helper.connector_logger.error(
                     "[ERROR] Cannot process the message", {"msg_data": msg.data}
                 )
-                return
+                return None
 
             if msg.event == "create":
                 self._handle_create_event(data)
@@ -282,13 +282,17 @@ class SentinelIntelConnector:
             if msg.event == "delete":
                 self._handle_delete_event(data)
 
-        except Exception as ex:
+        except SentinelApiHandlerError as err:
+            self.helper.connector_logger.error(err.msg, err.metadata)
+
+        except Exception as err:
             self.helper.connector_logger.error(
-                "[ERROR] Failed processing data {" + str(ex) + "}"
+                "[ERROR] Failed processing data {" + str(err) + "}"
             )
             self.helper.connector_logger.error(
                 "[ERROR] Message data {" + str(msg) + "}"
             )
+        finally:
             return None
 
     def run(self) -> None:
