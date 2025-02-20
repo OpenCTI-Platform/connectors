@@ -1,17 +1,45 @@
-version: '3'
 services:
   connector-abuseipdb-ipblacklist:
     image: opencti/connector-abuseipdb-ipblacklist:6.5.2
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe # Valid UUIDv4
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=CHANGEME
       - "CONNECTOR_NAME=AbuseIPDB IP Blacklist"
       - CONNECTOR_SCOPE=abuseipdb
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT12H # ISO8601 format in String, start with 'P...' for Period
+
+      # Connector's definition parameters OPTIONAL
+      # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
+      # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
+      # - CONNECTOR_SEND_TO_QUEUE=True # Default True
+      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False 
+      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+      # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
+
+      # Connector's custom execution parameters
       - ABUSEIPDB_URL=https://api.abuseipdb.com/api/v2/blacklist
-      - ABUSEIPDB_API_KEY=ChangeMe
-      - ABUSEIPDB_SCORE=100
-      - ABUSEIPDB_LIMIT=10000
-      - ABUSEIPDB_INTERVAL=2 #Day
+      # - ABUSEIPDB_API_KEY=""
+      # Default is mixed (4,6) - ABUSEIPDB_IPVERSION=4 
+      - ABUSEIPDB_SCORE=75
+      - # ABUSEIPDB_LIMIT=10000
+      - CONNECTOR_IPSUM_DEFAULT_X_OPENCTI_SCORE=60
+      # - ABUSEIPDB_EXCEPT_COUNTRY="RU,CN"
+      # - ABUSEIPDB_ONLY_COUNTRY="RU"
+
+
+      # Add proxy parameters below if needed
+      # - HTTP_PROXY=CHANGEME
+      # - HTTPS_PROXY=CHANGEME
+      # - NO_PROXY=CHANGEME
     restart: always
+    # networks:
+    #   - docker_default
+
+# networks:
+#   default:
+#     external: true
+#     name: docker_default

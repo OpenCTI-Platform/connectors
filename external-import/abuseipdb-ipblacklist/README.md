@@ -1,35 +1,153 @@
-# OpenCTI abuseipdb ipblacklist
+# OpenCTI External Ingestion Connector AbuseIPDB
 
-The connector uses the AbuseIPDB API to collect IPlist above a specified risk score.
-If you're using a free API key, you must use the 10K limitation in the parameters.
+<!--
+General description of the connector
+* What it does
+* How it works
+* Special requirements
+* Use case description
+* ...
+-->
+
+Table of Contents
+
+- [OpenCTI External Ingestion Connector AbuseIPDB](#opencti-external-ingestion-connector-abuseipdb)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
+
+## Introduction
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6.5.2
+- OpenCTI Platform >= 6...
 
-### Configuration
+## Configuration variables
 
-| Parameter                            | Docker envvar                | Mandatory    | Description                                                                                                                                                |
-| ------------------------------------ |------------------------------| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `opencti_url`                        | `OPENCTI_URL`                | Yes          | The URL of the OpenCTI platform.                                                                                                                           |
-| `opencti_token`                      | `OPENCTI_TOKEN`              | Yes          | The default admin token configured in the OpenCTI platform parameters file.                                                                                |
-| `connector_id`                       | `CONNECTOR_ID`               | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                         |
-| `connector_name`                     | `CONNECTOR_NAME`             | Yes          |                                                                                                                                           |
-| `connector_scope`                    | `CONNECTOR_SCOPE`            | Yes          |                                                                                                 |
-| `connector_log_level`                | `CONNECTOR_LOG_LEVEL`        | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                              |
-| `ABUSEIPDB_URL`                      | `ABUSEIPDB_URL`              | Yes          | the abuse IPDB URL                                                                                                                |
-| `ABUSEIPDB_API_KEY`                  | `ABUSEIPDB_API_KEY`          | Yes          | Your Abuse IPDB API KEY                                                                                                                |
-| `ABUSEIPDB_SCORE`                    | `ABUSEIPDB_SCORE_FILTER`     | Yes          | AbuseIPDB Score Limitation                                                                                                                |
-| `ABUSEIPDB_LIMIT`                    | `ABUSEIPDB_LIMIT`            | Yes          | limit number of result itself                                                                                                               |
-| `ABUSEIPDB_INTERVAL`                 | `ABUSEIPDB_LIMIT`            | Yes          | interval between 2 collect itself                                                                                                                |
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
+in `config.yml` (for manual deployment).
 
-### Debugging ###
+### OpenCTI environment variables
+
+Below are the parameters you'll need to set for OpenCTI:
+
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+
+### Base connector environment variables
+
+Below are the parameters you'll need to set for running the connector properly:
+
+| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
+|-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
+| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
+| Connector Type  | type       | `CONNECTOR_TYPE`            | `EXTERNAL_IMPORT` | No       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
+| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           |  `abuseipdb`           | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | `error`            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Duration Period       | `duration_period` | `CONNECTOR_DURATION_PERIOD` | `PT12H`       | No        | Determines the time interval between each launch of the connector (current use `interval_sec`).  |
+| Queue Threshold       | `queue_threshold` | `CONNECTOR_QUEUE_THRESHOLD` | `500`      | No        | Used to determine the limit (RabbitMQ) in MB at which the connector must go into buffering mode. |
+
+### Connector extra parameters environment variables
+
+Below are the parameters you'll need to set for the connector:
+
+| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
+|--------------|--------------|-----------------------------|---------|-----------|-------------|
+| API base URL | base_url | `ABUSEIPDB_API_URL`         | `https://api.abuseipdb.com/api/v2/blacklist`  |  No  |             |
+| API key      | api_key      | `ABUSEIPDB_API_KEY`         |         |  No       |             |
+| API Score    | score      | `ABUSEIPDB_API_KEY`           |         |  Yes      |  Confidence Score           |
+| Api Result Limit | limit   |  `ABUSEIPDB_API_KEY`         |   10000    | No  |   500000 feet your subscription limit |
+| IPv4 | ipversion | `ABUSEIPDB_LIMIT_IPVERSION` | mixed | No | You can choose between 4 and 6 |
+| Except Country | exceptcountry | `ABUSEIPDB_EXCEPT_COUNTRY` |    |  No | For example: RU, CN (You exclude Russia and China IPs) |
+| Only Country | onlycountry | `ABUSEIPDB_EXCEPT_COUNTRY` |  | No | RU : You want only Russian IPs |
+
+## Deployment
+
+### Docker Deployment
+
+Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
+version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
+sometimes the OpenCTI SDK fails to initialize.
+
+Build a Docker Image using the provided `Dockerfile`.
+
+Example:
+
+```shell
+# Replace the IMAGE NAME with the appropriate value
+docker build . -t [IMAGE NAME]:latest
+```
+
+Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
+environment. Then, start the docker container with the provided docker-compose.yml
+
+```shell
+docker compose up -d
+# -d for detached
+```
+
+### Manual Deployment
+
+Create a file `config.yml` based on the provided `config.yml.sample`.
+
+Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
+you environment.
+
+Install the required python dependencies (preferably in a virtual environment):
+
+```shell
+pip3 install -r requirements.txt
+```
+
+```shell
+python3 main.py
+```
+
+## Usage
+
+After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+
+However, if you would like to force an immediate download of a new batch of entities, navigate to:
+
+`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
+
+Find the connector, and click on the refresh button to reset the connector's state and force a new
+download of data by re-running the connector.
+
+## Behavior
+
+<!--
+Describe how the connector functions:
+* What data is ingested, updated, or modified
+* Important considerations for users when utilizing this connector
+* Additional relevant details
+-->
+
+## Debugging
+
+The connector can be debugged by setting the appropiate log level.
+Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
+e., `self.helper.connector_logger.error("An error message")`.
 
 <!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 
-### Additional information
+## Additional information
 
 <!--
 Any additional information about this connector
@@ -37,4 +155,3 @@ Any additional information about this connector
 * What should the user take into account when using this connector
 * ...
 -->
-
