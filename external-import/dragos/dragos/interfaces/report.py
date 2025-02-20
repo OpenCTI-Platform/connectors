@@ -159,6 +159,6 @@ class Reports(ABC):
     """Interface for Dragos Reports Retrieval."""
 
     @abstractmethod
-    def list(self) -> Iterable[Report]:
+    def list(self, since: AwareDatetime) -> Iterable[Report]:
         """List all Dragos reports."""
         pass
