@@ -113,5 +113,8 @@ exclude = [
     '^__pypackages__',
     '^.venv',
 ]
+plugins = [
+  "pydantic.mypy"
+]
 
 
