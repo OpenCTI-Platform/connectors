@@ -37,11 +37,7 @@ class Indicator(ABC, FrozenBaseModel):
 
     value: str = Field(..., description="The Dragos Indicator value.", min_length=1)
     type: Literal[
-        "ip",
-        "domain",
-        "sha1",
-        "sha256",
-        "url",  # indicator types are supposed to be known !
+         'md5', 'sha1', 'sha256', 'ip', 'domain', 'artifact', 'url', 'email',  # indicator types are supposed to be known !
     ] = Field(
         ...,
         description="The Dragos Indicator type.",
