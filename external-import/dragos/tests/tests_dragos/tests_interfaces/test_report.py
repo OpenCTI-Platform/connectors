@@ -67,13 +67,14 @@ class StubReport(Report):
         return "This is a sample report summary."
 
     @property
-    def _related_tags(self) -> list[Tag]:
-        return [StubTag()]
+    def _related_tags(self) -> typing.Generator[Tag, None, None]:
+        for stub_tag in [StubTag()]:
+            yield stub_tag
 
     @property
     def _related_indicators(
         self,
-    ) -> typing.Generator[Indicator, typing.Any, typing.Any]:
+    ) -> typing.Generator[Indicator, None, None]:
         for indicator in [StubIndicator()] * 3:
             yield indicator
 
