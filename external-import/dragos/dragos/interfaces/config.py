@@ -17,7 +17,6 @@ E.g.:
 
 """
 
-import os
 from abc import ABC, abstractmethod
 from datetime import datetime
 from logging import getLogger
@@ -281,6 +280,8 @@ class ConfigLoader(ABC, FrozenBaseModel):
 
 
 if __name__ == "__main__":
+    import os
+
     logger.warning("Thuis module is not intended to be run. Demo purpose only.")
 
     class ConfigLoaderEnvOCTI(ConfigLoaderOCTI):
