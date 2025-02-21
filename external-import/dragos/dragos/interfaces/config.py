@@ -22,11 +22,11 @@ from abc import ABC, abstractmethod
 from logging import getLogger
 from typing import Any, Literal
 
+from dragos.interfaces.common import FrozenBaseModel
 from pydantic import AwareDatetime, Field, SecretStr
 
-from dragos.interfaces.common import FrozenBaseModel
-
 logger = getLogger(__name__)
+
 
 class ConfigLoaderOCTI(ABC, FrozenBaseModel):
     """Interface for loading OpenCTI dedicated configuration."""
@@ -57,17 +57,17 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
     """Interface for loading connector dedicated configuration."""
 
     id: str = Field(...)
-    type: Literal["EXTERNAL_IMPORT"] = Field(..., default="EXTERNAL_IMPORT")
+    type: Literal["EXTERNAL_IMPORT"] = Field(default="EXTERNAL_IMPORT")
     name: str = Field(...)
-    scope: list[str] = Field(...)
-    log_level: Literal["debug", "info", "warn", "error"] = Field(..., default="error")
+    scope: list[str] = Field(..., min_length=1)
+    log_level: Literal["debug", "info", "warn", "error"] = Field(default="error")
     duration_period: str = Field(...)
-    queue_threshold: str = Field(...)
-    run_and_terminate: str = Field(...)
-    send_to_queue: str = Field(...)
-    send_to_directory: str = Field(...)
+    queue_threshold: int = Field(...)
+    run_and_terminate: bool = Field(...)
+    send_to_queue: bool = Field(...)
+    send_to_directory: bool = Field(...)
     send_to_directory_path: str = Field(...)
-    send_to_directory_retention: str = Field(...)
+    send_to_directory_retention: int = Field(...)
 
     def __init__(self):
         """Initialize connector dedicated configuration."""
@@ -148,14 +148,15 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
         pass
 
 
-
 class ConfigLoaderDragos(ABC, FrozenBaseModel):
     """Interface for loading Dragos dedicated configuration."""
 
     api_base_url: str = Field(...)
     api_token: SecretStr = Field(...)
     import_start_date: AwareDatetime = Field(...)
-    tlp_level: Literal["clear", "green", "amber", "amber+strict", "red"] = Field(..., default="amber")
+    tlp_level: Literal["clear", "green", "amber", "amber+strict", "red"] = Field(
+        default="amber"
+    )
 
     def __init__(self):
         """Initialize Dragos dedicated configuration."""
@@ -246,29 +247,32 @@ class ConfigLoader(ABC, FrozenBaseModel):
             },
             "dragos": {
                 "api_base_url": self.dragos.api_base_url,
-                "api_token": self.dragos.api_token.get_secret_value()
+                "api_token": (
+                    self.dragos.api_token.get_secret_value()
                     if token_as_plaintext
-                    else self.dragos.api_token,
+                    else self.dragos.api_token
+                ),
                 "import_start_date": self.dragos.import_start_date,
                 "tlp_level": self.dragos.tlp_level,
             },
         }
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     logger.warning("Thuis module is not intended to be run. Demo purpose only.")
+
     class ConfigLoaderEnvOCTI(ConfigLoaderOCTI):
         """OpenCTI configuration loader from environment variables."""
 
         @property
         def _url(self):
             return os.environ["OPENCTI_URL"]
+
         @property
         def _token(self):
             return os.environ["OPENCTI_TOKEN"]
 
     os.environ["OPENCTI_URL"] = "http://localhost:8080"
-    os.environ["OPENCTI_TOKEN"] = "blah" # noqa: S105 # demo purpose only
+    os.environ["OPENCTI_TOKEN"] = "blah"  # noqa: S105 # demo purpose only
     cfg = ConfigLoaderEnvOCTI()
-    print(cfg.model_dump_json(indent=4)) # noqa: T201 # demo purpose only
+    print(cfg.model_dump_json(indent=4))  # noqa: T201 # demo purpose only
