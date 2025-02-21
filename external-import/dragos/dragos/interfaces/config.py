@@ -26,7 +26,6 @@ import yarl
 from dragos.interfaces.common import FrozenBaseModel
 from pydantic import AnyUrl, AwareDatetime, Field, SecretStr, ValidationError
 
-
 logger = getLogger(__name__)
 
 

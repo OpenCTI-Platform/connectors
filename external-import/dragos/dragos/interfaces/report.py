@@ -9,8 +9,10 @@ from pydantic import AwareDatetime, Field, ValidationError
 if TYPE_CHECKING:
     import datetime
 
+
 class DataRetrievalError(Exception):
     """Error raised when data retrieval fails."""
+
 
 class Tag(ABC, FrozenBaseModel):
     """Interface for Dragos Tag."""
@@ -42,7 +44,14 @@ class Indicator(ABC, FrozenBaseModel):
 
     value: str = Field(..., description="The Dragos Indicator value.", min_length=1)
     type: Literal[
-         'md5', 'sha1', 'sha256', 'ip', 'domain', 'artifact', 'url', 'email',  # indicator types are supposed to be known !
+        "md5",
+        "sha1",
+        "sha256",
+        "ip",
+        "domain",
+        "artifact",
+        "url",
+        "email",  # indicator types are supposed to be known !
     ] = Field(
         ...,
         description="The Dragos Indicator type.",
