@@ -5,8 +5,9 @@ import inspect
 import typing
 
 import pytest
-from dragos.interfaces.report import Indicator, Report, Reports, Tag
 from pydantic import ValidationError
+
+from dragos.interfaces.report import DataRetrievalError, Indicator, Report, Reports, Tag
 
 
 class StubTag(Tag):
@@ -120,8 +121,8 @@ def tests_implemented_interface_attributes_are_read_only(implemented_interface_c
     # Then an error is raised
     with pytest.raises(ValidationError) as exc_info:
         implemented_interface_class().test = "new_type"
-        assert( # noqa: S101 we indeed call assert in test
-            "Instance is frozen" in str(exc_info.value)
+        assert "Instance is frozen" in str(  # noqa: S101 we indeed call assert in test
+            exc_info.value
         )
 
 
@@ -136,6 +137,7 @@ def test_tag_should_have_the_correct_attribute():
     )
     # in fact we just check there is no error due to breaking changes
 
+
 def test_tag_should_raise_validation_error_with_incorrect_attribute():
     """Test that the Tag raises a validation error with incorrect attributes."""
 
@@ -149,7 +151,7 @@ def test_tag_should_raise_validation_error_with_incorrect_attribute():
             return (44.5, 5.2)
 
     # When instantiating the IncorrectStubTag
-    with pytest.raises(ValidationError):
+    with pytest.raises(DataRetrievalError):
         _ = IncorrectStubTag()
 
 
@@ -176,7 +178,7 @@ def test_indicator_should_raise_validation_error_with_incorrect_attribute():
 
     # When instantiating the IncorrectStubIndicator
     # Then a validation error should be raised
-    with pytest.raises(ValidationError):
+    with pytest.raises(DataRetrievalError):
         _ = IncorrectStubIndicator()
 
 
@@ -203,7 +205,7 @@ def test_report_should_raise_validation_error_with_incorrect_attribute():
 
     # When instantiating the IncorrectStubReport
     # Then a validation error should be raised
-    with pytest.raises(ValidationError):
+    with pytest.raises(DataRetrievalError):
         _ = IncorrectStubReport()
 
 
