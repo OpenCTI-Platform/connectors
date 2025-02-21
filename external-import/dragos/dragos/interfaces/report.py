@@ -3,9 +3,8 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Iterable, Literal
 
-from pydantic import AwareDatetime, Field
-
 from dragos.interfaces.common import FrozenBaseModel
+from pydantic import AwareDatetime, Field
 
 if TYPE_CHECKING:
     import datetime

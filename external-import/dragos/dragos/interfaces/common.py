@@ -1,4 +1,5 @@
 """Provide comon tools for Dragos interfaces."""
+
 from pydantic import BaseModel, ConfigDict
 
 
