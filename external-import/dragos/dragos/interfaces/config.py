@@ -19,8 +19,9 @@ E.g.:
 
 import os
 from abc import ABC, abstractmethod
+from datetime import datetime
 from logging import getLogger
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from dragos.interfaces.common import FrozenBaseModel
 from pydantic import AwareDatetime, Field, SecretStr
@@ -44,12 +45,12 @@ class ConfigLoaderOCTI(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _url(self):
+    def _url(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _token(self):
+    def _token(self) -> str:
         pass
 
 
@@ -62,12 +63,12 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
     scope: list[str] = Field(..., min_length=1)
     log_level: Literal["debug", "info", "warn", "error"] = Field(default="error")
     duration_period: str = Field(...)
-    queue_threshold: int = Field(...)
-    run_and_terminate: bool = Field(...)
-    send_to_queue: bool = Field(...)
-    send_to_directory: bool = Field(...)
-    send_to_directory_path: str = Field(...)
-    send_to_directory_retention: int = Field(...)
+    queue_threshold: Optional[int] = Field(...)
+    run_and_terminate: Optional[bool] = Field(...)
+    send_to_queue: Optional[bool] = Field(...)
+    send_to_directory: Optional[bool] = Field(...)
+    send_to_directory_path: Optional[str] = Field(...)
+    send_to_directory_retention: Optional[int] = Field(...)
 
     def __init__(self):
         """Initialize connector dedicated configuration."""
@@ -89,62 +90,57 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _id(self):
+    def _id(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _type(self):
+    def _name(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _name(self):
+    def _scope(self) -> list[str]:
         pass
 
     @property
     @abstractmethod
-    def _scope(self):
+    def _log_level(self) -> Literal["debug", "info", "warn", "error"]:
         pass
 
     @property
     @abstractmethod
-    def _log_level(self):
+    def _duration_period(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _duration_period(self):
+    def _queue_threshold(self) -> int:
         pass
 
     @property
     @abstractmethod
-    def _queue_threshold(self):
+    def _run_and_terminate(self) -> bool:
         pass
 
     @property
     @abstractmethod
-    def _run_and_terminate(self):
+    def _send_to_queue(self) -> bool:
         pass
 
     @property
     @abstractmethod
-    def _send_to_queue(self):
+    def _send_to_directory(self) -> bool:
         pass
 
     @property
     @abstractmethod
-    def _send_to_directory(self):
+    def _send_to_directory_path(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _send_to_directory_path(self):
-        pass
-
-    @property
-    @abstractmethod
-    def _send_to_directory_retention(self):
+    def _send_to_directory_retention(self) -> int:
         pass
 
 
@@ -170,22 +166,22 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _api_base_url(self):
+    def _api_base_url(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _api_token(self):
+    def _api_token(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _import_start_date(self):
+    def _import_start_date(self) -> datetime:
         pass
 
     @property
     @abstractmethod
-    def _tlp_level(self):
+    def _tlp_level(self) -> Literal["clear", "green", "amber", "amber+strict", "red"]:
         pass
 
 
@@ -207,17 +203,17 @@ class ConfigLoader(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _opencti(self):
+    def _opencti(self) -> ConfigLoaderOCTI:
         pass
 
     @property
     @abstractmethod
-    def _connector(self):
+    def _connector(self) -> ConfigLoaderConnector:
         pass
 
     @property
     @abstractmethod
-    def _dragos(self):
+    def _dragos(self) -> ConfigLoaderDragos:
         pass
 
     def to_dict(self, token_as_plaintext: bool = False) -> dict[str, Any]:
