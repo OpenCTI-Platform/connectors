@@ -9,8 +9,8 @@ from dragos.interfaces.config import (
     ConfigLoaderConnector,
     ConfigLoaderDragos,
     ConfigLoaderOCTI,
+    ConfigRetrievalError,
 )
-from pydantic import ValidationError
 
 
 class StubConfigLoaderOCTI(ConfigLoaderOCTI):
@@ -141,8 +141,8 @@ def test_config_loader_octi_raises_validation_errors_with_incorrect_attributes()
             pass  # should return a string
 
     # When: instantiating InvalidStubConfigLoaderOCTI
-    # Then: Pydantic should raise a ValidationError
-    with pytest.raises(ValidationError):
+    # Then: Pydantic should raise a ConfigRetrievalError
+    with pytest.raises(ConfigRetrievalError):
         _ = InvalidStubConfigLoaderOCTI()
 
 
@@ -153,7 +153,7 @@ def test_config_loader_connector_has_correct_attributes():
 
     # Then: The instance should have the correct attributes
     assert stub_config_loader_connector.id == "uuid"
-    assert stub_config_loader_connector.type == "EXTERNAL_IMPORT"
+    assert stub_config_loader_connector.type == "EXTERNAL_IMPORT"  # hardcoded
     assert stub_config_loader_connector.name == "Stub Connector"
     assert stub_config_loader_connector.scope == ["stub"]
     assert stub_config_loader_connector.log_level == "error"
@@ -174,8 +174,8 @@ def test_config_loader_connector_raises_validation_errors_with_incorrect_attribu
             pass  # should return a string
 
     # When: instantiating InvalidStubConfigLoaderConnector
-    # Then: Pydantic should raise a ValidationError
-    with pytest.raises(ValidationError):
+    # Then: Pydantic should raise a ConfigRetrievalError
+    with pytest.raises(ConfigRetrievalError):
         _ = InvalidStubConfigLoaderConnector()
 
 
@@ -201,8 +201,8 @@ def test_config_loader_dragos_raises_validation_errors_with_incorrect_attributes
             pass  # should return a string
 
     # When: instantiating InvalidStubConfigLoaderDragos
-    # Then: Pydantic should raise a ValidationError
-    with pytest.raises(ValidationError):
+    # Then: Pydantic should raise a ConfigRetrievalError
+    with pytest.raises(ConfigRetrievalError):
         _ = InvalidStubConfigLoaderDragos()
 
 
@@ -225,6 +225,6 @@ def test_config_loader_raises_validation_errors_with_incorrect_attributes():
             pass  # should return a ConfigLoaderOCTI instance
 
     # When: instantiating InvalidStubConfigLoader
-    # Then: Pydantic should raise a ValidationError
-    with pytest.raises(ValidationError):
+    # Then: Pydantic should raise a ConfigRetrievalError
+    with pytest.raises(ConfigRetrievalError):
         _ = InvalidStubConfigLoader()

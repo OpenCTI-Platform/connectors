@@ -24,9 +24,13 @@ from logging import getLogger
 from typing import Any, Literal, Optional
 
 from dragos.interfaces.common import FrozenBaseModel
-from pydantic import AwareDatetime, Field, SecretStr
+from pydantic import AwareDatetime, Field, SecretStr, ValidationError
 
 logger = getLogger(__name__)
+
+
+class ConfigRetrievalError(Exception):
+    """Known errors wrapper for config loaders."""
 
 
 class ConfigLoaderOCTI(ABC, FrozenBaseModel):
@@ -37,11 +41,17 @@ class ConfigLoaderOCTI(ABC, FrozenBaseModel):
 
     def __init__(self):
         """Initialize OpenCTI dedicated configuration."""
-        FrozenBaseModel.__init__(
-            self,
-            url=self._url,
-            token=self._token,
-        )
+
+        try:
+            FrozenBaseModel.__init__(
+                self,
+                url=self._url,
+                token=self._token,
+            )
+        except ValidationError as exc:
+            error_message = "Invalid OpenCTI configuration."
+            logger.error(error_message)
+            raise ConfigRetrievalError(error_message) from exc
 
     @property
     @abstractmethod
@@ -72,21 +82,27 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
 
     def __init__(self):
         """Initialize connector dedicated configuration."""
-        FrozenBaseModel.__init__(
-            self,
-            id=self._id,
-            type="EXTERNAL_IMPORT",
-            name=self._name,
-            scope=self._scope,
-            log_level=self._log_level,
-            duration_period=self._duration_period,
-            queue_threshold=self._queue_threshold,
-            run_and_terminate=self._run_and_terminate,
-            send_to_queue=self._send_to_queue,
-            send_to_directory=self._send_to_directory,
-            send_to_directory_path=self._send_to_directory_path,
-            send_to_directory_retention=self._send_to_directory_retention,
-        )
+
+        try:
+            FrozenBaseModel.__init__(
+                self,
+                id=self._id,
+                type="EXTERNAL_IMPORT",
+                name=self._name,
+                scope=self._scope,
+                log_level=self._log_level,
+                duration_period=self._duration_period,
+                queue_threshold=self._queue_threshold,
+                run_and_terminate=self._run_and_terminate,
+                send_to_queue=self._send_to_queue,
+                send_to_directory=self._send_to_directory,
+                send_to_directory_path=self._send_to_directory_path,
+                send_to_directory_retention=self._send_to_directory_retention,
+            )
+        except ValidationError as exc:
+            error_message = "Invalid connector configuration."
+            logger.error(error_message)
+            raise ConfigRetrievalError(error_message) from exc
 
     @property
     @abstractmethod
@@ -154,13 +170,19 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
 
     def __init__(self):
         """Initialize Dragos dedicated configuration."""
-        FrozenBaseModel.__init__(
-            self,
-            api_base_url=self._api_base_url,
-            api_token=self._api_token,
-            import_start_date=self._import_start_date,
-            tlp_level=self._tlp_level,
-        )
+
+        try:
+            FrozenBaseModel.__init__(
+                self,
+                api_base_url=self._api_base_url,
+                api_token=self._api_token,
+                import_start_date=self._import_start_date,
+                tlp_level=self._tlp_level,
+            )
+        except ValidationError as exc:
+            error_message = "Invalid Dragos configuration."
+            logger.error(error_message)
+            raise ConfigRetrievalError(error_message) from exc
 
     @property
     @abstractmethod
@@ -192,12 +214,18 @@ class ConfigLoader(ABC, FrozenBaseModel):
 
     def __init__(self):
         """Initialize configuration loader."""
-        FrozenBaseModel.__init__(
-            self,
-            opencti=self._opencti,
-            connector=self._connector,
-            dragos=self._dragos,
-        )
+
+        try:
+            FrozenBaseModel.__init__(
+                self,
+                opencti=self._opencti,
+                connector=self._connector,
+                dragos=self._dragos,
+            )
+        except ValidationError as err:
+            error_message = "ConfigLoader can't be instantiated."
+            logger.error(error_message)
+            raise ConfigRetrievalError(error_message) from err
 
     @property
     @abstractmethod
