@@ -11,6 +11,7 @@ from dragos.interfaces.config import (
     ConfigLoaderOCTI,
     ConfigRetrievalError,
 )
+from pydantic import ValidationError
 
 
 class StubConfigLoaderOCTI(ConfigLoaderOCTI):
@@ -121,6 +122,27 @@ def test_interface_is_abstract(interface):
     # When: Checking type of interface
     # Then: It should be a ABC subclass
     assert issubclass(interface, ABC) is True
+
+
+@pytest.mark.parametrize(
+    "implemented_interface_class",
+    [
+        pytest.param(StubConfigLoaderOCTI, id="ConfigLoaderOCTI"),
+        pytest.param(StubConfigLoaderConnector, id="ConfigLoaderConnector"),
+        pytest.param(StubConfigLoaderDragos, id="ConfigLoaderDragos"),
+        pytest.param(StubConfigLoader, id="ConfigLoader"),
+    ],
+)
+def tests_implemented_interface_attributes_are_read_only(implemented_interface_class):
+    """Test that the implemented interface attributes are read-only."""
+    # Given: An implemented interface class
+    # When: Trying to set an attribute
+    # Then: An error is raised
+    with pytest.raises(ValidationError) as exc_info:
+        implemented_interface_class().test = "new_type"
+        assert "Instance is frozen" in str(  # noqa: S101 we indeed call assert in test
+            exc_info.value
+        )
 
 
 def test_config_loader_octi_has_correct_attributes():
