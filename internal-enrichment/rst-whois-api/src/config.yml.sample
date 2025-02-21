@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'RST WHOIS API'
+  scope: 'Domain-Name,Url,indicator'
+  auto: false # Enable/disable auto-enrichment of observables an indicators
+  log_level: 'info'
+
+rst-whois-api:
+  base_url: 'https://api.rstcloud.net/v1'
+  api_key: 'ChangeMe'
+  timeout: 10
+  max_tlp: 'TLP:AMBER+STRICT'
+  whois_output_object: note
+  update_output_action: overwrite
+  output_format: standard
+  output_include_raw: false

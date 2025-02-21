@@ -16,13 +16,16 @@ class RSTNoiseControlConnector:
         # Load config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config = (
-            yaml.safe_load(open(config_file_path))
+            yaml.safe_load(open(config_file_path, encoding="UTF-8"))
             if os.path.isfile(config_file_path)
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config, True)
         self.base_url = get_config_variable(
-            "RST_NOISE_CONTROL_BASE_URL", ["rst-noise-control", "base_url"], config
+            "RST_NOISE_CONTROL_BASE_URL",
+            ["rst-noise-control", "base_url"],
+            config,
+            default="https://api.rstcloud.net/v1/",
         )
         self.api_key = get_config_variable(
             "RST_NOISE_CONTROL_API_KEY", ["rst-noise-control", "api_key"], config
@@ -76,19 +79,12 @@ class RSTNoiseControlConnector:
             )
         )
 
-        self.created_by_filter = get_config_variable(
-            "RST_NOISE_CONTROL_CREATED_BY_FILTER",
-            ["rst-noise-control", "created_by_filter"],
-            config,
-            default="RST Cloud",
-        )
-
-        self.timeout = get_config_variable(
+        self.timeout = int(get_config_variable(
             "RST_NOISE_CONTROL_TIMEOUT",
             ["rst-noise-control", "timeout"],
             config,
-            default=5,
-        )
+            default=10,
+        ))
 
         self.connector_auto = bool(
             get_config_variable(
@@ -100,7 +96,6 @@ class RSTNoiseControlConnector:
 
         self.helper.log_info(f"connector_auto {self.connector_auto}")
         self.helper.log_info(f"detection_flag {self.detection_flag}")
-        self.helper.log_info(f"created_by_filter {self.created_by_filter}")
 
     def update_observable(self, stix_objects, labels, action, obj_type):
         for obj in stix_objects:
@@ -155,9 +150,6 @@ class RSTNoiseControlConnector:
                 else:
                     new_score = new_score - diff
                 obj["x_opencti_score"] = new_score
-                obj = OpenCTIStix2.put_attribute_in_extension(
-                    obj, STIX_EXT_OCTI_SCO, "score", new_score
-                )
 
             if self.update_confidence:
                 new_confidence = obj["confidence"]
@@ -176,7 +168,7 @@ class RSTNoiseControlConnector:
     def _process_message(self, data: Dict) -> str:
         opencti_entity = data["enrichment_entity"]
 
-        tlp = "TLP:CLEAR"
+        tlp = "TLP:WHITE"
         for marking_definition in opencti_entity.get("objectMarking", []):
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
@@ -184,132 +176,111 @@ class RSTNoiseControlConnector:
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
             raise ValueError("TLP of the value is greater than MAX TLP")
 
-        check = True
-        if (
-            self.connector_auto
-            and self.created_by_filter
-            and len(self.created_by_filter) > 0
-        ):
-            if (
-                "createdBy" in data["enrichment_entity"]
-                and data["enrichment_entity"]["createdBy"]
-                and "name" in data["enrichment_entity"]["createdBy"]
-            ):
-                created_by = data["enrichment_entity"]["createdBy"]["name"]
-                orgs_to_filter = self.created_by_filter.split(",")
-                for i in orgs_to_filter:
-                    if created_by == i:
-                        check = False
-                        break
-
         self.helper.log_debug(f"Data Entity {data}")
 
-        if check:
-            # most of the entities will have 1 value
-            # but StixFile can consist of multiple hashes
-            values = []
-            if data["entity_type"] in ["IPv4-Addr", "Domain-Name", "Url"]:
-                values.append(data["stix_entity"]["value"])
-            elif data["entity_type"] == "StixFile":
-                if "hashes" in data["enrichment_entity"]:
-                    for hash in data["enrichment_entity"]["hashes"]:
-                        if "algorithm" in hash and hash["algorithm"] in [
-                            "MD5",
-                            "SHA-1",
-                            "SHA-256",
-                        ]:
-                            if len(hash["hash"]) > 0:
-                                values.append(hash["hash"])
-                            else:
-                                data["stix_entity"]["hashes"].pop(hash["algorithm"])
-                else:
-                    return "[CONNECTOR] No changes required. No MD5, SHA-1 or SHA-256 hash found"
-            elif data["entity_type"] == "Indicator":
-                values.append(data["enrichment_entity"]["name"])
+        # most of the entities will have 1 value
+        # but StixFile can consist of multiple hashes
+        values = []
+        if data["entity_type"] in ["IPv4-Addr", "Domain-Name", "Url"]:
+            values.append(data["stix_entity"]["value"])
+        elif data["entity_type"] == "StixFile":
+            if "hashes" in data["enrichment_entity"]:
+                for hash_l in data["enrichment_entity"]["hashes"]:
+                    if "algorithm" in hash_l and hash_l["algorithm"] in [
+                        "MD5",
+                        "SHA-1",
+                        "SHA-256",
+                    ]:
+                        if len(hash_l["hash"]) > 0:
+                            values.append(hash_l["hash"])
+                        else:
+                            data["stix_entity"]["hashes"].pop(hash_l["algorithm"])
             else:
-                raise ValueError(f"Unsupported value: {data}")
+                return "[CONNECTOR] No changes required. No MD5, SHA-1 or SHA-256 hash found"
+        elif data["entity_type"] == "Indicator":
+            values.append(data["enrichment_entity"]["name"])
+        else:
+            raise ValueError(f"Unsupported value: {data}")
 
-            if len(values) < 1:
-                return "[CONNECTOR] Nothing to check"
-            reponses = []
-            for value in values:
-                url = self.base_url + "/benign/lookup"
-                headers = {
-                    "Content-Type": "application/json",
-                    "x-api-key": self.api_key,
-                }
-                params = {"value": value}
-                r = requests.get(
-                    url, headers=headers, params=params, timeout=self.timeout
-                )
-                r.raise_for_status()
-                resp = r.json()
-                reponses.append(resp)
-                if resp.get("benign") == "true":
-                    # do not check all 3 hashes if at least one is listed as benign
-                    break
+        if len(values) < 1:
+            return "[CONNECTOR] Nothing to check"
+        reponses = []
+        for value in values:
+            url = self.base_url + "/benign/lookup"
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-key": self.api_key,
+            }
+            params = {"value": value}
+            r = requests.get(url, headers=headers, params=params, timeout=self.timeout)
+            r.raise_for_status()
+            resp = r.json()
+            reponses.append(resp)
+            if resp.get("benign") == "true":
+                # do not check all 3 hashes if at least one is listed as benign
+                break
 
-            resp = {}
-            for first_found in reponses:
-                if "benign" in first_found:
-                    resp = first_found
-                    break
+        resp = {}
+        for first_found in reponses:
+            if "benign" in first_found:
+                resp = first_found
+                break
 
-            if "benign" in resp:
-                self.helper.log_debug(f"Response {resp}")
-                if resp["benign"] == "true":
-                    stix_objects = data["stix_objects"]
-                    stix_entry = data["stix_entity"]
-                    if "labels" not in stix_entry:
-                        stix_entry["labels"] = []
-                    labels = stix_entry["labels"]
-                    if resp["reason"].startswith("Drop"):
-                        categories = resp["reason"].replace("Drop ", "")
-                        for word in list(set(categories.lower().split("/"))):
-                            labels.append(word)
-                        labels.append("benign")
-                        labels.append("rst-nc-action: drop")
-                        if data["entity_type"] == "Indicator":
-                            stix_objects = self.update_indicator(
-                                stix_objects, labels, "Drop", data["entity_type"]
-                            )
-                        else:
-                            stix_objects = self.update_observable(
-                                stix_objects, labels, "Drop", data["entity_type"]
-                            )
-                    elif resp["reason"].startswith("Change Score"):
-                        categories = resp["reason"].replace("Change Score ", "")
-                        for word in list(set(categories.lower().split("/"))):
-                            labels.append(word)
-                        labels.append("noise")
-                        labels.append("rst-nc-action: change score")
-                        if data["entity_type"] == "Indicator":
-                            stix_objects = self.update_indicator(
-                                stix_objects,
-                                labels,
-                                "Change Score",
-                                data["entity_type"],
-                            )
-                        else:
-                            stix_objects = self.update_observable(
-                                stix_objects,
-                                labels,
-                                "Change Score",
-                                data["entity_type"],
-                            )
+        if "benign" in resp:
+            self.helper.log_debug(f"Response {resp}")
+            if resp["benign"] == "true":
+                stix_objects = data["stix_objects"]
+                stix_entry = data["stix_entity"]
+                if "labels" not in stix_entry:
+                    stix_entry["labels"] = []
+                labels = stix_entry["labels"]
+                if resp["reason"].startswith("Drop"):
+                    categories = resp["reason"].replace("Drop ", "")
+                    for word in list(set(categories.lower().split("/"))):
+                        labels.append(word)
+                    labels.append("benign")
+                    labels.append("rst-nc-action: drop")
+                    if data["entity_type"] == "Indicator":
+                        stix_objects = self.update_indicator(
+                            stix_objects, labels, "Drop", data["entity_type"]
+                        )
                     else:
-                        raise ValueError(f"Unsupported value: {resp}")
-                    self.helper.log_debug(f"Result {stix_objects}")
-                    serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
-                    self.helper.send_stix2_bundle(serialized_bundle)
-                    return f"[CONNECTOR] Sent STIX bundle to update: {resp['reason']}"
-                elif resp["benign"] == "false":
-                    pass
+                        stix_objects = self.update_observable(
+                            stix_objects, labels, "Drop", data["entity_type"]
+                        )
+                elif resp["reason"].startswith("Change Score"):
+                    categories = resp["reason"].replace("Change Score ", "")
+                    for word in list(set(categories.lower().split("/"))):
+                        labels.append(word)
+                    labels.append("noise")
+                    labels.append("rst-nc-action: change score")
+                    if data["entity_type"] == "Indicator":
+                        stix_objects = self.update_indicator(
+                            stix_objects,
+                            labels,
+                            "Change Score",
+                            data["entity_type"],
+                        )
+                    else:
+                        stix_objects = self.update_observable(
+                            stix_objects,
+                            labels,
+                            "Change Score",
+                            data["entity_type"],
+                        )
                 else:
                     raise ValueError(f"Unsupported value: {resp}")
+                self.helper.log_debug(f"Result {stix_objects}")
+                serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
+                self.helper.send_stix2_bundle(serialized_bundle)
+                return f"[CONNECTOR] Sent STIX bundle to update: {resp['reason']}"
+            elif resp["benign"] == "false":
+                pass
             else:
-                raise ValueError(f"Communication error: {resp}")
-            return "[CONNECTOR] No changes required"
+                raise ValueError(f"Unsupported value: {resp}")
+        else:
+            raise ValueError(f"Communication error: {resp}")
+        return "[CONNECTOR] No changes required"
 
     # Start the main loop
     def start(self):
