@@ -4,6 +4,7 @@ from abc import ABC
 from datetime import datetime, timezone
 
 import pytest
+import yarl
 from dragos.interfaces.config import (
     ConfigLoader,
     ConfigLoaderConnector,
@@ -19,7 +20,7 @@ class StubConfigLoaderOCTI(ConfigLoaderOCTI):
 
     @property
     def _url(self):
-        return "http://localhost:8080"
+        return yarl.URL("http://localhost:8080")
 
     @property
     def _token(self):
@@ -79,7 +80,7 @@ class StubConfigLoaderDragos(ConfigLoaderDragos):
 
     @property
     def _api_base_url(self):
-        return "http://localhost:8080"
+        return yarl.URL("http://localhost:8080")
 
     @property
     def _api_token(self):
@@ -151,7 +152,9 @@ def test_config_loader_octi_has_correct_attributes():
     stub_config_loader_octi = StubConfigLoaderOCTI()
 
     # Then: The instance should have the correct attributes
-    assert stub_config_loader_octi.url == "http://localhost:8080"
+    assert (
+        str(stub_config_loader_octi.url) == "http://localhost:8080/"
+    )  # trailing slash is coming from URL object serialization
     assert stub_config_loader_octi.token.get_secret_value() == "api-token"
 
 
@@ -207,7 +210,9 @@ def test_config_loader_dragos_has_correct_attributes():
     stub_config_loader_dragos = StubConfigLoaderDragos()
 
     # Then: The instance should have the correct attributes
-    assert stub_config_loader_dragos.api_base_url == "http://localhost:8080"
+    assert (
+        str(stub_config_loader_dragos.api_base_url) == "http://localhost:8080/"
+    )  # trailing slash is coming from URL object serialization
     assert stub_config_loader_dragos.api_token.get_secret_value() == "api-token"
     assert stub_config_loader_dragos.import_start_date == datetime(
         1970, 1, 1, 0, 0, 0, tzinfo=timezone.utc

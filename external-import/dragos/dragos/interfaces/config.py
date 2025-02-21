@@ -22,8 +22,10 @@ from datetime import datetime
 from logging import getLogger
 from typing import Any, Literal, Optional
 
+import yarl
 from dragos.interfaces.common import FrozenBaseModel
-from pydantic import AwareDatetime, Field, SecretStr, ValidationError
+from pydantic import AnyUrl, AwareDatetime, Field, SecretStr, ValidationError
+
 
 logger = getLogger(__name__)
 
@@ -35,7 +37,7 @@ class ConfigRetrievalError(Exception):
 class ConfigLoaderOCTI(ABC, FrozenBaseModel):
     """Interface for loading OpenCTI dedicated configuration."""
 
-    url: str = Field(...)
+    url: AnyUrl = Field(...)
     token: SecretStr = Field(...)
 
     def __init__(self):
@@ -44,7 +46,7 @@ class ConfigLoaderOCTI(ABC, FrozenBaseModel):
         try:
             FrozenBaseModel.__init__(
                 self,
-                url=self._url,
+                url=str(self._url),
                 token=self._token,
             )
         except ValidationError as exc:
@@ -54,7 +56,7 @@ class ConfigLoaderOCTI(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _url(self) -> str:
+    def _url(self) -> yarl.URL:
         pass
 
     @property
@@ -162,7 +164,7 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
 class ConfigLoaderDragos(ABC, FrozenBaseModel):
     """Interface for loading Dragos dedicated configuration."""
 
-    api_base_url: str = Field(...)
+    api_base_url: AnyUrl = Field(...)
     api_token: SecretStr = Field(...)
     import_start_date: AwareDatetime = Field(...)
     tlp_level: Literal["clear", "green", "amber", "amber+strict", "red"] = Field(...)
@@ -173,7 +175,7 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
         try:
             FrozenBaseModel.__init__(
                 self,
-                api_base_url=self._api_base_url,
+                api_base_url=str(self._api_base_url),
                 api_token=self._api_token,
                 import_start_date=self._import_start_date,
                 tlp_level=self._tlp_level,
@@ -185,7 +187,7 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _api_base_url(self) -> str:
+    def _api_base_url(self) -> yarl.URL:
         pass
 
     @property

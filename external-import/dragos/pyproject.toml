@@ -21,7 +21,8 @@ requires-python = ">=3.11, <3.13"
 dependencies = [
 "stix2 >=3.0.1, <4",
 "pycti >=6.4, <7",
-"pydantic>= 2.8.10, <3"
+"pydantic >= 2.8.10, <3",
+"yarl >=1.18.3, <2"
 ]
 
 
