@@ -104,6 +104,26 @@ def test_interfaces_are_abstract(interface):
     assert inspect.isabstract(interface)  # noqa: S101 we indeed call assert in test
 
 
+@pytest.mark.parametrize(
+    "implemented_interface_class",
+    [
+        pytest.param(StubTag, id="Tag"),
+        pytest.param(StubIndicator, id="Indicator"),
+        pytest.param(StubReport, id="Report"),
+    ],
+)
+def tests_implemented_interface_attributes_are_read_only(implemented_interface_class):
+    """Test that the implemented interface attributes are read-only."""
+    # Given an implemented interface class
+    # When trying to set an attribute
+    # Then an error is raised
+    with pytest.raises(ValidationError) as exc_info:
+        implemented_interface_class().test = "new_type"
+        assert( # noqa: S101 we indeed call assert in test
+            "Instance is frozen" in str(exc_info.value)
+        )
+
+
 def test_tag_should_have_the_correct_attribute():
     """Test that the Tag has the correct attributes."""
     # Given a StubTag definition respecting interface
@@ -114,7 +134,6 @@ def test_tag_should_have_the_correct_attribute():
         tag.type == "Geolocation" and tag.value == "my_place"
     )
     # in fact we just check there is no error due to breaking changes
-
 
 def test_tag_should_raise_validation_error_with_incorrect_attribute():
     """Test that the Tag raises a validation error with incorrect attributes."""
