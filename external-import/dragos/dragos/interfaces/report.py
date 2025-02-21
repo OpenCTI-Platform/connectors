@@ -1,14 +1,16 @@
 """Define the interface for Dragos Product."""
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Iterable, Literal
+from typing import TYPE_CHECKING, Generator, Literal
 
 from dragos.interfaces.common import FrozenBaseModel
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime, Field, ValidationError
 
 if TYPE_CHECKING:
     import datetime
 
+class DataRetrievalError(Exception):
+    """Error raised when data retrieval fails."""
 
 class Tag(ABC, FrozenBaseModel):
     """Interface for Dragos Tag."""
@@ -19,7 +21,10 @@ class Tag(ABC, FrozenBaseModel):
 
     def __init__(self) -> None:
         """Initialize the Tag."""
-        FrozenBaseModel.__init__(self, type=self._type, value=self._value)
+        try:
+            FrozenBaseModel.__init__(self, type=self._type, value=self._value)
+        except ValidationError as e:
+            raise DataRetrievalError("Failed to retrieve Tag") from e
 
     @property
     @abstractmethod
@@ -52,13 +57,16 @@ class Indicator(ABC, FrozenBaseModel):
 
     def __init__(self) -> None:
         """Initialize the Indicator."""
-        FrozenBaseModel.__init__(
-            self,
-            value=self._value,
-            type=self._type,
-            first_seen=self._first_seen,
-            last_seen=self._last_seen,
-        )
+        try:
+            FrozenBaseModel.__init__(
+                self,
+                value=self._value,
+                type=self._type,
+                first_seen=self._first_seen,
+                last_seen=self._last_seen,
+            )
+        except ValidationError as e:
+            raise DataRetrievalError("Failed to retrieve Indicator") from e
 
     @property
     @abstractmethod
@@ -94,25 +102,28 @@ class Report(ABC, FrozenBaseModel):
     )
     summary: str = Field(..., description="The Dragos Report executive_summary.")
 
-    related_tags: Iterable[Tag] = Field(
+    related_tags: Generator[Tag, None, None] = Field(
         ..., description="The Dragos Report related tags."
     )
-    related_indicators: Iterable[Indicator] = Field(
+    related_indicators: Generator[Indicator, None, None] = Field(
         ..., description="The Dragos Report related indicators."
     )
 
     def __init__(self) -> None:
         """Initialize the Report."""
-        FrozenBaseModel.__init__(
-            self,
-            serial=self._serial,
-            title=self._title,
-            created_at=self._created_at,
-            updated_at=self._updated_at,
-            summary=self._summary,
-            related_tags=self._related_tags,
-            related_indicators=self._related_indicators,
-        )
+        try:
+            FrozenBaseModel.__init__(
+                self,
+                serial=self._serial,
+                title=self._title,
+                created_at=self._created_at,
+                updated_at=self._updated_at,
+                summary=self._summary,
+                related_tags=self._related_tags,
+                related_indicators=self._related_indicators,
+            )
+        except ValidationError as e:
+            raise DataRetrievalError("Failed to retrieve Report") from e
 
     @property
     @abstractmethod
@@ -141,12 +152,12 @@ class Report(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _related_tags(self) -> Iterable[Tag]:
+    def _related_tags(self) -> Generator[Tag, None, None]:
         pass
 
     @property
     @abstractmethod
-    def _related_indicators(self) -> Iterable[Indicator]:
+    def _related_indicators(self) -> Generator[Indicator, None, None]:
         pass
 
 
@@ -154,6 +165,6 @@ class Reports(ABC):
     """Interface for Dragos Reports Retrieval."""
 
     @abstractmethod
-    def list(self, since: AwareDatetime) -> Iterable[Report]:
+    def list(self, since: AwareDatetime) -> Generator[Report, None, None]:
         """List all Dragos reports."""
         pass
