@@ -82,6 +82,19 @@ class ConverterToStix:
         )
         return octi_hostname
 
+    def _create_identity_system(self, agent: harfanglab.Agent) -> opencti.Identity:
+        """
+        Create an Identity (system) for a given alert's agent.
+        :param agent: Agent found in a Harfanglab alert
+        :return: STIX 2.1 identity
+        """
+        octi_identity = opencti.Identity(
+            name=agent.hostname,
+            identity_class="system",
+            object_marking_refs=[self.marking_definition.id],
+        )
+        return octi_identity
+
     def _create_ipv4(self, ioc: harfanglab.IocRule) -> opencti.IPv4:
         """
         Create an IPv4Address (STIX2.1 observable, aka SCO) for a given ioc.
@@ -348,6 +361,7 @@ class ConverterToStix:
         if observable:
             observables.append(observable)
         if alert.agent:
+            observables.append(self._create_identity_system(alert.agent))
             observables.append(self._create_hostname(alert.agent))
         if alert.process:
             if alert.process.current_directory:
