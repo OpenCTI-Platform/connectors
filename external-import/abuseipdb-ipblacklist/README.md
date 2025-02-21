@@ -71,11 +71,11 @@ Below are the parameters you'll need to set for the connector:
 |--------------|--------------|-----------------------------|---------|-----------|-------------|
 | API base URL | base_url | `ABUSEIPDB_API_URL`         | `https://api.abuseipdb.com/api/v2/blacklist`  |  No  |             |
 | API key      | api_key      | `ABUSEIPDB_API_KEY`         |         |  No       |             |
-| API Score    | score      | `ABUSEIPDB_API_KEY`           |         |  Yes      |  Confidence Score           |
-| Api Result Limit | limit   |  `ABUSEIPDB_API_KEY`         |   10000    | No  |   500000 feet your subscription limit |
-| IPv4 | ipversion | `ABUSEIPDB_LIMIT_IPVERSION` | mixed | No | You can choose between 4 and 6 |
+| API Score    | score      | `ABUSEIPDB_SCORE`           |         |  Yes      |  Confidence Score           |
+| Api Result Limit | limit   |  `ABUSEIPDB_LIMIT`         |   10000    | No  |   500000 feet your subscription limit |
+| IPv4 | ipversion | `ABUSEIPDB_LIMIT_IPVERSION` | mixed | No | You can choose 4 ot 6 (Ipversion)|
 | Except Country | exceptcountry | `ABUSEIPDB_EXCEPT_COUNTRY` |    |  No | For example: RU, CN (You exclude Russia and China IPs) |
-| Only Country | onlycountry | `ABUSEIPDB_EXCEPT_COUNTRY` |  | No | RU : You want only Russian IPs |
+| Only Country | onlycountry | `ABUSEIPDB_ONLY_COUNTRY` |  | No | RU : You want only Russian IPs |
 
 ## Deployment
 
