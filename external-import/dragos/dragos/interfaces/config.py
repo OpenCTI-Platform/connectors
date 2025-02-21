@@ -58,10 +58,10 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
     """Interface for loading connector dedicated configuration."""
 
     id: str = Field(...)
-    type: Literal["EXTERNAL_IMPORT"] = Field(default="EXTERNAL_IMPORT")
+    type: Literal["EXTERNAL_IMPORT"] = Field(...)
     name: str = Field(...)
     scope: list[str] = Field(..., min_length=1)
-    log_level: Literal["debug", "info", "warn", "error"] = Field(default="error")
+    log_level: Literal["debug", "info", "warn", "error"] = Field(...)
     duration_period: str = Field(...)
     queue_threshold: Optional[int] = Field(...)
     run_and_terminate: Optional[bool] = Field(...)
@@ -75,7 +75,7 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
         FrozenBaseModel.__init__(
             self,
             id=self._id,
-            type=self._type,
+            type="EXTERNAL_IMPORT",
             name=self._name,
             scope=self._scope,
             log_level=self._log_level,
@@ -150,9 +150,7 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
     api_base_url: str = Field(...)
     api_token: SecretStr = Field(...)
     import_start_date: AwareDatetime = Field(...)
-    tlp_level: Literal["clear", "green", "amber", "amber+strict", "red"] = Field(
-        default="amber"
-    )
+    tlp_level: Literal["clear", "green", "amber", "amber+strict", "red"] = Field(...)
 
     def __init__(self):
         """Initialize Dragos dedicated configuration."""

@@ -33,10 +33,6 @@ class StubConfigLoaderConnector(ConfigLoaderConnector):
         return "uuid"
 
     @property
-    def _type(self):
-        return "EXTERNAL_IMPORT"
-
-    @property
     def _name(self):
         return "Stub Connector"
 
