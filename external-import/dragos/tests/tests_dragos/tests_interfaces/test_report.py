@@ -5,27 +5,26 @@ import inspect
 import typing
 
 import pytest
+from dragos.interfaces.report import Indicator, Report, Reports, Tag
 from pydantic import ValidationError
 
-from dragos.interfaces.report import Indicator, Report, Reports, Tag
 
-
-class DummyTag(Tag):
-    """Dummy Tag implementation for testing purposes."""
+class StubTag(Tag):
+    """Stub Tag implementation for testing purposes."""
 
     @property
     def _type(self) -> str:
-        """Return the Dummy Tag type."""
+        """Return the Stub Tag type."""
         return "Geolocation"
 
     @property
     def _value(self) -> str:
-        """Return the Dummy Tag value."""
+        """Return the Stub Tag value."""
         return "my_place"
 
 
-class DummyIndicator(Indicator):
-    """Dummy Indicator implementation for testing purposes."""
+class StubIndicator(Indicator):
+    """Stub Indicator implementation for testing purposes."""
 
     @property
     def _value(self):
@@ -44,8 +43,8 @@ class DummyIndicator(Indicator):
         return datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
 
 
-class DummyReport(Report):
-    """Dummy Report implementation for testing purposes."""
+class StubReport(Report):
+    """Stub Report implementation for testing purposes."""
 
     @property
     def _serial(self) -> str:
@@ -69,23 +68,23 @@ class DummyReport(Report):
 
     @property
     def _related_tags(self) -> list[Tag]:
-        return [DummyTag()]
+        return [StubTag()]
 
     @property
     def _related_indicators(
         self,
     ) -> typing.Generator[Indicator, typing.Any, typing.Any]:
-        for indicator in [DummyIndicator()] * 3:
+        for indicator in [StubIndicator()] * 3:
             yield indicator
 
 
-class DummyReports(Reports):
-    """Dummy Reports implementation for testing purposes."""
+class StubReports(Reports):
+    """Stub Reports implementation for testing purposes."""
 
     def list(self, since) -> typing.Generator[Report, typing.Any, typing.Any]:
         """List the reports."""
         _ = since
-        return iter([DummyReport()])
+        return iter([StubReport()])
 
 
 @pytest.mark.parametrize(
@@ -107,9 +106,9 @@ def test_interfaces_are_abstract(interface):
 
 def test_tag_should_have_the_correct_attribute():
     """Test that the Tag has the correct attributes."""
-    # Given a DummyTag definition respecting interface
-    # When instantiating the DummyTag
-    tag = DummyTag()
+    # Given a StubTag definition respecting interface
+    # When instantiating the StubTag
+    tag = StubTag()
     # Then the tag should have the correct attributes
     assert (  # noqa: S101 we indeed call assert in test
         tag.type == "Geolocation" and tag.value == "my_place"
@@ -120,25 +119,25 @@ def test_tag_should_have_the_correct_attribute():
 def test_tag_should_raise_validation_error_with_incorrect_attribute():
     """Test that the Tag raises a validation error with incorrect attributes."""
 
-    # Given a DummyTag implementation not respecting interface types
-    class IncorrectDummyTag(DummyTag):
-        """Incorrect Dummy Tag implementation for testing purposes."""
+    # Given a StubTag implementation not respecting interface types
+    class IncorrectStubTag(StubTag):
+        """Incorrect Stub Tag implementation for testing purposes."""
 
         @property
         def _value(self) -> tuple[float, float]:
-            """Return the Dummy Tag value."""
+            """Return the Stub Tag value."""
             return (44.5, 5.2)
 
-    # When instantiating the IncorrectDummyTag
+    # When instantiating the IncorrectStubTag
     with pytest.raises(ValidationError):
-        _ = IncorrectDummyTag()
+        _ = IncorrectStubTag()
 
 
 def test_indicator_should_have_the_correct_attribute():
     """Test that the Indicator has the correct attributes."""
-    # Given a DummyIndicator definition respecting interface types
-    # When instantiating the DummyIndicator
-    indicator = DummyIndicator()
+    # Given a StubIndicator definition respecting interface types
+    # When instantiating the StubIndicator
+    indicator = StubIndicator()
     # Then the indicator should have the correct attributes
     assert indicator.value == "192.0.0.1"  # noqa: S101 we indeed call assert in test
     # in fact we just check there is no error due to breaking changes
@@ -147,25 +146,25 @@ def test_indicator_should_have_the_correct_attribute():
 def test_indicator_should_raise_validation_error_with_incorrect_attribute():
     """Test that the Indicator raises a validation error with incorrect attributes."""
 
-    # Given a DummyIndicator implementation not respecting interface types
-    class IncorrectDummyIndicator(DummyIndicator):
-        """Incorrect Dummy Indicator implementation for testing purposes."""
+    # Given a StubIndicator implementation not respecting interface types
+    class IncorrectStubIndicator(StubIndicator):
+        """Incorrect Stub Indicator implementation for testing purposes."""
 
         @property
         def _value(self):
             return 1234
 
-    # When instantiating the IncorrectDummyIndicator
+    # When instantiating the IncorrectStubIndicator
     # Then a validation error should be raised
     with pytest.raises(ValidationError):
-        _ = IncorrectDummyIndicator()
+        _ = IncorrectStubIndicator()
 
 
 def test_report_should_have_the_correct_attributes():
     """Test that the Report has the correct attributes."""
-    # Given a DummyReport definition respecting interface types
-    # When instantiating the DummyReport
-    report = DummyReport()
+    # Given a StubReport definition respecting interface types
+    # When instantiating the StubReport
+    report = StubReport()
     # Then the report should have the correct attributes
     assert report.serial == "12345"  # noqa: S101 we indeed call assert in test
     # in fact we just check there is no error due to breaking changes
@@ -174,26 +173,30 @@ def test_report_should_have_the_correct_attributes():
 def test_report_should_raise_validation_error_with_incorrect_attribute():
     """Test that the Report raises a validation error with incorrect attributes."""
 
-    # Given a DummyReport implementation not respecting interface types
-    class IncorrectDummyReport(DummyReport):
-        """Incorrect Dummy Report implementation for testing purposes."""
+    # Given a StubReport implementation not respecting interface types
+    class IncorrectStubReport(StubReport):
+        """Incorrect Stub Report implementation for testing purposes."""
 
         @property
         def _serial(self) -> str:
             return 12345  # should be str
 
-    # When instantiating the IncorrectDummyReport
+    # When instantiating the IncorrectStubReport
     # Then a validation error should be raised
     with pytest.raises(ValidationError):
-        _ = IncorrectDummyReport()
+        _ = IncorrectStubReport()
 
 
 def test_reports_list_reports():
     """Test that the Reports list reports."""
-    # Given a DummyReports instance
-    reports = DummyReports()
+    # Given a StubReports instance
+    reports = StubReports()
     # When listing the reports
-    reports_list = list(reports.list(since=datetime.datetime(2023, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)))
+    reports_list = list(
+        reports.list(
+            since=datetime.datetime(2023, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        )
+    )
     # Then the reports list should not be empty
     assert len(reports_list) == 1  # noqa: S101 we indeed call assert in test
     # in fact we just check there is no error due to breaking changes
