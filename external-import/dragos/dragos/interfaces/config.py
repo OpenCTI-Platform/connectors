@@ -18,7 +18,7 @@ class ConfigRetrievalError(Exception):
     """Known errors wrapper for config loaders."""
 
 
-class ConfigLoaderOCTI(ABC, FrozenBaseModel):
+class _ConfigLoaderOCTI(ABC, FrozenBaseModel):
     """Interface for loading OpenCTI dedicated configuration.
 
     Examples:
@@ -73,7 +73,7 @@ class ConfigLoaderOCTI(ABC, FrozenBaseModel):
         pass
 
 
-class ConfigLoaderConnector(ABC, FrozenBaseModel):
+class _ConfigLoaderConnector(ABC, FrozenBaseModel):
     """Interface for loading connector dedicated configuration."""
 
     id: str = Field(
@@ -206,7 +206,7 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
         pass
 
 
-class ConfigLoaderDragos(ABC, FrozenBaseModel):
+class _ConfigLoaderDragos(ABC, FrozenBaseModel):
     """Interface for loading Dragos dedicated configuration."""
 
     api_base_url: HttpUrl = Field(
@@ -266,9 +266,9 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
 class ConfigLoader(ABC, FrozenBaseModel):
     """Interface for loading configuration settings."""
 
-    opencti: ConfigLoaderOCTI = Field(..., description="OpenCTI config.")
-    connector: ConfigLoaderConnector = Field(..., description="Connector config.")
-    dragos: ConfigLoaderDragos = Field(..., description="Dragos config.")
+    opencti: _ConfigLoaderOCTI = Field(..., description="OpenCTI config.")
+    connector: _ConfigLoaderConnector = Field(..., description="Connector config.")
+    dragos: _ConfigLoaderDragos = Field(..., description="Dragos config.")
 
     def __init__(self):
         """Initialize configuration loader."""
@@ -287,17 +287,17 @@ class ConfigLoader(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _opencti(self) -> ConfigLoaderOCTI:
+    def _opencti(self) -> _ConfigLoaderOCTI:
         pass
 
     @property
     @abstractmethod
-    def _connector(self) -> ConfigLoaderConnector:
+    def _connector(self) -> _ConfigLoaderConnector:
         pass
 
     @property
     @abstractmethod
-    def _dragos(self) -> ConfigLoaderDragos:
+    def _dragos(self) -> _ConfigLoaderDragos:
         pass
 
     def to_dict(self, token_as_plaintext: bool = False) -> dict[str, Any]:
@@ -336,4 +336,3 @@ class ConfigLoader(ABC, FrozenBaseModel):
                 "tlp_level": self.dragos.tlp_level,
             },
         }
-
