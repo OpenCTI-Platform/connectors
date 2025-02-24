@@ -1,21 +1,21 @@
 """Provide tests for dragos.interfaces.config module."""
 
 from abc import ABC
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from pydantic import ValidationError
 
 from dragos.interfaces.config import (
     ConfigLoader,
-    ConfigLoaderConnector,
-    ConfigLoaderDragos,
-    ConfigLoaderOCTI,
     ConfigRetrievalError,
+    _ConfigLoaderConnector,
+    _ConfigLoaderDragos,
+    _ConfigLoaderOCTI,
 )
 
 
-class StubConfigLoaderOCTI(ConfigLoaderOCTI):
+class StubConfigLoaderOCTI(_ConfigLoaderOCTI):
     """Stub adapter for testing purpose."""
 
     @property
@@ -27,7 +27,7 @@ class StubConfigLoaderOCTI(ConfigLoaderOCTI):
         return "api-token"
 
 
-class StubConfigLoaderConnector(ConfigLoaderConnector):
+class StubConfigLoaderConnector(_ConfigLoaderConnector):
     """Stub adapter for testing purpose."""
 
     @property
@@ -75,7 +75,7 @@ class StubConfigLoaderConnector(ConfigLoaderConnector):
         return 0
 
 
-class StubConfigLoaderDragos(ConfigLoaderDragos):
+class StubConfigLoaderDragos(_ConfigLoaderDragos):
     """Stub adapter for testing purpose."""
 
     @property
@@ -88,7 +88,7 @@ class StubConfigLoaderDragos(ConfigLoaderDragos):
 
     @property
     def _import_start_date(self):
-        return datetime(1970, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        return "1970-01-01T00:00:00Z"
 
     @property
     def _tlp_level(self):
@@ -112,9 +112,9 @@ class StubConfigLoader(ConfigLoader):
 @pytest.mark.parametrize(
     "interface",
     [
-        pytest.param(ConfigLoaderOCTI, id="ConfigLoaderOCTI"),
-        pytest.param(ConfigLoaderConnector, id="ConfigLoaderConnector"),
-        pytest.param(ConfigLoaderDragos, id="ConfigLoaderDragos"),
+        pytest.param(_ConfigLoaderOCTI, id="_ConfigLoaderOCTI"),
+        pytest.param(_ConfigLoaderConnector, id="_ConfigLoaderConnector"),
+        pytest.param(_ConfigLoaderDragos, id="_ConfigLoaderDragos"),
         pytest.param(ConfigLoader, id="ConfigLoader"),
     ],
 )
@@ -128,9 +128,9 @@ def test_interface_is_abstract(interface):
 @pytest.mark.parametrize(
     "implemented_interface_class",
     [
-        pytest.param(StubConfigLoaderOCTI, id="ConfigLoaderOCTI"),
-        pytest.param(StubConfigLoaderConnector, id="ConfigLoaderConnector"),
-        pytest.param(StubConfigLoaderDragos, id="ConfigLoaderDragos"),
+        pytest.param(StubConfigLoaderOCTI, id="_ConfigLoaderOCTI"),
+        pytest.param(StubConfigLoaderConnector, id="_ConfigLoaderConnector"),
+        pytest.param(StubConfigLoaderDragos, id="_ConfigLoaderDragos"),
         pytest.param(StubConfigLoader, id="ConfigLoader"),
     ],
 )
@@ -138,7 +138,7 @@ def tests_implemented_interface_attributes_are_read_only(implemented_interface_c
     """Test that the implemented interface attributes are read-only."""
     # Given: An implemented interface class
     # When: Trying to set an attribute
-    # Then: An error is raised
+    # Then: A Validation Error is raised
     with pytest.raises(ValidationError) as exc_info:
         implemented_interface_class().test = "new_type"
         assert "Instance is frozen" in str(  # noqa: S101 we indeed call assert in test
@@ -147,7 +147,7 @@ def tests_implemented_interface_attributes_are_read_only(implemented_interface_c
 
 
 def test_config_loader_octi_has_correct_attributes():
-    # Given: Valid implementation of ConfigLoaderOCTI
+    # Given: Valid implementation of _ConfigLoaderOCTI
     # When: Instantiating StubConfigLoaderOCTI
     stub_config_loader_octi = StubConfigLoaderOCTI()
 
@@ -158,21 +158,21 @@ def test_config_loader_octi_has_correct_attributes():
     assert stub_config_loader_octi.token.get_secret_value() == "api-token"
 
 
-def test_config_loader_octi_raises_validation_errors_with_incorrect_attributes():
-    # Given: Invalid implementation of ConfigLoaderOCTI
+def test_config_loader_octi_raises_config_retrieval_error_with_incorrect_attributes():
+    # Given: Invalid implementation of _ConfigLoaderOCTI
     class InvalidStubConfigLoaderOCTI(StubConfigLoaderOCTI):
         @property
         def _url(self):
             pass  # should return a string
 
     # When: instantiating InvalidStubConfigLoaderOCTI
-    # Then: Pydantic should raise a ConfigRetrievalError
+    # Then: A ConfigRetrievalError is raised
     with pytest.raises(ConfigRetrievalError):
         _ = InvalidStubConfigLoaderOCTI()
 
 
 def test_config_loader_connector_has_correct_attributes():
-    # Given: Valid implementation of ConfigLoaderConnector
+    # Given: Valid implementation of _ConfigLoaderConnector
     # When: Instantiating StubConfigLoaderConnector
     stub_config_loader_connector = StubConfigLoaderConnector()
 
@@ -182,30 +182,30 @@ def test_config_loader_connector_has_correct_attributes():
     assert stub_config_loader_connector.name == "Stub Connector"
     assert stub_config_loader_connector.scope == ["stub"]
     assert stub_config_loader_connector.log_level == "error"
-    assert stub_config_loader_connector.duration_period == "PT5M"
+    assert stub_config_loader_connector.duration_period == timedelta(minutes=5)
     assert stub_config_loader_connector.queue_threshold == 0
-    assert stub_config_loader_connector.run_and_terminate == False
-    assert stub_config_loader_connector.send_to_queue == False
-    assert stub_config_loader_connector.send_to_directory == False
+    assert stub_config_loader_connector.run_and_terminate is False
+    assert stub_config_loader_connector.send_to_queue is False
+    assert stub_config_loader_connector.send_to_directory is False
     assert stub_config_loader_connector.send_to_directory_path == "/path/to/dir"
     assert stub_config_loader_connector.send_to_directory_retention == 0
 
 
-def test_config_loader_connector_raises_validation_errors_with_incorrect_attributes():
-    # Given: Invalid implementation of ConfigLoaderConnector
-    class InvalidStubConfigLoaderConnector(StubConfigLoaderConnector):
+def test_config_loader_connector_raises_config_retrieval_error_with_incorrect_attributes():
+    # Given: Invalid implementation of _ConfigLoaderConnector
+    class InvaidStub_ConfigLoaderConnector(StubConfigLoaderConnector):
         @property
         def _id(self):
             pass  # should return a string
 
-    # When: instantiating InvalidStubConfigLoaderConnector
-    # Then: Pydantic should raise a ConfigRetrievalError
+    # When: instantiating InvaidStub_ConfigLoaderConnector
+    # Then: A ConfigRetrievalErroris raised
     with pytest.raises(ConfigRetrievalError):
-        _ = InvalidStubConfigLoaderConnector()
+        _ = InvaidStub_ConfigLoaderConnector()
 
 
 def test_config_loader_dragos_has_correct_attributes():
-    # Given: Valid implementation of ConfigLoaderDragos
+    # Given: Valid implementation of _ConfigLoaderDragos
     # When: Instantiating StubConfigLoaderDragos
     stub_config_loader_dragos = StubConfigLoaderDragos()
 
@@ -220,15 +220,15 @@ def test_config_loader_dragos_has_correct_attributes():
     assert stub_config_loader_dragos.tlp_level == "amber"
 
 
-def test_config_loader_dragos_raises_validation_errors_with_incorrect_attributes():
-    # Given: Invalid implementation of ConfigLoaderDragos
+def test_config_loader_dragos_raises_config_retrieval_error_with_incorrect_attributes():
+    # Given: Invalid implementation of _ConfigLoaderDragos
     class InvalidStubConfigLoaderDragos(StubConfigLoaderDragos):
         @property
         def _api_base_url(self):
             pass  # should return a string
 
     # When: instantiating InvalidStubConfigLoaderDragos
-    # Then: Pydantic should raise a ConfigRetrievalError
+    # Then: A ConfigRetrievalError is raised
     with pytest.raises(ConfigRetrievalError):
         _ = InvalidStubConfigLoaderDragos()
 
@@ -244,14 +244,14 @@ def test_config_loader_has_correct_attributes():
     assert isinstance(stub_config.dragos, StubConfigLoaderDragos) is True
 
 
-def test_config_loader_raises_validation_errors_with_incorrect_attributes():
+def test_config_loader_raises_config_retrieval_error_with_incorrect_attributes():
     # Given: Invalid implementation of ConfigLoader
     class InvalidStubConfigLoader(StubConfigLoader):
         @property
         def _opencti(self):
-            pass  # should return a ConfigLoaderOCTI instance
+            pass  # should return a _ConfigLoaderOCTI instance
 
     # When: instantiating InvalidStubConfigLoader
-    # Then: Pydantic should raise a ConfigRetrievalError
+    # Then: A ConfigRetrievalError is raised
     with pytest.raises(ConfigRetrievalError):
         _ = InvalidStubConfigLoader()
