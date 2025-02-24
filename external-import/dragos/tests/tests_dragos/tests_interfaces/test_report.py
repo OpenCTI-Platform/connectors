@@ -169,10 +169,12 @@ def test_indicator_should_have_the_correct_attribute():
     indicator = StubIndicator()
     # Then the indicator should have the correct attributes
     assert indicator.value == "192.0.0.1"  # noqa: S101 we indeed call assert in test
-    assert ( # noqa: S101 we indeed call assert in test
-        indicator.first_seen == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
-        )
+    assert (  # noqa: S101 we indeed call assert in test
+        indicator.first_seen
+        == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+    )
     # in fact we just check there is no error due to breaking changes
+
 
 def test_indicator_should_cast_datetime():
     """Test that the Indicator casts datetime correctly."""
@@ -180,10 +182,13 @@ def test_indicator_should_cast_datetime():
     # When instantiating the StubIndicator
     indicator = StubIndicator()
     # Then the indicator should have time aware datetime attributes
-    assert ( # noqa: S101 we indeed call assert in test
-        indicator.first_seen == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
-        and indicator.last_seen == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
-        )
+    assert (  # noqa: S101 we indeed call assert in test
+        indicator.first_seen
+        == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        and indicator.last_seen
+        == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+    )
+
 
 def test_indicator_should_raise_validation_error_with_incorrect_attribute():
     """Test that the Indicator raises a data retrieval error with incorrect attributes."""
@@ -197,7 +202,7 @@ def test_indicator_should_raise_validation_error_with_incorrect_attribute():
             return 1234
 
     # When instantiating the IncorrectStubIndicator
-    # Then a data retrieval error should be raised 
+    # Then a data retrieval error should be raised
     with pytest.raises(DataRetrievalError):
         _ = IncorrectStubIndicator()
 
@@ -218,10 +223,12 @@ def test_report_should_cast_datetime():
     # When instantiating the StubReport
     report = StubReport()
     # Then the report should have time aware datetime attributes
-    assert ( # noqa: S101 we indeed call assert in test
-        report.created_at == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
-        and report.updated_at == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
-        )
+    assert (  # noqa: S101 we indeed call assert in test
+        report.created_at
+        == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        and report.updated_at
+        == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+    )
 
 
 def test_report_should_raise_data_retrieval_error_with_incorrect_attribute():
