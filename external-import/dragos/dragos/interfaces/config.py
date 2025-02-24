@@ -4,7 +4,7 @@ To develop an adapter based on it simply implement the abstract properties.
 """
 
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging import getLogger
 from typing import Any, Literal, Optional
 
@@ -97,13 +97,13 @@ class _ConfigLoaderConnector(ABC, FrozenBaseModel):
         ...,
         description="Determines the verbosity of the logs.",
     )
-    duration_period: str = Field(
+    duration_period: timedelta = Field(
         ...,
         description="Duration between two scheduled runs of the connector (ISO format).",
     )
     queue_threshold: Optional[int] = Field(
         ...,
-        description="Connector queue max size in Mbytes.",
+        description="Connector queue max size in Mbytes. Default to 500.",  # default handled by PyCTI, see OpenCTIHelper
     )
     run_and_terminate: Optional[bool] = Field(
         ...,
@@ -177,32 +177,32 @@ class _ConfigLoaderConnector(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _queue_threshold(self) -> int:
+    def _queue_threshold(self) -> Optional[int]:
         pass
 
     @property
     @abstractmethod
-    def _run_and_terminate(self) -> bool:
+    def _run_and_terminate(self) -> Optional[bool]:
         pass
 
     @property
     @abstractmethod
-    def _send_to_queue(self) -> bool:
+    def _send_to_queue(self) -> Optional[bool]:
         pass
 
     @property
     @abstractmethod
-    def _send_to_directory(self) -> bool:
+    def _send_to_directory(self) -> Optional[bool]:
         pass
 
     @property
     @abstractmethod
-    def _send_to_directory_path(self) -> str:
+    def _send_to_directory_path(self) -> Optional[str]:
         pass
 
     @property
     @abstractmethod
-    def _send_to_directory_retention(self) -> int:
+    def _send_to_directory_retention(self) -> Optional[int]:
         pass
 
 
@@ -254,7 +254,7 @@ class _ConfigLoaderDragos(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _import_start_date(self) -> datetime:
+    def _import_start_date(self) -> str:
         pass
 
     @property
