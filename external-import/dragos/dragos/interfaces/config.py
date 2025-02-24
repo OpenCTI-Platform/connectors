@@ -4,7 +4,7 @@ To develop an adapter based on it simply implement the abstract properties.
 """
 
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta
+from datetime import timedelta
 from logging import getLogger
 from typing import Any, Literal, Optional
 
