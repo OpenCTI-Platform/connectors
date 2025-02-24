@@ -144,8 +144,8 @@ def test_tag_should_have_the_correct_attribute():
     # in fact we just check there is no error due to breaking changes
 
 
-def test_tag_should_raise_validation_error_with_incorrect_attribute():
-    """Test that the Tag raises a validation error with incorrect attributes."""
+def test_tag_should_raise_data_retrieval_error_with_incorrect_attribute():
+    """Test that the Tag raises a data retrieval error with incorrect attributes."""
 
     # Given a StubTag implementation not respecting interface types
     class IncorrectStubTag(StubTag):
@@ -157,6 +157,7 @@ def test_tag_should_raise_validation_error_with_incorrect_attribute():
             return (44.5, 5.2)
 
     # When instantiating the IncorrectStubTag
+    # Then a data retrieval error is raised
     with pytest.raises(DataRetrievalError):
         _ = IncorrectStubTag()
 
@@ -185,7 +186,7 @@ def test_indicator_should_cast_datetime():
         )
 
 def test_indicator_should_raise_validation_error_with_incorrect_attribute():
-    """Test that the Indicator raises a validation error with incorrect attributes."""
+    """Test that the Indicator raises a data retrieval error with incorrect attributes."""
 
     # Given a StubIndicator implementation not respecting interface types
     class IncorrectStubIndicator(StubIndicator):
@@ -196,7 +197,7 @@ def test_indicator_should_raise_validation_error_with_incorrect_attribute():
             return 1234
 
     # When instantiating the IncorrectStubIndicator
-    # Then a validation error should be raised
+    # Then a data retrieval error should be raised 
     with pytest.raises(DataRetrievalError):
         _ = IncorrectStubIndicator()
 
@@ -223,8 +224,8 @@ def test_report_should_cast_datetime():
         )
 
 
-def test_report_should_raise_validation_error_with_incorrect_attribute():
-    """Test that the Report raises a validation error with incorrect attributes."""
+def test_report_should_raise_data_retrieval_error_with_incorrect_attribute():
+    """Test that the Report raises a data retrieval error with incorrect attributes."""
 
     # Given a StubReport implementation not respecting interface types
     class IncorrectStubReport(StubReport):
@@ -235,7 +236,7 @@ def test_report_should_raise_validation_error_with_incorrect_attribute():
             return 12345  # should be str
 
     # When instantiating the IncorrectStubReport
-    # Then a validation error should be raised
+    # Then a data retrieval error should be raised
     with pytest.raises(DataRetrievalError):
         _ = IncorrectStubReport()
 
