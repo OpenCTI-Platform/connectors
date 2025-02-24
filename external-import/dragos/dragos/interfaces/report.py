@@ -174,4 +174,3 @@ class Reports(ABC):
     @abstractmethod
     def list(self, since: AwareDatetime) -> Generator[_Report, None, None]:
         """List all Dragos reports."""
-        pass
