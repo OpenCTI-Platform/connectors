@@ -4,7 +4,6 @@ from abc import ABC
 from datetime import datetime, timezone
 
 import pytest
-import yarl
 from dragos.interfaces.config import (
     ConfigLoader,
     ConfigLoaderConnector,
@@ -20,7 +19,7 @@ class StubConfigLoaderOCTI(ConfigLoaderOCTI):
 
     @property
     def _url(self):
-        return yarl.URL("http://localhost:8080")
+        return "http://localhost:8080"
 
     @property
     def _token(self):
@@ -80,7 +79,7 @@ class StubConfigLoaderDragos(ConfigLoaderDragos):
 
     @property
     def _api_base_url(self):
-        return yarl.URL("http://localhost:8080")
+        return "http://localhost:8080"
 
     @property
     def _api_token(self):

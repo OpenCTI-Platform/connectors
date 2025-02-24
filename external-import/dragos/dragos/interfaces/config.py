@@ -22,9 +22,8 @@ from datetime import datetime
 from logging import getLogger
 from typing import Any, Literal, Optional
 
-import yarl
 from dragos.interfaces.common import FrozenBaseModel
-from pydantic import AnyUrl, AwareDatetime, Field, SecretStr, ValidationError
+from pydantic import AwareDatetime, Field, HttpUrl, SecretStr, ValidationError
 
 logger = getLogger(__name__)
 
@@ -36,7 +35,7 @@ class ConfigRetrievalError(Exception):
 class ConfigLoaderOCTI(ABC, FrozenBaseModel):
     """Interface for loading OpenCTI dedicated configuration."""
 
-    url: AnyUrl = Field(
+    url: HttpUrl = Field(
         ...,
         description="The URL of the OpenCTI platform.",
     )
@@ -51,7 +50,7 @@ class ConfigLoaderOCTI(ABC, FrozenBaseModel):
         try:
             FrozenBaseModel.__init__(
                 self,
-                url=str(self._url),
+                url=self._url,
                 token=self._token,
             )
         except ValidationError as exc:
@@ -61,7 +60,7 @@ class ConfigLoaderOCTI(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _url(self) -> yarl.URL:
+    def _url(self) -> str:
         pass
 
     @property
@@ -206,7 +205,7 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
 class ConfigLoaderDragos(ABC, FrozenBaseModel):
     """Interface for loading Dragos dedicated configuration."""
 
-    api_base_url: AnyUrl = Field(
+    api_base_url: HttpUrl = Field(
         ...,
         description="Dragos API base URL.",
     )
@@ -229,7 +228,7 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
         try:
             FrozenBaseModel.__init__(
                 self,
-                api_base_url=str(self._api_base_url),
+                api_base_url=self._api_base_url,
                 api_token=self._api_token,
                 import_start_date=self._import_start_date,
                 tlp_level=self._tlp_level,
@@ -241,7 +240,7 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _api_base_url(self) -> yarl.URL:
+    def _api_base_url(self) -> str:
         pass
 
     @property
