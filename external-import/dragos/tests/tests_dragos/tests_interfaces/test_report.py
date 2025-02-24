@@ -5,8 +5,15 @@ import inspect
 import typing
 
 import pytest
-from dragos.interfaces.report import DataRetrievalError, Indicator, Report, Reports, Tag
 from pydantic import ValidationError
+
+from dragos.interfaces.report import (
+    DataRetrievalError,
+    Reports,
+    _Indicator,
+    _Report,
+    _Tag,
+)
 
 
 class StubTag(Tag):
@@ -23,7 +30,7 @@ class StubTag(Tag):
         return "my_place"
 
 
-class StubIndicator(Indicator):
+class StubIndicator(_Indicator):
     """Stub Indicator implementation for testing purposes."""
 
     @property
@@ -43,7 +50,7 @@ class StubIndicator(Indicator):
         return datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
 
 
-class StubReport(Report):
+class StubReport(_Report):
     """Stub Report implementation for testing purposes."""
 
     @property
@@ -74,7 +81,7 @@ class StubReport(Report):
     @property
     def _related_indicators(
         self,
-    ) -> typing.Generator[Indicator, None, None]:
+    ) -> typing.Generator[_Indicator, None, None]:
         for indicator in [StubIndicator()] * 3:
             yield indicator
 
@@ -91,9 +98,9 @@ class StubReports(Reports):
 @pytest.mark.parametrize(
     "interface",
     [
-        pytest.param(Tag, id="Tag"),
-        pytest.param(Indicator, id="Indicator"),
-        pytest.param(Report, id="Report"),
+        pytest.param(_Tag, id="Tag"),
+        pytest.param(_Indicator, id="Indicator"),
+        pytest.param(_Report, id="Report"),
         pytest.param(Reports, id="Reports"),
     ],
 )

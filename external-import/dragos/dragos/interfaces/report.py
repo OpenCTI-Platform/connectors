@@ -3,8 +3,9 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Generator, Literal
 
-from dragos.interfaces.common import FrozenBaseModel
 from pydantic import AwareDatetime, Field, ValidationError
+
+from dragos.interfaces.common import FrozenBaseModel
 
 if TYPE_CHECKING:
     import datetime
@@ -14,7 +15,7 @@ class DataRetrievalError(Exception):
     """Error raised when data retrieval fails."""
 
 
-class Tag(ABC, FrozenBaseModel):
+class _Tag(ABC, FrozenBaseModel):
     """Interface for Dragos Tag."""
 
     # Not an enum, use cases should handle the values and logs accordingly
@@ -39,7 +40,7 @@ class Tag(ABC, FrozenBaseModel):
         pass
 
 
-class Indicator(ABC, FrozenBaseModel):
+class _Indicator(ABC, FrozenBaseModel):
     """Interface for Dragos Indicator."""
 
     value: str = Field(..., description="The Dragos Indicator value.", min_length=1)
@@ -98,7 +99,7 @@ class Indicator(ABC, FrozenBaseModel):
         pass
 
 
-class Report(ABC, FrozenBaseModel):
+class _Report(ABC, FrozenBaseModel):
     """Interface for Dragos Report."""
 
     serial: str = Field(..., description="The Dragos Report ID.", min_length=1)
@@ -111,10 +112,10 @@ class Report(ABC, FrozenBaseModel):
     )
     summary: str = Field(..., description="The Dragos Report executive_summary.")
 
-    related_tags: Generator[Tag, None, None] = Field(
+    related_tags: Generator[_Tag, None, None] = Field(
         ..., description="The Dragos Report related tags."
     )
-    related_indicators: Generator[Indicator, None, None] = Field(
+    related_indicators: Generator[_Indicator, None, None] = Field(
         ..., description="The Dragos Report related indicators."
     )
 
@@ -161,12 +162,12 @@ class Report(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _related_tags(self) -> Generator[Tag, None, None]:
+    def _related_tags(self) -> Generator[_Tag, None, None]:
         pass
 
     @property
     @abstractmethod
-    def _related_indicators(self) -> Generator[Indicator, None, None]:
+    def _related_indicators(self) -> Generator[_Indicator, None, None]:
         pass
 
 
@@ -174,6 +175,6 @@ class Reports(ABC):
     """Interface for Dragos Reports Retrieval."""
 
     @abstractmethod
-    def list(self, since: AwareDatetime) -> Generator[Report, None, None]:
+    def list(self, since: AwareDatetime) -> Generator[_Report, None, None]:
         """List all Dragos reports."""
         pass
