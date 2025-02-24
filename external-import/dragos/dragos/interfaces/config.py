@@ -36,8 +36,14 @@ class ConfigRetrievalError(Exception):
 class ConfigLoaderOCTI(ABC, FrozenBaseModel):
     """Interface for loading OpenCTI dedicated configuration."""
 
-    url: AnyUrl = Field(...)
-    token: SecretStr = Field(...)
+    url: AnyUrl = Field(
+        ...,
+        description="The URL of the OpenCTI platform.",
+    )
+    token: SecretStr = Field(
+        ...,
+        description="The token of the user representing the connector in the OpenCTI platform.",
+    )
 
     def __init__(self):
         """Initialize OpenCTI dedicated configuration."""
@@ -67,18 +73,55 @@ class ConfigLoaderOCTI(ABC, FrozenBaseModel):
 class ConfigLoaderConnector(ABC, FrozenBaseModel):
     """Interface for loading connector dedicated configuration."""
 
-    id: str = Field(...)
-    type: Literal["EXTERNAL_IMPORT"] = Field(...)
-    name: str = Field(...)
-    scope: list[str] = Field(..., min_length=1)
-    log_level: Literal["debug", "info", "warn", "error"] = Field(...)
-    duration_period: str = Field(...)
-    queue_threshold: Optional[int] = Field(...)
-    run_and_terminate: Optional[bool] = Field(...)
-    send_to_queue: Optional[bool] = Field(...)
-    send_to_directory: Optional[bool] = Field(...)
-    send_to_directory_path: Optional[str] = Field(...)
-    send_to_directory_retention: Optional[int] = Field(...)
+    id: str = Field(
+        ...,
+        description="A unique UUIDv4 identifier for this connector instance.",
+    )
+    type: Literal["EXTERNAL_IMPORT"] = Field(
+        ...,
+        description="Should always be set to EXTERNAL_IMPORT for this connector.",
+    )
+    name: str = Field(
+        ...,
+        description="Name of the connector.",
+    )
+    scope: list[str] = Field(
+        ...,
+        description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+        min_length=1,
+    )
+    log_level: Literal["debug", "info", "warn", "error"] = Field(
+        ...,
+        description="Determines the verbosity of the logs.",
+    )
+    duration_period: str = Field(
+        ...,
+        description="Duration between two scheduled runs of the connector (ISO format).",
+    )
+    queue_threshold: Optional[int] = Field(
+        ...,
+        description="Connector queue max size in Mbytes.",
+    )
+    run_and_terminate: Optional[bool] = Field(
+        ...,
+        description="Connector run-and-terminate flag.",
+    )
+    send_to_queue: Optional[bool] = Field(
+        ...,
+        description="Connector send-to-queue flag.",
+    )
+    send_to_directory: Optional[bool] = Field(
+        ...,
+        description="Connector send-to-directory flag.",
+    )
+    send_to_directory_path: Optional[str] = Field(
+        ...,
+        description="Connector send-to-directory path.",
+    )
+    send_to_directory_retention: Optional[int] = Field(
+        ...,
+        description="Connector send-to-directory retention.",
+    )
 
     def __init__(self):
         """Initialize connector dedicated configuration."""
@@ -163,10 +206,22 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
 class ConfigLoaderDragos(ABC, FrozenBaseModel):
     """Interface for loading Dragos dedicated configuration."""
 
-    api_base_url: AnyUrl = Field(...)
-    api_token: SecretStr = Field(...)
-    import_start_date: AwareDatetime = Field(...)
-    tlp_level: Literal["clear", "green", "amber", "amber+strict", "red"] = Field(...)
+    api_base_url: AnyUrl = Field(
+        ...,
+        description="Dragos API base URL.",
+    )
+    api_token: SecretStr = Field(
+        ...,
+        description="Dragos API token.",
+    )
+    import_start_date: AwareDatetime = Field(
+        ...,
+        description="Start date of first import (ISO format).",
+    )
+    tlp_level: Literal["clear", "green", "amber", "amber+strict", "red"] = Field(
+        ...,
+        description="TLP level to apply on objects imported into OpenCTI.",
+    )
 
     def __init__(self):
         """Initialize Dragos dedicated configuration."""
@@ -208,9 +263,9 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
 class ConfigLoader(ABC, FrozenBaseModel):
     """Interface for loading configuration settings."""
 
-    opencti: ConfigLoaderOCTI = Field(...)
-    connector: ConfigLoaderConnector = Field(...)
-    dragos: ConfigLoaderDragos = Field(...)
+    opencti: ConfigLoaderOCTI = Field(..., description="OpenCTI config.")
+    connector: ConfigLoaderConnector = Field(..., description="Connector config.")
+    dragos: ConfigLoaderDragos = Field(..., description="Dragos config.")
 
     def __init__(self):
         """Initialize configuration loader."""
