@@ -1,8 +1,9 @@
-import traceback
-import requests
 import json
 import os
 import time
+import traceback
+
+import requests
 import urllib3
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
