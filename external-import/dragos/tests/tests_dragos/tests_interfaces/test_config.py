@@ -4,6 +4,8 @@ from abc import ABC
 from datetime import datetime, timezone
 
 import pytest
+from pydantic import ValidationError
+
 from dragos.interfaces.config import (
     ConfigLoader,
     ConfigLoaderConnector,
@@ -11,7 +13,6 @@ from dragos.interfaces.config import (
     ConfigLoaderOCTI,
     ConfigRetrievalError,
 )
-from pydantic import ValidationError
 
 
 class StubConfigLoaderOCTI(ConfigLoaderOCTI):
