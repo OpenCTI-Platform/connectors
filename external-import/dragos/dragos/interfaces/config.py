@@ -1,20 +1,6 @@
 """Define the interfaces for application config loader.
 
 To develop an adapter based on it simply implement the abstract properties.
-E.g.:
-    class ConfigLoaderEnvOCTI(ConfigLoaderOCTI):
-        @property
-        def _url(self):
-            return os.environ["OPENCTI_URL"]
-        @property
-        def _token(self):
-            return os.environ["OPENCTI_TOKEN"]
-
-    os.environ["OPENCTI_URL"] = "http://localhost:8080"
-    os.environ["OPENCTI_TOKEN"] = "blah"
-    cfg = ConfigLoaderEnvOCTI()
-    print(cfg.model_dump_json(indent=2))
-
 """
 
 from abc import ABC, abstractmethod
@@ -33,7 +19,25 @@ class ConfigRetrievalError(Exception):
 
 
 class ConfigLoaderOCTI(ABC, FrozenBaseModel):
-    """Interface for loading OpenCTI dedicated configuration."""
+    """Interface for loading OpenCTI dedicated configuration.
+
+    Examples:
+    >>>  class ConfigLoaderEnvOCTI(ConfigLoaderOCTI):
+    ...     \"""OpenCTI configuration loader from environment variables.\"""
+    ...
+    ...     @property
+    ...     def _url(self) -> str:
+    ...         return os.environ["OPENCTI_URL"]
+    ...
+    ...     @property
+    ...     def _token(self) -> str:
+    ...         return os.environ["OPENCTI_TOKEN"]
+
+    >>> os.environ["OPENCTI_URL"] = "http://localhost:8080"
+    >>> os.environ["OPENCTI_TOKEN"] = "blah"
+    >>> cfg = ConfigLoaderEnvOCTI()
+    >>> res = cfg.model_dump_json(indent=4)
+    """
 
     url: HttpUrl = Field(
         ...,
@@ -333,24 +337,3 @@ class ConfigLoader(ABC, FrozenBaseModel):
             },
         }
 
-
-if __name__ == "__main__":
-    import os
-
-    logger.warning("Thuis module is not intended to be run. Demo purpose only.")
-
-    class ConfigLoaderEnvOCTI(ConfigLoaderOCTI):
-        """OpenCTI configuration loader from environment variables."""
-
-        @property
-        def _url(self):
-            return os.environ["OPENCTI_URL"]
-
-        @property
-        def _token(self):
-            return os.environ["OPENCTI_TOKEN"]
-
-    os.environ["OPENCTI_URL"] = "http://localhost:8080"
-    os.environ["OPENCTI_TOKEN"] = "blah"  # noqa: S105 # demo purpose only
-    cfg = ConfigLoaderEnvOCTI()
-    print(cfg.model_dump_json(indent=4))  # noqa: T201 # demo purpose only
