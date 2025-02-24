@@ -75,15 +75,13 @@ class StubReport(_Report):
 
     @property
     def _related_tags(self) -> typing.Generator[_Tag, None, None]:
-        for stub_tag in [StubTag()]:
-            yield stub_tag
+        yield from [StubTag()]
 
     @property
     def _related_indicators(
         self,
     ) -> typing.Generator[_Indicator, None, None]:
-        for indicator in [StubIndicator()] * 3:
-            yield indicator
+        yield from [StubIndicator()] * 3
 
 
 class StubReports(Reports):
