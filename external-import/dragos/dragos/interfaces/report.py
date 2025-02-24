@@ -1,14 +1,11 @@
 """Define the interface for Dragos Product."""
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Generator, Literal
+from typing import Generator, Literal
 
 from pydantic import AwareDatetime, Field, ValidationError
 
 from dragos.interfaces.common import FrozenBaseModel
-
-if TYPE_CHECKING:
-    import datetime
 
 
 class DataRetrievalError(Exception):
@@ -90,12 +87,12 @@ class _Indicator(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _first_seen(self) -> "datetime.datetime":
+    def _first_seen(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _last_seen(self) -> "datetime.datetime":
+    def _last_seen(self) -> str:
         pass
 
 
@@ -147,12 +144,12 @@ class _Report(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _created_at(self) -> "datetime.datetime":
+    def _created_at(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def _updated_at(self) -> "datetime.datetime":
+    def _updated_at(self) -> str:
         pass
 
     @property

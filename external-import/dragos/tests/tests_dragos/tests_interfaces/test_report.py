@@ -16,7 +16,7 @@ from dragos.interfaces.report import (
 )
 
 
-class StubTag(Tag):
+class StubTag(_Tag):
     """Stub Tag implementation for testing purposes."""
 
     @property
@@ -42,12 +42,12 @@ class StubIndicator(_Indicator):
         return "ip"
 
     @property
-    def _first_seen(self):
-        return datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+    def _first_seen(self) -> str:
+        return "1970-01-01T00:00:00Z"
 
     @property
-    def _last_seen(self):
-        return datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+    def _last_seen(self) -> str:
+        return "1970-01-01T00:00:00Z"
 
 
 class StubReport(_Report):
@@ -62,19 +62,19 @@ class StubReport(_Report):
         return "Sample Report"
 
     @property
-    def _created_at(self) -> datetime.datetime:
-        return datetime.datetime(2023, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+    def _created_at(self) -> str:
+        return "1970-01-01T00:00:00Z"
 
     @property
-    def _updated_at(self) -> datetime.datetime:
-        return datetime.datetime(2023, 1, 2, 0, 0, 0, tzinfo=datetime.timezone.utc)
+    def _updated_at(self) -> str:
+        return "1970-01-01T00:00:00Z"
 
     @property
     def _summary(self) -> str:
         return "This is a sample report summary."
 
     @property
-    def _related_tags(self) -> typing.Generator[Tag, None, None]:
+    def _related_tags(self) -> typing.Generator[_Tag, None, None]:
         for stub_tag in [StubTag()]:
             yield stub_tag
 
@@ -89,7 +89,7 @@ class StubReport(_Report):
 class StubReports(Reports):
     """Stub Reports implementation for testing purposes."""
 
-    def list(self, since) -> typing.Generator[Report, typing.Any, typing.Any]:
+    def list(self, since) -> typing.Generator[_Report, typing.Any, typing.Any]:
         """List the reports."""
         _ = since
         return iter([StubReport()])
@@ -168,8 +168,21 @@ def test_indicator_should_have_the_correct_attribute():
     indicator = StubIndicator()
     # Then the indicator should have the correct attributes
     assert indicator.value == "192.0.0.1"  # noqa: S101 we indeed call assert in test
+    assert ( # noqa: S101 we indeed call assert in test
+        indicator.first_seen == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        )
     # in fact we just check there is no error due to breaking changes
 
+def test_indicator_should_cast_datetime():
+    """Test that the Indicator casts datetime correctly."""
+    # Given a StubIndicator definition respecting interface types
+    # When instantiating the StubIndicator
+    indicator = StubIndicator()
+    # Then the indicator should have time aware datetime attributes
+    assert ( # noqa: S101 we indeed call assert in test
+        indicator.first_seen == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        and indicator.last_seen == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        )
 
 def test_indicator_should_raise_validation_error_with_incorrect_attribute():
     """Test that the Indicator raises a validation error with incorrect attributes."""
@@ -196,6 +209,18 @@ def test_report_should_have_the_correct_attributes():
     # Then the report should have the correct attributes
     assert report.serial == "12345"  # noqa: S101 we indeed call assert in test
     # in fact we just check there is no error due to breaking changes
+
+
+def test_report_should_cast_datetime():
+    """Test that the Report casts datetime correctly."""
+    # Given a StubReport definition respecting interface types
+    # When instantiating the StubReport
+    report = StubReport()
+    # Then the report should have time aware datetime attributes
+    assert ( # noqa: S101 we indeed call assert in test
+        report.created_at == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        and report.updated_at == datetime.datetime(1970, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        )
 
 
 def test_report_should_raise_validation_error_with_incorrect_attribute():
