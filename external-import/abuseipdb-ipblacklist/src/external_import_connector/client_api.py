@@ -50,7 +50,7 @@ class ConnectorClient:
             )
             return None
 
-    def get_entities(self, params=None) -> list:
+    def get_entities(self, params=None) -> list | None:
         """
         If params is None, retrieve all IPs in the Github Repository
         :param params: Optional Params to filter what list to return

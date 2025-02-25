@@ -195,15 +195,8 @@ class ConverterToStix:
         if not observables:
             return indicators
         for observable in observables:
-            if observable.type == "ipv4-addr" and self.config.mode == "ipv4":
+            if observable.type == "ipv4-addr" or observable.type == "ipv6-addr":
                 indicator = self.create_indicator(observable)
-            if observable.type == "ipv6-addr":
-                indicator = self.create_indicator(observable)
-            else:
-                self.helper.log_error(
-                    "Unsupported observable type", {"type": observable.type}
-                )
-                continue
-            if indicator:
-                indicators.append(indicator)
+                if indicator:
+                    indicators.append(indicator)
         return indicators
