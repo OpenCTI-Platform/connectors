@@ -144,4 +144,3 @@ class ConverterToStix:
                 "This observable value is not a valid IPv4 or IPv6 address: ",
                 {"value": value},
             )
-            return None
