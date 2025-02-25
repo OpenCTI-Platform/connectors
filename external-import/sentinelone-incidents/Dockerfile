@@ -1,5 +1,5 @@
 FROM python:3.13-alpine
-ENV CONNECTOR_TYPE=STREAM
+ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 COPY src /opt/connector-sentinelone-incidents
 
