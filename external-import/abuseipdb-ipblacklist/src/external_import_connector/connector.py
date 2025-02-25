@@ -98,7 +98,16 @@ class ConnectorAbuseIPDB:
                     stix_objects.append(indicator)
                 if indicator and obs:
                     rel = self.converter_to_stix.create_relationship(
-                        indicator.id, "based-on", obs.id
+                        indicator, "based-on", obs
+                    )
+                    self.helper.connector_logger.debug(
+                        "[CONNECTOR] The generation of the relationship between the observable and the indicator was a success.",
+                        {
+                            "relationship_id": rel.id,
+                            "source_ref": indicator.id,
+                            "relationship_type": rel.relationship_type,
+                            "target_ref": obs.id,
+                        },
                     )
                     stix_objects.append(rel)
 
