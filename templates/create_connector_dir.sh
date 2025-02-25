@@ -131,8 +131,7 @@ find "$NEW_CONNECTOR_DIR" -type f -exec sed -i \
     -e "s/TEMPLATE/${CAPITALIZED_NAME}/g" {} +
 
 sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/config.yml.sample"
-sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/${TYPE//-/_}_connector/config_variables.py"
+sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/${TYPE//-/_}_connector/config_loader.py"
 
 echo "Connector '$NAME' of type '$TYPE' created successfully!"
 echo "Navigate to $NEW_CONNECTOR_DIR to start development."
-echo "Add the connector build in the CI:  ../.circleci/config.yml"
