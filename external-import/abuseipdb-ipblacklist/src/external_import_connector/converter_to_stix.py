@@ -87,7 +87,7 @@ class ConverterToStix:
             source_ref=source_id,
             target_ref=target_id,
             created_by_ref=self.author,
-            external_references=self.external_reference,
+            object_marking_refs=[self.tlp_marking],
         )
         return relationship
 
