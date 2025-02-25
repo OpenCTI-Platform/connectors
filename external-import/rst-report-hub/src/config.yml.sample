@@ -3,7 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe' # Valid UUIDv4
+  id: 'aa817c8b-abae-460a-9ebc-97b1551e70ee' # Valid UUIDv4
   name: 'RST Report Hub'
   scope: 'application/json' # MIME type or SCO
   run_and_terminate: true
@@ -16,7 +16,7 @@ rst-report-hub:
   read_timeout: 30
   retry_delay: 30
   retry_attempts: 5
-  import_start_date: '20240101'
+  import_start_date: '20250101'
   fetch_interval: 300
   language: 'eng'
   create_observables: false

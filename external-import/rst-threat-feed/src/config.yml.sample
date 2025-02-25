@@ -3,7 +3,7 @@ opencti:
   token: "ChangeMe"
 
 connector:
-  id: "aa817c8b-abae-460a-9ebc-97b1551e70ee" # Valid UUIDv4
+  id: "9288e3aa-3f94-4505-b31b-69585c47081b" # Valid UUIDv4
   type: "EXTERNAL_IMPORT"
   name: "RST Threat Feed"
   scope: "application/json" # MIME type or SCO

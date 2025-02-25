@@ -3,7 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
+  id: '3582c335-cea7-45ec-b2a2-f46130762713'
   type: 'INTERNAL_ENRICHMENT'
   name: 'RST WHOIS API'
   scope: 'Domain-Name,Url,indicator'

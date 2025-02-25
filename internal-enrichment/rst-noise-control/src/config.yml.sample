@@ -3,7 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
+  id: '3a3be5a8-775c-4b11-b7a8-6373ac7cd844'
   type: 'INTERNAL_ENRICHMENT'
   name: 'RST Noise Control'
   scope: 'IPv4-Addr,Domain-Name,Url,StixFile,indicator'
