@@ -245,13 +245,13 @@ def test_report_should_raise_data_retrieval_error_with_incorrect_attribute():
         _ = IncorrectStubReport()
 
 
-def test_reports_list_reports():
-    """Test that the Reports list reports."""
+def test_reports_iter_reports():
+    """Test that the Reports iterates over reports."""
     # Given a StubReports instance
     reports = StubReports()
-    # When listing the reports
+    # When iterating the reports
     reports_list = list(
-        reports.list(
+        reports.iter(
             since=datetime.datetime(2023, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
         )
     )

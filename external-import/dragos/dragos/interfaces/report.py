@@ -171,5 +171,5 @@ class Reports(ABC):
     """Interface for Dragos Reports Retrieval."""
 
     @abstractmethod
-    def list(self, since: AwareDatetime) -> Generator[_Report, None, None]:
+    def iter(self, since: AwareDatetime) -> Generator[_Report, None, None]:
         """List all Dragos reports."""
