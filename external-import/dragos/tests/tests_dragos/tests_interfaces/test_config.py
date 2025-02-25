@@ -160,6 +160,7 @@ def test_config_loader_octi_has_correct_attributes():
 
 def test_config_loader_octi_raises_config_retrieval_error_with_incorrect_attributes():
     """Test that the _ConfigLoaderOCTI raises a ConfigRetrievalError with incorrect attributes."""
+
     # Given: Invalid implementation of _ConfigLoaderOCTI
     class InvalidStubConfigLoaderOCTI(StubConfigLoaderOCTI):
         @property
@@ -180,21 +181,28 @@ def test_config_loader_connector_has_correct_attributes():
 
     # Then: The instance should have the correct attributes
     assert stub_config_loader_connector.id == "uuid"  # noqa: S101
-    assert stub_config_loader_connector.type == "EXTERNAL_IMPORT"  # hardcoded  # noqa: S101
+    assert (
+        stub_config_loader_connector.type == "EXTERNAL_IMPORT"
+    )  # hardcoded  # noqa: S101
     assert stub_config_loader_connector.name == "Stub Connector"  # noqa: S101
     assert stub_config_loader_connector.scope == ["stub"]  # noqa: S101
     assert stub_config_loader_connector.log_level == "error"  # noqa: S101
-    assert stub_config_loader_connector.duration_period == timedelta(minutes=5)  # noqa: S101
+    assert stub_config_loader_connector.duration_period == timedelta(
+        minutes=5
+    )  # noqa: S101
     assert stub_config_loader_connector.queue_threshold == 0  # noqa: S101
     assert stub_config_loader_connector.run_and_terminate is False  # noqa: S101
     assert stub_config_loader_connector.send_to_queue is False  # noqa: S101
     assert stub_config_loader_connector.send_to_directory is False  # noqa: S101
-    assert stub_config_loader_connector.send_to_directory_path == "/path/to/dir"  # noqa: S101
+    assert (
+        stub_config_loader_connector.send_to_directory_path == "/path/to/dir"
+    )  # noqa: S101
     assert stub_config_loader_connector.send_to_directory_retention == 0  # noqa: S101
 
 
 def test_config_loader_connector_raises_config_retrieval_error_with_incorrect_attributes():
     """Test that the _ConfigLoaderConnector raises a ConfigRetrievalError with incorrect attributes."""
+
     # Given: Invalid implementation of _ConfigLoaderConnector
     class InvalidStubConfigLoaderConnector(StubConfigLoaderConnector):
         @property
@@ -209,6 +217,7 @@ def test_config_loader_connector_raises_config_retrieval_error_with_incorrect_at
 
 def test_config_loader_connector_raises_config_retrieval_error_with_incorrect_attributes_combination():
     """Test that the _ConfigLoaderConnector raises a ConfigRetrievalError with incorrect attributes combination."""
+
     # Given: Invalid implementation of _ConfigLoaderConnector
     class InvalidStubConfigLoaderConnector(StubConfigLoaderConnector):
         @property
@@ -235,7 +244,9 @@ def test_config_loader_dragos_has_correct_attributes():
     assert (  # noqa: S101
         str(stub_config_loader_dragos.api_base_url) == "http://localhost:8080/"
     )  # trailing slash is coming from URL object serialization
-    assert stub_config_loader_dragos.api_token.get_secret_value() == "api-token"  # noqa: S101
+    assert (
+        stub_config_loader_dragos.api_token.get_secret_value() == "api-token"
+    )  # noqa: S101
     assert stub_config_loader_dragos.import_start_date == datetime(  # noqa: S101
         1970, 1, 1, 0, 0, 0, tzinfo=timezone.utc
     )
@@ -244,6 +255,7 @@ def test_config_loader_dragos_has_correct_attributes():
 
 def test_config_loader_dragos_raises_config_retrieval_error_with_incorrect_attributes():
     """Test that the _ConfigLoaderDragos raises a ConfigRetrievalError with incorrect attributes."""
+
     # Given: Invalid implementation of _ConfigLoaderDragos
     class InvalidStubConfigLoaderDragos(StubConfigLoaderDragos):
         @property
@@ -263,13 +275,18 @@ def test_config_loader_has_correct_attributes():
     stub_config = StubConfigLoader()
 
     # Then: The instance should have the correct attributes
-    assert isinstance(stub_config.opencti, StubConfigLoaderOCTI) is True  # noqa: S101 we indeed call assert in test
-    assert isinstance(stub_config.connector, StubConfigLoaderConnector) is True  # noqa: S101
+    assert (
+        isinstance(stub_config.opencti, StubConfigLoaderOCTI) is True
+    )  # noqa: S101 we indeed call assert in test
+    assert (
+        isinstance(stub_config.connector, StubConfigLoaderConnector) is True
+    )  # noqa: S101
     assert isinstance(stub_config.dragos, StubConfigLoaderDragos) is True  # noqa: S101
 
 
 def test_config_loader_raises_config_retrieval_error_with_incorrect_attributes():
     """Test that the ConfigLoader raises a ConfigRetrievalError with incorrect attributes."""
+
     # Given: Invalid implementation of ConfigLoader
     class InvalidStubConfigLoader(StubConfigLoader):
         @property
