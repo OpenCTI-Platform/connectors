@@ -165,7 +165,7 @@ class ConverterToStix:
             pattern = f"[ipv6-addr:value = '{value}']"
             observable_type = "IPv6-Addr"
 
-        if pattern and observable_type:
+        if not pattern and not observable_type:
             self.helper.log_error(
                 "Unsupported observable type", {"type": observable.type}
             )
