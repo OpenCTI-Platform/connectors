@@ -4,9 +4,9 @@ services:
     image: atunnecliffe/connector-virustotal-reporter
     environment:
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=5fce345a-6dd7-4ecb-8df4-0a57249a4217
+      - OPENCTI_TOKEN=ChangeMe
       - QUEUE_PROTOCOL=api # required when running locally and sending to remote SaaS, avoids RabbitMQ
-      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_ID=0968ce24-c882-4a2a-842c-80a4466b5910
       - "CONNECTOR_NAME=CI-ISAC OpenCTI VirusTotal Country Reporter"
       - CONNECTOR_SCOPE=vtreporter
       - CONNECTOR_LOG_LEVEL=info

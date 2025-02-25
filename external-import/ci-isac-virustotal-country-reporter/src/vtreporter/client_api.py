@@ -3,12 +3,12 @@
 # 2. perform intel search to get similar files for each one https://github.com/VirusTotal/vt-py/blob/master/examples/search_similar_files.py
 # 3. write a report, relate files to report
 
-import requests
 import urllib
 import uuid
 from datetime import datetime, timedelta, timezone
-import isodate
 
+import isodate
+import requests
 import stix2.v21 as stix2
 
 QUERY_TEMPLATE = 'entity:file submitter:{country} fs:{start_date}+ fs:{end_date}- p:1+'
@@ -288,7 +288,7 @@ class ConnectorClient:
             try:
                 duration_period_in_seconds = isodate.parse_duration(self.config.duration_period).total_seconds()
                 self.helper.connector_logger.warning(f"[API] duration_period parsed successfully: ISO-8601 {self.config.duration_period} == {duration_period_in_seconds} seconds.")
-            except Exception as err:
+            except Exception:
                 self.helper.connector_logger.warning("[API] duration_period probably not valid ISO 8601, defaulting to 1-day history.")
             
             # Start the search at now() - duration, e.g. duration=1day, start_date=yesterday
