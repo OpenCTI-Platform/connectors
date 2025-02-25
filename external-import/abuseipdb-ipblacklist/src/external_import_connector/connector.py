@@ -102,6 +102,8 @@ class ConnectorAbuseIPDB:
 
         if stix_objects:
             stix_objects.append(self.converter_to_stix.author)
+            stix_objects.append(self.converter_to_stix.tlp_marking)
+            stix_objects.extend(self.converter_to_stix.external_reference)
 
         return stix_objects
 
