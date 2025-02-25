@@ -10,6 +10,7 @@ class ConnectorClient:
         """
         Initialize the client with necessary configurations
         """
+
         self.helper = helper
         self.config = config
 
