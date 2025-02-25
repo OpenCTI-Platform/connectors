@@ -4,8 +4,6 @@ from abc import ABC
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from pydantic import ValidationError
-
 from dragos.interfaces.config import (
     ConfigLoader,
     ConfigRetrievalError,
@@ -13,6 +11,7 @@ from dragos.interfaces.config import (
     _ConfigLoaderDragos,
     _ConfigLoaderOCTI,
 )
+from pydantic import ValidationError
 
 
 class StubConfigLoaderOCTI(_ConfigLoaderOCTI):
@@ -193,15 +192,32 @@ def test_config_loader_connector_has_correct_attributes():
 
 def test_config_loader_connector_raises_config_retrieval_error_with_incorrect_attributes():
     # Given: Invalid implementation of _ConfigLoaderConnector
-    class InvaidStub_ConfigLoaderConnector(StubConfigLoaderConnector):
+    class InvalidStubConfigLoaderConnector(StubConfigLoaderConnector):
         @property
         def _id(self):
             pass  # should return a string
 
-    # When: instantiating InvaidStub_ConfigLoaderConnector
-    # Then: A ConfigRetrievalErroris raised
+    # When: Instantiating InvalidStubConfigLoaderConnector
+    # Then: A ConfigRetrievalError is raised
     with pytest.raises(ConfigRetrievalError):
-        _ = InvaidStub_ConfigLoaderConnector()
+        _ = InvalidStubConfigLoaderConnector()
+
+
+def test_config_loader_connector_raises_config_retrieval_error_with_incorrect_attributes_combination():
+    # Given: Invalid implementation of _ConfigLoaderConnector
+    class InvalidStubConfigLoaderConnector(StubConfigLoaderConnector):
+        @property
+        def _send_to_directory(self):
+            return True
+
+        @property
+        def _send_to_directory_path(self):
+            return None  # A directory path must be provided if send-to-directory flag is True.
+
+    # When: Instantiating InvalidStubConfigLoaderConnector
+    # Then: A ConfigRetrievalError is raised
+    with pytest.raises(ConfigRetrievalError):
+        _ = InvalidStubConfigLoaderConnector()
 
 
 def test_config_loader_dragos_has_correct_attributes():

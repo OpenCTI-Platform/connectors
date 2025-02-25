@@ -6,10 +6,17 @@ To develop an adapter based on it simply implement the abstract properties.
 from abc import ABC, abstractmethod
 from datetime import timedelta
 from logging import getLogger
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Self
 
 from dragos.interfaces.common import FrozenBaseModel
-from pydantic import AwareDatetime, Field, HttpUrl, SecretStr, ValidationError
+from pydantic import (
+    AwareDatetime,
+    Field,
+    HttpUrl,
+    SecretStr,
+    ValidationError,
+    model_validator,
+)
 
 logger = getLogger(__name__)
 
@@ -204,6 +211,25 @@ class _ConfigLoaderConnector(ABC, FrozenBaseModel):
     @abstractmethod
     def _send_to_directory_retention(self) -> Optional[int]:
         pass
+
+    @model_validator(mode="after")
+    def _check_dependent_fields(self) -> Self:
+        missing_directory_path_or_retention_value = self.send_to_directory is True and (
+            self.send_to_directory_path is None
+            or self.send_to_directory_retention is None
+        )
+        if missing_directory_path_or_retention_value:
+            raise ValueError(
+                "Missing send_to_directory_path and/or send_to_directory_retention values."
+            )
+
+        missing_send_to_directory_value = self.send_to_directory is None and (
+            self.send_to_directory_path is not None
+            or self.send_to_directory_retention is not None
+        )
+        if missing_send_to_directory_value:
+            raise ValueError("Missing send_to_directory value.")
+        return self
 
 
 class _ConfigLoaderDragos(ABC, FrozenBaseModel):
