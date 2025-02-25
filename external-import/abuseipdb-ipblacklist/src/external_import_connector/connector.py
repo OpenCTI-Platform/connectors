@@ -88,6 +88,8 @@ class ConnectorAbuseIPDB:
             for elt in entities
             if elt is not None
         ]
+        if len(stix_objects):
+            stix_objects.append(self.converter_to_stix.author)
         return stix_objects
 
     def process_message(self) -> None:
@@ -130,10 +132,12 @@ class ConnectorAbuseIPDB:
 
             stix_objects = self._collect_intelligence()
 
-            if stix_objects is not None and len(stix_objects) != 0:
+            if len(stix_objects):
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
-                    stix_objects_bundle, work_id=work_id
+                    stix_objects_bundle,
+                    work_id=work_id,
+                    cleanup_inconsistent_bundle=True,
                 )
 
                 self.helper.connector_logger.info(
