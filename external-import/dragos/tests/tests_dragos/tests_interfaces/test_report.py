@@ -86,10 +86,10 @@ class StubReport(_Report):
 class StubReports(Reports):
     """Stub Reports implementation for testing purposes."""
 
-    def list(self, since) -> typing.Generator[_Report, typing.Any, typing.Any]:
+    def iter(self, since) -> typing.Generator[_Report, typing.Any, typing.Any]:
         """List the reports."""
         _ = since
-        return iter([StubReport()])
+        yield from [StubReport()]
 
 
 @pytest.mark.parametrize(
