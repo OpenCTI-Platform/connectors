@@ -73,7 +73,7 @@ Below are the parameters you'll need to set for the connector:
 | API key      | api_key      | `ABUSEIPDB_API_KEY`         |         |  No       |             |
 | API Score    | score      | `ABUSEIPDB_SCORE`           |         |  Yes      |  Confidence Score           |
 | Api Result Limit | limit   |  `ABUSEIPDB_LIMIT`         |   10000    | No  |   500000 feet your subscription limit |
-| IPv4 | ipversion | `ABUSEIPDB_LIMIT_IPVERSION` | mixed | No | You can choose 4 ot 6 (Ipversion)|
+| IPv4 | ipversion | `ABUSEIPDB_IPVERSION` | mixed | No | You can choose 4 ot 6 (Ipversion)|
 | Except Country | exceptcountry | `ABUSEIPDB_EXCEPT_COUNTRY` |    |  No | For example: RU, CN (You exclude Russia and China IPs) |
 | Only Country | onlycountry | `ABUSEIPDB_ONLY_COUNTRY` |  | No | RU : You want only Russian IPs |
 | Create Indicator | create_indicator | `ABUSEIPDB_CREATE_INDICATOR` | No | No | |

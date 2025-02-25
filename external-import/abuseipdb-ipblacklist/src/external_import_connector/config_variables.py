@@ -58,7 +58,7 @@ class ConfigConnector:
             self.limit = "500000"
 
         self.ipversion = get_config_variable(
-            "ABUSEIPDB_LIMIT_IPVERSION",
+            "ABUSEIPDB_IPVERSION",
             ["abuseipdb", "ipversion"],
             self.load,
             default="mixed",

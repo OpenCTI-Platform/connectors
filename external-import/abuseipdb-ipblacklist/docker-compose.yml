@@ -21,16 +21,19 @@ services:
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
       # Connector's custom execution parameters
-      - ABUSEIPDB_URL=https://api.abuseipdb.com/api/v2/blacklist
-      # - ABUSEIPDB_API_KEY=""
-      # Default is mixed (4,6) - ABUSEIPDB_IPVERSION=4 
+      # - ABUSEIPDB_API_KEY=CHANGEME
+      # - ABUSEIPDB_IPVERSION=4 # Value possible: mixed, 4, 6
+      # - ABUSEIPDB_CREATE_INDICATOR=true
+      # - ABUSEIPDB_TLP_LEVEL=white
       - ABUSEIPDB_SCORE=75
-      - # ABUSEIPDB_LIMIT=10000
-      - CONNECTOR_IPSUM_DEFAULT_X_OPENCTI_SCORE=60
-      # - ABUSEIPDB_EXCEPT_COUNTRY="RU,CN"
-      # - ABUSEIPDB_ONLY_COUNTRY="RU"
+      # - ABUSEIPDB_LIMIT=10000
+      # When you provide API key, you can use the following parameters
+      # 500000 feat the maximum limit of your subscription plan
+      # - ABUSEIPDB_LIMIT=500000
+      # - ABUSEIPDB_EXCEPT_COUNTRY=RU,CN
+      # - ABUSEIPDB_ONLY_COUNTRY=RU
 
-
+      # Connector's proxy parameters
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME
       # - HTTPS_PROXY=CHANGEME
