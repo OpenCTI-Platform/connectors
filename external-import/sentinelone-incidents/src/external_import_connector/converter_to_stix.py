@@ -29,10 +29,12 @@ class ConverterToStix:
         )
         return author
 
-    def create_incident(self, incident_data: dict, incident_id: str, s1_url: str) -> list[stix2.Incident]:
+    def create_incident(
+        self, incident_data: dict, incident_id: str, s1_url: str
+    ) -> list[stix2.Incident]:
         """
         Creates a Stix Incident from a SentinelOne incident alongside
-        an external reference with a link to accessing it. 
+        an external reference with a link to accessing it.
         """
 
         def _convert_confidence(confidence):
@@ -41,7 +43,9 @@ class ConverterToStix:
             )
             return confidence_score
 
-        self.helper.connector_logger.debug("Attempting to create corresponding Stix Incident")
+        self.helper.connector_logger.debug(
+            "Attempting to create corresponding Stix Incident"
+        )
 
         machine = incident_data.get("agentRealtimeInfo", {}).get(
             "agentComputerName", "unknown"
@@ -90,13 +94,17 @@ class ConverterToStix:
 
         return [incident]
 
-    def create_user_account_observable(self, s1_incident: dict, cti_incident_id: str) -> list[stix2.UserAccount, stix2.Relationship]:
+    def create_user_account_observable(
+        self, s1_incident: dict, cti_incident_id: str
+    ) -> list[stix2.UserAccount, stix2.Relationship]:
         """
         Creates a Stix UserAccount Observable from a SentinelOne incident
         alongside a relationship to the incident.
         """
 
-        self.helper.connector_logger.debug("Attempting to create UserAccount Observable")
+        self.helper.connector_logger.debug(
+            "Attempting to create UserAccount Observable"
+        )
 
         endpoint_name = s1_incident.get("agentRealtimeInfo", {}).get(
             "agentComputerName", ""
@@ -124,8 +132,6 @@ class ConverterToStix:
         )
 
         return [endpoint_observable, endpoint_relationship]
-
-
 
     def create_attack_patterns(self, incident_data: dict, cti_incident_id: str) -> list:
         """
@@ -261,7 +267,9 @@ class ConverterToStix:
 
         return indicators
 
-    def create_relationship(self, parent_id: str, child_id: str, relationship_type: str) -> stix2.Relationship:
+    def create_relationship(
+        self, parent_id: str, child_id: str, relationship_type: str
+    ) -> stix2.Relationship:
         """
         Creates a Stix Relationship between two objects
         """
