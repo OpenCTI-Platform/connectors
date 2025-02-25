@@ -123,7 +123,7 @@ class ConverterToStix:
 
     def create_obs(
         self, value: str, country_code: str, confidence_score: str, last_reported: str
-    ) -> dict | None:
+    ) -> stix2.IPv4Address | stix2.IPv6Address | None:
         """
         Create observable according to value given
         :param value: Value in string

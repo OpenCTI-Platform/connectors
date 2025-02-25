@@ -94,16 +94,17 @@ class ConnectorAbuseIPDB:
 
             if self.config.create_indicator:
                 indicator = self.converter_to_stix.create_indicator(obs)
-                stix_objects.append(indicator)
-                rel = self.converter_to_stix.create_relationship(
-                    indicator.id, "based-on", obs.id
-                )
-                stix_objects.append(rel)
+                if indicator:
+                    stix_objects.append(indicator)
+                if indicator and obs:
+                    rel = self.converter_to_stix.create_relationship(
+                        indicator.id, "based-on", obs.id
+                    )
+                    stix_objects.append(rel)
 
         if stix_objects:
             stix_objects.append(self.converter_to_stix.author)
             stix_objects.append(self.converter_to_stix.tlp_marking)
-            stix_objects.extend(self.converter_to_stix.external_reference)
 
         return stix_objects
 
