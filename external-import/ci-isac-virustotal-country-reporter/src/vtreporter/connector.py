@@ -65,7 +65,7 @@ class Connector:
         # Get entities from external sources
         stix_objects = self.client.get_entities()
 
-        #self.helper.connector_logger.warning(json.dumps(entities, indent=2))
+        # self.helper.connector_logger.warning(json.dumps(entities, indent=2))
 
         return stix_objects
 
@@ -98,8 +98,9 @@ class Connector:
                 )
 
             # friendly_name is what appears in the Data/Ingestion/Connectors/<my connector> web interface for each run.
-            friendly_name = f"{self.helper.connect_name} Connector Run @ " + now.strftime(
-                "%Y-%m-%d %H:%M:%S"
+            friendly_name = (
+                f"{self.helper.connect_name} Connector Run @ "
+                + now.strftime("%Y-%m-%d %H:%M:%S")
             )
 
             # Initiate a new work
@@ -139,9 +140,9 @@ class Connector:
             )
             current_state = self.helper.get_state()
             current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
-            last_run_datetime = datetime.fromtimestamp(current_timestamp, timezone.utc).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+            last_run_datetime = datetime.fromtimestamp(
+                current_timestamp, timezone.utc
+            ).strftime("%Y-%m-%d %H:%M:%S")
             if current_state:
                 current_state["last_run"] = current_state_datetime
             else:

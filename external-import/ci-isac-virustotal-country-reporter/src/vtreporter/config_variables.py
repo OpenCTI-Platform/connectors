@@ -54,44 +54,28 @@ class ConfigConnector:
             self.load,
         )
         self.country = get_config_variable(
-            "VTREPORTER_COUNTRY", 
-            ["vtreporter", "country"], 
-            self.load
+            "VTREPORTER_COUNTRY", ["vtreporter", "country"], self.load
         )
 
         # Report and file params
         self.threat_types = get_config_variable(
-            "VTREPORTER_THREAT_TYPES", 
-            ["vtreporter", "threat_types"], 
-            self.load
+            "VTREPORTER_THREAT_TYPES", ["vtreporter", "threat_types"], self.load
         )
         self.confidence = get_config_variable(
-            "VTREPORTER_CONFIDENCE", 
-            ["vtreporter", "confidence"], 
-            self.load
+            "VTREPORTER_CONFIDENCE", ["vtreporter", "confidence"], self.load
         )
         self.report_labels = get_config_variable(
-            "VTREPORTER_REPORT_LABELS", 
-            ["vtreporter", "report_labels"], 
-            self.load
+            "VTREPORTER_REPORT_LABELS", ["vtreporter", "report_labels"], self.load
         )
         self.reliability = get_config_variable(
-            "VTREPORTER_RELIABILITY", 
-            ["vtreporter", "reliability"], 
-            self.load
+            "VTREPORTER_RELIABILITY", ["vtreporter", "reliability"], self.load
         )
         self.report_markings = get_config_variable(
-            "VTREPORTER_REPORT_MARKINGS", 
-            ["vtreporter", "report_markings"], 
-            self.load
+            "VTREPORTER_REPORT_MARKINGS", ["vtreporter", "report_markings"], self.load
         )
         self.file_labels = get_config_variable(
-            "VTREPORTER_FILE_LABELS", 
-            ["vtreporter", "file_labels"], 
-            self.load
+            "VTREPORTER_FILE_LABELS", ["vtreporter", "file_labels"], self.load
         )
         self.file_markings = get_config_variable(
-            "VTREPORTER_FILE_MARKINGS", 
-            ["vtreporter", "file_markings"], 
-            self.load
+            "VTREPORTER_FILE_MARKINGS", ["vtreporter", "file_markings"], self.load
         )
