@@ -1,7 +1,7 @@
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
+from .config_loader import ConfigConnector
 from .converter_to_stix import ConverterToStix
 
 
@@ -151,7 +151,7 @@ class ConnectorTemplate:
             )
             self.helper.connector_logger.info(info_msg, {"type": {obs_type}})
 
-            if self.entity_in_scope:
+            if self.entity_in_scope(data):
                 # Performing the collection of intelligence and enrich the entity
                 # ===========================
                 # === Add your code below ===
@@ -160,18 +160,8 @@ class ConnectorTemplate:
                 # EXAMPLE Collect intelligence and enrich current STIX object
                 stix_objects = self._collect_intelligence(obs_value, obs_standard_id)
 
-                if stix_objects is not None and len(stix_objects) is not None:
-                    stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
-                    bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
-
-                    info_msg = (
-                        "[API] Observable value found and knowledge added for type: "
-                        + obs_type
-                        + ", sending "
-                        + str(len(bundles_sent))
-                        + " stix bundle(s) for worker import"
-                    )
-                    return info_msg
+                if stix_objects is not None and len(stix_objects):
+                    return self._send_bundle(stix_objects)
                 else:
                     info_msg = "[CONNECTOR] No information found"
                     return info_msg
@@ -180,16 +170,32 @@ class ConnectorTemplate:
                 # === Add your code above ===
                 # ===========================
             else:
-                return self.helper.connector_logger.info(
-                    "[CONNECTOR] Skip the following entity as it does not concern "
-                    "the initial scope found in the config connector: ",
-                    {"entity_id": opencti_entity["entity_id"]},
-                )
+                if not data.get("event_type"):
+                    # If it is not in scope AND entity bundle passed through playbook, we should return the original bundle unchanged
+                    self._send_bundle(self.stix_objects_list)
+                else:
+                    # self.helper.connector_logger.info(
+                    #     "[CONNECTOR] Skip the following entity as it does not concern "
+                    #     "the initial scope found in the config connector: ",
+                    #     {"entity_id": opencti_entity["entity_id"]},
+                    # )
+                    raise ValueError(
+                        f"Failed to process observable, {opencti_entity['entity_type']} is not a supported entity type."
+                    )
         except Exception as err:
             # Handling other unexpected exceptions
             return self.helper.connector_logger.error(
                 "[CONNECTOR] Unexpected Error occurred", {"error_message": str(err)}
             )
+
+    def _send_bundle(self, stix_objects: list) -> str:
+        stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
+        bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
+
+        info_msg = (
+            "Sending " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
+        )
+        return info_msg
 
     def run(self) -> None:
         """
