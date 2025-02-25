@@ -32,7 +32,7 @@ class ConnectorClient:
 
     def _get_authentication_token(self) -> str:
         """
-        Get a authentication token from Zvelo.
+        Get an authentication token from Zvelo.
         :return: Authentication token
         """
         token_headers = {"Content-Type": "application/json"}

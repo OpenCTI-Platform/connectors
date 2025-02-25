@@ -41,3 +41,9 @@ class ConfigConnector:
             ["connector", "duration_period"],
             self.load,
         )
+        self.threat_actor_to_intrusion_set = get_config_variable(
+            "WIZ_THREAT_ACTOR_AS_INTRUSION_SET",
+            ["wiz", "threat_actor_as_intrusion_set"],
+            self.load,
+            default=False,
+        )
