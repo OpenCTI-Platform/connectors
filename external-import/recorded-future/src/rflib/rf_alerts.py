@@ -292,7 +292,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         },
                     )
                     stix_relationship = self._generate_stix_relationship(
-                        stix_incident.id, "related-to", stix_url.id
+                        stix_url.id, "related-to", stix_incident.id
                     )
                     bundle_objects.append(stix_url)
                     bundle_objects.append(stix_relationship)
@@ -306,7 +306,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         },
                     )
                     stix_relationship = self._generate_stix_relationship(
-                        stix_incident.id, "related-to", stix_ipv4address.id
+                        stix_ipv4address.id, "related-to", stix_incident.id
                     )
                     bundle_objects.append(stix_ipv4address)
                     bundle_objects.append(stix_relationship)
@@ -319,7 +319,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         },
                     )
                     stix_relationship = self._generate_stix_relationship(
-                        stix_incident.id, "related-to", stix_emailaddress.id
+                        stix_emailaddress.id, "related-to", stix_incident.id
                     )
                     bundle_objects.append(stix_emailaddress)
                     bundle_objects.append(stix_relationship)
@@ -332,7 +332,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         },
                     )
                     stix_relationship = self._generate_stix_relationship(
-                        stix_incident.id, "related-to", stix_domain.id
+                        stix_domain.id, "related-to", stix_incident.id
                     )
                     bundle_objects.append(stix_domain)
                     bundle_objects.append(stix_relationship)
@@ -426,7 +426,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     },
                 )
                 stix_relationship = self._generate_stix_relationship(
-                    stix_incident.id, "related-to", stix_text.id
+                    stix_text.id, "related-to", stix_incident.id
                 )
                 bundle_objects.append(stix_text)
                 bundle_objects.append(stix_relationship)
@@ -438,7 +438,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     },
                 )
                 stix_relationship = self._generate_stix_relationship(
-                    stix_incident.id, "related-to", stix_url_doc.id
+                    stix_url_doc.id, "related-to", stix_incident.id
                 )
                 bundle_objects.append(stix_url_doc)
                 bundle_objects.append(stix_relationship)
@@ -467,7 +467,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     },
                 )
                 stix_relationship = self._generate_stix_relationship(
-                    stix_incident.id, "related-to", stix_user.id
+                    stix_user.id, "related-to", stix_incident.id
                 )
                 bundle_objects.append(stix_user)
                 bundle_objects.append(stix_relationship)

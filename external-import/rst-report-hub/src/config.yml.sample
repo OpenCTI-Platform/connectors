@@ -4,21 +4,21 @@ opencti:
 
 connector:
   id: 'ChangeMe' # Valid UUIDv4
-  type: 'EXTERNAL_IMPORT'
   name: 'RST Report Hub'
   scope: 'application/json' # MIME type or SCO
-  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: true
   run_and_terminate: true
   log_level: 'info'
 
 rst-report-hub:
   base_url: 'https://api.rstcloud.net/v1'
   api_key: 'ChangeMe'
-  connection_timeout: 10
+  connection_timeout: 30
   read_timeout: 30
   retry_delay: 30
   retry_attempts: 5
-  import_start_date: '20230904'
+  import_start_date: '20240101'
   fetch_interval: 300
   language: 'eng'
+  create_observables: false
+  create_related_to: true
+  create_custom_ttps: true
