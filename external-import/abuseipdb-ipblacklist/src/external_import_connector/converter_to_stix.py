@@ -147,10 +147,12 @@ class ConverterToStix:
         if self._is_ipv6(value):
             return stix2.IPv6Address(
                 value=value,
+                object_marking_refs=[self.tlp_marking],
                 custom_properties=custom_properties,
             )
         return stix2.IPv4Address(
             value=value,
+            object_marking_refs=[self.tlp_marking],
             custom_properties=custom_properties,
         )
 
@@ -175,7 +177,7 @@ class ConverterToStix:
             id=Indicator.generate_id(pattern),
             name=value,
             description="Agressive IP known malicious on AbuseIPDB",
-            created_by_ref=self.author["id"],
+            created_by_ref=self.author,
             confidence=self.helper.connect_confidence_level,
             pattern_type="stix",
             pattern=pattern,
