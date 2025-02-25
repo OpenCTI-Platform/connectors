@@ -3,9 +3,8 @@
 from abc import ABC, abstractmethod
 from typing import Generator, Literal
 
-from pydantic import AwareDatetime, Field, ValidationError
-
 from dragos.interfaces.common import FrozenBaseModel
+from pydantic import AwareDatetime, Field, ValidationError
 
 
 class DataRetrievalError(Exception):

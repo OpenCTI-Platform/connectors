@@ -5,8 +5,6 @@ import inspect
 import typing
 
 import pytest
-from pydantic import ValidationError
-
 from dragos.interfaces.report import (
     DataRetrievalError,
     Reports,
@@ -14,6 +12,7 @@ from dragos.interfaces.report import (
     _Report,
     _Tag,
 )
+from pydantic import ValidationError
 
 
 class StubTag(_Tag):
