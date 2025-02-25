@@ -26,7 +26,7 @@ class ConverterToStix:
         :return: External reference STIX2 list
         """
         external_reference = stix2.ExternalReference(
-            source_name="External Source",
+            source_name="IPsum",
             url="https://github.com/stamparm/ipsum/tree/master",
             description="All lists are automatically retrieved and parsed on a daily (24h) basis.",
         )
