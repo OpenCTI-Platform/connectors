@@ -1,16 +1,12 @@
+import logging
 import sys
 from datetime import datetime
-import time
+
 from pycti import OpenCTIConnectorHelper
-from typing import List
 
 from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
 from .s1_client import SentinelOneClient
-
-
-
-import logging
 
 
 class IncidentConnector:
@@ -24,8 +20,7 @@ class IncidentConnector:
         self.s1_client = SentinelOneClient(self.helper.connector_logger, self.config)
         self.stix_client = ConverterToStix(self.helper)
 
-        #self._setup_development_logging(self.helper)
-
+        # self._setup_development_logging(self.helper)
 
     def _setup_development_logging(self, helper):
         """
@@ -35,53 +30,53 @@ class IncidentConnector:
         """
 
         logging.basicConfig(
-            format='%(levelname)s %(asctime)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
+            format="%(levelname)s %(asctime)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
             level=logging.DEBUG,
-            force=True
+            force=True,
         )
 
-        logging.addLevelName(logging.DEBUG, '[*]')
-        logging.addLevelName(logging.INFO, '[+]')
-        logging.addLevelName(logging.WARNING, '[?]')
-        logging.addLevelName(logging.ERROR, '[!]')
-        logging.addLevelName(logging.CRITICAL, '[⚠️]')
-
-
+        logging.addLevelName(logging.DEBUG, "[*]")
+        logging.addLevelName(logging.INFO, "[+]")
+        logging.addLevelName(logging.WARNING, "[?]")
+        logging.addLevelName(logging.ERROR, "[!]")
+        logging.addLevelName(logging.CRITICAL, "[⚠️]")
 
     def process_message(self) -> None:
         """
         The main process for the connector, triggered
-        at each interval. It first scans for any 
+        at each interval. It first scans for any
         flagged Incidents that aren't in the cache and
-        then processes each. 
+        then processes each.
 
         """
-
 
         try:
             ############### PHASE 1: SCAN FOR INCIDENTS ###############
             friendly_name = "S1 Incident Connector: Scanning For Incidents"
-            work_id = self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
-            self.helper.connector_logger.info("Connector Beginning To Scan SentinelOne Instance For Flagged Incidents")
-        
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
+            self.helper.connector_logger.info(
+                "Connector Beginning To Scan SentinelOne Instance For Flagged Incidents"
+            )
+
             ###query new incidents
             self._query_new_incidents()
 
-            ### after this, close that work 
-            self.helper.connector_logger.info("Connector Completed Flagged Incidents Scan")
-            self.helper.api.work.to_processed(work_id,"completed scan")
+            ### after this, close that work
+            self.helper.connector_logger.info(
+                "Connector Completed Flagged Incidents Scan"
+            )
+            self.helper.api.work.to_processed(work_id, "completed scan")
             #########################################################
 
-
             ################ PHASE 2: Process Incidents ###############
-            #Individual work is made and closed in the incident processing method.
+            # Individual work is made and closed in the incident processing method.
             if self.to_process:
                 self._process_incidents()
             #########################################################
 
-
-           
             ################ PHASE 3: Update State ###############
 
             # Store the current timestamp as a last run of the connector
@@ -105,17 +100,11 @@ class IncidentConnector:
             self.helper.connector_logger.info(message)
             #########################################################
 
-
-
         except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info(
-                "Connector stopped..."
-            )
+            self.helper.connector_logger.info("Connector stopped...")
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
-
-
 
     def run(self) -> None:
         """
@@ -127,10 +116,6 @@ class IncidentConnector:
             message_callback=self.process_message,
             duration_period=self.config.duration_period,
         )
-
-
-
-
 
     def _query_new_incidents(self):
         """
@@ -152,7 +137,9 @@ class IncidentConnector:
         self.helper.connector_logger.info("Retrieving and filtering Incidents...")
         present_incidents = self.s1_client.fetch_incidents()
         if not present_incidents:
-            self.helper.connector_logger.info("Connector retreived no incidents from SentinelOne")
+            self.helper.connector_logger.info(
+                "Connector retreived no incidents from SentinelOne"
+            )
             return
         self.helper.connector_logger.info(f"Found {len(present_incidents)} incidents")
 
@@ -182,68 +169,76 @@ class IncidentConnector:
 
         self.helper.connector_logger.info("Retrieval process complete")
 
-
-
-
     def _process_incidents(self):
         """
         Processes each incident in the to_process list by creating
-        corresponding stix objects. 
+        corresponding stix objects.
 
         Incident objects are mandatory whereas the rest of objects
         are optional and depend on the incident data: UserAccount,
         Notes, Indicators, Attack Patterns.
         """
 
-        self.helper.log_info(f"Connector Beginning creation of {len(self.to_process)} applicable Incidents")
+        self.helper.log_info(
+            f"Connector Beginning creation of {len(self.to_process)} applicable Incidents"
+        )
         for i, s1_incident_id in enumerate(self.to_process):
             friendly_name = f"S1 Incident Connector: Creating Incident From Threat with ID: {s1_incident_id}"
-            
-            work_id = self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
-            self.helper.log_info(f"Connector Beggining Creation of Incident for S1 ID: {s1_incident_id}")
+
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
+            self.helper.log_info(
+                f"Connector Beggining Creation of Incident for S1 ID: {s1_incident_id}"
+            )
 
             s1_incident = self.s1_client.fetch_incident(s1_incident_id)
             if not s1_incident:
-                self.helper.log_info("Unable to retrieve the Incident from SentinelOne, halting process.")
+                self.helper.log_info(
+                    "Unable to retrieve the Incident from SentinelOne, halting process."
+                )
                 return False
-
 
             stix_objects = []
 
-
             ### Incident + Source
-            incident_items = self.stix_client.create_incident(s1_incident, s1_incident_id, self.config.s1_url)
+            incident_items = self.stix_client.create_incident(
+                s1_incident, s1_incident_id, self.config.s1_url
+            )
             if not incident_items:
-                self.helper.connector_logger.error("Connector unable to create Incident, creation process cannot continue.")
+                self.helper.connector_logger.error(
+                    "Connector unable to create Incident, creation process cannot continue."
+                )
                 break
-            
+
             cti_incident_id = incident_items[0].get("id")
             stix_objects.extend(incident_items)
 
-
             ### UserAccount + Relationship to Incident
-            account_items = self.stix_client.create_user_account_observable(s1_incident, cti_incident_id)
+            account_items = self.stix_client.create_user_account_observable(
+                s1_incident, cti_incident_id
+            )
             stix_objects.extend(account_items)
-
 
             ### List Of Notes
             s1_incident_notes = self.s1_client.fetch_incident_notes(s1_incident_id)
-            notes_items = self.stix_client.create_notes(s1_incident_notes, cti_incident_id)
+            notes_items = self.stix_client.create_notes(
+                s1_incident_notes, cti_incident_id
+            )
             stix_objects.extend(notes_items)
 
-
-
             ### List Of Indicators  with Relationships to Incident
-            indicators_items = self.stix_client.create_hash_indicators(s1_incident, cti_incident_id)
+            indicators_items = self.stix_client.create_hash_indicators(
+                s1_incident, cti_incident_id
+            )
             stix_objects.extend(indicators_items)
-
 
             ### List Of Attack Patterns with Relationships to Incident and Sub Attack Patterns with
             ### Relationships to the Attack Patterns
-            attack_patterns_items = self.stix_client.create_attack_patterns(s1_incident, cti_incident_id)
+            attack_patterns_items = self.stix_client.create_attack_patterns(
+                s1_incident, cti_incident_id
+            )
             stix_objects.extend(attack_patterns_items)
-           
-           
 
             ### Informative log of all created objects
             message = ""
@@ -257,19 +252,21 @@ class IncidentConnector:
                 message += ", Indicators"
             if attack_patterns_items:
                 message += ", Attack Patterns"
-            self.helper.connector_logger.info(f"Connector created the following objects for the Incident: {message}")
-
+            self.helper.connector_logger.info(
+                f"Connector created the following objects for the Incident: {message}"
+            )
 
             ### Send the bundle to OpenCTI
             bundle = self.helper.stix2_create_bundle(stix_objects)
             bundles_sent = self.helper.send_stix2_bundle(
                 bundle, work_id=work_id, cleanup_inconsistent_bundle=True
             )
-            self.helper.connector_logger.info(f"Connector Sent Bundle of {len(bundles_sent)} STIX objects to OpenCTI")
+            self.helper.connector_logger.info(
+                f"Connector Sent Bundle of {len(bundles_sent)} STIX objects to OpenCTI"
+            )
 
             self.helper.api.work.to_processed(work_id, "completed creation of incident")
             self.cache.append(s1_incident_id)
 
         self.to_process = [inc for inc in self.to_process if inc not in self.cache]
         self.helper.log_info("Completed Incident Creation Process.")
-
