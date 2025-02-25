@@ -1,0 +1,30 @@
+version: '3'
+services:
+  connector-virustotal-reporter:
+    image: atunnecliffe/connector-virustotal-reporter
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=5fce345a-6dd7-4ecb-8df4-0a57249a4217
+      - QUEUE_PROTOCOL=api # required when running locally and sending to remote SaaS, avoids RabbitMQ
+      - CONNECTOR_ID=ChangeMe
+      - "CONNECTOR_NAME=CI-ISAC OpenCTI VirusTotal Country Reporter"
+      - CONNECTOR_SCOPE=vtreporter
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=P1D # Maximum granularity daily
+
+      # VirusTotal API
+      - VTREPORTER_API_URL=https://virustotal.com/api/v3
+      - VTREPORTER_API_KEY=ChangeMe
+      - VTREPORTER_COUNTRY=AU # ISO 3166-1 alpha 2, aka two-letter country code.
+
+      # Report
+      - "VTREPORTER_THREAT_TYPES=THREAT-REPORT"
+      - VTREPORTER_CONFIDENCE=75
+      - "VTREPORTER_REPORT_LABELS=my-feed,Australia"
+      - "VTREPORTER_RELIABILITY=B - Usually Reliable"
+      - VTREPORTER_REPORT_MARKINGS=TLP_AMBER
+
+      # Files
+      - "VTREPORTER_FILE_LABELS=my-feed,Australia"
+      - VTREPORTER_FILE_MARKINGS=TLP_AMBER
+    restart: always
