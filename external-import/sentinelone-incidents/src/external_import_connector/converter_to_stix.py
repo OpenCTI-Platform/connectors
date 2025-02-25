@@ -10,22 +10,14 @@ from pycti import (
 
 
 class ConverterToStix:
-    """
-    Provides methods for converting various types of input data into STIX 2.1 objects.
-
-    REQUIREMENTS:
-    - generate_id() for each entity from OpenCTI pycti library except observables to create
-    """
 
     def __init__(self, helper):
         self.helper = helper
-        self.author = self.create_author()
+        self.author = self._create_author()
 
-    @staticmethod
-    def create_author() -> dict:
+    def _create_author(self) -> dict:
         """
-        Create Author
-        :return: Author in Stix2 object
+        Creates an author for the connector
         """
         author = stix2.Identity(
             id=Identity.generate_id(
@@ -37,14 +29,19 @@ class ConverterToStix:
         )
         return author
 
-    def create_incident(self, incident_data, incident_id, s1_url):
-        def convert_confidence(confidence):
+    def create_incident(self, incident_data: dict, incident_id: str, s1_url: str) -> list[stix2.Incident]:
+        """
+        Creates a Stix Incident from a SentinelOne incident alongside
+        an external reference with a link to accessing it. 
+        """
+
+        def _convert_confidence(confidence):
             confidence_score = {"malicious": 80, "suspicious": 50, "N/A": 20}.get(
                 confidence, "suspicious"
             )
             return confidence_score
 
-        self.helper.log_debug("Attempting to create corresponding Stix Incident")
+        self.helper.connector_logger.debug("Attempting to create corresponding Stix Incident")
 
         machine = incident_data.get("agentRealtimeInfo", {}).get(
             "agentComputerName", "unknown"
@@ -82,7 +79,7 @@ class ConverterToStix:
             name=name,
             description=description,
             labels=labels,
-            confidence=convert_confidence(
+            confidence=_convert_confidence(
                 incident_data.get("threatInfo", {}).get("confidenceLevel", "suspicious")
             ),
             created=created,
@@ -93,9 +90,13 @@ class ConverterToStix:
 
         return [incident]
 
-    def create_endpoint_observable(self, s1_incident, cti_incident_id):
+    def create_user_account_observable(self, s1_incident: dict, cti_incident_id: str) -> list[stix2.UserAccount, stix2.Relationship]:
+        """
+        Creates a Stix UserAccount Observable from a SentinelOne incident
+        alongside a relationship to the incident.
+        """
 
-        self.helper.log_debug("Attempting to create Endpoint Observable")
+        self.helper.connector_logger.debug("Attempting to create UserAccount Observable")
 
         endpoint_name = s1_incident.get("agentRealtimeInfo", {}).get(
             "agentComputerName", ""
@@ -124,7 +125,13 @@ class ConverterToStix:
 
         return [endpoint_observable, endpoint_relationship]
 
-    def create_attack_patterns(self, incident_data, cti_incident_id):
+
+
+    def create_attack_patterns(self, incident_data: dict, cti_incident_id: str) -> list:
+        """
+        Creates a Stix Attack Pattern from a SentinelOne incident
+        alongside a relationship to the incident.
+        """
 
         def create_mitre_reference(technique):
             mitre_ref = stix2.ExternalReference(
@@ -134,7 +141,7 @@ class ConverterToStix:
             )
             return mitre_ref
 
-        self.helper.log_debug("Attempting to create Stix Attack Patterns")
+        self.helper.connector_logger.debug("Attempting to create Stix Attack Patterns")
 
         attack_patterns = []
 
@@ -193,13 +200,20 @@ class ConverterToStix:
 
         return attack_patterns
 
-    def create_notes(self, s1_notes, cti_incident_id):
+    def create_notes(self, s1_notes: list, cti_incident_id: str) -> list:
+        """
+        Creates a Stix Note from a SentinelOne incident
+        alongside a relationship to the incident.
+        """
 
-        self.helper.log_debug("Attempting to create Stix Notes")
+        self.helper.connector_logger.debug("Attempting to create Stix Notes")
 
         incident_notes = []
         for note in s1_notes:
-            content = note.get("text", "") + "\ncreated by: " + note.get("creator", "")
+            # Convert None values to empty strings before concatenation
+            note_text = str(note.get("text", "") or "")
+            note_creator = str(note.get("creator", "") or "")
+            content = note_text + "\ncreated by: " + note_creator
             created = note.get("createdAt", "")
             incident_note = stix2.Note(
                 id=Note.generate_id(content=content, created=created),
@@ -212,9 +226,13 @@ class ConverterToStix:
 
         return incident_notes
 
-    def create_hash_indicators(self, s1_incident, cti_incident_id):
+    def create_hash_indicators(self, s1_incident: dict, cti_incident_id: str) -> list:
+        """
+        Creates a Stix Indicator from a SentinelOne incident
+        alongside a relationship to the incident.
+        """
 
-        self.helper.log_debug("Attempting to create Indicators")
+        self.helper.connector_logger.debug("Attempting to create Indicators")
 
         available_patterns = []
         hash_types = {"sha256": "SHA-256", "sha1": "SHA-1", "md5": "MD5"}
@@ -243,7 +261,10 @@ class ConverterToStix:
 
         return indicators
 
-    def create_relationship(self, parent_id, child_id, relationship_type):
+    def create_relationship(self, parent_id: str, child_id: str, relationship_type: str) -> stix2.Relationship:
+        """
+        Creates a Stix Relationship between two objects
+        """
         relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(relationship_type, parent_id, child_id),
             created_by_ref=self.author,
