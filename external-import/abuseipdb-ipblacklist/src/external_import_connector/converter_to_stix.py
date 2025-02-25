@@ -42,7 +42,7 @@ class ConverterToStix:
             id=Identity.generate_id(name="AbuseIPDB", identity_class="organization"),
             name="AbuseIPDB",
             identity_class="organization",
-            description="AbuseIPDB is a project dedicated to helping combat the spread of hackers, spammers, and abusive activity on the internet",
+            description="AbuseIPDB is a project dedicated to helping combat the spread of hackers, spammers, and abusive activity on the internet.",
         )
         return author
 
@@ -143,7 +143,7 @@ class ConverterToStix:
                 },
             )
             return stix_ipv6_address
-        elif self._is_ipv4(value) is True:
+        if self._is_ipv4(value) is True:
             stix_ipv4_address = stix2.IPv4Address(
                 value=value,
                 custom_properties={
@@ -160,21 +160,24 @@ class ConverterToStix:
                 },
             )
             return stix_ipv4_address
-        else:
-            self.helper.connector_logger.error(
-                "This observable value is not a valid IPv4 or IPv6 address: ",
-                {"value": value},
-            )
+        self.helper.connector_logger.error(
+            "This observable value is not a valid IPv4 or IPv6 address: ",
+            {"value": value},
+        )
+        return None
 
     def create_indicator(self, observable) -> stix2.Indicator:
+        pattern = None
+        observable_type = None
         value = observable.value
         if observable.type == "ipv4-addr":
             pattern = f"[ipv4-addr:value = '{value}']"
             observable_type = "IPv4-Addr"
-        elif observable.type == "ipv6-addr":
+        if observable.type == "ipv6-addr":
             pattern = f"[ipv6-addr:value = '{value}']"
             observable_type = "IPv6-Addr"
-        else:
+
+        if pattern and observable_type:
             self.helper.log_error(
                 "Unsupported observable type", {"type": observable.type}
             )

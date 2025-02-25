@@ -97,10 +97,10 @@ class ConnectorAbuseIPDB:
                 indicators = self.converter_to_stix.create_indicators(stix_objects)
                 rels = []
 
-                for i in range(0, len(stix_objects)):
+                for i, obs in enumerate(stix_objects):
                     rels.append(
                         self.converter_to_stix.create_relationship(
-                            indicators[i].id, "based-on", stix_objects[i].id
+                            indicators[i].id, "based-on", obs.id
                         )
                     )
                 stix_objects += indicators + rels
@@ -149,7 +149,7 @@ class ConnectorAbuseIPDB:
 
             stix_objects = self._collect_intelligence()
 
-            if len(stix_objects):
+            if stix_objects:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
                     stix_objects_bundle,

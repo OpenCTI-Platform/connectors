@@ -67,12 +67,12 @@ class ConnectorClient:
                     confidence_score = str(d["abuseConfidenceScore"])
                     last_reported = str(d["lastReportedAt"])
                     ips.append(
-                        dict(
-                            value=value,
-                            country_code=country_code,
-                            confidence_score=confidence_score,
-                            last_reported=last_reported,
-                        )
+                        {
+                            "value": value,
+                            "country_code": country_code,
+                            "confidence_score": confidence_score,
+                            "last_reported": last_reported,
+                        }
                     )
             return ips
         except Exception as err:
