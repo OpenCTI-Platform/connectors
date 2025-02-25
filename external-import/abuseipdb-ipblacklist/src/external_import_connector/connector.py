@@ -78,7 +78,7 @@ class ConnectorAbuseIPDB:
             params["onlyCountries"] = self.config.only_country_list
 
         entities = self.client.get_entities(params)
-        if entities is None:
+        if not entities:
             return stix_objects
 
         stix_objects = [
@@ -89,13 +89,16 @@ class ConnectorAbuseIPDB:
                 elt["last_reported"],
             )
             for elt in entities
-            if elt is not None
+            if elt
         ]
 
         if self.config.create_indicator:
             if len(stix_objects):
                 indicators = self.converter_to_stix.create_indicators(stix_objects)
                 rels = []
+
+                if not indicators:
+                    return stix_objects
 
                 for i, obs in enumerate(stix_objects):
                     rels.append(

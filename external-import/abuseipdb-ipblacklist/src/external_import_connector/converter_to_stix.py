@@ -42,7 +42,10 @@ class ConverterToStix:
             id=Identity.generate_id(name="AbuseIPDB", identity_class="organization"),
             name="AbuseIPDB",
             identity_class="organization",
-            description="AbuseIPDB is a project dedicated to helping combat the spread of hackers, spammers, and abusive activity on the internet.",
+            description=(
+                "AbuseIPDB is a project dedicated to helping combat the spread of hackers, "
+                "spammers, and abusive activity on the internet."
+            ),
         )
         return author
 
@@ -195,7 +198,7 @@ class ConverterToStix:
         if not observables:
             return indicators
         for observable in observables:
-            if observable.type == "ipv4-addr" or observable.type == "ipv6-addr":
+            if observable.type in ("ipv4-addr", "ipv6-addr"):
                 indicator = self.create_indicator(observable)
                 if indicator:
                     indicators.append(indicator)
