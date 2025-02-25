@@ -99,7 +99,7 @@ stix_object_mapping = {
         allow_custom=True,
     ),
     "Malware": lambda value, object_markings, custom_properties: stix2.Malware(
-        id = Malware.generate_id(value),
+        id=Malware.generate_id(value),
         name=value,
         is_family=False,
         object_markings=object_markings,
@@ -107,21 +107,21 @@ stix_object_mapping = {
         allow_custom=True,
     ),
     "Threat-Actor-Group": lambda value, object_markings, custom_properties: stix2.ThreatActor(
-        id = ThreatActorGroup.generate_id(value),
+        id=ThreatActorGroup.generate_id(value),
         name=value,
         object_markings=object_markings,
         custom_properties=custom_properties,
         allow_custom=True,
     ),
     "Attack-Pattern.x_mitre_id": lambda value, object_markings, custom_properties: stix2.AttackPattern(
-        id = AttackPattern.generate_id(value),
+        id=AttackPattern.generate_id(value),
         name=value,
         object_markings=object_markings,
         custom_properties=custom_properties,
         allow_custom=True,
     ),
     "Vulnerability.name": lambda value, object_markings, custom_properties: stix2.Vulnerability(
-        id = Vulnerability.generate_id(value),
+        id=Vulnerability.generate_id(value),
         name=value,
         object_markings=object_markings,
         custom_properties=custom_properties,
@@ -136,11 +136,10 @@ stix_object_mapping = {
         object_markings=object_markings,
     ),
     "Intrusion-Set": lambda value, object_markings, custom_properties: stix2.IntrusionSet(
-        id = IntrusionSet.generate_id(value),
+        id=IntrusionSet.generate_id(value),
         name=value,
         object_markings=object_markings,
         custom_properties=custom_properties,
         allow_custom=True,
     ),
 }
- 
