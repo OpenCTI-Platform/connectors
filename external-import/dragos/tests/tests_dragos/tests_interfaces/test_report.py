@@ -82,6 +82,10 @@ class StubReport(_Report):
     ) -> typing.Generator[_Indicator, None, None]:
         yield from [StubIndicator()] * 3
 
+    @property
+    def _pdf(self) -> bytes:
+        return b"%PDF-1%%EOF"
+
 
 class StubReports(Reports):
     """Stub Reports implementation for testing purposes."""
@@ -238,6 +242,23 @@ def test_report_should_raise_data_retrieval_error_with_incorrect_attribute():
         @property
         def _serial(self) -> str:
             return 12345  # should be str
+
+    # When instantiating the IncorrectStubReport
+    # Then a data retrieval error should be raised
+    with pytest.raises(DataRetrievalError):
+        _ = IncorrectStubReport()
+
+
+def test_report_should_raise_data_retrieval_error_with_invalid_pdf():
+    """Test that the Report raises a data retrieval error with invalid PDF."""
+
+    #  # Given a StubReport implementation not respecting interface types
+    class IncorrectStubReport(StubReport):
+        """Incorrect Stub Report implementation for testing purposes."""
+
+        @property
+        def _pdf(self) -> bytes:
+            return b"whatever"
 
     # When instantiating the IncorrectStubReport
     # Then a data retrieval error should be raised

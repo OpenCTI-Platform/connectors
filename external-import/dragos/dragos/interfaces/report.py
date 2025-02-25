@@ -1,14 +1,35 @@
 """Define the interface for Dragos Product."""
 
 from abc import ABC, abstractmethod
-from typing import Generator, Literal
+from typing import Annotated, Generator, Literal, Optional
 
 from dragos.interfaces.common import FrozenBaseModel
-from pydantic import AwareDatetime, Field, ValidationError
+from pydantic import (
+    AfterValidator,
+    AwareDatetime,
+    Field,
+    ValidationError,
+    ValidationInfo,
+)
 
 
 class DataRetrievalError(Exception):
     """Error raised when data retrieval fails."""
+
+
+def _validate_pdf_bytes(value: str, info: ValidationInfo) -> bytes:
+    """Raise a ValueError if byte array is not a PDF.
+
+    References:
+        * ISO 32000-1
+
+    """
+    if value[:4] != b"%PDF":
+        raise ValueError("Invalid PDF file")
+    return value
+
+
+PDFBytes = Annotated[bytes, AfterValidator(_validate_pdf_bytes)]
 
 
 class _Tag(ABC, FrozenBaseModel):
@@ -108,6 +129,10 @@ class _Report(ABC, FrozenBaseModel):
     )
     summary: str = Field(..., description="The Dragos Report executive_summary.")
 
+    pdf: Optional[PDFBytes] = Field(
+        None, description="The Dragos Report PDF file.", min_length=1
+    )
+
     related_tags: Generator[_Tag, None, None] = Field(
         ..., description="The Dragos Report related tags."
     )
@@ -127,6 +152,7 @@ class _Report(ABC, FrozenBaseModel):
                 summary=self._summary,
                 related_tags=self._related_tags,
                 related_indicators=self._related_indicators,
+                pdf=self._pdf,
             )
         except ValidationError as e:
             raise DataRetrievalError("Failed to retrieve Report") from e
@@ -154,6 +180,11 @@ class _Report(ABC, FrozenBaseModel):
     @property
     @abstractmethod
     def _summary(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def _pdf(self) -> Optional[bytes]:
         pass
 
     @property
