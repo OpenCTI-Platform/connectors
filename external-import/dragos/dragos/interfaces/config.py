@@ -55,9 +55,8 @@ class _ConfigLoaderOCTI(ABC, FrozenBaseModel):
         description="The token of the user representing the connector in the OpenCTI platform.",
     )
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize OpenCTI dedicated configuration."""
-
         try:
             FrozenBaseModel.__init__(
                 self,
@@ -133,9 +132,8 @@ class _ConfigLoaderConnector(ABC, FrozenBaseModel):
         description="Connector send-to-directory retention.",
     )
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize connector dedicated configuration."""
-
         try:
             FrozenBaseModel.__init__(
                 self,
@@ -252,9 +250,8 @@ class _ConfigLoaderDragos(ABC, FrozenBaseModel):
         description="TLP level to apply on objects imported into OpenCTI.",
     )
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize Dragos dedicated configuration."""
-
         try:
             FrozenBaseModel.__init__(
                 self,
@@ -296,9 +293,8 @@ class ConfigLoader(ABC, FrozenBaseModel):
     connector: _ConfigLoaderConnector = Field(..., description="Connector config.")
     dragos: _ConfigLoaderDragos = Field(..., description="Dragos config.")
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize configuration loader."""
-
         try:
             FrozenBaseModel.__init__(
                 self,
