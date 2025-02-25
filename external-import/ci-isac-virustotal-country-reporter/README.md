@@ -9,7 +9,7 @@ docker run \
   -d \
   --name="connector-virustotal-reporter" \
   -e TZ="Australia/Sydney" \
-  -e OPENCTI_URL="https://ci-isac.octi.filigran.io/" \
+  -e OPENCTI_URL="http://MyOCTIHost:8080" \
   -e OPENCTI_TOKEN="ChangeMe" \
   -e QUEUE_PROTOCOL="api" \
   -e CONNECTOR_ID="0968ce24-c882-4a2a-842c-80a4466b5910" \
@@ -22,10 +22,10 @@ docker run \
   -e VTREPORTER_COUNTRY="AU" \
   -e VTREPORTER_THREAT_TYPES="THREAT-REPORT" \
   -e VTREPORTER_CONFIDENCE="75" \
-  -e VTREPORTER_REPORT_LABELS="ci-isac-nio-feed,Australia" \
+  -e VTREPORTER_REPORT_LABELS="my-feed,Australia" \
   -e VTREPORTER_RELIABILITY="B - Usually Reliable" \
   -e VTREPORTER_REPORT_MARKINGS="TLP_AMBER" \
-  -e VTREPORTER_FILE_LABELS="ci-isac-nio-feed,Australia" \
+  -e VTREPORTER_FILE_LABELS="my-feed,Australia" \
   -e VTREPORTER_FILE_MARKINGS="TLP_AMBER" \
   atunnecliffe/connector-virustotal-reporter:latest
 ```
