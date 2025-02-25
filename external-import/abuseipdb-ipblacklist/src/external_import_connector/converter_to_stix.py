@@ -20,7 +20,7 @@ class ConverterToStix:
         self.tlp_marking = self._create_tlp_marking(level=self.config.tlp_level.lower())
 
     @staticmethod
-    def create_external_reference() -> list:
+    def create_external_reference() -> list[stix2.ExternalReference]:
         """
         Create external reference
         :return: External reference STIX2 list
@@ -47,7 +47,7 @@ class ConverterToStix:
         return author
 
     @staticmethod
-    def _create_tlp_marking(level):
+    def _create_tlp_marking(level) -> stix2.MarkingDefinition:
         mapping = {
             "white": stix2.TLP_WHITE,
             "clear": stix2.TLP_WHITE,
@@ -68,7 +68,7 @@ class ConverterToStix:
 
     def create_relationship(
         self, source_id: str, relationship_type: str, target_id: str
-    ) -> dict:
+    ) -> stix2.Relationship:
         """
         Creates Relationship object
         :param source_id: ID of source in string
@@ -120,53 +120,38 @@ class ConverterToStix:
 
     def create_obs(
         self, value: str, country_code: str, confidence_score: str, last_reported: str
-    ) -> dict:
+    ) -> dict | None:
         """
         Create observable according to value given
         :param value: Value in string
         :return: Stix object for IPV4, IPV6 or Domain
         """
-        if self._is_ipv6(value) is True:
-            stix_ipv6_address = stix2.IPv6Address(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.external_reference,
-                    "x_opencti_description": "Agressive IP known malicious on AbuseIPDB"
-                    + " - countryCode: "
-                    + country_code
-                    + " - abuseConfidenceScore: "
-                    + confidence_score
-                    + " - lastReportedAt: "
-                    + last_reported,
-                    "x_opencti_score": int(confidence_score),
-                },
+        if not (self._is_ipv4(value) or self._is_ipv6(value)):
+            self.helper.connector_logger.error(
+                "This observable value is not a valid IPv4 or IPv6 address: ",
+                {"value": value},
             )
-            return stix_ipv6_address
-        if self._is_ipv4(value) is True:
-            stix_ipv4_address = stix2.IPv4Address(
+            return None
+        custom_properties = {
+            "x_opencti_created_by_ref": self.author["id"],
+            "x_opencti_external_references": self.external_reference,
+            "x_opencti_description": (
+                f"Aggressive IP known malicious on AbuseIPDB - countryCode: {country_code} "
+                f"- abuseConfidenceScore: {confidence_score} - lastReportedAt: {last_reported}"
+            ),
+            "x_opencti_score": int(confidence_score),
+        }
+        if self._is_ipv6(value):
+            return stix2.IPv6Address(
                 value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.external_reference,
-                    "x_opencti_description": "Agressive IP known malicious on AbuseIPDB"
-                    + " - countryCode: "
-                    + country_code
-                    + " - abuseConfidenceScore: "
-                    + confidence_score
-                    + " - lastReportedAt: "
-                    + last_reported,
-                    "x_opencti_score": int(confidence_score),
-                },
+                custom_properties=custom_properties,
             )
-            return stix_ipv4_address
-        self.helper.connector_logger.error(
-            "This observable value is not a valid IPv4 or IPv6 address: ",
-            {"value": value},
+        return stix2.IPv4Address(
+            value=value,
+            custom_properties=custom_properties,
         )
-        return None
 
-    def create_indicator(self, observable) -> stix2.Indicator:
+    def create_indicator(self, observable) -> stix2.Indicator | None:
         pattern = None
         observable_type = None
         value = observable.value
@@ -198,7 +183,7 @@ class ConverterToStix:
         )
         return indicator
 
-    def create_indicators(self, observables):
+    def create_indicators(self, observables) -> list[stix2.Indicator]:
         """
         Creates STIX Indicators from provided STIX observables
 
@@ -212,12 +197,13 @@ class ConverterToStix:
         for observable in observables:
             if observable.type == "ipv4-addr" and self.config.mode == "ipv4":
                 indicator = self.create_indicator(observable)
-            elif observable.type == "ipv6-addr":
+            if observable.type == "ipv6-addr":
                 indicator = self.create_indicator(observable)
             else:
                 self.helper.log_error(
                     "Unsupported observable type", {"type": observable.type}
                 )
                 continue
-            indicators.append(indicator)
+            if indicator:
+                indicators.append(indicator)
         return indicators
