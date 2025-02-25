@@ -65,51 +65,44 @@ class ConnectorAbuseIPDB:
             "limit": str(self.config.limit),
         }
 
-        if self.config.ipversion:
-            if self.config.ipversion != "mixed":
-                ipversion = int(self.config.ipversion)
-                if ipversion in [4, 6]:
-                    params["ipVersion"] = ipversion
+        if self.config.ipversion and self.config.ipversion != "mixed":
+            ipversion = int(self.config.ipversion)
+            if ipversion in [4, 6]:
+                params["ipVersion"] = ipversion
 
-        if self.config.except_country_list and self.config.api_key:
-            params["exceptCountries"] = self.config.except_country_list
-
-        if self.config.only_country_list and self.config.api_key:
-            params["onlyCountries"] = self.config.only_country_list
+        if self.config.api_key:
+            if self.config.except_country_list:
+                params["exceptCountries"] = self.config.except_country_list
+            if self.config.only_country_list:
+                params["onlyCountries"] = self.config.only_country_list
 
         entities = self.client.get_entities(params)
         if not entities:
             return stix_objects
 
-        stix_objects = [
-            self.converter_to_stix.create_obs(
+        for elt in entities:
+            if not elt:
+                continue
+
+            obs = self.converter_to_stix.create_obs(
                 elt["value"],
                 elt["country_code"],
                 elt["confidence_score"],
                 elt["last_reported"],
             )
-            for elt in entities
-            if elt
-        ]
+            stix_objects.append(obs)
 
-        if self.config.create_indicator:
-            if len(stix_objects):
-                indicators = self.converter_to_stix.create_indicators(stix_objects)
-                rels = []
+            if self.config.create_indicator:
+                indicator = self.converter_to_stix.create_indicator(obs)
+                stix_objects.append(indicator)
+                rel = self.converter_to_stix.create_relationship(
+                    indicator.id, "based-on", obs.id
+                )
+                stix_objects.append(rel)
 
-                if not indicators:
-                    return stix_objects
-
-                for i, obs in enumerate(stix_objects):
-                    rels.append(
-                        self.converter_to_stix.create_relationship(
-                            indicators[i].id, "based-on", obs.id
-                        )
-                    )
-                stix_objects += indicators + rels
-
-        if len(stix_objects):
+        if stix_objects:
             stix_objects.append(self.converter_to_stix.author)
+
         return stix_objects
 
     def process_message(self) -> None:
