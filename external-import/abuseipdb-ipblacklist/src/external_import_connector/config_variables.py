@@ -34,19 +34,22 @@ class ConfigConnector:
         """
         self.api_url = get_config_variable(
             "ABUSEIPDB_URL",
-            ["abuseipdbipblacklistimport", "api_url"],
+            ["abuseipdb", "api_url"],
             self.load,
             default="https://api.abuseipdb.com/api/v2/blacklist",
         )
+
         self.api_key = get_config_variable(
-            "ABUSEIPDB_API_KEY", ["abuseipdbipblacklistimport", "api_key"], self.load
+            "ABUSEIPDB_API_KEY", ["abuseipdb", "api_key"], self.load
         )
+
         self.score = get_config_variable(
-            "ABUSEIPDB_SCORE", ["abuseipdbipblacklistimport", "score"], self.load, True
+            "ABUSEIPDB_SCORE", ["abuseipdb", "score"], self.load, True
         )
+
         self.limit = get_config_variable(
             "ABUSEIPDB_LIMIT",
-            ["abuseipdbipblacklistimport", "limit"],
+            ["abuseipdb", "limit"],
             self.load,
             default="10000",
         )
@@ -56,9 +59,9 @@ class ConfigConnector:
 
         self.ipversion = get_config_variable(
             "ABUSEIPDB_LIMIT_IPVERSION",
-            ["abuseipdbipblacklistimport", "ipversion"],
+            ["abuseipdb", "ipversion"],
             self.load,
-            isNumber=True,
+            default="mixed",
         )
 
         self.except_country_list = get_config_variable(
@@ -67,6 +70,22 @@ class ConfigConnector:
 
         self.only_country_list = get_config_variable(
             "ABUSEIPDB_ONLY_COUNTRY", ["abuseipdb", "onlycountry"], self.load
+        )
+
+        self.create_indicator = bool(
+            get_config_variable(
+                "ABUSEIPDB_CREATE_INDICATOR",
+                ["abuseipdb", "create_indicator"],
+                self.load,
+                default=False,
+            )
+        )
+
+        self.tlp_level = get_config_variable(
+            "ABUSEIPDB_TLP_LEVEL",
+            ["abuseipdb", "tlp_level"],
+            self.load,
+            default="clear",
         )
 
         self.duration_period = get_config_variable(

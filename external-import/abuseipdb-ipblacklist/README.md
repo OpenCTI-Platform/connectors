@@ -76,6 +76,8 @@ Below are the parameters you'll need to set for the connector:
 | IPv4 | ipversion | `ABUSEIPDB_LIMIT_IPVERSION` | mixed | No | You can choose 4 ot 6 (Ipversion)|
 | Except Country | exceptcountry | `ABUSEIPDB_EXCEPT_COUNTRY` |    |  No | For example: RU, CN (You exclude Russia and China IPs) |
 | Only Country | onlycountry | `ABUSEIPDB_ONLY_COUNTRY` |  | No | RU : You want only Russian IPs |
+| Create Indicator | create_indicator | `ABUSEIPDB_CREATE_INDICATOR` | No | No | |
+| ABUSEIPDB_TLP_LEVEL | tlp_level | `ABUSEIPDB_TLP_LEVEL` | clear | No | |
 
 ## Deployment
 

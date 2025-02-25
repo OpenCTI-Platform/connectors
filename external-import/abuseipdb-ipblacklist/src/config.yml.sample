@@ -14,3 +14,5 @@ abuseipdb:
   api_key: 'ChangeMe'
   score: 100
   limit: 1000
+  create_indicator: false
+  tlp_level: 'clear'

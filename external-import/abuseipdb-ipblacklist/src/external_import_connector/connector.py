@@ -66,7 +66,10 @@ class ConnectorAbuseIPDB:
         }
 
         if self.config.ipversion:
-            params["ipVersion"] = int(self.config.ipversion)
+            if self.config.ipversion != "mixed":
+                ipversion = int(self.config.ipversion)
+                if ipversion in [4, 6]:
+                    params["ipVersion"] = ipversion
 
         if self.config.except_country_list and self.config.api_key:
             params["exceptCountries"] = self.config.except_country_list
@@ -88,6 +91,20 @@ class ConnectorAbuseIPDB:
             for elt in entities
             if elt is not None
         ]
+
+        if self.config.create_indicator:
+            if len(stix_objects):
+                indicators = self.converter_to_stix.create_indicators(stix_objects)
+                rels = []
+
+                for i in range(0, len(stix_objects)):
+                    rels.append(
+                        self.converter_to_stix.create_relationship(
+                            indicators[i].id, "based-on", stix_objects[i].id
+                        )
+                    )
+                stix_objects += indicators + rels
+
         if len(stix_objects):
             stix_objects.append(self.converter_to_stix.author)
         return stix_objects
