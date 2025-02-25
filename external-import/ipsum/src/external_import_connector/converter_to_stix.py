@@ -20,7 +20,7 @@ class ConverterToStix:
         self.external_reference = self.create_external_reference()
 
     @staticmethod
-    def create_external_reference() -> list:
+    def create_external_reference() -> list[stix2.ExternalReference]:
         """
         Create external reference
         :return: External reference STIX2 list
@@ -42,13 +42,13 @@ class ConverterToStix:
             id=Identity.generate_id(name="IPsum", identity_class="organization"),
             name="IPsum",
             identity_class="organization",
-            description="IPsum is a threat intelligence feed based on 30+ different publicly available lists s",
+            description="IPsum is a threat intelligence feed based on 30+ different publicly available lists.",
         )
         return author
 
     def create_relationship(
         self, source_id: str, relationship_type: str, target_id: str
-    ) -> dict:
+    ) -> stix2.Relationship:
         """
         Creates Relationship object
         :param source_id: ID of source in string
@@ -107,7 +107,7 @@ class ConverterToStix:
         """
         return validators.domain(value)
 
-    def create_obs(self, value: str) -> dict:
+    def create_obs(self, value: str) -> dict | None:
         """
         Create observable according to value given
         :param value: Value in string
