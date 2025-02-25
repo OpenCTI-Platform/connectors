@@ -1,6 +1,6 @@
 import traceback
 
-from incident_import_connector import IncidentConnector
+from external_import_connector import IncidentConnector
 
 if __name__ == "__main__":
     """
