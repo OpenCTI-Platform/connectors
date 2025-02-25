@@ -1,6 +1,7 @@
 # OpenCTI Flashpoint Connector
 
-This connector integrates Flashpoint with the OpenCTI platform. It pulls various threat intelligence data from Flashpoint and imports it into OpenCTI, providing enhanced visibility into security threats.
+This connector integrates Flashpoint with the OpenCTI platform. 
+It pulls various threat intelligence data from Flashpoint and imports it into OpenCTI, providing enhanced visibility into security threats.
 
 See [Flashpoint API Documentation](https://flashpoint.io/resources/datasheets/ignite-platform-datasheet/) for more details.
 
@@ -8,14 +9,14 @@ See [Flashpoint API Documentation](https://flashpoint.io/resources/datasheets/ig
 
 - [Introduction](#introduction)
 - [Installation](#installation)
-    - [Requirements](#requirements)
+  - [Requirements](#requirements)
 - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [OpenCTI environment variables](#opencti-environment-variables)
+  - [Base connector environment variables](#base-connector-environment-variables)
+  - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
 - [Deployment](#deployment)
-    - [Docker Deployment](#docker-deployment)
-    - [Manual Deployment](#manual-deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
 - [Usage](#usage)
 - [Behavior](#behavior)
 - [Debugging](#debugging)
@@ -45,28 +46,29 @@ The configuration variables for the connector can be set in `docker-compose.yml`
 
 ### Base connector environment variables
 
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                      |
-|-----------------|------------|-----------------------------|-----------------|-----------|----------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                        |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                    |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                           |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | flashpoint      | Yes       | The scope or type of data the connector is importing (e.g., flashpoint).        |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options: `debug`, `info`, `warn`, `error`. |
+| Parameter       | config.yml      | Docker environment variable | Default         | Mandatory | Description                                                                      |
+|-----------------|-----------------|-----------------------------|-----------------|-----------|----------------------------------------------------------------------------------|
+| Connector ID    | id              | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                        |
+| Connector Type  | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                    |
+| Connector Name  | name            | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                           |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`           | flashpoint      | Yes       | The scope or type of data the connector is importing (e.g., flashpoint).        |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options: `debug`, `info`, `warn`, `error`. |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | /               | Yes       | The period of time to wait between two connector's runs (in ISO-8601 format).            |
 
 ### Connector extra parameters environment variables
 
-| Parameter                       | config.yml                     | Docker environment variable          | Default       | Mandatory | Description                                               |
-|---------------------------------|--------------------------------|-------------------------------------|---------------|-----------|-----------------------------------------------------------|
-| API base URL                    | api_base_url                   | `FLASHPOINT_API_BASE_URL`           | https://api.flashpoint.io | Yes       | Base URL for the Flashpoint API.                          |
-| API access key                  | api_access_key                 | `FLASHPOINT_API_KEY`                 |               | Yes       | Flashpoint API access key.                                |
-| Import interval (minutes)       | interval                       | `FLASHPOINT_INTERVAL`                | 5             | No        | Interval (in minutes) to import data from Flashpoint.     |
-| Import start date               | import_start_date              | `FLASHPOINT_IMPORT_START_DATE`       |               | No        | The date from which to start importing data.              |
-| Import reports                  | import_reports                 | `FLASHPOINT_IMPORT_REPORTS`          | true          | No        | Import reports from Flashpoint.                           |
-| Import indicators                | import_indicators              | `FLASHPOINT_IMPORT_INDICATORS`       | true          | No        | Import indicators of compromise (IoCs).                   |
-| Import communities               | import_communities             | `FLASHPOINT_IMPORT_COMMUNITIES`      | false         | No        | Import community data.                                    |
-| Communities queries              | communities_queries            | `FLASHPOINT_COMMUNITIES_QUERIES`     | ""            | No        | Comma-separated list of community queries to execute.     |
-| Import alerts                   | import_alerts                 | `FLASHPOINT_IMPORT_ALERTS`           | true          | No        | Import alert data from Flashpoint.                        |
-| Indicators in reports           | indicators_in_reports          | `FLASHPOINT_INDICATORS_IN_REPORTS`   | false         | No        | Include indicators in the reports imported from MispFeed. |
+| Parameter                              | config.yml                       | Docker environment variable                | Default                     | Mandatory | Description                                                                                                                  |
+|----------------------------------------|----------------------------------|--------------------------------------------|-----------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------|
+| API access key                         | api_access_key                   | `FLASHPOINT_API_KEY`                       | /                           | Yes       | Flashpoint API access key.                                                                                                   |
+| Import interval (minutes) (Deprecated) | interval                         | `FLASHPOINT_INTERVAL`                      | 5                           | No        | Interval (in minutes) to import data from Flashpoint. This option option is deprecated. Please use 'duration_period' instead |
+| Import start date                      | import_start_date                | `FLASHPOINT_IMPORT_START_DATE`             | /                           | No        | The date from which to start importing data.                                                                                 |
+| Import reports                         | import_reports                   | `FLASHPOINT_IMPORT_REPORTS`                | true                        | No        | Import reports from Flashpoint.                                                                                              |
+| Indicators in reports                  | indicators_in_reports            | `FLASHPOINT_INDICATORS_IN_REPORTS`         | false                       | No        | Include indicators in the reports imported from MispFeed.                                                                    |
+| Import indicators                      | import_indicators                | `FLASHPOINT_IMPORT_INDICATORS`             | true                        | No        | Import indicators of compromise (IoCs).                                                                                      |
+| Import alerts                          | import_alerts                    | `FLASHPOINT_IMPORT_ALERTS`                 | true                        | No        | Import alert data from Flashpoint.                                                                                           |
+| Create alert related entities          | alert_create_related_entities    | `FLASHPOINT_ALERT_CREATE_RELATED_ENTITIES` | false                       | No        | Create alert related Channel entity and Media-Content observable                                                             |
+| Import communities                     | import_communities               | `FLASHPOINT_IMPORT_COMMUNITIES`            | false                       | No        | Import community data.                                                                                                       |
+| Communities queries                    | communities_queries              | `FLASHPOINT_COMMUNITIES_QUERIES`           | "cybersecurity,cyberattack" | No        | Comma-separated list of community queries to execute.                                                                        |
 
 ## Deployment
 
@@ -201,3 +203,8 @@ graph LR
     OpenCTIChannel -- publishes --> OpenCTIMediaContent
     OpenCTIMediaContent -- related-to --> OpenCTIIncident
 ```
+
+## Debugging
+
+The connector can be debugged by setting the appropriate log level.
+Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.

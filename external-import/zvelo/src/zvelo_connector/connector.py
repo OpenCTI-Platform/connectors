@@ -6,7 +6,7 @@ from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
-from .converter_to_stix import ConverterToStix
+from .converter_to_stix import ConverterError, ConverterToStix
 from .utils import SUPPORTED_COLLECTIONS
 
 
@@ -22,7 +22,6 @@ class ConnectorZvelo:
         # Load configuration file and connection helper
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.client = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper)
 
     def _collect_intelligence(self, from_date: str) -> list[stix2.v21._STIXBase21]:
@@ -31,6 +30,10 @@ class ConnectorZvelo:
         :param from_date: Minimum Zvelo IOC creation date timestamp
         :return: List of STIX objects
         """
+
+        # init a token
+        api_client = ConnectorClient(self.helper, self.config)
+
         # validate collection configured
         for collection in self.config.zvelo_collections:
             if collection not in SUPPORTED_COLLECTIONS:
@@ -52,29 +55,35 @@ class ConnectorZvelo:
             )
 
             # Get entities from external sources
-            entities = self.client.get_collections_entities(
-                collection=collection, from_date=from_date
-            )
+            try:
+                entities = api_client.get_collections_entities(
+                    collection=collection, from_date=from_date
+                )
+            except Exception as err:
+                message = f"An error occurred while fetching data collection: {collection}, error: {err}"
+                self.helper.connector_logger.error(message)
+                continue
 
             # Convert into STIX2 object and add it on a list
-            if collection == "threat":
+            converter_method = {
+                "threat": self.converter_to_stix.convert_threat_to_stix,
+                "phish": self.converter_to_stix.convert_phish_to_stix,
+                "malicious": self.converter_to_stix.convert_malicious_to_stix,
+            }.get(collection)
+
+            if not converter_method:
+                self.helper.connector_logger.warning(
+                    f"[CONNECTOR] Unsupported collection: {collection}"
+                )
+                continue
+            else:
                 for entity in entities:
-                    entity_to_stix_objects = (
-                        self.converter_to_stix.convert_threat_to_stix(entity)
-                    )
-                    stix_objects.extend(entity_to_stix_objects)
-            if collection == "phish":
-                for entity in entities:
-                    entity_to_stix_objects = (
-                        self.converter_to_stix.convert_phish_to_stix(entity)
-                    )
-                    stix_objects.extend(entity_to_stix_objects)
-            if collection == "malicious":
-                for entity in entities:
-                    entity_to_stix_objects = (
-                        self.converter_to_stix.convert_malicious_to_stix(entity)
-                    )
-                    stix_objects.extend(entity_to_stix_objects)
+                    try:
+                        stix_objects.extend(converter_method(entity))
+                    except ConverterError as err:
+                        message = f"[CONNECTOR] An error occurred while converting {entity} to stix, skipping entity."
+                        self.helper.connector_logger.error(message, {"error": str(err)})
+                        continue
 
         return stix_objects
 
