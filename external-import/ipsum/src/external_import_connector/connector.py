@@ -69,7 +69,7 @@ class ConnectorIPSUM:
             for entity in entities
             if entity is not None
         ]
-        
+
         if len(stix_objects):
             stix_objects.append(self.converter_to_stix.author)
         return stix_objects
