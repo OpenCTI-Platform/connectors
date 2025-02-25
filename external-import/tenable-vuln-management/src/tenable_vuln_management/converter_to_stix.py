@@ -103,7 +103,7 @@ def cvss3_severity_from_score(
 def tlp_marking_definition_handler(
     marking_definition: Literal[
         "TLP:CLEAR", "TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"
-    ]
+    ],
 ) -> stix2.MarkingDefinition:
     """
     Handles Traffic Light Protocol (TLP) marking definitions and returns the

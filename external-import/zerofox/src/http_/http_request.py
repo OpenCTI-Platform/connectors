@@ -1,4 +1,4 @@
-""" Wrapper function for http requests."""
+"""Wrapper function for http requests."""
 
 # third-party
 import requests

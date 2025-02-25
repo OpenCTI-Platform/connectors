@@ -1,10 +1,10 @@
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
+from .config_loader import ConfigConnector
 from .converter_to_stix import ConverterToStix
 
 
@@ -53,7 +53,7 @@ class ConnectorTemplate:
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
         self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper)
+        self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
     def _collect_intelligence(self) -> list:
         """
@@ -74,11 +74,16 @@ class ConnectorTemplate:
             entity_to_stix = self.converter_to_stix.create_obs(entity["value"])
             stix_objects.append(entity_to_stix)
 
-        return stix_objects
-
         # ===========================
         # === Add your code above ===
         # ===========================
+
+        # Ensure consistent bundle by adding the author and TLP marking
+        if len(stix_objects):
+            stix_objects.append(self.converter_to_stix.author)
+            stix_objects.append(self.converter_to_stix.tlp_marking)
+
+        return stix_objects
 
     def process_message(self) -> None:
         """
@@ -127,10 +132,12 @@ class ConnectorTemplate:
             # ===========================
             stix_objects = self._collect_intelligence()
 
-            if stix_objects is not None and len(stix_objects) != 0:
+            if len(stix_objects):
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
-                    stix_objects_bundle, work_id=work_id
+                    stix_objects_bundle,
+                    work_id=work_id,
+                    cleanup_inconsistent_bundle=True,
                 )
 
                 self.helper.connector_logger.info(
@@ -148,9 +155,9 @@ class ConnectorTemplate:
             )
             current_state = self.helper.get_state()
             current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
-            last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+            last_run_datetime = datetime.fromtimestamp(
+                current_timestamp, tz=timezone.utc
+            ).strftime("%Y-%m-%d %H:%M:%S")
             if current_state:
                 current_state["last_run"] = current_state_datetime
             else:

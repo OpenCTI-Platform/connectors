@@ -47,11 +47,6 @@ class AbuseSSLImportConnector:
             )
             * 60
         )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
 
     def run(self):
         """Running component of class"""
@@ -200,7 +195,9 @@ class AbuseSSLImportConnector:
     def create_bundle(self, observables, indicators, relationships):
         """Creates serialized STIX Bundle object from the provided lists of STIX Observables, Indicators, and Relationships
 
+        :param observables: List of STIX Observables objects
         :param indicators: List of STIX Indicator objects
+        :param relationships: List of STIX Relationship objects
         :return: Serialized STIX Bundle object
         """
         self.helper.log_info("Creating STIX Bundle")
@@ -219,18 +216,15 @@ class AbuseSSLImportConnector:
         Attempts to send serialized STIX Bundle to OpenCTI client
 
         :param bundle: Serialized STIX Bundle
+        :param work_id: a valid work id
         """
         self.helper.log_info("Sending STIX Bundle")
         try:
-            self.helper.send_stix2_bundle(
-                bundle, work_id=work_id, update=self.update_existing_data
-            )
+            self.helper.send_stix2_bundle(bundle, work_id=work_id)
         except:
             time.sleep(60)
             try:
-                self.helper.send_stix2_bundle(
-                    bundle, work_id=work_id, update=self.update_existing_data
-                )
+                self.helper.send_stix2_bundle(bundle, work_id=work_id)
             except Exception as e:
                 self.helper.log_error(str(e))
 
