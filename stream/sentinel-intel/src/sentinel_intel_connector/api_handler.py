@@ -19,6 +19,12 @@ from .utils import (
 )
 
 
+class SentinelApiHandlerError(Exception):
+    def __init__(self, msg, metadata):
+        self.msg = msg
+        self.metadata = metadata
+
+
 class SentinelApiHandler:
     def __init__(self, helper, config):
         """
@@ -99,7 +105,7 @@ class SentinelApiHandler:
             response = self.session.request(method, url, **kwargs)
             response.raise_for_status()
 
-            self.helper.connector_logger.info(
+            self.helper.connector_logger.debug(
                 "[API] HTTP Request to endpoint",
                 {"url_path": f"{method.upper()} {url}"},
             )
@@ -107,40 +113,11 @@ class SentinelApiHandler:
             if response.content:
                 return response.json()
 
-        except RetryError as err:
-            self.helper.connector_logger.error(
-                "A retry error occurred, maximum retries exceeded for url",
-                {"url_path": f"{method.upper()} {url}", "error": str(err)},
-            )
-            return None
-
-        except HTTPError as err:
-            self.helper.connector_logger.error(
-                "[API] A HTTP error occurred",
-                {"url_path": f"{method.upper()} {url}", "error": str(err)},
-            )
-            return None
-
-        except Timeout as err:
-            self.helper.connector_logger.error(
-                "[API] A timeout error occurred",
-                {"url_path": f"{method.upper()} {url}", "error": str(err)},
-            )
-            return None
-
-        except ConnectionError as err:
-            self.helper.connector_logger.error(
-                "[API] A connection error occurred",
-                {"url_path": f"{method.upper()} {url}", "error": str(err)},
-            )
-            return None
-
-        except Exception as err:
-            self.helper.connector_logger.error(
-                "[API] An unexpected error occurred",
-                {"url_path": f"{method.upper()} {url}", "error": str(err)},
-            )
-            return None
+        except (RetryError, HTTPError, Timeout, ConnectionError) as err:
+            raise SentinelApiHandlerError(
+                "[API] An error occured during request",
+                {"url_path": f"{method.upper()} {url}"},
+            ) from err
 
     def _build_request_body(self, observable: dict) -> dict:
         """
@@ -181,13 +158,6 @@ class SentinelApiHandler:
         elif observable["type"] == "file":
             body["fileHashType"] = get_hash_type(observable)
             body["fileHashValue"] = get_hash_value(observable)
-            body["fileName"] = observable.get("name", None)
-            body["fileSize"] = observable.get("size", 0)
-            body["fileCreatedDateTime"] = (
-                OpenCTIConnectorHelper.get_attribute_in_extension(
-                    "created_at", observable
-                )
-            )
         else:
             body = {}
         return body
@@ -195,32 +165,31 @@ class SentinelApiHandler:
     def get_indicators(self) -> list[dict] | None:
         """
         Get Threat Intelligence Indicators from Sentinel.
-        :return: List of Threat Intelligence Indicators if request is succesful, None otherwise
+        :return: List of Threat Intelligence Indicators if request is successful, None otherwise
         """
         data = self._send_request(
             "get", f"{self.config.base_url}{self.config.resource_path}"
         )
         return data["value"]
 
-    def search_indicator(self, observable_opencti_id: str) -> dict | None:
+    def search_indicators(self, opencti_id: str) -> list | None:
         """
-        Search a Threath Intelligence Indicator on Sentinel that corresponds to an OpenCTI observable.
-        :param observable_opencti_id: OpenCTI ID of the observable to get Threat Intelligence Indicator for
-        :return: Threat Intelligence Indicator if request is succesful, None otherwise
+        Search a Threat Intelligence Indicator on Sentinel that corresponds to an OpenCTI observable.
+        :param opencti_id: OpenCTI ID of the observable or the indicator to get Threat Intelligence Indicator for
+        :return: Threat Intelligence Indicator if request is successful, None otherwise
         """
-        params = f"$filter=externalId eq '{observable_opencti_id}'"
+        params = f"$filter=externalId eq '{opencti_id}'"
 
         data = self._send_request(
             "get", f"{self.config.base_url}{self.config.resource_path}", params=params
         )
-        if len(data["value"]) == 1:
-            return data["value"][0]
+        return data["value"]
 
     def post_indicator(self, observable: dict) -> dict | None:
         """
         Create a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
         :param observable: OpenCTI observable to create Threat Intelligence Indicator for
-        :return: Threat Intelligence Indicator if request is succesful, None otherwise
+        :return: Threat Intelligence Indicator if request is successful, None otherwise
         """
         request_body = self._build_request_body(observable)
         if not request_body:
@@ -233,24 +202,16 @@ class SentinelApiHandler:
         )
         return data
 
-    def patch_indicator(self, observable: dict) -> bool:
+    def patch_indicator(self, observable: dict, sentinel_indicator_id: str) -> bool:
         """
         Update a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
         :param observable: OpenCTI observable to update Threat Intelligence Indicator from
-        :return: True if request is succesful, False otherwise
+        :param sentinel_indicator_id: identifier of the corresponding azure indicator
+        :return: True if request is successful, False otherwise
         """
-        indicator_external_id = OpenCTIConnectorHelper.get_attribute_in_extension(
-            "id", observable
-        )
-        indicator_data = self.search_indicator(indicator_external_id)
-        if not indicator_data:
-            return False
-
-        indicator_id = indicator_data["id"]
-
         self._send_request(
             "patch",
-            f"{self.config.base_url}{self.config.resource_path}/{indicator_id}",
+            f"{self.config.base_url}{self.config.resource_path}/{sentinel_indicator_id}",
             json=self._build_request_body(observable),
         )
         return True
@@ -259,7 +220,7 @@ class SentinelApiHandler:
         """
         Delete a Threat Intelligence Indicator on Sentinel corresponding to an OpenCTI observable.
         :param indicator_id: OpenCTI observable to delete Threat Intelligence Indicator for
-        :return: True if request is succesful, False otherwise
+        :return: True if request is successful, False otherwise
         """
         self._send_request(
             "delete",
