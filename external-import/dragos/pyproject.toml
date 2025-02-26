@@ -22,12 +22,17 @@ dependencies = [
 "stix2 >=3.0.1, <4",
 "pycti >=6.4, <7",
 "pydantic >= 2.8.10, <3",
+"aiohttp >=3.7.4, <4",
+"yarl >=1.10.1, <2",
+"PyYAML >=6.0.2, <7",
+"tenacity >=9, <10",
 ]
 
 
 [project.optional-dependencies]
 test= [
     "pytest >=8.1.1, <9",   
+    "pytest-asyncio >= 0.25.3, <1",
 ]
 dev = [
     "black >=25.1, <26",  # Code formatter
@@ -46,8 +51,10 @@ where = ["."]
 
 [tool.pytest]
 testpaths = [
-    ";/tests",
+    "./tests",
 ]
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 
 
 [tool.isort]
