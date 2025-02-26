@@ -23,15 +23,3 @@ class ConnectorConfigurationError(StreamConnectorError):
     """Raised when there are configuration issues."""
 
     pass
-
-
-class StixConversionError(StreamConnectorError):
-    """Raised when there are STIX conversion issues."""
-
-    pass
-
-
-class APIError(StreamConnectorError):
-    """Raised when there are API communication issues."""
-
-    pass
