@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from datetime import timedelta
 
     from aiohttp import ClientResponse
-    from pydantic import SecretStr
 
 
 ResponseModel = PermissiveBaseModel  # Alias
