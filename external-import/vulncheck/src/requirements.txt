@@ -1,5 +1,5 @@
-vulncheck-sdk==0.0.7
-pycti==6.5.2
-pydantic==2.10.4
+vulncheck-sdk==0.0.8
+pycti==6.5.3
+pydantic==2.10.6
 validators==0.34.0
 psutil==6.1.1
