@@ -1,4 +1,4 @@
-#isort:skip_file
+# isort:skip_file
 """Offer public classes and methods for the Dragos API V1 endpoints."""
 
 from typing import TYPE_CHECKING
@@ -43,4 +43,3 @@ class DragosClientAPIV1:
             retry=retry,
             backoff=backoff,
         )
-
