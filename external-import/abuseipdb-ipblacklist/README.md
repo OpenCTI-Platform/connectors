@@ -156,4 +156,3 @@ Any additional information about this connector
 * What information is ingested/updated/changed
 * What should the user take into account when using this connector
 * ...
--->
