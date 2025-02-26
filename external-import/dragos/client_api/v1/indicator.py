@@ -293,34 +293,3 @@ class IndicatorClientAPIV1(BaseClientAPIV1):
             if page >= indicators.total_pages:
                 break
             page += 1
-
-if __name__ == "__main__":
-    from datetime import datetime, timedelta, timezone
-    from yarl import URL
-    from pydantic import SecretStr
-    client = IndicatorClientAPIV1(
-        base_url=URL("https://portal.dragos.com"),
-        token=SecretStr("ChangeMe"),
-        secret=SecretStr("ChangeMe"),
-        timeout=timedelta(seconds=10),
-        retry=3,
-        backoff=timedelta(seconds=0.1),
-    )
-    # async def last_day():
-    #     async for indicator in client.iter_indicators(
-    #         updated_after=datetime.now(timezone.utc) - timedelta(days=10)
-    #     ):
-    #         try:
-    #             print(indicator)
-    #         except Exception as e:
-    #             print(e)
-
-    async def secured_last_day():
-        indicator_gen = client.iter_indicators(
-            updated_after=datetime.now(timezone.utc) - timedelta(days=10)
-        )
-        try:
-            await anext(indicator_gen)
-        except Exception as e:
-            print(e)
-    asyncio.run(secured_last_day())
