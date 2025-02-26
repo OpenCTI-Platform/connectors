@@ -36,13 +36,6 @@ class ConverterToStix:
         Creates a Stix Incident from a SentinelOne incident alongside
         an external reference with a link to accessing it.
         """
-
-        def _convert_confidence(confidence):
-            confidence_score = {"malicious": 80, "suspicious": 50, "N/A": 20}.get(
-                confidence, "suspicious"
-            )
-            return confidence_score
-
         self.helper.connector_logger.debug(
             "Attempting to create corresponding Stix Incident"
         )
@@ -83,9 +76,6 @@ class ConverterToStix:
             name=name,
             description=description,
             labels=labels,
-            confidence=_convert_confidence(
-                incident_data.get("threatInfo", {}).get("confidenceLevel", "suspicious")
-            ),
             created=created,
             external_references=[external_s1_ref] if external_s1_ref else None,
             object_marking_refs=[stix2.TLP_RED.id],
