@@ -52,7 +52,7 @@ class ConnectorClient:
 
     def get_entities(self, params=None) -> list | None:
         """
-        If params is None, retrieve all IPs in the Github Repository
+        If params is None, retrieve all IPs from the API with default params
         :param params: Optional Params to filter what list to return
         :return: A list of IPs
         """

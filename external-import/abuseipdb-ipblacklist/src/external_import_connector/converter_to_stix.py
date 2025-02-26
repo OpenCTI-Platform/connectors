@@ -15,12 +15,12 @@ class ConverterToStix:
     def __init__(self, helper, config):
         self.helper = helper
         self.config = config
-        self.author = self.create_author()
-        self.external_reference = self.create_external_reference()
-        self.tlp_marking = self._create_tlp_marking(level=self.config.tlp_level.lower())
+        self.author = self._create_author()
+        self.external_reference = self._create_external_reference()
+        self.tlp_marking = self._create_tlp_marking(self.config.tlp_level.lower())
 
     @staticmethod
-    def create_external_reference() -> list[stix2.ExternalReference]:
+    def _create_external_reference() -> list[stix2.ExternalReference]:
         """
         Create external reference
         :return: External reference STIX2 list
@@ -33,7 +33,7 @@ class ConverterToStix:
         return [external_reference]
 
     @staticmethod
-    def create_author() -> stix2.Identity:
+    def _create_author() -> stix2.Identity:
         """
         Create Author
         :return: Author in Stix2 object
@@ -67,6 +67,8 @@ class ConverterToStix:
             ),
             "red": stix2.TLP_RED,
         }
+        if level not in mapping:
+            return mapping["clear"]
         return mapping[level]
 
     def create_relationship(
@@ -86,8 +88,8 @@ class ConverterToStix:
             relationship_type=relationship_type,
             source_ref=source_id,
             target_ref=target_id,
-            created_by_ref=self.author,
-            object_marking_refs=[self.tlp_marking],
+            created_by_ref=self.author["id"],
+            object_marking_refs=[self.tlp_marking["id"]],
         )
         return relationship
 
@@ -147,12 +149,12 @@ class ConverterToStix:
         if self._is_ipv6(value):
             return stix2.IPv6Address(
                 value=value,
-                object_marking_refs=[self.tlp_marking],
+                object_marking_refs=[self.tlp_marking["id"]],
                 custom_properties=custom_properties,
             )
         return stix2.IPv4Address(
             value=value,
-            object_marking_refs=[self.tlp_marking],
+            object_marking_refs=[self.tlp_marking["id"]],
             custom_properties=custom_properties,
         )
 
@@ -177,31 +179,12 @@ class ConverterToStix:
             id=Indicator.generate_id(pattern),
             name=value,
             description="Agressive IP known malicious on AbuseIPDB",
-            created_by_ref=self.author,
-            confidence=self.helper.connect_confidence_level,
             pattern_type="stix",
             pattern=pattern,
-            object_marking_refs=[self.tlp_marking],
+            object_marking_refs=[self.tlp_marking["id"]],
+            created_by_ref=self.author["id"],
             custom_properties={
                 "x_opencti_main_observable_type": observable_type,
             },
         )
         return indicator
-
-    def create_indicators(self, observables) -> list[stix2.Indicator]:
-        """
-        Creates STIX Indicators from provided STIX observables
-
-        :param observables: List of STIX IPv4, IPv6 Address observables
-        :return: :class:`List` of STIX Indicators
-        """
-        self.helper.log_info("Creating STIX Indicators")
-        indicators = []
-        if not observables:
-            return indicators
-        for observable in observables:
-            if observable.type in ("ipv4-addr", "ipv6-addr"):
-                indicator = self.create_indicator(observable)
-                if indicator:
-                    indicators.append(indicator)
-        return indicators

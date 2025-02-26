@@ -81,40 +81,33 @@ class ConnectorAbuseIPDB:
             return stix_objects
 
         for elt in entities:
-            if not elt:
-                continue
-
             obs = self.converter_to_stix.create_obs(
                 elt["value"],
                 elt["country_code"],
                 elt["confidence_score"],
                 elt["last_reported"],
             )
+            if not obs:
+                continue
+
             stix_objects.append(obs)
 
             if self.config.create_indicator:
                 indicator = self.converter_to_stix.create_indicator(obs)
                 if indicator:
                     stix_objects.append(indicator)
-                if indicator and obs:
                     rel = self.converter_to_stix.create_relationship(
-                        indicator, "based-on", obs
+                        indicator.id, "based-on", obs.id
                     )
-                    self.helper.connector_logger.debug(
-                        "[CONNECTOR] The generation of the relationship between the observable and the indicator was a success.",
-                        {
-                            "relationship_id": rel.id,
-                            "source_ref": indicator.id,
-                            "relationship_type": rel.relationship_type,
-                            "target_ref": obs.id,
-                        },
-                    )
-                    stix_objects.append(rel)
-
+                    if rel:
+                        stix_objects.append(rel)
         if stix_objects:
-            stix_objects.append(self.converter_to_stix.author)
-            stix_objects.append(self.converter_to_stix.tlp_marking)
-
+            author = self.converter_to_stix.author
+            tlp_marking = self.converter_to_stix.tlp_marking
+            if author:
+                stix_objects.append(author)
+            if tlp_marking:
+                stix_objects.append(tlp_marking)
         return stix_objects
 
     def process_message(self) -> None:
