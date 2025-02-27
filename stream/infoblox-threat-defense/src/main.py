@@ -23,17 +23,13 @@ class InfobloxThreatDefenseConnector:
         )
         self.helper = OpenCTIConnectorHelper(config)
         self.infoblox_api_key = get_config_variable(
-            "INFOBLOX_API_KEY",
-            ["infoblox", "api_key"],
-            config,
+            "INFOBLOX_API_KEY", ["infoblox", "api_key"], config
         )
         self.infoblox_verify_ssl = get_config_variable(
             "INFOBLOX_VERIFY_SSL", ["infoblox", "verify_ssl"], config, default=True
         )
         self.infoblox_custom_list_id = get_config_variable(
-            "INFOBLOX_CUSTOM_LIST_ID",
-            ["infoblox", "custom_list_id"],
-            config,
+            "INFOBLOX_CUSTOM_LIST_ID", ["infoblox", "custom_list_id"], config
         )
 
     def get_headers(self):
@@ -43,7 +39,9 @@ class InfobloxThreatDefenseConnector:
             "Content-Type": "application/json",
         }
 
-    def make_request_with_retries(self, method, url, retries=3, delay=2, **kwargs):
+    def make_request_with_retries(
+        self, method, url, retries=3, delay=2, **kwargs
+    ):
         """Make a request with retries and exponential backoff."""
         for attempt in range(retries):
             try:
@@ -57,7 +55,7 @@ class InfobloxThreatDefenseConnector:
                     f"[ConnectionError] Attempt {attempt + 1} failed: {e}"
                 )
                 if attempt < retries - 1:
-                    time.sleep(delay * (2 ** attempt))  # Exponential backoff
+                    time.sleep(delay * (2**attempt))  # Exponential backoff
                 else:
                     raise
             except requests.exceptions.HTTPError as e:
@@ -101,13 +99,9 @@ class InfobloxThreatDefenseConnector:
             )
             return
 
-        existing_items = {
-            item["item"] for item in existing_list.get("items_described", [])
-        }
+        existing_items = {item["item"] for item in existing_list.get("items_described", [])}
         updated_items = (
-            set(updated_items)
-            if isinstance(updated_items, (list, set))
-            else {updated_items}
+            set(updated_items) if isinstance(updated_items, (list, set)) else {updated_items}
         )
 
         if operation == "add":
@@ -160,18 +154,14 @@ class InfobloxThreatDefenseConnector:
                 )[0]["value"]
 
                 if msg.event in ["create", "update"] and not data.get("revoked"):
-                    if data.get("type") == "indicator" and data.get(
-                        "pattern_type", ""
-                    ).startswith("stix"):
-                        self.update_custom_list(
-                            self.infoblox_custom_list_id, observable_value, "add"
-                        )
+                    if data.get("type") == "indicator" and data.get("pattern_type", "").startswith(
+                        "stix"
+                    ):
+                        self.update_custom_list(self.infoblox_custom_list_id, observable_value, "add")
                 elif msg.event == "delete" or (
                     msg.event in ["create", "update"] and data.get("revoked")
                 ):
-                    self.update_custom_list(
-                        self.infoblox_custom_list_id, observable_value, "remove"
-                    )
+                    self.update_custom_list(self.infoblox_custom_list_id, observable_value, "remove")
 
         except Exception as ex:
             self.helper.log_error(f"[ERROR] Failed processing message: {ex}")
