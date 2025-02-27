@@ -2,7 +2,6 @@ import traceback
 
 from stream_connector import IndicatorConnector
 
-
 CREATING_INDICATORS = False
 
 
