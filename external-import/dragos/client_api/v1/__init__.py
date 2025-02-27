@@ -3,7 +3,6 @@
 
 from typing import TYPE_CHECKING
 
-from .common import BaseClientAPIV1
 from .indicator import IndicatorClientAPIV1
 from .product import ProductClientAPIV1
 
@@ -18,7 +17,7 @@ class DragosClientAPIV1:
     """Client for the Dragos API V1 endpoints."""
 
     def __init__(
-        self: "BaseClientAPIV1",
+        self: "DragosClientAPIV1",
         base_url: "URL",
         token: "SecretStr",
         secret: "SecretStr",
