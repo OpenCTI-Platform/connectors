@@ -1,0 +1,24 @@
+version: '3'
+services:
+  connector-sentinelone-incidents:
+    image: opencti/connector-template:6.5.1
+
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=ChangeMe
+      - CONNECTOR_SCOPE=ChangeMe
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=CHANGEME # ISO8601 format in String, start with 'P...' for Period
+
+      - S1_URL=ChangeMe
+      - S1_API_KEY=ChangeMe
+      - S1_ACCOUNT_ID=ChangeMe
+
+      - MAX_API_ATTEMPTS=5
+      - SIGN=[OpenCTI_add]
+
+    restart: always
+
