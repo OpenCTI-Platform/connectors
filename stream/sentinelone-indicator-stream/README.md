@@ -189,19 +189,19 @@ The following are required parameters that are necessary for your connector to f
 ##### SentinelOne URL
 - The SentinelOne URL used to access the console. **NOTE:** The URL should not end with a `/`.
 - Example: `https://usea1-purple.sentinelone.net`
-- Environment Variable: `SENTINELONE_URL`
+- Environment Variable: `S1_URL`
 - Config.yml: `url`
 
 ##### SentinelOne API Key
 - The API key for your SentinelOne account (JWT). **NOTE:** Should not include `APIToken`.
 - Example: `eyJraWQiO...`
-- Environment Variable: `SENTINELONE_API_KEY`
+- Environment Variable: `S1_API_KEY`
 - Config.yml: `api_key`
 
 ##### SentinelOne Account ID
 - The ID of your SentinelOne Account.
 - Example: `1234567890123456789`
-- Environment Variable: `SENTINELONE_ACCOUNT_ID`
+- Environment Variable: `S1_ACCOUNT_ID`
 - Config.yml: `account_id`
 
 ##### Maximum API Attempts
