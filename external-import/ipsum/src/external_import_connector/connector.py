@@ -119,8 +119,7 @@ class ConnectorIPSUM:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
                     stix_objects_bundle,
-                    work_id=work_id,
-                    cleanup_inconsistent_bundle=True,
+                    work_id=work_id
                 )
 
                 self.helper.connector_logger.info(
