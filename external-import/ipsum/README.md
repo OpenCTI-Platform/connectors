@@ -28,6 +28,10 @@ Table of Contents
   - [Additional information](#additional-information)
 
 ## Introduction
+IPsum is a threat intelligence feed based on 30+ different publicly available lists of suspicious and/or malicious IP addresses. All lists are automatically retrieved and parsed on a daily (24h) basis and the final result is pushed to this repository. List is made of IP addresses together with a total number of (black)list occurrence (for each). Greater the number, lesser the chance of false positive detection and/or dropping in (inbound) monitored traffic. Also, list is sorted from most (problematic) to least occurent IP addresses.
+
+https://github.com/stamparm/ipsum/tree/master
+
 
 ## Installation
 
@@ -58,18 +62,18 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
 | Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
 | Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |  ipsum           | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           | ipsum           | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error           | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
 
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url |  `CONNECTOR_IPSUM_API_BASE_URL`  |  `https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/5.txt`  |  Yes  | You can choose between level 1 to level 8. 1 can have a lot of false positives, 8 has no false positive (Example: https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/8.txt - No false positive )          |
-| API key      | api_key      |  `CONNECTOR_IPSUM_API_KEY`  |         |  No   | Github API Key              |
-| Score        | default_x_opencti_score   |       `CONNECTOR_IPSUM_DEFAULT_X_OPENCTI_SCORE`  |   60    | No  |   |
+| Parameter    | config.yml              | Docker environment variable               | Default                                                                           | Mandatory | Description                                                                                                                                                                                                             |
+|--------------|-------------------------|-------------------------------------------|-----------------------------------------------------------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| API base URL | api_base_url            | `CONNECTOR_IPSUM_API_BASE_URL`            | `https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/5.txt` | Yes       | You can choose between level 1 to level 8. 1 can have a lot of false positives, 8 has no false positive (Example: https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/8.txt - No false positive ) |
+| API key      | api_key                 | `CONNECTOR_IPSUM_API_KEY`                 |                                                                                   | No        | Github API Key                                                                                                                                                                                                          |
+| Score        | default_x_opencti_score | `CONNECTOR_IPSUM_DEFAULT_X_OPENCTI_SCORE` | 60                                                                                | No        |                                                                                                                                                                                                                         |
 
 ## Deployment
 
@@ -137,7 +141,7 @@ Describe how the connector functions:
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
+The connector can be debugged by setting the appropriate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
 
