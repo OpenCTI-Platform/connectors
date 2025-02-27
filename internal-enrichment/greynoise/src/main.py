@@ -655,8 +655,6 @@ class GreyNoiseConnector:
         :return: dict
         """
 
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-
         # Generate Indicator
         stix_indicator = stix2.Indicator(
             id=Indicator.generate_id(data["ip"]),
@@ -665,7 +663,6 @@ class GreyNoiseConnector:
             pattern=f"[ipv4-addr:value = '{data['ip']}']",
             created_by_ref=self.greynoise_identity["id"],
             external_references=external_reference,
-            valid_from=now,
             custom_properties={
                 "pattern_type": "stix",
                 "x_opencti_score": self.default_score,

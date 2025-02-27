@@ -13,6 +13,8 @@ class ConfigConnector:
 
         # Load configuration file
         self.load = self._load_config()
+        # Update connector type to "EXTERNAL_IMPORT"
+        self.load["connector"]["type"] = "EXTERNAL_IMPORT"
         self._initialize_configurations()
 
     @staticmethod

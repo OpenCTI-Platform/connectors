@@ -1,5 +1,5 @@
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pycti import OpenCTIConnectorHelper
 
@@ -69,6 +69,9 @@ class ConnectorIPSUM:
             for entity in entities
             if entity is not None
         ]
+
+        if len(stix_objects):
+            stix_objects.append(self.converter_to_stix.author)
         return stix_objects
 
     def process_message(self) -> None:
@@ -82,6 +85,7 @@ class ConnectorIPSUM:
         )
 
         try:
+            # Get the current state
             now = datetime.now()
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
@@ -114,7 +118,9 @@ class ConnectorIPSUM:
             if stix_objects is not None and len(stix_objects) != 0:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
-                    stix_objects_bundle, work_id=work_id
+                    stix_objects_bundle,
+                    work_id=work_id,
+                    cleanup_inconsistent_bundle=True,
                 )
 
                 self.helper.connector_logger.info(
@@ -128,9 +134,9 @@ class ConnectorIPSUM:
             )
             current_state = self.helper.get_state()
             current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
-            last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+            last_run_datetime = datetime.fromtimestamp(
+                current_timestamp, tz=timezone.utc
+            ).strftime("%Y-%m-%d %H:%M:%S")
             if current_state:
                 current_state["last_run"] = current_state_datetime
             else:

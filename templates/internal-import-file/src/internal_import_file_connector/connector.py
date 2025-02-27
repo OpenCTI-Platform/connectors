@@ -2,7 +2,7 @@ import json
 
 from pycti import OpenCTIConnectorHelper
 
-from .config_variables import ConfigConnector
+from .config_loader import ConfigConnector
 
 
 class ConnectorTemplate:

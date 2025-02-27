@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-mitre-atlas:
-    image: opencti/connector-mitre-atlas:6.4.8
+    image: opencti/connector-mitre-atlas:6.5.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
