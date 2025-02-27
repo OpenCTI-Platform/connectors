@@ -15,4 +15,4 @@ SentinelOne:
   account_id: 'ChangeMe'
   url: 'ChangeMe'
   max_api_attempts: 5
-  sign: 'OpenCTI_add'
+  sign: '[OpenCTI_add]'

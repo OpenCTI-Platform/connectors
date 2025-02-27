@@ -23,13 +23,13 @@ The connector will create a corresponding OpenCTI Incident for `flagged` Sentine
 
 <br>
 
-- To `flag` a threat in SentinelOne, simply create a new note on the threat's page whose text is the value of `SENTINELONE_SEARCH_SIGN`. You will define this as an environment variable in the setup (`[OpenCTI_add]` by default).
+- To `flag` a threat in SentinelOne, simply create a new note on the threat's page whose text is the value of `SIGN`. You will define this as an environment variable in the setup (`[OpenCTI_add]` by default).
 
 ![Flagging Note In S1](doc/tag_note.png)
 
 <br>
 
-- Each fetch interval, the connector will scan the threats on your SentinelOne account, triggering the creation process on those that are flagged. The interval between scans is determined by the enviroment variable `CONNECTOR_FETCH_INTERVAL` that you will define in seconds.
+- Each fetch interval, the connector will scan the threats on your SentinelOne account, triggering the creation process on those that are flagged. The interval between scans is determined by the enviroment variable `CONNECTOR_DURATION_PERIOD` that you will define in seconds.
 
 <br>
 
@@ -90,40 +90,87 @@ It is best practice to create a new user under the `Connectors` group and to use
 
 ## Configuration
 
-### **OpenCTI Parameters:**
+### OpenCTI Parameters
+##### OpenCTI Instance URL
+- The URL of your OpenCTI instance within its internal network.
+- Example: `http://opencti:8080`
+- Environment Variable: `OPENCTI_URL`
+- Config.yml: `url`
 
-| Parameter | config.yml  | Docker environment variable | Example                    | Description                                  |
-|----------------------|------------|-----------------------------|----------------------------|----------------------------------------------|
-| URL                 | `url`      | `OPENCTI_URL`               | `http://opencti:8080`    | The URL of your OpenCTI instance within its internal network.            |
-| Token               | `token`    | `OPENCTI_TOKEN`             | `11111111-2222-3333-4444-555555555555`                 | The token of the user specifically created for this Connector, under the `Connectors` group.      |
-
----
-
-<br>
-
-### **Connector Parameters:**
-
-| Parameter       | config.yml  | Docker environment variable | Example                                | Description                                                                            |
-|------------------------------|------------|-----------------------------|----------------------------------------|----------------------------------------------------------------------------------------|
-| ID                          | `id`       | `CONNECTOR_ID`              | `11111111-2222-3333-4444-555555555555` | Unique `UUIDv4` identifier for the connector.                             |
-| Name                        | `name`     | `CONNECTOR_NAME`            | `SentinelOne Indicator Export Stream`                   | The Connector's name as it will appear in OpenCTI.                                      |
-| Scope                       | `scope`    | `CONNECTOR_SCOPE`           | `all`                             | The scope of this connector.                                        |
-| Log Level                   | `log_level`| `CONNECTOR_LOG_LEVEL`       | `info`                                | The level of logs/outputs presented. `info` is recommended.     |
-| Duration Period                  | `duration_period`| `CONNECTOR_DURATION_PERIOD`       | `info`                                | The interval in minutes (ISO-8601 format) between scans. E.g `PT5M` is 5 minutes  |
-
----
+##### OpenCTI User Token
+- The token of the user specifically created for this Connector, under the `Connectors` group.
+- Example: `11111111-2222-3333-4444-555555555555`
+- Environment Variable: `OPENCTI_TOKEN`
+- Config.yml: `token`
 
 <br>
 
-### **SentinelOne Parameters**
+### Connector Parameters
 
-| Parameter                 | config.yml           | Docker environment variable     | Example                                  | Description                                                                 |
-|---------------------------|----------------------|---------------------------------|------------------------------------------|-----------------------------------------------------------------------------|
-| SentinelOne URL       | `url`               | `SENTINELONE_URL`              | `https://usea1-purple.sentinelone.net/` | The SentinelOne platform URL. **NOTE:** The URL should end with a `/`.      |
-| SentinelOne API Key  | `api_key`           | `SENTINELONE_API_KEY`          | `eyJraWQiO...`                          | The API key for your SentinelOne account (JWT). **NOTE:** Should not include `APIToken`. |
-| SentinelOne Account ID| `account_id`        | `SENTINELONE_ACCOUNT_ID`       | `1234567890123456789`                    | The ID of your SentinelOne Account.                                         |
-| Max API Call Attempts | `max_api_attempts`  | `SENTINELONE_MAX_API_ATTEMPTS` | `5`                                      | The maximum number of retry attempts when API requests to SentinelOne repeatedly fail. `5` is recommended. |
-| Search Sign | `search_sign`  | `SENTINELONE_SEARCH_SIGN` | `[OpenCTI_add]`                                      | The string that the connector will look for in the notes of each SentinelOne Incident. At present, this is case sensitive and the Note's contents must be this value exactly. |
----
+##### Connector ID
+- Unique UUIDv4 identifier for the connector.
+- Example: `11111111-2222-3333-4444-555555555555`
+- Environment Variable: `CONNECTOR_ID`
+- Config.yml: `id`
+
+##### Connector Name
+- The Connector's name as it will appear in OpenCTI.
+- Example: `SentinelOne Indicator Export Stream`
+- Environment Variable: `CONNECTOR_NAME`
+- Config.yml: `name`
+
+##### Connector Scope
+- The scope applied to the connector.
+- Example: `all`
+- Environment Variable: `CONNECTOR_SCOPE`
+- Config.yml: `scope`
+
+##### Connector Log Level
+- The level of logs/outputs presented. `info` is recommended.
+- Example: `info`
+- Environment Variable: `CONNECTOR_LOG_LEVEL`
+- Config.yml: `log_level`
+
+##### Connector Duration Period
+- The intervals at which the Connector will scan for (and subsequently process) newly flagged Incidents in ISO8601 format. A value of `PT5M`, to scan every 5 minutes, is recommended. 
+- Example: `PT5M`
+- Environment Variable: `CONNECTOR_DURATION_PERIOD`
+- Config.yml: `duration_period`
+
+
+
+<br>
+
+### SentinelOne Parameters
+
+##### SentinelOne URL
+- The SentinelOne URL used to access the console. **NOTE:** The URL should not end with a `/`.
+- Example: `https://usea1-purple.sentinelone.net`
+- Environment Variable: `S1_URL`
+- Config.yml: `url`
+
+##### SentinelOne API Key
+- The API key for your SentinelOne account (JWT). **NOTE:** Should not include `APIToken`.
+- Example: `eyJraWQiO...`
+- Environment Variable: `S1_API_KEY`
+- Config.yml: `api_key`
+
+##### SentinelOne Account ID
+- The ID of your SentinelOne Account.
+- Example: `1234567890123456789`
+- Environment Variable: `S1_ACCOUNT_ID`
+- Config.yml: `account_id`
+
+##### Maximum API Attempts
+- The maximum number of times the connector will retry push attempts when they fail. `5` is recommended as failures almost only ever occur due to the API rate limits Exponential backoffs are implemented alongside this to handle the rate limits.
+- Example: `5`
+- Environment Variable: `MAX_API_ATTEMPTS`
+- Config.yml: `max_api_attempts`
+
+##### Incident Flag String
+- The string that will be inputted into a note for an Incident in SentinelOne to flag it for importing. 
+- Example: `[OpenCTI_add]`
+- Environment Variable: `SIGN`
+- Config.yml: `sign`
 
 <br>
