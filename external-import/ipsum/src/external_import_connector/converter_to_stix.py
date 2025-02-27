@@ -116,6 +116,7 @@ class ConverterToStix:
         if self._is_ipv6(value) is True:
             stix_ipv6_address = stix2.IPv6Address(
                 value=value,
+                object_marking_refs=[stix2.TLP_WHITE],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self.external_reference,
@@ -126,6 +127,7 @@ class ConverterToStix:
         if self._is_ipv4(value) is True:
             stix_ipv4_address = stix2.IPv4Address(
                 value=value,
+                object_marking_refs=[stix2.TLP_WHITE],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self.external_reference,
@@ -136,6 +138,7 @@ class ConverterToStix:
         if self._is_domain(value) is True:
             stix_domain_name = stix2.DomainName(
                 value=value,
+                object_marking_refs=[stix2.TLP_WHITE],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self.external_reference,
