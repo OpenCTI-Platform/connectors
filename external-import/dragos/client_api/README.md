@@ -39,6 +39,55 @@ async def last_day():
 asyncio.run(last_day())
 ```
 
+
+## Dev
+
+A dev fake server Api is provided to test the client. It is a simple FastAPI server that simulates the Dragos API. It is used for testing the client.
+
+To use it you need to install the project with the `dev`extra:
+
+```bash
+pip install -e .[dev]
+```
+
+### Data
+The fake server uses a simple json file to store the data. The data should be stored in the `client_api/dev/fake_server` directory under `products.json`and `indicator.json` files.	
+
+Lucky Filigran Developper can find a complete example on connector development Notion Page (under Usefull Resource section).
+
+### Run
+
+The fake server can be run with the following command:
+
+```bash
+cd client_api/dev/fake_server
+python -m uvicorn main:app --port 4000 
+```
+Then you can find the Base URL in the terminal output (here http://127.0.0.1:4000).
+```
+INFO:     Started server process [15748]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:4000 (Press CTRL+C to quit)      
+INFO:     127.0.0.1:65483 - "GET /api/v1/products/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49952 - "GET /api/v1/products/DOM-2024-08 HTTP/1.1" 200 OK
+```
+
+An interactive documentation is available at http://<base_url>/api/v1/docs
+
+### Authentication
+
+You must use a header with the values 
+
+API-Token: dev
+API-Secret: dev
+
+Not providing this can be useful to test application reaction to a 401 error response.
+
+### Results
+
+see [docs](./dev/docs/)
+
 ## Modules
 
 ### error
@@ -55,4 +104,3 @@ This module provides the client and response models for the Dragos Worldview API
 
 #### product
 This module provides the client and response models for the Dragos Worldview API product endpoint. It includes classes for handling product responses and making requests to the product API.
-
