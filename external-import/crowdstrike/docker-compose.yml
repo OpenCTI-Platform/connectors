@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-crowdstrike:
-    image: opencti/connector-crowdstrike:6.4.5
+    image: opencti/connector-crowdstrike:6.5.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -13,7 +13,7 @@ services:
       - CROWDSTRIKE_BASE_URL=https://api.crowdstrike.com
       - CROWDSTRIKE_CLIENT_ID=ChangeMe
       - CROWDSTRIKE_CLIENT_SECRET=ChangeMe
-      - CROWDSTRIKE_TLP=Amber
+      - CROWDSTRIKE_TLP=amber+strict
       - CROWDSTRIKE_CREATE_OBSERVABLES=true
       - CROWDSTRIKE_CREATE_INDICATORS=true
       - CROWDSTRIKE_SCOPES=actor,report,indicator,yara_master

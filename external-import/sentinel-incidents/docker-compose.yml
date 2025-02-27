@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-sentinel-incidents:
-    image: opencti/connector-sentinel-incidents:6.4.5
+    image: opencti/connector-sentinel-incidents:6.5.3
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
@@ -12,6 +12,8 @@ services:
       - "CONNECTOR_NAME=Microsoft Sentinel"
       - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      
       # Connector's definition parameters OPTIONAL
       # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
       # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once

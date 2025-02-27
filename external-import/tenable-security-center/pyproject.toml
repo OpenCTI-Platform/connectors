@@ -17,9 +17,9 @@ classifiers = [
     ]
 dependencies = [
     "stix2~=3.0.1",
-    "pycti==6.4.1",
+    "pycti==6.5.3",
     "validators~=0.33.0",
-    "pydantic~=2.8.2",
+    "pydantic>=2.8.2,<3.0.0",
     "pytenable~=1.5.3", # for now we handle API from 5.13 to 6.4
     "cvss~=3.3",
     "semver>=3,<4",
@@ -34,13 +34,13 @@ test = [
 ]
 dev = [
     "black>=22.0.0,<25",  # Code formatter
-    "isort>=5.10.0,<6",  # Import sorter
+    "isort>=6,<7",  # Import sorter
     "ruff>=0.7.2,<1",  # linter
     "mypy>=1.13.0,<2",  # type validator
     "types-requests",  # stubs for requests lib
     "types-PyYAML",  # stubs for PyYAML lib
     "python-dotenv~=1.0.1",
-    "pip-audit~=2.7.3"
+    "pip-audit~=2.8.0"
 ]
 all = [
     "tenable_security_center[test,dev]"

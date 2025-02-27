@@ -81,7 +81,7 @@ class GreyNoiseFeed:
             ["greynoisefeed", "interval"],
             config,
             isNumber=True,
-            default=12,
+            default=24,
         )
         self.identity = self.helper.api.identity.create(
             type="Organization",
@@ -564,12 +564,21 @@ class GreyNoiseFeed:
         if len(bundle_entities) > 0:
             shuffle(bundle_relationships)
             bundle_objects = bundle_entities + bundle_relationships
-            bundle_objects = self.helper.stix2_deduplicate_objects(bundle_objects)
-            bundle = self.helper.stix2_create_bundle(bundle_objects)
-            self.helper.send_stix2_bundle(
-                bundle,
-                work_id=work_id,
-            )
+            batch_count = 0
+            bundle_objects_len = len(bundle_objects)
+            batch_size = 50000
+            for i in range(batch_count, bundle_objects_len, batch_size):
+                self.helper.log_info("Batch: " + str(int(i) / int(batch_size)))
+                x = i
+                self.helper.log_info("Creating Bundles")
+                bundle = self.helper.stix2_create_bundle(
+                    bundle_objects[x : x + batch_size]
+                )
+                self.helper.log_info("Submitting Bundles")
+                self.helper.send_stix2_bundle(
+                    bundle,
+                    work_id=work_id,
+                )
 
     def run(self):
         self.helper.log_info("GreyNoise feed - Initialization...")
@@ -581,6 +590,24 @@ class GreyNoiseFeed:
                 current_state = self.helper.get_state()
                 if current_state is not None and "last_run_timestamp" in current_state:
                     last_run_timestamp = parse(current_state["last_run_timestamp"])
+
+                    pause_run = True
+
+                    while pause_run:
+                        self.helper.log_info(
+                            "GreyNoise feed - Checking Last Run Interval"
+                        )
+                        now = datetime.now(pytz.UTC)
+                        diff = now - last_run_timestamp
+                        days, seconds = diff.days, diff.seconds
+                        last_run_hours = days * 24 + seconds // 3600
+                        if last_run_hours < self.greynoise_interval:
+                            self.helper.log_info(
+                                "GreyNoise feed - Last Run Less than Interval - Waiting 60 minutes"
+                            )
+                            time.sleep(3600)
+                        else:
+                            pause_run = False
                 else:
                     last_run_timestamp = now - timedelta(days=1)
 
@@ -591,7 +618,7 @@ class GreyNoiseFeed:
                 try:
                     ips_list = []
                     session = GreyNoise(
-                        api_key=self.api_key, integration_name="opencti-feed-v2.3"
+                        api_key=self.api_key, integration_name="opencti-feed-v2.4"
                     )
 
                     query = self.get_feed_query(self.feed_type)
@@ -653,7 +680,7 @@ class GreyNoiseFeed:
                     self.helper.log_error(str(e))
 
                 # Wait
-                time.sleep(3600 * self.greynoise_interval)
+                # time.sleep(3600 * self.greynoise_interval)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
                 exit(0)

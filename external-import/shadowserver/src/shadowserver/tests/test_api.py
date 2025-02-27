@@ -1,9 +1,13 @@
 import json
 import os
+from unittest.mock import MagicMock
 
 import pytest
 import requests
+from pycti import OpenCTIConnectorHelper
 from shadowserver.api import ShadowserverAPI
+
+FIXTURES_DIR = "fixtures"
 
 
 class TestShadowserverAPI:
@@ -30,7 +34,7 @@ class TestShadowserverAPI:
             FileNotFoundError: If the fixture file does not exist.
             ValueError: If the fixture file is empty.
         """
-        filepath = os.path.join(os.path.dirname(__file__), "fixtures", filename)
+        filepath = os.path.join(os.path.dirname(__file__), FIXTURES_DIR, filename)
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Fixture {filename} not found.")
 
@@ -120,3 +124,30 @@ class TestShadowserverAPI:
             shadow_server_api.get_report(
                 report_id="test_report_id", report="invalid_report"
             )
+
+    def test_all_fixture_types(self, shadow_server_api, mocker):
+
+        self.api_helper = MagicMock(spec=OpenCTIConnectorHelper)
+        self.api_helper.connector_logger = MagicMock()
+        self.api_helper.connector_logger.debug = MagicMock()
+        self.api_helper.connector_logger.info = MagicMock()
+        self.api_helper.connector_logger.error = MagicMock()
+
+        filepath = os.path.join(os.path.dirname(__file__), FIXTURES_DIR)
+        report_files = [f for f in os.listdir(filepath) if f.startswith("report_type")]
+        for report_file in report_files:
+            report_type = report_file.replace("report_type_", "").replace(".json", "")
+
+            self.shadowserver_fixture(
+                report_file,
+                fixture_mocker=mocker,
+                shadow_server_api=shadow_server_api,
+            )
+
+            report = {"id": "test_report_id", "report": report_type}
+
+            stix_reports = shadow_server_api.get_stix_report(
+                report=report, api_helper=self.api_helper
+            )
+
+            assert len(stix_reports) > 0

@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-greynoise-feed:
-    image: opencti/connector-greynoise-feed:6.4.5
+    image: opencti/connector-greynoise-feed:6.5.3
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
@@ -18,5 +18,5 @@ services:
       - "GREYNOISE_DESCRIPTION=GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet."
       - GREYNOISE_LIMIT=10000
       - GREYNOISE_IMPORT_METADATA=false
-      - GREYNOISE_INTERVAL=12 # In hours (the connector will always pull last 2 days each run)
+      - GREYNOISE_INTERVAL=24 # In hours
     restart: always

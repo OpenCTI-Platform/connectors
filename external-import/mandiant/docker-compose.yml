@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-mandiant:
-    image: opencti/connector-mandiant:6.4.5
+    image: opencti/connector-mandiant:6.5.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -12,4 +12,5 @@ services:
       - CONNECTOR_DURATION_PERIOD=PT5M # In ISO8601 Format starting with "P" for Period ex: "PT5M" = Period time of 5 minutes
       - MANDIANT_API_V4_KEY_ID=ChangeMe
       - MANDIANT_API_V4_KEY_SECRET=ChangeMe
+      - MANDIANT_MARKING=amber+strict
     restart: always

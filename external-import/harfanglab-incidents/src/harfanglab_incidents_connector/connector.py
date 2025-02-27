@@ -127,7 +127,7 @@ class HarfanglabIncidentsConnector:
         self.helper.set_state(state)
 
     def _collect_incident_intelligence(
-        self, threat: harfanglab.Threat = None
+        self, threat: harfanglab.Threat | None = None
     ) -> list[opencti.BaseModel]:
         """
         Collect intelligence from Harfanglab and convert into STIX object
@@ -157,6 +157,11 @@ class HarfanglabIncidentsConnector:
                 )
                 stix_objects.append(stix_incident)
 
+                stix_identity = self.converter_to_stix.create_identity(
+                    alert=alert, alert_intelligence=alert_intelligence
+                )
+                stix_objects.append(stix_identity)
+
                 stix_indicator = self.converter_to_stix.create_indicator(
                     alert=alert, alert_intelligence=alert_intelligence
                 )
@@ -185,6 +190,9 @@ class HarfanglabIncidentsConnector:
                         "directory",
                         "user-account",
                     ]
+                    targets_observable_types = [
+                        "identity",
+                    ]
 
                     observable_type = stix_observable.stix2_representation.type
                     if observable_type in based_on_observable_types:
@@ -197,14 +205,35 @@ class HarfanglabIncidentsConnector:
                         )
                         stix_objects.append(stix_based_on_relationship)
                     if observable_type in related_to_observable_types:
-                        stix_based_on_relationship = (
+                        stix_related_to_relationship = (
                             self.converter_to_stix.create_relationship(
                                 relationship_type="related-to",
                                 source=stix_observable,
                                 target=stix_incident,
                             )
                         )
-                        stix_objects.append(stix_based_on_relationship)
+                        stix_objects.append(stix_related_to_relationship)
+                    if observable_type in targets_observable_types:
+                        stix_targets_relationship = (
+                            self.converter_to_stix.create_relationship(
+                                relationship_type="targets",
+                                source=stix_incident,
+                                target=stix_observable,
+                            )
+                        )
+                        stix_objects.append(stix_targets_relationship)
+                        # Create related to between the Identity (system) and the hostname
+                        for stix_observable2 in stix_observables:
+                            if stix_observable2.stix2_representation.type == "hostname":
+                                stix_related_to_relationship2 = (
+                                    self.converter_to_stix.create_relationship(
+                                        relationship_type="related-to",
+                                        source=stix_observable2,
+                                        target=stix_observable,
+                                    )
+                                )
+                                stix_objects.append(stix_related_to_relationship2)
+
                 if isinstance(alert_intelligence, harfanglab.YaraSignature):
                     for technique_tag in alert_intelligence.rule_technique_tags:
                         stix_attack_pattern = (

@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-taxii2:
-    image: opencti/connector-taxii2:6.4.5
+    image: opencti/connector-taxii2:6.5.3
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
@@ -60,4 +60,6 @@ services:
       - TAXII2_NOTES_TO_IGNORE=ChangeMe
       - TAXII2_SAVE_ORIGINAL_INDICATOR_ID_TO_NOTE=false
       - TAXII2_SAVE_ORIGINAL_INDICATOR_ID_ABSTRACT=ChangeMe
+      - TAXII2_CHANGE_REPORT_STATUS=false
+      - TAXII2_CHANGE_REPORT_STATUS_X_OPENCTI_WORKFLOW_ID=ChangeMe
     restart: always
