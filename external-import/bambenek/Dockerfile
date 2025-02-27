@@ -6,10 +6,9 @@ ARG SRC_DIR=/opt/opencti-connector-bambenek
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
-RUN cd $SRC_DIR && \
+RUN apk --no-cache add git build-base libmagic libffi-dev && \
+    cd $SRC_DIR && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
