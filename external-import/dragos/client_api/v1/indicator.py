@@ -6,17 +6,17 @@ from typing import AsyncGenerator, Literal, Optional
 
 from pydantic import AwareDatetime, Field
 
-from client_api.v1.common import BaseAPIV1BulkResponse, BaseClientAPIV1
-from client_api.warning import PermissiveBaseModel, PermissiveLiteral
+from client_api.v1.common import BaseAPIV1BulkResponse, BaseClientAPIV1, ResponseModel
+from client_api.warning import PermissiveLiteral
 
 
-class ProductReference(PermissiveBaseModel):
+class ProductReference(ResponseModel):
     """Reference model for a product in the Dragos Worldview API indicator endpoint."""
 
     serial: str = Field(..., description="Unique serial identifier for the product.")
 
 
-class IndicatorResponse(PermissiveBaseModel):
+class IndicatorResponse(ResponseModel):
     """Response model for an indicator in the Dragos Worldview API."""
 
     id: int = Field(..., description="Unique identifier for the indicator.")

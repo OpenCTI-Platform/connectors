@@ -7,11 +7,11 @@ from typing import AsyncGenerator, Literal, Optional
 
 from pydantic import AwareDatetime, Field, HttpUrl
 
-from client_api.v1.common import BaseAPIV1BulkResponse, BaseClientAPIV1
-from client_api.warning import PermissiveBaseModel, PermissiveLiteral
+from client_api.v1.common import BaseAPIV1BulkResponse, BaseClientAPIV1, ResponseModel
+from client_api.warning import PermissiveLiteral
 
 
-class TagResponse(PermissiveBaseModel):
+class TagResponse(ResponseModel):
     """Response model for the Dragos Worldview API."""
 
     text: str = Field(..., description="The tag text value.")
@@ -21,7 +21,7 @@ class TagResponse(PermissiveBaseModel):
     )
 
 
-class ProductResponse(PermissiveBaseModel):
+class ProductResponse(ResponseModel):
     """Response model for the Dragos Worldview API."""
 
     tlp_level: PermissiveLiteral[Literal["clear", "green", "amber", "red"]] = Field(

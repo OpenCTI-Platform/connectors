@@ -37,7 +37,7 @@ ResponseModel = PermissiveBaseModel  # Alias
 logger = getLogger(__name__)
 
 
-class BaseAPIV1BulkResponse(PermissiveBaseModel):
+class BaseAPIV1BulkResponse(ResponseModel):
     """Base class for bulk responses."""
 
     total: int = Field(..., description="Total number of item available.")
