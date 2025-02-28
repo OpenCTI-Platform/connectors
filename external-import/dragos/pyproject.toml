@@ -41,6 +41,8 @@ dev = [
     "mypy >=1.13.0, <2",  # Type validator
     "pip_audit >=2, <3",  # Security checker
     "types-PyYAML", # stubs for untyped module
+    "fastapi >=0.115.8, <1", # to fake api
+    "uvicorn >=0.34.0, <1" # to run the fake api
 ]
 all = [
     "dragos[test,dev]"

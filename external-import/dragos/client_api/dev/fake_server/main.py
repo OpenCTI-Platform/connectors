@@ -4,6 +4,7 @@
 from typing import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from client_api.dev.fake_server.v1.indicators import router as indicators_router
@@ -15,13 +16,13 @@ class V1AuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
-    ) -> Response:
+    ) -> Response | JSONResponse:
         """Dispatch method for the middleware."""
         api_token = request.headers.get("API-Token")
         api_secret = request.headers.get("API-Secret")
 
         if api_token != "dev" or api_secret != "dev":  # noqa: S105
-            return Response(status_code=401, content={"detail": "Unauthorized"})
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
         return await call_next(request)
 
