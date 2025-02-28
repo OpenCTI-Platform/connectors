@@ -70,7 +70,7 @@ async def get_product(
         products = json.load(f)
     product = next((p for p in products if p["serial"] == id), None)
     if not product:
-        return JSONResponse({"message": "not found"}, status_code=404)
+        return JSONResponse({"message": "Product not found"}, status_code=404)
     return JSONResponse(product, status_code=200)
 
 
@@ -95,6 +95,13 @@ async def get_product_report(
     id: str = Path(..., description="Product serial number")
 ) -> Response:
     """Get product report."""
+    # chek if serial is valid
+    # load products from /data/products.json
+    with open(products_json_path, "r", encoding="utf8") as f:
+        products = json.load(f)
+        product = next((p for p in products if p["serial"] == id), None)
+    if not product:
+        return Response(content="Product not found", status_code=404)
     # Create fake pdf content
     text = f"Fake PDF serial:{id}".encode("utf-8")
     text_length = len(text) + 20  # Adjust length based on content
