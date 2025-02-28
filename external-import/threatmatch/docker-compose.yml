@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   connector-threatmatch:
     image: opencti/connector-threatmatch:6.5.2
@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=ThreatMatch
       - CONNECTOR_SCOPE=threatmatch
-      - CONNECTOR_CONFIDENCE_LEVEL=75 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - THREATMATCH_URL=https://eu.threatmatch.com
       - THREATMATCH_CLIENT_ID=ChangeMe
