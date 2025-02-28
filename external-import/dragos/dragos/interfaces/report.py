@@ -17,7 +17,7 @@ class DataRetrievalError(Exception):
     """Error raised when data retrieval fails."""
 
 
-def _validate_pdf_bytes(value: str, info: ValidationInfo) -> bytes:
+def _validate_pdf_bytes(value: bytes, info: ValidationInfo) -> bytes:
     """Raise a ValueError if byte array is not a PDF.
 
     References:
