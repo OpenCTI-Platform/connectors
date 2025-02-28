@@ -47,6 +47,20 @@ class ReportImporter:
             "CONNECTOR_LICENCE_KEY_PEM", ["connector", "licence_key_pem"], config
         )
         self.licence_key_base64 = base64.b64encode(license_key_pem.encode())
+        self.instance_id = (
+            self.helper.api.query(
+                """
+                query SettingsQuery {
+                    settings {
+                        id
+                        }
+                    }
+            """
+            )
+            .get("data", {})
+            .get("settings", {})
+            .get("id", "")
+        )
 
     def _process_message(self, data: Dict) -> str:
         self.helper.log_info("Processing new message")
@@ -71,7 +85,10 @@ class ReportImporter:
                 response = requests.post(
                     url=self.web_service_url + "/extract_entities",
                     files={"file": (data["file_id"], f, data["file_mime"])},
-                    headers={"X-OpenCTI-Certificate": self.licence_key_base64},
+                    headers={
+                        "X-OpenCTI-Certificate": self.licence_key_base64,
+                        "X-OpenCTI-instance-id": self.instance_id,
+                    },
                 )
         except ConnectionError:
             raise ConnectionError(
