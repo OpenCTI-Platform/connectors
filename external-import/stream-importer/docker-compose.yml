@@ -10,7 +10,6 @@ services:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted).
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_RUN_EVERY=1m
       # Connector's custom execution parameters:

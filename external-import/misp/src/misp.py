@@ -1010,7 +1010,6 @@ class Misp:
                     labels=event_tags,
                     object_refs=object_refs,
                     external_references=event_external_references,
-                    confidence=self.helper.connect_confidence_level,
                     custom_properties={
                         "x_opencti_files": added_files,
                     },
@@ -1025,7 +1024,6 @@ class Misp:
                             ),
                             self.process_note(note["content"], bundle_objects),
                         ),
-                        confidence=self.helper.connect_confidence_level,
                         created=datetime.utcfromtimestamp(
                             int(note["timestamp"])
                         ).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -1192,7 +1190,6 @@ class Misp:
                         id=Indicator.generate_id(pattern),
                         name=name,
                         description=attribute["comment"],
-                        confidence=self.helper.connect_confidence_level,
                         pattern_type=pattern_type,
                         pattern=pattern,
                         valid_from=datetime.utcfromtimestamp(
@@ -1523,7 +1520,6 @@ class Misp:
                             target_ref=threat.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1539,7 +1535,6 @@ class Misp:
                             target_ref=threat.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1566,7 +1561,6 @@ class Misp:
                             target_ref=threat_id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1582,7 +1576,6 @@ class Misp:
                             target_ref=threat_id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1609,7 +1602,6 @@ class Misp:
                         target_ref=attack_pattern.id,
                         description=attribute["comment"],
                         object_marking_refs=attribute_markings,
-                        confidence=self.helper.connect_confidence_level,
                         allow_custom=True,
                     )
                     relationships.append(relationship_uses)
@@ -1623,7 +1615,6 @@ class Misp:
                     #         source_ref=indicator.id,
                     #         target_ref=relationship_uses.id,
                     #         description=attribute["comment"],
-                    #         confidence=self.helper.connect_confidence_level,
                     #         object_marking_refs=attribute_markings,
                     #     )
                     #     relationships.append(relationship_indicates)
@@ -1637,7 +1628,6 @@ class Misp:
                     #         source_ref=observable.id,
                     #         target_ref=relationship_uses.id,
                     #         description=attribute["comment"],
-                    #         confidence=self.helper.connect_confidence_level,
                     #         object_marking_refs=attribute_markings,
                     #     )
                     #     relationships.append(relationship_indicates)
@@ -1660,7 +1650,6 @@ class Misp:
                             "uses", threat_id, attack_pattern.id
                         ),
                         relationship_type="uses",
-                        confidence=self.helper.connect_confidence_level,
                         created_by_ref=author["id"],
                         source_ref=threat_id,
                         target_ref=attack_pattern.id,
@@ -1679,7 +1668,6 @@ class Misp:
                     #        source_ref=indicator.id,
                     #        target_ref=relationship_uses.id,
                     #        description=attribute["comment"],
-                    #        confidence=self.helper.connect_confidence_level,
                     #        object_marking_refs=attribute_markings,
                     #    )
                     #    relationships.append(relationship_indicates)
@@ -1693,7 +1681,6 @@ class Misp:
                     #        source_ref=observable.id,
                     #        target_ref=relationship_uses.id,
                     #        description=attribute["comment"],
-                    #        confidence=self.helper.connect_confidence_level,
                     #        object_marking_refs=attribute_markings,
                     #    )
                     #    relationships.append(relationship_indicates)
@@ -1710,7 +1697,6 @@ class Misp:
                             target_ref=sector.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1726,7 +1712,6 @@ class Misp:
                             target_ref=sector.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1744,7 +1729,6 @@ class Misp:
                             target_ref=country.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1760,7 +1744,6 @@ class Misp:
                             target_ref=country.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1818,7 +1801,6 @@ class Misp:
                             stix2.IntrusionSet(
                                 id=IntrusionSet.generate_id(name),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 labels=["intrusion-set"],
                                 description=galaxy_entity["description"],
                                 created_by_ref=author["id"],
@@ -1875,7 +1857,6 @@ class Misp:
                                 id=Malware.generate_id(name),
                                 name=name,
                                 is_family=True,
-                                confidence=self.helper.connect_confidence_level,
                                 aliases=aliases,
                                 labels=[galaxy["name"]],
                                 description=galaxy_entity["description"],
@@ -1968,7 +1949,6 @@ class Misp:
                             stix2.Location(
                                 id=Location.generate_id(name, "Region"),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 region=name,
                                 allow_custom=True,
                             )
@@ -2017,7 +1997,6 @@ class Misp:
                                     stix2.IntrusionSet(
                                         id=IntrusionSet.generate_id(threat["name"]),
                                         name=threat["name"],
-                                        confidence=self.helper.connect_confidence_level,
                                         created_by_ref=author["id"],
                                         object_marking_refs=markings,
                                         allow_custom=True,
@@ -2030,7 +2009,6 @@ class Misp:
                                         id=Malware.generate_id(threat["name"]),
                                         name=threat["name"],
                                         is_family=True,
-                                        confidence=self.helper.connect_confidence_level,
                                         created_by_ref=author["id"],
                                         object_marking_refs=markings,
                                         allow_custom=True,
@@ -2042,7 +2020,6 @@ class Misp:
                                     stix2.Tool(
                                         id=Tool.generate_id(threat["name"]),
                                         name=threat["name"],
-                                        confidence=self.helper.connect_confidence_level,
                                         created_by_ref=author["id"],
                                         object_marking_refs=markings,
                                         allow_custom=True,
@@ -2054,7 +2031,6 @@ class Misp:
                                     stix2.AttackPattern(
                                         id=AttackPattern.generate_id(threat["name"]),
                                         name=threat["name"],
-                                        confidence=self.helper.connect_confidence_level,
                                         created_by_ref=author["id"],
                                         object_marking_refs=markings,
                                         allow_custom=True,
@@ -2098,7 +2074,6 @@ class Misp:
                             stix2.IntrusionSet(
                                 id=IntrusionSet.generate_id(name),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -2129,7 +2104,6 @@ class Misp:
                             stix2.Tool(
                                 id=Tool.generate_id(name),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -2165,7 +2139,6 @@ class Misp:
                                 id=Malware.generate_id(name),
                                 name=name,
                                 is_family=True,
-                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -2197,7 +2170,6 @@ class Misp:
                             stix2.AttackPattern(
                                 id=AttackPattern.generate_id(name),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -2214,7 +2186,6 @@ class Misp:
                             stix2.Identity(
                                 id=Identity.generate_id(name, "class"),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 identity_class="class",
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
