@@ -41,7 +41,7 @@ class ActorBundleBuilder:
         _CS_MOTIVATION_CRIMINAL: "personal-gain",
         _CS_MOTIVATION_STATE_SPONSORED: "organizational-gain",
         _CS_MOTIVATION_HACKTIVIST: "ideology",
-        _CS_MOTIVATION_DEFACEMENT: "ideology"
+        _CS_MOTIVATION_DEFACEMENT: "ideology",
     }
 
     def __init__(
