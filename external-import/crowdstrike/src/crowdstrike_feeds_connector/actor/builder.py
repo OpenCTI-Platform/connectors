@@ -33,14 +33,12 @@ class ActorBundleBuilder:
     """Actor bundle builder."""
 
     _CS_MOTIVATION_CRIMINAL = "Criminal"
-    _CS_MOTIVATION_DESTRUCTION = "Destruction"
-    _CS_MOTIVATION_ESPIONAGE = "Espionage"
-    _CS_MOTIVATION_HACKTIVIST = "Hacktivist"
+    _CS_MOTIVATION_HACKTIVIST = "Hacktivism"
+    _CS_MOTIVATION_STATE_SPONSORED = "State-Sponsored"
 
     _CS_MOTIVATION_TO_STIX_MOTIVATION = {
         _CS_MOTIVATION_CRIMINAL: "personal-gain",
-        _CS_MOTIVATION_DESTRUCTION: "dominance",
-        _CS_MOTIVATION_ESPIONAGE: "organizational-gain",
+        _CS_MOTIVATION_STATE_SPONSORED: "organizational-gain",
         _CS_MOTIVATION_HACKTIVIST: "ideology",
     }
 
