@@ -74,6 +74,36 @@ Below are the parameters you'll need to set for CrowdStrike Connector:
 
 **Note**: It is not recommended to use the default value `0` for configuration parameters `report_start_timestamp` and `indicator_start_timestamp` because of the large data volumes.
 
+### RabbitMQ Configuration
+
+When using RabbitMQ 4.0+ (the default version in [OpenCTI's docker-compose](https://github.com/OpenCTI-Platform/docker/blob/master/docker-compose.yml)), you need to increase the default message size limit to accommodate larger CrowdStrike intelligence data. RabbitMQ 4.0 defaults to a 16MB message limit, but CrowdStrike data often exceeds this size.
+
+Add the following environment variable to your RabbitMQ container:
+
+```
+RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS="-rabbit max_message_size 100000000"
+```
+
+Here is an example of the docker-compose file updated with that value:
+
+```
+  rabbitmq:
+    image: rabbitmq:4.0-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - RABBITMQ_NODENAME=rabbit01@localhost
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS="-rabbit max_message_size 100000000"
+    volumes:
+      - amqpdata:/var/lib/rabbitmq
+    restart: always
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+```
+
 ## Known Issues and Workarounds for Crowdstrike Connector Scopes
 
 ### Issue
