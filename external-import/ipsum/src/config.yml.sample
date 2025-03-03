@@ -23,3 +23,4 @@ connector_ipsum:
   api_base_url: 'https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/5.txt'
   api_key: ''
   default_x_opencti_score: 60
+  tlp_level: 'white'
