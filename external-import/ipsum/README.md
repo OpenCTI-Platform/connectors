@@ -74,7 +74,7 @@ Below are the parameters you'll need to set for the connector:
 | API base URL | api_base_url            | `CONNECTOR_IPSUM_API_BASE_URL`            | `https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/5.txt` | Yes       | You can choose between level 1 to level 8. 1 can have a lot of false positives, 8 has no false positive (Example: https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/8.txt - No false positive ) |
 | API key      | api_key                 | `CONNECTOR_IPSUM_API_KEY`                 |                                                                                   | No        | Github API Key                                                                                                                                                                                                          |
 | Score        | default_x_opencti_score | `CONNECTOR_IPSUM_DEFAULT_X_OPENCTI_SCORE` | 60                                                                                | No        |                                                                                                                                                                                                                         |
-| TLP Level | tlp_level | `CONNECTOR_IPSUM_TLP_LEVEL` | Yes | Traffic Light Protocol Marking definition level for ingested objects should be in 'white', 'green', 'amber', 'amber+strict', 'red' |
+| TLP Level | tlp_level | `CONNECTOR_IPSUM_TLP_LEVEL` |   | Yes | Traffic Light Protocol Marking definition level for ingested objects should be in 'white', 'green', 'amber', 'amber+strict', 'red' |
 
 ## Deployment
 
