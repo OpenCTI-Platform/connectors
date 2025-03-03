@@ -21,15 +21,19 @@ class ConnecteurEnrichReportWithStixIndicatorsFromObservables:
         for stix_object in stix_objects:
             if stix_object["type"] == "report":
                 for object_contained_in_report in stix_object["object_refs"]:
-                    is_observable = self.helper.api.stix_cyber_observable.read(id=object_contained_in_report)
+                    is_observable = self.helper.api.stix_cyber_observable.read(
+                        id=object_contained_in_report
+                    )
                     if not is_observable:
                         continue
 
-                    based_on_relationships = self.helper.api.stix_core_relationship.list(
-                        toId=object_contained_in_report,
-                        relationship_type="based-on"
+                    based_on_relationships = (
+                        self.helper.api.stix_core_relationship.list(
+                            toId=object_contained_in_report,
+                            relationship_type="based-on",
+                        )
                     )
-                    
+
                     # If no relationship of type "based-on" exists
                     if based_on_relationships == [] or based_on_relationships is None:
                         # Create the stix indicator and the relation
@@ -39,31 +43,40 @@ class ConnecteurEnrichReportWithStixIndicatorsFromObservables:
                         # Add the indicator to the report
                         self.helper.api.report.add_stix_object_or_stix_relationship(
                             id=stix_object["id"],
-                            stixObjectOrStixRelationshipId=indicator["id"]
+                            stixObjectOrStixRelationshipId=indicator["id"],
                         )
                         # Get relationship and add it to the report
-                        based_on_relationships = self.helper.api.stix_core_relationship.list(
-                            fromId=indicator["id"],
-                            toId=indicator["observables"][0]["id"],
-                            relationship_type="based-on"
+                        based_on_relationships = (
+                            self.helper.api.stix_core_relationship.list(
+                                fromId=indicator["id"],
+                                toId=indicator["observables"][0]["id"],
+                                relationship_type="based-on",
+                            )
                         )
                         self.helper.api.report.add_stix_object_or_stix_relationship(
                             id=stix_object["id"],
-                            stixObjectOrStixRelationshipId=based_on_relationships[0]["id"]
+                            stixObjectOrStixRelationshipId=based_on_relationships[0][
+                                "id"
+                            ],
                         )
                     else:
                         for based_on_relationship in based_on_relationships:
                             self.helper.api.report.add_stix_object_or_stix_relationship(
                                 id=stix_object["id"],
-                                stixObjectOrStixRelationshipId=based_on_relationship["from"]["id"]
+                                stixObjectOrStixRelationshipId=based_on_relationship[
+                                    "from"
+                                ]["id"],
                             )
                             self.helper.api.report.add_stix_object_or_stix_relationship(
                                 id=stix_object["id"],
-                                stixObjectOrStixRelationshipId=based_on_relationship["id"]
+                                stixObjectOrStixRelationshipId=based_on_relationship[
+                                    "id"
+                                ],
                             )
 
     def run(self) -> None:
         self.helper.listen(message_callback=self._process_message)
+
 
 if __name__ == "__main__":
     try:
