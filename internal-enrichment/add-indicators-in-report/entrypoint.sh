@@ -1,5 +1,5 @@
 #!/bin/sh
 
-cd /opt/opencti-connector-template
+cd /opt/opencti-add-indicators-in-report
 
 python3 main.py
