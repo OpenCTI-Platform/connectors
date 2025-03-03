@@ -7,7 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Feedly'
   scope: 'feedly'
-  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 feedly:

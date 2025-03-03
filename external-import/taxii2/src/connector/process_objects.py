@@ -120,23 +120,27 @@ class ProcessObjects:
                 # High score labels
                 for high_label in self.config.indicator_high_score_labels:
                     if high_label.lower() in obj_labels_set:
-                        obj["x_opencti_score"] = self.config.indicator_high_score
+                        obj["x_opencti_score"] = int(self.config.indicator_high_score)
                         break
                 # Medium score labels (if high score not already assigned)
                 if "x_opencti_score" not in obj:
                     for med_label in self.config.indicator_medium_score_labels:
                         if med_label.lower() in obj_labels_set:
-                            obj["x_opencti_score"] = self.config.indicator_medium_score
+                            obj["x_opencti_score"] = int(
+                                self.config.indicator_medium_score
+                            )
                             break
                 # Low score labels (if neither high nor medium score assigned)
                 if "x_opencti_score" not in obj:
                     for low_label in self.config.indicator_low_score_labels:
                         if low_label.lower() in obj_labels_set:
-                            obj["x_opencti_score"] = self.config.indicator_low_score
+                            obj["x_opencti_score"] = int(
+                                self.config.indicator_low_score
+                            )
                             break
                 # Default score if no match found
                 if "x_opencti_score" not in obj:
-                    obj["x_opencti_score"] = self.config.default_x_opencti_score
+                    obj["x_opencti_score"] = int(self.config.default_x_opencti_score)
         return stix_objects
 
     def set_indicator_as_detection(self, stix_objects: list) -> list:

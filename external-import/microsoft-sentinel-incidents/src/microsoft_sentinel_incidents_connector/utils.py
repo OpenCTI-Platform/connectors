@@ -23,6 +23,9 @@ def format_datetime(date_str: str | None) -> str:
     :return: The formatted date string in ISO 8601 format with 'Z' as the timezone indicator.
     """
     if date_str is not None and date_str.strip():
+        # some 'CreatedTimeUtc' date doesn't contains 'Z' (see malware evidence)
+        if not date_str.endswith("Z") and not date_str.endswith("+00:00"):
+            date_str += "Z"
         from_iso_format = datetime.fromisoformat(date_str)
         iso_date_str = (
             from_iso_format.replace(microsecond=0).isoformat().replace("+00:00", "Z")
