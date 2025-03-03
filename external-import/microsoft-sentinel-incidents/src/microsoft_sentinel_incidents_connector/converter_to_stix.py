@@ -290,7 +290,9 @@ class ConverterToStix:
             return stix_identity_system
         else:
             self.helper.connector_logger.error(
-                "HostEntity HostName is none, unable to convert to System entity", evidence)
+                "HostEntity HostName is none, unable to convert to System entity",
+                evidence,
+            )
 
     @handle_stix2_error
     def create_evidence_custom_observable_hostname(
