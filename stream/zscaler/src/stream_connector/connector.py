@@ -257,7 +257,7 @@ class ZscalerConnector:
 
         if event_type == "create":
             base_url = f"https://zsapi.zscalertwo.net/api/v1/urlCategories/{self.zscaler_blacklist_name}?action=ADD_TO_LIST"
-            
+
             payload = {
                 "configuredName": self.zscaler_blacklist_name,
                 "urls": [domain],
