@@ -81,7 +81,7 @@ When using RabbitMQ 4.0+ (the default version in [OpenCTI's docker-compose](http
 Add the following environment variable to your RabbitMQ container:
 
 ```
-RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS="-rabbit max_message_size 100000000"
+RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit max_message_size 100000000
 ```
 
 Here is an example of the docker-compose file updated with that value:
