@@ -286,7 +286,7 @@ class Asset(FrozenBaseModelWithWarnedExtra):
         ..., description="The ID of the network the asset belongs to."
     )
     tracked: bool = Field(..., description="Indicates if the asset is being tracked.")
-    last_scan_target: str = Field(
+    last_scan_target: Optional[str] = Field(
         ...,
         description="The IP address or fully qualified domain name \
                                   (FQDN) of the asset targeted in the last scan.",
