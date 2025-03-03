@@ -1,0 +1,14 @@
+version: '3'
+services:
+  connector-add-indicators-in-report:
+    image: opencti/connector-add-indicators-in-report:6.5.3
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Add Indicators In Report
+      - CONNECTOR_SCOPE=Report
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=error
+    restart: always
