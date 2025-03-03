@@ -311,6 +311,21 @@ class ConverterToStix:
         Returns:
             list[Software]: A list of Software objects extracted from the CPE URIs in the plugin.
         """
+        # early out
+        if plugin.cpe is None:
+            return []
+
+        # filter out the CPE URIs that are not handled (i.e. should start with cpe, not p-cpe, etc)
+        unhandled_uris = [
+            cpe_uri for cpe_uri in plugin.cpe if not cpe_uri.startswith("cpe:")
+        ]
+        if unhandled_uris:
+            self.helper.connector_logger.warning(
+                f"Unhandled CPE URIs: {unhandled_uris}. They will be ignored."
+            )
+
+        # remove unhandled URIs and eventually deduplicate
+        cpe_uris = list(set(plugin.cpe) - set(unhandled_uris))
 
         return (
             [
@@ -321,10 +336,11 @@ class ConverterToStix:
                     vendor=cpe_data["vendor"],
                     cpe=cpe_uri,
                 )
-                for cpe_uri in plugin.cpe
+                for cpe_uri in cpe_uris
                 for cpe_data in [parse_cpe_uri(cpe_uri)]
             ]
-            if plugin.cpe is not None
+            if plugin.cpe
+            is not None  # mypy needed this, even though it's already checked above
             else []
         )
 
