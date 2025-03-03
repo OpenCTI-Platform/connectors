@@ -93,7 +93,7 @@ Here is an example of the docker-compose file updated with that value:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
       - RABBITMQ_NODENAME=rabbit01@localhost
-      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS="-rabbit max_message_size 100000000"
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbit max_message_size 100000000
     volumes:
       - amqpdata:/var/lib/rabbitmq
     restart: always
