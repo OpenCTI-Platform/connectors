@@ -7,7 +7,7 @@ from pycti import OpenCTIConnectorHelper
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
-from .utils import find_matching_file_ids, format_date, detect_ip_version
+from .utils import detect_ip_version, find_matching_file_ids, format_date
 
 
 class MicrosoftDefenderIncidentsConnector:

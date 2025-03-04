@@ -1,6 +1,6 @@
-import ipaddress
-from datetime import datetime
 import re
+from datetime import datetime
+
 import stix2
 from dateutil.parser import parse
 
