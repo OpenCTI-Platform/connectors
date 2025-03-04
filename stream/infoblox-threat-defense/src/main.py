@@ -53,7 +53,7 @@ class InfobloxThreatDefenseConnector:
                     f"[ConnectionError] Attempt {attempt + 1} failed: {e}"
                 )
                 if attempt < retries - 1:
-                    time.sleep(delay * (2 ** attempt))  # Exponential backoff
+                    time.sleep(delay * (2**attempt))  # Exponential backoff
                 else:
                     raise
             except requests.exceptions.HTTPError as e:
