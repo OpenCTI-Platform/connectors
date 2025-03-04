@@ -3,6 +3,7 @@
 import re
 from datetime import datetime
 
+
 def is_cve_format(string: str) -> bool:
     """Check if string is in CVE identifier format
     :param string: String to be checked
@@ -14,6 +15,7 @@ def is_cve_format(string: str) -> bool:
         return True
 
     return False
+
 
 def time_from_unixtime(timestamp: int):
     return datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")

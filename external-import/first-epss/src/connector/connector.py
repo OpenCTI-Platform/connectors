@@ -27,7 +27,6 @@ class FirstEPSSConnector:
 
         self.author = None
 
-
     def run(self) -> None:
         """Main execution loop procedure for First EPSS connector
         :return: None
@@ -57,8 +56,12 @@ class FirstEPSSConnector:
         :return: Work ID as string
         """
         now = datetime.fromtimestamp(timestamp, tz=UTC)
-        friendly_name = f"{self.helper.connect_name} run @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
-        work_id = self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
+        friendly_name = (
+            f"{self.helper.connect_name} run @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
 
         info_msg = f"[CONNECTOR] New work {work_id} initiated..."
         self.helper.log_info(info_msg)
@@ -71,11 +74,15 @@ class FirstEPSSConnector:
         custom_attributes = """
             name
         """
-        opencti_data = self.helper.api.vulnerability.list(getAll=True, customAttributes=custom_attributes)
+        opencti_data = self.helper.api.vulnerability.list(
+            getAll=True, customAttributes=custom_attributes
+        )
         opencti_data = [item["name"] for item in opencti_data]
         return opencti_data
 
-    def _update_vuln_data_with_epss(self, vuln_data: list, epss_data: dict) -> list[dict]:
+    def _update_vuln_data_with_epss(
+        self, vuln_data: list, epss_data: dict
+    ) -> list[dict]:
         """Update vulnerability data with EPSS score and convert into STIX object
         :param vuln_data: Vulnerability names from OpenCTI
         :param epss_data: EPSS data from First EPSS
@@ -132,7 +139,9 @@ class FirstEPSSConnector:
         self.helper.metric.state("running")
 
         friendly_name = f"{self.config.connector_name} run @ {time_now}"
-        work_id = self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
 
         epss_data = self.client.request_data(self.config.api_base_url)
         vuln_data = self._get_opencti_vulnerability_data()
@@ -145,4 +154,6 @@ class FirstEPSSConnector:
         self.helper.api.work.to_processed(work_id, message)
 
         interval_in_hours = round(self.config.interval_hours, 2)
-        self.helper.log_info(f"[CONNECTOR] last_run stored, next run in: {interval_in_hours} hours")
+        self.helper.log_info(
+            f"[CONNECTOR] last_run stored, next run in: {interval_in_hours} hours"
+        )

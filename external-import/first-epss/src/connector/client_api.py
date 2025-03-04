@@ -12,6 +12,7 @@ import requests
 class ConnectorClient:
     # pylint: disable=too-few-public-methods
     """Client API."""
+
     def __init__(self, helper, config):
         """
         Initialize the client with necessary configurations
@@ -24,7 +25,9 @@ class ConnectorClient:
         self.session = requests.Session()
         self.session.headers.update(headers)
 
-    def request_data(self, api_url: str, params=None) -> Optional[dict[Union[str, Any], dict[str, float]]]:
+    def request_data(
+        self, api_url: str, params=None
+    ) -> Optional[dict[Union[str, Any], dict[str, float]]]:
         """
         Internal method to handle API requests
         :return: Response in JSON format
@@ -41,7 +44,11 @@ class ConnectorClient:
                 # Read csv by defaut taking in the headers cve,epss,percentile
                 reader = csv.DictReader(f)
                 epss_data = {
-                    row["cve"]: {"epss": float(row["epss"]), "percentile": float(row["percentile"])} for row in reader
+                    row["cve"]: {
+                        "epss": float(row["epss"]),
+                        "percentile": float(row["percentile"]),
+                    }
+                    for row in reader
                 }
 
             return epss_data
