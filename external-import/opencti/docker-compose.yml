@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   connector-opencti:
     image: opencti/connector-opencti:6.5.3
@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - "CONNECTOR_NAME=OpenCTI Datasets"
       - CONNECTOR_SCOPE=marking-definition,identity,location
-      - CONNECTOR_CONFIDENCE_LEVEL=100
       - CONNECTOR_UPDATE_EXISTING_DATA=true
       - CONNECTOR_RUN_AND_TERMINATE=false
       - CONNECTOR_LOG_LEVEL=error

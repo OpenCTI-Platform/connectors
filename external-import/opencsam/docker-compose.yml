@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   connector-opencsam:
     image: opencti/connector-opencsam:6.5.3
@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - "CONNECTOR_NAME=OpenCSAM"
       - CONNECTOR_SCOPE=opencsam
-      - CONNECTOR_CONFIDENCE_LEVEL=20 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
       - CONNECTOR_RUN_AND_TERMINATE=false
       - CONNECTOR_LOG_LEVEL=error

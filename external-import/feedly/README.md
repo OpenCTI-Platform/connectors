@@ -28,7 +28,6 @@ The OpenCTI Feedly connector allows you to import data from Feedly boards and fo
 | `connector_id`               | `CONNECTOR_ID`               | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                            |
 | `connector_name`             | `CONNECTOR_NAME`             | Yes          | Option `Feedly`                                                                               |
 | `connector_scope`            | `CONNECTOR_SCOPE`            | Yes          | Supported scope: Template Scope (MIME Type or Stix Object)                                    |
-| `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes          | The default confidence level for created sightings (a number between 1 and 4).                |
 | `connector_log_level`        | `CONNECTOR_LOG_LEVEL`        | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose). |
 | `feedly_source_ids`          | `FEEDLY_SOURCE_IDS`          | Yes          | A comma separated list of source ids you want to integrate                                    |
 | `feedly_api_key`             | `FEEDLY_API_KEY`             | Yes          | The API key of your Feedly account, to generate here https://feedly.com/i/team/api            |

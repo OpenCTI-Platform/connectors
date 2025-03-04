@@ -157,7 +157,6 @@ class AbuseSSLImportConnector:
                 name=observable.value,
                 description="Malicious SSL connections",
                 created_by_ref=f"{self.author.id}",
-                confidence=self.helper.connect_confidence_level,
                 pattern_type="stix",
                 pattern=pattern,
                 labels=["osint", "ssl-blacklist"],

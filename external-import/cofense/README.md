@@ -25,7 +25,6 @@ General description of the connector
 | `connector_type`             | `CONNECTOR_TYPE`             | Yes       | Must be `EXTERNAL_IMPORT` (this is the connector type).                                       |
 | `connector_name`             | `CONNECTOR_NAME`             | Yes       | Option `CofenseIntel`                                                                         |
 | `connector_scope`            | `CONNECTOR_SCOPE`            | Yes       | Supported scope: Template Scope (MIME Type or Stix Object)                                    |
-| `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes       | The default confidence level for created sightings (a number between 1 and 4).                |
 | `connector_log_level`        | `CONNECTOR_LOG_LEVEL`        | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose). |
 | `interval_sec`               | `COFENSEINTEL_INTERVAL`      | Yes       | The number of interval in seconds                                                             |
 | `user_token`                 | `COFENSEINTEL_USER`          | Yes       | User token for the Cofense Intelligence SDK                                                   |

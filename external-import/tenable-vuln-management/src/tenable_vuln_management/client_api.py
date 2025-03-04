@@ -272,8 +272,16 @@ class ConnectorClient:
             ),
         )
         resp.raise_for_status()
-        content = resp.json()
-        pagination = content["pagination"]
+        content = dict(resp.json())
+        if "pagination" not in content.keys():
+            self.helper.connector_logger.warning(
+                "[API] Unexpected response format : pagination section not in response",
+                {"response": content},
+            )
+            pagination = None
+        else:
+            pagination = content.get("pagination", {})
+
         return content["findings"], (
             pagination.get("next") if pagination is not None else None
         )

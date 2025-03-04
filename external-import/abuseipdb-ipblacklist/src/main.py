@@ -140,7 +140,6 @@ class abuseipdbipblacklistimport:
                                     + " - lastReportedAt: "
                                     + str(d["lastReportedAt"]),
                                     created_by_ref=self.identity["standard_id"],
-                                    confidence=self.helper.connect_confidence_level,
                                     pattern_type="stix",
                                     pattern=pattern,
                                     external_references=[external_reference],
@@ -181,7 +180,6 @@ class abuseipdbipblacklistimport:
                                     + " - lastReportedAt: "
                                     + str(d["lastReportedAt"]),
                                     created_by_ref=self.identity["standard_id"],
-                                    confidence=self.helper.connect_confidence_level,
                                     pattern_type="stix",
                                     pattern=pattern,
                                     external_references=[external_reference],

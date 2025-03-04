@@ -34,21 +34,21 @@ To develop and test your connector, you need a running OpenCTI instance with the
 
 ### Docker Environment
 
-Assuming that OpenCTI is deployed using Docker using the steps on the following documentation: [OpenCTI Docker Deployment](https://docs.opencti.io/latest/deployment/installation/#using-docker), 
+Assuming that OpenCTI is deployed using Docker using the steps on the following documentation: [OpenCTI Docker Deployment](https://docs.opencti.io/latest/deployment/installation/#using-docker),
 
 Since the deployment of OpenCTI connectors uses `docker-compose.yml` files, it is considered that this approach is the best option to be consistent with the deployment.
 
 Using `docker-compose.yml` files makes the code clearer even when the learning curve needs some Docker knowledge.
 
-However, this effort is always needed since connectors are expected to be run in production using  `docker compose up`.
+However, this effort is always needed since connectors are expected to be run in production using `docker compose up`.
 
 #### Docker Compose Basics
 
 To engage with OpenCTI deployed systems in a different folder, it is relevant to understand how Docker networking works.
 Services deployed within a given `docker-compose.yml` file are attached to a specifically created network which uses the name of the folder as the network name.
-Hence, if OpenCTI is deployed the official [Docker repository](https://github.com/opencti/docker), the network name would be `docker_default`. 
+Hence, if OpenCTI is deployed the official [Docker repository](https://github.com/opencti/docker), the network name would be `docker_default`.
 
-However, when deploying a specific connector we are using a different `docker-compose.yml` file. 
+However, when deploying a specific connector we are using a different `docker-compose.yml` file.
 This has a direct impact: since the new container is NOT defined in the same `docker-compose.yml` file in which the platform is deployed, and we have to manually attach the container to the previously created network.
 
 To be consistent with the original deployment, we are assuming the the original network is created using the official OpenCTI project (note that credentials may be set manually):
@@ -72,13 +72,13 @@ CONNECTOR_IMPORT_FILE_STIX_ID=$(cat /proc/sys/kernel/random/uuid)
 CONNECTOR_IMPORT_REPORT_ID=$(cat /proc/sys/kernel/random/uuid)
 EOF
 ) > .env
-docker compose up --build 
+docker compose up --build
 ```
 
 Note that this approach implies that the project is cloned into a folder named `docker` being the default network name.
 Docker networking creates by default a network using the name of the folder where the `docker-compose.yml` is located (in this case, `docker`) to create a new default network named `docker_default`.
 
-This Docker network is the one which is manually attached to the services found in the `docker-compose.yml` of the connectors. 
+This Docker network is the one which is manually attached to the services found in the `docker-compose.yml` of the connectors.
 Thus, the hostnames of the services defined in the main OpenCTI deployment can be used (e.g., `http://opencti:8080`).
 
 ```
@@ -152,7 +152,7 @@ python main.py
 There are a few files in the template we need to change for our connector to be unique. You can check for all places you need to change you connector name with the following command (the output will look similar):
 
 ```shell
-# search for the term "template" in files within the current directory 
+# search for the term "template" in files within the current directory
 # and all its subdirectories
 $ grep -Ri template
 
@@ -277,10 +277,9 @@ indicator = stix2.Indicator(
   pattern_type="pattern_type",
   valid_from="valid_from",
   labels="labels",
-  confidence="confidence",
   object_marking_refs="object_markings",
   custom_properties="custom_properties",
-) 
+)
 ```
 
 ⚠️ Any connector **should be validated** through pylint for linter. Example of commands:
@@ -329,6 +328,7 @@ It requires the `duration_period` connector variable in ISO-8601 standard format
 Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
 
 Configurations
+
 ```
 connector:
   id: 'external-import-template'
@@ -338,7 +338,9 @@ connector:
   log_level: 'info'
   duration_period: 'PT10S'
 ```
-Code 
+
+Code
+
 ```
 self.helper.schedule_iso(
     message_callback=self.process_message,

@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   connector-silobreaker:
     image: opencti/connector-silobreaker:6.5.3
@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - "CONNECTOR_NAME=Silobreaker Cyber Threat Intelligence"
       - CONNECTOR_SCOPE=silobreaker
-      - CONNECTOR_CONFIDENCE_LEVEL=25 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - SILOBREAKER_API_URL=https://api.silobreaker.com
       - SILOBREAKER_API_KEY=ChangeMe

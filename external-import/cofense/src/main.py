@@ -150,7 +150,6 @@ class CofenseIntel(CofenseIntegration):
             name="Cofense",
             identity_class="organization",
             description="CofenseIntel",
-            confidence=helper.connect_confidence_level,
         )
 
         now = datetime.utcnow()

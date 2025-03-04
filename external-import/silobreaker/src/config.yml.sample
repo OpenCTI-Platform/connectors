@@ -7,7 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Silobreaker Cyber Threat Intelligence'
   scope: 'silobreaker'
-  confidence_level: 25 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 silobreaker:

@@ -335,7 +335,6 @@ class UrlscanConnector:
             name=value,
             description=description,
             labels=self._default_labels,
-            confidence=self._helper.connect_confidence_level,
             object_marking_refs=[self._default_tlp],
             custom_properties=dict(
                 x_opencti_score=(
@@ -362,7 +361,6 @@ class UrlscanConnector:
         :param description: Description
         :return: A relationship
         """
-        confidence = self._helper.connect_confidence_level
         created_by_ref = self._identity["standard_id"]
 
         return stix2.Relationship(
@@ -371,7 +369,6 @@ class UrlscanConnector:
             relationship_type=rel_type,
             target_ref=target_id,
             created_by_ref=created_by_ref,
-            confidence=confidence,
             description=description,
             labels=self._default_labels,
             object_marking_refs=[self._default_tlp],

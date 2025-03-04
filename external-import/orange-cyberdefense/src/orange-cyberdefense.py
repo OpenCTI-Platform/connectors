@@ -312,7 +312,6 @@ class OrangeCyberDefense:
         technical_md = generate_markdown_table(indicator_object)
         note_stix = stix2.Note(
             id=Note.generate_id(creation_date, technical_md),
-            confidence=self.helper.connect_confidence_level,
             abstract="OCD-CERT Datalake additional informations",
             content=technical_md,
             created=creation_date,
@@ -537,7 +536,6 @@ class OrangeCyberDefense:
                             ),
                             relationship_type="targets",
                             created_by_ref=self.identity["standard_id"],
-                            confidence=self.helper.connect_confidence_level,
                             source_ref=attacker["id"],
                             target_ref=victim["id"],
                             object_marking_refs=markings,
@@ -558,7 +556,6 @@ class OrangeCyberDefense:
                             ),
                             relationship_type="uses",
                             created_by_ref=self.identity["standard_id"],
-                            confidence=self.helper.connect_confidence_level,
                             source_ref=threat["id"],
                             target_ref=arsenal["id"],
                             object_marking_refs=markings,
@@ -684,7 +681,6 @@ class OrangeCyberDefense:
             description=report_md,
             report_types=["threat-report"],
             created_by_ref=self.identity["standard_id"],
-            confidence=self.helper.connect_confidence_level,
             external_references=external_references,
             created=parse(report["timestamp_created"]),
             published=parse(report["timestamp_updated"]),

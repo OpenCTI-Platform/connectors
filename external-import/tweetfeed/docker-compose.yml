@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=Tweetfeed
       - CONNECTOR_SCOPE=tweetfeed
-      - CONNECTOR_CONFIDENCE_LEVEL=15
       - CONNECTOR_LOG_LEVEL=error
       - TWEETFEED_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - TWEETFEED_CREATE_INDICATORS=true

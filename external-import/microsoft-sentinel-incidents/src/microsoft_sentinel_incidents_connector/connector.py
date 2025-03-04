@@ -162,9 +162,12 @@ class MicrosoftSentinelIncidentsConnector:
                 "file": 2,
                 "filehash": 3,
             }
+
+            # some alerts return a 'ParseError_LengthExceedsLimit' error in the Entities field
             entities = json.loads(
                 alert.get("Entities", "[]")
                 if len(alert.get("Entities", "[]")) > 0
+                and alert.get("Entities") != "ParseError_LengthExceedsLimit"
                 else "[]"
             )
             files_index = {}

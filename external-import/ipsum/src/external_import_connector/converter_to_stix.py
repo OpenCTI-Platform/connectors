@@ -20,20 +20,20 @@ class ConverterToStix:
         self.external_reference = self.create_external_reference()
 
     @staticmethod
-    def create_external_reference() -> list:
+    def create_external_reference() -> list[stix2.ExternalReference]:
         """
         Create external reference
         :return: External reference STIX2 list
         """
         external_reference = stix2.ExternalReference(
-            source_name="External Source",
+            source_name="IPsum",
             url="https://github.com/stamparm/ipsum/tree/master",
-            description="All lists are automatically retrieved and parsed on a daily (24h) basis and the final result is pushed to this repository",
+            description="All lists are automatically retrieved and parsed on a daily (24h) basis.",
         )
         return [external_reference]
 
     @staticmethod
-    def create_author() -> dict:
+    def create_author() -> stix2.Identity:
         """
         Create Author
         :return: Author in Stix2 object
@@ -42,13 +42,13 @@ class ConverterToStix:
             id=Identity.generate_id(name="IPsum", identity_class="organization"),
             name="IPsum",
             identity_class="organization",
-            description="IPsum is a threat intelligence feed based on 30+ different publicly available lists of suspicious and/or malicious IP addresses",
+            description="IPsum is a threat intelligence feed based on 30+ different publicly available lists.",
         )
         return author
 
     def create_relationship(
         self, source_id: str, relationship_type: str, target_id: str
-    ) -> dict:
+    ) -> stix2.Relationship:
         """
         Creates Relationship object
         :param source_id: ID of source in string
@@ -105,14 +105,9 @@ class ConverterToStix:
         :param value: Value in string
         :return: A boolean
         """
-        is_valid_domain = validators.domain(value)
+        return validators.domain(value)
 
-        if is_valid_domain:
-            return True
-        else:
-            return False
-
-    def create_obs(self, value: str) -> dict:
+    def create_obs(self, value: str) -> dict | None:
         """
         Create observable according to value given
         :param value: Value in string
@@ -128,7 +123,7 @@ class ConverterToStix:
                 },
             )
             return stix_ipv6_address
-        elif self._is_ipv4(value) is True:
+        if self._is_ipv4(value) is True:
             stix_ipv4_address = stix2.IPv4Address(
                 value=value,
                 custom_properties={
@@ -138,7 +133,7 @@ class ConverterToStix:
                 },
             )
             return stix_ipv4_address
-        elif self._is_domain(value) is True:
+        if self._is_domain(value) is True:
             stix_domain_name = stix2.DomainName(
                 value=value,
                 custom_properties={
@@ -148,8 +143,8 @@ class ConverterToStix:
                 },
             )
             return stix_domain_name
-        else:
-            self.helper.connector_logger.error(
-                "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
-                {"value": value},
-            )
+        self.helper.connector_logger.error(
+            "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
+            {"value": value},
+        )
+        return None

@@ -7,7 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: RestoreFiles'
   scope: 'restore'
-  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 backup:

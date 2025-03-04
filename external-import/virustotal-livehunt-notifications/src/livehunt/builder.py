@@ -221,7 +221,6 @@ class LivehuntBuilder:
             description=f'Date of the alert on VirusTotal: {datetime.datetime.fromtimestamp(vtobj._context_attributes["notification_date"])}',
             source=self._SOURCE,
             created_by_ref=self.author["standard_id"],
-            confidence=self.helper.connect_confidence_level,
             labels=self.retrieve_labels(vtobj),
             external_references=[external_reference],
             allow_custom=True,
@@ -344,7 +343,6 @@ class LivehuntBuilder:
                 created_by_ref=self.author["standard_id"],
                 source_ref=incident_id,
                 target_ref=file["id"],
-                confidence=self.helper.connect_confidence_level,
                 allow_custom=True,
             )
             self.bundle.append(relationship)
@@ -410,7 +408,6 @@ class LivehuntBuilder:
                         (i["date"] for i in rule.get("metadata", {}) if "date" in i),
                         "No description",
                     ),
-                    confidence=self.helper.connect_confidence_level,
                     pattern=plyara.utils.rebuild_yara_rule(rule),
                     pattern_type="yara",
                     valid_from=valid_from,
@@ -434,7 +431,6 @@ class LivehuntBuilder:
                         created_by_ref=self.author["standard_id"],
                         source_ref=incident_id,
                         target_ref=indicator["id"],
-                        confidence=self.helper.connect_confidence_level,
                         allow_custom=True,
                     )
                     self.bundle.append(relationship)
@@ -450,7 +446,6 @@ class LivehuntBuilder:
                         created_by_ref=self.author["standard_id"],
                         source_ref=file_id,
                         target_ref=indicator["id"],
-                        confidence=self.helper.connect_confidence_level,
                         allow_custom=True,
                     )
                     self.bundle.append(relationship)
