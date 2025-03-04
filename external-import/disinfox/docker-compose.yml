@@ -34,14 +34,4 @@ services:
       # - HTTPS_PROXY=CHANGEME
       # - NO_PROXY=CHANGEME
     restart: always
-    networks:
-      - opencti
-      - disinfox
 
-networks:
-  opencti:
-    external: true
-    name: opencti
-  disinfox:
-    external: true
-    name: disinfox_default
