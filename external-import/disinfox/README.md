@@ -34,11 +34,12 @@ Table of Contents
 ### Requirements
 
 - OpenCTI Platform >= 6...
+- A recheable [DISINFOX](https://github.com/CyberDataLab/disinfox) API.
+- A DISINFOX API Key. 
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` or  `.env` (duplicating the `example.env`) in Docker.
 
 ### OpenCTI environment variables
 
@@ -56,10 +57,6 @@ Below are the parameters you'll need to set for running the connector properly:
 | Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
 |-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
 | Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
 
 ### Connector extra parameters environment variables
 
@@ -67,8 +64,8 @@ Below are the parameters you'll need to set for the connector:
 
 | Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
 |--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
+| DISINFOX API base URL |  |  DISINFOX_URL                           |         | Yes       |     URL of a reachable DISINFOX installation        |
+| DISINFOX API key      |       |  DISINFOX_API_KEY                           |         | Yes       |    The API key for DISINFOX, available in the user's Profile section         |
 
 ## Deployment
 
@@ -87,8 +84,14 @@ Example:
 docker build . -t [IMAGE NAME]:latest
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Make sure to:
+
+- **Duplicate the `example.env` file**
+- Rename it to `.env`.
+- Adapt it to your instalation environment.
+
+You can also directly edit the environment variables in `docker-compose.yml` with the appropriate configurations for your
+environment. Then, start the docker container with the provided `docker-compose.yml`.
 
 ```shell
 docker compose up -d
@@ -97,26 +100,11 @@ docker compose up -d
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
-
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
-
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
-pip3 install -r requirements.txt
-```
-
-Then, start the connector from recorded-future/src:
-
-```shell
-python3 main.py
-```
+...
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` in `duration_period`.
 
 However, if you would like to force an immediate download of a new batch of entities, navigate to:
 
@@ -133,7 +121,10 @@ Describe how the connector functions:
 * Important considerations for users when utilizing this connector
 * Additional relevant details
 -->
+This connector retrieves data from a DISINFOX instance.
+It fetches STIX2 Bundles from the DISINFOX Public API to get newly added disinformation incidents to DISINFOX. 
 
+**It's essential** to get a DISINFOX API Key from the Profile page at DISINFOX.
 
 ## Debugging
 
