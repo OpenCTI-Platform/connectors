@@ -34,7 +34,7 @@ Table of Contents
 ### Requirements
 
 - OpenCTI Platform >= 6...
-- A recheable [DISINFOX](https://github.com/CyberDataLab/disinfox) API.
+- A reacheable [DISINFOX](https://github.com/CyberDataLab/disinfox) API.
 - A DISINFOX API Key. 
 
 ## Configuration variables
@@ -90,8 +90,7 @@ Make sure to:
 - Rename it to `.env`.
 - Adapt it to your instalation environment.
 
-You can also directly edit the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided `docker-compose.yml`.
+You can also directly edit the environment variables in `docker-compose.yml` with the appropriate configurations for your environment. Then, start the docker container with the provided `docker-compose.yml`.
 
 ```shell
 docker compose up -d
@@ -122,7 +121,7 @@ Describe how the connector functions:
 * Additional relevant details
 -->
 This connector retrieves data from a DISINFOX instance.
-It fetches STIX2 Bundles from the DISINFOX Public API to get newly added disinformation incidents to DISINFOX. 
+It fetches STIX2 Bundles from the DISINFOX Public API to get newly added disinformation incidents to DISINFOX.
 
 **It's essential** to get a DISINFOX API Key from the Profile page at DISINFOX.
 
