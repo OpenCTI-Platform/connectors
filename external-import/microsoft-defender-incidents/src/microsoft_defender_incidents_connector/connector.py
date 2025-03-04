@@ -7,7 +7,7 @@ from pycti import OpenCTIConnectorHelper
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
-from .utils import find_matching_file_ids, format_date
+from .utils import detect_ip_version, find_matching_file_ids, format_date
 
 
 class MicrosoftDefenderIncidentsConnector:
@@ -156,8 +156,16 @@ class MicrosoftDefenderIncidentsConnector:
 
                     # ipEvidence
                     case "#microsoft.graph.security.ipEvidence":
+                        version = detect_ip_version(evidence.get("ipAddress"))
                         # Create Stix IPv4Address
-                        stix_ip = self.converter_to_stix.create_evidence_ipv4(evidence)
+                        if version == "ipv4":
+                            stix_ip = self.converter_to_stix.create_evidence_ipv4(
+                                evidence
+                            )
+                        else:
+                            stix_ip = self.converter_to_stix.create_evidence_ipv6(
+                                evidence
+                            )
                         if stix_ip:
                             stix_objects.append(stix_ip)
                             stix_relationship_ip = (
