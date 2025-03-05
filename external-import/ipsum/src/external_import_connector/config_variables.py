@@ -65,5 +65,6 @@ class ConfigConnector:
             "CONNECTOR_IPSUM_TLP_LEVEL",
             ["connector_ipsum", "tlp_level"],
             self.load,
-            required=True,
+            required=False,
+            default="white",
         )
