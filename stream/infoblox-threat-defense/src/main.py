@@ -133,7 +133,7 @@ class InfobloxThreatDefenseConnector:
 
         if update_response.status_code == 201:
             action = "added to" if operation == "add" else "removed from"
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"Items successfully {action} the custom list: {updated_items}"
             )
         else:
