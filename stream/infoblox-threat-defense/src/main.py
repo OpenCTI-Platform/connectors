@@ -49,7 +49,7 @@ class InfobloxThreatDefenseConnector:
                 response.raise_for_status()
                 return response
             except requests.exceptions.ConnectionError as e:
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     f"[ConnectionError] Attempt {attempt + 1} failed: {e}"
                 )
                 if attempt < retries - 1:
