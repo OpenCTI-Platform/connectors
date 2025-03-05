@@ -209,7 +209,8 @@ class ZscalerConnector:
 
         if response and response.status_code == 200:
             data = response.json()
-            blocked_domains = data.get("dbCategorizedUrls", [])
+
+            blocked_domains = data.get("urls", [])
             return blocked_domains
         else:
             code = response.status_code if response else "No code"
@@ -256,9 +257,10 @@ class ZscalerConnector:
 
         if event_type == "create":
             base_url = f"https://zsapi.zscalertwo.net/api/v1/urlCategories/{self.zscaler_blacklist_name}?action=ADD_TO_LIST"
+
             payload = {
                 "configuredName": self.zscaler_blacklist_name,
-                "dbCategorizedUrls": [domain],
+                "urls": [domain],
             }
         elif event_type == "delete":
             base_url = f"https://zsapi.zscalertwo.net/api/v1/urlCategories/{self.zscaler_blacklist_name}?action=REMOVE_FROM_LIST"
