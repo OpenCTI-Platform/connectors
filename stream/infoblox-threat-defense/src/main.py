@@ -92,7 +92,7 @@ class InfobloxThreatDefenseConnector:
             return
 
         if not existing_list.get("id") or not existing_list.get("name"):
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 "The 'id' or 'name' field is missing in the response. Verify the API response format."
             )
             return
