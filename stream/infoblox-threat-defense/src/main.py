@@ -73,7 +73,7 @@ class InfobloxThreatDefenseConnector:
         if response.status_code == 200:
             return response.json()
         else:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Failed to retrieve custom lists: {response.status_code} - {response.text}"
             )
             return None
