@@ -18,3 +18,11 @@ repos:
     - id: isort
       name: isort (python)
       args: ['--profile black']
+-   repo: local
+    hooks:
+    - id: gpg-signed-commit
+      name: GPG Signed Commit Check
+      entry: bash -c 'for commit_sha in $(git log --pretty=%h master..); do git verify-commit "$commit_sha" || echo "error unisgned commit $commit_sha" && exit 1; done'
+      language: system
+      stages: [pre-push, manual]
+      minimum_pre_commit_version: '3.2.0'
