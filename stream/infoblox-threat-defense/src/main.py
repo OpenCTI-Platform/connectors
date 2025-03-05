@@ -137,7 +137,7 @@ class InfobloxThreatDefenseConnector:
                 f"Items successfully {action} the custom list: {updated_items}"
             )
         else:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Failed to update the custom list: {update_response.status_code} - {update_response.text}"
             )
 
