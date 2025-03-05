@@ -111,7 +111,7 @@ class InfobloxThreatDefenseConnector:
         elif operation == "remove":
             combined_items = existing_items - updated_items
         else:
-            self.helper.log_error("Invalid operation. Use 'add' or 'remove'.")
+            self.helper.connector_logger.error("Invalid operation. Use 'add' or 'remove'.")
             return
 
         payload = {
