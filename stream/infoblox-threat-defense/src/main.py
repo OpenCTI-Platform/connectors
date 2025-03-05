@@ -60,7 +60,7 @@ class InfobloxThreatDefenseConnector:
                 self.helper.log_error(f"[HTTPError] {e}")
                 raise
             except Exception as e:
-                self.helper.log_error(f"[UnexpectedError] {e}")
+                self.helper.connector_logger.error(f"[UnexpectedError] {e}")
                 raise
 
     def get_custom_lists(self):
