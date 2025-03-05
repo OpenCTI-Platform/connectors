@@ -57,7 +57,7 @@ class InfobloxThreatDefenseConnector:
                 else:
                     raise
             except requests.exceptions.HTTPError as e:
-                self.helper.log_error(f"[HTTPError] {e}")
+                self.helper.connector_logger.error(f"[HTTPError] {e}")
                 raise
             except Exception as e:
                 self.helper.connector_logger.error(f"[UnexpectedError] {e}")
