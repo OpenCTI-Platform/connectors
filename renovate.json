@@ -1,7 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "local>uis/devops/renovate-config:enablePreCommit"
   ],
   "labels": [
     "dependencies",
