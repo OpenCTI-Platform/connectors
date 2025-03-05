@@ -88,7 +88,7 @@ class InfobloxThreatDefenseConnector:
         try:
             existing_list = response.json().get("results", {})
         except json.JSONDecodeError:
-            self.helper.log_error("Failed to decode the response as JSON.")
+            self.helper.connector_logger.error("Failed to decode the response as JSON.")
             return
 
         if not existing_list.get("id") or not existing_list.get("name"):
