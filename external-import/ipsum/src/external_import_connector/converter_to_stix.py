@@ -2,7 +2,7 @@ import ipaddress
 
 import stix2
 import validators
-from pycti import Identity, StixCoreRelationship
+from pycti import Identity, MarkingDefinition, StixCoreRelationship
 
 
 class ConverterToStix:
@@ -18,6 +18,9 @@ class ConverterToStix:
         self.config = config
         self.author = self.create_author()
         self.external_reference = self.create_external_reference()
+        self.tlp_marking = ConverterToStix._create_tlp_marking(
+            level=self.config.tlp_level.lower()
+        )
 
     @staticmethod
     def create_external_reference() -> list[stix2.ExternalReference]:
@@ -45,6 +48,26 @@ class ConverterToStix:
             description="IPsum is a threat intelligence feed based on 30+ different publicly available lists.",
         )
         return author
+
+    @staticmethod
+    def _create_tlp_marking(level):
+        mapping = {
+            "white": stix2.TLP_WHITE,
+            "clear": stix2.TLP_WHITE,
+            "green": stix2.TLP_GREEN,
+            "amber": stix2.TLP_AMBER,
+            "amber+strict": stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                custom_properties={
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:AMBER+STRICT",
+                },
+            ),
+            "red": stix2.TLP_RED,
+        }
+        return mapping[level]
 
     def create_relationship(
         self, source_id: str, relationship_type: str, target_id: str
@@ -116,6 +139,7 @@ class ConverterToStix:
         if self._is_ipv6(value) is True:
             stix_ipv6_address = stix2.IPv6Address(
                 value=value,
+                object_marking_refs=[self.tlp_marking],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self.external_reference,
@@ -126,6 +150,7 @@ class ConverterToStix:
         if self._is_ipv4(value) is True:
             stix_ipv4_address = stix2.IPv4Address(
                 value=value,
+                object_marking_refs=[self.tlp_marking],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self.external_reference,
@@ -136,6 +161,7 @@ class ConverterToStix:
         if self._is_domain(value) is True:
             stix_domain_name = stix2.DomainName(
                 value=value,
+                object_marking_refs=[self.tlp_marking],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self.external_reference,
