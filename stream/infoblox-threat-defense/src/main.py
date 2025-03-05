@@ -170,8 +170,8 @@ class InfobloxThreatDefenseConnector:
                     )
 
         except Exception as ex:
-            self.helper.log_error(f"[ERROR] Failed processing message: {ex}")
-            self.helper.log_error(f"[ERROR] Message data: {msg}")
+            self.helper.connector_logger.error(f"[ERROR] Failed processing message: {ex}")
+            self.helper.connector_logger.error(f"[ERROR] Message data: {msg}")
 
     def start(self):
         """Start the connector to listen to the OpenCTI stream."""
