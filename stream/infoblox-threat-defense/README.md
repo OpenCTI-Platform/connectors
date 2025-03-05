@@ -6,7 +6,7 @@ This connector allows organizations to stream OpenCTI indicators to Infoblox Thr
 
 ### Requirements
 
-- OpenCTI Platform >= 6.4.8
+- OpenCTI Platform >= 6.5.3
 
 ### Configuration
 
