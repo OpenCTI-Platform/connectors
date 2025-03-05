@@ -2,8 +2,9 @@ import base64
 import os
 import re
 from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import requests
 import stix2
@@ -20,7 +21,7 @@ from reportimporter.constants import (
     RESULT_FORMAT_TYPE,
 )
 from reportimporter.util import create_stix_object
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError, HTTPError
 
 
 class ReportImporter:
@@ -63,12 +64,12 @@ class ReportImporter:
         )
 
     def _process_message(self, data: Dict) -> str:
-        self.helper.log_info("Processing new message")
+        self.helper.connector_logger.info("Processing new message")
         self.file = None
         return self._process_import(data)
 
     def _process_import(self, data: Dict) -> str:
-        file_name = self._download_import_file(data)
+        file_name, file_content_buffered = self._download_import_file(data)
         entity_id = data.get("entity_id", None)
         bypass_validation = data.get("bypass_validation", False)
         entity = (
@@ -81,27 +82,30 @@ class ReportImporter:
 
         # Parse report from web service
         try:
-            with open(file_name, "rb") as f:
-                response = requests.post(
-                    url=self.web_service_url + "/extract_entities",
-                    files={"file": (data["file_id"], f, data["file_mime"])},
-                    headers={
-                        "X-OpenCTI-Certificate": self.licence_key_base64,
-                        "X-OpenCTI-instance-id": self.instance_id,
-                    },
-                )
+            response = requests.post(
+                url=self.web_service_url + "/extract_entities",
+                files={
+                    "file": (data["file_id"], file_content_buffered, data["file_mime"])
+                },
+                headers={
+                    "X-OpenCTI-Certificate": self.licence_key_base64,
+                    "X-OpenCTI-instance-id": self.instance_id,
+                },
+            )
+            response.raise_for_status()
         except ConnectionError:
             raise ConnectionError(
                 "ImportDocumentAI webservice seems to be unreachable, have you configured your connector properly ?"
             )
-
+        except HTTPError:
+            raise HTTPError(
+                f"{response.status_code}, request failed with reason : {response.json()['detail']}"
+            )
         parsed = response.json()
-        os.remove(file_name)
         if not parsed:
             return "No information extracted from report"
-
         # Process parsing results
-        self.helper.log_debug("Results: {}".format(parsed))
+        self.helper.connector_logger.debug(f"Results: {parsed}")
         observables, entities = self._process_parsing_results(parsed, entity)
         # Send results to OpenCTI
         observable_cnt = self._process_parsed_objects(
@@ -120,12 +124,12 @@ class ReportImporter:
     def start(self) -> None:
         self.helper.listen(self._process_message)
 
-    def _download_import_file(self, data: Dict) -> str:
+    def _download_import_file(self, data: Dict) -> Tuple[str, BytesIO]:
         file_fetch = data["file_fetch"]
         file_uri = self.helper.opencti_url + file_fetch
 
         # Downloading and saving file to connector
-        self.helper.log_info("Importing the file " + file_uri)
+        self.helper.connector_logger.info("Importing the file {file_uri}")
         file_name = os.path.basename(file_fetch)
         file_content = self.helper.api.fetch_opencti_file(file_uri, True)
 
@@ -138,10 +142,11 @@ class ReportImporter:
         if os_system == "nt":
             file_name = re.sub(r'[\\/:*?"<>|]', "_", file_name)
 
-        with open(file_name, "wb") as f:
-            f.write(file_content)
+        buffer = BytesIO()
+        buffer.write(file_content)
+        buffer.seek(0)
 
-        return file_name
+        return file_name, buffer
 
     def _process_parsing_results(
         self, parsed: List[Dict], context_entity: Dict
