@@ -79,12 +79,14 @@ class RSTNoiseControlConnector:
             )
         )
 
-        self.timeout = int(get_config_variable(
-            "RST_NOISE_CONTROL_TIMEOUT",
-            ["rst-noise-control", "timeout"],
-            config,
-            default=10,
-        ))
+        self.timeout = int(
+            get_config_variable(
+                "RST_NOISE_CONTROL_TIMEOUT",
+                ["rst-noise-control", "timeout"],
+                config,
+                default=10,
+            )
+        )
 
         self.connector_auto = bool(
             get_config_variable(
