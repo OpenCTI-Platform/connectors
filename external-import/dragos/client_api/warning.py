@@ -62,7 +62,7 @@ class ValidationWarning(Warning):
         """Return the string representation of the validation warning."""
         warnings_repr = os.linesep.join(str(warning) for warning in self.warnings)
         return (
-            f"{self.warnings_count} validation warning{'s' if self.warnings_count>1 else ''} for {self.model.__name__}{os.linesep}"
+            f"{self.warnings_count} validation warning{'s' if self.warnings_count!=1 else ''} for {self.model.__name__}{os.linesep}"
             f"{warnings_repr}"
         )
 
