@@ -32,7 +32,7 @@ class _ConfigLoaderOCTI(ABC, FrozenBaseModel):
 
     Examples:
     >>>  class ConfigLoaderEnvOCTI(ConfigLoaderOCTI):
-    ...     \"""OpenCTI configuration loader from environment variables.\"""
+    ...     """OpenCTI configuration loader from environment variables."""
     ...
     ...     @property
     ...     def _url(self) -> str:
