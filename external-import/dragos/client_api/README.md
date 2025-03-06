@@ -51,7 +51,7 @@ pip install -e .[dev]
 ```
 
 ### Data
-The fake server uses a simple json file to store the data. The data should be stored in the `client_api/dev/fake_server` directory under `products.json`and `indicator.json` files.	
+The fake server uses a simple json file to store the data. The data should be stored in the `client_api/dev/fake_server/data` directory in `products.json`and `indicator.json` files.	
 
 Lucky Filigran Developper can find a complete example on connector development Notion Page (under Usefull Resource section).
 
