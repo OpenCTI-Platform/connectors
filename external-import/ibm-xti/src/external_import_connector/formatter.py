@@ -152,18 +152,15 @@ class OpenCTISTIXFormatter:
         if not platform["affected"]:
             return
 
-        obj["labels"].append(f"{platform['vendor']} {platform['product']}")
-
-    def format_vulnerability(self, obj: dict[str, Any], alias: str):
-        # set CVE as the vulnerability name
-        xfid = ""
-        name = obj["name"]
-
         if not obj.get("labels"):
             obj["labels"] = []
 
-        if alias == "otvulnerability":
-            obj["labels"].append("ot")
+        obj["labels"].append(f"{platform['vendor']} {platform['product']}")
+
+    def format_vulnerability(self, obj: dict[str, Any], _alias: str):
+        # set CVE as the vulnerability name
+        xfid = ""
+        name = obj["name"]
 
         for reference in obj["external_references"]:
             if reference["source_name"] == "xfid":

@@ -72,7 +72,7 @@ class ConnectorClient:
             self.__helper.connector_logger.info(
                 f"type = {stix_obj.get('type')}, id = {stix_obj.get('id')}, name={stix_obj.get('name')}"
             )
-            for ref in stix_obj.get("object_refs"):
+            for ref in stix_obj.get("object_refs", []):
                 self.__helper.connector_logger.info(f"        reference = {ref}")
         else:
             if col_type != "report":
