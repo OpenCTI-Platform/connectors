@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import time
+import traceback
 import urllib.parse
 import urllib.request
 from datetime import datetime
@@ -641,7 +642,7 @@ class Silobreaker:
                 ):
                     self._process_items(data, work_id)
                     page_number = page_number + 1
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "Iterating from "
                         + str(page_number * 100)
                         + " to "
@@ -664,7 +665,14 @@ class Silobreaker:
         for list in self.silobreaker_lists:
             url = self.silobreaker_api_url + "/v2/lists/15_" + list
             data = self._query("GET", url)
-            self._import_documents(data["Description"], work_id, delta_days)
+
+            # If data exists and "Description" in data, import documents. Else log the error for each list
+            if data and data.get("Description"):
+                self._import_documents(data["Description"], work_id, delta_days)
+            else:
+                self.helper.connector_logger.error(
+                    "No data found, please check your account activation and API key"
+                )
 
     def run(self):
         while True:
@@ -683,11 +691,11 @@ class Silobreaker:
                 now = datetime.now().astimezone(pytz.UTC)
                 delta = now - last_run
                 delta_days = delta.days
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     str(delta_days) + " days to process since last run"
                 )
                 if delta_days < 1:
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "Need at least one day to process, doing nothing"
                     )
                     return
@@ -695,27 +703,29 @@ class Silobreaker:
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
-                self.helper.log_info("Processing the last " + str(delta_days) + " days")
+                self.helper.connector_logger.info(
+                    "Processing the last " + str(delta_days) + " days"
+                )
                 self._process_lists(work_id, delta_days)
                 last_run = now.astimezone(pytz.UTC).isoformat()
                 message = "Connector successfully run, storing last_run as " + last_run
-                self.helper.log_info(message)
+                self.helper.connector_logger.info(message)
                 self.helper.set_state({"last_run": last_run})
                 self.helper.api.work.to_processed(work_id, message)
                 if self.helper.connect_run_and_terminate:
-                    self.helper.log_info("Connector stop")
+                    self.helper.connector_logger.info("Connector stop")
                     self.helper.force_ping()
                     sys.exit(0)
                 time.sleep(self.get_interval())
             except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("Connector stop")
+                self.helper.connector_logger.info("Connector stop")
                 sys.exit(0)
 
             except Exception as e:
-                self.helper.log_error(str(e))
+                self.helper.connector_logger.error(str(e))
 
                 if self.helper.connect_run_and_terminate:
-                    self.helper.log_info("Connector stop")
+                    self.helper.connector_logger.info("Connector stop")
                     sys.exit(0)
 
                 time.sleep(60)
@@ -725,7 +735,6 @@ if __name__ == "__main__":
     try:
         silobreakerConnector = Silobreaker()
         silobreakerConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+    except Exception:
+        traceback.print_exc()
+        exit(1)
