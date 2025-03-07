@@ -1,5 +1,6 @@
 import sys
 import time
+import traceback
 from traceback import format_exc
 
 # WARN: python-dotenv is used for integration manual run
@@ -40,7 +41,7 @@ class CustomConnector(ExternalImportConnector):
 
         Returns:
             stix_objects: A list of STIX2 objects."""
-        self.helper.log_debug(
+        self.helper.connector_logger.debug(
             f"{self.helper.connect_name} connector is starting the collection of objects..."
         )
 
@@ -48,7 +49,7 @@ class CustomConnector(ExternalImportConnector):
         # === Add your code below ===
         # ===========================
 
-        self.helper.log_debug("Collecting data")
+        self.helper.connector_logger.debug("Collecting data")
 
         stix_objects = list()
 
@@ -108,7 +109,7 @@ class CustomConnector(ExternalImportConnector):
 
         json_date_obj["ttl"] = ttl
 
-        self.helper.log_debug("Initializing adapter")
+        self.helper.connector_logger.debug("Initializing adapter")
 
         report_adapter = DataToSTIXAdapter(
             mitre_mapper=mitre_mapper,
@@ -118,9 +119,9 @@ class CustomConnector(ExternalImportConnector):
             is_ioc=True,
         )
 
-        self.helper.log_debug(json_threat_actor_obj.get("name"))
+        self.helper.connector_logger.debug(json_threat_actor_obj.get("name"))
 
-        self.helper.log_debug("Generating STIX objects")
+        self.helper.connector_logger.debug("Generating STIX objects")
 
         stix_malware_list = report_adapter.generate_stix_malware(
             obj=json_malware_report_obj,
@@ -259,7 +260,7 @@ class CustomConnector(ExternalImportConnector):
             json_threat_actor_obj=json_threat_actor_obj,
         )
 
-        self.helper.log_debug("Pack objects")
+        self.helper.connector_logger.debug("Pack objects")
 
         if stix_report:
             x += stix_report.stix_objects
@@ -271,7 +272,7 @@ class CustomConnector(ExternalImportConnector):
 
         stix_objects += x
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
         )
         return stix_objects
@@ -282,6 +283,5 @@ if __name__ == "__main__":
         connector = CustomConnector()
         connector.run()
     except Exception:
-        print(format_exc())
-        time.sleep(10)
-        sys.exit(0)
+        traceback.print_exc()
+        exit(1)
