@@ -125,7 +125,7 @@ def test_artifact_class_should_accept_valid_input(input_data):
     ],
 )
 def test_artifact_class_should_not_accept_invalid_input(input_data, error_field):
-    # Given: valid input data for the Artifact class
+    # Given: Invalid input data for the Artifact class
     # When: we try to create a Artifact instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:

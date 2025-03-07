@@ -1,6 +1,7 @@
-from .common import BaseEntity, ExternalReference, TLPMarking
+from .common import BaseEntity, ExternalReference, KillChainPhase, TLPMarking
 from .domain import (
     Indicator,
+    Organization,
     OrganizationAuthor,
     Report,
 )
@@ -25,7 +26,9 @@ __all__ = [
     "IndicatorBasedOnObservable",
     "IPV4Address",
     "IPV6Address",
+    "KillChainPhase",
     "Observable",  # for typing purpose
+    "Organization",
     "OrganizationAuthor",
     "Report",
     "TLPMarking",

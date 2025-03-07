@@ -2,14 +2,12 @@
 
 from abc import abstractmethod
 from datetime import datetime
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
 from dragos.domain.models.octi.common import (
     Author,
-    AttackMotivation,
-    AttackResourceLevel,
     BaseEntity,
     ExternalReference,
     IndicatorType,
@@ -20,16 +18,13 @@ from dragos.domain.models.octi.common import (
     Platform,
     Reliability,
     ReportType,
-    ThreatActorRole,
-    ThreatActorType,
-    ThreatActorSophistication,
     TLPMarking,
 )
 from pydantic import AwareDatetime, Field
 
 
 class DomainObject(BaseEntity):
-    """Base class for STIX Domain Objects."""
+    """Base class for OpenCTI Domain Objects."""
 
     author: Optional[Author] = Field(
         None,
@@ -283,117 +278,3 @@ class Report(DomainObject):
             granular_markings=None,
             extensions=None,
         )
-
-
-class _ThreatActor(DomainObject):
-    """Base class of ThreatActorGroup and ThreatActorIndividual classes."""
-
-    name: str = Field(
-        ...,
-        description="A name used to identify this Threat Actor or Threat Actor group.",
-        min_length=1,
-    )
-    description: Optional[str] = Field(
-        None,
-        description="A description that provides more details and context about the Threat Actor.",
-    )
-    threat_actor_types: Optional[list[ThreatActorType]] = Field(
-        None,
-        description="The type(s) of this threat actor.",
-    )
-    aliases: Optional[list[str]] = Field(
-        None,
-        description="A list of other names that this Threat Actor is believed to use.",
-    )
-    first_seen: Optional[AwareDatetime] = Field(
-        None,
-        description="The time that this Threat Actor was first seen.",
-    )
-    last_seen: Optional[AwareDatetime] = Field(
-        None,
-        description="The time that this Threat Actor was last seen.",
-    )
-    roles: Optional[list[ThreatActorRole]] = Field(
-        None,
-        description="A list of roles the Threat Actor plays.",
-    )
-    goals: Optional[list[str]] = Field(
-        None,
-        description="The high-level goals of this Threat Actor, namely, what are they trying to do.",
-    )
-    sophistication: Optional[ThreatActorSophistication] = Field(
-        None,
-        description="The skill, specific knowledge, special training, or expertise a Threat Actor must have to perform the attack.",
-    )
-    resource_level: Optional[AttackResourceLevel] = Field(
-        None,
-        description="The organizational level at which this Threat Actor typically works.",
-    )
-    primary_motivation: Optional[AttackMotivation] = Field(
-        None,
-        description="The primary reason, motivation, or purpose behind this Threat Actor.",
-    )
-    secondary_motivations: Optional[list[AttackMotivation]] = Field(
-        None,
-        description="The secondary reasons, motivations, or purposes behind this Threat Actor.",
-    )
-    personal_motivations: Optional[list[AttackMotivation]] = Field(
-        None,
-        description="The personal reasons, motivations, or purposes of the Threat Actor regardless of organizational goals.",
-    )
-    type: Optional[Literal["Threat-Actor-Individual", "Threat-Actor-Group"]] = Field(
-        None,
-        description="OpenCTI threat actor type.",
-    )
-
-    def to_stix2_object(self) -> stix2.v21.ThreatActor:
-        """Make stix object."""
-        if self._stix2_representation is not None:
-            return self._stix2_representation
-
-        return stix2.ThreatActor(
-            id=pycti.ThreatActor.generate_id(name=self.name, opencti_type=self.type),
-            name=self.name,
-            description=self.description,
-            threat_actor_types=self.threat_actor_types,
-            aliases=self.aliases,
-            first_seen=self.first_seen,
-            last_seen=self.last_seen,
-            roles=self.roles,
-            goals=self.goals,
-            sophistication=self.sophistication,
-            resource_level=self.resource_level,
-            primary_motivation=self.primary_motivation,
-            secondary_motivations=self.secondary_motivations,
-            personal_motivations=self.personal_motivations,
-            created_by_ref=self.author.id if self.author else None,
-            external_references=[
-                external_reference.to_stix2_object()
-                for external_reference in self.external_references or []
-            ],
-            object_marking_refs=[marking.id for marking in self.markings or []],
-            custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
-                x_opencti_type=self.type,
-            ),
-            # unused
-            created=None,
-            modified=None,
-            revoked=None,
-            confidence=None,
-            labels=None,
-            lang=None,
-            granular_markings=None,
-            extensions=None,
-        )
-
-
-class ThreatActorGroup(_ThreatActor):
-    """Represent a threat actor group."""
-
-    type: Literal["Threat-Actor-Group"] = "Threat-Actor-Group"
-
-
-class ThreatActorIndividual(_ThreatActor):
-    """Represent a threat actor individual."""
-
-    type: Literal["Threat-Actor-Individual"] = "Threat-Actor-Individual"

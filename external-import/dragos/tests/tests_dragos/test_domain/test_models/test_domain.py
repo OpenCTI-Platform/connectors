@@ -2,22 +2,16 @@ from datetime import datetime, timezone
 
 import pytest
 import stix2
-from dragos.domain.models.octi.common import (
+from dragos.domain.models.octi import (
     ExternalReference,
-    KillChainPhase,
-    TLPMarking,
-)
-from dragos.domain.models.octi.domain import (
     Indicator,
+    KillChainPhase,
     Organization,
     OrganizationAuthor,
     Report,
-    ThreatActorGroup,
-    ThreatActorIndividual,
+    TLPMarking,
 )
 from dragos.domain.models.octi.enum import (
-    AttackMotivation,
-    AttackResourceLevel,
     IndicatorType,
     ObservableType,
     OrganizationType,
@@ -25,9 +19,6 @@ from dragos.domain.models.octi.enum import (
     Platform,
     Reliability,
     ReportType,
-    ThreatActorRole,
-    ThreatActorType,
-    ThreatActorSophistication,
     TLPLevel,
 )
 from pydantic import ValidationError
@@ -166,7 +157,7 @@ def test_indicator_class_should_accept_valid_input(input_data):
     ],
 )
 def test_indicator_class_should_not_accept_invalid_input(input_data, error_field):
-    # Given: valid input data for the Indicator class
+    # Given: Invalid input data for the Indicator class
     # When: Trying to create a Indicator instance
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
@@ -416,295 +407,3 @@ def test_report_to_stix2_object_returns_valid_stix_object():
     assert stix2_obj.report_types == input_data.get("report_types")
     assert stix2_obj.x_opencti_reliability == input_data.get("reliability")
     assert stix2_obj.object_refs == [obj.id for obj in input_data.get("objects")]
-
-
-@pytest.mark.parametrize(
-    "input_data",
-    [
-        pytest.param(
-            {
-                "name": "Test Threat Actor",
-                "description": "Test Threat Actor Description",
-                "threat_actor_types": [member.value for member in ThreatActorType],
-                "aliases": ["Test alias"],
-                "first_seen": datetime.now(tz=timezone.utc),
-                "last_seen": datetime.now(tz=timezone.utc),
-                "roles": [member.value for member in ThreatActorRole],
-                "goals": ["Test goals"],
-                "sophistication": ThreatActorSophistication.ADVANCED.value,
-                "resource_level": AttackResourceLevel.CLUB.value,
-                "primary_motivation": AttackMotivation.ACCIDENTAL.value,
-                "secondary_motivations": [member.value for member in AttackMotivation],
-                "personal_motivations": [member.value for member in AttackMotivation],
-                "author": fake_valid_organization_author(),
-                "external_references": [fake_external_reference()],
-                "markings": [fake_valid_tlp_marking()],
-            },
-            id="full_valid_data",
-        ),
-        pytest.param(
-            {
-                "name": "Test ThreatActor",
-                "author": fake_valid_organization_author(),
-                "markings": [fake_valid_tlp_marking()],
-            },
-            id="minimal_valid_data",
-        ),
-    ],
-)
-def test_threat_actor_group_class_should_accept_valid_input(input_data):
-    # Given: Valid threat actor group input data
-    # When: Creating a threat actor group object
-    threat_actor_group = ThreatActorGroup.model_validate(input_data)
-
-    # Then: The threat actor group object should be valid
-    assert threat_actor_group.id is not None
-    assert threat_actor_group.name == input_data.get("name")
-    assert threat_actor_group.description == input_data.get("description")
-    assert threat_actor_group.threat_actor_types == input_data.get("threat_actor_types")
-    assert threat_actor_group.aliases == input_data.get("aliases")
-    assert threat_actor_group.first_seen == input_data.get("first_seen")
-    assert threat_actor_group.last_seen == input_data.get("last_seen")
-    assert threat_actor_group.roles == input_data.get("roles")
-    assert threat_actor_group.goals == input_data.get("goals")
-    assert threat_actor_group.sophistication == input_data.get("sophistication")
-    assert threat_actor_group.resource_level == input_data.get("resource_level")
-    assert threat_actor_group.primary_motivation == input_data.get("primary_motivation")
-    assert threat_actor_group.secondary_motivations == input_data.get(
-        "secondary_motivations"
-    )
-    assert threat_actor_group.personal_motivations == input_data.get(
-        "personal_motivations"
-    )
-    assert threat_actor_group.author == input_data.get("author")
-    assert threat_actor_group.external_references == input_data.get(
-        "external_references"
-    )
-    assert threat_actor_group.markings == input_data.get("markings")
-
-
-@pytest.mark.parametrize(
-    "input_data, error_field",
-    [
-        pytest.param(
-            {
-                "description": "Test ThreatActor description",
-                "author": fake_valid_organization_author(),
-                "markings": [fake_valid_tlp_marking()],
-            },
-            "name",
-            id="missing_name",
-        ),
-        pytest.param(
-            {
-                "name": "Test ThreatActor",
-                "first_seen": "any string",
-                "objects": [fake_valid_organization_author()],
-            },
-            "first_seen",
-            id="invalid_first_seen_type",
-        ),
-    ],
-)
-def test_threat_actor_group_class_should_not_accept_invalid_input(
-    input_data, error_field
-):
-    # Given: Invalid input data for the ThreatActorGroup class
-    # When: Trying to create a ThreatActorGroup instance
-    # Then: A ValidationError should be raised
-    with pytest.raises(ValidationError) as err:
-        ThreatActorGroup.model_validate(input_data)
-    assert str(error_field) in str(err)
-
-
-def test_threat_actor_group_to_stix2_object_returns_valid_stix_object():
-    # Given: A valid threat actor group
-    input_data = {
-        "name": "Test Threat Actor",
-        "description": "Test Threat Actor Description",
-        "threat_actor_types": [member.value for member in ThreatActorType],
-        "aliases": ["Test alias"],
-        "first_seen": datetime.now(tz=timezone.utc),
-        "last_seen": datetime.now(tz=timezone.utc),
-        "roles": [member.value for member in ThreatActorRole],
-        "goals": ["Test goals"],
-        "sophistication": ThreatActorSophistication.ADVANCED.value,
-        "resource_level": AttackResourceLevel.CLUB.value,
-        "primary_motivation": AttackMotivation.ACCIDENTAL.value,
-        "secondary_motivations": [member.value for member in AttackMotivation],
-        "personal_motivations": [member.value for member in AttackMotivation],
-        "author": fake_valid_organization_author(),
-        "external_references": [fake_external_reference()],
-        "markings": [fake_valid_tlp_marking()],
-    }
-    threat_actor_group = ThreatActorGroup.model_validate(input_data)
-
-    # When: calling to_stix2_object method
-    stix2_obj = threat_actor_group.to_stix2_object()
-
-    # Then: A valid STIX2.1 ThreatActor is returned
-    assert isinstance(stix2_obj, stix2.ThreatActor) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.threat_actor_types == input_data.get("threat_actor_types")
-    assert stix2_obj.aliases == input_data.get("aliases")
-    assert stix2_obj.first_seen == input_data.get("first_seen")
-    assert stix2_obj.last_seen == input_data.get("last_seen")
-    assert stix2_obj.roles == input_data.get("roles")
-    assert stix2_obj.goals == input_data.get("goals")
-    assert stix2_obj.sophistication == input_data.get("sophistication")
-    assert stix2_obj.resource_level == input_data.get("resource_level")
-    assert stix2_obj.primary_motivation == input_data.get("primary_motivation")
-    assert stix2_obj.secondary_motivations == input_data.get("secondary_motivations")
-    assert stix2_obj.personal_motivations == input_data.get("personal_motivations")
-    assert stix2_obj.created_by_ref == input_data.get("author").id
-    assert stix2_obj.x_opencti_type == "Threat-Actor-Group"
-
-
-@pytest.mark.parametrize(
-    "input_data",
-    [
-        pytest.param(
-            {
-                "name": "Test Threat Actor",
-                "description": "Test Threat Actor Description",
-                "threat_actor_types": [member.value for member in ThreatActorType],
-                "aliases": ["Test alias"],
-                "first_seen": datetime.now(tz=timezone.utc),
-                "last_seen": datetime.now(tz=timezone.utc),
-                "roles": [member.value for member in ThreatActorRole],
-                "goals": ["Test goals"],
-                "sophistication": ThreatActorSophistication.ADVANCED.value,
-                "resource_level": AttackResourceLevel.CLUB.value,
-                "primary_motivation": AttackMotivation.ACCIDENTAL.value,
-                "secondary_motivations": [member.value for member in AttackMotivation],
-                "personal_motivations": [member.value for member in AttackMotivation],
-                "author": fake_valid_organization_author(),
-                "external_references": [fake_external_reference()],
-                "markings": [fake_valid_tlp_marking()],
-            },
-            id="full_valid_data",
-        ),
-        pytest.param(
-            {
-                "name": "Test ThreatActor",
-                "author": fake_valid_organization_author(),
-                "markings": [fake_valid_tlp_marking()],
-            },
-            id="minimal_valid_data",
-        ),
-    ],
-)
-def test_threat_actor_individual_class_should_accept_valid_input(input_data):
-    # Given: Valid threat actor individual input data
-    # When: Creating a threat actor individual object
-    threat_actor_individual = ThreatActorIndividual.model_validate(input_data)
-
-    # Then: The threat actor individual object should be valid
-    assert threat_actor_individual.id is not None
-    assert threat_actor_individual.name == input_data.get("name")
-    assert threat_actor_individual.description == input_data.get("description")
-    assert threat_actor_individual.threat_actor_types == input_data.get(
-        "threat_actor_types"
-    )
-    assert threat_actor_individual.aliases == input_data.get("aliases")
-    assert threat_actor_individual.first_seen == input_data.get("first_seen")
-    assert threat_actor_individual.last_seen == input_data.get("last_seen")
-    assert threat_actor_individual.roles == input_data.get("roles")
-    assert threat_actor_individual.goals == input_data.get("goals")
-    assert threat_actor_individual.sophistication == input_data.get("sophistication")
-    assert threat_actor_individual.resource_level == input_data.get("resource_level")
-    assert threat_actor_individual.primary_motivation == input_data.get(
-        "primary_motivation"
-    )
-    assert threat_actor_individual.secondary_motivations == input_data.get(
-        "secondary_motivations"
-    )
-    assert threat_actor_individual.personal_motivations == input_data.get(
-        "personal_motivations"
-    )
-    assert threat_actor_individual.author == input_data.get("author")
-    assert threat_actor_individual.external_references == input_data.get(
-        "external_references"
-    )
-    assert threat_actor_individual.markings == input_data.get("markings")
-
-
-@pytest.mark.parametrize(
-    "input_data, error_field",
-    [
-        pytest.param(
-            {
-                "description": "Test ThreatActor description",
-                "author": fake_valid_organization_author(),
-                "markings": [fake_valid_tlp_marking()],
-            },
-            "name",
-            id="missing_name",
-        ),
-        pytest.param(
-            {
-                "name": "Test ThreatActor",
-                "first_seen": "any string",
-                "objects": [fake_valid_organization_author()],
-            },
-            "first_seen",
-            id="invalid_first_seen_type",
-        ),
-    ],
-)
-def test_threat_actor_individual_class_should_not_accept_invalid_input(
-    input_data, error_field
-):
-    # Given: Invalid input data for the ThreatActorIndividual class
-    # When: Trying to create a ThreatActorIndividual instance
-    # Then: A ValidationError should be raised
-    with pytest.raises(ValidationError) as err:
-        ThreatActorIndividual.model_validate(input_data)
-    assert str(error_field) in str(err)
-
-
-def test_threat_actor_individual_to_stix2_object_returns_valid_stix_object():
-    # Given: A valid threat actor individual
-    input_data = {
-        "name": "Test Threat Actor",
-        "description": "Test Threat Actor Description",
-        "threat_actor_types": [member.value for member in ThreatActorType],
-        "aliases": ["Test alias"],
-        "first_seen": datetime.now(tz=timezone.utc),
-        "last_seen": datetime.now(tz=timezone.utc),
-        "roles": [member.value for member in ThreatActorRole],
-        "goals": ["Test goals"],
-        "sophistication": ThreatActorSophistication.ADVANCED.value,
-        "resource_level": AttackResourceLevel.CLUB.value,
-        "primary_motivation": AttackMotivation.ACCIDENTAL.value,
-        "secondary_motivations": [member.value for member in AttackMotivation],
-        "personal_motivations": [member.value for member in AttackMotivation],
-        "author": fake_valid_organization_author(),
-        "external_references": [fake_external_reference()],
-        "markings": [fake_valid_tlp_marking()],
-    }
-    threat_actor_individual = ThreatActorIndividual.model_validate(input_data)
-
-    # When: calling to_stix2_object method
-    stix2_obj = threat_actor_individual.to_stix2_object()
-
-    # Then: A valid STIX2.1 ThreatActor is returned
-    assert isinstance(stix2_obj, stix2.ThreatActor) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.threat_actor_types == input_data.get("threat_actor_types")
-    assert stix2_obj.aliases == input_data.get("aliases")
-    assert stix2_obj.first_seen == input_data.get("first_seen")
-    assert stix2_obj.last_seen == input_data.get("last_seen")
-    assert stix2_obj.roles == input_data.get("roles")
-    assert stix2_obj.goals == input_data.get("goals")
-    assert stix2_obj.sophistication == input_data.get("sophistication")
-    assert stix2_obj.resource_level == input_data.get("resource_level")
-    assert stix2_obj.primary_motivation == input_data.get("primary_motivation")
-    assert stix2_obj.secondary_motivations == input_data.get("secondary_motivations")
-    assert stix2_obj.personal_motivations == input_data.get("personal_motivations")
-    assert stix2_obj.created_by_ref == input_data.get("author").id
-    assert stix2_obj.x_opencti_type == "Threat-Actor-Individual"
