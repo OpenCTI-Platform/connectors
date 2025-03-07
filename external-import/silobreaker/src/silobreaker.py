@@ -689,7 +689,8 @@ class Silobreaker:
                 self._import_documents(data["Description"], work_id, delta_days)
             else:
                 self.helper.connector_logger.error(
-                    "No data found, please check your account activation and API key"
+                    "No data found for, please check your account activation and API key",
+                    {"list_concerned": list},
                 )
 
     def process_message(self):
