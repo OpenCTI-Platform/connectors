@@ -19,36 +19,6 @@ class AccountType(StrEnum):
     WINDOWS_DOMAIN = "windows-domain"
 
 
-class AttackMotivation(StrEnum):
-    """Attack Motivation Open Vocabulary.
-    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_dmb1khqsn650
-    """
-
-    ACCIDENTAL = "accidental"
-    COERCION = "coercion"
-    DOMINANCE = "dominance"
-    IDEOLOGY = "ideology"
-    NOTORIETY = "notoriety"
-    ORGANIZATIONAL_GAIN = "organizational-gain"
-    PERSONAL_GAIN = "personal-gain"
-    PERSONAL_SATISFACTION = "personal-satisfaction"
-    REVENGE = "revenge"
-    UNPREDICTABLE = "unpredictable"
-
-
-class AttackResourceLevel(StrEnum):
-    """Attack Resource Level Open Vocabulary.
-    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_moarppphq8vq
-    """
-
-    INDIVIDUAL = "individual"
-    CLUB = "club"
-    CONTEST = "contest"
-    TEAM = "team"
-    ORGANIZATION = "organization"
-    GOVERNMENT = "government"
-
-
 class EncryptionAlgorithm(StrEnum):
     """Encryption Algorithm Enum.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_nfgle8k7nbo4
@@ -193,53 +163,6 @@ class ReportType(StrEnum):
     MALWARE = "malware"
     SPOTREP = "spotrep"
     THREAT_REPORT = "threat-report"
-
-
-class ThreatActorType(StrEnum):
-    """Threat Actor Type Open Vocabulary.
-    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_tqbl8z36yoir
-    """
-
-    ACTIVIST = "activist"
-    COMPETITOR = "competitor"
-    CRIME_SYNDICATE = "crime-syndicate"
-    CRIMINAL = "criminal"
-    HACKER = "hacker"
-    INSIDER_ACCIDENTAL = "insider-accidental"
-    INSIDER_DISGRUNTLED = "insider-disgruntled"
-    NATION_STATE = "nation-state"
-    SENSATIONALIST = "sensationalist"
-    SPY = "spy"
-    TERRORIST = "terrorist"
-    UNKNOWN = "unknown"
-
-
-class ThreatActorRole(StrEnum):
-    """Threat Actor Role Open Vocabulary.
-    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_u6befh8d18r
-    """
-
-    AGENT = "agent"
-    DIRECTOR = "director"
-    INDEPENDENT = "independent"
-    INFRASTRUCTURE_ARCHITECT = "infrastructure-architect"
-    INFRASTRUCTURE_OPERATOR = "infrastructure-operator"
-    MALWARE_AUTHOR = "malware-author"
-    SPONSOR = "sponsor"
-
-
-class ThreatActorSophistication(StrEnum):
-    """Threat Actor Sophistication Open Vocabulary.
-    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_8jm676xbnggg
-    """
-
-    NONE = "none"
-    MINIMAL = "minimal"
-    INTERMEDIATE = "intermediate"
-    ADVANCED = "advanced"
-    EXPERT = "expert"
-    INNOVATOR = "innovator"
-    STRATEGIC = "strategic"
 
 
 class TLPLevel(StrEnum):

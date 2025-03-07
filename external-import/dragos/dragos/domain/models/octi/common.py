@@ -4,32 +4,10 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Annotated, Any, Callable, Optional
 
+import dragos.domain.models.octi.enum as OCTIEnum
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
 import stix2.exceptions
-from dragos.domain.models.octi.enum import (
-    AccountType as AccountTypeEnum,
-    AttackMotivation as AttackMotivationEnum,
-    AttackResourceLevel as AttackResourceLevelEnum,
-    EncryptionAlgorithm as EncryptionAlgorithmEnum,
-    HashAlgorithm as HashAlgorithmEnum,
-    IndicatorType as IndicatorTypeEnum,
-    ObservableType as ObservableTypeEnum,
-    OrganizationType as OrganizationTypeEnum,
-    PatternType as PatternTypeEnum,
-    Platform as PlatformEnum,
-    Reliability as ReliabilityEnum,
-    ReportType as ReportTypeEnum,
-    ThreatActorRole as ThreatActorRoleEnum,
-    ThreatActorType as ThreatActorTypeEnum,
-    ThreatActorSophistication as ThreatActorSophisticationEnum,
-    TLPLevel as TLPLevelEnum,
-    WindowsIntegrityLevel as WindowsIntegrityLevelEnum,
-    WindowsRegistryDatatype as WindowsRegistryDatatypeEnum,
-    WindowsServiceStartType as WindowsServiceStartTypeEnum,
-    WindowsServiceStatus as WindowsServiceStatusEnum,
-    WindowsServiceType as WindowsServiceTypeEnum,
-)
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PrivateAttr
 
 
@@ -40,48 +18,43 @@ def is_in_enum(enum: Enum) -> Callable:
         """Check if value is in enum."""
         enum_values = [member.value for member in enum]
         if value not in enum_values:
-            raise ValueError(f"Value {value} is not in {enum}")
+            raise ValueError(
+                f"Invalid value '{value}'. Allowed values are: {', '.join(enum_values)}"
+            )
         return value
 
     return compare_value
 
 
 # Convert Enums to Types in order to manipulate strings (not Enums) in Pydantic models
-AccountType = Annotated[str, AfterValidator(is_in_enum(AccountTypeEnum))]
-AttackMotivation = Annotated[str, AfterValidator(is_in_enum(AttackMotivationEnum))]
-AttackResourceLevel = Annotated[
-    str, AfterValidator(is_in_enum(AttackResourceLevelEnum))
-]
+AccountType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.AccountType))]
 EncryptionAlgorithm = Annotated[
-    str, AfterValidator(is_in_enum(EncryptionAlgorithmEnum))
+    str, AfterValidator(is_in_enum(OCTIEnum.EncryptionAlgorithm))
 ]
-HashAlgorithm = Annotated[str, AfterValidator(is_in_enum(HashAlgorithmEnum))]
-IndicatorType = Annotated[str, AfterValidator(is_in_enum(IndicatorTypeEnum))]
-ObservableType = Annotated[str, AfterValidator(is_in_enum(ObservableTypeEnum))]
-OrganizationType = Annotated[str, AfterValidator(is_in_enum(OrganizationTypeEnum))]
-PatternType = Annotated[str, AfterValidator(is_in_enum(PatternTypeEnum))]
-Platform = Annotated[str, AfterValidator(is_in_enum(PlatformEnum))]
-Reliability = Annotated[str, AfterValidator(is_in_enum(ReliabilityEnum))]
-ReportType = Annotated[str, AfterValidator(is_in_enum(ReportTypeEnum))]
-ThreatActorRole = Annotated[str, AfterValidator(is_in_enum(ThreatActorRoleEnum))]
-ThreatActorType = Annotated[str, AfterValidator(is_in_enum(ThreatActorTypeEnum))]
-ThreatActorSophistication = Annotated[
-    str, AfterValidator(is_in_enum(ThreatActorSophisticationEnum))
-]
-TLPLevel = Annotated[str, AfterValidator(is_in_enum(TLPLevelEnum))]
+HashAlgorithm = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.HashAlgorithm))]
+IndicatorType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.IndicatorType))]
+ObservableType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.ObservableType))]
+OrganizationType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.OrganizationType))]
+PatternType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.PatternType))]
+Platform = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.Platform))]
+Reliability = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.Reliability))]
+ReportType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.ReportType))]
+TLPLevel = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.TLPLevel))]
 WindowsRegistryDatatype = Annotated[
-    str, AfterValidator(is_in_enum(WindowsRegistryDatatypeEnum))
+    str, AfterValidator(is_in_enum(OCTIEnum.WindowsRegistryDatatype))
 ]
 WindowsIntegrityLevel = Annotated[
-    str, AfterValidator(is_in_enum(WindowsIntegrityLevelEnum))
+    str, AfterValidator(is_in_enum(OCTIEnum.WindowsIntegrityLevel))
 ]
 WindowsServiceStartType = Annotated[
-    str, AfterValidator(is_in_enum(WindowsServiceStartTypeEnum))
+    str, AfterValidator(is_in_enum(OCTIEnum.WindowsServiceStartType))
 ]
 WindowsServiceStatus = Annotated[
-    str, AfterValidator(is_in_enum(WindowsServiceStatusEnum))
+    str, AfterValidator(is_in_enum(OCTIEnum.WindowsServiceStatus))
 ]
-WindowsServiceType = Annotated[str, AfterValidator(is_in_enum(WindowsServiceTypeEnum))]
+WindowsServiceType = Annotated[
+    str, AfterValidator(is_in_enum(OCTIEnum.WindowsServiceType))
+]
 
 
 class BaseModelWithoutExtra(BaseModel):
