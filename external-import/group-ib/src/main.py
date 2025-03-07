@@ -1,7 +1,4 @@
-import sys
-import time
 import traceback
-from traceback import format_exc
 
 # WARN: python-dotenv is used for integration manual run
 import dotenv
