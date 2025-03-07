@@ -195,10 +195,10 @@ class TLPMarking(BaseEntity):
             return self._stix2_representation
 
         mapping = {
-            "TLP:WHITE": stix2.TLP_WHITE,
-            "TLP:GREEN": stix2.TLP_GREEN,
-            "TLP:AMBER": stix2.TLP_AMBER,
-            "TLP:AMBER+STRICT": stix2.MarkingDefinition(
+            "white": stix2.TLP_WHITE,
+            "green": stix2.TLP_GREEN,
+            "amber": stix2.TLP_AMBER,
+            "amber+strict": stix2.MarkingDefinition(
                 id=pycti.MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
                 definition_type="statement",
                 definition={"statement": "custom"},
@@ -207,6 +207,6 @@ class TLPMarking(BaseEntity):
                     x_opencti_definition="TLP:AMBER+STRICT",
                 ),
             ),
-            "TLP:RED": stix2.TLP_RED,
+            "red": stix2.TLP_RED,
         }
         return mapping[self.level]

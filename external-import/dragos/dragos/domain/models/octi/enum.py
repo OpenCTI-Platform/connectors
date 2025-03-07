@@ -170,11 +170,11 @@ class TLPLevel(StrEnum):
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/identifier.js#L76
     """
 
-    WHITE = "TLP:WHITE"
-    GREEN = "TLP:GREEN"
-    AMBER = "TLP:AMBER"
-    AMBER_STRICT = "TLP:AMBER+STRICT"
-    RED = "TLP:RED"
+    WHITE = "white"
+    GREEN = "green"
+    AMBER = "amber"
+    AMBER_STRICT = "amber+strict"
+    RED = "red"
 
 
 class WindowsIntegrityLevel(StrEnum):
