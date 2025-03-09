@@ -2,8 +2,8 @@ import os
 import time
 from threading import Thread
 from pycti import OpenCTIConnectorHelper
-from .git_handler import GitHandler
-from .cve_processor import CVEProcessor
+from git_handler import GitHandler
+from cve_processor import CVEProcessor
 
 class CVEListV5Connector:
     def __init__(self):

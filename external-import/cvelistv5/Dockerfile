@@ -9,7 +9,7 @@ COPY src /opt/opencti-connector-cvelistv5
 RUN apk --no-cache add git build-base libmagic libffi-dev && \
     cd /opt/opencti-connector-cvelistv5 && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del build-base
 
 # Expose and entrypoint
 COPY entrypoint.sh /

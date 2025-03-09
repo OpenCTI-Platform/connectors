@@ -88,6 +88,12 @@ docker compose up -d
 # -d for detached
 ```
 
+Debugging with:
+```shell
+docker run --rm -it --entrypoint sh opencti-cvelistv5-import:latest
+```
+
+
 #### Manual Deployment
 
 Create a file `config.yml` based on the provided `config.yml.sample`.

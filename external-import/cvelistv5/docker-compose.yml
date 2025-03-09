@@ -1,15 +1,15 @@
 version: '3'
 services:
   connector-cvelistv5:
-    image: opencti/connector-cvelistv5:6.5.4
+    image: opencti-cvelistv5-import:latest
     environment:
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=af3b9e5b-caec-449a-8087-5f72941f69a3
+      - CONNECTOR_ID=fbad95af-d705-4e6f-bcfa-ead6924606c1
       - CONNECTOR_NAME=CVEProject cvelistV5
       - CONNECTOR_SCOPE=identity,vulnerability
       - CONNECTOR_RUN_AND_TERMINATE=false
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=debug
       
       - CVE_INTERVAL=10 # Required, in minutes
       - CVE_MAINTAIN_DATA=true # Required, retrieve only updated data
