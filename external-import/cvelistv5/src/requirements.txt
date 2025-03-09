@@ -1,0 +1,3 @@
+pycti
+urllib3
+stix2

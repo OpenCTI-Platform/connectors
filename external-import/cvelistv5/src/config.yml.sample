@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'CVEProject cvelistV5'
+  scope: 'identity,vulnerability'
+  confidence_level: 100
+  update_existing_data: true
+  run_and_terminate: false
+  log_level: 'info'
+
+cvelistv5:
+  url: 'https://github.com/CVEProject/cvelistV5.git'
+  branch: 'main'
+  start_year: 2024
+  pull_history: False # If True, history_start_year is required
+  maintain_data: True # Required, retrieve only updated data
+  local_path: './'
+  interval: 10  # 10, in minutes
