@@ -77,7 +77,7 @@ Build a Docker Image using the provided `Dockerfile`.
 Example:
 
 ```shell
-docker build . -t opencti-cve-import:latest
+docker build . -t opencti-cvelistv5-import:latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
