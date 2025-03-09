@@ -1,6 +1,6 @@
 # CVE Project Listv5 connector
 An alternative connector for the CVE Connector wich fetches updates from NVD. 
-This connector fetches updates from The CVE Project's github repo: cvelistV5.
+This connector fetches updates from The CVE Project's github repo: [cvelistV5](https://github.com/CVEProject/cvelistV5).
 
 ## Summary
 
