@@ -1,22 +1,40 @@
 import os
 import time
+import yaml
 from threading import Thread
-from pycti import OpenCTIConnectorHelper
 from git_handler import GitHandler
 from cve_processor import CVEProcessor
+from pycti import (
+    OpenCTIConnectorHelper,
+    get_config_variable,
+)
+
 
 class CVEListV5Connector:
     def __init__(self):
-        config = self.helper.config
-        self.helper = OpenCTIConnectorHelper(config)
-        self.git_handler = GitHandler(
-            config['cvelistv5']['url'],
-            config['cvelistv5']['local_path'],
-            config['cvelistv5']['branch']
+        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        config = (
+            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+            if os.path.isfile(config_file_path)
+            else {}
         )
+        self.helper = OpenCTIConnectorHelper(config)
+        
+        # OpenCTI config
+        self.opencti_url = get_config_variable("OPENCTI_URL", ["opencti", "url"], config)
+        self.opencti_token = get_config_variable("OPENCTI_TOKEN", ["opencti", "token"], config)
+        
+        # Connector config
+        self.start_year = get_config_variable("CVE_HISTORY_START_YEAR", ["cvelistv5", "start_year"], config)
+        self.update_interval = int(get_config_variable("CVE_INTERVAL", ["cvelistv5", "interval"], config)) * 60
+        
+        self.git_handler = GitHandler(
+            repo_url='https://github.com/CVEProject/cvelistV5.git',
+            local_path='main',
+            branch='./'
+        )
+        
         self.cve_processor = CVEProcessor(self.helper, self.helper.api)
-        self.start_year = int(config['cvelistv5']['start_year'])
-        self.update_interval = int(config['cvelistv5'].get('interval', 10)) * 60 # Multiplies with 60 seconds to Default to 10 minutes
 
     def _process_updates(self):
         while True:
