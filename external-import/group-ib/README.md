@@ -425,11 +425,12 @@ If the **log** folder doesn't exist, please collect logs from console output or 
 2. If you have problems with proxy configuration, attach the proxy environment by executing this command: 
 ```printenv | grep proxy```
 
+3. If you encounter any problem when activate a collection and 403 status response is raised:
+```ConnectionException: Status code: 403. Message: Something is wrong with your account, please, contact us. The issue can be related to Access list, Wrong API key or Wrong username.", "taskName": null}```
 
-
-<br/>
-
-
+Please ensure that:
+- **IP is in Access List**: Provide your public IP addresses, for GroupIB to add them to the API access list.
+- **Generate API Key if expired**: Log in to your account, navigate to your profile, and generate an API_KEY. Be sure to save this key, as it will be required for API access. For API authorization, use your email and the generated API key instead of your portal password. 
 
 ## FAQ
 
