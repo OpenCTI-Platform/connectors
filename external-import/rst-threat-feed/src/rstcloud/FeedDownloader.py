@@ -44,6 +44,7 @@ class FeedDownloader:
         """
         self._downloaded_res.clear()
         downloadtype = self._rstcloud_config["feeds"]["filetype"]
+
         current_day_formatted = self._current_day.strftime(self._time_formatter)
         if int(self._current_day.timestamp()) <= int(self._lastmodified.timestamp()):
             self._downloaded_res[self._feed_type] = {
@@ -71,10 +72,10 @@ class FeedDownloader:
             proxy = {self._proxy_config["type"]: self._proxy_config["url"].strip()}
         for i in range(1, self._CON_RETRY + 1):
             log.debug(
-                "Try (" + str(i) + ") connect to: " + self._rstcloud_config["baseurl"]
+                "Attempt %s: connecting to: %s", i, self._rstcloud_config["baseurl"]
             )
             if proxy:
-                log.debug("Using proxy: " + str(proxy))
+                log.debug("Using proxy: %s", proxy)
 
             if self._try_connect(
                 url=self._rstcloud_config["baseurl"],
@@ -84,10 +85,10 @@ class FeedDownloader:
                 proxy=proxy,
             ):
                 self._is_connected = True
-                log.debug("Try(" + str(i) + "). Connection succeed")
+                log.debug("Attempt %s: Connection succeed", i)
                 break
         if not self._is_connected:
-            raise Exception("Cannot connect: " + self._rstcloud_config["baseurl"])
+            raise Exception(f"Cannot connect: {self._rstcloud_config["baseurl"]}")
 
     def _try_connect(self, url, apikey, endpoint, downloadtype, proxy=None):
         """
@@ -100,16 +101,14 @@ class FeedDownloader:
         self._session = requests.Session()
         self._session.headers = {"Accept": "*/*", "X-Api-Key": apikey}
         self._session.proxies = proxy
-        self._session.verify = False
+        self._session.verify = self._rstcloud_config["ssl_verify"]
         try:
             apiurl = url + endpoint + "?type=" + downloadtype
-            log.debug("Trying HEAD {}".format(apiurl))
+            log.debug("Trying HEAD %s", apiurl)
             r = self._session.head(url=apiurl.format(), timeout=self._CON_TIMEOUT)
             if r.status_code != 200:
                 raise Exception(
-                    'Test exec code not 200: {0!s}. Server msg: "{1!s}"'.format(
-                        r.status_code, r.text
-                    )
+                    f'HTTP Error Code: {r.status_code}. Server msg: "{r.text}"'
                 )
             else:
                 timestamp = time.mktime(
@@ -121,11 +120,11 @@ class FeedDownloader:
                     timestamp, tz=pytz.timezone("UTC")
                 )
                 log.info(
-                    "Last available feed: "
-                    + self._lastmodified.strftime(self._time_formatter)
+                    "Last available feed: %s",
+                    self._lastmodified.strftime(self._time_formatter),
                 )
         except RequestException as e:
-            log.error("Error: " + str(e))
+            log.error("Error: %s", e)
             return False
         return True
 
@@ -148,15 +147,13 @@ class FeedDownloader:
         return new_state
 
     def _try_to_download(self, day, file_name, downloadtype):
-        log.info(
-            "Trying to download file for the date {0!s}: {1!s}".format(day, file_name)
-        )
+        log.info("Downloading the feed for the date %s: %s", day, file_name)
 
         in_state = self._is_feed_in_state(
             self._yesterday.strftime(self._time_formatter), file_name
         )
         if in_state:
-            log.debug("Found {0!s} in the state file".format(file_name))
+            log.debug("Found %s in the state file", file_name)
             self.already_processed = True
             return True
 
@@ -176,12 +173,15 @@ class FeedDownloader:
                 "Accept": "*/*",
                 "X-Api-Key": self._rstcloud_config["apikey"],
             }
-            log.debug("Start downloading: {0!s}".format(file_url))
+            log.debug("Start downloading: %s", file_url)
             r = self._session.get(
-                url=file_url.format(), stream=True, timeout=self._CON_TIMEOUT
+                url=file_url.format(),
+                stream=True,
+                timeout=self._CON_TIMEOUT,
+                verify=self._rstcloud_config["ssl_verify"],
             )
             if r.status_code != 200:
-                log.error("Can not download: " + filenamegz)
+                log.error("Cannot download: %s", filenamegz)
                 return False
             handle = open(file_gz, "wb")
             for chunk in r.iter_content(chunk_size=512):
@@ -190,9 +190,9 @@ class FeedDownloader:
             downloaded_bytes = int(r.headers["Content-length"])
             handle.close()
         except RequestException as re:
-            raise Exception("Error while request: " + str(re))
+            raise Exception(f"Error while request: {re}")
         except Exception as ex:
-            raise Exception("Errors while downloading: " + str(ex))
+            raise Exception(f"Errors while downloading: {ex}")
         converted_size = self._convert_size(downloaded_bytes)
         log.info(
             "File "
@@ -206,8 +206,8 @@ class FeedDownloader:
             with gzip.open(file_gz, "rb") as f_in:
                 with open(file_saved, "wb") as f_out:
                     shutil.copyfileobj(f_in, f_out)
-        except:
-            log.error("No file for that date is present on the server.")
+        except Exception as ex:
+            log.error("No file for that date is present on the server. %s", ex)
             os.remove(file_gz)
             os.remove(file_saved)
             return False
@@ -215,27 +215,27 @@ class FeedDownloader:
             os.remove(file_gz)
         uncompressed_size = str(self._convert_size(os.stat(file_saved).st_size))
         log.info(
-            "File {} ({}) saved to {}".format(
-                file_name, uncompressed_size, self._dirs_config["tmp"]
-            )
+            "File %s (%s) saved to %s",
+            file_name,
+            uncompressed_size,
+            self._dirs_config["tmp"],
         )
         return True, None
 
     def set_current_day(self, day=None):
         if day:
             self._current_day = datetime.fromtimestamp(day, tz=pytz.timezone("UTC"))
-            log.info(
-                "cday was set to {0!s}".format(
-                    self._current_day.strftime(self._time_formatter)
-                )
+            log_msg = (
+                "cday was set to {0!s}",
+                self._current_day.strftime(self._time_formatter),
             )
         else:
             self._current_day = self._yesterday
-            log.info(
-                "cday was not specifed. Using yesterday: {0!s}".format(
-                    self._current_day.strftime(self._time_formatter)
-                )
+            log_msg = (
+                "cday was not specifed. Using yesterday: {0!s}",
+                self._current_day.strftime(self._time_formatter),
             )
+        log.info(log_msg)
 
     def _is_feed_in_state(self, day: str, file_name):
         """
@@ -244,13 +244,13 @@ class FeedDownloader:
         :param file_name: feed file name
         :return: True - if feed in .state
         """
-        log.debug("Checking state for date: {}".format(day))
+        log.debug("Checking state for date: %s", day)
         if (
             not self._state.get(day)
             or not self._state[day].get(self._feed_type)
             or not self._state[day][self._feed_type] == file_name
         ):
-            log.debug("File is not listed in state: " + file_name)
+            log.debug("File is not listed in state: %s", file_name)
             return False
         log.info("File is in state. Skip downloading")
         return True
