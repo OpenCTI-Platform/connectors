@@ -41,8 +41,6 @@ Extra infromation includes:
 
 ### Configuration variables
 
-### Configuration variables
-
 Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
@@ -64,7 +62,6 @@ Below are the parameters you'll need to set for the connector:
 
 | Parameter              | config.yml         | Docker environment variable | Default                                      | Mandatory | Description                                                                                                                                                         |
 |------------------------|--------------------|-----------------------------|----------------------------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-
 | CVE Interval           | interval           | `CVE_INTERVAL`              | 10                                           | Yes       | Interval in minutes to check and import new CVEs.                                                   |
 | CVE Maintain Data      | maintain_data      | `CVE_MAINTAIN_DATA`         | True                                         | Yes       | If set to `True`, import CVEs from the last run of the connector to the current time. Takes 2 values: `True` or `False`.                                            |
 | CVE Pull History       | pull_history       | `CVE_PULL_HISTORY`          | False                                        | No        | If set to `True`, import all CVEs from start year define in history start year configuration and history start year is required. Takes 2 values: `True` or `False`. |
@@ -121,12 +118,12 @@ python3 main.py
 
 #### Initial population
 
-For the first run of the connector, the connector will clone the the github repo **cvelistv5** by CVEProject. 
+For the first run of the connector, the connector will clone the the github repo *cvelistv5* by CVEProject. 
 Using the start_year it will start transforming the CVEs into stix format and push it to OpenCTI.
 
 #### Pull CVEs updates
 
-After the first run the connector will pause for the specified **interval** amount. And the next time it will fetch updates from the github repository, and using the commit log it will imported new and updated cve records.
+After the first run the connector will pause for the specified *interval* amount. And the next time it will fetch updates from the github repository, and using the commit log it will imported new and updated cve records.
 
 #### Maintaining data
 
