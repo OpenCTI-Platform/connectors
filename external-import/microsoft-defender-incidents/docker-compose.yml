@@ -1,0 +1,41 @@
+version: '3'
+services:
+  connector-microsoft-defender-incidents:
+    image: opencti/connector-microsoft-defender-incidents:6.5.5
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=CHANGEME
+      - "CONNECTOR_NAME=Microsoft Defender Incidents"
+      - CONNECTOR_SCOPE=defender # MIME type or Stix Object - Not used
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      
+      # Connector's definition parameters OPTIONAL
+      # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
+      # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
+      # - CONNECTOR_SEND_TO_QUEUE=True # Default True
+      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False 
+      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+      # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
+
+      # Connector's custom execution parameters
+      - MICROSOFT_DEFENDER_INCIDENTS_TENANT_ID=ChangeMe # Azure Tentant ID
+      - MICROSOFT_DEFENDER_INCIDENTS_CLIENT_ID=ChangeMe # Azure App Client ID
+      - MICROSOFT_DEFENDER_INCIDENTS_CLIENT_SECRET=ChangeMe # Azure App Client Secret
+      - MICROSOFT_DEFENDER_INCIDENTS_IMPORT_START_DATE=2025-01-01T00:00:00Z
+      # Add proxy parameters below if needed
+      # - HTTP_PROXY=CHANGEME
+      # - HTTPS_PROXY=CHANGEME
+      # - NO_PROXY=CHANGEME
+    restart: unless-stopped
+    # networks:
+    #   - docker_default
+
+# networks:
+#   default:
+#     external: true
+#     name: docker_default

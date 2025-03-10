@@ -35,6 +35,36 @@ STIX_TYPES_TO_XSOAR = {
 }
 
 
+def resolve_tlp(tlps):
+    markings = {}
+    markings["marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"] = "CLEAR"
+    markings["marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"] = "GREEN"
+    markings["marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"] = "AMBER"
+    markings["marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"] = (
+        "AMBER+STRICT"
+    )
+    markings["marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"] = "RED"
+
+    for tlp in tlps:
+        if tlp in markings:
+            return markings[tlp]
+    else:
+        return None
+
+
+def compute_score(score: int | None):
+    if score is None:
+        return 0
+    if score > 60:
+        return 3
+    elif score > 30:
+        return 2
+    elif score > 0:
+        return 1
+    else:
+        return 0
+
+
 def sanitize_key(key):
     """Sanitize key name for Splunk usage
 
@@ -92,8 +122,9 @@ class XSoarAPI:
 
     def update(self, id: str, payload: dict):
         if id is not None and payload is not None:
+            payload = payload["indicator"]
             payload["entityId"] = id
-            payload["indicator"]["id"] = id
+            payload["id"] = id
             r = requests.post(
                 f"{self.indicators_url}/edit",
                 json=payload,
@@ -255,8 +286,13 @@ class XSoarConnector:
             if type in STIX_TYPES_TO_XSOAR:
                 payload["tags"] = payload.get("labels", None)
                 payload["reportedby"] = payload.get("created_by", None)
+                payload["stixid"] = payload.get("id", None)
+                payload["trafficlightprotocol"] = resolve_tlp(
+                    payload.get("object_marking_refs", [])
+                )
                 indicator = {
                     "indicator": {
+                        "stixId": payload.get("id", None),
                         "indicator_type": STIX_TYPES_TO_XSOAR[type],
                         "tags": payload.get("labels", None),
                         "manuallyEditedFields": [
@@ -273,7 +309,12 @@ class XSoarConnector:
                         "firstSeen": payload.get("valid_from", None),
                         "expiration": payload.get("valid_until", None),
                         "manualExpirationTime": payload.get("valid_until", None),
-                        "score": payload.get("x_opencti_score", None),
+                        "score": compute_score(
+                            self.helper.get_attribute_in_extension("score", payload)
+                            if self.helper.get_attribute_in_extension("score", payload)
+                            is not None
+                            else payload.get("x_opencti_score", None)
+                        ),
                         "manualScore": True,
                         "isDetectable": True,
                         "isPreventable": True,

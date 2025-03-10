@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-tanium-intel:
-    image: opencti/connector-tanium-intel:6.5.1
+    image: opencti/connector-tanium-intel:6.5.5
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -9,7 +9,7 @@ services:
       - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-      - "CONNECTOR_NAME=Tanium Threat Response"
+      - "CONNECTOR_NAME=Tanium Threat Response Intel"
       - CONNECTOR_SCOPE=tanium
       - CONNECTOR_LOG_LEVEL=error
       - TANIUM_INTEL_URL=https://console.changeme.com

@@ -1,14 +1,13 @@
-version: '3'
-services :
+version: "3"
+services:
   connector-phishunt:
-    image: opencti/connector-phishunt:6.5.1
+    image: opencti/connector-phishunt:6.5.5
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe(UUIDv4 token)
       - CONNECTOR_ID=ChangeMe(UUIDv4 token)
       - CONNECTOR_NAME=Phishunt
       - CONNECTOR_SCOPE=phishunt
-      - CONNECTOR_CONFIDENCE_LEVEL=40 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - PHISHUNT_API_KEY= # Optional, if not provided, consume only https://phishunt.io/feed.txt
       - PHISHUNT_CREATE_INDICATORS=true
