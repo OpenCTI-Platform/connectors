@@ -74,13 +74,15 @@ class DataToSTIXAdapter:
 
         if date_raw:
             if date_raw.startswith("00"):
-                self.helper.log_warning("Wrong format of date: {}".format(date_raw))
+                self.helper.connector_logger.warning(
+                    "Wrong format of date: {}".format(date_raw)
+                )
                 return datetime.now()
 
         try:
             _datetime = datetime.fromisoformat(date_raw)
         except (Exception,):
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 "Failed to format date: {}. Using default.".format(date_raw)
             )
             _datetime = datetime.now()
@@ -102,20 +104,20 @@ class DataToSTIXAdapter:
 
         if date_modified_raw:
             if date_modified_raw.startswith("00"):
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     "Wrong format of date_modified: {}".format(date_modified_raw)
                 )
                 date_modified_raw = None
 
         if date_created_raw:
             if date_created_raw.startswith("00"):
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     "Wrong format of date_created: {}".format(date_created_raw)
                 )
                 date_created_raw = None
 
         if not date_modified_raw and not date_created_raw:
-            self.helper.log_warning("No correct date found. Using default")
+            self.helper.connector_logger.warning("No correct date found. Using default")
             base_ttl_datetime = datetime.now()
         else:
             if date_modified_raw:
@@ -126,7 +128,7 @@ class DataToSTIXAdapter:
             try:
                 base_ttl_datetime = datetime.fromisoformat(base_ttl_raw_date)
             except (Exception,):
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     "Failed to format base_ttl_raw_date: {}. Using default.".format(
                         base_ttl_raw_date
                     )
@@ -776,19 +778,19 @@ class DataToSTIXAdapter:
                 _sha256 = _e.get("sha256", None)
                 if _md5:
                     if not self._valid_hash(_md5, "MD5"):
-                        self.helper.log_error(
+                        self.helper.connector_logger.error(
                             f"Error! {_md5} is not valid MD5. Ignored."
                         )
                         _md5 = None
                 if _sha1:
                     if not self._valid_hash(_sha1, "SHA1"):
-                        self.helper.log_error(
+                        self.helper.connector_logger.error(
                             f"Error! {_sha1} is not valid SHA1. Ignored."
                         )
                         _sha1 = None
                 if _sha256:
                     if not self._valid_hash(_sha256, "SHA256"):
-                        self.helper.log_error(
+                        self.helper.connector_logger.error(
                             f"Error! {_sha256} is not valid SHA256. Ignored."
                         )
                         _sha256 = None
@@ -818,15 +820,19 @@ class DataToSTIXAdapter:
             _sha256 = obj.get("sha256", None)
             if _md5:
                 if not self._valid_hash(_md5, "MD5"):
-                    self.helper.log_error(f"Error! {_md5} is not valid MD5. Ignored.")
+                    self.helper.connector_logger.error(
+                        f"Error! {_md5} is not valid MD5. Ignored."
+                    )
                     _md5 = None
             if _sha1:
                 if not self._valid_hash(_sha1, "SHA1"):
-                    self.helper.log_error(f"Error! {_sha1} is not valid SHA1. Ignored.")
+                    self.helper.connector_logger.error(
+                        f"Error! {_sha1} is not valid SHA1. Ignored."
+                    )
                     _sha1 = None
             if _sha256:
                 if not self._valid_hash(_sha256, "SHA256"):
-                    self.helper.log_error(
+                    self.helper.connector_logger.error(
                         f"Error! {_sha256} is not valid SHA256. Ignored."
                     )
                     _sha256 = None
