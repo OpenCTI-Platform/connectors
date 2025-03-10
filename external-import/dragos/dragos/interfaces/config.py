@@ -1,3 +1,4 @@
+# isort:skip_file
 """Define the interfaces for application config loader.
 
 To develop an adapter based on it simply implement the abstract properties.
@@ -8,7 +9,6 @@ from datetime import timedelta
 from logging import getLogger
 from typing import Any, Literal, Optional, Self
 
-from dragos.interfaces.common import FrozenBaseModel
 from pydantic import (
     AwareDatetime,
     Field,
@@ -18,6 +18,8 @@ from pydantic import (
     model_validator,
 )
 
+from dragos.interfaces.common import FrozenBaseModel
+
 logger = getLogger(__name__)
 
 
@@ -26,11 +28,11 @@ class ConfigRetrievalError(Exception):
 
 
 class _ConfigLoaderOCTI(ABC, FrozenBaseModel):
-    """Interface for loading OpenCTI dedicated configuration.
+    '''Interface for loading OpenCTI dedicated configuration.
 
     Examples:
     >>>  class ConfigLoaderEnvOCTI(ConfigLoaderOCTI):
-    ...     \"""OpenCTI configuration loader from environment variables.\"""
+    ...     """OpenCTI configuration loader from environment variables."""
     ...
     ...     @property
     ...     def _url(self) -> str:
@@ -44,7 +46,8 @@ class _ConfigLoaderOCTI(ABC, FrozenBaseModel):
     >>> os.environ["OPENCTI_TOKEN"] = "blah"
     >>> cfg = ConfigLoaderEnvOCTI()
     >>> res = cfg.model_dump_json(indent=4)
-    """
+
+    '''
 
     url: HttpUrl = Field(
         ...,
