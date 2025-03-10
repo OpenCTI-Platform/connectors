@@ -15,7 +15,6 @@ class AnyrunFeed(ExternalImportConnector):
             "ANYRUN_TI_URL", "https://api.any.run/v1/feeds/stix.json"
         )
 
-
     def get_feed(self):
         response = requests.get(
             self.ti_url, headers={"Authorization": "API-Key {}".format(self.token)}
