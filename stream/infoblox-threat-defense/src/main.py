@@ -111,7 +111,9 @@ class InfobloxThreatDefenseConnector:
         elif operation == "remove":
             combined_items = existing_items - updated_items
         else:
-            self.helper.connector_logger.error("Invalid operation. Use 'add' or 'remove'.")
+            self.helper.connector_logger.error(
+                "Invalid operation. Use 'add' or 'remove'."
+            )
             return
 
         payload = {
@@ -170,7 +172,9 @@ class InfobloxThreatDefenseConnector:
                     )
 
         except Exception as ex:
-            self.helper.connector_logger.error(f"[ERROR] Failed processing message: {ex}")
+            self.helper.connector_logger.error(
+                f"[ERROR] Failed processing message: {ex}"
+            )
             self.helper.connector_logger.error(f"[ERROR] Message data: {msg}")
 
     def start(self):
