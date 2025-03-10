@@ -29,7 +29,6 @@ class AnyrunFeed(ExternalImportConnector):
                     response.status_code, response.text
                 )
             )
-
         return json.loads(response.text)
 
     def _collect_intelligence(self) -> []:
