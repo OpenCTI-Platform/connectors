@@ -11,7 +11,7 @@ from pycti import (
     StixCoreRelationship,
 )
 
-from .utils import CASE_INCIDENT_PRIORITIES, format_datetime, is_ipv4
+from .utils import CASE_INCIDENT_PRIORITIES, format_datetime
 
 
 def handle_stix2_error(decorated_function):
@@ -113,7 +113,7 @@ class ConverterToStix:
         """
         Create STIX 2.1 Custom Case Incident object
         :param incident: Incident to create Case Incident from
-        :param bundle_objects: List of all the STIX 2.1 objects refering to the incident
+        :param bundle_objects: List of all the STIX 2.1 objects referring to the incident
         :return: Case Incident in STIX 2.1 format
         """
         case_incident_name = incident.get("displayName")
@@ -177,22 +177,30 @@ class ConverterToStix:
         :param evidence: Evidence to create IPv4 from
         :return: IPv4 Address in STIX 2.1 format
         """
-        ip_address = evidence.get("ipAddress")
-        if not is_ipv4(ip_address):
-            self.helper.connector_logger.error(
-                "This observable value is not a valid IPv4 address: ",
-                {"value": ip_address},
-            )
-            return None
-
         ipv4 = stix2.IPv4Address(
-            value=ip_address,
+            value=evidence.get("ipAddress"),
             object_marking_refs=[self.tlp_marking],
             custom_properties={
                 "created_by_ref": self.author["id"],
             },
         )
         return ipv4
+
+    @handle_stix2_error
+    def create_evidence_ipv6(self, evidence: dict) -> stix2.IPv6Address | None:
+        """
+        Create STIX 2.1 IPv6 Address object
+        :param evidence: Evidence to create IPv4 from
+        :return: IPv4 Address in STIX 2.1 format
+        """
+        ipv6 = stix2.IPv6Address(
+            value=evidence.get("ipAddress"),
+            object_marking_refs=[self.tlp_marking],
+            custom_properties={
+                "created_by_ref": self.author["id"],
+            },
+        )
+        return ipv6
 
     @handle_stix2_error
     def create_evidence_url(self, evidence: dict) -> stix2.URL | None:
@@ -270,39 +278,53 @@ class ConverterToStix:
             return None
 
     @handle_stix2_error
-    def create_evidence_identity_system(self, evidence: dict) -> stix2.Identity:
+    def create_evidence_identity_system(self, evidence: dict) -> stix2.Identity | None:
         """
         Create STIX 2.1 Identity System object
         :param evidence: Evidence to create Identity system from
         :return: Identity System in STIX 2.1 format
         """
-        stix_identity_system = stix2.Identity(
-            id=Identity.generate_id(
-                name=evidence.get("deviceDnsName"), identity_class="system"
-            ),
-            name=evidence.get("deviceDnsName"),
-            identity_class="system",
-            object_marking_refs=[self.tlp_marking],
-            created_by_ref=self.author["id"],
-        )
-        return stix_identity_system
+        if evidence.get("deviceDnsName", None):
+            stix_identity_system = stix2.Identity(
+                id=Identity.generate_id(
+                    name=evidence.get("deviceDnsName"), identity_class="system"
+                ),
+                name=evidence.get("deviceDnsName"),
+                identity_class="system",
+                object_marking_refs=[self.tlp_marking],
+                created_by_ref=self.author["id"],
+            )
+            return stix_identity_system
+        else:
+            self.helper.connector_logger.error(
+                "This evidence does not contain deviceDnsName: ",
+                {"evidence": evidence},
+            )
+            return None
 
     @handle_stix2_error
     def create_evidence_custom_observable_hostname(
         self, evidence: dict
-    ) -> CustomObservableHostname:
+    ) -> CustomObservableHostname | None:
         """
         Create STIX 2.1 Custom Observable Hostname object
         :param evidence: Evidence to create Observable Hostname from
         :return: Observable Hostname in STIX 2.1 format
         """
-        stix_hostname = CustomObservableHostname(
-            value=evidence.get("deviceDnsName"),
-            object_marking_refs=[self.tlp_marking],
-            custom_properties={
-                "created_by_ref": self.author["id"],
-            },
-        )
+        if evidence.get("deviceDnsName", None):
+            stix_hostname = CustomObservableHostname(
+                value=evidence.get("deviceDnsName"),
+                object_marking_refs=[self.tlp_marking],
+                custom_properties={
+                    "created_by_ref": self.author["id"],
+                },
+            )
+        else:
+            self.helper.connector_logger.error(
+                "This evidence does not contain deviceDnsName: ",
+                {"evidence": evidence},
+            )
+            return None
         return stix_hostname
 
     @handle_stix2_error
