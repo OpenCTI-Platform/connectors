@@ -16,7 +16,7 @@ services:
 
       - S1_URL=CHANGEME
       - S1_API_KEY=CHANGEME
-      - S1_ACCOUNT_ID = CHANGEME
+      - S1_ACCOUNT_ID=CHANGEME
       - MAX_API_ATTEMPTS=5
       - LOG_S1_RESPONSE=true
 
