@@ -85,7 +85,7 @@ class ConfigConnector:
             "ABUSEIPDB_TLP_LEVEL",
             ["abuseipdb", "tlp_level"],
             self.load,
-            default="clear",
+            default="white",
         )
 
         self.duration_period = get_config_variable(

@@ -94,20 +94,15 @@ class ConnectorAbuseIPDB:
 
             if self.config.create_indicator:
                 indicator = self.converter_to_stix.create_indicator(obs)
-                if indicator:
-                    stix_objects.append(indicator)
-                    rel = self.converter_to_stix.create_relationship(
-                        indicator.id, "based-on", obs.id
-                    )
-                    if rel:
-                        stix_objects.append(rel)
-        if stix_objects:
-            author = self.converter_to_stix.author
-            tlp_marking = self.converter_to_stix.tlp_marking
-            if author:
-                stix_objects.append(author)
-            if tlp_marking:
-                stix_objects.append(tlp_marking)
+                stix_objects.append(indicator)
+                rel = self.converter_to_stix.create_relationship(
+                    indicator.id, "based-on", obs.id
+                )
+                stix_objects.append(rel)
+
+        if len(stix_objects):
+            stix_objects.append(self.converter_to_stix.author)
+            stix_objects.append(self.converter_to_stix.tlp_marking)
         return stix_objects
 
     def process_message(self) -> None:

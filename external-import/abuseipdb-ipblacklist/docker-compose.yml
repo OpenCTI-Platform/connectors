@@ -10,7 +10,7 @@ services:
       - "CONNECTOR_NAME=AbuseIPDB IP Blacklist"
       - CONNECTOR_SCOPE=abuseipdb
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT12H # ISO8601 format in String, start with 'P...' for Period
+      - CONNECTOR_DURATION_PERIOD=PT12H # ISO8601 format in String, start with 'P...' for Perio
 
       # Connector's definition parameters OPTIONAL
       # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
@@ -24,7 +24,7 @@ services:
       # - ABUSEIPDB_API_KEY=CHANGEME
       # - ABUSEIPDB_IPVERSION=4 # Value possible: mixed, 4, 6
       # - ABUSEIPDB_CREATE_INDICATOR=true
-      # - ABUSEIPDB_TLP_LEVEL=white
+      - ABUSEIPDB_TLP_LEVEL=white
       - ABUSEIPDB_SCORE=75
       # - ABUSEIPDB_LIMIT=10000
       # When you provide API key, you can use the following parameters

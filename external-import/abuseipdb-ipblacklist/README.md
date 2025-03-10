@@ -45,7 +45,7 @@ in `config.yml` (for manual deployment).
 Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
 | OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
 | OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
@@ -53,31 +53,31 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | `EXTERNAL_IMPORT` | No       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |  `abuseipdb`           | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | `error`            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Duration Period       | `duration_period` | `CONNECTOR_DURATION_PERIOD` | `PT12H`       | No        | Determines the time interval between each launch of the connector (current use `interval_sec`).  |
-| Queue Threshold       | `queue_threshold` | `CONNECTOR_QUEUE_THRESHOLD` | `500`      | No        | Used to determine the limit (RabbitMQ) in MB at which the connector must go into buffering mode. |
+| Parameter       | config.yml        | Docker environment variable | Default           | Mandatory | Description                                                                                      |
+| --------------- | ----------------- | --------------------------- | ----------------- | --------- | ------------------------------------------------------------------------------------------------ |
+| Connector ID    | id                | `CONNECTOR_ID`              | /                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                                        |
+| Connector Type  | type              | `CONNECTOR_TYPE`            | `EXTERNAL_IMPORT` | No        | Should always be set to `EXTERNAL_IMPORT` for this connector.                                    |
+| Connector Name  | name              | `CONNECTOR_NAME`            |                   | Yes       | Name of the connector.                                                                           |
+| Connector Scope | scope             | `CONNECTOR_SCOPE`           | `abuseipdb`       | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.         |
+| Log Level       | log_level         | `CONNECTOR_LOG_LEVEL`       | `error`           | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.           |
+| Duration Period | `duration_period` | `CONNECTOR_DURATION_PERIOD` | `PT12H`           | No        | Determines the time interval between each launch of the connector (current use `interval_sec`).  |
+| Queue Threshold | `queue_threshold` | `CONNECTOR_QUEUE_THRESHOLD` | `500`             | No        | Used to determine the limit (RabbitMQ) in MB at which the connector must go into buffering mode. |
 
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | base_url | `ABUSEIPDB_API_URL`         | `https://api.abuseipdb.com/api/v2/blacklist`  |  No  |             |
-| API key      | api_key      | `ABUSEIPDB_API_KEY`         |         |  No       |             |
-| API Score    | score      | `ABUSEIPDB_SCORE`           |         |  Yes      |  Confidence Score           |
-| Api Result Limit | limit   |  `ABUSEIPDB_LIMIT`         |   10000    | No  |   500000 feet your subscription limit |
-| IPv4 | ipversion | `ABUSEIPDB_IPVERSION` | mixed | No | You can choose 4 ot 6 (Ipversion)|
-| Except Country | exceptcountry | `ABUSEIPDB_EXCEPT_COUNTRY` |    |  No | For example: RU, CN (You exclude Russia and China IPs) |
-| Only Country | onlycountry | `ABUSEIPDB_ONLY_COUNTRY` |  | No | RU : You want only Russian IPs |
-| Create Indicator | create_indicator | `ABUSEIPDB_CREATE_INDICATOR` | No | No | |
-| ABUSEIPDB_TLP_LEVEL | tlp_level | `ABUSEIPDB_TLP_LEVEL` | clear | No | |
+| Parameter           | config.yml       | Docker environment variable  | Default                                      | Mandatory | Description                                            |
+| ------------------- | ---------------- | ---------------------------- | -------------------------------------------- | --------- | ------------------------------------------------------ |
+| API base URL        | base_url         | `ABUSEIPDB_API_URL`          | `https://api.abuseipdb.com/api/v2/blacklist` | No        |                                                        |
+| API key             | api_key          | `ABUSEIPDB_API_KEY`          |                                              | No        |                                                        |
+| API Score           | score            | `ABUSEIPDB_SCORE`            |                                              | Yes       | Confidence Score                                       |
+| Api Result Limit    | limit            | `ABUSEIPDB_LIMIT`            | 10000                                        | No        | 500000 feet your subscription limit                    |
+| IPv4                | ipversion        | `ABUSEIPDB_IPVERSION`        | mixed                                        | No        | You can choose 4 ot 6 (Ipversion)                      |
+| Except Country      | exceptcountry    | `ABUSEIPDB_EXCEPT_COUNTRY`   |                                              | No        | For example: RU, CN (You exclude Russia and China IPs) |
+| Only Country        | onlycountry      | `ABUSEIPDB_ONLY_COUNTRY`     |                                              | No        | RU : You want only Russian IPs                         |
+| Create Indicator    | create_indicator | `ABUSEIPDB_CREATE_INDICATOR` | No                                           | No        |                                                        |
+| ABUSEIPDB_TLP_LEVEL | tlp_level        | `ABUSEIPDB_TLP_LEVEL`        | white                                        | No        |                                                        |
 
 ## Deployment
 
@@ -143,7 +143,7 @@ Describe how the connector functions:
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
+The connector can be debugged by setting the appropriate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
 

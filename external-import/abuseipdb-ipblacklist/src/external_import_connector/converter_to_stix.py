@@ -93,10 +93,6 @@ class ConverterToStix:
         )
         return relationship
 
-    # ===========================#
-    # Other Examples
-    # ===========================#
-
     @staticmethod
     def _is_ipv6(value: str) -> bool:
         """
@@ -149,16 +145,16 @@ class ConverterToStix:
         if self._is_ipv6(value):
             return stix2.IPv6Address(
                 value=value,
-                object_marking_refs=[self.tlp_marking["id"]],
+                object_marking_refs=[self.tlp_marking],
                 custom_properties=custom_properties,
             )
         return stix2.IPv4Address(
             value=value,
-            object_marking_refs=[self.tlp_marking["id"]],
+            object_marking_refs=[self.tlp_marking],
             custom_properties=custom_properties,
         )
 
-    def create_indicator(self, observable) -> stix2.Indicator | None:
+    def create_indicator(self, observable: dict) -> stix2.Indicator | None:
         pattern = None
         observable_type = None
         value = observable.value
@@ -175,16 +171,15 @@ class ConverterToStix:
             )
             return None
 
-        indicator = stix2.Indicator(
+        return stix2.Indicator(
             id=Indicator.generate_id(pattern),
             name=value,
             description="Agressive IP known malicious on AbuseIPDB",
             pattern_type="stix",
             pattern=pattern,
-            object_marking_refs=[self.tlp_marking["id"]],
+            object_marking_refs=[self.tlp_marking],
             created_by_ref=self.author["id"],
             custom_properties={
                 "x_opencti_main_observable_type": observable_type,
             },
         )
-        return indicator
