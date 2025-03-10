@@ -1,0 +1,23 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: '0968ce24-c882-4a2a-842c-80a4466b5910'
+  type: 'EXTERNAL_IMPORT'
+  name: 'CI-ISAC VirusTotal Country Reporter'
+  scope: 'vtreporter' 
+  log_level: 'info'
+  duration_period: 'P1D' 
+  queue_protocol: 'api'
+
+vtreporter:
+  api_url: 'https://virustotal.com/api/v3'
+  api_key: 'ChangeMe'
+  country: 'AU'
+  threat_types: "THREAT-REPORT"
+  confidence: 75
+  report_labels: "my-feed,Australia"
+  reliability: "B - Usually Reliable"
+  file_labels: "my-feed,Australia"
+  file_markings: "TLP_AMBER"
