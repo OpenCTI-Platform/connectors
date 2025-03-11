@@ -10,7 +10,6 @@ from dragos.domain.models.octi.common import (
     Author,
     BaseEntity,
     ExternalReference,
-    HashAlgorithm,
     TLPMarking,
 )
 from dragos.domain.models.octi.domain import Indicator
@@ -19,6 +18,7 @@ from dragos.domain.models.octi.enum import (
     ObservableType,
     PatternType,
 )
+from dragos.domain.models.octi.types import HashAlgorithm
 from pydantic import Field, PositiveInt, field_validator, model_validator
 
 
@@ -162,7 +162,7 @@ class Artifact(Observable):
             stix_pattern = f"[{' AND '.join(comparison_expressions)}]"
 
         return Indicator(
-            name=self.payload_bin or self.url,
+            name=name,
             pattern=stix_pattern,
             pattern_type=PatternType.STIX.value,
             observable_type=ObservableType.ARTIFACT.value,

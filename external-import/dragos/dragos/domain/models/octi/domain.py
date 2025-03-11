@@ -10,17 +10,29 @@ from dragos.domain.models.octi.common import (
     Author,
     BaseEntity,
     ExternalReference,
-    IndicatorType,
     KillChainPhase,
+    TLPMarking,
+)
+from dragos.domain.models.octi.enum import LocationType as LocationTypeEnum
+from dragos.domain.models.octi.types import (
+    AttackMotivation,
+    AttackResourceLevel,
+    CvssSeverity,
+    ImplementationLanguage,
+    IndicatorType,
+    LocationType,
+    MalwareCapability,
+    MalwareType,
     ObservableType,
     OrganizationType,
     PatternType,
     Platform,
+    ProcessorArchitecture,
+    Region,
     Reliability,
     ReportType,
-    TLPMarking,
 )
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime, Field, PrivateAttr
 
 
 class DomainObject(BaseEntity):

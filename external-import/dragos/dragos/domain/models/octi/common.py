@@ -1,60 +1,14 @@
 """Offer common tools to create octi entities."""
 
 from abc import ABC, abstractmethod
-from enum import Enum
-from typing import Annotated, Any, Callable, Optional
+from typing import Any, Optional
 
-import dragos.domain.models.octi.enum as OCTIEnum
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
 import stix2.exceptions
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-
-def is_in_enum(enum: Enum) -> Callable:
-    """Get validator to check if a value is in given enum."""
-
-    def compare_value(value: Any) -> Any:
-        """Check if value is in enum."""
-        enum_values = [member.value for member in enum]
-        if value not in enum_values:
-            raise ValueError(
-                f"Invalid value '{value}'. Allowed values are: {', '.join(enum_values)}"
-            )
-        return value
-
-    return compare_value
-
-
-# Convert Enums to Types in order to manipulate strings (not Enums) in Pydantic models
-AccountType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.AccountType))]
-EncryptionAlgorithm = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.EncryptionAlgorithm))
-]
-HashAlgorithm = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.HashAlgorithm))]
-IndicatorType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.IndicatorType))]
-ObservableType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.ObservableType))]
-OrganizationType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.OrganizationType))]
-PatternType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.PatternType))]
-Platform = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.Platform))]
-Reliability = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.Reliability))]
-ReportType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.ReportType))]
-TLPLevel = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.TLPLevel))]
-WindowsRegistryDatatype = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.WindowsRegistryDatatype))
-]
-WindowsIntegrityLevel = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.WindowsIntegrityLevel))
-]
-WindowsServiceStartType = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.WindowsServiceStartType))
-]
-WindowsServiceStatus = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.WindowsServiceStatus))
-]
-WindowsServiceType = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.WindowsServiceType))
-]
+from dragos.domain.models.octi.types import TLPLevel
 
 
 class BaseModelWithoutExtra(BaseModel):
