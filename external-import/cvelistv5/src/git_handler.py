@@ -3,16 +3,15 @@ import os
 from datetime import datetime
 
 class GitHandler:
-    def __init__(self, repo_url, local_path, branch):
+    def __init__(self, repo_url, local_path):
         self.repo_url = repo_url
         self.local_path = local_path
-        self.branch = branch
         self.repo = self._init_repo()
         self.last_run_time = None
 
     def _init_repo(self):
         if not os.path.exists(self.local_path):
-            return git.Repo.clone_from(self.repo_url, self.local_path, branch=self.branch)
+            return git.Repo.clone_from(self.repo_url, self.local_path)
         return git.Repo(self.local_path)
 
     def pull_updates(self):
@@ -43,13 +42,13 @@ class GitHandler:
         return all_files
 
     def _get_files_since_last_run(self):
-        commits = list(self.repo.iter_commits(f'{self.branch}', since=self.last_run_time))
+        commits = list(self.repo.iter_commits(f'main', since=self.last_run_time))
         updated_files = set()
         for commit in commits:
             updated_files.update(commit.stats.files.keys())
             
         self.update_last_run_time()
-        return [f for f in updated_files if f.startswith('cves/') and f.endswith('.json')]
+        return [os.path.join(self.local_path, f) for f in updated_files if f.startswith('cves/') and f.endswith('.json') and not f.endswith('delta.json')]
 
     def update_last_run_time(self):
         self.last_run_time = datetime.now()

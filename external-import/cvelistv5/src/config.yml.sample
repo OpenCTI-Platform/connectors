@@ -6,10 +6,11 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'CVEProject cvelistV5'
-  scope: 'identity,vulnerability'
+  scope: 'identity,vulnerability','software'
   confidence_level: 100
   update_existing_data: true
   run_and_terminate: false
+  duration_period: 'PT10M' # Format ISO 8601
   log_level: 'info'
 
 cvelistv5:

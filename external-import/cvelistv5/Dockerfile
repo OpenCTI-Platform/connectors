@@ -11,6 +11,9 @@ RUN apk --no-cache add git build-base libmagic libffi-dev && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del build-base
 
+# Need this because of GitPython (Issue 1979)
+RUN ln -sv $(which uname) /usr/bin/uname
+
 # Expose and entrypoint
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
