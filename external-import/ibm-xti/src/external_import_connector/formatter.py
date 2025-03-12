@@ -186,7 +186,7 @@ class OpenCTISTIXFormatter:
                 ext = extensions[key]
 
                 # enrich the vulnerability with the x_opencti_cvss info
-                for entry in ext["cvss"]:
+                for entry in ext.get("cvss", []):
                     self.__parse_cvss(obj, entry)
 
                 for entry in ext["reference"]:
