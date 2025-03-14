@@ -1,7 +1,13 @@
 from enum import StrEnum
 
 
-class AccountType(StrEnum):
+class OpenVocab(StrEnum):
+    """Distinguish OCTI Open Vocabularies (extensible) from OCTI Enums (strict)."""
+
+    pass
+
+
+class AccountType(OpenVocab):
     """Account Type Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_k2b7lkt45f0i
     """
@@ -19,6 +25,48 @@ class AccountType(StrEnum):
     WINDOWS_DOMAIN = "windows-domain"
 
 
+class AttackMotivation(OpenVocab):
+    """Attack Motivation Open Vocabulary.
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_dmb1khqsn650
+    """
+
+    ACCIDENTAL = "accidental"
+    COERCION = "coercion"
+    DOMINANCE = "dominance"
+    IDEOLOGY = "ideology"
+    NOTORIETY = "notoriety"
+    ORGANIZATIONAL_GAIN = "organizational-gain"
+    PERSONAL_GAIN = "personal-gain"
+    PERSONAL_SATISFACTION = "personal-satisfaction"
+    REVENGE = "revenge"
+    UNPREDICTABLE = "unpredictable"
+
+
+class AttackResourceLevel(OpenVocab):
+    """Attack Resource Level Open Vocabulary.
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_moarppphq8vq
+    """
+
+    INDIVIDUAL = "individual"
+    CLUB = "club"
+    CONTEST = "contest"
+    TEAM = "team"
+    ORGANIZATION = "organization"
+    GOVERNMENT = "government"
+
+
+class CvssSeverity(StrEnum):
+    """CVSS Severity Enum.
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/domain/vulnerability.js#L10
+    """
+
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+    UNKNOWN = "Unknown"
+
+
 class EncryptionAlgorithm(StrEnum):
     """Encryption Algorithm Enum.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_nfgle8k7nbo4
@@ -29,7 +77,7 @@ class EncryptionAlgorithm(StrEnum):
     MIME_TYPE_INDICATED = "mime-type-indicated"
 
 
-class HashAlgorithm(StrEnum):
+class HashAlgorithm(OpenVocab):
     """Hash Algorithm Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_tumklw3o2gyz
     """
@@ -44,7 +92,48 @@ class HashAlgorithm(StrEnum):
     TLSH = "TLSH"
 
 
-class IndicatorType(StrEnum):
+class IdentityClass(OpenVocab):
+    """Identity Class Open Vocaubulary.
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_be1dktvcmyu
+    """
+
+    INDIVIDUAL = "individual"
+    GROUP = "group"
+    SYSTEM = "system"
+    ORGANIZATION = "organization"
+    CLASS = "class"
+    UNKNOWN = "unknown"
+
+
+class ImplementationLanguage(OpenVocab):
+    """Implementation Language Open Vocabulary.
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_1s3o9ou3pbq
+    """
+
+    APPLESCRIPT = "applescript"
+    BASH = "bash"
+    C = "c"
+    C_PLUS_PLUS = "c++"
+    C_SHARP = "c#"
+    GO = "go"
+    JAVA = "java"
+    JAVASCRIPT = "javascript"
+    LUA = "lua"
+    OBJECTIVE_C = "objective-c"
+    PERL = "perl"
+    PHP = "php"
+    POWERSHELL = "powershell"
+    PYTHON = "python"
+    RUBY = "ruby"
+    SCALA = "scala"
+    SWIFT = "swift"
+    TYPESCRIPT = "typescript"
+    VISUAL_BASIC = "visual-basic"
+    X86_32 = "x86-32"
+    X86_64 = "x86-64"
+
+
+class IndicatorType(OpenVocab):
     """Indicator Type Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_cvhfwe3t9vuo
     """
@@ -56,6 +145,138 @@ class IndicatorType(StrEnum):
     COMPROMISED = "compromised"
     MALICIOUS_ACTIVITY = "malicious-activity"
     UNKNOWN = "unknown"
+
+
+class IndustrySector(OpenVocab):
+    """Industry Sector Open Vocabulary.
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_oogrswk3onck
+    """
+
+    AGRICULTURE = "agriculture"
+    AEROSPACE = "aerospace"
+    AUTOMOTIVE = "automotive"
+    CHEMICAL = "chemical"
+    COMMERCIAL = "commercial"
+    COMMUNICATIONS = "communications"
+    CONSTRUCTION = "construction"
+    DEFENSE = "defense"
+    EDUCATION = "education"
+    ENERGY = "energy"
+    ENTERTAINMENT = "entertainment"
+    FINANCIAL_SERVICES = "financial-services"
+
+    # Government
+    GOVERNMENT = "government"
+    EMERGENCY_SERVICES = "emergency-services"
+    GOVERNMENT_LOCAL = "government-local"
+    GOVERNMENT_NATIONAL = "government-national"
+    GOVERNMENT_PUBLIC_SERVICES = "government-public-services"
+    GOVERNMENT_REGIONAL = "government-regional"
+
+    HEALTHCARE = "healthcare"
+    HOSPITALITY_LEISURE = "hospitality-leisure"
+
+    # Infrastructure
+    INFRASTRUCTURE = "infrastructure"
+    DAMS = "dams"
+    NUCLEAR = "nuclear"
+    WATER = "water"
+
+    INSURANCE = "insurance"
+    MANUFACTURING = "manufacturing"
+    MINING = "mining"
+    NON_PROFIT = "non-profit"
+    PHARMACEUTICALS = "pharmaceuticals"
+    RETAIL = "retail"
+    TECHNOLOGY = "technology"
+    TELECOMMUNICATIONS = "telecommunications"
+    TRANSPORTATION = "transportation"
+    UTILITIES = "utilities"
+
+
+class LocationType(StrEnum):
+    """Location Type Enum.
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/stixDomainObject.ts#L47
+    """
+
+    ADMINISTRATIVE_AREA = "Administrative-Area"
+    CITY = "City"
+    COUNTRY = "Country"
+    REGION = "Region"
+    POSITION = "Position"
+
+
+class MalwareCapability(OpenVocab):
+    """Malware Capability Open Vocabulary.
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_2b6es5hl7gmc
+    """
+
+    ACCESSES_REMOTE_MACHINES = "accesses-remote-machines"
+    ANTI_DEBUGGING = "anti-debugging"
+    ANTI_DISASSEMBLY = "anti-disassembly"
+    ANTI_EMULATION = "anti-emulation"
+    ANTI_MEMORY_FORENSICS = "anti-memory-forensics"
+    ANTI_SANDBOX = "anti-sandbox"
+    ANTI_VM = "anti-vm"
+    CAPTURES_INPUT_PERIPHERALS = "captures-input-peripherals"
+    CAPTURES_OUTPUT_PERIPHERALS = "captures-output-peripherals"
+    CAPTURES_SYSTEM_STATE_DATA = "captures-system-state-data"
+    CLEANS_TRACES_OF_INFECTION = "cleans-traces-of-infection"
+    COMMITS_FRAUD = "commits-fraud"
+    COMMUNICATES_WITH_C2 = "communicates-with-c2"
+    COMPROMISES_DATA_AVAILABILITY = "compromises-data-availability"
+    COMPROMISES_DATA_INTEGRITY = "compromises-data-integrity"
+    COMPROMISES_SYSTEM_AVAILABILITY = "compromises-system-availability"
+    CONTROLS_LOCAL_MACHINE = "controls-local-machine"
+    DEGRADES_SECURITY_SOFTWARE = "degrades-security-software"
+    DEGRADES_SYSTEM_UPDATES = "degrades-system-updates"
+    DETERMINES_C2_SERVER = "determines-c2-server"
+    EMAILS_SPAM = "emails-spam"
+    ESCALATES_PRIVILEGES = "escalates-privileges"
+    EVADES_AV = "evades-av"
+    EXFILTRATES_DATA = "exfiltrates-data"
+    FINGERPRINTS_HOST = "fingerprints-host"
+    HIDES_ARTIFACTS = "hides-artifacts"
+    HIDES_EXECUTING_CODE = "hides-executing-code"
+    INFECTS_FILES = "infects-files"
+    INFECTS_REMOTE_MACHINES = "infects-remote-machines"
+    INSTALLS_OTHER_COMPONENTS = "installs-other-components"
+    PERSISTS_AFTER_SYSTEM_REBOOT = "persists-after-system-reboot"
+    PREVENTS_ARTIFACT_ACCESS = "prevents-artifact-access"
+    PREVENTS_ARTIFACT_DELETION = "prevents-artifact-deletion"
+    PROBES_NETWORK_ENVIRONMENT = "probes-network-environment"
+    SELF_MODIFIES = "self-modifies"
+    STEALS_AUTHENTICATION_CREDENTIALS = "steals-authentication-credentials"
+    VIOLATES_SYSTEM_OPERATIONAL_INTEGRITY = "violates-system-operational-integrity"
+
+
+class MalwareType(OpenVocab):
+    """Malware Type Open Vocabulary.
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_oxlc4df65spl
+    """
+
+    ADWARE = "adware"
+    BACKDOOR = "backdoor"
+    BOT = "bot"
+    BOOTKIT = "bootkit"
+    DDOS = "ddos"
+    DOWNLOADER = "downloader"
+    DROPPER = "dropper"
+    EXPLOIT_KIT = "exploit-kit"
+    KEYLOGGER = "keylogger"
+    RANSOMWARE = "ransomware"
+    REMOTE_ACCESS_TROJAN = "remote-access-trojan"
+    RESOURCE_EXPLOITATION = "resource-exploitation"
+    ROGUE_SECURITY_SOFTWARE = "rogue-security-software"
+    ROOTKIT = "rootkit"
+    SCREEN_CAPTURE = "screen-capture"
+    SPYWARE = "spyware"
+    TROJAN = "trojan"
+    UNKNOWN = "unknown"
+    VIRUS = "virus"
+    WEBSHELL = "webshell"
+    WIPER = "wiper"
+    WORM = "worm"
 
 
 class ObservableType(StrEnum):
@@ -97,7 +318,7 @@ class ObservableType(StrEnum):
     X509_CERTIFICATE = "X509-Certificate"
 
 
-class OrganizationType(StrEnum):
+class OrganizationType(OpenVocab):
     """Organization Type Open Vocabulary.
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L770
     """
@@ -109,7 +330,7 @@ class OrganizationType(StrEnum):
     OTHER = "other"
 
 
-class PatternType(StrEnum):
+class PatternType(OpenVocab):
     """Pattern Type Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_9lfdvxnyofxw
     """
@@ -126,7 +347,7 @@ class PatternType(StrEnum):
     YARA = "yara"
 
 
-class Platform(StrEnum):
+class Platform(OpenVocab):
     """Platform Open Vocabulary.
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L797
     """
@@ -137,7 +358,62 @@ class Platform(StrEnum):
     ANDROID = "android"
 
 
-class Reliability(StrEnum):
+class ProcessorArchitecture(OpenVocab):
+    """Processor Architecture Open Vocabulary.
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_iup9ob79qwei
+    """
+
+    ALPHA = "alpha"
+    ARM = "arm"
+    IA_64 = "ia-64"
+    MIPS = "mips"
+    POWERPC = "powerpc"
+    SPARC = "sparc"
+    X86 = "x86"
+    X86_64 = "x86-64"
+
+
+class Region(OpenVocab):
+    """Region Open Vocabulary.
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_i1sw27qw1v0s
+    """
+
+    AFRICA = "africa"
+    EASTERN_AFRICA = "eastern-africa"
+    MIDDLE_AFRICA = "middle-africa"
+    NORTHERN_AFRICA = "northern-africa"
+    SOUTHERN_AFRICA = "southern-africa"
+    WESTERN_AFRICA = "western-africa"
+
+    AMERICAS = "americas"
+    CARIBBEAN = "caribbean"
+    CENTRAL_AMERICA = "central-america"
+    LATIN_AMERICA_CARIBBEAN = "latin-america-caribbean"
+    NORTHERN_AMERICA = "northern-america"
+    SOUTH_AMERICA = "south-america"
+
+    ASIA = "asia"
+    CENTRAL_ASIA = "central-asia"
+    EASTERN_ASIA = "eastern-asia"
+    SOUTHERN_ASIA = "southern-asia"
+    SOUTH_EASTERN_ASIA = "south-eastern-asia"
+    WESTERN_ASIA = "western-asia"
+
+    EUROPE = "europe"
+    EASTERN_EUROPE = "eastern-europe"
+    NORTHERN_EUROPE = "northern-europe"
+    SOUTHERN_EUROPE = "southern-europe"
+    WESTERN_EUROPE = "western-europe"
+
+    OCEANIA = "oceania"
+    ANTARTICA = "antarctica"
+    AUSTRALIA_NEW_ZEALAND = "australia-new-zealand"
+    MELANESIA = "melanesia"
+    MICRONESIA = "micronesia"
+    POLYNESIA = "polynesia"
+
+
+class Reliability(OpenVocab):
     """Reliability Open Vocabulary.
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L866
     """
@@ -150,7 +426,7 @@ class Reliability(StrEnum):
     F = "F - Reliability cannot be judged"
 
 
-class ReportType(StrEnum):
+class ReportType(OpenVocab):
     """Report Type Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_9lfdvxnyofxw
     """
