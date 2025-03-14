@@ -4,9 +4,8 @@ import warnings
 from enum import Enum
 from typing import Annotated, Any, Callable
 
-from pydantic import AfterValidator
-
 import dragos.domain.models.octi.enums as octi_enums
+from pydantic import AfterValidator
 
 
 def is_in_enum(enum: Enum) -> Callable:

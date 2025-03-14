@@ -6,9 +6,8 @@ from typing import Any, Optional
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
 import stix2.exceptions
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
-
 from dragos.domain.models.octi.types import TLPLevel
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 class BaseModelWithoutExtra(BaseModel):

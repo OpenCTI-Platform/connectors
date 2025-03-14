@@ -3,11 +3,11 @@
 from typing import TYPE_CHECKING, Any, Generator
 
 import dragos.domain.models.octi as octi
-from dragos.domain.use_cases.common import BaseUseCase
 from dragos.domain.models.octi.enums import OrganizationType
+from dragos.domain.use_cases.common import BaseUseCase
 
 if TYPE_CHECKING:
-    from dragos.domain.models.octi import BaseEntity, Observable, DomainObject
+    from dragos.domain.models.octi import BaseEntity, DomainObject, Observable
     from dragos.interfaces import Indicator, Report, Tag
 
 

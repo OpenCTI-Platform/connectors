@@ -4,6 +4,7 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Any, Optional
 
+import dragos.domain.models.octi.enums as octi_enums
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
 from dragos.domain.models.octi.common import (
@@ -13,7 +14,6 @@ from dragos.domain.models.octi.common import (
     KillChainPhase,
     TLPMarking,
 )
-import dragos.domain.models.octi.enums as octi_enums
 from dragos.domain.models.octi.types import (
     AttackMotivation,
     AttackResourceLevel,
