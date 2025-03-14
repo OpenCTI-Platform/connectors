@@ -1,9 +1,11 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended",
-    "local>uis/devops/renovate-config:enablePreCommit"
+    "config:recommended"
   ],
+  "pre-commit": {
+    "enabled": true
+  },
   "labels": [
     "dependencies",
     "filigran team"
