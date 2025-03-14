@@ -9,7 +9,7 @@ from dragos.domain.models.octi import (
     TLPMarking,
     Url,
 )
-from dragos.domain.models.octi.enum import TLPLevel
+from dragos.domain.models.octi.enums import TLPLevel
 from pydantic import ValidationError
 
 

@@ -13,7 +13,7 @@ from dragos.domain.models.octi.common import (
     TLPMarking,
 )
 from dragos.domain.models.octi.domain import Indicator
-from dragos.domain.models.octi.enum import (
+from dragos.domain.models.octi.enums import (
     EncryptionAlgorithm,
     ObservableType,
     PatternType,

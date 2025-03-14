@@ -13,7 +13,7 @@ from dragos.domain.models.octi.common import (
     KillChainPhase,
     TLPMarking,
 )
-import dragos.domain.models.octi.enum as octi_enums
+import dragos.domain.models.octi.enums as octi_enums
 from dragos.domain.models.octi.types import (
     AttackMotivation,
     AttackResourceLevel,

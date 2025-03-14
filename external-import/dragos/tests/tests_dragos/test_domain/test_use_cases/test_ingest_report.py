@@ -1,7 +1,7 @@
 from typing import Generator, Optional
 
-import dragos.domain.models.octi as OCTI
-from dragos.domain.models.octi.enum import TLPLevel
+import dragos.domain.models.octi as octi
+from dragos.domain.models.octi.enums import TLPLevel
 from dragos.domain.use_cases.ingest_report import ReportProcessor
 from dragos.interfaces import Indicator, Report, Tag
 
@@ -86,11 +86,11 @@ def test_report_processor_should_process_a_valid_report():
 
     # Then: ReportProcessor returns a list of OCTI entities
     assert isinstance(octi_entities, list) is True
-    assert any(isinstance(entity, OCTI.Report) for entity in octi_entities)
-    assert any(isinstance(entity, OCTI.Observable) for entity in octi_entities)
-    assert any(isinstance(entity, OCTI.Indicator) for entity in octi_entities)
+    assert any(isinstance(entity, octi.Report) for entity in octi_entities)
+    assert any(isinstance(entity, octi.Observable) for entity in octi_entities)
+    assert any(isinstance(entity, octi.Indicator) for entity in octi_entities)
     assert any(
-        isinstance(entity, OCTI.IndicatorBasedOnObservable) for entity in octi_entities
+        isinstance(entity, octi.IndicatorBasedOnObservable) for entity in octi_entities
     )
-    assert any(isinstance(entity, OCTI.OrganizationAuthor) for entity in octi_entities)
-    assert any(isinstance(entity, OCTI.TLPMarking) for entity in octi_entities)
+    assert any(isinstance(entity, octi.OrganizationAuthor) for entity in octi_entities)
+    assert any(isinstance(entity, octi.TLPMarking) for entity in octi_entities)
