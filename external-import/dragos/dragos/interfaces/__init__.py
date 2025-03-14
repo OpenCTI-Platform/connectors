@@ -13,5 +13,5 @@ __all__ = [
     "Indicator",  # for typing purposes in application layer
     "Report",  # for typing purposes in application layer
     "Reports",  # for typing purposes in application layer
-    "Tags",  # for typing purposes in application layer
+    "Tag",  # for typing purposes in application layer
 ]
