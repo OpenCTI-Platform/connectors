@@ -1,11 +1,12 @@
 """Provide custom types for Pydantic models."""
 
+import warnings
 from enum import Enum
 from typing import Annotated, Any, Callable
 
 from pydantic import AfterValidator
 
-import dragos.domain.models.octi.enum as OCTIEnum
+import dragos.domain.models.octi.enums as octi_enums
 
 
 def is_in_enum(enum: Enum) -> Callable:
@@ -15,80 +16,91 @@ def is_in_enum(enum: Enum) -> Callable:
         """Check if value is in enum."""
         enum_values = [member.value for member in enum]
         if value not in enum_values:
-            raise ValueError(
-                f"Invalid value '{value}'. Allowed values are: {', '.join(enum_values)}"
-            )
+            if issubclass(enum, octi_enums.OpenVocab):
+                warnings.warn(
+                    f"Value '{value}' out of recommended values: {', '.join(enum_values)}."
+                )
+            else:
+                raise ValueError(
+                    f"Invalid value '{value}'. Allowed values are: {', '.join(enum_values)}."
+                )
         return value
 
     return compare_value
 
 
-AccountType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.AccountType))]
+AccountType = Annotated[str, AfterValidator(is_in_enum(octi_enums.AccountType))]
 
-AttackMotivation = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.AttackMotivation))]
+AttackMotivation = Annotated[
+    str, AfterValidator(is_in_enum(octi_enums.AttackMotivation))
+]
 
 AttackResourceLevel = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.AttackResourceLevel))
+    str, AfterValidator(is_in_enum(octi_enums.AttackResourceLevel))
 ]
 
-CvssSeverity = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.CvssSeverity))]
+CvssSeverity = Annotated[str, AfterValidator(is_in_enum(octi_enums.CvssSeverity))]
 
 EncryptionAlgorithm = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.EncryptionAlgorithm))
+    str, AfterValidator(is_in_enum(octi_enums.EncryptionAlgorithm))
 ]
 
-HashAlgorithm = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.HashAlgorithm))]
+HashAlgorithm = Annotated[str, AfterValidator(is_in_enum(octi_enums.HashAlgorithm))]
 
 ImplementationLanguage = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.ImplementationLanguage))
+    str, AfterValidator(is_in_enum(octi_enums.ImplementationLanguage))
 ]
 
-IndicatorType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.IndicatorType))]
+IndicatorType = Annotated[str, AfterValidator(is_in_enum(octi_enums.IndicatorType))]
 
-LocationType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.LocationType))]
+IndustrySector = Annotated[str, AfterValidator(is_in_enum(octi_enums.IndustrySector))]
+
+LocationType = Annotated[str, AfterValidator(is_in_enum(octi_enums.LocationType))]
 
 MalwareCapability = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.MalwareCapability))
+    str, AfterValidator(is_in_enum(octi_enums.MalwareCapability))
 ]
 
-MalwareType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.MalwareType))]
+MalwareType = Annotated[str, AfterValidator(is_in_enum(octi_enums.MalwareType))]
 
-ObservableType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.ObservableType))]
+ObservableType = Annotated[str, AfterValidator(is_in_enum(octi_enums.ObservableType))]
 
-OrganizationType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.OrganizationType))]
+OrganizationType = Annotated[
+    str, AfterValidator(is_in_enum(octi_enums.OrganizationType))
+]
 
-PatternType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.PatternType))]
+PatternType = Annotated[str, AfterValidator(is_in_enum(octi_enums.PatternType))]
 
-Platform = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.Platform))]
+Platform = Annotated[str, AfterValidator(is_in_enum(octi_enums.Platform))]
 
 ProcessorArchitecture = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.ProcessorArchitecture))
+    str, AfterValidator(is_in_enum(octi_enums.ProcessorArchitecture))
 ]
 
-Region = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.Region))]
+Region = Annotated[str, AfterValidator(is_in_enum(octi_enums.Region))]
 
-Reliability = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.Reliability))]
+Reliability = Annotated[str, AfterValidator(is_in_enum(octi_enums.Reliability))]
 
-ReportType = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.ReportType))]
+ReportType = Annotated[str, AfterValidator(is_in_enum(octi_enums.ReportType))]
 
-TLPLevel = Annotated[str, AfterValidator(is_in_enum(OCTIEnum.TLPLevel))]
+TLPLevel = Annotated[str, AfterValidator(is_in_enum(octi_enums.TLPLevel))]
 
 WindowsRegistryDatatype = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.WindowsRegistryDatatype))
+    str, AfterValidator(is_in_enum(octi_enums.WindowsRegistryDatatype))
 ]
 
 WindowsIntegrityLevel = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.WindowsIntegrityLevel))
+    str, AfterValidator(is_in_enum(octi_enums.WindowsIntegrityLevel))
 ]
 
 WindowsServiceStartType = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.WindowsServiceStartType))
+    str, AfterValidator(is_in_enum(octi_enums.WindowsServiceStartType))
 ]
 
 WindowsServiceStatus = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.WindowsServiceStatus))
+    str, AfterValidator(is_in_enum(octi_enums.WindowsServiceStatus))
 ]
 
 WindowsServiceType = Annotated[
-    str, AfterValidator(is_in_enum(OCTIEnum.WindowsServiceType))
+    str, AfterValidator(is_in_enum(octi_enums.WindowsServiceType))
 ]
