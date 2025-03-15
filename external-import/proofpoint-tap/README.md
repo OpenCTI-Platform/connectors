@@ -97,8 +97,8 @@ Below are the parameters you'll need to set for the connector:
 | Parameter                              | Docker environment variable       | Default | Mandatory | Description                                                                                     |
 |----------------------------------------|-----------------------------------|---------|-----------|-------------------------------------------------------------------------------------------------|
 | API base URL                           | `TAP_API_BASE_URL`                |         | Yes       | Base URL for Proofpoint TAP API                                                        |
-| API access key                         | `TAP_API_PRINCIPAL_KEY`           |         | Yes       | Access key for Proofpoint TAP  API                                                      |
-| API secret key                         | `TAP_API_SECRET_KEY`              |         | Yes       | Secret key for Proofpoint TAP  API                                                      |
+| API access key                         | `TAP_API_PRINCIPAL`               |         | Yes       | Access key for Proofpoint TAP API                                                       |
+| API secret key                         | `TAP_API_SECRET`                  |         | Yes       | Secret key for Proofpoint TAP API                                                       |
 | API timeout                            | `TAP_API_TIMEOUT`                 |         | Yes       | Timeout for API requests in ISO8601                                                          |
 | API backoff                            | `TAP_API_BACKOFF`                 |         | Yes       | Backoff time in ISO8601 for API retries                                                         |
 | API retries                            | `TAP_API_RETRIES`                 |         | Yes       | Number of retries for API requests                                                              |
