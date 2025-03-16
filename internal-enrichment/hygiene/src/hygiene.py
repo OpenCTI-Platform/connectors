@@ -1,5 +1,6 @@
 import os
 from typing import Dict
+from stix_shifter.stix_translation import stix_translation
 
 import tldextract
 import yaml
@@ -159,11 +160,98 @@ class HygieneConnector:
                     "The hygiene label could not be created. If your connector does not have the permission to create labels, please create it manually before launching"
                 )
 
+    def _process_entity(self, stix_objects, stix_entity, opencti_entity) -> str:
+
+        if opencti_entity["entity_type"] == "Indicator":
+            # Extract the observable in the pattern
+            observables = self._convert_indicator_to_observables(opencti_entity)
+
+            return self._process_indicator(stix_objects, stix_entity, observables)
+
+        else:
+            return self._process_observable(stix_objects, stix_entity, opencti_entity)
+
     def _process_observable(self, stix_objects, stix_entity, opencti_entity) -> str:
         # Search in warninglist
         result = self.warninglists.search(opencti_entity["observable_value"])
 
         # If not found and the domain is a subdomain, search with the parent.
+        use_parent, result = self.search_with_parent(result, stix_entity)
+
+        # Iterate over the hits
+        if result:
+            self.process_result(
+                self, result, stix_objects, stix_entity, opencti_entity, use_parent
+            )
+            return "Observable value found on warninglist and tagged accordingly"
+
+    def _process_indicator(self, stix_objects, stix_entity, observables) -> str:
+        for observable in observables:
+            if observable["type"] == "unsupported_type":
+                continue
+            # Search in warninglist
+            result = self.warninglists.search(observable["value"])
+
+            # If not found and the domain is a subdomain, search with the parent.
+            use_parent, result = self.search_with_parent(result, observable)
+
+            # Iterate over the hits
+            if result:
+                self.process_result(
+                    self, result, stix_objects, stix_entity, observable, use_parent
+                )
+                return "Observable value found on warninglist and tagged accordingly"
+
+    def _convert_indicator_to_observables(self, data) -> list[dict]:
+        """
+        Convert an OpenCTI indicator to its corresponding observables.
+        :param data: OpenCTI indicator data
+        :return: Observables data
+        """
+        try:
+            observables = []
+            translation = stix_translation.StixTranslation()
+            parsed = translation.translate("splunk", "parse", "{}", data["pattern"])
+            if "parsed_stix" in parsed:
+                results = parsed["parsed_stix"]
+                for result in results:
+                    observable_data = {}
+                    observable_data.update(data)
+
+                    supported_attributes = [
+                        "domain-name:value",
+                        "ipv4-addr:value",
+                        "ipv6-addr:value",
+                        "file:hashes.'SHA-256'",
+                        "file:hashes.SHA-256",
+                        "file:hashes.'SHA-1'",
+                        "file:hashes.SHA-1",
+                        "file:hashes.'MD5'",
+                        "file:hashes.MD5",
+                    ]
+                    if result["attribute"] not in supported_attributes:
+                        self.helper.connector_logger.warning(
+                            "[UNSUPPORTED ATTRIBUTE] Cannot scan { "
+                            + result["attribute"]
+                            + "}"
+                        )
+                        observable_data["type"] = "unsupported_type"
+                        observables.append(observable_data)
+                    else:
+                        stix_type = result["attribute"].replace(":value", "")
+                        observable_data["type"] = stix_type
+                        observable_data["value"] = result["value"]
+                        observables.append(observable_data)
+            return observables
+        except:
+            indicator_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
+                "id", data
+            )
+            self.helper.connector_logger.warning(
+                "[CREATE] Cannot convert STIX indicator { " + indicator_opencti_id + "}"
+            )
+
+    def search_with_parent(self, result, stix_entity):
         use_parent = False
         if not result and self.enrich_subdomains is True:
             if stix_entity["type"] == "domain-name":
@@ -171,79 +259,81 @@ class HygieneConnector:
                 if stix_entity["value"] != ext.domain + "." + ext.suffix:
                     result = self.warninglists.search(ext.domain + "." + ext.suffix)
                     use_parent = True
+        return use_parent, result
 
-        # Iterate over the hits
-        if result:
+    def process_result(
+        self, result, stix_objects, stix_entity, opencti_entity, use_parent
+    ):
+        self.helper.log_info(
+            "Hit found for %s in warninglists" % (opencti_entity["value"])
+        )
+
+        for hit in result:
             self.helper.log_info(
-                "Hit found for %s in warninglists"
-                % (opencti_entity["observable_value"])
+                "Type: %s | Name: %s | Version: %s | Descr: %s"
+                % (hit.type, hit.name, hit.version, hit.description)
             )
 
-            for hit in result:
-                self.helper.log_info(
-                    "Type: %s | Name: %s | Version: %s | Descr: %s"
-                    % (hit.type, hit.name, hit.version, hit.description)
-                )
+            # We set the score based on the number of warning list entries
+            if len(result) >= 5:
+                score = 5
+            elif len(result) >= 3:
+                score = 10
+            elif len(result) == 1:
+                score = 15
+            else:
+                score = 20
 
-                # We set the score based on the number of warning list entries
-                if len(result) >= 5:
-                    score = 5
-                elif len(result) >= 3:
-                    score = 10
-                elif len(result) == 1:
-                    score = 15
-                else:
-                    score = 20
+            self.helper.log_info(
+                f"number of hits ({len(result)}) setting score to {score}"
+            )
 
-                self.helper.log_info(
-                    f"number of hits ({len(result)}) setting score to {score}"
-                )
-
-                # Add labels
-                if use_parent:
-                    OpenCTIStix2.put_attribute_in_extension(
-                        stix_entity,
-                        STIX_EXT_OCTI_SCO,
-                        "labels",
-                        self.label_hygiene_parent["value"],
-                        True,
-                    )
-                else:
-                    OpenCTIStix2.put_attribute_in_extension(
-                        stix_entity,
-                        STIX_EXT_OCTI_SCO,
-                        "labels",
-                        self.label_hygiene["value"],
-                        True,
-                    )
-
-                # Update score
-                OpenCTIStix2.put_attribute_in_extension(
-                    stix_entity, STIX_EXT_OCTI_SCO, "score", score
-                )
-
-                # External references
-                if hit.name in LIST_MAPPING:
-                    url = (
-                        "https://github.com/MISP/misp-warninglists/tree/main/"
-                        + LIST_MAPPING[hit.name]
-                    )
-                else:
-                    # reference not found in the LIST_MAPPING, define a generic URL
-                    url = "https://github.com/MISP/misp-warninglists/tree/main"
+            # Add labels
+            if use_parent:
                 OpenCTIStix2.put_attribute_in_extension(
                     stix_entity,
                     STIX_EXT_OCTI_SCO,
-                    "external_references",
-                    {
-                        "source_name": "misp-warninglist",
-                        "url": url,
-                        "external_id": hit.name,
-                        "description": hit.description,
-                    },
+                    "labels",
+                    self.label_hygiene_parent["value"],
+                    True,
+                )
+            else:
+                OpenCTIStix2.put_attribute_in_extension(
+                    stix_entity,
+                    STIX_EXT_OCTI_SCO,
+                    "labels",
+                    self.label_hygiene["value"],
                     True,
                 )
 
+            # Update score
+            OpenCTIStix2.put_attribute_in_extension(
+                stix_entity, STIX_EXT_OCTI_SCO, "score", score
+            )
+
+            # External references
+            if hit.name in LIST_MAPPING:
+                url = (
+                    "https://github.com/MISP/misp-warninglists/tree/main/"
+                    + LIST_MAPPING[hit.name]
+                )
+            else:
+                # reference not found in the LIST_MAPPING, define a generic URL
+                url = "https://github.com/MISP/misp-warninglists/tree/main"
+            OpenCTIStix2.put_attribute_in_extension(
+                stix_entity,
+                STIX_EXT_OCTI_SCO,
+                "external_references",
+                {
+                    "source_name": "misp-warninglist",
+                    "url": url,
+                    "external_id": hit.name,
+                    "description": hit.description,
+                },
+                True,
+            )
+
+            if opencti_entity["entity_type"] != "Indicator":
                 # Add indicators
                 for indicator_id in opencti_entity["indicatorsIds"]:
                     stix_indicator = (
@@ -279,15 +369,14 @@ class HygieneConnector:
                     # Append
                     stix_objects.append(stix_indicator)
 
-                serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
-                self.helper.send_stix2_bundle(serialized_bundle)
-            return "Observable value found on warninglist and tagged accordingly"
+            serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
+            self.helper.send_stix2_bundle(serialized_bundle)
 
     def _process_message(self, data: Dict) -> str:
         stix_objects = data["stix_objects"]
         stix_entity = data["stix_entity"]
         opencti_entity = data["enrichment_entity"]
-        return self._process_observable(stix_objects, stix_entity, opencti_entity)
+        return self._process_entity(stix_objects, stix_entity, opencti_entity)
 
     # Start the main loop
     def start(self):
