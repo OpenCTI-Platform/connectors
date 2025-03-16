@@ -1,6 +1,5 @@
 import os
 from typing import Dict
-from stix_shifter.stix_translation import stix_translation
 
 import tldextract
 import yaml
@@ -12,6 +11,7 @@ from pycti import (
     get_config_variable,
 )
 from pymispwarninglists import WarningLists
+from stix_shifter.stix_translation import stix_translation
 
 # At the moment it is not possible to map lists to their upstream path.
 # Thus we need to have our own mapping here.
