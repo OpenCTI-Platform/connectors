@@ -26,3 +26,12 @@ def test_author(mocked_helper: OpenCTIConnectorHelper):
     # Ensure all stix objects have the author
     for stix_object in stix_objects[:6]:
         assert stix_object["created_by_ref"] == author.id
+
+
+@pytest.mark.usefixtures("mocked_requests")
+def test_send_stix2_bundle_update_argument(mocked_helper: OpenCTIConnectorHelper):
+    connector = ConnectorWiz(config=ConfigConnector(), helper=mocked_helper)
+
+    connector.process_message()
+
+    assert not mocked_helper.send_stix2_bundle.call_args.kwargs.get("update", False)
