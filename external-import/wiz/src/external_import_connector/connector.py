@@ -32,7 +32,7 @@ class ConnectorWiz:
         state = self.helper.get_state()
         i = 0
 
-        results = []
+        stix_objects = []
         for entity in entities:
 
             # Filter entities
@@ -65,10 +65,17 @@ class ConnectorWiz:
                 entity["target_ref"] = entity["target_ref"].replace(
                     "threat-actor", "intrusion-set"
                 )
-            results.append(entity)
+
+            if not entity.get("created_by_ref"):
+                entity["created_by_ref"] = self.converter_to_stix.author["id"]
+
+            stix_objects.append(entity)
             i += 1
 
-        return results
+        # Ensure consistent bundle by adding the author
+        if stix_objects:
+            stix_objects.append(self.converter_to_stix.author)
+        return stix_objects
 
     def process_message(self) -> None:
         """

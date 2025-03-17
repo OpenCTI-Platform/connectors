@@ -38,10 +38,13 @@ class ConverterToStix:
         :return: Author in Stix2 object
         """
         author = stix2.Identity(
-            id=Identity.generate_id(name="Source Name", identity_class="organization"),
-            name="Source Name",
+            id=Identity.generate_id(name="Wiz", identity_class="organization"),
+            name="Wiz Research",
             identity_class="organization",
-            description="DESCRIPTION",
+            description="WIZ Research is an SME specialised in complex digital systems "
+            "with a unique combination of expertise in data-driven digital twins, artificial "
+            "intelligence staking, multi-organisation decentralised data structures and "
+            "human-centred interfaces",
         )
         return author
 
