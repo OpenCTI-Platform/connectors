@@ -1,7 +1,7 @@
 version: '1'
 services:
   connector-infoblox:
-    image: opencti/connector-infoblox:6.5.6
+    image: opencti/connector-infoblox:6.5.7
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
