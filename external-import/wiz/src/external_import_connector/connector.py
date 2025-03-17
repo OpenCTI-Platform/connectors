@@ -30,14 +30,13 @@ class ConnectorWiz:
         # Get entities from external sources
         entities = self.client.get_entities()["objects"]
         state = self.helper.get_state()
-        i = 0
 
+        results = []
         for entity in entities:
 
             # Filter entities
             if "modified" in entity and state is not None:
                 if entity["modified"] < state["last_run"]:
-                    del entities[i]
                     continue
 
             if entity["type"] == "malware":
@@ -46,7 +45,7 @@ class ConnectorWiz:
                     and len(entity["malware_types"]) == 1
                     and entity["malware_types"][0] == ""
                 ):
-                    del entities[i]["malware_types"]
+                    del entity["malware_types"]
 
             if (
                 entity["type"] == "threat-actor"
@@ -65,9 +64,9 @@ class ConnectorWiz:
                 entity["target_ref"] = entity["target_ref"].replace(
                     "threat-actor", "intrusion-set"
                 )
-            i += 1
+            results.append(entity)
 
-        return entities
+        return results
 
     def process_message(self) -> None:
         """
