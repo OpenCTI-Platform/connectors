@@ -32,12 +32,12 @@ class ConnectorWiz:
         state = self.helper.get_state()
         i = 0
 
+        results = []
         for entity in entities:
 
             # Filter entities
             if "modified" in entity and state is not None:
                 if entity["modified"] < state["last_run"]:
-                    del entities[i]
                     continue
 
             if entity["type"] == "malware":
@@ -65,9 +65,10 @@ class ConnectorWiz:
                 entity["target_ref"] = entity["target_ref"].replace(
                     "threat-actor", "intrusion-set"
                 )
+            results.append(entity)
             i += 1
 
-        return entities
+        return results
 
     def process_message(self) -> None:
         """
