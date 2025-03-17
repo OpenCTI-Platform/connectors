@@ -37,7 +37,7 @@ class CVEProcessor:
 
         # Import STIX objects to OpenCTI
         bundle = self.helper.stix2_create_bundle(stix_objects)
-        self.helper.send_stix2_bundle(bundle, work_id=work_id)
+        self.helper.send_stix2_bundle(bundle, work_id=work_id, update=True)
 
         self.helper.log_info(f"Processed CVE: {cve_data['cveMetadata']['cveId']}")
 
@@ -88,6 +88,19 @@ class CVEProcessor:
                     url=reference["url"]
                 )
             )
+        
+        # Extract cwe and capec IDs to attach as labels to the Vulnerbaility object
+        labels = []
+        for problemType in cna["problemTypes"]:
+            for cwe in  problemType['descriptions']:
+                if 'cweId' in cwe:
+                    labels.append(cwe['cweId'])
+                if 'CWE-' in cwe['description'] and 'cweId' not in cwe:
+                    labels.append(cwe['description'].split(" ")[0].replace(":",""))
+                    labels.append(" ".join(cwe['description'].split(" ")[1:]))
+                else:
+                    labels.append(cwe['description'])
+
             
         # Create Vulnerability object
         vulnerability = stix2.Vulnerability(
@@ -98,7 +111,8 @@ class CVEProcessor:
             modified=modified_date,
             external_references=external_references,
             created_by_ref=self.author,
-            custom_properties=x_opencti_cvss
+            custom_properties=x_opencti_cvss,
+            labels=labels
         )
         stix_objects.append(vulnerability)
         

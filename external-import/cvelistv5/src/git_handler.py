@@ -48,7 +48,7 @@ class GitHandler:
             updated_files.update(commit.stats.files.keys())
             
         self.update_last_run_time()
-        return [os.path.join(self.local_path, f) for f in updated_files if f.startswith('cves/') and f.endswith('.json') and not f.endswith('delta.json')]
+        return [os.path.join(self.local_path, f) for f in updated_files if f.startswith('cves/') and f.endswith('.json') and not f.endswith('delta.json') and not f.endswith('deltaLog.json')]
 
     def update_last_run_time(self):
         self.last_run_time = datetime.now()

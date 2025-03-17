@@ -1,6 +1,7 @@
 import os
 import datetime
 import yaml
+import json
 from threading import Thread
 from git_handler import GitHandler
 from cve_processor import CVEProcessor
@@ -36,7 +37,7 @@ class CVEListV5Connector:
         )
         self._log_message(f"Git repo clone complete.")
         
-        state = self.helper.get_state
+        state = self.helper.get_state()
         if 'last_update' in state:
             self.git_handler.last_run_time = state['last_update']
             
@@ -45,7 +46,9 @@ class CVEListV5Connector:
 
     def _log_message(self, message: str):
         self.helper.log_info(message)
-        state = self.helper.get_state
+        state = self.helper.get_state()
+        self.helper.log_debug(f"Original state: {json.dumps(state)}")
+        if not state: state = {}
         state['message'] = message
         self.helper.set_state(state)
         
