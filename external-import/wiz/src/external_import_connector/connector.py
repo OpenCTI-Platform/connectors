@@ -19,7 +19,7 @@ class ConnectorWiz:
         self.config = config
         self.helper = helper
         self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper)
+        self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
     def _collect_intelligence(self) -> list:
         """
@@ -31,7 +31,7 @@ class ConnectorWiz:
         entities = self.client.get_entities()["objects"]
         state = self.helper.get_state()
 
-        results = []
+        stix_objects = []
         for entity in entities:
 
             # Filter entities
@@ -64,9 +64,16 @@ class ConnectorWiz:
                 entity["target_ref"] = entity["target_ref"].replace(
                     "threat-actor", "intrusion-set"
                 )
-            results.append(entity)
 
-        return results
+            if not entity.get("created_by_ref"):
+                entity["created_by_ref"] = self.converter_to_stix.author["id"]
+
+            stix_objects.append(entity)
+
+        # Ensure consistent bundle by adding the author
+        if stix_objects:
+            stix_objects.append(self.converter_to_stix.author)
+        return stix_objects
 
     def process_message(self) -> None:
         """
