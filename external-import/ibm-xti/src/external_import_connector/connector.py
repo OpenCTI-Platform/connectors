@@ -85,7 +85,10 @@ class ConnectorIBMXTI:
 
         added_after = feed_state.get("added_after")
         # if this is the first ingest and the collection is vulnerabilities, only ingest from a rolling 2 year period
-        if not added_after and source.collection.id == "23e33546-486b-415f-851c-250b6a7b0674":
+        if (
+            not added_after
+            and source.collection.id == "23e33546-486b-415f-851c-250b6a7b0674"
+        ):
             added_after_dt = datetime.now(timezone.utc) - timedelta(days=365 * 2)
             added_after = added_after_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
