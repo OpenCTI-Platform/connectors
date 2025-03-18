@@ -21,17 +21,18 @@ class ConverterToStix:
         self.tlp_marking = self._create_tlp_marking(level=self.config.tlp_level.lower())
 
     @staticmethod
-    def create_external_reference() -> list:
+    def create_external_reference() -> dict:
         """
         Create external reference
         :return: External reference STIX2 list
         """
         external_reference = stix2.ExternalReference(
-            source_name="External Source",
-            url="CHANGEME",
-            description="DESCRIPTION",
+            source_name="Wiz Cloud Threat Landscape",
+            url="https://threats.wiz.io/",
+            description="A comprehensive threat intelligence database of cloud security "
+            "incidents, actors, tools and techniques. Powered by Wiz Research.",
         )
-        return [external_reference]
+        return external_reference
 
     @staticmethod
     def create_author() -> dict:

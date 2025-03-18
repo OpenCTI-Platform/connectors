@@ -50,6 +50,28 @@ def test_object_marking_refs(mocked_helper: OpenCTIConnectorHelper):
         assert stix_object["object_marking_refs"] == [tlp_marking.id]
 
 
+@freezegun.freeze_time("2025-03-17T00:00:00Z")
+@pytest.mark.usefixtures("mocked_requests")
+def test_external_references(mocked_helper: OpenCTIConnectorHelper):
+    connector = ConnectorWiz(config=ConfigConnector(), helper=mocked_helper)
+
+    stix_objects = connector._collect_intelligence()
+
+    assert len(stix_objects) == 8  # Assert all objects are collected
+
+    external_reference = connector.converter_to_stix.external_reference
+
+    # Ensure all stix objects have the external references
+    assert stix_objects[0]["external_references"] == [  # Existing one
+        {"source_name": "Campaign Source", "url": "https://www.url-campaign.com"}
+    ]
+    assert stix_objects[1]["external_references"] == [external_reference]
+    assert stix_objects[2]["external_references"] == [external_reference]
+    assert stix_objects[3]["external_references"] == [external_reference]
+    assert stix_objects[4]["external_references"] == [external_reference]
+    assert stix_objects[5]["external_references"] == [external_reference]
+
+
 @pytest.mark.usefixtures("mocked_requests")
 def test_send_stix2_bundle_update_argument(mocked_helper: OpenCTIConnectorHelper):
     connector = ConnectorWiz(config=ConfigConnector(), helper=mocked_helper)
