@@ -6,9 +6,8 @@ from stix2 import TAXIICollectionSource
 from stix2.parsing import parse
 from taxii2client.v21 import Server, as_pages
 
-from external_import_connector.formatter import OpenCTISTIXFormatter
-
 from .config_variables import ConfigConnector
+from .formatter import OpenCTISTIXFormatter
 
 
 class ConnectorClient:
