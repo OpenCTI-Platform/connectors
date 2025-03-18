@@ -13,6 +13,7 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=CHANGEME # ISO8601 format in String, start with 'P...' for Period
       - WIZ_THREAT_ACTOR_AS_INTRUSION_SET=False
+      - WIZ_TLP_LEVEL=clear
       # Connector's definition parameters OPTIONAL
       # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
       # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once

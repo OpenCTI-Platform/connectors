@@ -13,7 +13,7 @@ def test_author(mocked_helper: OpenCTIConnectorHelper):
 
     stix_objects = connector._collect_intelligence()
 
-    assert len(stix_objects) == 7  # Assert all objects are collected
+    assert len(stix_objects) == 8  # Assert all objects are collected
 
     author = next(
         stix_object
@@ -26,6 +26,28 @@ def test_author(mocked_helper: OpenCTIConnectorHelper):
     # Ensure all stix objects have the author
     for stix_object in stix_objects[:6]:
         assert stix_object["created_by_ref"] == author.id
+
+
+@freezegun.freeze_time("2025-03-17T00:00:00Z")
+@pytest.mark.usefixtures("mocked_requests")
+def test_object_marking_refs(mocked_helper: OpenCTIConnectorHelper):
+    connector = ConnectorWiz(config=ConfigConnector(), helper=mocked_helper)
+
+    stix_objects = connector._collect_intelligence()
+
+    assert len(stix_objects) == 8  # Assert all objects are collected
+
+    tlp_marking = next(
+        stix_object
+        for stix_object in stix_objects
+        if isinstance(stix_object, stix2.MarkingDefinition)
+    )
+
+    assert tlp_marking == connector.converter_to_stix.tlp_marking
+
+    # Ensure all stix objects have the object_marking_refs
+    for stix_object in stix_objects[:6]:
+        assert stix_object["object_marking_refs"] == [tlp_marking.id]
 
 
 @pytest.mark.usefixtures("mocked_requests")
