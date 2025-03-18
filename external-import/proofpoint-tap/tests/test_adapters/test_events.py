@@ -42,23 +42,26 @@ def mock_siem_v2_client_instance() -> SIEMClient:
     client._get = AsyncMock()
     return client
 
+
 @pytest.fixture(scope="function")
 def siem_v2_client_instance():
     """Return a mock Client instance."""
     return mock_siem_v2_client_instance()
 
+
 def mock_events_api_v2_adapter():
     """Return a mock Client instance."""
-    adapter =  EventsAPIV2(
+    adapter = EventsAPIV2(
         base_url=URL("http://example.com"),
         principal=SecretStr("principal"),
         secret=SecretStr("*****"),  # noqa: S106  # we indeed harcode a secret here...
         timeout=timedelta(seconds=1),
         retry=1,
-        backoff=timedelta(seconds=1)
+        backoff=timedelta(seconds=1),
     )
     adapter._client = mock_siem_v2_client_instance()
     return adapter
+
 
 @pytest.fixture(scope="function")
 def events_api_v2_adapter():
@@ -89,8 +92,8 @@ def events_api_v2_adapter():
             datetime(1970, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
             datetime(1970, 1, 1, 1, 15, 0, tzinfo=timezone.utc),
             id="2.5_times_prefered_duration",
-        )
-    ]
+        ),
+    ],
 )
 def test_events_api_v2_splits_interval_correctly(start_time, stop_time):
     """Test interval computation."""
@@ -102,19 +105,18 @@ def test_events_api_v2_splits_interval_correctly(start_time, stop_time):
     )
     intervals = list(iterable)
     # Then the correct intervals should be present
-    assert ( # noqa: S101
+    assert (  # noqa: S101
         # start_time is contained in the first list item
         # stop_time is contained in the last list item
         # all intervals last the same amount of time
-        intervals[0][0] <= start_time <= intervals[0][1]
+        intervals[0][0]
+        <= start_time
+        <= intervals[0][1]
     )
-    assert ( # noqa: S101
-        intervals[-1][0] <= stop_time <= intervals[-1][1]
-    )
-    duration_seconds = (intervals[0][1]-intervals[0][0]).total_seconds()
-    assert ( # noqa: S101
-        60 <= duration_seconds <= 3600
-    )
-    assert ( # noqa: S101
-        all((interval[1]-interval[0]).total_seconds()==duration_seconds for interval in intervals)
+    assert intervals[-1][0] <= stop_time <= intervals[-1][1]  # noqa: S101
+    duration_seconds = (intervals[0][1] - intervals[0][0]).total_seconds()
+    assert 60 <= duration_seconds <= 3600  # noqa: S101
+    assert all(  # noqa: S101
+        (interval[1] - interval[0]).total_seconds() == duration_seconds
+        for interval in intervals
     )

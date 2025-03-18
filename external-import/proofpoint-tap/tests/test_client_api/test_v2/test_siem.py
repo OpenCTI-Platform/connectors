@@ -70,20 +70,24 @@ def mark_parametrize_all_public_methods(func: Callable[..., Any]) -> Callable[..
         ],
     )(func)
 
+
 # Test client interval computation
 def test_interval_formatting(client_instance: SIEMClient) -> None:
     """Test interval computation."""
     # Given a client instance
     # When calling the _format_interval_param method
-    yesterday_midnight = (datetime.now(timezone.utc) - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_midnight = (datetime.now(timezone.utc) - timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
     yesterday_1_am = yesterday_midnight + timedelta(hours=1)
     res = client_instance._format_interval_param(
         start_time=yesterday_midnight,
         end_time=yesterday_1_am,
     )
     # Then the interval should be computed correctly
-    assert ( # noqa: S101 # We indeed call assert in unit tests.
-        res == f"{yesterday_midnight.year}-{yesterday_midnight.month:02d}-{yesterday_midnight.day:02d}T00:00:00+00:00/{yesterday_1_am.year}-{yesterday_1_am.month:02d}-{yesterday_1_am.day:02d}T01:00:00+00:00"
+    assert (  # noqa: S101 # We indeed call assert in unit tests.
+        res
+        == f"{yesterday_midnight.year}-{yesterday_midnight.month:02d}-{yesterday_midnight.day:02d}T00:00:00+00:00/{yesterday_1_am.year}-{yesterday_1_am.month:02d}-{yesterday_1_am.day:02d}T01:00:00+00:00"
     )
 
 
