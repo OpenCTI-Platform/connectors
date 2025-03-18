@@ -1,5 +1,9 @@
 # AI based OpenCTI Document Import Connector (Powered by Ariane) 
 
+| Status            | Date       | Comment |
+| ----------------- |------------| ------- |
+| Filigran Verified | 2025-03-18 |    -    |
+
 This connector allows Enterprise Edition Organizations to feed information from document to OpenCTI, with more capabilities than regular Import Document connector. 
 
 This connector add more extraction capabilities : it is possible to extract `Malware`, `Country` and `Intrusion-Set` entities.  
