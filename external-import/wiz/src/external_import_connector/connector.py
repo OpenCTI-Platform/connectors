@@ -73,6 +73,11 @@ class ConnectorWiz:
                     self.converter_to_stix.tlp_marking["id"]
                 ]
 
+            if "external_references" not in entity:
+                entity["external_references"] = [
+                    dict(self.converter_to_stix.external_reference)
+                ]
+
             stix_objects.append(entity)
 
         # Ensure consistent bundle by adding the author
