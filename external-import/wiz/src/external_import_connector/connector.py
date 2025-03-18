@@ -19,7 +19,7 @@ class ConnectorWiz:
         self.config = config
         self.helper = helper
         self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper)
+        self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
     def _collect_intelligence(self) -> list:
         """
@@ -69,12 +69,18 @@ class ConnectorWiz:
             if not entity.get("created_by_ref"):
                 entity["created_by_ref"] = self.converter_to_stix.author["id"]
 
+            if "object_marking_refs" not in entity:
+                entity["object_marking_refs"] = [
+                    self.converter_to_stix.tlp_marking["id"]
+                ]
+
             stix_objects.append(entity)
             i += 1
 
         # Ensure consistent bundle by adding the author
         if stix_objects:
             stix_objects.append(self.converter_to_stix.author)
+            stix_objects.append(self.converter_to_stix.tlp_marking)
         return stix_objects
 
     def process_message(self) -> None:
