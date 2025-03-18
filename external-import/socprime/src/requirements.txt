@@ -1,2 +1,2 @@
-pycti==6.5.5
+pycti==6.5.8
 python-dateutil==2.9.0.post0

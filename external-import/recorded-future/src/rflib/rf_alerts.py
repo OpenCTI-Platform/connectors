@@ -28,7 +28,7 @@ class RecordedFutureAlertConnector(threading.Thread):
         threading.Thread.__init__(self)
         self.helper = helper
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "Starting Recorded Future Alert connector module initialization"
         )
 
@@ -133,16 +133,20 @@ class RecordedFutureAlertConnector(threading.Thread):
         )
 
         self.update_rules()
+
         timestamp = datetime.datetime.now(pytz.timezone("UTC"))
-        current_state = self.helper.get_state()
-        if current_state is not None and "last_alert_run" in current_state:
-            current_state_datetime = datetime.datetime.strptime(
-                current_state["last_alert_run"], "%Y-%m-%dT%H:%M:%S"
+        current_state = self.helper.get_state() or {}
+
+        if current_state is not None and "last_alerts_run" in current_state:
+
+            last_alerts_run = datetime.datetime.strptime(
+                current_state["last_alerts_run"], "%Y-%m-%dT%H:%M:%S"
             )
-            if current_state_datetime.date() == datetime.datetime.today().date():
+
+            if last_alerts_run.date() == datetime.datetime.today().date():
                 self.run_for_time_period(
                     trigger=str(datetime.datetime.today().date()),
-                    after=current_state["last_alert_run"],
+                    after=current_state["last_alerts_run"],
                 )
                 for alert in self.api_recorded_future.alerts:
                     try:
@@ -153,25 +157,26 @@ class RecordedFutureAlertConnector(threading.Thread):
                             {"alert_id": alert.alert_id, "error_msg": str(err)},
                         )
                     timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
-                    self.helper.set_state(
+
+                    current_state = self.helper.get_state() or {}
+                    current_state.update(
                         {
-                            "last_alert_run": timestamp_checkpoint.strftime(
+                            "last_alerts_run": timestamp_checkpoint.strftime(
                                 "%Y-%m-%dT%H:%M:%S"
                             )
                         }
                     )
+                    self.helper.set_state(current_state)
             else:
                 local_alerts = []
                 self.run_for_time_period(
-                    trigger=str(current_state_datetime.date()),
-                    after=current_state["last_alert_run"],
+                    trigger=str(last_alerts_run.date()),
+                    after=current_state["last_alerts_run"],
                 )
                 local_alerts.extend(self.api_recorded_future.alerts)
-                day_delta = (
-                    datetime.datetime.today().date() - current_state_datetime.date()
-                )
+                day_delta = datetime.datetime.today().date() - last_alerts_run.date()
                 for i in range(1, day_delta.days + 1):
-                    day = current_state_datetime.date() + datetime.timedelta(days=i)
+                    day = last_alerts_run.date() + datetime.timedelta(days=i)
                     self.run_for_time_period(trigger=str(day))
                     local_alerts.extend(self.api_recorded_future.alerts)
                 for alert in local_alerts:
@@ -183,13 +188,16 @@ class RecordedFutureAlertConnector(threading.Thread):
                             {"alert_id": alert.alert_id, "error_msg": str(err)},
                         )
                     timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
-                    self.helper.set_state(
+
+                    current_state = self.helper.get_state() or {}
+                    current_state.update(
                         {
-                            "last_alert_run": timestamp_checkpoint.strftime(
+                            "last_alerts_run": timestamp_checkpoint.strftime(
                                 "%Y-%m-%dT%H:%M:%S"
                             )
                         }
                     )
+                    self.helper.set_state(current_state)
         else:
             self.run_for_time_period(trigger=str(datetime.datetime.today().date()))
             for alert in self.api_recorded_future.alerts:
@@ -201,17 +209,23 @@ class RecordedFutureAlertConnector(threading.Thread):
                         {"alert_id": alert.alert_id, "error_msg": str(err)},
                     )
                 timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
-                self.helper.set_state(
+
+                current_state = self.helper.get_state() or {}
+                current_state.update(
                     {
-                        "last_alert_run": timestamp_checkpoint.strftime(
+                        "last_alerts_run": timestamp_checkpoint.strftime(
                             "%Y-%m-%dT%H:%M:%S"
                         )
                     }
                 )
+                self.helper.set_state(current_state)
 
-        self.helper.set_state(
-            {"last_alert_run": timestamp.strftime("%Y-%m-%dT%H:%M:%S")}
+        current_state = self.helper.get_state() or {}
+        current_state.update(
+            {"last_alerts_run": timestamp.strftime("%Y-%m-%dT%H:%M:%S")}
         )
+        self.helper.set_state(current_state)
+
         message = f"{self.helper.connect_name} connector successfully run for Recorded Future Alerts"
         self.helper.api.work.to_processed(self.work_id, message)
 
@@ -530,9 +544,11 @@ class RecordedFutureAlertConnector(threading.Thread):
             self.recordedfuture_alert_time, after=after
         )
         if len(self.api_recorded_future.alerts) == 0:
-            self.helper.log_info("[" + str(trigger) + "] No alert found : exiting")
+            self.helper.connector_logger.info(
+                "[" + str(trigger) + "] No alert found : exiting"
+            )
         else:
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 "["
                 + str(trigger)
                 + "] "

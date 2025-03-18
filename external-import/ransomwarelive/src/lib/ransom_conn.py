@@ -397,7 +397,7 @@ class RansomwareAPIConnector:
         """Generates STIX objects from the ransomware.live API data"""
 
         # Creating Victim object
-        post_title = item.get("victims")
+        post_title = item.get("victim")
         victim_name, identity_class = (
             (post_title, "organization")
             if len(post_title) > 2
