@@ -34,14 +34,14 @@ class ConnectorTemplate:
 
     """
 
-    def __init__(self):
+    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
 
         # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.config = config
+        self.helper = helper
 
     def process_message(self, data: dict) -> str:
         """
