@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import timedelta
+from math import ceil
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Generator, Literal, Optional
 
 from proofpoint_tap.client_api.v2.siem import (
@@ -323,7 +324,7 @@ class EventsAPIV2(EventsPort):
             >>> list(EventsAPIV2._chunk_30_minutes_intervals(start, stop))
 
         """
-        number_of_intervals = int((stop_time - start_time).total_seconds() / 1800) + 1
+        number_of_intervals = int(ceil((stop_time - start_time).total_seconds() / 1800))
         padded_start_time = stop_time - number_of_intervals * timedelta(minutes=30)
         for i in range(number_of_intervals):
             start = padded_start_time + timedelta(seconds=i * 1800)
