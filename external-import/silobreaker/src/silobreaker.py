@@ -160,8 +160,24 @@ class Silobreaker:
                 with urllib.request.urlopen(req) as response:
                     responseJson = response.read()
                 return json.loads(responseJson.decode("utf-8"))
-        except:
+        except urllib.request.HTTPError as err:
+            # In this specific case, get error from API response
+            error_metadata = {
+                "error_status_reason": err.reason,
+                "error_status": str(err.status),
+                "url": err.url,
+            }
+            self.helper.connector_logger.error(
+                "[API] An error occurred while trying to request the list",
+                error_metadata,
+            )
             return {}
+        except Exception as err:
+            error_metadata = {"error": err}
+            self.helper.connector_logger.error(
+                "[API] An error occurred while trying to request the list",
+                error_metadata,
+            )
 
     def _convert_to_markdown(self, content):
         text_maker = html2text.HTML2Text()
