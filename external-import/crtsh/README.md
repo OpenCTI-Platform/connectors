@@ -43,7 +43,6 @@ This connector ingests and updates information from Cert.SH, focusing on domain-
 OPENCTI_URL=http://opencti:8080
 OPENCTI_TOKEN=[Your token]
 CONNECTOR_ID=[UUIDv4]
-CONNECTOR_CONFIDENCE_LEVEL=100
 CONNECTOR_LOG_LEVEL=info
 CONNECTOR_RUN_EVERY=60s
 CONNECTOR_UPDATE_EXISTING_DATA=false

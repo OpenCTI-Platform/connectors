@@ -157,11 +157,6 @@ class HarfanglabIncidentsConnector:
                 )
                 stix_objects.append(stix_incident)
 
-                stix_identity = self.converter_to_stix.create_identity(
-                    alert=alert, alert_intelligence=alert_intelligence
-                )
-                stix_objects.append(stix_identity)
-
                 stix_indicator = self.converter_to_stix.create_indicator(
                     alert=alert, alert_intelligence=alert_intelligence
                 )

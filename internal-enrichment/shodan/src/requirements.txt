@@ -1,2 +1,2 @@
-pycti==6.5.3
+pycti==6.5.8
 shodan==1.31.0

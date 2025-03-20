@@ -1,5 +1,8 @@
 # OpenCTI Group-IB Connector
 
+| Status            | Date       | Comment |
+| ----------------- |------------| ------- |
+| Filigran Verified | 2025-03-10 |    -    |
 
 [![Python](https://img.shields.io/badge/python-v3.6.8+-blue?logo=python)](https://python.org/downloads/release/python-368/)
 [![cyberintegrations](https://img.shields.io/badge/cyberintegrations-v0.6.6+-orange?)](https://github.com/cyberintegrations/releases/tag/0.6.6/)
@@ -96,7 +99,6 @@ The ones that follow are connector's generic execution parameters expected to be
 
 | Parameter                    | Mandatory | Description                                                                                                                                                                   |
 |------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `CONNECTOR_CONFIDENCE_LEVEL` | Yes       | The default confidence level for created sightings (a number between 1 and 4).                                                                                                |
 | `CONNECTOR_LOG_LEVEL`        | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                 |
 | `CONNECTOR__DURATION_PERIOD`            | Yes       | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day. |
 | `CONNECTOR_UPDATE_EXISTING_DATA`       | Yes       | Whether to update known existing data.                                                                                                                                        |
@@ -426,11 +428,12 @@ If the **log** folder doesn't exist, please collect logs from console output or 
 2. If you have problems with proxy configuration, attach the proxy environment by executing this command: 
 ```printenv | grep proxy```
 
+3. If you encounter any problem when activate a collection and 403 status response is raised:
+```ConnectionException: Status code: 403. Message: Something is wrong with your account, please, contact us. The issue can be related to Access list, Wrong API key or Wrong username.", "taskName": null}```
 
-
-<br/>
-
-
+Please ensure that:
+- **IP is in Access List**: Provide your public IP addresses, for GroupIB to add them to the API access list.
+- **Generate API Key if expired**: Log in to your account, navigate to your profile, and generate an API_KEY. Be sure to save this key, as it will be required for API access. For API authorization, use your email and the generated API key instead of your portal password. 
 
 ## FAQ
 

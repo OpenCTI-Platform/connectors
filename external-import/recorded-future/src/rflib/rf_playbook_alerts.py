@@ -24,7 +24,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         threading.Thread.__init__(self)
         self.helper = helper
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "Starting Recorded Future Playbook Alert connector module initialization"
         )
 
@@ -66,7 +66,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         timestamp = datetime.datetime.now(pytz.timezone("UTC"))
         self.work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id,
-            "Recorded Future Playbook Alert",
+            "Recorded Future Playbook Alerts",
         )
         current_state = self.helper.get_state()
         playbook_types = [
@@ -78,10 +78,10 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             self.api_recorded_future.playbook_alerts_summaries = []
             if (
                 current_state is not None
-                and str("last_playbook_alert_run_" + playbook_type) in current_state
+                and str("last_playbook_alerts_run_" + playbook_type) in current_state
             ):
                 current_state_datetime = datetime.datetime.strptime(
-                    current_state[str("last_playbook_alert_run_" + playbook_type)],
+                    current_state[str("last_playbook_alerts_run_" + playbook_type)],
                     "%Y-%m-%dT%H:%M:%S",
                 )
                 self.api_recorded_future.get_playbook_id(
@@ -106,7 +106,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
 
             for plb_alert in self.api_recorded_future.playbook_alerts_summaries:
                 try:
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         plb_alert.title + " - " + plb_alert.playbook_alert_id
                     )
                     playbook_alert = (
@@ -131,7 +131,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                             + playbook_alert["data"]["playbook_alert_id"]
                         )
                 except Exception as err:
-                    self.helper.log_error(err)
+                    self.helper.connector_logger.error(err)
                 self.update_state(plb_alert.category)
 
         for playbook_type in playbook_types:
@@ -144,22 +144,34 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
 
     def debug(self, text):
         if self.debug_var:
-            self.helper.log_error(text)
+            self.helper.connector_logger.error(text)
 
     def update_state(self, playbook_type):
         timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
-        current_state = self.helper.get_state()
-        if current_state is not None:
-            current_state[str("last_playbook_alert_run_" + playbook_type)] = (
-                timestamp_checkpoint.strftime("%Y-%m-%dT%H:%M:%S")
+        current_state = self.helper.get_state() or {}
+        if (
+            current_state is not None
+            and str("last_playbook_alerts_run_" + playbook_type) in current_state
+        ):
+            last_playbook_alerts_run = timestamp_checkpoint.strftime(
+                "%Y-%m-%dT%H:%M:%S"
+            )
+
+            current_state.update(
+                {"last_playbook_alerts_run_" + playbook_type: last_playbook_alerts_run}
             )
             self.helper.set_state(current_state)
         else:
-            current_state_new = {}
-            current_state_new[str("last_playbook_alert_run_" + playbook_type)] = (
-                timestamp_checkpoint.strftime("%Y-%m-%dT%H:%M:%S")
+            last_playbook_alerts_run = timestamp_checkpoint.strftime(
+                "%Y-%m-%dT%H:%M:%S"
             )
-            self.helper.set_state(current_state_new)
+
+            current_state = self.helper.get_state() or {}
+            current_state.update(
+                {"last_playbook_alerts_run_" + playbook_type: last_playbook_alerts_run}
+            )
+
+            self.helper.set_state(current_state)
 
     def create_incident_from_playbook_alert_code_repo_leakage(self, playbook_alert):
         bundle_objects = []

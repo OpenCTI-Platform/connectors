@@ -22,7 +22,7 @@ from pycti import (
 from stix2 import URL, Bundle, File, IPv4Address, Relationship
 from stix2.v21.vocab import HASHING_ALGORITHM_SHA_256
 
-__version__ = "6.5.3"
+__version__ = "6.5.8"
 BANNER = f"""
 
  ██████   ██████ █████   ███   █████ ██████████   ███████████
@@ -219,7 +219,6 @@ class MWDB:
                 id=Indicator.generate_id(pattern),
                 name=value,
                 description=description,
-                # confidence=self.helper.connect_confidence_level,
                 pattern_type="stix",
                 pattern=pattern,
                 valid_from=parser.parse(virus["malware"]["upload_time"]),
@@ -474,7 +473,6 @@ class MWDB:
                     id=Indicator.generate_id(pattern),
                     name=str(malware.file_name).replace("-" + malware.sha256, ""),
                     description=description,
-                    confidence=self.helper.connect_confidence_level,
                     pattern_type="stix",
                     pattern=pattern,
                     valid_from=malware.upload_time,

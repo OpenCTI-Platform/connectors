@@ -442,6 +442,26 @@ def test_converter_to_stix_make_targeted_software_s(
     assert software.cpe == "cpe:/a:microsoft:sharepoint_server"
 
 
+def test_unhandled_cpe_uri_are_skipped(mock_helper, mock_config, fake_plugin):
+    # Test added in the same time than a fix for the issue
+    # https://github.com/OpenCTI-Platform/connectors/issues/3473
+    # Given a converter to stix instance
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
+    # And a fake plugin with unhandled CPE URI
+    fake_plugin = fake_plugin.model_copy(
+        update={"cpe": ["p-cpe:/a:unhandled:unhandled"]}
+    )
+
+    # When calling _make_targeted_software_s
+    targeted_software = converter_to_stix._make_targeted_software_s(plugin=fake_plugin)
+
+    # Then the result should contain no software objects
+    assert len(targeted_software) == 0
+    # and nothing raised error...
+
+
 def test_converter_to_stix_make_vulnerabilities(mock_helper, mock_config, fake_plugin):
     # Given a converter to stix instance and a fake plugin instance
     converter_to_stix = ConverterToStix(
