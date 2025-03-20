@@ -53,26 +53,9 @@ class ShodanInternetDBConnector:
 
         self._client = ShodanInternetDbClient(verify=self._config.shodan.ssl_verify)
 
-    def run(self) -> None:
-        """
-        Run the connector
-        :return: None
-        """
-        self._helper.listen(message_callback=self._process_message)
-
-    def _process_message(self, data: dict[str, Any]) -> str:
-        """
-        Process the data message
-        :param data: Entity data
-        :return: None
-        """
-        # Fetch the observable being processed
-        observable = data["enrichment_entity"]
-        stix_observable = data["stix_entity"]
-
-        # Check TLP markings, do not submit higher than the max allowed
+    def extract_and_check_markings(self, opencti_entity: dict[str, Any]) -> str:
         tlps = ["TLP:CLEAR"]
-        for marking_definition in observable.get("objectMarking", []):
+        for marking_definition in opencti_entity.get("objectMarking", []):
             if marking_definition["definition_type"] == "TLP":
                 tlps.append(marking_definition["definition"])
 
@@ -81,6 +64,21 @@ class ShodanInternetDBConnector:
             if not OpenCTIConnectorHelper.check_max_tlp(tlp, max_tlp_name):
                 log.debug("Skipping observable, TLP is greater than the MAX TLP")
                 return "Skipping observable (TLP)"
+
+    def process_message(self, data: dict[str, Any]) -> str:
+        """
+        Get the observable created/modified in OpenCTI and check which type to send for process
+        The data passed in the data parameter is a dictionary with the following structure as shown in
+        https://docs.opencti.io/latest/development/connectors/#additional-implementations
+        :param data: dict of data to process
+        :return: string
+        """
+
+        self.extract_and_check_markings(opencti_entity=data["enrichment_entity"])
+
+        stix_observable = data["stix_entity"]
+
+        # Check TLP markings, do not submit higher than the max allowed
 
         # Process the observable value
         value = stix_observable["value"]
@@ -232,3 +230,12 @@ Ports: {format_list(result.ports)}
             stix_objects.append(stix_vuln)
             stix_objects.append(relationship)
         return stix_objects
+
+    def run(self) -> None:
+        """
+        Run the main process in self.helper.listen() method
+        The method continuously monitors a message queue associated with a specific connector
+        The connector have to listen a specific queue to get and then enrich the information.
+        The helper provide an easy way to listen to the events.
+        """
+        self._helper.listen(message_callback=self.process_message)
