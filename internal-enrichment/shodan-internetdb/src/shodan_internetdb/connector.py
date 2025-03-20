@@ -55,9 +55,9 @@ class ShodanInternetDBConnector:
 
         self._client = ShodanInternetDbClient(verify=self._config.shodan.ssl_verify)
 
-    def start(self) -> None:
+    def run(self) -> None:
         """
-        Start the connector
+        Run the connector
         :return: None
         """
         self._helper.listen(message_callback=self._process_message)
