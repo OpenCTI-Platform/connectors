@@ -13,5 +13,6 @@ abuseipdb:
   api_url: 'https://api.abuseipdb.com/api/v2/blacklist'
   api_key: 'ChangeMe'
   score: 100
-  limit: 1000
-  interval: 2 # In days, must be strictly greater than 1
+  limit: 10000
+  create_indicator: false
+  tlp_level: 'white'
