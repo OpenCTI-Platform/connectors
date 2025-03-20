@@ -67,9 +67,7 @@ After appending the container to your compose file, you will need to create a ne
 ### Determining Your SentinelOne URL
 Your SentinelOne URL is simply the first component of the URL you use to access the console.
 
-![S1 URL Example](doc/url_finding.png)
-
-When configuring the connector, ensure that you include the ending '/'. For example, for the above image, you would input `https://usea1-purple.sentinelone.net/`
+When configuring the connector, ensure that you include the ending '/'. For example `https://mysentinelone.instance.net/`
 
 <br>
 
