@@ -69,6 +69,15 @@ class ShodanInternetDBConnector:
                     "to enrich this entity."
                 )
 
+    def _send_bundle(self, stix_objects: list) -> str:
+        stix_objects_bundle = self._helper.stix2_create_bundle(stix_objects)
+        bundles_sent = self._helper.send_stix2_bundle(stix_objects_bundle)
+
+        info_msg = (
+            "Sending " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
+        )
+        return info_msg
+
     def process_message(self, data: dict[str, Any]) -> str:
         """
         Get the observable created/modified in OpenCTI and check which type to send for process
@@ -108,10 +117,7 @@ class ShodanInternetDBConnector:
         stix_objects.append(self._process_note(stix_observable, result))
         stix_objects.append(self._process_tags(stix_observable, result))
 
-        bundle = stix2.Bundle(objects=stix_objects, allow_custom=True).serialize()
-        self._helper.log_info("Sending event STIX2 bundle")
-        bundle_sent = self._helper.send_stix2_bundle(bundle)
-        return "Sent " + str(len(bundle_sent)) + " stix bundle(s) for worker import"
+        return self._send_bundle(stix_objects)
 
     def _process_note(
         self,
