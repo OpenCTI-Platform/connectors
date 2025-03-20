@@ -69,6 +69,7 @@ Your SentinelOne URL is simply the first component of the URL you use to access 
 
 When configuring the connector, ensure that you include the ending '/'. For example `https://mysentinelone.instance.net/`
 
+
 <br>
 
 ### Creating the Connector User
