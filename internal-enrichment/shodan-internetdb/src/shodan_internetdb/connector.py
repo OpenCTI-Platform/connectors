@@ -1,6 +1,5 @@
 """Shodan InternetDB connector"""
 
-import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -24,8 +23,6 @@ from .config import RootConfig
 __all__ = [
     "ShodanInternetDBConnector",
 ]
-
-log = logging.getLogger(__name__)
 
 
 class ShodanInternetDBConnector:
@@ -63,7 +60,9 @@ class ShodanInternetDBConnector:
         for tlp in tlps:
             max_tlp_name = self._config.shodan.max_tlp.name
             if not OpenCTIConnectorHelper.check_max_tlp(tlp, max_tlp_name):
-                log.debug("Skipping observable, TLP is greater than the MAX TLP")
+                self._helper.connector_logger.debug(
+                    "Skipping observable, TLP is greater than the MAX TLP"
+                )
                 return "Skipping observable (TLP)"
 
     def process_message(self, data: dict[str, Any]) -> str:
@@ -84,22 +83,24 @@ class ShodanInternetDBConnector:
         # Process the observable value
         value = stix_observable["value"]
         if not validators.ipv4(value):
-            log.error("Observable value is not an IPv4 address")
+            self._helper.connector_logger.error(
+                "Observable value is not an IPv4 address"
+            )
             return "Skipping observable (ipv4 validation)"
 
         try:
             result = self._client.query(value)
         except RequestException:
-            log.exception("Shodan API error")
+            self._helper.connector_logger.exception("Shodan API error")
             return "Skipping observable (Shodan API error)"
 
         if result is None:
-            log.debug("No information available on %s", value)
+            self._helper.connector_logger.debug("No information available on %s", value)
             return "Skipping observable (Shodan 404)"
 
         # Process the result
         stix_objects = []
-        log.debug("Processing %s", value)
+        self._helper.connector_logger.debug("Processing %s", value)
         stix_objects.extend(self._process_domains(stix_observable, result))
         stix_objects.extend(self._process_vulns(stix_observable, result))
         stix_objects.append(self._process_note(stix_observable, result))
@@ -165,7 +166,7 @@ Ports: {format_list(result.ports)}
         """
         stix_objects = []
         for name in result.hostnames:
-            log.debug("Adding domain %s", name)
+            self._helper.connector_logger.debug("Adding domain %s", name)
             stix_domain = stix2.DomainName(
                 value=name,
                 object_marking_refs=[self._object_marking_id],
@@ -208,7 +209,7 @@ Ports: {format_list(result.ports)}
         vuln_eol = now + timedelta(days=60)
 
         for name in result.vulns:
-            log.debug("Creating vulnerability %s", name)
+            self._helper.connector_logger.debug("Creating vulnerability %s", name)
             stix_vuln = stix2.Vulnerability(
                 id=Vulnerability.generate_id(name),
                 name=f"{name}",
