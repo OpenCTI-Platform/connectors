@@ -1,11 +1,9 @@
 """Shodan InternetDB connector"""
 
-from __future__ import annotations
-
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any
 
 import stix2
 import validators
@@ -33,7 +31,7 @@ log = logging.getLogger(__name__)
 class ShodanInternetDBConnector:
     """Shodan InternetDB connector"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Constructor"""
         config_path = Path(__file__).parent.parent.joinpath("config.yml")
         config = (
@@ -62,7 +60,7 @@ class ShodanInternetDBConnector:
         """
         self._helper.listen(message_callback=self._process_message)
 
-    def _process_message(self, data: Dict) -> str:
+    def _process_message(self, data: dict[str, Any]) -> str:
         """
         Process the data message
         :param data: Entity data
@@ -115,7 +113,7 @@ class ShodanInternetDBConnector:
 
     def _process_note(
         self,
-        observable: Dict[str, Any],
+        observable: dict[str, Any],
         result: ShodanResult,
     ) -> Note:
         """
@@ -125,7 +123,7 @@ class ShodanInternetDBConnector:
         :return: None
         """
 
-        def format_list(alist: List[Union[str, int]]) -> str:
+        def format_list(alist: list[str] | list[int]) -> str:
             """Format a list of primitives into a Markdown list"""
             return "".join(f"\n- {name}" for name in alist) or "n/a"
 
@@ -157,9 +155,9 @@ Ports: {format_list(result.ports)}
 
     def _process_domains(
         self,
-        observable: Dict[str, Any],
+        observable: dict[str, Any],
         result: ShodanResult,
-    ) -> list:
+    ) -> list[stix2.DomainName]:
         """
         Add additional domains to the observable
         :param observable: Observable data
@@ -180,9 +178,9 @@ Ports: {format_list(result.ports)}
 
     def _process_tags(
         self,
-        observable: Dict[str, Any],
+        observable: dict[str, Any],
         result: ShodanResult,
-    ) -> Dict:
+    ) -> dict[str, Any]:
         """
         Add additional tags to the observable
         :param observable: Observable data
@@ -197,9 +195,9 @@ Ports: {format_list(result.ports)}
 
     def _process_vulns(
         self,
-        observable: Dict[str, Any],
+        observable: dict[str, Any],
         result: ShodanResult,
-    ) -> list:
+    ) -> list[stix2.Vulnerability | stix2.Relationship]:
         """
         Add additional vulnerabilities to the observable
         :param observable: Observable data
