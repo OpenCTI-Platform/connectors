@@ -34,6 +34,23 @@ THREAT_TYPES = {
 }
 TLP_AMBER_STRICT_ID = "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
 
+NETWORK_ATTRIBUTES_LIST = [
+    "domain-name",
+    "hostname",
+    "ipv4-addr",
+    "ipv6-addr",
+    "url",
+    "email-addr",
+]
+
+FILE_HASH_TYPES_MAPPER = {
+    "md5": "md5",
+    "sha-1": "sha1",
+    "sha1": "sha1",
+    "sha-256": "sha256",
+    "sha256": "sha256",
+}
+
 
 def is_stix_indicator(data: dict) -> bool:
     """
@@ -163,12 +180,10 @@ def get_hash_type(data: dict) -> str | None:
         raise ValueError("Data type is not file")
 
     hash_type = None
-    if "MD5" in data["hashes"]:
-        hash_type = "md5"
-    if "SHA-1" in data["hashes"]:
-        hash_type = "sha1"
-    if "SHA-256" in data["hashes"]:
-        hash_type = "sha256"
+
+    for key in data["hashes"]:
+        hash_type = FILE_HASH_TYPES_MAPPER[key]
+
     return hash_type
 
 
@@ -182,10 +197,8 @@ def get_hash_value(data: dict) -> str | None:
         raise ValueError("Data type is not file")
 
     hash_value = None
-    if "MD5" in data["hashes"]:
-        hash_value = data["hashes"]["MD5"]
-    if "SHA-1" in data["hashes"]:
-        hash_value = data["hashes"]["SHA-1"]
-    if "SHA-256" in data["hashes"]:
-        hash_value = data["hashes"]["SHA-256"]
+
+    for key in data["hashes"]:
+        hash_type = FILE_HASH_TYPES_MAPPER[key]
+        hash_value = data["hashes"].get(hash_type)
     return hash_value

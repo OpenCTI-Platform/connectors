@@ -70,3 +70,11 @@ Below are the parameters you'll need to set for Sentinel Connector:
 | Target Product             | `target_product` | `SENTINEL_INTEL_TARGET_PRODUCT` | /       | Yes       | `Azure Sentinel`              | `Azure Sentinel` or `Microsoft Defender ATP`                                                                                                                                                                                                                                                                                                                 |
 | TLP Level                  | `tlp_level`      | `SENTINEL_INTEL_TLP_LEVEL`      | /       | No        | `amber`                       | This will overide all TLP values submitted to Sentinel to this. Possible TLP values are `unknown`, `white`, `green`, `amber`, `red`                                                                                                                                                                                                                               |
 | Passive Only               | `passive_only`   | `SENTINEL_INTEL_PASSIVE_ONLY`   | /       | No        | `true`                        | Determines if the indicator should trigger an event that is visible to an end-user. When set to `True` security tools will not notify the end user that a ‘hit’ has occurred. This is most often treated as audit or silent mode by security products where they will simply log that a match occurred but will not perform the action. Default value is `False`. |
+
+
+### Known Behavior
+
+- When creating, updating or deleting and IOC, it can take few minutes before seeing it into Microsoft Sentinel TI
+- When creating an email address, it will display the `Types` as `Other`
+
+![Display of Email Address on MSTI](./doc/ioc_msti.png)
