@@ -28,7 +28,7 @@ The connector adds the following Entities:
 
 ### Requirements
 
-- OpenCTI Platform >= 6.5.3
+- OpenCTI Platform >= 6.5.8
 
 ### Configuration
 
@@ -39,7 +39,6 @@ The connector adds the following Entities:
 | `connector_id`         | `CONNECTOR_ID`                   | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                      |
 | `connector_name`       | `CONNECTOR_NAME`                 | Yes       | Option `ZeroFox`                                                                                                        |
 | `connector_scope`      | `CONNECTOR_SCOPE`                | Yes       | Supported scope: Template Scope (MIME Type or Stix Object)                                                              |
-| `confidence_level`     | `CONNECTOR_CONFIDENCE_LEVEL`     | Yes       | Set the confidence level for this data                                                                                  |
 | `update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | No        | Update data alrerady in the platform based on the Threat Fox data pull                                                  |
 | `log_level`            | `CONNECTOR_LOG_LEVEL`            | No        | Log output for the connector. Defaults to `INFO`                                                                                            |
 | `csv_url`              | `THREATFOX_CSV_URL`              | No        | Defaults to `https://threatfox.abuse.ch/export/csv/recent/`                                                                                                                        |

@@ -41,7 +41,6 @@ class VirustotalLivehuntNotifications:
             name=self._DEFAULT_AUTHOR,
             type="Organization",
             description="Download/upload files from Virustotal Livehunt Notifications.",
-            confidence=self.helper.connect_confidence_level,
         )
 
         # Instantiate vt client from config settings

@@ -1,14 +1,13 @@
-version: '3'
+version: "3"
 services:
   connector-taxii2:
-    image: opencti/connector-siemrules:6.5.3
+    image: opencti/connector-siemrules:6.5.8
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=SIEMRULES
       - CONNECTOR_SCOPE=identity,report,indicator
-      - CONNECTOR_CONFIDENCE_LEVEL=70
       - CONNECTOR_LOG_LEVEL=error
       - TAXII2_DISCOVERY_URL=https://app.siemrules.com/taxii/taxii2
       - TAXII2_USERNAME=CHANGEME
