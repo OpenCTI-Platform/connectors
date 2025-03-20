@@ -116,6 +116,7 @@ class ShodanInternetDBConnector:
         stix_objects.extend(self._process_vulns(stix_observable, result))
         stix_objects.append(self._process_note(stix_observable, result))
         stix_objects.append(self._process_tags(stix_observable, result))
+        stix_objects.append(self._identity)
 
         return self._send_bundle(stix_objects)
 
