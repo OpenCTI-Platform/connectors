@@ -99,8 +99,8 @@ class ShodanInternetDBConnector:
             return "Skipping observable (Shodan 404)"
 
         # Process the result
-        stix_objects = []
         self._helper.connector_logger.debug("Processing %s", value)
+        stix_objects = data.get("stix_objects", [])
         stix_objects.extend(self._process_domains(stix_observable, result))
         stix_objects.extend(self._process_vulns(stix_observable, result))
         stix_objects.append(self._process_note(stix_observable, result))
