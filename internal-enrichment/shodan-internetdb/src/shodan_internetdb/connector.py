@@ -46,7 +46,7 @@ class ShodanInternetDBConnector:
             description="Shodan is a search engine for Internet-connected devices.",
         )
         self._identity_id = self._identity["standard_id"]
-        self._object_marking_id = stix2.TLP_WHITE["id"]
+        self._object_marking = stix2.TLP_WHITE
 
         self._client = ShodanInternetDbClient(verify=self._config.shodan.ssl_verify)
 
@@ -117,6 +117,7 @@ class ShodanInternetDBConnector:
         stix_objects.append(self._process_note(stix_observable, result))
         stix_objects.append(self._process_tags(stix_observable, result))
         stix_objects.append(self._identity)
+        stix_objects.append(self._object_marking["id"])
 
         return self._send_bundle(stix_objects)
 
@@ -154,7 +155,7 @@ Ports: {format_list(result.ports)}
         note = stix2.Note(
             id=Note.generate_id(datetime.now().isoformat(), content),
             created_by_ref=self._identity_id,
-            object_marking_refs=[self._object_marking_id],
+            object_marking_refs=[self._object_marking["id"]],
             abstract=abstract,
             content=content,
             object_refs=[observable["id"]],
@@ -178,7 +179,7 @@ Ports: {format_list(result.ports)}
             self._helper.connector_logger.debug("Adding domain %s", name)
             stix_domain = stix2.DomainName(
                 value=name,
-                object_marking_refs=[self._object_marking_id],
+                object_marking_refs=[self._object_marking["id"]],
                 resolves_to_refs=[observable["id"]],
                 custom_properties={"created_by_ref": self._identity_id},
             )
@@ -223,7 +224,7 @@ Ports: {format_list(result.ports)}
                 id=Vulnerability.generate_id(name),
                 name=f"{name}",
                 created_by_ref=self._identity_id,
-                object_marking_refs=[self._object_marking_id],
+                object_marking_refs=[self._object_marking["id"]],
             )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
@@ -233,7 +234,7 @@ Ports: {format_list(result.ports)}
                 created_by_ref=self._identity_id,
                 source_ref=observable["id"],
                 target_ref=stix_vuln.id,
-                object_marking_refs=[self._object_marking_id],
+                object_marking_refs=[self._object_marking["id"]],
                 allow_custom=True,
                 start_time=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 stop_time=vuln_eol.strftime("%Y-%m-%dT%H:%M:%SZ"),
