@@ -55,10 +55,11 @@ class ShodanInternetDBConnector:
 
     def extract_and_check_markings(self, opencti_entity: dict[str, Any]) -> str:
         tlps = ["TLP:CLEAR"]
-        for marking_definition in opencti_entity.get("objectMarking", []):
-            if marking_definition["definition_type"] == "TLP":
-                tlps.append(marking_definition["definition"])
-
+        tlps.extend(
+            marking_definition["definition"]
+            for marking_definition in opencti_entity.get("objectMarking", [])
+            if marking_definition["definition_type"] == "TLP"
+        )
         for tlp in tlps:
             max_tlp_name = self._config.shodan.max_tlp.name
             if not OpenCTIConnectorHelper.check_max_tlp(tlp, max_tlp_name):
