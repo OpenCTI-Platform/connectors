@@ -93,7 +93,7 @@ class ShodanInternetDBConnector:
         try:
             result = self._client.query(value)
         except RequestException:
-            self._helper.connector_logger.exception("Shodan API error")
+            self._helper.connector_logger.error("Shodan API error")
             return "Skipping observable (Shodan API error)"
 
         if result is None:
