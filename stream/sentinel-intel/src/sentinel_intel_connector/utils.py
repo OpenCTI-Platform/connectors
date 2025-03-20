@@ -181,6 +181,7 @@ def get_hash_type(data: dict) -> str | None:
 
     hash_type = None
 
+    # data["hashes"] contains only one item
     for key in data["hashes"]:
         hash_type = FILE_HASH_TYPES_MAPPER[key]
 
