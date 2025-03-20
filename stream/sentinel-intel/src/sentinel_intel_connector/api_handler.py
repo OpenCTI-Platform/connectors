@@ -7,6 +7,7 @@ from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
 
 from .utils import (
+    NETWORK_ATTRIBUTES_LIST,
     get_action,
     get_description,
     get_expiration_datetime,
@@ -148,13 +149,14 @@ class SentinelApiHandler:
             ),
         }
 
-        network_types = ["ipv4-addr", "ipv6-addr", "domain-name", "url"]
-        if observable["type"] in network_types:
+        if (
+            observable["type"] in NETWORK_ATTRIBUTES_LIST
+            and observable["type"] == "email-addr"
+        ):
+            body["emailSenderAddress"] = observable.get("value", None)
+        elif observable["type"] in NETWORK_ATTRIBUTES_LIST:
             ioc_type = get_ioc_type(observable)
             body[ioc_type] = observable.get("value", None)
-        elif observable["type"] == "email-addr":
-            body["emailSenderAddress"] = observable.get("value", None)
-            body["emailSenderName"] = observable.get("display_name", None)
         elif observable["type"] == "file":
             body["fileHashType"] = get_hash_type(observable)
             body["fileHashValue"] = get_hash_value(observable)
