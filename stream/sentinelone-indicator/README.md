@@ -81,9 +81,7 @@ If you don't want to use the default stream, you will also need to create your o
 ### Determining Your SentinelOne URL
 Your SentinelOne URL is simply the first component of the URL you use to access the console.
 
-![S1 URL Example](doc/url_finding.png)
-
-When configuring the connector, do not include the terminating `/`. For example, for the above image, you would input `https://usea1-purple.sentinelone.net`
+When configuring the connector, do not include the terminating `/`. For example, for the above image, you would input `https://mysentinelone.instance.net`
 
 <br>
 
