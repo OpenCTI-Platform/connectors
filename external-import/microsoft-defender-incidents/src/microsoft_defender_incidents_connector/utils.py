@@ -1,4 +1,4 @@
-import ipaddress
+import re
 from datetime import datetime
 
 import stix2
@@ -12,6 +12,20 @@ CASE_INCIDENT_PRIORITIES = {
     "high": "P1",
     "unknownFutureValue": "P3",
 }
+
+
+def detect_ip_version(value):
+    """
+    :param value:
+    :return:
+    """
+    if re.match(
+        r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}(\/([1-9]|[1-2]\d|3[0-2]))?$",
+        value,
+    ):
+        return "ipv4"
+    else:
+        return "ipv6"
 
 
 def format_datetime(date_str: str | None) -> str:
@@ -35,21 +49,12 @@ def format_datetime(date_str: str | None) -> str:
 
 
 def format_date(date: str) -> int:
+    """
+    :param date:
+    :return:
+    """
     incident_last_update_timestamp = parse(date).timestamp()
     return int(round(incident_last_update_timestamp))
-
-
-def is_ipv4(value: str) -> bool:
-    """
-    Determine whether the provided IP string is IPv4 or not
-    :param value: Value in string
-    :return: True is value is a valid IP address, otherwise False
-    """
-    try:
-        ipaddress.IPv4Address(value)
-        return True
-    except ipaddress.AddressValueError:
-        return False
 
 
 def find_matching_file_ids(malware_name: str, stix_objects: list) -> list | None:

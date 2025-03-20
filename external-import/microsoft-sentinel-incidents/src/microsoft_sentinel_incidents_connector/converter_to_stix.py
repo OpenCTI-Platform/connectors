@@ -112,7 +112,7 @@ class ConverterToStix:
         """
         Create STIX 2.1 Custom Case Incident object
         :param incident: Incident to create Case Incident from
-        :param bundle_objects: List of all the STIX 2.1 objects refering to the incident
+        :param bundle_objects: List of all the STIX 2.1 objects referring to the incident
         :return: Case Incident in STIX 2.1 format
         """
         case_incident_name = incident.get("Title")
@@ -277,16 +277,22 @@ class ConverterToStix:
         :param evidence: Evidence to create Identity system from
         :return: Identity System in STIX 2.1 format
         """
-        stix_identity_system = stix2.Identity(
-            id=Identity.generate_id(
-                name=evidence.get("HostName"), identity_class="system"
-            ),
-            name=evidence.get("HostName"),
-            identity_class="system",
-            object_marking_refs=[self.tlp_marking],
-            created_by_ref=self.author["id"],
-        )
-        return stix_identity_system
+        if evidence.get("HostName", None):
+            stix_identity_system = stix2.Identity(
+                id=Identity.generate_id(
+                    name=evidence.get("HostName"), identity_class="system"
+                ),
+                name=evidence.get("HostName"),
+                identity_class="system",
+                object_marking_refs=[self.tlp_marking],
+                created_by_ref=self.author["id"],
+            )
+            return stix_identity_system
+        else:
+            self.helper.connector_logger.error(
+                "HostEntity HostName is none, unable to convert to System entity",
+                evidence,
+            )
 
     @handle_stix2_error
     def create_evidence_custom_observable_hostname(

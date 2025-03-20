@@ -3,6 +3,9 @@
   "extends": [
     "config:recommended"
   ],
+  "pre-commit": {
+    "enabled": true
+  },
   "labels": [
     "dependencies",
     "filigran team"

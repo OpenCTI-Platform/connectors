@@ -17,7 +17,7 @@ import yaml
 # PyCTI
 from pycti import Identity as PyctiIdentity
 from pycti import Indicator as PyctiIndicator
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 # STIX2
 from stix2 import TLP_WHITE, Bundle
@@ -258,37 +258,13 @@ class RadarConnector:
             modified=valid_from,
         )
 
-        # Step 9.0: Create relationship between indicator and identity
-        # Step 9.1: Generate stable relationship ID
-        relationship_id = StixCoreRelationship.generate_id(
-            "created-by", indicator.id, identity_obj.id
-        )
-        # Step 9.2: Format timestamps for relationship
-        created_str = valid_from.strftime("%Y-%m-%dT%H:%M:%SZ")
-        modified_str = valid_until.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-        # Step 9.3: Build relationship object
-        relationship_obj = {
-            "id": relationship_id,
-            "type": "relationship",
-            "spec_version": "2.1",
-            "x_opencti_type": "stix-core-relationship",
-            "relationship_type": "created-by",
-            "source_ref": indicator.id,
-            "target_ref": identity_obj.id,
-            "created": created_str,
-            "modified": modified_str,
-            "confidence": 75,
-            "object_marking_refs": [TLP_WHITE.id],
-        }
-
-        # Step 10.0: Combine all STIX objects
-        stix_objects.extend([identity_obj, indicator, relationship_obj])
-        # Step 10.1: Log success
+        # Step 9.0: Combine all STIX objects
+        stix_objects.extend([identity_obj, indicator])
+        # Step 9.1: Log success
         self.helper.log_info(
             f"Created {feed_type} indicator => {value} from {maintainer}"
         )
-        # Step 10.2: Return combined objects
+        # Step 9.2: Return combined objects
         return stix_objects
 
     def _process_feed(self, work_id: str):

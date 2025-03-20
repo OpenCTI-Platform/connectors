@@ -147,7 +147,6 @@ class RedFlagDomainImportConnector:
                 name=observable.value,
                 description="Malicious domain",
                 created_by_ref=f"{self.author.id}",
-                confidence=self.helper.connect_confidence_level,
                 pattern_type="stix",
                 pattern=pattern,
                 labels=["phishing", "red-flag-domains"],

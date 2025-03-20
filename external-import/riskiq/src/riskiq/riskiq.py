@@ -70,7 +70,6 @@ class RiskIQConnector:
             description=" RiskIQ is a cyber security company based in San Francisco, California."
             " It provides cloud - based software as a service(SaaS) for organizations"
             " to detect phishing, fraud, malware, and other online security threats.",
-            confidence=self.helper.connect_confidence_level,
         )
         # Initialization of the client
         self.client = RiskIQClient(self.helper, self.base_url, user, password)
