@@ -82,8 +82,6 @@ class ShodanInternetDBConnector:
 
         stix_observable = data["stix_entity"]
 
-        # Check TLP markings, do not submit higher than the max allowed
-
         # Process the observable value
         value = stix_observable["value"]
         if not validators.ipv4(value):
