@@ -50,7 +50,7 @@ class ShodanInternetDBConnector:
 
         self._client = ShodanInternetDbClient(verify=self._config.shodan.ssl_verify)
 
-    def extract_and_check_markings(self, opencti_entity: dict[str, Any]) -> str:
+    def extract_and_check_markings(self, opencti_entity: dict[str, Any]) -> None:
         tlps = ["TLP:CLEAR"]
         tlps.extend(
             marking_definition["definition"]
@@ -63,7 +63,11 @@ class ShodanInternetDBConnector:
                 self._helper.connector_logger.debug(
                     "Skipping observable, TLP is greater than the MAX TLP"
                 )
-                return "Skipping observable (TLP)"
+                raise ValueError(
+                    "[CONNECTOR] Enrichment of the entity was unsuccessful, the entity's TLP is greater than the "
+                    "MAX TLP allowed in the connector's configuration, so it does not have the necessary authorisation "
+                    "to enrich this entity."
+                )
 
     def process_message(self, data: dict[str, Any]) -> str:
         """
