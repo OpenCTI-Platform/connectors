@@ -1,10 +1,10 @@
 doppel_api:
-  url: "https://api.doppel.com/v1/alerts"
-  api_key: "AIzaSyDuWpWKgwazrrvgYsrW7R6_InJ_W6P9DlE"  
+  url: ""    # Doppel endpoint
+  api_key: ""  # Doppel API key
 
 opencti:
   url: "http://localhost:8080"
-  api_key: "807dcd04-a559-480a-9d70-7b9e32b77334"
+  api_key: ""      # OpenCTI api key
 
 polling_interval: 3600  # Fetch alerts every 60 minutes (3600 seconds)
 
