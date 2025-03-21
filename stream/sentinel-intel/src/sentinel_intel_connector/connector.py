@@ -1,13 +1,11 @@
 import json
-from json import JSONDecodeError
 
 from pycti import OpenCTIConnectorHelper
+from stix_shifter.stix_translation import stix_translation
 
 from .api_handler import SentinelApiHandler, SentinelApiHandlerError
 from .config_variables import ConfigConnector
 from .utils import (
-    FILE_HASH_TYPES_MAPPER,
-    NETWORK_ATTRIBUTES_LIST,
     get_hash_type,
     get_hash_value,
     get_ioc_type,
@@ -67,41 +65,41 @@ class SentinelIntelConnector:
     def _convert_indicator_to_observables(self, data) -> list[dict]:
         """
         Convert an OpenCTI indicator to its corresponding observables.
-        Observables taken into account:
         :param data: OpenCTI indicator data
         :return: Observables data
         """
         try:
             observables = []
-
-            parsed_observables = self.helper.get_attribute_in_extension(
-                "observable_values", data
-            )
-
-            if parsed_observables:
-
-                # Iterate over the parsed observables
-                for observable in parsed_observables:
+            translation = stix_translation.StixTranslation()
+            parsed = translation.translate("splunk", "parse", "{}", data["pattern"])
+            if "parsed_stix" in parsed:
+                results = parsed["parsed_stix"]
+                for result in results:
                     observable_data = {}
                     observable_data.update(data)
 
-                    x_opencti_observable_type = observable.get("type").lower()
-
-                    if x_opencti_observable_type in NETWORK_ATTRIBUTES_LIST:
-                        observable_data["type"] = x_opencti_observable_type
-                        observable_data["value"] = observable.get("value")
+                    network_attributes = [
+                        "domain-name:value",
+                        "hostname:value",
+                        "ipv4-addr:value",
+                        "ipv6-addr:value",
+                        "url:value",
+                    ]
+                    file_attributes = [
+                        "file:hashes.'SHA-256'",
+                        "file:hashes.'SHA-1'",
+                        "file:hashes.MD5",
+                    ]
+                    if result["attribute"] in network_attributes:
+                        stix_type = result["attribute"].replace(":value", "")
+                        observable_data["type"] = stix_type
+                        observable_data["value"] = result["value"]
                         observables.append(observable_data)
-                    elif x_opencti_observable_type == "stixfile":
-                        file = {}
-                        for key, value in observable.get("hashes", {}).items():
-                            hash_type = FILE_HASH_TYPES_MAPPER.get(key.lower())
-                            if hash_type is not None:
-                                file[hash_type] = value
-                        if file:
-                            observable_data["type"] = "file"
-                            observable_data["hashes"] = file
-                            observables.append(observable_data)
-
+                    elif result["attribute"] in file_attributes:
+                        hash_type = result["attribute"].split(".")[1].replace("'", "")
+                        observable_data["type"] = "file"
+                        observable_data["hashes"] = {hash_type: result["value"]}
+                        observables.append(observable_data)
             return observables
         except:
             indicator_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
@@ -159,7 +157,7 @@ class SentinelIntelConnector:
         for indicator_data in indicators_data:
             if observable_data["type"] == "file":
                 observable_hash_type = get_hash_type(observable_data)
-                observable_hash_value = get_hash_value(observable_data)
+                observable_hash_value = get_hash_value(observable_data).lower()
                 indicator_hash_type = indicator_data.get("fileHashType")
                 indicator_hash_value = indicator_data.get("fileHashValue", "").lower()
                 if (
@@ -195,6 +193,28 @@ class SentinelIntelConnector:
                 },
             )
 
+    def _get_external_id(self, observable_data):
+        """
+        Extracts the external_id from the observable data
+        :param: observable_data: OpenCTI observable data
+        :return: Sentinel / Defender external_id or none if not found
+        """
+        try:
+            if "external_references" in observable_data: 
+                external_references = observable_data["external_references"] 
+                for ref in external_references:
+                    if ref.get("source_name") == "Microsoft Defender ATP" and ref.get("external_id"):
+                        return ref["external_id"]
+                    elif ref.get("source_name") == "Azure Sentinel" and ref.get("external_id"):
+                        return ref["external_id"]
+        except KeyError as e:
+            print(f"KeyError: {e}")
+            return None
+        except TypeError as e:
+            print(f"TypeError: {e}")
+            return None
+        return None
+    
     def _delete_sentinel_indicator(self, observable_data) -> bool:
         """
         Delete Threat Intelligence Indicators on Sentinel corresponding to an OpenCTI observable.
@@ -202,21 +222,18 @@ class SentinelIntelConnector:
         :return: True if the indicators have been successfully deleted, False otherwise
         """
         did_delete = False
-
+        
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
             "id", observable_data
         )
-        indicators_data = self.api.search_indicators(opencti_id=opencti_id)
-        for indicator_data in indicators_data:
-            if indicator_data["externalId"] == opencti_id:
-                result = self.api.delete_indicator(indicator_data["id"])
-                # TODO: should we delete external references on OpenCTI too?
-                if result:
-                    self.helper.connector_logger.info(
-                        "[DELETE] Indicator deleted",
-                        {"sentinel_id": indicator_data["id"], "opencti_id": opencti_id},
-                    )
-                did_delete = result
+        external_id = self._get_external_id(observable_data)
+        result = self.api.delete_indicator(external_id)
+        if result:
+            self.helper.connector_logger.info(
+                "[DELETE] Indicator deleted",
+                {"sentinel_id": external_id, "opencti_id": opencti_id},
+            )
+        did_delete = result
         return did_delete
 
     def _handle_create_event(self, data):
@@ -258,21 +275,6 @@ class SentinelIntelConnector:
                 {"opencti_id": opencti_id},
             )
 
-    def validate_json(self, msg) -> dict | JSONDecodeError:
-        """
-        Validate the JSON data from the stream
-        :param msg: Message event from stream
-        :return: Parsed JSON data or raise JSONDecodeError if JSON data cannot be parsed
-        """
-        try:
-            parsed_msg = json.loads(msg.data)
-            return parsed_msg
-        except json.JSONDecodeError:
-            self.helper.connector_logger.error(
-                "[ERROR] Data cannot be parsed to JSON", {"msg_data": msg.data}
-            )
-            raise JSONDecodeError("Data cannot be parsed to JSON", msg.data, 0)
-
     def process_message(self, msg) -> None:
         """
         Main process if connector successfully works
@@ -284,8 +286,13 @@ class SentinelIntelConnector:
         try:
             self._check_stream_id()
 
-            parsed_msg = self.validate_json(msg)
-            data = parsed_msg["data"]
+            try:
+                data = json.loads(msg.data)["data"]
+            except json.JSONDecodeError:
+                self.helper.connector_logger.error(
+                    "[ERROR] Cannot process the message", {"msg_data": msg.data}
+                )
+                return None
 
             if msg.event == "create":
                 self._handle_create_event(data)
