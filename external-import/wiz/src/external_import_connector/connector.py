@@ -10,16 +10,16 @@ from .converter_to_stix import ConverterToStix
 
 class ConnectorWiz:
 
-    def __init__(self):
+    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
 
         # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.config = config
+        self.helper = helper
         self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper)
+        self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
     def _collect_intelligence(self) -> list:
         """
@@ -32,12 +32,12 @@ class ConnectorWiz:
         state = self.helper.get_state()
         i = 0
 
+        stix_objects = []
         for entity in entities:
 
             # Filter entities
             if "modified" in entity and state is not None:
                 if entity["modified"] < state["last_run"]:
-                    del entities[i]
                     continue
 
             if entity["type"] == "malware":
@@ -65,9 +65,28 @@ class ConnectorWiz:
                 entity["target_ref"] = entity["target_ref"].replace(
                     "threat-actor", "intrusion-set"
                 )
+
+            if not entity.get("created_by_ref"):
+                entity["created_by_ref"] = self.converter_to_stix.author["id"]
+
+            if "object_marking_refs" not in entity:
+                entity["object_marking_refs"] = [
+                    self.converter_to_stix.tlp_marking["id"]
+                ]
+
+            if "external_references" not in entity:
+                entity["external_references"] = [
+                    dict(self.converter_to_stix.external_reference)
+                ]
+
+            stix_objects.append(entity)
             i += 1
 
-        return entities
+        # Ensure consistent bundle by adding the author
+        if stix_objects:
+            stix_objects.append(self.converter_to_stix.author)
+            stix_objects.append(self.converter_to_stix.tlp_marking)
+        return stix_objects
 
     def process_message(self) -> None:
         """
@@ -117,7 +136,7 @@ class ConnectorWiz:
             if stix_objects is not None and len(stix_objects) is not None:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
-                    stix_objects_bundle, work_id=work_id, update=True
+                    stix_objects_bundle, work_id=work_id
                 )
 
                 self.helper.connector_logger.info(
