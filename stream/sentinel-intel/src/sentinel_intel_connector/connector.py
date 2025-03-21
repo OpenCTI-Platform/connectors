@@ -195,6 +195,28 @@ class SentinelIntelConnector:
                 },
             )
 
+    def _get_external_id(self, observable_data):
+        """
+        Extracts the external_id from the observable data
+        :param: observable_data: OpenCTI observable data
+        :return: Sentinel / Defender external_id or none if not found
+        """
+        try:
+            if "external_references" in observable_data: 
+                external_references = observable_data["external_references"] 
+                for ref in external_references:
+                    if ref.get("source_name") == "Microsoft Defender ATP" and ref.get("external_id"):
+                        return ref["external_id"]
+                    elif ref.get("source_name") == "Azure Sentinel" and ref.get("external_id"):
+                        return ref["external_id"]
+        except KeyError as e:
+            print(f"KeyError: {e}")
+            return None
+        except TypeError as e:
+            print(f"TypeError: {e}")
+            return None
+        return None
+    
     def _delete_sentinel_indicator(self, observable_data) -> bool:
         """
         Delete Threat Intelligence Indicators on Sentinel corresponding to an OpenCTI observable.
@@ -202,21 +224,17 @@ class SentinelIntelConnector:
         :return: True if the indicators have been successfully deleted, False otherwise
         """
         did_delete = False
-
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
             "id", observable_data
         )
-        indicators_data = self.api.search_indicators(opencti_id=opencti_id)
-        for indicator_data in indicators_data:
-            if indicator_data["externalId"] == opencti_id:
-                result = self.api.delete_indicator(indicator_data["id"])
-                # TODO: should we delete external references on OpenCTI too?
-                if result:
-                    self.helper.connector_logger.info(
-                        "[DELETE] Indicator deleted",
-                        {"sentinel_id": indicator_data["id"], "opencti_id": opencti_id},
-                    )
-                did_delete = result
+        external_id = self._get_external_id(observable_data)
+        result = self.api.delete_indicator(external_id)
+        if result:
+            self.helper.connector_logger.info(
+                "[DELETE] Indicator deleted",
+                {"sentinel_id": external_id, "opencti_id": opencti_id},
+            )
+        did_delete = result
         return did_delete
 
     def _handle_create_event(self, data):
