@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  doppel-connector:
+    build: .
+    container_name: doppel_opencti_connector
+    restart: always
+    environment:
+      - DOPPEL_API_KEY=${DOPPEL_API_KEY}
+      - OPENCTI_API_URL=${OPENCTI_API_URL}
+      - OPENCTI_API_KEY=${OPENCTI_API_KEY}
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - opencti
+
+  opencti:
+    image: opencti/platform:latest
+    container_name: opencti_instance
+    environment:
+      - OPENCTI_ADMIN_EMAIL=admin@opencti.io
+      - OPENCTI_ADMIN_PASSWORD=changeme
