@@ -48,6 +48,7 @@ If you are using it independently, remember that the connector will try to conne
 | `misp_import_to_ids_no_score`                 | `MISP_IMPORT_TO_IDS_NO_SCORE`                 | No           | A score (`Integer`) value for the indicator/observable if the attribute `to_ids` value is no.        |
 | `misp_import_unsupported_observables_as_text` | `MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT` | No           | Import unsupported observable as x_opencti_text                                                      |
 | `misp_interval`                               | `MISP_INTERVAL`                               | Yes          | Check for new event to import every `n` minutes.                                                     |
+| `misp_propagate_labels`                       | `MISP_PROPAGATE_LABELS`               | No           | Apply labels from Misp EVENT to OpenCTI observables on top of MISP Attribute labels |
 
 ## Behavior
 
