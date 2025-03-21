@@ -1,0 +1,20 @@
+doppel_api:
+  url: "https://api.doppel.com/v1/alerts"
+  api_key: "AIzaSyDuWpWKgwazrrvgYsrW7R6_InJ_W6P9DlE"  
+
+opencti:
+  url: "http://localhost:8080"
+  api_key: "807dcd04-a559-480a-9d70-7b9e32b77334"
+
+polling_interval: 3600  # Fetch alerts every 60 minutes (3600 seconds)
+
+logging:
+  log_level: "INFO"  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_file: "logs/doppel_connector.log"  # Log storage location
+  log_format: "%(asctime)s - %(levelname)s - %(message)s"
+
+error_handling:
+  max_retries: 3  # Number of retry attempts if API fails
+  retry_delay: 30  # Delay (seconds) between retries
+  stop_on_failure: false  # If true, stops execution after repeated failures
+
