@@ -3,7 +3,8 @@ from pathlib import Path
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from utils import SUPPORTED_COLLECTIONS
+
+from .utils import SUPPORTED_COLLECTIONS
 
 
 class ConfigConnector:

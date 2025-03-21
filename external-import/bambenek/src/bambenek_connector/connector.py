@@ -27,7 +27,6 @@ class ConnectorBambenek:
     def _collect_intelligence(self) -> list[stix2.v21._STIXBase21]:
         """
         Collect intelligence from Bambenek and convert into STIX object
-        :param from_date: Minimum Bambenek IOC creation date timestamp
         :return: List of STIX objects
         """
 

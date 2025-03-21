@@ -2,6 +2,7 @@ from csv import DictReader
 from datetime import datetime, timezone
 from ipaddress import AddressValueError, ip_address
 
+import pycti
 from dateutil.parser import parse
 from pycti import StixCoreRelationship
 from stix2 import (
@@ -44,7 +45,9 @@ class ConverterToStix:
         :return: Author as STIX 2.1 Identity object
         """
         author = Identity(
-            id=Identity.generate_id(name="Bambenek", identity_class="organization"),
+            id=pycti.Identity.generate_id(
+                name="Bambenek", identity_class="organization"
+            ),
             name="Bambenek",
             identity_class="organization",
         )
@@ -63,7 +66,7 @@ class ConverterToStix:
         Convenience method to return an indicator using common patterns from the Bambenek feeds
         """
         return Indicator(
-            id=Indicator.generate_id(pattern_value),
+            id=pycti.Indicator.generate_id(pattern_value),
             name=name,
             description="",
             created_by_ref=self.author["id"],
@@ -170,7 +173,7 @@ class ConverterToStix:
             stix_indicator = self._create_stix_indicator(
                 pattern_value=pattern_value,
                 name=entity.get("domain"),
-                observable_type="Domain",
+                observable_type="Domain-Name",
                 labels=[cleaned_tag, collection],
                 valid_from=parse(
                     entity.get("fetch_date", datetime.now(timezone.utc).isoformat())
@@ -185,7 +188,7 @@ class ConverterToStix:
             bundle_objects.append(stix_indicator)
             bundle_objects.append(stix_observable)
             bundle_objects.append(stix_relationship)
-            stix_objects.append(bundle_objects)
+            stix_objects.extend(bundle_objects)
         return stix_objects
 
     def convert_ip_ioc_to_stix(self, entities, collection):
@@ -228,5 +231,5 @@ class ConverterToStix:
             bundle_objects.append(stix_indicator)
             bundle_objects.append(stix_observable)
             bundle_objects.append(stix_relationship)
-            stix_objects.append(bundle_objects)
+            stix_objects.extend(bundle_objects)
         return stix_objects
