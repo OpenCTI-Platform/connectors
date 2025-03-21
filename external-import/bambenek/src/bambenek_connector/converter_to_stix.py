@@ -45,7 +45,9 @@ class ConverterToStix:
         :return: Author as STIX 2.1 Identity object
         """
         author = Identity(
-            id=pycti.Identity.generate_id(name="Bambenek", identity_class="organization"),
+            id=pycti.Identity.generate_id(
+                name="Bambenek", identity_class="organization"
+            ),
             name="Bambenek",
             identity_class="organization",
         )
