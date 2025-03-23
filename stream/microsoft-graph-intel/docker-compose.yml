@@ -9,7 +9,7 @@ services:
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-      - "CONNECTOR_NAME=Microsoft Sentinel"
+      - "CONNECTOR_NAME=Microsoft Graph Intel"
       - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
       - CONNECTOR_LOG_LEVEL=error
       - MICROSOFT_GRAPH_INTEL_TENANT_ID=ChangeMe # Azure Tenant ID
@@ -20,7 +20,4 @@ services:
       - MICROSOFT_GRAPH_INTEL_BASE_URL=https://graph.microsoft.com
       - MICROSOFT_GRAPH_INTEL_RESOURCE_PATH=/beta/security/tiIndicators
       - MICROSOFT_GRAPH_INTEL_EXPIRE_TIME=30 # Number of days for IOC to expire in Sentinel
-      - MICROSOFT_GRAPH_INTEL_ACTION=alert # Optional: Setting this will override all alerts to be this action (unknown, allow, block, alert)
-      - MICROSOFT_GRAPH_INTEL_TLP_LEVEL=amber # Optional: This will override all TLP submitted to Sentinel. (unknown, white, green, amber, red)
-      - MICROSOFT_GRAPH_INTEL_PASSIVE_ONLY=false # Optional: Defaults to false.
     restart: unless-stopped

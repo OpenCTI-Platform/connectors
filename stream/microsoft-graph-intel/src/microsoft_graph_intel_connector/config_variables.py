@@ -57,16 +57,19 @@ class ConfigConnector:
             "MICROSOFT_GRAPH_INTEL_LOGIN_URL",
             ["microsoft_graph_intel", "login_url"],
             self.load,
+            default="https://login.microsoft.com",
         )
         self.base_url = get_config_variable(
             "MICROSOFT_GRAPH_INTEL_BASE_URL",
             ["microsoft_graph_intel", "base_url"],
             self.load,
+            default="https://graph.microsoft.com",
         )
         self.resource_path = get_config_variable(
             "MICROSOFT_GRAPH_INTEL_RESOURCE_PATH",
             ["microsoft_graph_intel", "resource_path"],
             self.load,
+            default="/beta/security/tiIndicators",
         )
         self.expire_time = get_config_variable(
             "MICROSOFT_GRAPH_INTEL_EXPIRE_TIME",
@@ -92,4 +95,5 @@ class ConfigConnector:
             "MICROSOFT_GRAPH_INTEL_PASSIVE_ONLY",
             ["microsoft_graph_intel", "passive_only"],
             self.load,
+            default=False,
         )

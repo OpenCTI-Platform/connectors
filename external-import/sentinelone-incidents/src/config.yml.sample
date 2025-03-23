@@ -10,7 +10,7 @@ connector:
   log_level: 'info'
   duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
 
-SentinelOne:
+sentinelone_incidents:
   api_key: 'ChangeMe'
   account_id: 'ChangeMe'
   url: 'ChangeMe'

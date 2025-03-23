@@ -73,20 +73,15 @@ class MicrosoftGraphIntelConnector:
         """
         try:
             observables = []
-
             parsed_observables = self.helper.get_attribute_in_extension(
                 "observable_values", data
             )
-
             if parsed_observables:
-
                 # Iterate over the parsed observables
                 for observable in parsed_observables:
                     observable_data = {}
                     observable_data.update(data)
-
                     x_opencti_observable_type = observable.get("type").lower()
-
                     if x_opencti_observable_type in NETWORK_ATTRIBUTES_LIST:
                         observable_data["type"] = x_opencti_observable_type
                         observable_data["value"] = observable.get("value")
@@ -184,7 +179,6 @@ class MicrosoftGraphIntelConnector:
         indicator_data = self._find_sentinel_indicator(observable_data)
         if indicator_data is None:
             return False
-
         updated = self.api.patch_indicator(observable_data, indicator_data["id"])
         if updated:
             self.helper.connector_logger.info(
@@ -210,12 +204,35 @@ class MicrosoftGraphIntelConnector:
         for indicator_data in indicators_data:
             if indicator_data["externalId"] == opencti_id:
                 result = self.api.delete_indicator(indicator_data["id"])
-                # TODO: should we delete external references on OpenCTI too?
                 if result:
                     self.helper.connector_logger.info(
                         "[DELETE] Indicator deleted",
                         {"sentinel_id": indicator_data["id"], "opencti_id": opencti_id},
                     )
+                    external_reference = self.helper.api.external_reference.read(
+                        filters={
+                            "mode": "and",
+                            "filters": [
+                                {
+                                    "key": "source_name",
+                                    "values": [
+                                        self.config.target_product.replace(
+                                            "Azure", "Microsoft"
+                                        )
+                                    ],
+                                },
+                                {
+                                    "key": "external_id",
+                                    "values": [indicator_data["id"]],
+                                },
+                            ],
+                            "filterGroups": [],
+                        }
+                    )
+                    if external_reference is not None:
+                        self.helper.api.external_reference.delete(
+                            external_reference["id"]
+                        )
                 did_delete = result
         return did_delete
 
@@ -236,7 +253,6 @@ class MicrosoftGraphIntelConnector:
         Handle update event by trying to update the corresponding Threat Intelligence Indicator on Sentinel.
         :param data: Streamed data (representing either an observable or an indicator)
         """
-
         if is_stix_indicator(data):
             observables = self._convert_indicator_to_observables(data)
             for observable in observables:

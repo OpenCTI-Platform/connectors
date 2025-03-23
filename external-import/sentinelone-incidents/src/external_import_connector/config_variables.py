@@ -44,10 +44,14 @@ class ConfigConnector:
 
         # Ensure the presence of 'APIToken ' regardless of user config.
         configured_api_key = get_config_variable(
-            "S1_API_KEY", ["SentinelOne", "api_key"], self.load
+            "SENTINELONE_INCIDENTS_API_KEY",
+            ["sentinelone_incidents", "api_key"],
+            self.load,
         )
         if not configured_api_key:
-            raise ConnectorConfigurationError("S1_API_KEY is not configured")
+            raise ConnectorConfigurationError(
+                "SENTINELONE_INCIDENTS_API_KEY is not configured"
+            )
         self.s1_api_key = (
             configured_api_key
             if "APIToken " in configured_api_key
@@ -55,23 +59,33 @@ class ConfigConnector:
         )
 
         configured_account_id = get_config_variable(
-            "S1_ACCOUNT_ID", ["SentinelOne", "account_id"], self.load
+            "SENTINELONE_INCIDENTS_ACCOUNT_ID",
+            ["sentinelone_incidents", "account_id"],
+            self.load,
         )
         if not configured_account_id:
-            raise ConnectorConfigurationError("S1_ACCOUNT_ID is not configured")
+            raise ConnectorConfigurationError(
+                "SENTINELONE_INCIDENTS_ACCOUNT_ID is not configured"
+            )
         self.s1_account_id = configured_account_id
 
         # Ensure no slash at the end of the URL
         configured_url = get_config_variable(
-            "S1_URL", ["SentinelOne", "url"], self.load
+            "SENTINELONE_INCIDENTS_URL", ["sentinelone_incidents", "url"], self.load
         )
         if not configured_url:
-            raise ConnectorConfigurationError("S1_URL is not configured")
+            raise ConnectorConfigurationError(
+                "SENTINELONE_INCIDENTS_URL is not configured"
+            )
         self.s1_url = configured_url.rstrip("/")
 
         # Ensure the maximum number of API attempts is a non-zero positive integer and default to 3 if not.
         configured_api_attempts = get_config_variable(
-            "MAX_API_ATTEMPTS", ["SentinelOne", "max_api_attempts"], self.load
+            "SENTINELONE_INCIDENTS_MAX_API_ATTEMPTS",
+            ["sentinelone_incidents", "max_api_attempts"],
+            self.load,
+            isNumber=True,
+            default=3,
         )
         if isinstance(configured_api_attempts, int) and configured_api_attempts > 0:
             self.max_api_attempts = configured_api_attempts
@@ -88,7 +102,7 @@ class ConfigConnector:
         self.duration_period = configured_duration_period
 
         configured_sign = get_config_variable(
-            "SIGN", ["SentinelOne", "sign"], self.load
+            "SENTINELONE_INCIDENTS_SIGN", ["SentinelOne", "sign"], self.load
         )
         if not configured_sign:
             raise ConnectorConfigurationError("SIGN is not configured")

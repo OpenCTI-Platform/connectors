@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'STREAM'
-  name: 'SentinelOne Indicator Stream Connector'
+  name: 'SentinelOne Intel'
   scope: 'ChangeMe'
   log_level: 'info'
   live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI

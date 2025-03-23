@@ -113,15 +113,36 @@ def get_action(data: dict) -> str:
     :return: Action name or "unknown"
     """
     score = OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
-
     action = "unknown"
-    if score >= 50:  # self.config.confidence_level == 50
+    if score >= 50:
         action = "block"
     elif 0 < score < 50:
         action = "alert"
     elif score == 0:
         action = "allow"
     return action
+
+
+def get_severity(data: dict) -> str:
+    """
+    Get severity according to observable score.
+    :param data: Observable data to get action from
+    :return: Severity or "unknown"
+    """
+    score = OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
+    if score >= 70:
+        severity = 5
+    elif score >= 50:
+        severity = 4
+    elif score >= 30:
+        severity = 3
+    elif score >= 10:
+        severity = 2
+    elif score > 0:
+        severity = 1
+    else:
+        severity = 0
+    return severity
 
 
 def get_expiration_datetime(data: dict, expiration_time: int) -> str:

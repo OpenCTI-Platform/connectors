@@ -14,6 +14,7 @@ from .utils import (
     get_hash_type,
     get_hash_value,
     get_ioc_type,
+    get_severity,
     get_tags,
     get_threat_type,
     get_tlp_level,
@@ -141,6 +142,7 @@ class SentinelApiHandler:
                 observable, int(self.config.expire_time)
             ),
             "action": self.config.action or get_action(observable),
+            "severity": get_severity(observable),
             "tlpLevel": self.config.tlp_level or get_tlp_level(observable),
             "passiveOnly": "true" if self.config.passive_only else "false",
             "targetProduct": self.config.target_product,
@@ -181,7 +183,6 @@ class SentinelApiHandler:
         :return: Threat Intelligence Indicator if request is successful, None otherwise
         """
         params = f"$filter=externalId eq '{opencti_id}'"
-
         data = self._send_request(
             "get", f"{self.config.base_url}{self.config.resource_path}", params=params
         )
@@ -202,6 +203,7 @@ class SentinelApiHandler:
             f"{self.config.base_url}{self.config.resource_path}",
             json=request_body,
         )
+        print(data)
         return data
 
     def patch_indicator(self, observable: dict, sentinel_indicator_id: str) -> bool:

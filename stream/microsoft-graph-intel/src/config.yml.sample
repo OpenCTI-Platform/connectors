@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'STREAM'
-  name: 'Microsoft Sentinel'
+  name: 'Microsoft Graph Intel'
   scope: 'sentinel' # MIME type or SCO
   log_level: 'info'
   live_stream_id: 'ChangeMe'
@@ -21,6 +21,3 @@ microsoft_graph_intel:
   resource_path: '/beta/security/tiIndicators'
   expire_time: 30
   target_product: 'Azure Sentinel'
-  action: alert
-  tlp_level: amber 
-  passive_only: true
