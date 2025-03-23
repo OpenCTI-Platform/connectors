@@ -1,3 +1,3 @@
 from .connector import MicrosoftSentinelIntelConnector
 
-__all__ = ["MicrosoftGraphIntelConnector"]
+__all__ = ["MicrosoftSentinelIntelConnector"]

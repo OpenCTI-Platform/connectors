@@ -14,7 +14,7 @@ def chunker_list(a, n):
     return [a[i : i + n] for i in range(0, len(a), n)]
 
 
-class MicrosoftDefenderIntelConnector:
+class MicrosoftDefenderIntelSynchronizerConnector:
     """
     Specifications of the Stream connector
 

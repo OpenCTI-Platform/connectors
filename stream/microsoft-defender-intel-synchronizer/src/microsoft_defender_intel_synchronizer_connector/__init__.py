@@ -1,3 +1,3 @@
-from .connector import MicrosoftDefenderIntelConnector
+from .connector import MicrosoftDefenderIntelSynchronizerConnector
 
-__all__ = ["MicrosoftDefenderIntelConnector"]
+__all__ = ["MicrosoftDefenderIntelSynchronizerConnector"]

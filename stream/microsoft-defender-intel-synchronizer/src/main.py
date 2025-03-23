@@ -1,6 +1,8 @@
 import traceback
 
-from microsoft_defender_intel_synchronizer_connector import MicrosoftDefenderIntelConnector
+from microsoft_defender_intel_synchronizer_connector import (
+    MicrosoftDefenderIntelConnector,
+)
 
 if __name__ == "__main__":
     """
