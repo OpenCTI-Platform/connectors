@@ -147,10 +147,7 @@ class MicrosoftGraphIntelConnector:
         :param observable_data: OpenCTI observable data
         :return: Found Sentinel indicator or None
         """
-        opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
-            "id", observable_data
-        )
-        indicators_data = self.api.search_indicators(opencti_id=opencti_id)
+        indicators_data = self.api.search_indicators(observable_data)
         for indicator_data in indicators_data:
             if observable_data["type"] == "file":
                 observable_hash_type = get_hash_type(observable_data)
@@ -196,44 +193,40 @@ class MicrosoftGraphIntelConnector:
         :return: True if the indicators have been successfully deleted, False otherwise
         """
         did_delete = False
-
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
             "id", observable_data
         )
-        indicators_data = self.api.search_indicators(opencti_id=opencti_id)
+        indicators_data = self.api.search_indicators(observable_data)
         for indicator_data in indicators_data:
-            if indicator_data["externalId"] == opencti_id:
-                result = self.api.delete_indicator(indicator_data["id"])
-                if result:
-                    self.helper.connector_logger.info(
-                        "[DELETE] Indicator deleted",
-                        {"sentinel_id": indicator_data["id"], "opencti_id": opencti_id},
-                    )
-                    external_reference = self.helper.api.external_reference.read(
-                        filters={
-                            "mode": "and",
-                            "filters": [
-                                {
-                                    "key": "source_name",
-                                    "values": [
-                                        self.config.target_product.replace(
-                                            "Azure", "Microsoft"
-                                        )
-                                    ],
-                                },
-                                {
-                                    "key": "external_id",
-                                    "values": [indicator_data["id"]],
-                                },
-                            ],
-                            "filterGroups": [],
-                        }
-                    )
-                    if external_reference is not None:
-                        self.helper.api.external_reference.delete(
-                            external_reference["id"]
-                        )
-                did_delete = result
+            result = self.api.delete_indicator(indicator_data["id"])
+            if result:
+                self.helper.connector_logger.info(
+                    "[DELETE] Indicator deleted",
+                    {"sentinel_id": indicator_data["id"], "opencti_id": opencti_id},
+                )
+                external_reference = self.helper.api.external_reference.read(
+                    filters={
+                        "mode": "and",
+                        "filters": [
+                            {
+                                "key": "source_name",
+                                "values": [
+                                    self.config.target_product.replace(
+                                        "Azure", "Microsoft"
+                                    )
+                                ],
+                            },
+                            {
+                                "key": "external_id",
+                                "values": [indicator_data["id"]],
+                            },
+                        ],
+                        "filterGroups": [],
+                    }
+                )
+                if external_reference is not None:
+                    self.helper.api.external_reference.delete(external_reference["id"])
+            did_delete = result
         return did_delete
 
     def _handle_create_event(self, data):
@@ -266,7 +259,13 @@ class MicrosoftGraphIntelConnector:
         :param data: Streamed data (representing either an observable or an indicator)
         """
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
-        did_delete = self._delete_sentinel_indicator(data)
+        did_delete = False
+        if is_stix_indicator(data):
+            observables = self._convert_indicator_to_observables(data)
+            for observable in observables:
+                did_delete = self._delete_sentinel_indicator(observable)
+        elif is_observable(data):
+            did_delete = self._delete_sentinel_indicator(data)
         if not did_delete:
             self.helper.connector_logger.info(
                 "[DELETE] Indicator not found on "
