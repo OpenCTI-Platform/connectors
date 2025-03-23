@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 
 from pycti import OpenCTIConnectorHelper
-from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 OBSERVABLE_TYPES = [
     "ipv4-addr",
