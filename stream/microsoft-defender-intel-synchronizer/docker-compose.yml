@@ -15,7 +15,6 @@ services:
       - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TENANT_ID=ChangeMe # Azure Tenant ID
       - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_CLIENT_ID=ChangeMe # Azure App Client ID
       - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_CLIENT_SECRET=ChangeMe # Azure App Client Secret
-      - "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TARGET_PRODUCT=Azure Sentinel" # "Azure Sentinel" or "Microsoft Defender ATP"
       - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_LOGIN_URL=https://login.microsoft.com
       - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_BASE_URL=https://api.securitycenter.microsoft.com
       - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RESOURCE_PATH=/api/indicators

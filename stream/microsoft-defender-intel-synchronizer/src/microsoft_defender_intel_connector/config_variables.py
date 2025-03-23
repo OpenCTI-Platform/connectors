@@ -75,11 +75,8 @@ class ConfigConnector:
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EXPIRE_TIME",
             ["microsoft_defender_intel_synchronizer", "expire_time"],
             self.load,
-        )
-        self.target_product = get_config_variable(
-            "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TARGET_PRODUCT",
-            ["microsoft_defender_intel_synchronizer", "target_product"],
-            self.load,
+            isNumber=True,
+            default=30
         )
         self.action = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_ACTION",
