@@ -9,7 +9,7 @@ services:
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-      - "CONNECTOR_NAME=Microsoft Graph Intel"
+      - "CONNECTOR_NAME=Microsoft Sentinel Intel"
       - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
       - CONNECTOR_LOG_LEVEL=error
       - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe # Azure Tenant ID

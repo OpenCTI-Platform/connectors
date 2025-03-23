@@ -39,63 +39,63 @@ class ConfigConnector:
 
         # Connector extra parameters
         self.tenant_id = get_config_variable(
-            "MICROSOFT_GRAPH_INTEL_TENANT_ID",
-            ["microsoft_graph_intel", "tenant_id"],
+            "MICROSOFT_SENTINEL_INTEL_TENANT_ID",
+            ["microsoft_sentinel_intel", "tenant_id"],
             self.load,
         )
         self.client_id = get_config_variable(
-            "MICROSOFT_GRAPH_INTEL_CLIENT_ID",
-            ["microsoft_graph_intel", "client_id"],
+            "MICROSOFT_SENTINEL_INTEL_CLIENT_ID",
+            ["microsoft_sentinel_intel", "client_id"],
             self.load,
         )
         self.client_secret = get_config_variable(
-            "MICROSOFT_GRAPH_INTEL_CLIENT_SECRET",
-            ["microsoft_graph_intel", "client_secret"],
+            "MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET",
+            ["microsoft_sentinel_intel", "client_secret"],
             self.load,
         )
         self.login_url = get_config_variable(
-            "MICROSOFT_GRAPH_INTEL_LOGIN_URL",
-            ["microsoft_graph_intel", "login_url"],
+            "MICROSOFT_SENTINEL_INTEL_LOGIN_URL",
+            ["microsoft_sentinel_intel", "login_url"],
             self.load,
             default="https://login.microsoft.com",
         )
         self.base_url = get_config_variable(
-            "MICROSOFT_GRAPH_INTEL_BASE_URL",
-            ["microsoft_graph_intel", "base_url"],
+            "MICROSOFT_SENTINEL_INTEL_BASE_URL",
+            ["microsoft_sentinel_intel", "base_url"],
             self.load,
             default="https://graph.microsoft.com",
         )
         self.resource_path = get_config_variable(
-            "MICROSOFT_GRAPH_INTEL_RESOURCE_PATH",
-            ["microsoft_graph_intel", "resource_path"],
+            "MICROSOFT_SENTINEL_INTEL_RESOURCE_PATH",
+            ["microsoft_sentinel_intel", "resource_path"],
             self.load,
             default="/beta/security/tiIndicators",
         )
         self.expire_time = get_config_variable(
-            "MICROSOFT_GRAPH_INTEL_EXPIRE_TIME",
-            ["microsoft_graph_intel", "expire_time"],
+            "MICROSOFT_SENTINEL_INTEL_EXPIRE_TIME",
+            ["microsoft_sentinel_intel", "expire_time"],
             self.load,
             isNumber=True,
             default=30,
         )
         self.target_product = get_config_variable(
-            "MICROSOFT_GRAPH_INTEL_TARGET_PRODUCT",
-            ["microsoft_graph_intel", "target_product"],
+            "MICROSOFT_SENTINEL_INTEL_TARGET_PRODUCT",
+            ["microsoft_sentinel_intel", "target_product"],
             self.load,
         )
         self.action = get_config_variable(
-            "MICROSOFT_GRAPH_INTEL_ACTION",
-            ["microsoft_graph_intel", "action"],
+            "MICROSOFT_SENTINEL_INTEL_ACTION",
+            ["microsoft_sentinel_intel", "action"],
             self.load,
         )
         self.tlp_level = get_config_variable(
-            "MICROSOFT_GRAPH_INTEL_TLP_LEVEL",
-            ["microsoft_graph_intel", "tlp_level"],
+            "MICROSOFT_SENTINEL_INTEL_TLP_LEVEL",
+            ["microsoft_sentinel_intel", "tlp_level"],
             self.load,
         )
         self.passive_only = get_config_variable(
-            "MICROSOFT_GRAPH_INTEL_PASSIVE_ONLY",
-            ["microsoft_graph_intel", "passive_only"],
+            "MICROSOFT_SENTINEL_INTEL_PASSIVE_ONLY",
+            ["microsoft_sentinel_intel", "passive_only"],
             self.load,
             default=False,
         )
