@@ -125,26 +125,6 @@ def get_expiration_datetime(data: dict, expiration_time: int) -> str:
     return expiration_datetime
 
 
-def get_tlp_level(data: dict) -> str:
-    """
-    Get a TLP level for an observable.
-    :param data: Observable data to extract TLP level from
-    :return: TLP level or "unknown"
-    """
-    tlp_level = "unknown"
-    if "object_marking_refs" in data:
-        marking_refs = data["object_marking_refs"]
-        if TLP_RED.id in marking_refs:
-            tlp_level = "red"
-        elif TLP_AMBER.id in marking_refs or TLP_AMBER_STRICT_ID in marking_refs:
-            tlp_level = "amber"
-        elif TLP_GREEN.id in marking_refs:
-            tlp_level = "green"
-        elif TLP_WHITE.id in marking_refs:
-            tlp_level = "white"
-    return tlp_level
-
-
 def get_tags(data: dict) -> list[str]:
     """
     Get tags for an observable.
@@ -172,17 +152,3 @@ def get_hash_type(data: dict) -> str | None:
         hash_type = FILE_HASH_TYPES_MAPPER[key]
 
     return hash_type
-
-
-def get_hash_value(data: dict, type: str) -> str | None:
-    """
-    Get hash value for a file.
-    :param data: File data to get hash value for
-    :param type: Hash type
-    :return: Hash value
-    """
-    if data["type"] != "file":
-        raise ValueError("Data type is not file")
-
-    hash_value = data["hashes"].get(FILE_HASH_TYPES_MAPPER[key])
-    return hash_value

@@ -2,6 +2,7 @@ import json
 import time
 
 from pycti import OpenCTIConnectorHelper
+
 from .api_handler import SentinelApiHandler
 from .config_variables import ConfigConnector
 from .utils import (

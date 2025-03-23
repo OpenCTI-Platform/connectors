@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
 
 import requests
+from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
 
-from pycti import OpenCTIConnectorHelper
 from .utils import (
     IOC_TYPES,
     get_action,

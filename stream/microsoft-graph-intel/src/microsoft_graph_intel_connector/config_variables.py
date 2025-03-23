@@ -76,7 +76,7 @@ class ConfigConnector:
             ["microsoft_graph_intel", "expire_time"],
             self.load,
             isNumber=True,
-            default=30
+            default=30,
         )
         self.target_product = get_config_variable(
             "MICROSOFT_GRAPH_INTEL_TARGET_PRODUCT",
