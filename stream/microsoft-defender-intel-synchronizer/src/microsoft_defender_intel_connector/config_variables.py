@@ -63,13 +63,13 @@ class ConfigConnector:
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_BASE_URL",
             ["microsoft_defender_intel_synchronizer", "base_url"],
             self.load,
-            default="https://defender.microsoft.com",
+            default="https://api.securitycenter.microsoft.com",
         )
         self.resource_path = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RESOURCE_PATH",
             ["microsoft_defender_intel_synchronizer", "resource_path"],
             self.load,
-            default="/beta/security/tiIndicators",
+            default="/api/indicators",
         )
         self.expire_time = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EXPIRE_TIME",
@@ -102,3 +102,10 @@ class ConfigConnector:
             ["microsoft_defender_intel_synchronizer", "taxii_collections"],
             self.load,
         ).split(",")
+        self.interval = get_config_variable(
+            "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_INTERVAL",
+            ["microsoft_defender_intel_synchronizer", "interval"],
+            self.load,
+            isNumber=True,
+            default=300
+        )

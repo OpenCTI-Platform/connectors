@@ -266,4 +266,4 @@ class MicrosoftDefenderIntelConnector:
                 self.helper.connector_logger.error(
                     "An error occured during the run", {"error": str(e)}
                 )
-            time.sleep(30)
+            time.sleep(self.config.interval)

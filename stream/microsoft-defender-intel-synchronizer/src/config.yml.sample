@@ -19,3 +19,4 @@ microsoft_defender_intel_synchronizer:
   expire_time: 30
   target_product: 'Azure Sentinel'
   taxii_collections: 'ID1,ID2,ID3,etc.'
+  interval: 300
