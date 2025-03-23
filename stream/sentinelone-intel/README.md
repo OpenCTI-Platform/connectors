@@ -1,4 +1,4 @@
-# OpenCTI SentinelOne Indicator Stream Connector
+# OpenCTI SentinelOne Intel Stream Connector
 
 This connector works autonomously to allow Indicators created within the attached OpenCTI instance to be synchronised to a SentinelOne account. The connector simply pushes Indicators as they are created within OpenCTI. This covers the majority of use cases, such as Indicators created in consumption of a MISP feed, manual creation, etc.
 

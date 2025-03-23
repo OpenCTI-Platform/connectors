@@ -44,7 +44,7 @@ class ConfigConnector:
 
         # Ensure the presence of 'APIToken ' regardless of user config.
         configured_api_key = get_config_variable(
-            "S1_API_KEY", ["SentinelOne", "api_key"], self.load
+            "SENTINELONE_INTEL_API_KEY", ["sentinelone_intel", "api_key"], self.load
         )
         if not configured_api_key:
             raise ConnectorConfigurationError("S1_API_KEY is not configured")
@@ -55,7 +55,9 @@ class ConfigConnector:
         )
 
         configured_account_id = get_config_variable(
-            "S1_ACCOUNT_ID", ["SentinelOne", "account_id"], self.load
+            "SENTINELONE_INTEL_ACCOUNT_ID",
+            ["sentinelone_intel", "account_id"],
+            self.load,
         )
         if not configured_account_id:
             raise ConnectorConfigurationError("S1_ACCOUNT_ID is not configured")
@@ -63,7 +65,7 @@ class ConfigConnector:
 
         # Ensure no slash at the end of the URL
         configured_url = get_config_variable(
-            "S1_URL", ["SentinelOne", "url"], self.load
+            "SENTINELONE_INTEL_URL", ["sentinelone_intel", "url"], self.load
         )
         if not configured_url:
             raise ConnectorConfigurationError("S1_URL is not configured")
@@ -71,7 +73,9 @@ class ConfigConnector:
 
         # Ensure the maximum number of API attempts is a non-zero positive integer and default to 3 if not.
         configured_api_attempts = get_config_variable(
-            "MAX_API_ATTEMPTS", ["SentinelOne", "max_api_attempts"], self.load
+            "SENTINELONE_INTEL_MAX_API_ATTEMPTS",
+            ["sentinelone_intel", "max_api_attempts"],
+            self.load,
         )
         if isinstance(configured_api_attempts, int) and configured_api_attempts > 0:
             self.max_api_attempts = configured_api_attempts
@@ -80,7 +84,9 @@ class ConfigConnector:
 
         self.log_s1_response = (
             get_config_variable(
-                "LOG_S1_RESPONSE", ["SentinelOne", "log_s1_response"], self.load
+                "SENTINELONE_INTEL_LOG_S1_RESPONSE",
+                ["sentinelone_intel", "log_s1_response"],
+                self.load,
             )
             or False
         )

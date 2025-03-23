@@ -1,4 +1,4 @@
-# OpenCTI Harfanglab Intel Stream Connector
+# OpenCTI HarfangLab Intel Stream Connector
 
 Table of Contents
 
