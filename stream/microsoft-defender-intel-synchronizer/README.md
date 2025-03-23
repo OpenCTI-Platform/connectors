@@ -10,7 +10,7 @@ help !
 
 It's also important to define the necessary permissions in Sentinel for the connector to work.
 
-In the Azure portal, you need to set :
+In the Entra portal, you need to set :
 Home > Application Registration > OpenCTI (your name) > API Permissions
 and prioritize the "ThreatIndicators.ReadWrite.OwnedBy" permissions.
 ![Sentinel_permission](doc/permission_mandatory.png)

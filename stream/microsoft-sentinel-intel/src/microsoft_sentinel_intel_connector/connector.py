@@ -16,7 +16,7 @@ from .utils import (
 )
 
 
-class MicrosoftGraphIntelConnector:
+class MicrosoftSentinelIntelConnector:
     """
     Specifications of the Stream connector
 

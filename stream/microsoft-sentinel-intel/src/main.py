@@ -1,6 +1,6 @@
 import traceback
 
-from microsoft_graph_intel_connector import MicrosoftGraphIntelConnector
+from microsoft_sentinel_intel_connector import MicrosoftSentinelIntelConnector
 
 if __name__ == "__main__":
     """
@@ -13,7 +13,7 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        connector = MicrosoftGraphIntelConnector()
+        connector = MicrosoftSentinelIntelConnector()
         connector.run()
     except Exception:
         traceback.print_exc()
