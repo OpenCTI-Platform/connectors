@@ -1,0 +1,24 @@
+version: '3'
+services:
+  connector-microsoft-defender-intel-synchronizer:
+    image: opencti/connector-microsoft-defender-intel-synchronizer:6.5.9
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - "CONNECTOR_NAME=Microsoft Defender Intel Synchronizer"
+      - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
+      - CONNECTOR_LOG_LEVEL=error
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TENANT_ID=ChangeMe # Azure Tenant ID
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_CLIENT_ID=ChangeMe # Azure App Client ID
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_CLIENT_SECRET=ChangeMe # Azure App Client Secret
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_LOGIN_URL=https://login.microsoft.com
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_BASE_URL=https://api.securitycenter.microsoft.com
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RESOURCE_PATH=/api/indicators
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EXPIRE_TIME=30 # Number of days for IOC to expire in Sentinel
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS=ID1,ID2,etc.
+      - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_INTERVAL=300
+    restart: unless-stopped

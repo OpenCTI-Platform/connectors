@@ -5,28 +5,19 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'STREAM'
-  name: 'Microsoft Sentinel'
+  name: 'Microsoft Sentinel Intel'
   scope: 'sentinel' # MIME type or SCO
   log_level: 'info'
   live_stream_id: 'ChangeMe'
   live_stream_listen_delete: true
   live_stream_no_dependencies: true
 
-sentinel:
+microsoft_sentinel_intel:
   tenant_id: 'ChangeMe'
-  workspace_id: 'ChangeMe' # Only for Sentinel
   client_id: 'ChangeMe' 
   client_secret: 'ChangeMe' 
   login_url: 'https://login.microsoft.com'
-  resource_url: 'https://graph.microsoft.com'
-  request_url: '/beta/security/tiIndicators'
-  incident_url : '/v1.0/security/incidents'
-  sentinel_url: 'https://sentinelus.azure-api.net'
-  use_new_sentinel_api: false
-  confidence_level: 50 
+  base_url: 'https://graph.microsoft.com'
+  resource_path: '/beta/security/tiIndicators'
   expire_time: 30
   target_product: 'Azure Sentinel'
-  action: alert
-  tlp_level: amber 
-  passive_only: true
-  import_incidents: true

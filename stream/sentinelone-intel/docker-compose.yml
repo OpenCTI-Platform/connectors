@@ -1,23 +1,19 @@
 services:
-  sentinelone-indicator:
-    image: opencti/sentinelone-indicator:6.5.6
-
+  connector-sentinelone-intel:
+    image: opencti/connector-sentinelone-intel:6.5.6
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGEME
-
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=SentinelOne Indicator Stream Connector
+      - "CONNECTOR_NAME=SentinelOne Intel"
       - CONNECTOR_SCOPE=CHANGEME
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_LIVE_STREAM_ID=live # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-
-      - S1_URL=CHANGEME
-      - S1_API_KEY=CHANGEME
-      - S1_ACCOUNT_ID=CHANGEME
-      - MAX_API_ATTEMPTS=5
-      - LOG_S1_RESPONSE=true
-
+      - SENTINELONE_INTEL_URL=CHANGEME
+      - SENTINELONE_INTEL_API_KEY=CHANGEME
+      - SENTINELONE_INTEL_ACCOUNT_ID=CHANGEME
+      - SENTINELONE_INTEL_MAX_API_ATTEMPTS=5
+      - SENTINELONE_INTEL_LOG_S1_RESPONSE=true
     restart: always

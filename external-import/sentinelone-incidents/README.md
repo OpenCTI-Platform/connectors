@@ -1,4 +1,4 @@
-# OpenCTI SentinelOne Incident External Import Connector
+# OpenCTI SentinelOne Incidents
 
 This connector allows Incidents from a SentinelOne account to be created within an OpenCTI Instance
 

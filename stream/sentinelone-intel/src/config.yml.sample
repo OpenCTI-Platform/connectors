@@ -5,19 +5,17 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'STREAM'
-  name: 'SentinelOne Indicator Stream Connector'
+  name: 'SentinelOne Intel'
   scope: 'ChangeMe'
   log_level: 'info'
   live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true
   live_stream_no_dependencies: true
 
-
-sentinelOne:
+sentinelone_intel:
   url: 'change Me Ending In/'
   api_key: 'ChangeMe'
   account_id: 'ChangeMe'
-
   max_api_attempts: 5
   log_s1_response: true
   
