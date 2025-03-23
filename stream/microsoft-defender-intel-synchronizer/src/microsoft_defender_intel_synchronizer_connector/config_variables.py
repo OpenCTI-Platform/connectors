@@ -83,11 +83,6 @@ class ConfigConnector:
             ["microsoft_defender_intel_synchronizer", "action"],
             self.load,
         )
-        self.tlp_level = get_config_variable(
-            "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TLP_LEVEL",
-            ["microsoft_defender_intel_synchronizer", "tlp_level"],
-            self.load,
-        )
         self.passive_only = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_PASSIVE_ONLY",
             ["microsoft_defender_intel_synchronizer", "passive_only"],
