@@ -1,5 +1,6 @@
 """Offer tools to ingest Report and related entities from Dragos reports."""
 
+import logging
 from typing import TYPE_CHECKING, Any, Generator
 
 from dragos.domain.models import octi
@@ -8,6 +9,8 @@ from dragos.domain.use_cases.common import BaseUseCase
 
 if TYPE_CHECKING:
     from dragos.interfaces import Indicator, Report, Tag
+
+logger = logging.getLogger(__name__)
 
 
 class ReportProcessor(BaseUseCase):
@@ -120,22 +123,22 @@ class ReportProcessor(BaseUseCase):
     ) -> Generator["octi.DomainObject", Any, Any]:
         """Make OCTI domain objects generator from Dragos report related tags."""
         for related_tag in report.related_tags:
-            entity = None
-            match related_tag.type.lower():
+            tag_type = related_tag.type.lower()
+            match tag_type:
                 case "industry" | "naics":
-                    entity = self._make_sector(related_tag)
+                    yield self._make_sector(related_tag)
                 case "geographiclocation":
-                    entity = None  # Location
+                    yield None  # Location
                 case "hacker group" | "threatgroup" | "externalname":
-                    entity = self._make_intrusion_set(related_tag)
+                    yield self._make_intrusion_set(related_tag)
                 case "government organization":
-                    entity = self._make_organization(related_tag)
+                    yield self._make_organization(related_tag)
                 case "malware":
-                    entity = self._make_malware(related_tag)
+                    yield self._make_malware(related_tag)
                 case "cve":
-                    entity = self._make_vulnerability(related_tag)
-            if entity:
-                yield entity
+                    yield self._make_vulnerability(related_tag)
+                case _:
+                    logger.warning(f"Unsupported tag type {tag_type}")
 
     def make_observables_and_indicators(
         self, report: "Report"
@@ -144,22 +147,26 @@ class ReportProcessor(BaseUseCase):
 
         def make_observable(related_indicator: "Indicator") -> "octi.Observable":
             """Make an OCTI observable from a Dragos report related indicator."""
-            observable = None
-            match related_indicator.type:
+            dragos_indicator_type = related_indicator.type.lower()
+            match dragos_indicator_type:
                 case "artifact":
-                    observable = self._make_artifact(related_indicator)
+                    return self._make_artifact(related_indicator)
                 case "domain":
-                    observable = self._make_domain_name(related_indicator)
+                    return self._make_domain_name(related_indicator)
                 case "ip":
                     if self._is_ipv4(related_indicator.value):
-                        observable = self._make_ipv4_address(related_indicator)
+                        return self._make_ipv4_address(related_indicator)
                     if self._is_ipv6(related_indicator.value):
-                        observable = self._make_ipv6_address(related_indicator)
+                        return self._make_ipv6_address(related_indicator)
                 case "md5" | "sha1" | "sha256":
-                    observable = self._make_file(related_indicator)
+                    return self._make_file(related_indicator)
                 case "url":
-                    observable = self._make_url(related_indicator)
-            return observable
+                    return self._make_url(related_indicator)
+                case _:
+                    logger.warning(
+                        f"Unsupported indicator type {dragos_indicator_type}"
+                    )
+            return None
 
         for related_indicator in report.related_indicators:
             observable = make_observable(related_indicator)
