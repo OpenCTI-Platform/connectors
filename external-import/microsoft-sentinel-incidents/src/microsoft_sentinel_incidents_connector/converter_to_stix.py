@@ -234,7 +234,19 @@ class ConverterToStix:
             "sha256": "SHA-256",
         }
         hashes = {}
-        file = evidence.get("ImageFile") or evidence.get("value")
+
+        file = evidence.get("ImageFile") or evidence.get("value") or evidence.get("FileHashes")
+
+        # FileHashes evidences
+        if isinstance(file, list):
+            for file_hash in file:
+                if "Type" in file_hash and file_hash.get("Type") == "filehash":
+                    hash_name = hashes_mapping.get(file_hash.get("Algorithm").lower())
+                    if hash_name:
+                        hashes[hash_name] = file_hash.get("Value")
+                        self.all_hashes.add(file_hash.get("Value"))
+                    else:
+                        continue
 
         # process and file
         if isinstance(file, dict):
@@ -256,6 +268,7 @@ class ConverterToStix:
                 return None
 
         if hashes:
+            print(hashes)
             stix_file = stix2.File(
                 hashes=hashes,
                 name=file.get("fileName") if isinstance(file, dict) else None,
