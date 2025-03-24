@@ -2,7 +2,6 @@
 
 import ipaddress
 from abc import abstractmethod
-from datetime import datetime
 from typing import Any, Optional, Self
 
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
@@ -19,7 +18,7 @@ from dragos.domain.models.octi.enums import (
     PatternType,
 )
 from dragos.domain.models.octi.types import HashAlgorithm
-from pydantic import Field, PositiveInt, field_validator, model_validator
+from pydantic import AwareDatetime, Field, PositiveInt, field_validator, model_validator
 
 
 class Observable(BaseEntity):
@@ -73,7 +72,11 @@ class Observable(BaseEntity):
         """Make stix object."""
 
     @abstractmethod
-    def to_indicator(self) -> Indicator:
+    def to_indicator(
+        self,
+        valid_from: Optional[AwareDatetime] = None,
+        valid_until: Optional[AwareDatetime] = None,
+    ) -> Indicator:
         """Make stix indicator based on current observable."""
 
 
@@ -110,7 +113,7 @@ class Artifact(Observable):
         description="OpenCTI additional names.",
     )
 
-    def _custom_properties_to_stix(self):
+    def _custom_properties_to_stix(self) -> dict[str, Any]:
         """Convert custom properties to stix."""
         custom_properties = super()._custom_properties_to_stix()
         custom_properties.update(dict(x_opencti_additional_names=self.additional_names))
@@ -138,8 +141,8 @@ class Artifact(Observable):
 
     def to_indicator(
         self,
-        valid_from: Optional[datetime] = None,
-        valid_until: Optional[datetime] = None,
+        valid_from: Optional[AwareDatetime] = None,
+        valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
         """Make stix indicator based on current observable."""
         name = (
@@ -203,8 +206,8 @@ class DomainName(Observable):
 
     def to_indicator(
         self,
-        valid_from: Optional[datetime] = None,
-        valid_until: Optional[datetime] = None,
+        valid_from: Optional[AwareDatetime] = None,
+        valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
         """Make stix indicator based on current observable."""
         return Indicator(
@@ -250,15 +253,15 @@ class File(Observable):
         None,
         description="The MIME type name specified for the file, e.g., application/msword.",
     )
-    ctime: Optional[datetime] = Field(
+    ctime: Optional[AwareDatetime] = Field(
         None,
         description="Date/time the directory was created.",
     )
-    mtime: Optional[datetime] = Field(
+    mtime: Optional[AwareDatetime] = Field(
         None,
         description="Date/time the directory was last writtend to or modified.",
     )
-    atime: Optional[datetime] = Field(
+    atime: Optional[AwareDatetime] = Field(
         None,
         description="Date/time the directory was last accessed.",
     )
@@ -273,7 +276,7 @@ class File(Observable):
             raise ValueError("Either 'name' or one of 'hashes' must be provided.")
         return self
 
-    def _custom_properties_to_stix(self):
+    def _custom_properties_to_stix(self) -> dict[str, Any]:
         """Convert custom properties to stix."""
         custom_properties = super()._custom_properties_to_stix()
         custom_properties.update(dict(x_opencti_additional_names=self.additional_names))
@@ -307,8 +310,8 @@ class File(Observable):
 
     def to_indicator(
         self,
-        valid_from: Optional[datetime] = None,
-        valid_until: Optional[datetime] = None,
+        valid_from: Optional[AwareDatetime] = None,
+        valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
         """Make stix indicator based on current observable."""
         name = self.name or (self.hashes.values()[0] if self.hashes else None)
@@ -375,8 +378,8 @@ class IPV4Address(Observable):
 
     def to_indicator(
         self,
-        valid_from: Optional[datetime] = None,
-        valid_until: Optional[datetime] = None,
+        valid_from: Optional[AwareDatetime] = None,
+        valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
         """Make stix indicator based on current observable."""
         return Indicator(
@@ -432,8 +435,8 @@ class IPV6Address(Observable):
 
     def to_indicator(
         self,
-        valid_from: Optional[datetime] = None,
-        valid_until: Optional[datetime] = None,
+        valid_from: Optional[AwareDatetime] = None,
+        valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
         """Make stix indicator based on current observable."""
         return Indicator(
@@ -477,8 +480,8 @@ class Url(Observable):
 
     def to_indicator(
         self,
-        valid_from: Optional[datetime] = None,
-        valid_until: Optional[datetime] = None,
+        valid_from: Optional[AwareDatetime] = None,
+        valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
         """Make stix indicator based on current observable."""
         return Indicator(

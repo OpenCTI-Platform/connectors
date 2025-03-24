@@ -1,7 +1,6 @@
 """Define OpenCTI entities."""
 
 from abc import abstractmethod
-from datetime import datetime
 from typing import Any, Optional
 
 import dragos.domain.models.octi.enums as octi_enums
@@ -89,11 +88,11 @@ class Indicator(DomainObject):
         None,
         description="Platforms.",
     )
-    valid_from: Optional[datetime] = Field(
+    valid_from: Optional[AwareDatetime] = Field(
         None,
         description="Valid from.",
     )
-    valid_until: Optional[datetime] = Field(
+    valid_until: Optional[AwareDatetime] = Field(
         None,
         description="Valid until.",
     )
