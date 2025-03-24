@@ -2,16 +2,18 @@
 
 import warnings
 from enum import Enum
-from typing import Annotated, Any, Callable
+from typing import Annotated, Any, Callable, TypeVar
 
 import dragos.domain.models.octi.enums as octi_enums
 from pydantic import AfterValidator
 
+T = TypeVar("T")
 
-def is_in_enum(enum: Enum) -> Callable:
+
+def is_in_enum(enum: Enum) -> Callable[[T], T]:
     """Get validator to check if a value is in given enum."""
 
-    def compare_value(value: Any) -> Any:
+    def compare_value(value: T) -> T:
         """Check if value is in enum."""
         enum_values = [member.value for member in enum]
         if value not in enum_values:
