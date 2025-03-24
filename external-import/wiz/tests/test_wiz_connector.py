@@ -1,3 +1,5 @@
+import datetime
+
 import freezegun
 import pytest
 import stix2
@@ -79,3 +81,18 @@ def test_send_stix2_bundle_update_argument(mocked_helper: OpenCTIConnectorHelper
     connector.process_message()
 
     assert not mocked_helper.send_stix2_bundle.call_args.kwargs.get("update", False)
+
+
+@freezegun.freeze_time("2025-03-13T10:24:00Z")
+@pytest.mark.usefixtures("mocked_requests")
+def test_modified_entity_and_state(mocked_helper: OpenCTIConnectorHelper):
+    connector = ConnectorWiz(config=ConfigConnector(), helper=mocked_helper)
+
+    entities = connector._collect_intelligence()
+    assert len(entities) == 8
+
+    mocked_helper.get_state = lambda: {"last_run": str(datetime.datetime.now())}
+    entities = connector._collect_intelligence()
+
+    # Campaign, Threat and Attack Pattern are modified before the last run, so ignore in the second run
+    assert len(entities) == 5

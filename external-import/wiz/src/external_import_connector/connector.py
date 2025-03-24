@@ -1,5 +1,5 @@
+import datetime
 import sys
-from datetime import datetime
 
 from pycti import OpenCTIConnectorHelper
 
@@ -36,7 +36,11 @@ class ConnectorWiz:
 
             # Filter entities
             if "modified" in entity and state is not None:
-                if entity["modified"] < state["last_run"]:
+                entity_modified = datetime.datetime.fromisoformat(entity["modified"])
+                last_run = datetime.datetime.fromisoformat(state["last_run"]).replace(
+                    tzinfo=datetime.timezone.utc
+                )
+                if entity_modified < last_run:
                     continue
 
             if entity["type"] == "malware":
@@ -98,9 +102,7 @@ class ConnectorWiz:
 
         try:
             # Get the current state
-            now = datetime.now()
-            current_timestamp = int(datetime.timestamp(now))
-
+            now = datetime.datetime.now(tz=datetime.UTC)
             current_state = self.helper.get_state()
 
             if current_state is not None and "last_run" in current_state:
@@ -147,22 +149,18 @@ class ConnectorWiz:
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug(
                 "Getting current state and update it with last run of the connector",
-                {"current_timestamp": current_timestamp},
+                {"current_timestamp": now.timestamp()},
             )
             current_state = self.helper.get_state()
-            current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
-            last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
             if current_state:
-                current_state["last_run"] = current_state_datetime
+                current_state["last_run"] = now
             else:
-                current_state = {"last_run": current_state_datetime}
+                current_state = {"last_run": now}
             self.helper.set_state(current_state)
 
             message = (
                 f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(last_run_datetime)
+                + str(now)
             )
 
             self.helper.api.work.to_processed(work_id, message)
