@@ -2,12 +2,11 @@
 
 from typing import TYPE_CHECKING, Any, Generator
 
-import dragos.domain.models.octi as octi
+from dragos.domain.models import octi
 from dragos.domain.models.octi.enums import OrganizationType
 from dragos.domain.use_cases.common import BaseUseCase
 
 if TYPE_CHECKING:
-    from dragos.domain.models.octi import BaseEntity, DomainObject, Observable
     from dragos.interfaces import Indicator, Report, Tag
 
 
@@ -118,7 +117,7 @@ class ReportProcessor(BaseUseCase):
 
     def make_domain_objects(
         self, report: "Report"
-    ) -> Generator["DomainObject", Any, Any]:
+    ) -> Generator["octi.DomainObject", Any, Any]:
         """Make OCTI domain objects generator from Dragos report related tags."""
         for related_tag in report.related_tags:
             entity = None
@@ -140,10 +139,10 @@ class ReportProcessor(BaseUseCase):
 
     def make_observables_and_indicators(
         self, report: "Report"
-    ) -> Generator[tuple["Observable", "Indicator"], Any, Any]:
+    ) -> Generator[tuple["octi.Observable", "octi.Indicator"], Any, Any]:
         """Make an OCTI Observable and Indicator generator from Dragos report related indicators."""
 
-        def make_observable(related_indicator: "Indicator") -> "Observable":
+        def make_observable(related_indicator: "Indicator") -> "octi.Observable":
             """Make an OCTI observable from a Dragos report related indicator."""
             observable = None
             match related_indicator.type:
@@ -173,7 +172,7 @@ class ReportProcessor(BaseUseCase):
                 yield (observable, indicator)
 
     def make_indicator_based_on_observable_relationship(
-        self, indicator: "Indicator", observable: "Observable"
+        self, indicator: "Indicator", observable: "octi.Observable"
     ) -> octi.IndicatorBasedOnObservable:
         """Make an OCTI IndicatorBasedOnObservable relationship from Indicator and Observable."""
         return octi.IndicatorBasedOnObservable(
@@ -189,7 +188,7 @@ class ReportProcessor(BaseUseCase):
         )
 
     def make_report(
-        self, report: "Report", related_objetcs: list["BaseEntity"]
+        self, report: "Report", related_objetcs: list["octi.BaseEntity"]
     ) -> octi.Report:
         """Make an OCTI Report from a Dragos report and the related entities."""
         return octi.Report(
@@ -206,9 +205,9 @@ class ReportProcessor(BaseUseCase):
             external_references=None,
         )
 
-    def run_on(self, report: "Report") -> list["BaseEntity"]:
+    def run_on(self, report: "Report") -> list["octi.BaseEntity"]:
         """Run the process of entities creation thanks to a Report."""
-        entities: list["BaseEntity"] = []
+        entities: list["octi.BaseEntity"] = []
 
         observables_and_indicators = self.make_observables_and_indicators(report)
         for observable, indicator in observables_and_indicators:
