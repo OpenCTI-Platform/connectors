@@ -168,6 +168,7 @@ class ConverterToStix:
         | stix2.Vulnerability
         | stix2.Relationship
         | stix2.Note
+        | stix2.Identity
         | dict[str, Any]
     ]:
         return (
@@ -189,5 +190,6 @@ class ConverterToStix:
                     vulns=result.vulns,
                     ports=result.ports,
                 ),
+                self.author,
             ]
         )
