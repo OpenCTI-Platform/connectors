@@ -159,10 +159,11 @@ class Artifact(Observable):
             )
         if self.url:
             comparison_expressions.append(f"artifact:url='{self.url}'")
-        for key in self.hashes:
-            comparison_expressions.append(
-                f"artifact:hashes.'{key}'='{self.hashes[key]}'"
-            )
+        if self.hashes:
+            for key in self.hashes:
+                comparison_expressions.append(
+                    f"artifact:hashes.'{key}'='{self.hashes[key]}'"
+                )
         if comparison_expressions:
             stix_pattern = f"[{' AND '.join(comparison_expressions)}]"
 
@@ -274,7 +275,7 @@ class File(Observable):
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
-        if self.name is None and len(self.hashes) == 0:
+        if not self.name and not self.hashes:
             raise ValueError("Either 'name' or one of 'hashes' must be provided.")
         return self
 
@@ -322,8 +323,11 @@ class File(Observable):
         comparison_expressions = []
         if self.name:
             comparison_expressions.append(f"file:name='{self.name}'")
-        for key in self.hashes:
-            comparison_expressions.append(f"file:hashes.'{key}'='{self.hashes[key]}'")
+        if self.hashes:
+            for key in self.hashes:
+                comparison_expressions.append(
+                    f"file:hashes.'{key}'='{self.hashes[key]}'"
+                )
         if comparison_expressions:
             stix_pattern = f"[{' AND '.join(comparison_expressions)}]"
 
