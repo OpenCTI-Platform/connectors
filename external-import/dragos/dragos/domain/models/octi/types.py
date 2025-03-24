@@ -17,7 +17,8 @@ def is_in_enum(enum: Enum) -> Callable:
         if value not in enum_values:
             if issubclass(enum, octi_enums.OpenVocab):
                 warnings.warn(
-                    f"Value '{value}' out of recommended values: {', '.join(enum_values)}."
+                    f"Value '{value}' out of recommended values: {', '.join(enum_values)}.",
+                    stacklevel=2,
                 )
             else:
                 raise ValueError(
