@@ -1,9 +1,3 @@
-"""Shodan InternetDB client"""
-
-from __future__ import annotations
-
-from typing import List, Optional
-
 import requests
 from pydantic.v1 import BaseModel, parse_raw_as
 
@@ -11,6 +5,17 @@ __all__ = [
     "ShodanInternetDbClient",
     "ShodanResult",
 ]
+
+
+class ShodanResult(BaseModel):
+    """Shodan InternetDB response"""
+
+    cpes: list[str]  # Common Platform Enumeration (CPE)
+    hostnames: list[str]
+    ip: str
+    ports: list[int]
+    tags: list[str]
+    vulns: list[str]
 
 
 class ShodanInternetDbClient:
@@ -26,7 +31,7 @@ class ShodanInternetDbClient:
         self._session = requests.Session()
         self._verify = verify
 
-    def query(self, ip: str) -> Optional[ShodanResult]:
+    def query(self, ip: str) -> ShodanResult | None:
         """Process the IP and return the result
         :return: Query result
         """
@@ -43,14 +48,3 @@ class ShodanInternetDbClient:
         resp.raise_for_status()
 
         return parse_raw_as(ShodanResult, resp.text)
-
-
-class ShodanResult(BaseModel):
-    """Shodan InternetDB response"""
-
-    cpes: List[str]  # Common Platform Enumeration (CPE)
-    hostnames: List[str]
-    ip: str
-    ports: List[int]
-    tags: List[str]
-    vulns: List[str]

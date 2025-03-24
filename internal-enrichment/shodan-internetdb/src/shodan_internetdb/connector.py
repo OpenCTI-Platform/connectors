@@ -1,8 +1,3 @@
-"""Shodan InternetDB connector"""
-
-from __future__ import annotations
-
-import logging
 from typing import Any
 
 import validators
@@ -17,9 +12,6 @@ from shodan_internetdb.converter_to_stix import ConverterToStix
 __all__ = [
     "ShodanInternetDBConnector",
 ]
-
-
-log = logging.getLogger(__name__)
 
 
 class ShodanInternetDBConnector:
@@ -69,7 +61,9 @@ class ShodanInternetDBConnector:
         # Process the observable value
         value = stix_observable["value"]
         if not validators.ipv4(value):
-            log.error("Observable value is not an IPv4 address")
+            self.helper.connector_logger.error(
+                "Observable value is not an IPv4 address"
+            )
             return "Skipping observable (ipv4 validation)"
 
         if not self._is_entity_in_scope(data["entity_type"]):
@@ -84,15 +78,15 @@ class ShodanInternetDBConnector:
         try:
             result = self._client.query(value)
         except RequestException:
-            log.exception("Shodan API error")
+            self.helper.connector_logger.exception("Shodan API error")
             return "Skipping observable (Shodan API error)"
 
         if result is None:
-            log.debug("No information available on %s", value)
+            self.helper.connector_logger.debug("No information available on %s", value)
             return "Skipping observable (Shodan 404)"
 
         # Process the result
-        log.debug("Processing %s", value)
+        self.helper.connector_logger.debug("Processing %s", value)
 
         return self._send_bundle(
             stix_objects + self.converter.create_stix_objects(stix_observable, result)
