@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Generator
 
 from dragos.domain.models import octi
 from dragos.domain.models.octi.enums import OrganizationType
-from dragos.domain.use_cases.common import BaseUseCase
+from dragos.domain.use_cases.common import BaseUseCase, UseCaseError
 
 if TYPE_CHECKING:
     from dragos.interfaces import Indicator, Report, Tag
@@ -52,21 +52,24 @@ class ReportProcessor(BaseUseCase):
             markings=[self.tlp_marking],
         )
 
-    def _make_ipv4_address(self, indicator: "Indicator") -> octi.IPV4Address:
-        """Make an OCTI IPV4Address from report's indicator."""
-        return octi.IPV4Address(
-            value=indicator.value,
-            author=self.author,
-            markings=[self.tlp_marking],
-        )
-
-    def _make_ipv6_address(self, indicator: "Indicator") -> octi.IPV6Address:
-        """Make an OCTI IPV6Address from report's indicator."""
-        return octi.IPV6Address(
-            value=indicator.value,
-            author=self.author,
-            markings=[self.tlp_marking],
-        )
+    def _make_ip_address(
+        self, indicator: "Indicator"
+    ) -> octi.IPV4Address | octi.IPV6Address:
+        """Make an OCTI IP Address (v4 or v6) from report's indicator."""
+        if self._is_ipv4(indicator.value):
+            return octi.IPV4Address(
+                value=indicator.value,
+                author=self.author,
+                markings=[self.tlp_marking],
+            )
+        elif self._is_ipv6(indicator.value):
+            return octi.IPV6Address(
+                value=indicator.value,
+                author=self.author,
+                markings=[self.tlp_marking],
+            )
+        else:
+            raise UseCaseError(f"Invalid IP Address: {indicator.value}")
 
     def _make_url(self, indicator: "Indicator") -> octi.Url:
         """Make an OCTI URL from report's indicator."""
@@ -154,10 +157,7 @@ class ReportProcessor(BaseUseCase):
                 case "domain":
                     return self._make_domain_name(related_indicator)
                 case "ip":
-                    if self._is_ipv4(related_indicator.value):
-                        return self._make_ipv4_address(related_indicator)
-                    if self._is_ipv6(related_indicator.value):
-                        return self._make_ipv6_address(related_indicator)
+                    return self._make_ip_address(related_indicator)
                 case "md5" | "sha1" | "sha256":
                     return self._make_file(related_indicator)
                 case "url":
