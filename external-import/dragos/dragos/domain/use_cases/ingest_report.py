@@ -169,6 +169,7 @@ class ReportProcessor(BaseUseCase):
             return None
 
         for related_indicator in report.related_indicators:
+            indicator = None
             observable = make_observable(related_indicator)
             if observable:
                 indicator = observable.to_indicator(
@@ -179,7 +180,7 @@ class ReportProcessor(BaseUseCase):
                 yield (observable, indicator)
 
     def make_indicator_based_on_observable_relationship(
-        self, indicator: "Indicator", observable: "octi.Observable"
+        self, indicator: "octi.Indicator", observable: "octi.Observable"
     ) -> octi.IndicatorBasedOnObservable:
         """Make an OCTI IndicatorBasedOnObservable relationship from Indicator and Observable."""
         return octi.IndicatorBasedOnObservable(
