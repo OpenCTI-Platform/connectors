@@ -169,6 +169,7 @@ class ConverterToStix:
         | stix2.Relationship
         | stix2.Note
         | stix2.Identity
+        | stix2.MarkingDefinition
         | dict[str, Any]
     ]:
         return (
@@ -191,5 +192,6 @@ class ConverterToStix:
                     ports=result.ports,
                 ),
                 self.author,
+                self.tlp_marking,
             ]
         )
