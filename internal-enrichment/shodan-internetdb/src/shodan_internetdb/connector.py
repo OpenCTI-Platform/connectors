@@ -12,6 +12,7 @@ import validators
 import yaml
 from pycti import (
     STIX_EXT_OCTI_SCO,
+    Identity,
     Note,
     OpenCTIConnectorHelper,
     OpenCTIStix2,
@@ -45,12 +46,13 @@ class ShodanInternetDBConnector:
         self._config = RootConfig.parse_obj(config)
         self._helper = OpenCTIConnectorHelper(config, True)
 
-        self._identity = self._helper.api.identity.create(
-            type="Organization",
+        self._identity = stix2.Identity(
+            id=Identity.generate_id(name="Shodan", identity_class="organization"),
             name="Shodan",
+            identity_class="organization",
             description="Shodan is a search engine for Internet-connected devices.",
         )
-        self._identity_id = self._identity["standard_id"]
+        self._identity_id = self._identity["id"]
         self._object_marking_id = stix2.TLP_WHITE["id"]
 
         self._client = ShodanInternetDbClient(verify=self._config.shodan.ssl_verify)
