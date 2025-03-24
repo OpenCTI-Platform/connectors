@@ -146,15 +146,17 @@ class Artifact(Observable):
     ) -> Indicator:
         """Make stix indicator based on current observable."""
         name = (
-            self.payload_bin
+            self.payload_bin.decode()
             or self.url
-            or (self.hashes.values()[0] if self.hashes else None)
+            or (list(self.hashes.values())[0] if self.hashes else None)
         )
 
         stix_pattern = None
         comparison_expressions = []
         if self.payload_bin:
-            comparison_expressions.append(f"artifact:payload_bin='{self.payload_bin}'")
+            comparison_expressions.append(
+                f"artifact:payload_bin='{self.payload_bin.decode()}'"
+            )
         if self.url:
             comparison_expressions.append(f"artifact:url='{self.url}'")
         for key in self.hashes:
@@ -314,7 +316,7 @@ class File(Observable):
         valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
         """Make stix indicator based on current observable."""
-        name = self.name or (self.hashes.values()[0] if self.hashes else None)
+        name = self.name or (list(self.hashes.values())[0] if self.hashes else None)
 
         stix_pattern = None
         comparison_expressions = []
