@@ -235,7 +235,11 @@ class ConverterToStix:
         }
         hashes = {}
 
-        file = evidence.get("ImageFile") or evidence.get("value") or evidence.get("FileHashes")
+        file = (
+            evidence.get("ImageFile")
+            or evidence.get("value")
+            or evidence.get("FileHashes")
+        )
 
         # FileHashes evidences
         if isinstance(file, list):
