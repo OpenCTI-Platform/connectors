@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import stix2
 import validators
 from pycti import (
     OpenCTIConnectorHelper,
@@ -46,6 +45,14 @@ class ShodanInternetDBConnector:
                     "the connector does not has access to this observable, please check the group of the connector user"
                 )
 
+    def _send_bundle(self, stix_objects: list[Any]) -> str:
+        stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
+        bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
+        return f"Sending {len(bundles_sent)} stix bundle(s) for worker import"
+
+    def _is_entity_in_scope(self, entity_type: str) -> bool:
+        return self.helper.connect_scope.lower() == entity_type.lower()
+
     def _process_message(self, data: dict[str, Any]) -> str:
         """
         Process the data message
@@ -55,6 +62,7 @@ class ShodanInternetDBConnector:
         # Fetch the observable being processed
         observable = data["enrichment_entity"]
         stix_observable = data["stix_entity"]
+        stix_objects = data["stix_objects"]
 
         self.extract_and_check_markings(observable)
 
@@ -63,6 +71,15 @@ class ShodanInternetDBConnector:
         if not validators.ipv4(value):
             log.error("Observable value is not an IPv4 address")
             return "Skipping observable (ipv4 validation)"
+
+        if not self._is_entity_in_scope(data["entity_type"]):
+            if data.get("event_type"):
+                raise ValueError(
+                    f"Failed to process observable, {data['entity_type']} is not a supported entity type."
+                )
+            # If it is not in scope AND entity bundle passed through playbook,
+            # we should return the original bundle unchanged
+            return self._send_bundle(stix_objects)
 
         try:
             result = self._client.query(value)
@@ -77,12 +94,9 @@ class ShodanInternetDBConnector:
         # Process the result
         log.debug("Processing %s", value)
 
-        stix_objects = self.converter.create_stix_objects(stix_observable, result)
-
-        bundle = stix2.Bundle(objects=stix_objects, allow_custom=True).serialize()
-        self.helper.log_info("Sending event STIX2 bundle")
-        bundle_sent = self.helper.send_stix2_bundle(bundle)
-        return f"Sent {len(bundle_sent)} stix bundle(s) for worker import"
+        return self._send_bundle(
+            stix_objects + self.converter.create_stix_objects(stix_observable, result)
+        )
 
     def run(self) -> None:
         """
