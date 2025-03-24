@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Any, Dict, List, Union
 
 import stix2
 import validators
-import yaml
 from pycti import (
     STIX_EXT_OCTI_SCO,
     Identity,
@@ -20,13 +18,13 @@ from pycti import (
     Vulnerability,
 )
 from requests.exceptions import RequestException
-
-from .client import ShodanInternetDbClient, ShodanResult
-from .config import RootConfig
+from shodan_internetdb.client import ShodanInternetDbClient, ShodanResult
+from shodan_internetdb.config import ConfigConnector
 
 __all__ = [
     "ShodanInternetDBConnector",
 ]
+
 
 log = logging.getLogger(__name__)
 
@@ -34,17 +32,11 @@ log = logging.getLogger(__name__)
 class ShodanInternetDBConnector:
     """Shodan InternetDB connector"""
 
-    def __init__(self) -> None:
+    def __init__(self, helper: OpenCTIConnectorHelper, config: ConfigConnector) -> None:
         """Constructor"""
-        config_path = Path(__file__).parent.parent.joinpath("config.yml")
-        config = (
-            yaml.load(config_path.open(), Loader=yaml.SafeLoader)
-            if config_path.is_file()
-            else {}
-        )
-
-        self._config = RootConfig.parse_obj(config)
-        self._helper = OpenCTIConnectorHelper(config, True)
+        self.config = config
+        self.helper = helper
+        self._client = ShodanInternetDbClient(verify=self.config.shodan_ssl_verify)
 
         self._identity = stix2.Identity(
             id=Identity.generate_id(name="Shodan", identity_class="organization"),
@@ -54,8 +46,6 @@ class ShodanInternetDBConnector:
         )
         self._identity_id = self._identity["id"]
         self._object_marking_id = stix2.TLP_WHITE["id"]
-
-        self._client = ShodanInternetDbClient(verify=self._config.shodan.ssl_verify)
 
     def _process_message(self, data: Dict) -> str:
         """
@@ -74,7 +64,7 @@ class ShodanInternetDBConnector:
                 tlps.append(marking_definition["definition"])
 
         for tlp in tlps:
-            max_tlp_name = self._config.shodan.max_tlp.name
+            max_tlp_name = self.config.shodan_max_tlp
             if not OpenCTIConnectorHelper.check_max_tlp(tlp, max_tlp_name):
                 log.debug("Skipping observable, TLP is greater than the MAX TLP")
                 return "Skipping observable (TLP)"
@@ -104,8 +94,8 @@ class ShodanInternetDBConnector:
         stix_objects.append(self._process_tags(stix_observable, result))
 
         bundle = stix2.Bundle(objects=stix_objects, allow_custom=True).serialize()
-        self._helper.log_info("Sending event STIX2 bundle")
-        bundle_sent = self._helper.send_stix2_bundle(bundle)
+        self.helper.log_info("Sending event STIX2 bundle")
+        bundle_sent = self.helper.send_stix2_bundle(bundle)
         return f"Sent {len(bundle_sent)} stix bundle(s) for worker import"
 
     def _process_note(
@@ -235,4 +225,4 @@ Ports: {format_list(result.ports)}
         Start the connector
         :return: None
         """
-        self._helper.listen(message_callback=self._process_message)
+        self.helper.listen(message_callback=self._process_message)

@@ -11,11 +11,16 @@ It signals to the operating system and any calling processes that the program di
 import sys
 import traceback
 
+from pycti import OpenCTIConnectorHelper
+from shodan_internetdb.config import ConfigConnector
 from shodan_internetdb.connector import ShodanInternetDBConnector
 
 if __name__ == "__main__":
     try:
-        connector = ShodanInternetDBConnector()
+        config = ConfigConnector()
+        helper = OpenCTIConnectorHelper(config.load, True)
+
+        connector = ShodanInternetDBConnector(helper=helper, config=config)
         connector.run()
     except Exception:
         traceback.print_exc()
