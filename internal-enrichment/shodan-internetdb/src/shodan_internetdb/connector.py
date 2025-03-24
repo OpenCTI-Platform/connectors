@@ -10,7 +10,6 @@ import stix2
 import validators
 from pycti import (
     STIX_EXT_OCTI_SCO,
-    Identity,
     Note,
     OpenCTIConnectorHelper,
     OpenCTIStix2,
@@ -20,6 +19,7 @@ from pycti import (
 from requests.exceptions import RequestException
 from shodan_internetdb.client import ShodanInternetDbClient, ShodanResult
 from shodan_internetdb.config import ConfigConnector
+from shodan_internetdb.converter_to_stix import ConverterToStix
 
 __all__ = [
     "ShodanInternetDBConnector",
@@ -37,15 +37,7 @@ class ShodanInternetDBConnector:
         self.config = config
         self.helper = helper
         self._client = ShodanInternetDbClient(verify=self.config.shodan_ssl_verify)
-
-        self._identity = stix2.Identity(
-            id=Identity.generate_id(name="Shodan", identity_class="organization"),
-            name="Shodan",
-            identity_class="organization",
-            description="Shodan is a search engine for Internet-connected devices.",
-        )
-        self._identity_id = self._identity["id"]
-        self._object_marking_id = stix2.TLP_WHITE["id"]
+        self.converter = ConverterToStix(self.helper)
 
     def _process_message(self, data: Dict) -> str:
         """
@@ -131,8 +123,8 @@ Ports: {format_list(result.ports)}
 """
         note = stix2.Note(
             id=Note.generate_id(datetime.now().isoformat(), content),
-            created_by_ref=self._identity_id,
-            object_marking_refs=[self._object_marking_id],
+            created_by_ref=self.converter.author.id,
+            object_marking_refs=[self.converter.tlp_marking.id],
             abstract=abstract,
             content=content,
             object_refs=[observable["id"]],
@@ -156,9 +148,9 @@ Ports: {format_list(result.ports)}
             log.debug("Adding domain %s", name)
             stix_domain = stix2.DomainName(
                 value=name,
-                object_marking_refs=[self._object_marking_id],
+                object_marking_refs=[self.converter.tlp_marking.id],
                 resolves_to_refs=[observable["id"]],
-                custom_properties={"created_by_ref": self._identity_id},
+                custom_properties={"created_by_ref": self.converter.author.id},
             )
             stix_objects.append(stix_domain)
         return stix_objects
@@ -200,18 +192,18 @@ Ports: {format_list(result.ports)}
             stix_vuln = stix2.Vulnerability(
                 id=Vulnerability.generate_id(name),
                 name=f"{name}",
-                created_by_ref=self._identity_id,
-                object_marking_refs=[self._object_marking_id],
+                created_by_ref=self.converter.author.id,
+                object_marking_refs=[self.converter.tlp_marking.id],
             )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
                     "related-to", observable["id"], stix_vuln.id
                 ),
                 relationship_type="related-to",
-                created_by_ref=self._identity_id,
+                created_by_ref=self.converter.author.id,
                 source_ref=observable["id"],
                 target_ref=stix_vuln.id,
-                object_marking_refs=[self._object_marking_id],
+                object_marking_refs=[self.converter.tlp_marking.id],
                 allow_custom=True,
                 start_time=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 stop_time=vuln_eol.strftime("%Y-%m-%dT%H:%M:%SZ"),
