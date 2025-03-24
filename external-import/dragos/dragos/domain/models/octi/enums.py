@@ -4,8 +4,6 @@ from enum import StrEnum
 class OpenVocab(StrEnum):
     """Distinguish OCTI Open Vocabularies (extensible) from OCTI Enums (strict)."""
 
-    pass
-
 
 class AccountType(OpenVocab):
     """Account Type Open Vocabulary.
@@ -73,7 +71,7 @@ class EncryptionAlgorithm(StrEnum):
     """
 
     AES_256_GCM = "AES-256-GCM"
-    ChaCha20_Poly1305 = "ChaCha20-Poly1305"
+    CHACHA20_POLY1305 = "ChaCha20-Poly1305"
     MIME_TYPE_INDICATED = "mime-type-indicated"
 
 
