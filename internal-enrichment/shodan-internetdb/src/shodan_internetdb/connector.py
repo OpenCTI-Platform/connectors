@@ -34,7 +34,7 @@ log = logging.getLogger(__name__)
 class ShodanInternetDBConnector:
     """Shodan InternetDB connector"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Constructor"""
         config_path = Path(__file__).parent.parent.joinpath("config.yml")
         config = (
@@ -56,13 +56,6 @@ class ShodanInternetDBConnector:
         self._object_marking_id = stix2.TLP_WHITE["id"]
 
         self._client = ShodanInternetDbClient(verify=self._config.shodan.ssl_verify)
-
-    def start(self) -> None:
-        """
-        Start the connector
-        :return: None
-        """
-        self._helper.listen(message_callback=self._process_message)
 
     def _process_message(self, data: Dict) -> str:
         """
@@ -113,7 +106,7 @@ class ShodanInternetDBConnector:
         bundle = stix2.Bundle(objects=stix_objects, allow_custom=True).serialize()
         self._helper.log_info("Sending event STIX2 bundle")
         bundle_sent = self._helper.send_stix2_bundle(bundle)
-        return "Sent " + str(len(bundle_sent)) + " stix bundle(s) for worker import"
+        return f"Sent {len(bundle_sent)} stix bundle(s) for worker import"
 
     def _process_note(
         self,
@@ -236,3 +229,10 @@ Ports: {format_list(result.ports)}
             stix_objects.append(stix_vuln)
             stix_objects.append(relationship)
         return stix_objects
+
+    def run(self) -> None:
+        """
+        Start the connector
+        :return: None
+        """
+        self._helper.listen(message_callback=self._process_message)
