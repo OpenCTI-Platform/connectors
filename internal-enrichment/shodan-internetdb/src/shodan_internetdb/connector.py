@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict
+from typing import Any
 
 import stix2
 import validators
@@ -33,7 +33,20 @@ class ShodanInternetDBConnector:
         self._client = ShodanInternetDbClient(verify=self.config.shodan_ssl_verify)
         self.converter = ConverterToStix(self.helper)
 
-    def _process_message(self, data: Dict) -> str:
+    def extract_and_check_markings(self, observable: dict[str, Any]) -> None:
+        max_tlp_name = self.config.shodan_max_tlp
+        for marking_definition in observable.get("objectMarking", []):
+            if marking_definition["definition_type"] == "TLP" and not (
+                OpenCTIConnectorHelper.check_max_tlp(
+                    tlp=marking_definition["definition"], max_tlp=max_tlp_name
+                )
+            ):
+                raise ValueError(
+                    "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
+                    "the connector does not has access to this observable, please check the group of the connector user"
+                )
+
+    def _process_message(self, data: dict[str, Any]) -> str:
         """
         Process the data message
         :param data: Entity data
@@ -43,17 +56,7 @@ class ShodanInternetDBConnector:
         observable = data["enrichment_entity"]
         stix_observable = data["stix_entity"]
 
-        # Check TLP markings, do not submit higher than the max allowed
-        tlps = ["TLP:CLEAR"]
-        for marking_definition in observable.get("objectMarking", []):
-            if marking_definition["definition_type"] == "TLP":
-                tlps.append(marking_definition["definition"])
-
-        for tlp in tlps:
-            max_tlp_name = self.config.shodan_max_tlp
-            if not OpenCTIConnectorHelper.check_max_tlp(tlp, max_tlp_name):
-                log.debug("Skipping observable, TLP is greater than the MAX TLP")
-                return "Skipping observable (TLP)"
+        self.extract_and_check_markings(observable)
 
         # Process the observable value
         value = stix_observable["value"]
