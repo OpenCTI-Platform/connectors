@@ -268,7 +268,6 @@ class ConverterToStix:
                 return None
 
         if hashes:
-            print(hashes)
             stix_file = stix2.File(
                 hashes=hashes,
                 name=file.get("fileName") if isinstance(file, dict) else None,
