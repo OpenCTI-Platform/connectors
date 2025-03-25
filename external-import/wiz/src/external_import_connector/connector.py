@@ -41,8 +41,8 @@ class ConnectorWiz:
                 last_run = datetime.datetime.fromisoformat(state["last_run"])
                 if last_run.tzinfo is None:
                     warning_message = (
-                        f"Found ISOFORMAT in state, last_run = {last_run} without TimeZone, "
-                        f"this is deprecated and will be replaced by ISOFORMAT with TimeZone UTC."
+                        "ISOFORMAT without timezone is deprecated and will be replaced "
+                        "by ISOFORMAT with timezone."
                     )
                     warnings.warn(
                         warning_message,
