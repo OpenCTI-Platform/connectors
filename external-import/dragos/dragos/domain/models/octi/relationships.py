@@ -68,8 +68,8 @@ class Relationship(BaseEntity):
         )
 
     def _common_stix2_args(self) -> dict[str, Any]:
-        # keep dict constructor rather than literal dict for maintainance.
-        return dict(  # noqa: C408
+        """Factorize custom params."""
+        return dict(  # noqa: C408 # No literal dict for maintainability
             source_ref=self.source.id,
             target_ref=self.target.id,
             description=self.description,

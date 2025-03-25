@@ -144,9 +144,13 @@ class Artifact(Observable):
         valid_from: Optional[AwareDatetime] = None,
         valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
-        """Make stix indicator based on current observable."""
+        """Make stix indicator based on current observable.
+
+        - Indicator's name is either the payload bin, or the url, or the first hash value of the artifact.
+        - Indicator's pattern is a combination of both payload bin, url and hash values of the artifact, if present.
+        """
         name = (
-            self.payload_bin.decode()
+            (self.payload_bin.decode() if self.payload_bin else None)
             or self.url
             or (list(self.hashes.values())[0] if self.hashes else None)
         )
@@ -212,7 +216,11 @@ class DomainName(Observable):
         valid_from: Optional[AwareDatetime] = None,
         valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
-        """Make stix indicator based on current observable."""
+        """Make stix indicator based on current observable.
+
+        - Indicator's name is the value of the domain name.
+        - Indicator's pattern is the value of the domain name.
+        """
         return Indicator(
             name=self.value,
             pattern=f"[domain-name:value='{self.value}']",
@@ -275,6 +283,7 @@ class File(Observable):
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
+        """Add further validation after model initialization. Automatically called by Pydantic."""
         if not self.name and not self.hashes:
             raise ValueError("Either 'name' or one of 'hashes' must be provided.")
         return self
@@ -316,7 +325,11 @@ class File(Observable):
         valid_from: Optional[AwareDatetime] = None,
         valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
-        """Make stix indicator based on current observable."""
+        """Make stix indicator based on current observable.
+
+        - Indicator's name is either the name or the first hash value of the file.
+        - Indicator's pattern is a combination of the name and the hash values of the file.
+        """
         name = self.name or (list(self.hashes.values())[0] if self.hashes else None)
 
         stix_pattern = None
@@ -387,7 +400,11 @@ class IPV4Address(Observable):
         valid_from: Optional[AwareDatetime] = None,
         valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
-        """Make stix indicator based on current observable."""
+        """Make stix indicator based on current observable.
+
+        - Indicator's name is the value of the IP address.
+        - Indicator's pattern is the value of the IP address.
+        """
         return Indicator(
             name=self.value,
             pattern=f"[ipv4-addr:value='{self.value}']",
@@ -444,7 +461,11 @@ class IPV6Address(Observable):
         valid_from: Optional[AwareDatetime] = None,
         valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
-        """Make stix indicator based on current observable."""
+        """Make stix indicator based on current observable.
+
+        - Indicator's name is the value of the IP address.
+        - Indicator's pattern is the value of the IP address.
+        """
         return Indicator(
             name=self.value,
             pattern=f"[ipv6-addr:value='{self.value}']",
@@ -489,7 +510,11 @@ class Url(Observable):
         valid_from: Optional[AwareDatetime] = None,
         valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
-        """Make stix indicator based on current observable."""
+        """Make stix indicator based on current observable.
+
+        - Indicator's name is the value of the url.
+        - Indicator's pattern is the value of the url.
+        """
         return Indicator(
             name=self.value,
             pattern=f"[url:value='{self.value}']",

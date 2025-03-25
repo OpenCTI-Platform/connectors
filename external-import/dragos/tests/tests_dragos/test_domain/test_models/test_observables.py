@@ -1,30 +1,27 @@
+from datetime import datetime, timezone
+
 import pytest
 import stix2
-from dragos.domain.models.octi import (
-    Artifact,
-    DomainName,
-    ExternalReference,
-    File,
-    IPV4Address,
-    IPV6Address,
-    OrganizationAuthor,
-    TLPMarking,
-    Url,
+from dragos.domain.models import octi
+from dragos.domain.models.octi.enums import (
+    EncryptionAlgorithm,
+    ObservableType,
+    PatternType,
+    TLPLevel,
 )
-from dragos.domain.models.octi.enums import EncryptionAlgorithm, TLPLevel
 from pydantic import ValidationError
 
 
 def fake_valid_organization_author():
-    return OrganizationAuthor(name="Valid Author")
+    return octi.OrganizationAuthor(name="Valid Author")
 
 
 def fake_valid_tlp_marking():
-    return TLPMarking(level=TLPLevel.RED.value)
+    return octi.TLPMarking(level=TLPLevel.RED.value)
 
 
 def fake_valid_external_reference():
-    return ExternalReference(
+    return octi.ExternalReference(
         source_name="Test Source",
         description="Test Description",
         url="http://example.com",
@@ -72,7 +69,7 @@ def fake_valid_external_reference():
 def test_artifact_class_should_accept_valid_input(input_data):
     # Given: Valid artifact input data
     # When: Creating an artifact object
-    artifact = Artifact.model_validate(input_data)
+    artifact = octi.Artifact.model_validate(input_data)
 
     # Then: The artifact object should be valid
     assert artifact.id is not None
@@ -129,7 +126,7 @@ def test_artifact_class_should_not_accept_invalid_input(input_data, error_field)
     # When: we try to create a Artifact instance
     # Then: a ValidationError should be raised
     with pytest.raises(ValidationError) as err:
-        Artifact.model_validate(input_data)
+        octi.Artifact.model_validate(input_data)
     assert str(error_field) in str(err)
 
 
@@ -149,7 +146,7 @@ def test_artifact_to_stix2_object_returns_valid_stix_object():
         "external_references": [fake_valid_external_reference()],
         "markings": [fake_valid_tlp_marking()],
     }
-    artifact = Artifact.model_validate(input_data)
+    artifact = octi.Artifact.model_validate(input_data)
 
     # When: calling to_stix2_object method
     stix2_obj = artifact.to_stix2_object()
@@ -174,6 +171,48 @@ def test_artifact_to_stix2_object_returns_valid_stix_object():
         external_reference.to_stix2_object()
         for external_reference in input_data.get("external_references")
     ]
+
+
+def test_artifact_to_indicator_returns_valid_octi_indicator():
+    # Given: A valid artifact
+    input_data = {
+        "mime_type": "application/octet-stream",
+        "url": "http://example.com",
+        "hashes": {"MD5": "44d88612fea8a8f36de82e1278abb02f"},
+        "encryption_algorithm": EncryptionAlgorithm.AES_256_GCM.value,
+        "decryption_key": "example_key",
+        "additional_names": ["example_name"],
+        "score": 50,
+        "description": "Example description",
+        "labels": ["example_label"],
+        "author": fake_valid_organization_author(),
+        "external_references": [fake_valid_external_reference()],
+        "markings": [fake_valid_tlp_marking()],
+    }
+    artifact = octi.Artifact.model_validate(input_data)
+
+    # When: calling to_indicator method
+    valid_from = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    valid_until = datetime.now(tz=timezone.utc)
+    indicator = artifact.to_indicator(valid_from, valid_until)
+
+    # Then: A valid OCTI Indicator is returned
+    assert isinstance(indicator, octi.Indicator) is True
+    assert indicator.id is not None
+    assert indicator.name == input_data.get("url")
+    assert (
+        indicator.pattern
+        == f"[artifact:url='{input_data.get('url')}' AND artifact:hashes.'MD5'='{input_data.get('hashes')['MD5']}']"
+    )
+    assert indicator.pattern_type == PatternType.STIX.value
+    assert indicator.observable_type == ObservableType.ARTIFACT.value
+    assert indicator.description == input_data.get("description")
+    assert indicator.valid_from == valid_from
+    assert indicator.valid_until == valid_until
+    assert indicator.score == input_data.get("score")
+    assert indicator.author == input_data.get("author")
+    assert indicator.markings == input_data.get("markings")
+    assert indicator.external_references == input_data.get("external_references")
 
 
 @pytest.mark.parametrize(
@@ -202,7 +241,7 @@ def test_artifact_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_domain_name_class_should_accept_valid_input(input_data):
-    domain_name = DomainName.model_validate(input_data)
+    domain_name = octi.DomainName.model_validate(input_data)
     assert domain_name.id is not None
     assert domain_name.value == input_data.get("value")
 
@@ -222,7 +261,7 @@ def test_domain_name_class_should_accept_valid_input(input_data):
 )
 def test_domain_name_class_should_not_accept_invalid_input(input_data, error_field):
     with pytest.raises(ValidationError) as err:
-        DomainName.model_validate(input_data)
+        octi.DomainName.model_validate(input_data)
     assert str(error_field) in str(err)
 
 
@@ -237,7 +276,7 @@ def test_domain_name_to_stix2_object_returns_valid_stix_object():
         "external_references": [fake_valid_external_reference()],
         "markings": [fake_valid_tlp_marking()],
     }
-    domain_name = DomainName.model_validate(input_data)
+    domain_name = octi.DomainName.model_validate(input_data)
 
     # When: calling to_stix2_object method
     stix2_obj = domain_name.to_stix2_object()
@@ -257,6 +296,40 @@ def test_domain_name_to_stix2_object_returns_valid_stix_object():
         external_reference.to_stix2_object()
         for external_reference in input_data.get("external_references")
     ]
+
+
+def test_domain_name_to_indicator_returns_valid_octi_indicator():
+    # Given: A valid domain name
+    input_data = {
+        "value": "example.com",
+        "score": 50,
+        "description": "Example description",
+        "labels": ["example_label"],
+        "author": fake_valid_organization_author(),
+        "external_references": [fake_valid_external_reference()],
+        "markings": [fake_valid_tlp_marking()],
+    }
+    domain_name = octi.DomainName.model_validate(input_data)
+
+    # When: calling to_indicator method
+    valid_from = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    valid_until = datetime.now(tz=timezone.utc)
+    indicator = domain_name.to_indicator(valid_from, valid_until)
+
+    # Then: A valid OCTI Indicator is returned
+    assert isinstance(indicator, octi.Indicator) is True
+    assert indicator.id is not None
+    assert indicator.name == input_data.get("value")
+    assert indicator.pattern == f"[domain-name:value='{input_data.get('value')}']"
+    assert indicator.pattern_type == PatternType.STIX.value
+    assert indicator.observable_type == ObservableType.DOMAIN_NAME.value
+    assert indicator.description == input_data.get("description")
+    assert indicator.valid_from == valid_from
+    assert indicator.valid_until == valid_until
+    assert indicator.score == input_data.get("score")
+    assert indicator.author == input_data.get("author")
+    assert indicator.markings == input_data.get("markings")
+    assert indicator.external_references == input_data.get("external_references")
 
 
 @pytest.mark.parametrize(
@@ -287,7 +360,7 @@ def test_domain_name_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_file_class_should_accept_valid_input(input_data):
-    file = File.model_validate(input_data)
+    file = octi.File.model_validate(input_data)
     assert file.id is not None
     assert file.hashes == input_data.get("hashes")
     assert file.size == input_data.get("size")
@@ -310,7 +383,7 @@ def test_file_class_should_accept_valid_input(input_data):
 )
 def test_file_class_should_not_accept_invalid_input(input_data, error_field):
     with pytest.raises(ValidationError) as err:
-        File.model_validate(input_data)
+        octi.File.model_validate(input_data)
     assert str(error_field) in str(err)
 
 
@@ -327,7 +400,7 @@ def test_file_to_stix2_object_returns_valid_stix_object():
         "external_references": [fake_valid_external_reference()],
         "markings": [fake_valid_tlp_marking()],
     }
-    file = File.model_validate(input_data)
+    file = octi.File.model_validate(input_data)
 
     # When: calling to_stix2_object method
     stix2_obj = file.to_stix2_object()
@@ -349,6 +422,45 @@ def test_file_to_stix2_object_returns_valid_stix_object():
         external_reference.to_stix2_object()
         for external_reference in input_data.get("external_references")
     ]
+
+
+def test_file_to_indicator_returns_valid_octi_indicator():
+    # Given: A valid file
+    input_data = {
+        "hashes": {"MD5": "44d88612fea8a8f36de82e1278abb02f"},
+        "size": 1024,
+        "name": "example.txt",
+        "score": 50,
+        "description": "Example description",
+        "labels": ["example_label"],
+        "author": fake_valid_organization_author(),
+        "external_references": [fake_valid_external_reference()],
+        "markings": [fake_valid_tlp_marking()],
+    }
+    file = octi.File.model_validate(input_data)
+
+    # When: calling to_indicator method
+    valid_from = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    valid_until = datetime.now(tz=timezone.utc)
+    indicator = file.to_indicator(valid_from, valid_until)
+
+    # Then: A valid OCTI Indicator is returned
+    assert isinstance(indicator, octi.Indicator) is True
+    assert indicator.id is not None
+    assert indicator.name == input_data.get("name")
+    assert (
+        indicator.pattern
+        == f"[file:name='{input_data.get('name')}' AND file:hashes.'MD5'='{input_data.get('hashes')['MD5']}']"
+    )
+    assert indicator.pattern_type == PatternType.STIX.value
+    assert indicator.observable_type == ObservableType.FILE.value
+    assert indicator.description == input_data.get("description")
+    assert indicator.valid_from == valid_from
+    assert indicator.valid_until == valid_until
+    assert indicator.score == input_data.get("score")
+    assert indicator.author == input_data.get("author")
+    assert indicator.markings == input_data.get("markings")
+    assert indicator.external_references == input_data.get("external_references")
 
 
 @pytest.mark.parametrize(
@@ -377,7 +489,7 @@ def test_file_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_ip_v4_class_should_accept_valid_input(input_data):
-    ip_v4 = IPV4Address.model_validate(input_data)
+    ip_v4 = octi.IPV4Address.model_validate(input_data)
     assert ip_v4.id is not None
     assert ip_v4.value == input_data.get("value")
     assert ip_v4.score == input_data.get("score")
@@ -401,7 +513,7 @@ def test_ip_v4_class_should_accept_valid_input(input_data):
 )
 def test_ip_v4_class_should_not_accept_invalid_input(input_data, error_field):
     with pytest.raises(ValidationError) as err:
-        IPV4Address.model_validate(input_data)
+        octi.IPV4Address.model_validate(input_data)
     assert str(error_field) in str(err)
 
 
@@ -416,7 +528,7 @@ def test_ip_v4_address_to_stix2_object_returns_valid_stix_object():
         "external_references": [fake_valid_external_reference()],
         "markings": [fake_valid_tlp_marking()],
     }
-    ip_v4_address = IPV4Address.model_validate(input_data)
+    ip_v4_address = octi.IPV4Address.model_validate(input_data)
 
     # When: calling to_stix2_object method
     stix2_obj = ip_v4_address.to_stix2_object()
@@ -436,6 +548,40 @@ def test_ip_v4_address_to_stix2_object_returns_valid_stix_object():
         external_reference.to_stix2_object()
         for external_reference in input_data.get("external_references")
     ]
+
+
+def test_ip_v4_to_indicator_returns_valid_octi_indicator():
+    # Given: A valid IP v4 address
+    input_data = {
+        "value": "165.3.228.230",
+        "score": 50,
+        "description": "Example description",
+        "labels": ["example_label"],
+        "author": fake_valid_organization_author(),
+        "external_references": [fake_valid_external_reference()],
+        "markings": [fake_valid_tlp_marking()],
+    }
+    ip_v4_address = octi.IPV4Address.model_validate(input_data)
+
+    # When: calling to_indicator method
+    valid_from = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    valid_until = datetime.now(tz=timezone.utc)
+    indicator = ip_v4_address.to_indicator(valid_from, valid_until)
+
+    # Then: A valid OCTI Indicator is returned
+    assert isinstance(indicator, octi.Indicator) is True
+    assert indicator.id is not None
+    assert indicator.name == input_data.get("value")
+    assert indicator.pattern == f"[ipv4-addr:value='{input_data.get('value')}']"
+    assert indicator.pattern_type == PatternType.STIX.value
+    assert indicator.observable_type == ObservableType.IPV4_ADDR.value
+    assert indicator.description == input_data.get("description")
+    assert indicator.valid_from == valid_from
+    assert indicator.valid_until == valid_until
+    assert indicator.score == input_data.get("score")
+    assert indicator.author == input_data.get("author")
+    assert indicator.markings == input_data.get("markings")
+    assert indicator.external_references == input_data.get("external_references")
 
 
 @pytest.mark.parametrize(
@@ -464,7 +610,7 @@ def test_ip_v4_address_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_ip_v6_class_should_accept_valid_input(input_data):
-    ip_v6 = IPV6Address.model_validate(input_data)
+    ip_v6 = octi.IPV6Address.model_validate(input_data)
     assert ip_v6.id is not None
     assert ip_v6.value == input_data.get("value")
     assert ip_v6.score == input_data.get("score")
@@ -488,7 +634,7 @@ def test_ip_v6_class_should_accept_valid_input(input_data):
 )
 def test_ip_v6_class_should_not_accept_invalid_input(input_data, error_field):
     with pytest.raises(ValidationError) as err:
-        IPV6Address.model_validate(input_data)
+        octi.IPV6Address.model_validate(input_data)
     assert str(error_field) in str(err)
 
 
@@ -503,7 +649,7 @@ def test_ip_v6_address_to_stix2_object_returns_valid_stix_object():
         "external_references": [fake_valid_external_reference()],
         "markings": [fake_valid_tlp_marking()],
     }
-    ip_v6_address = IPV6Address.model_validate(input_data)
+    ip_v6_address = octi.IPV6Address.model_validate(input_data)
 
     # When: calling to_stix2_object method
     stix2_obj = ip_v6_address.to_stix2_object()
@@ -523,6 +669,40 @@ def test_ip_v6_address_to_stix2_object_returns_valid_stix_object():
         external_reference.to_stix2_object()
         for external_reference in input_data.get("external_references")
     ]
+
+
+def test_ip_v6_to_indicator_returns_valid_octi_indicator():
+    # Given: A valid IP v6 address
+    input_data = {
+        "value": "9042:6eb5:1b3b:ef30:92f0:375c:a227:b4be",
+        "score": 50,
+        "description": "Example description",
+        "labels": ["example_label"],
+        "author": fake_valid_organization_author(),
+        "external_references": [fake_valid_external_reference()],
+        "markings": [fake_valid_tlp_marking()],
+    }
+    ip_v6_address = octi.IPV6Address.model_validate(input_data)
+
+    # When: calling to_indicator method
+    valid_from = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    valid_until = datetime.now(tz=timezone.utc)
+    indicator = ip_v6_address.to_indicator(valid_from, valid_until)
+
+    # Then: A valid OCTI Indicator is returned
+    assert isinstance(indicator, octi.Indicator) is True
+    assert indicator.id is not None
+    assert indicator.name == input_data.get("value")
+    assert indicator.pattern == f"[ipv6-addr:value='{input_data.get('value')}']"
+    assert indicator.pattern_type == PatternType.STIX.value
+    assert indicator.observable_type == ObservableType.IPV6_ADDR.value
+    assert indicator.description == input_data.get("description")
+    assert indicator.valid_from == valid_from
+    assert indicator.valid_until == valid_until
+    assert indicator.score == input_data.get("score")
+    assert indicator.author == input_data.get("author")
+    assert indicator.markings == input_data.get("markings")
+    assert indicator.external_references == input_data.get("external_references")
 
 
 @pytest.mark.parametrize(
@@ -551,7 +731,7 @@ def test_ip_v6_address_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_url_class_should_accept_valid_input(input_data):
-    url = Url.model_validate(input_data)
+    url = octi.Url.model_validate(input_data)
     assert url.id is not None
     assert url.value == input_data.get("value")
 
@@ -571,12 +751,12 @@ def test_url_class_should_accept_valid_input(input_data):
 )
 def test_url_class_should_not_accept_invalid_input(input_data, error_field):
     with pytest.raises(ValidationError) as err:
-        Url.model_validate(input_data)
+        octi.Url.model_validate(input_data)
     assert str(error_field) in str(err)
 
 
 def test_url_to_stix2_object_returns_valid_stix_object():
-    # Given: A valid domain name
+    # Given: A valid url
     input_data = {
         "value": "example.com",
         "score": 50,
@@ -586,7 +766,7 @@ def test_url_to_stix2_object_returns_valid_stix_object():
         "external_references": [fake_valid_external_reference()],
         "markings": [fake_valid_tlp_marking()],
     }
-    url = Url.model_validate(input_data)
+    url = octi.Url.model_validate(input_data)
 
     # When: calling to_stix2_object method
     stix2_obj = url.to_stix2_object()
@@ -606,3 +786,37 @@ def test_url_to_stix2_object_returns_valid_stix_object():
         external_reference.to_stix2_object()
         for external_reference in input_data.get("external_references")
     ]
+
+
+def test_url_to_indicator_returns_valid_octi_indicator():
+    # Given: A valid url
+    input_data = {
+        "value": "example.com",
+        "score": 50,
+        "description": "Example description",
+        "labels": ["example_label"],
+        "author": fake_valid_organization_author(),
+        "external_references": [fake_valid_external_reference()],
+        "markings": [fake_valid_tlp_marking()],
+    }
+    url = octi.Url.model_validate(input_data)
+
+    # When: calling to_indicator method
+    valid_from = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    valid_until = datetime.now(tz=timezone.utc)
+    indicator = url.to_indicator(valid_from, valid_until)
+
+    # Then: A valid OCTI Indicator is returned
+    assert isinstance(indicator, octi.Indicator) is True
+    assert indicator.id is not None
+    assert indicator.name == input_data.get("value")
+    assert indicator.pattern == f"[url:value='{input_data.get('value')}']"
+    assert indicator.pattern_type == PatternType.STIX.value
+    assert indicator.observable_type == ObservableType.URL.value
+    assert indicator.description == input_data.get("description")
+    assert indicator.valid_from == valid_from
+    assert indicator.valid_until == valid_until
+    assert indicator.score == input_data.get("score")
+    assert indicator.author == input_data.get("author")
+    assert indicator.markings == input_data.get("markings")
+    assert indicator.external_references == input_data.get("external_references")
