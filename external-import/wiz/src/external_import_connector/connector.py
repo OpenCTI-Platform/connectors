@@ -1,5 +1,6 @@
 import datetime
 import sys
+import warnings
 
 from pycti import OpenCTIConnectorHelper
 
@@ -37,9 +38,21 @@ class ConnectorWiz:
             # Filter entities
             if "modified" in entity and state is not None:
                 entity_modified = datetime.datetime.fromisoformat(entity["modified"])
-                last_run = datetime.datetime.fromisoformat(state["last_run"]).replace(
-                    tzinfo=datetime.timezone.utc
-                )
+                last_run = datetime.datetime.fromisoformat(state["last_run"])
+                if last_run.tzinfo is None:
+                    warning_message = (
+                        f"Found ISOFORMAT in state, last_run = {last_run} without TimeZone, "
+                        f"this is deprecated and will be replaced by ISOFORMAT with TimeZone UTC."
+                    )
+                    warnings.warn(
+                        warning_message,
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+                    self.helper.connector_logger.warning(
+                        warning_message, {"last_run": last_run}
+                    )
+                    last_run = last_run.replace(tzinfo=datetime.UTC)
                 if entity_modified < last_run:
                     continue
 
@@ -153,9 +166,9 @@ class ConnectorWiz:
             )
             current_state = self.helper.get_state()
             if current_state:
-                current_state["last_run"] = now
+                current_state["last_run"] = now.isoformat(sep=" ", timespec="seconds")
             else:
-                current_state = {"last_run": now}
+                current_state = {"last_run": now.isoformat(sep=" ", timespec="seconds")}
             self.helper.set_state(current_state)
 
             message = (
