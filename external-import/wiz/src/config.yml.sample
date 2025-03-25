@@ -21,3 +21,4 @@ connector:
 
 wiz:
   threat_actor_as_intrusion_set: 'False'
+  tlp_level: 'clear'

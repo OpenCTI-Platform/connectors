@@ -47,3 +47,9 @@ class ConfigConnector:
             self.load,
             default=False,
         )
+        self.tlp_level = get_config_variable(
+            "WIZ_TLP_LEVEL",
+            ["wiz", "tlp_level"],
+            self.load,
+            default="clear",
+        )
