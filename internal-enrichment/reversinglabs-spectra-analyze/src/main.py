@@ -1387,25 +1387,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                     hash = ent_hash["hash"]
                     hash_type = ent_hash["algorithm"]
 
-            # Get file classification
-            analysis_result = self._submit_file_for_classification(
-                stix_entity, opencti_entity, hash
-            )
-
-            if not analysis_result:
-                self.helper.log_info(
-                    f"{self.helper.connect_name}: There is no analysis result for provided sample!"
-                )
-
-            # Integrate classification analysis results with OpenCTI
-            if "results" not in analysis_result:
-
-                results = self._process_file_classification_results(
-                    stix_objects, stix_entity, opencti_entity, analysis_result
-                )
-
-                self._process_malicious(stix_objects, stix_entity, results)
-
             # Submit File sample for analysis
             analysis_result = self._submit_file_for_analysis(
                 stix_entity, opencti_entity, hash, hash_type
@@ -1436,6 +1417,25 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 opencti_entity,
                 url_sample,
             )
+
+            # Get file classification
+            analysis_result = self._submit_file_for_classification(
+                stix_entity, opencti_entity, hash
+            )
+
+            if not analysis_result:
+                self.helper.log_info(
+                    f"{self.helper.connect_name}: There is no analysis result for provided sample!"
+                )
+
+            # Integrate classification analysis results with OpenCTI
+            if "results" not in analysis_result:
+
+                results = self._process_file_classification_results(
+                    stix_objects, stix_entity, opencti_entity, analysis_result
+                )
+
+                self._process_malicious(stix_objects, stix_entity, results)
 
             if not analysis_result:
                 raise ValueError(
