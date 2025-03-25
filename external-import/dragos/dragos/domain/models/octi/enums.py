@@ -1,11 +1,24 @@
+import warnings
 from enum import StrEnum
 
 
-class OpenVocab(StrEnum):
-    """Distinguish OCTI Open Vocabularies (extensible) from OCTI Enums (strict)."""
+class PermissiveEnum(StrEnum):
+    """Enum that allows for missing values."""
+
+    @classmethod
+    def _missing_(cls, value):
+        warnings.warn(
+            f"Value '{value}' is out of {cls.__name__} defined values.",
+            UserWarning,
+            stacklevel=3,
+        )
+        # Return a dynamically created instance
+        obj = str.__new__(cls, value)
+        obj._value_ = value
+        return obj
 
 
-class AccountType(OpenVocab):
+class AccountType(PermissiveEnum):
     """Account Type Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_k2b7lkt45f0i
     """
@@ -23,7 +36,7 @@ class AccountType(OpenVocab):
     WINDOWS_DOMAIN = "windows-domain"
 
 
-class AttackMotivation(OpenVocab):
+class AttackMotivation(PermissiveEnum):
     """Attack Motivation Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_dmb1khqsn650
     """
@@ -40,7 +53,7 @@ class AttackMotivation(OpenVocab):
     UNPREDICTABLE = "unpredictable"
 
 
-class AttackResourceLevel(OpenVocab):
+class AttackResourceLevel(PermissiveEnum):
     """Attack Resource Level Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_moarppphq8vq
     """
@@ -75,7 +88,7 @@ class EncryptionAlgorithm(StrEnum):
     MIME_TYPE_INDICATED = "mime-type-indicated"
 
 
-class HashAlgorithm(OpenVocab):
+class HashAlgorithm(PermissiveEnum):
     """Hash Algorithm Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_tumklw3o2gyz
     """
@@ -90,7 +103,7 @@ class HashAlgorithm(OpenVocab):
     TLSH = "TLSH"
 
 
-class IdentityClass(OpenVocab):
+class IdentityClass(PermissiveEnum):
     """Identity Class Open Vocaubulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_be1dktvcmyu
     """
@@ -103,7 +116,7 @@ class IdentityClass(OpenVocab):
     UNKNOWN = "unknown"
 
 
-class ImplementationLanguage(OpenVocab):
+class ImplementationLanguage(PermissiveEnum):
     """Implementation Language Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_1s3o9ou3pbq
     """
@@ -131,7 +144,7 @@ class ImplementationLanguage(OpenVocab):
     X86_64 = "x86-64"
 
 
-class IndicatorType(OpenVocab):
+class IndicatorType(PermissiveEnum):
     """Indicator Type Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_cvhfwe3t9vuo
     """
@@ -145,7 +158,7 @@ class IndicatorType(OpenVocab):
     UNKNOWN = "unknown"
 
 
-class IndustrySector(OpenVocab):
+class IndustrySector(PermissiveEnum):
     """Industry Sector Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_oogrswk3onck
     """
@@ -204,7 +217,7 @@ class LocationType(StrEnum):
     POSITION = "Position"
 
 
-class MalwareCapability(OpenVocab):
+class MalwareCapability(PermissiveEnum):
     """Malware Capability Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_2b6es5hl7gmc
     """
@@ -248,7 +261,7 @@ class MalwareCapability(OpenVocab):
     VIOLATES_SYSTEM_OPERATIONAL_INTEGRITY = "violates-system-operational-integrity"
 
 
-class MalwareType(OpenVocab):
+class MalwareType(PermissiveEnum):
     """Malware Type Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_oxlc4df65spl
     """
@@ -316,7 +329,7 @@ class ObservableType(StrEnum):
     X509_CERTIFICATE = "X509-Certificate"
 
 
-class OrganizationType(OpenVocab):
+class OrganizationType(PermissiveEnum):
     """Organization Type Open Vocabulary.
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L770
     """
@@ -328,7 +341,7 @@ class OrganizationType(OpenVocab):
     OTHER = "other"
 
 
-class PatternType(OpenVocab):
+class PatternType(PermissiveEnum):
     """Pattern Type Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_9lfdvxnyofxw
     """
@@ -345,7 +358,7 @@ class PatternType(OpenVocab):
     YARA = "yara"
 
 
-class Platform(OpenVocab):
+class Platform(PermissiveEnum):
     """Platform Open Vocabulary.
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L797
     """
@@ -356,7 +369,7 @@ class Platform(OpenVocab):
     ANDROID = "android"
 
 
-class ProcessorArchitecture(OpenVocab):
+class ProcessorArchitecture(PermissiveEnum):
     """Processor Architecture Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_iup9ob79qwei
     """
@@ -371,7 +384,7 @@ class ProcessorArchitecture(OpenVocab):
     X86_64 = "x86-64"
 
 
-class Region(OpenVocab):
+class Region(PermissiveEnum):
     """Region Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_i1sw27qw1v0s
     """
@@ -411,7 +424,7 @@ class Region(OpenVocab):
     POLYNESIA = "polynesia"
 
 
-class Reliability(OpenVocab):
+class Reliability(PermissiveEnum):
     """Reliability Open Vocabulary.
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L866
     """
@@ -424,7 +437,7 @@ class Reliability(OpenVocab):
     F = "F - Reliability cannot be judged"
 
 
-class ReportType(OpenVocab):
+class ReportType(PermissiveEnum):
     """Report Type Open Vocabulary.
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_9lfdvxnyofxw
     """

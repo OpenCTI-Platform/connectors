@@ -1,11 +1,10 @@
 """Provide custom types for Pydantic models."""
 
-import warnings
 from enum import Enum
-from typing import Annotated, Any, Callable, TypeVar
+from typing import Annotated, Callable, TypeVar
 
 import dragos.domain.models.octi.enums as octi_enums
-from pydantic import AfterValidator
+from pydantic import AfterValidator, TypeAdapter
 
 T = TypeVar("T")
 
@@ -15,18 +14,8 @@ def is_in_enum(enum: Enum) -> Callable[[T], T]:
 
     def compare_value(value: T) -> T:
         """Check if value is in enum."""
-        enum_values = [member.value for member in enum]
-        if value not in enum_values:
-            if issubclass(enum, octi_enums.OpenVocab):
-                warnings.warn(
-                    f"Value '{value}' out of recommended values: {', '.join(enum_values)}.",
-                    stacklevel=2,
-                )
-            else:
-                raise ValueError(
-                    f"Invalid value '{value}'. Allowed values are: {', '.join(enum_values)}."
-                )
-        return value
+        type_adapter = TypeAdapter(enum)
+        return type_adapter.validate_python(value)
 
     return compare_value
 
