@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Annotated, Generator, Literal, Optional
 
-from dragos.interfaces.common import FrozenBaseModel
+from dragos.interfaces.common import FrozenBaseModel, DataRetrievalError
 from pydantic import (
     AfterValidator,
     AwareDatetime,
@@ -13,7 +13,7 @@ from pydantic import (
 )
 
 
-class DataRetrievalError(Exception):
+class ReportRetrievalError(DataRetrievalError):
     """Error raised when data retrieval fails."""
 
 
@@ -44,7 +44,7 @@ class _Tag(ABC, FrozenBaseModel):
         try:
             FrozenBaseModel.__init__(self, type=self._type, value=self._value)
         except ValidationError as e:
-            raise DataRetrievalError("Failed to retrieve Tag") from e
+            raise ReportRetrievalError("Failed to retrieve Tag") from e
 
     @property
     @abstractmethod
@@ -93,7 +93,7 @@ class _Indicator(ABC, FrozenBaseModel):
                 last_seen=self._last_seen,
             )
         except ValidationError as e:
-            raise DataRetrievalError("Failed to retrieve Indicator") from e
+            raise ReportRetrievalError("Failed to retrieve Indicator") from e
 
     @property
     @abstractmethod
@@ -155,7 +155,7 @@ class _Report(ABC, FrozenBaseModel):
                 pdf=self._pdf,
             )
         except ValidationError as e:
-            raise DataRetrievalError("Failed to retrieve Report") from e
+            raise ReportRetrievalError("Failed to retrieve Report") from e
 
     @property
     @abstractmethod
