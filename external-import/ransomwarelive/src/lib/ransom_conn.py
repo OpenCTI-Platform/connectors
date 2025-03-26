@@ -544,12 +544,10 @@ class RansomwareAPIConnector:
                         intrusion_set.get("id"), sector_id, "targets"
                     )
                     bundle.append(relation_sec_vic)
-                    bundle.append(relation_sec_TA)
                     bundle.append(relation_is_sec)
 
                     report.get("object_refs").append(sector_id)
                     report.get("object_refs").append(relation_sec_vic.get("id"))
-                    report.get("object_refs").append(relation_sec_TA.get("id"))
                     report.get("object_refs").append(relation_is_sec.get("id"))
         except Exception as e:
             self.helper.log_error(str(e))
