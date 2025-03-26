@@ -312,18 +312,33 @@ class RecordedFutureAlertConnector(threading.Thread):
                     bundle_objects.append(stix_relationship)
 
                 elif entity["type"] == "IpAddress":
-                    stix_ipv4address = stix2.IPv4Address(
-                        value=entity["name"],
-                        object_marking_refs=self.tlp,
-                        custom_properties={
-                            "x_opencti_created_by_ref": self.author["id"],
-                        },
-                    )
-                    stix_relationship = self._generate_stix_relationship(
-                        stix_ipv4address.id, "related-to", stix_incident.id
-                    )
-                    bundle_objects.append(stix_ipv4address)
-                    bundle_objects.append(stix_relationship)
+                    stix_ip_address = None
+                    ip_address_value = entity["name"]
+                    if is_ip_v4_address(ip_address_value):
+                        stix_ip_address = stix2.IPv4Address(
+                            value=ip_address_value,
+                            object_marking_refs=self.tlp,
+                            custom_properties={
+                                "x_opencti_created_by_ref": self.author["id"],
+                            },
+                        )
+                    elif is_ip_v6_address(ip_address_value):
+                        stix_ip_address = stix2.IPv6Address(
+                            value=ip_address_value,
+                            object_marking_refs=self.tlp,
+                            custom_properties={
+                                "x_opencti_created_by_ref": self.author["id"],
+                            },
+                        )
+                    else:
+                        raise ValueError(f"Invalid IP address: {ip_address_value}")
+
+                    if stix_ip_address:
+                        stix_relationship = self._generate_stix_relationship(
+                            stix_ip_address.id, "related-to", stix_incident.id
+                        )
+                        bundle_objects.append(stix_ip_address)
+                        bundle_objects.append(stix_relationship)
                 elif entity["type"] == "EmailAddress":
                     stix_emailaddress = stix2.EmailAddress(
                         value=entity["name"],
