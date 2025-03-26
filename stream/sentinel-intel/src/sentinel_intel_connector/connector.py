@@ -113,7 +113,7 @@ class SentinelIntelConnector:
 
     def get_indicator_external_references(self, indicator_id, source_name):
         """
-        Retrieves the external references associated with a specific indicator
+        Retrieves all external references associated with a specific indicator
         and filters them by source_name.
 
         Args:
