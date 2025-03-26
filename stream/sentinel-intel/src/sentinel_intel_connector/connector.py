@@ -275,7 +275,7 @@ class SentinelIntelConnector:
     
     def _delete_sentinel_indicator(self, observable_data) -> bool:
         """
-        Delete Threat Intelligence Indicators on Sentinel corresponding to an OpenCTI observable.
+        Delete Threat Intelligence Indicators on Sentinel or Defender corresponding to an OpenCTI observable.
         :param observable_data: OpenCTI observable data
         :return: True if the indicators have been successfully deleted, False otherwise
         """
