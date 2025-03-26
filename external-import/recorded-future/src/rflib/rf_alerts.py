@@ -14,7 +14,7 @@ from pycti import (
 )
 
 from .constants import TLP_MAP
-from .utils import make_markdown_table, is_ip_v4_address, is_ip_v6_address
+from .utils import is_ip_v4_address, is_ip_v6_address, make_markdown_table
 
 
 class Vocabulary:
