@@ -3,7 +3,6 @@
 from abc import abstractmethod
 from typing import Any, Optional
 
-import dragos.domain.models.octi.enums as octi_enums
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
 from dragos.domain.models.octi.common import (
@@ -13,10 +12,11 @@ from dragos.domain.models.octi.common import (
     KillChainPhase,
     TLPMarking,
 )
-from dragos.domain.models.octi.types import (
+from dragos.domain.models.octi.enums import (
     AttackMotivation,
     AttackResourceLevel,
     CvssSeverity,
+    IdentityClass,
     ImplementationLanguage,
     IndicatorType,
     IndustrySector,
@@ -310,31 +310,31 @@ class _Location(DomainObject):
 class LocationAdministrativeArea(_Location):
     """Represent an administrative area entity."""
 
-    _location_type = octi_enums.LocationType.ADMINISTRATIVE_AREA.value
+    _location_type = LocationType.ADMINISTRATIVE_AREA.value
 
 
 class LocationCity(_Location):
     """Represent a city entity."""
 
-    _location_type = octi_enums.LocationType.CITY.value
+    _location_type = LocationType.CITY.value
 
 
 class LocationCountry(_Location):
     """Represent a country entity."""
 
-    _location_type = octi_enums.LocationType.COUNTRY.value
+    _location_type = LocationType.COUNTRY.value
 
 
 class LocationPosition(_Location):
     """Represent a position entity."""
 
-    _location_type = octi_enums.LocationType.POSITION.value
+    _location_type = LocationType.POSITION.value
 
 
 class LocationRegion(_Location):
     """Represent a region entity."""
 
-    _location_type = octi_enums.LocationType.REGION.value
+    _location_type = LocationType.REGION.value
 
 
 class Malware(DomainObject):
@@ -432,7 +432,7 @@ class Organization(DomainObject):
 
     # OpenCTI maps STIX Identity SDO to OCTI Organization entity based on `identity_class`.
     # To create an Organization entity on OpenCTI, `identity_class` MUST be 'organization'.
-    _identity_class = PrivateAttr(octi_enums.IdentityClass.ORGANIZATION.value)
+    _identity_class = PrivateAttr(IdentityClass.ORGANIZATION.value)
 
     name: str = Field(
         ...,
@@ -578,7 +578,7 @@ class Sector(DomainObject):
 
     # OpenCTI maps STIX Identity SDO to OCTI Sector entity based on `identity_class`.
     # To create a Sector entity on OpenCTI, `identity_class` MUST be 'class'.
-    _identity_class = PrivateAttr(octi_enums.IdentityClass.CLASS.value)
+    _identity_class = PrivateAttr(IdentityClass.CLASS.value)
 
     name: str = Field(
         ...,
