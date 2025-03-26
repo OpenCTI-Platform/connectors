@@ -4,6 +4,7 @@ from typing import Any, Literal
 import pycti
 import stix2
 from shodan_internetdb.client import ShodanResult
+from shodan_internetdb.exceptions import ShodanInternetDbInvalidTlpLevelError
 
 
 class ConverterToStix:
@@ -67,7 +68,9 @@ class ConverterToStix:
             case "red":
                 return stix2.TLP_RED
             case _:  # default
-                raise ValueError(f"Invalid TLP level: {level}")
+                raise ShodanInternetDbInvalidTlpLevelError(
+                    f"Invalid TLP level: {level}"
+                )
 
     def _create_domain_names(
         self,

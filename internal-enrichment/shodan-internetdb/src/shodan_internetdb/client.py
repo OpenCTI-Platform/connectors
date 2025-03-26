@@ -6,6 +6,11 @@ __all__ = [
     "ShodanResult",
 ]
 
+from shodan_internetdb.exceptions import (
+    ShodanInternetDbApiError,
+    ShodanInternetDbNotFoundError,
+)
+
 
 class ShodanResult(BaseModel):
     """Shodan InternetDB response"""
@@ -31,19 +36,26 @@ class ShodanInternetDbClient:
         self._session = requests.Session()
         self._verify = verify
 
-    def query(self, ip: str) -> ShodanResult | None:
+    def query(self, ip: str) -> ShodanResult:
         """Process the IP and return the result
         :return: Query result
         """
-        resp = self._session.get(
-            f"{self._base_url}{ip}",
-            headers=self._headers,
-            verify=self._verify,
-        )
+        try:
+            resp = self._session.get(
+                f"{self._base_url}{ip}",
+                headers=self._headers,
+                verify=self._verify,
+            )
+        except Exception as e:
+            raise ShodanInternetDbApiError(
+                "[CONNECTOR] Skipping observable (Shodan API error)"
+            ) from e
 
         # {'detail': 'No information available'}
         if resp.status_code == 404:
-            return None
+            raise ShodanInternetDbNotFoundError(
+                "[CONNECTOR] No information available, skipping observable (Shodan 404)"
+            )
 
         resp.raise_for_status()
 

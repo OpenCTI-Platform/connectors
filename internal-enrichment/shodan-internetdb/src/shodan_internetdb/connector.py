@@ -1,13 +1,18 @@
 from typing import Any
 
 import validators
-from pycti import (
-    OpenCTIConnectorHelper,
-)
-from requests.exceptions import RequestException
+from pycti import OpenCTIConnectorHelper
 from shodan_internetdb.client import ShodanInternetDbClient
 from shodan_internetdb.config import ConfigConnector
 from shodan_internetdb.converter_to_stix import ConverterToStix
+from shodan_internetdb.exceptions import (
+    ShodanInternetDbApiError,
+    ShodanInternetDbEntityNotInScopeError,
+    ShodanInternetDbExtractAndCheckMarkingsError,
+    ShodanInternetDbInvalidIPv4AddressError,
+    ShodanInternetDbInvalidTlpLevelError,
+    ShodanInternetDbNotFoundError,
+)
 
 __all__ = [
     "ShodanInternetDBConnector",
@@ -32,7 +37,7 @@ class ShodanInternetDBConnector:
                     tlp=marking_definition["definition"], max_tlp=max_tlp_name
                 )
             ):
-                raise ValueError(
+                raise ShodanInternetDbExtractAndCheckMarkingsError(
                     "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
                     "the connector does not has access to this observable, please check the group of the connector user"
                 )
@@ -60,30 +65,22 @@ class ShodanInternetDBConnector:
 
         # Process the observable value
         value = stix_observable["value"]
+
         if not validators.ipv4(value):
-            self.helper.connector_logger.error(
-                "Observable value is not an IPv4 address"
+            raise ShodanInternetDbInvalidIPv4AddressError(
+                "[CONNECTOR] Observable value is not an IPv4 address"
             )
-            return "Skipping observable (ipv4 validation)"
 
         if not self._is_entity_in_scope(data["entity_type"]):
             if data.get("event_type"):
-                raise ValueError(
-                    f"Failed to process observable, {data['entity_type']} is not a supported entity type."
+                raise ShodanInternetDbEntityNotInScopeError(
+                    f"[CONNECTOR] Failed to process observable, {data['entity_type']} is not a supported entity type"
                 )
             # If it is not in scope AND entity bundle passed through playbook,
             # we should return the original bundle unchanged
             return self._send_bundle(stix_objects)
 
-        try:
-            result = self._client.query(value)
-        except RequestException:
-            self.helper.connector_logger.exception("Shodan API error")
-            return "Skipping observable (Shodan API error)"
-
-        if result is None:
-            self.helper.connector_logger.debug("No information available on %s", value)
-            return "Skipping observable (Shodan 404)"
+        result = self._client.query(value)
 
         # Process the result
         self.helper.connector_logger.debug("Processing %s", value)
@@ -91,6 +88,24 @@ class ShodanInternetDBConnector:
         return self._send_bundle(
             stix_objects + self.converter.create_stix_objects(stix_observable, result)
         )
+
+    def process_message(self, data: dict[str, Any]) -> str:
+        try:
+            return self._process_message(data)
+        except (
+            ShodanInternetDbInvalidIPv4AddressError,
+            ShodanInternetDbEntityNotInScopeError,
+            ShodanInternetDbApiError,
+            ShodanInternetDbNotFoundError,
+            ShodanInternetDbExtractAndCheckMarkingsError,
+            ShodanInternetDbInvalidTlpLevelError,
+        ) as e:
+            self.helper.connector_logger.error(e)
+            return str(e)
+        except Exception as e:
+            message = "[CONNECTOR] Unexpected error."
+            self.helper.connector_logger.error(message, {"error": str(e)})
+            return f"{message} See connector's log for more details."
 
     def run(self) -> None:
         """
