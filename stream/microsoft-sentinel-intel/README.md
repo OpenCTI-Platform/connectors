@@ -4,12 +4,11 @@ This OpenCTI connector allows the ability to create or delete data from your Ope
 Sentinel or Microsoft Defender for Endpoint platform utilizing
 the [Microsoft Graph API Threat Intelligence Indicator](https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta).
 Microsoft has a detailed guide on how to get started with connecting your threat intelligence platform to Sentinel
-found [here](https://learn.microsoft.com/en-us/azure/sentinel/connect-threat-intelligence-upload-api).
+found [here](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/data/sentinel-threat-intelligence#import-threat-indicators-with-the-platforms-data-connector).
 
 ## Installation
 
-It is recommended to use a managed identity for authentication. It's also possible to use an app registration.
-If you don't know how to get the `tenant_id`, `client_id`, and `client_secret` for the app registrationinformation, here's a screenshot to
+If you don't know how to get the `tenant_id`, `client_id`, and `client_secret` information, here's a screenshot to
 help !
 ![Sentinel_variables](./doc/sentinel_info_variables.png)
 
