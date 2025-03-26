@@ -2,13 +2,13 @@
 
 import pytest
 from dragos.interfaces.geocoding import (
-    Geocoding,
-    GeocodingRetrievalError,
-    Country,
-    Region,
     Area,
     City,
+    Country,
+    Geocoding,
+    GeocodingRetrievalError,
     Position,
+    Region,
 )
 
 

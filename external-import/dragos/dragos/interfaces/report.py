@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Annotated, Generator, Literal, Optional
 
-from dragos.interfaces.common import FrozenBaseModel, DataRetrievalError
+from dragos.interfaces.common import DataRetrievalError, FrozenBaseModel
 from pydantic import (
     AfterValidator,
     AwareDatetime,
