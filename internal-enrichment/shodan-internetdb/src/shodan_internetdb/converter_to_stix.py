@@ -29,17 +29,15 @@ class ConverterToStix:
         :return: Author in Stix2 object
         """
         return stix2.Identity(
-            id=pycti.Identity.generate_id(
-                name=self.helper.connect_name, identity_class="organization"
-            ),
-            name=self.helper.connect_name,
+            id=pycti.Identity.generate_id(name="Shodan", identity_class="organization"),
+            name="Shodan",
             identity_class="organization",
             description="Shodan is a search engine for Internet-connected devices.",
         )
 
     def _create_external_reference(self) -> stix2.ExternalReference:
         return stix2.ExternalReference(
-            source_name=self.helper.connect_name,
+            source_name="Shodan",
             url="https://internetdb.shodan.io/",
             description="Shodan is a search engine for Internet-connected devices.",
         )
