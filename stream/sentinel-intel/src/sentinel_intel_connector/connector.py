@@ -161,6 +161,7 @@ class SentinelIntelConnector:
     def _create_sentinel_indicator(self, observable_data):
         """
         Create a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
+        Identify and delete existing external references from the target product, replacing with the most current. 
         :param observable_data: OpenCTI observable data
         :return: True if the indicator has been successfully created, False otherwise
         """
