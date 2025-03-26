@@ -5,6 +5,7 @@ from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
 
+
 class SentinelApiHandlerError(Exception):
     def __init__(self, msg, metadata):
         self.msg = msg
@@ -27,22 +28,18 @@ class SentinelApiHandler:
         self._expiration_token_date = None
         self.workspace_url = f"https://api.ti.sentinel.azure.com/workspaces/{self.config.workspace_id}/threat-intelligence-stix-objects:upload?api-version=2024-02-01-preview"
 
-
-
     def _get_authorization_managed_identity_token(self):
         """
         Get a token from the metadata endpoint
         """
         response_json = {}
         try:
-            url = 'http://169.254.169.254/metadata/identity/oauth2/token'
+            url = "http://169.254.169.254/metadata/identity/oauth2/token"
             params = {
-                'api-version': '2018-02-01',
-                'resource': 'https://management.azure.com/'
+                "api-version": "2018-02-01",
+                "resource": "https://management.azure.com/",
             }
-            headers = {
-                'Metadata': 'true'
-            }
+            headers = {"Metadata": "true"}
             response = requests.get(url, params=params, headers=headers)
             response_json = response.json()
             response.raise_for_status()
@@ -54,21 +51,17 @@ class SentinelApiHandler:
             )
         except (requests.exceptions.HTTPError, KeyError) as e:
             error_description = response_json.get("error_description", "Unknown error")
-            error_message = (
-                f"[ERROR] Failed generating oauth token (managed identity): {error_description}"
-            )
+            error_message = f"[ERROR] Failed generating oauth token (managed identity): {error_description}"
             self.helper.connector_logger.error(
                 error_message, {"response": response_json}
             )
             raise e
-
 
     def _update_authorization_header(self):
         if self.config.login_type == "client_secret":
             self._get_authorization_client_secret_token()
         elif self.config.login_type == "managed_identity":
             self._get_authorization_managed_identity_token()
-
 
     def _get_authorization_client_secret_token(self):
         """
@@ -149,17 +142,12 @@ class SentinelApiHandler:
                 {"url_path": f"{method.upper()} {url} {str(err)}"},
             ) from err
 
-
     def _build_request_body(self, indicator: dict) -> dict:
-        del indicator["extensions"] # Todo: add configurable labels + make it configurable to delete extensions
-        data = {
-            "sourcesystem" : self.config.source_system,
-            "stixobjects" : [
-                indicator
-            ]
-        }
+        del indicator[
+            "extensions"
+        ]  # Todo: add configurable labels + make it configurable to delete extensions
+        data = {"sourcesystem": self.config.source_system, "stixobjects": [indicator]}
         return data
-
 
     def post_indicator(self, indicator: dict) -> dict | None:
         """

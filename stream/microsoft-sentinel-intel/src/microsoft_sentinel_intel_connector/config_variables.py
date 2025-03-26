@@ -55,21 +55,21 @@ class ConfigConnector:
         )
 
         self.workspace_id = get_config_variable(
-            "SENTINEL_INTEL_WORKSPACE_ID",
-            ["sentinel_intel", "workspace_id"],
-            self.load
+            "SENTINEL_INTEL_WORKSPACE_ID", ["sentinel_intel", "workspace_id"], self.load
         )
 
         self.source_system = get_config_variable(
             "SENTINEL_INTEL_SOURCE_SYSTEM",
             ["sentinel_intel", "source_system"],
-            self.load,False,
-            "Opencti Stream Connector"
+            self.load,
+            False,
+            "Opencti Stream Connector",
         )
 
         self.source_system = get_config_variable(
             "SENTINEL_INTEL_LOGIN_TYPE",
             ["sentinel_intel", "login_type"],
-            self.load,False,
-            "client_secret"
+            self.load,
+            False,
+            "client_secret",
         )

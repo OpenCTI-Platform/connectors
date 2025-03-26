@@ -64,7 +64,6 @@ class MicrosoftSentinelIntelConnector:
         ):
             raise ValueError("Missing stream ID, please check your configurations.")
 
-
     def _create_sentinel_indicator(self, indicator_data):
         """
         Create a Threat Intelligence Indicator on Sentinel from an OpenCTI indicator.
@@ -74,10 +73,15 @@ class MicrosoftSentinelIntelConnector:
 
         result = self.api.post_indicator(indicator_data)
         if result:
-           self.helper.connector_logger.info("[CREATE] Indicator created",{"sentinel_id": result["id"], "opencti_id": indicator_data["id"]},)
+            self.helper.connector_logger.info(
+                "[CREATE] Indicator created",
+                {"sentinel_id": result["id"], "opencti_id": indicator_data["id"]},
+            )
         else:
-            self.helper.connector_logger.error("[CREATE] Indicator not created", {"opencti_id": indicator_data["id"]},)
-
+            self.helper.connector_logger.error(
+                "[CREATE] Indicator not created",
+                {"opencti_id": indicator_data["id"]},
+            )
 
     def _update_sentinel_indicator(self, indicator_data) -> bool:
         """
@@ -87,9 +91,15 @@ class MicrosoftSentinelIntelConnector:
         """
         result = self.api.post_indicator(indicator_data)
         if result:
-           self.helper.connector_logger.info("[UPDATE] Indicator updated",{"sentinel_id": result["id"], "opencti_id": indicator_data["id"]},)
+            self.helper.connector_logger.info(
+                "[UPDATE] Indicator updated",
+                {"sentinel_id": result["id"], "opencti_id": indicator_data["id"]},
+            )
         else:
-            self.helper.connector_logger.error("[UPDATE] Indicator not updated", {"opencti_id": indicator_data["id"]},)
+            self.helper.connector_logger.error(
+                "[UPDATE] Indicator not updated",
+                {"opencti_id": indicator_data["id"]},
+            )
 
         pass
 
@@ -107,10 +117,9 @@ class MicrosoftSentinelIntelConnector:
         :param data: Streamed data (representing either an observable or an indicator)
         """
         if is_stix_indicator(data):
-          self._create_sentinel_indicator(data)
+            self._create_sentinel_indicator(data)
         else:
-          self.helper.connector_logger.info(f"[CREATE] Entity not supported")
-
+            self.helper.connector_logger.info(f"[CREATE] Entity not supported")
 
     def _handle_update_event(self, data):
         """
@@ -118,9 +127,9 @@ class MicrosoftSentinelIntelConnector:
         :param data: Streamed data (representing either an observable or an indicator)
         """
         if is_stix_indicator(data):
-          self._update_sentinel_indicator(data)
+            self._update_sentinel_indicator(data)
         else:
-          self.helper.connector_logger.info(f"[UPDATE] Entity not supported")
+            self.helper.connector_logger.info(f"[UPDATE] Entity not supported")
 
     def _handle_delete_event(self, data):
         """
@@ -128,12 +137,13 @@ class MicrosoftSentinelIntelConnector:
         :param data: Streamed data (representing either an observable or an indicator)
         """
 
-        self.helper.connector_logger.warning(f"[DELETE] Event is currently not supported by the Microsoft Upload API")
+        self.helper.connector_logger.warning(
+            f"[DELETE] Event is currently not supported by the Microsoft Upload API"
+        )
         if is_stix_indicator(data):
-          self._delete_sentinel_indicator(data)
+            self._delete_sentinel_indicator(data)
         else:
-          self.helper.connector_logger.info(f"[DELETE] Entity not supported")
-
+            self.helper.connector_logger.info(f"[DELETE] Entity not supported")
 
     def validate_json(self, msg) -> dict | JSONDecodeError:
         """
