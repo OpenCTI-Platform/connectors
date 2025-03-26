@@ -255,7 +255,7 @@ class SentinelIntelConnector:
         """
         Extracts the external_id from the observable data
         :param: observable_data: OpenCTI observable data
-        :return: Sentinel / Defender external_id or none if not found
+        :return: Sentinel or Defender external_id or none if not found
         """
         external_id_list = []
         source_name =  self.config.target_product
