@@ -6,7 +6,7 @@ import typing
 
 import pytest
 from dragos.interfaces.report import (
-    DataRetrievalError,
+    ReportRetrievalError,
     Reports,
     _Indicator,
     _Report,
@@ -159,7 +159,7 @@ def test_tag_should_raise_data_retrieval_error_with_incorrect_attribute():
 
     # When instantiating the IncorrectStubTag
     # Then a data retrieval error is raised
-    with pytest.raises(DataRetrievalError):
+    with pytest.raises(ReportRetrievalError):
         _ = IncorrectStubTag()
 
 
@@ -204,7 +204,7 @@ def test_indicator_should_raise_validation_error_with_incorrect_attribute():
 
     # When instantiating the IncorrectStubIndicator
     # Then a data retrieval error should be raised
-    with pytest.raises(DataRetrievalError):
+    with pytest.raises(ReportRetrievalError):
         _ = IncorrectStubIndicator()
 
 
@@ -245,7 +245,7 @@ def test_report_should_raise_data_retrieval_error_with_incorrect_attribute():
 
     # When instantiating the IncorrectStubReport
     # Then a data retrieval error should be raised
-    with pytest.raises(DataRetrievalError):
+    with pytest.raises(ReportRetrievalError):
         _ = IncorrectStubReport()
 
 
@@ -262,7 +262,7 @@ def test_report_should_raise_data_retrieval_error_with_invalid_pdf():
 
     # When instantiating the IncorrectStubReport
     # Then a data retrieval error should be raised
-    with pytest.raises(DataRetrievalError):
+    with pytest.raises(ReportRetrievalError):
         _ = IncorrectStubReport()
 
 
