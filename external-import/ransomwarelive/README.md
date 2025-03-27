@@ -45,7 +45,6 @@ The ones that follow are connector's generic execution parameters expected to be
 | `connector_id`               | `CONNECTOR_ID`                   | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                                            |
 | `connector_log_level`        | `CONNECTOR_LOG_LEVEL`            | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                 |
 | `interval`                   | `CONNECTOR_RUN_EVERY`            | Yes       | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day. |
-| `update_existing_data`       | `CONNECTOR_UPDATE_EXISTING_DATA` | No        | Whether to update known existing data (Default: false)                                                                                                                        | |
 
 
 Finally, the ones that follow are connector's specific execution parameters expected to be used by this connector.
