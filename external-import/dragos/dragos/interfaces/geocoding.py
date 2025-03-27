@@ -84,17 +84,20 @@ class Geocoding(ABC, FrozenBaseModel):
     Examples:
         >>> from dragos.interfaces.geocoding import Geocoding, GeoRetrievalError
         >>> import requests
+        >>> import logging
+        >>> from typing import Optional
+        >>> logger = logging.getLogger(__name__)
         >>> class MyGeocoding(Geocoding):
-        ...     def __init__(self, url: str, creds: dict[str, str]):
+        ...     def __init__(self: "MyGeocoding", url: str, creds: dict[str, str]) -> None:
         ...         '''Initialize the geocoding service.'''
         ...         self.headers = {"Authorization": f"Bearer {creds['token']}"}
         ...         self.url = url
         ...
-        ...     def _call_geocoding_api(self, name: str):
+        ...     def _call_geocoding_api(self: "MyGeocoding", name: str) -> requests.Response:
         ...         '''Call the geocoding API.'''
         ...         return requests.get(f"{self.url}/search?name={name}", headers=self.headers)
         ...
-        ...     def find_from_name(self, name: str):
+        ...     def find_from_name(self: "MyGeocoding", name: str) -> Optional[Country | Region | Area | City | Position]:
         ...         '''Retrieve geocoding data.'''
         ...         try:
         ...             response = self._call_geocoding_api(name)
@@ -112,6 +115,6 @@ class Geocoding(ABC, FrozenBaseModel):
 
     @abstractmethod
     def find_from_name(
-        self, name: str
+        self: "Geocoding", name: str
     ) -> Optional[Country | Region | Area | City | Position]:
         """Retrieve geocoding data."""
