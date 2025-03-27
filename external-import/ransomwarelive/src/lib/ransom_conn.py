@@ -273,12 +273,10 @@ class RansomwareAPIConnector:
                 filters={
                     "mode": "and",
                     "filters": [
-                        {"key": "entity_type", "values": ["Sector"], "operator": "eq"},
                         {
-                            "key": "name",
-                            "values": sector,
-                            "mode": "or",
-                            "operator": "search",
+                            "key": "entity_type",
+                            "values": ["Sector"],
+                            "operator": "eq",
                         },
                     ],
                     "filterGroups": [
@@ -286,16 +284,14 @@ class RansomwareAPIConnector:
                             "mode": "or",
                             "filters": [
                                 {
-                                    "key": "x_opencti_aliases",
-                                    "values": sector,
-                                    "mode": "or",
-                                    "operator": "search",
-                                },
-                                {
                                     "key": "name",
                                     "values": sector,
-                                    "mode": "or",
-                                    "operator": "search",
+                                    "operator": "eq",
+                                },
+                                {
+                                    "key": "x_opencti_aliases",
+                                    "values": sector,
+                                    "operator": "eq",
                                 },
                             ],
                             "filterGroups": [],
