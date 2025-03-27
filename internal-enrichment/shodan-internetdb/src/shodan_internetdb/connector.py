@@ -100,7 +100,7 @@ class ShodanInternetDBConnector:
             ShodanInternetDbExtractAndCheckMarkingsError,
             ShodanInternetDbInvalidTlpLevelError,
         ) as e:
-            self.helper.connector_logger.error(e)
+            self.helper.connector_logger.warning(e)
             return str(e)
         except Exception as e:
             message = "[CONNECTOR] Unexpected error."
