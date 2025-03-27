@@ -146,8 +146,18 @@ class SentinelIntelConnector:
 
             external_references = []
 
-            if result and result.get("data") and result["data"].get("stixDomainObject") and result["data"]["stixDomainObject"].get("externalReferences") and result["data"]["stixDomainObject"]["externalReferences"].get("edges"):
-                for edge in result["data"]["stixDomainObject"]["externalReferences"]["edges"]:
+            if (
+                result
+                and result.get("data")
+                and result["data"].get("stixDomainObject")
+                and result["data"]["stixDomainObject"].get("externalReferences")
+                and result["data"]["stixDomainObject"]["externalReferences"].get(
+                    "edges"
+                )
+            ):
+                for edge in result["data"]["stixDomainObject"]["externalReferences"][
+                    "edges"
+                ]:
                     reference = edge["node"]
                     if reference.get("source_name") == source_name:
                         external_references.append(reference)
@@ -155,13 +165,15 @@ class SentinelIntelConnector:
             return external_references
 
         except Exception as e:
-            self.helper.connector_logger.error(f"Error retrieving external references: {e}")
+            self.helper.connector_logger.error(
+                f"Error retrieving external references: {e}"
+            )
             return []
-        
+
     def _create_sentinel_indicator(self, observable_data):
         """
         Create a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
-        Identify and delete existing external references from the target product, replacing with the most current. 
+        Identify and delete existing external references from the target product, replacing with the most current.
         :param observable_data: OpenCTI observable data
         :return: True if the indicator has been successfully created, False otherwise
         """
@@ -181,7 +193,7 @@ class SentinelIntelConnector:
             indicator_external_references = self.get_indicator_external_references(
                 observable_opencti_id, source_name
             )
-                    # Delete existing references if any
+            # Delete existing references if any
             for ref in indicator_external_references:
                 self.helper.api.external_reference.delete(id=ref["id"])
             # Update OpenCTI SDO external references
@@ -259,11 +271,11 @@ class SentinelIntelConnector:
         :return: Sentinel or Defender external_id or none if not found
         """
         external_id_list = []
-        source_name =  self.config.target_product
+        source_name = self.config.target_product
 
         try:
-            if "external_references" in observable_data: 
-                external_references = observable_data["external_references"] 
+            if "external_references" in observable_data:
+                external_references = observable_data["external_references"]
                 for ref in external_references:
                     if ref.get("source_name") == source_name and ref.get("external_id"):
                         external_id_list.append(ref["external_id"])
@@ -272,8 +284,7 @@ class SentinelIntelConnector:
         except TypeError as e:
             print(f"TypeError: {e}")
         return external_id_list
-    
-    
+
     def _delete_sentinel_indicator(self, observable_data) -> bool:
         """
         Delete Threat Intelligence Indicators on Sentinel or Defender corresponding to an OpenCTI observable.
@@ -288,7 +299,10 @@ class SentinelIntelConnector:
         external_id_list = self._get_external_id(observable_data)
 
         for external_id in external_id_list:
-            if target_product in observable_data["external_references"][0]["source_name"]:
+            if (
+                target_product
+                in observable_data["external_references"][0]["source_name"]
+            ):
                 result = self.api.delete_indicator(external_id)
                 if result:
                     log_message = "[DELETE] Indicator deleted"
