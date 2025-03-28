@@ -40,53 +40,68 @@ class ExportFileCsv:
             ]
         csv_data = [headers]
         for d in data:
-            row = []
-            for h in headers:
-                if h.startswith("hashes_") and "hashes" in d:
-                    hashes = {}
-                    for hash in d["hashes"]:
-                        hashes[hash["algorithm"]] = hash["hash"]
-                    if h.split("_")[1] in hashes:
-                        row.append(hashes[h.split("_")[1]])
+            try:
+                row = []
+                for h in headers:
+                    if h.startswith("hashes_") and "hashes" in d:
+                        hashes = {}
+                        for hash in d["hashes"]:
+                            hashes[hash["algorithm"]] = hash["hash"]
+                        if h.split("_")[1] in hashes:
+                            row.append(hashes[h.split("_")[1]])
+                        else:
+                            row.append("")
+                    elif h not in d:
+                        row.append("")
+                    elif isinstance(d[h], str):
+                        row.append(d[h])
+                    elif isinstance(d[h], int):
+                        row.append(str(d[h]))
+                    elif isinstance(d[h], float):
+                        row.append(str(d[h]))
+                    elif isinstance(d[h], list):
+                        if len(d[h]) > 0 and isinstance(d[h][0], str):
+                            row.append(",".join(d[h]))
+                        elif len(d[h]) > 0 and isinstance(d[h][0], dict):
+                            rrow = []
+                            for r in d[h]:
+                                if "name" in r:
+                                    if r["name"] is not None:
+                                        rrow.append(r["name"])
+                                    else:
+                                        rrow.append("")
+                                elif "definition" in r:
+                                    if r["definition"] is not None:
+                                        rrow.append(r["definition"])
+                                    else:
+                                        rrow.append("")
+                                elif "value" in r:
+                                    if r["value"] is not None:
+                                        rrow.append(r["value"])
+                                    else:
+                                        rrow.append("")
+                                elif "observable_value" in r:
+                                    if r["observable_value"] is not None:
+                                        rrow.append(r["observable_value"])
+                                    else:
+                                        rrow.append("")
+                            row.append(",".join(rrow))
+                        else:
+                            row.append("")
+                    elif isinstance(d[h], dict):
+                        if "name" in d[h]:
+                            row.append(d[h]["name"])
+                        elif "value" in d[h]:
+                            row.append(d[h]["value"])
+                        elif "observable_value" in d[h]:
+                            row.append(d[h]["observable_value"])
+                        else:
+                            row.append("")
                     else:
                         row.append("")
-                elif h not in d:
-                    row.append("")
-                elif isinstance(d[h], str):
-                    row.append(d[h])
-                elif isinstance(d[h], int):
-                    row.append(str(d[h]))
-                elif isinstance(d[h], float):
-                    row.append(str(d[h]))
-                elif isinstance(d[h], list):
-                    if len(d[h]) > 0 and isinstance(d[h][0], str):
-                        row.append(",".join(d[h]))
-                    elif len(d[h]) > 0 and isinstance(d[h][0], dict):
-                        rrow = []
-                        for r in d[h]:
-                            if "name" in r:
-                                rrow.append(r["name"])
-                            elif "definition" in r:
-                                rrow.append(r["definition"])
-                            elif "value" in r:
-                                rrow.append(r["value"])
-                            elif "observable_value" in r:
-                                rrow.append(r["observable_value"])
-                        row.append(",".join(rrow))
-                    else:
-                        row.append("")
-                elif isinstance(d[h], dict):
-                    if "name" in d[h]:
-                        row.append(d[h]["name"])
-                    elif "value" in d[h]:
-                        row.append(d[h]["value"])
-                    elif "observable_value" in d[h]:
-                        row.append(d[h]["observable_value"])
-                    else:
-                        row.append("")
-                else:
-                    row.append("")
-            csv_data.append(row)
+                csv_data.append(row)
+            except Exception as err:
+                self.helper.log_error("ERROR with csv input data." + str(err))
         writer = csv.writer(
             output,
             delimiter=self.export_file_csv_delimiter,
