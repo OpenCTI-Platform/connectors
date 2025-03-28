@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: changeMe
+
+connector:
+  id: '0150bc73-18b1-4c51-860a-fbbbcdc10a8f' # Valid UUIDv4
+  type: 'EXTERNAL_IMPORT'
+  name: 'Doppel Threat Intelligence'
+  scope: 'doppel' 
+  log_level: 'info'
+
+doppel:
+  api_url: 'https://api.doppel.com/v1/alerts'
+  api_key: changeme
+  polling_interval: 60  # Fetch alerts every 60 minutes (3600 seconds)
+  historical_polling_days: 30 #Defines the number of past days to initially retrieve data from
+  max_retries: 3  # Number of retry attempts if API fails
+  retry_delay: 30  # Delay (seconds) between retries
