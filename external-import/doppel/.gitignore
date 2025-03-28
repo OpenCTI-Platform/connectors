@@ -1,1 +1,4 @@
 venv/
+src/config.yml
+src/app.py
+src/connection.py
