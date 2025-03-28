@@ -7,7 +7,7 @@ import stix2
 from pycti import StixCoreRelationship
 
 from .constants import TLP_MAP
-from .make_markdown_table import make_markdown_table
+from .utils import make_markdown_table
 
 
 class RecordedFuturePlaybookAlertConnector(threading.Thread):
