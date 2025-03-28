@@ -331,7 +331,9 @@ class RecordedFutureAlertConnector(threading.Thread):
                             },
                         )
                     else:
-                        raise ValueError(f"Invalid IP address: {ip_address_value}")
+                        self.helper.connector_logger.warning(
+                            f"Invalid IP address: {ip_address_value}. The entity will be skipped."
+                        )
 
                     if stix_ip_address:
                         stix_relationship = self._generate_stix_relationship(
