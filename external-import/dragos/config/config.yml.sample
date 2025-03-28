@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'External Import Connector Template'
+  scope: 'ChangeMe'
+  log_level: 'info'
+  duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
+
+dragos:
+  api_base_url: TODO
+  api_key: TODO
