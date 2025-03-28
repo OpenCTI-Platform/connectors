@@ -154,8 +154,8 @@ class ConverterToStix:
         """
         user_account_dict = evidence.get("userAccount")
         if not isinstance(user_account_dict, dict):
-            self.helper.connector_logger.error(
-                "This evidence does not contain user account's details: ",
+            self.helper.connector_logger.warning(
+                "The userEvidence does not contain userAccount: ",
                 {"evidence": evidence},
             )
             return None
@@ -296,8 +296,8 @@ class ConverterToStix:
             )
             return stix_identity_system
         else:
-            self.helper.connector_logger.error(
-                "This evidence does not contain deviceDnsName: ",
+            self.helper.connector_logger.warning(
+                "The deviceEvidence does not contain deviceDnsName: ",
                 {"evidence": evidence},
             )
             return None
@@ -320,8 +320,8 @@ class ConverterToStix:
                 },
             )
         else:
-            self.helper.connector_logger.error(
-                "This evidence does not contain deviceDnsName: ",
+            self.helper.connector_logger.warning(
+                "This deviceEvidence does not contain deviceDnsName: ",
                 {"evidence": evidence},
             )
             return None
