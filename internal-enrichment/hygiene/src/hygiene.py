@@ -260,7 +260,7 @@ class HygieneConnector:
         return use_parent, result
 
     def process_result(
-            self, result, stix_objects, stix_entity, opencti_entity, use_parent
+        self, result, stix_objects, stix_entity, opencti_entity, use_parent
     ):
         if opencti_entity["entity_type"] == "Indicator":
             self.helper.log_info(
@@ -268,7 +268,8 @@ class HygieneConnector:
             )
         else:
             self.helper.log_info(
-                "Hit found for %s in warninglists" % (opencti_entity["observable_value"])
+                "Hit found for %s in warninglists"
+                % (opencti_entity["observable_value"])
             )
 
         for hit in result:
@@ -323,8 +324,8 @@ class HygieneConnector:
             # External references
             if hit.name in LIST_MAPPING:
                 url = (
-                        "https://github.com/MISP/misp-warninglists/tree/main/"
-                        + LIST_MAPPING[hit.name]
+                    "https://github.com/MISP/misp-warninglists/tree/main/"
+                    + LIST_MAPPING[hit.name]
                 )
             else:
                 # reference not found in the LIST_MAPPING, define a generic URL
@@ -357,8 +358,8 @@ class HygieneConnector:
                     if use_parent:
                         stix_indicator["labels"] = (
                             (
-                                    stix_indicator["labels"]
-                                    + [self.label_hygiene_parent["value"]]
+                                stix_indicator["labels"]
+                                + [self.label_hygiene_parent["value"]]
                             )
                             if "labels" in stix_indicator
                             else [self.label_hygiene_parent["value"]]
