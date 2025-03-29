@@ -11,7 +11,6 @@ from pycti import (
     get_config_variable,
 )
 from pymispwarninglists import WarningLists
-from stix_shifter.stix_translation import stix_translation
 
 # At the moment it is not possible to map lists to their upstream path.
 # Thus we need to have our own mapping here.
@@ -181,7 +180,7 @@ class HygieneConnector:
         # Iterate over the hits
         if result:
             self.process_result(
-                self, result, stix_objects, stix_entity, opencti_entity, use_parent
+                result, stix_objects, stix_entity, opencti_entity, use_parent
             )
             return "Observable value found on warninglist and tagged accordingly"
 
@@ -198,7 +197,7 @@ class HygieneConnector:
             # Iterate over the hits
             if result:
                 self.process_result(
-                    self, result, stix_objects, stix_entity, observable, use_parent
+                    result, stix_objects, stix_entity, observable, use_parent
                 )
                 return "Observable value found on warninglist and tagged accordingly"
 
@@ -210,37 +209,36 @@ class HygieneConnector:
         """
         try:
             observables = []
-            translation = stix_translation.StixTranslation()
-            parsed = translation.translate("splunk", "parse", "{}", data["pattern"])
-            if "parsed_stix" in parsed:
-                results = parsed["parsed_stix"]
-                for result in results:
+
+            parsed_observables = self.helper.get_attribute_in_extension(
+                "x_opencti_observable_values", data
+            )
+
+            if parsed_observables:
+                # Iterate over the parsed observables
+                for observable in parsed_observables:
                     observable_data = {}
                     observable_data.update(data)
 
+                    x_opencti_observable_type = observable.get("type").lower()
+
                     supported_attributes = [
-                        "domain-name:value",
-                        "ipv4-addr:value",
-                        "ipv6-addr:value",
-                        "file:hashes.'SHA-256'",
-                        "file:hashes.SHA-256",
-                        "file:hashes.'SHA-1'",
-                        "file:hashes.SHA-1",
-                        "file:hashes.'MD5'",
-                        "file:hashes.MD5",
+                        "domain-name",
+                        "stixfile",
+                        "ipv4-addr",
+                        "ipv6-addr",
                     ]
-                    if result["attribute"] not in supported_attributes:
+                    if x_opencti_observable_type not in supported_attributes:
                         self.helper.connector_logger.warning(
                             "[UNSUPPORTED ATTRIBUTE] Cannot scan { "
-                            + result["attribute"]
+                            + x_opencti_observable_type
                             + "}"
                         )
                         observable_data["type"] = "unsupported_type"
                         observables.append(observable_data)
                     else:
-                        stix_type = result["attribute"].replace(":value", "")
-                        observable_data["type"] = stix_type
-                        observable_data["value"] = result["value"]
+                        observable_data["type"] = x_opencti_observable_type
+                        observable_data["value"] = observable.get("value")
                         observables.append(observable_data)
             return observables
         except:
@@ -262,11 +260,16 @@ class HygieneConnector:
         return use_parent, result
 
     def process_result(
-        self, result, stix_objects, stix_entity, opencti_entity, use_parent
+            self, result, stix_objects, stix_entity, opencti_entity, use_parent
     ):
-        self.helper.log_info(
-            "Hit found for %s in warninglists" % (opencti_entity["value"])
-        )
+        if opencti_entity["entity_type"] == "Indicator":
+            self.helper.log_info(
+                "Hit found for %s in warninglists" % (opencti_entity["value"])
+            )
+        else:
+            self.helper.log_info(
+                "Hit found for %s in warninglists" % (opencti_entity["observable_value"])
+            )
 
         for hit in result:
             self.helper.log_info(
@@ -290,21 +293,27 @@ class HygieneConnector:
 
             # Add labels
             if use_parent:
-                OpenCTIStix2.put_attribute_in_extension(
-                    stix_entity,
-                    STIX_EXT_OCTI_SCO,
-                    "labels",
-                    self.label_hygiene_parent["value"],
-                    True,
-                )
+                if opencti_entity["entity_type"] == "Indicator":
+                    stix_entity["labels"].append(self.label_hygiene_parent["value"])
+                else:
+                    OpenCTIStix2.put_attribute_in_extension(
+                        stix_entity,
+                        STIX_EXT_OCTI_SCO,
+                        "labels",
+                        self.label_hygiene_parent["value"],
+                        True,
+                    )
             else:
-                OpenCTIStix2.put_attribute_in_extension(
-                    stix_entity,
-                    STIX_EXT_OCTI_SCO,
-                    "labels",
-                    self.label_hygiene["value"],
-                    True,
-                )
+                if opencti_entity["entity_type"] == "Indicator":
+                    stix_entity["labels"].append(self.label_hygiene["value"])
+                else:
+                    OpenCTIStix2.put_attribute_in_extension(
+                        stix_entity,
+                        STIX_EXT_OCTI_SCO,
+                        "labels",
+                        self.label_hygiene["value"],
+                        True,
+                    )
 
             # Update score
             OpenCTIStix2.put_attribute_in_extension(
@@ -314,8 +323,8 @@ class HygieneConnector:
             # External references
             if hit.name in LIST_MAPPING:
                 url = (
-                    "https://github.com/MISP/misp-warninglists/tree/main/"
-                    + LIST_MAPPING[hit.name]
+                        "https://github.com/MISP/misp-warninglists/tree/main/"
+                        + LIST_MAPPING[hit.name]
                 )
             else:
                 # reference not found in the LIST_MAPPING, define a generic URL
@@ -348,8 +357,8 @@ class HygieneConnector:
                     if use_parent:
                         stix_indicator["labels"] = (
                             (
-                                stix_indicator["labels"]
-                                + [self.label_hygiene_parent["value"]]
+                                    stix_indicator["labels"]
+                                    + [self.label_hygiene_parent["value"]]
                             )
                             if "labels" in stix_indicator
                             else [self.label_hygiene_parent["value"]]
