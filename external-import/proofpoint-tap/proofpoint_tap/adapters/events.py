@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import timedelta
+from math import ceil
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Generator, Literal, Optional
 
 from proofpoint_tap.client_api.v2.siem import (
@@ -310,18 +311,25 @@ class EventsAPIV2(EventsPort):
     ) -> Generator[tuple["datetime", "datetime"], Any, Any]:
         """Chunk the interval into 30 minutes intervals.
 
+        Note: To prevent generating intervals that are too short (e.g., when a single short
+        interval is provided as input or when the difference between start and stop time
+        is just slightly above 30 minutes, such as 30 minutes and 1 second), we adjust the
+        start time to ensure an exact number of 30-minute chunks rather than simply trimming
+        the interval at stop_time. I.E. we prefer overlapping in the past rather than missing
+        an element close to the stop_time.
+
         Example:
             >>> start = datetime(2021,1,1,0,15,0)
             >>> stop = datetime(2021,1,1,3,11,0)
             >>> list(EventsAPIV2._chunk_30_minutes_intervals(start, stop))
 
         """
-        number_of_intervals = int((stop_time - start_time).total_seconds() / 1800) + 1
+        number_of_intervals = int(ceil((stop_time - start_time).total_seconds() / 1800))
+        padded_start_time = stop_time - number_of_intervals * timedelta(minutes=30)
         for i in range(number_of_intervals):
-            if start_time + timedelta(seconds=i * 1800) < stop_time:
-                start = start_time + timedelta(seconds=i * 1800)
-                stop = min(start_time + timedelta(seconds=(i + 1) * 1800), stop_time)
-                yield (start, stop)
+            start = padded_start_time + timedelta(seconds=i * 1800)
+            stop = min(padded_start_time + timedelta(seconds=(i + 1) * 1800), stop_time)
+            yield (start, stop)
 
     async def _fetch(
         self,

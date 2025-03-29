@@ -73,7 +73,7 @@ class RFClient:
         for note in res.json()["data"]["results"]:
             attributes = note["attributes"]
             msg = f'[ANALYST NOTES] Processing note "{attributes["title"]}"'
-            self.helper.log_info(msg)
+            self.helper.connector_logger.info(msg)
             if pull_signatures and "attachment" in attributes:
                 try:
                     result = self.get_attachment(note["id"])
@@ -82,15 +82,15 @@ class RFClient:
                         attributes["attachment_type"] = result["type"]
                     else:
                         msg = "[ANALYST NOTES] No attachment found"
-                        self.helper.log_error(msg)
+                        self.helper.connector_logger.error(msg)
                 except requests.exceptions.HTTPError as err:
                     if "403" in str(err):
                         msg = "[ANALYST NOTES] Your API token does not have permission to pull Detection Rules"
-                        self.helper.log_error(msg)
+                        self.helper.connector_logger.error(msg)
                     else:
                         raise err
                 except (KeyError, IndexError):
-                    self.helper.log_error(
+                    self.helper.connector_logger.error(
                         "[ANALYST NOTES] Problem with API response for detection"
                         "rule for note {}. Rule will not be added".format(note["id"])
                     )
@@ -197,7 +197,9 @@ class RFClient:
 
     def get_entities_links(self, entities_id: list):
         try:
-            entities_params = {"entities": entities_id}
+            # The Links API doesn't allow more than 100 links between entities.
+            # The connector will retrieve only the 100 first links.
+            entities_params = {"entities": entities_id[:1]}
 
             res = self.session.post(LINKS_PATH, json=entities_params)
             res.raise_for_status()
@@ -208,7 +210,7 @@ class RFClient:
         except requests.RequestException as err:
             error_msg = f"[API] Error while fetching data from {LINKS_PATH}: {str(err)}"
             error_response = err.response.json()
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 error_msg, {"error_response": str(error_response["message"])}
             )
             return None

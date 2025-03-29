@@ -7,9 +7,9 @@ images:
     python: python3-11
   stream_splunk:
     python: python3-11
-  stream_sentinel-intel:
+  stream_microsoft-sentinel-intel:
     python: python3-11
-  stream_sentinel:
+  stream_sentinel-intel:
     python: python3-11
   stream_harfanglab-intel:
     python: python3-11

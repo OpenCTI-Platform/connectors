@@ -317,6 +317,17 @@ Example of result if you want to perform an investigation on an intrusion set an
 
 To verify that Risk Lists have been imported, navigate to the `Threats` -> `Intrusion Set` tab in the OpenCTI Platform. You should see new intrusion sets authored by the Identity Recorded Future. Click on those intrusion sets to see the details, and on `Knowledge` to see the relationships with the related entities configured.
 
+#### Threat Maps known issues
+
+You may find the following error:
+
+```{"timestamp": "2025-03-15T09:05:10.734479Z", "level": "ERROR", "name": "Recorded Future", "message": "[API] Error while fetching data from https://api.recordedfuture.com/links/search: 400 Client Error: Bad Request for url: https://api.recordedfuture.com/links/search", "exc_info": "Traceback (most recent call last):\n  File \"C:\\Users\\helen\\IdeaProjects\\connectors\\external-import\\recorded-future\\src\\rflib\\rf_client.py\", line 203, in get_entities_links\n    res.raise_for_status()\n  File \"C:\\Users\\helen\\IdeaProjects\\opencti\\venv312\\Lib\\site-packages\\requests\\models.py\", line 1024, in raise_for_status\n    raise HTTPError(http_error_msg, response=self)\nrequests.exceptions.HTTPError: 400 Client Error: Bad Request for url: https://api.recordedfuture.com/links/search", "taskName": null, "attributes": {"error_response": "Number of input entities is limited to 100"}}```
+
+The Links API doesn't allow more than 100 links between entities.
+
+The connector will retrieve only the 100 first links.
+
+
 ### Alerts
 
 Also known as Classic Alerts (or "Basic" Alerts), these are essentially saved searches that run periodically on the Recorded Future database. For example, a classic alert could search for all typosquats of a specific domain, run on a schedule (e.g., every hour), and return all detected typosquats along with some associated raw data from that timeframe.
