@@ -38,13 +38,12 @@ class ConnectorClient:
             if response.ok:
                 return response
             return None
-
         except requests.RequestException as err:
             error_msg = "[API] Error while fetching data: "
             self.helper.connector_logger.error(
                 error_msg, {"url_path": {api_url}, "error": {str(err)}}
             )
-            return None
+        return None
 
     def get_entities(self, params=None) -> list:
         """
@@ -70,3 +69,4 @@ class ConnectorClient:
             return ips
         except Exception as err:
             self.helper.connector_logger.error(err)
+            return ips

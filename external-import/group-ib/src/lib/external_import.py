@@ -99,7 +99,9 @@ class ExternalImportConnector:
             enable = self.cfg.get_collection_settings(collection_name, "enable")
             if enable == True:
                 self.enabled_collections.append(slached_collection_name)
-        self.helper.log_info(f"Enabled Collections: {self.enabled_collections}")
+        self.helper.connector_logger.info(
+            f"Enabled Collections: {self.enabled_collections}"
+        )
         # TI API initialization
         self.ti_adapter = TIAdapter(
             ti_creds_dict={
@@ -113,7 +115,7 @@ class ExternalImportConnector:
             collection_mapping_config=self.cfg.collection_mapping_config,
             collections_last_sequence_updates=current_state,
         )
-        self.helper.log_info(f"Initialized TI Adapter, {self.ti_adapter}")
+        self.helper.connector_logger.info(f"Initialized TI Adapter, {self.ti_adapter}")
         # create list of collections feeds generators
         self.MITRE_MAPPER = None
 
@@ -125,7 +127,7 @@ class ExternalImportConnector:
 
     def check_generator(self, generator, collection):
         if not generator:
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 "No generator for collection: {}".format(collection)
             )
             return False
@@ -133,7 +135,7 @@ class ExternalImportConnector:
 
     def check_enable(self, enable, collection):
         if not enable:
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 "User disable collection: {}. Aborting!".format(collection)
             )
             return False
@@ -182,18 +184,22 @@ class ExternalImportConnector:
     def get_last_run(self, current_state: dict | None):
         if current_state is not None and "last_run" in current_state:
             last_run = current_state["last_run"]
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"{self.helper.connect_name} connector last run: "
                 f"{self.get_formatted_utcfromtimestamp(date=last_run)}"
             )
         else:
             last_run = None
-            self.helper.log_info(f"{self.helper.connect_name} connector has never run")
+            self.helper.connector_logger.info(
+                f"{self.helper.connect_name} connector has never run"
+            )
         return last_run
 
     def run(self) -> None:
         # Main procedure
-        self.helper.log_info(f"Starting {self.helper.connect_name} connector...")
+        self.helper.connector_logger.info(
+            f"Starting {self.helper.connect_name} connector..."
+        )
         while True:
             try:
                 # Get the current timestamp and check
@@ -208,7 +214,9 @@ class ExternalImportConnector:
                 if last_run is None or (timestamp - last_run >= interval_seconds):
                     self.helper.metric.inc("run_count")
                     self.helper.metric.state("running")
-                    self.helper.log_info(f"{self.helper.connect_name} will run!")
+                    self.helper.connector_logger.info(
+                        f"{self.helper.connect_name} will run!"
+                    )
                     friendly_name = f"{self.helper.connect_name} run @ {self.get_formatted_utcfromtimestamp(date=timestamp)}"
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name
@@ -217,7 +225,9 @@ class ExternalImportConnector:
                     try:
                         # create list of collections feeds generators
                         data = self.ti_adapter.create_generators(sleep_amount=1)
-                        self.helper.log_debug(f"Generators data {data} {type(data)}")
+                        self.helper.connector_logger.debug(
+                            f"Generators data {data} {type(data)}"
+                        )
 
                         # MITRE
                         self.MITRE_MAPPER = get_mitre_mapper(
@@ -229,12 +239,12 @@ class ExternalImportConnector:
                         ###
                         for data_item in data:
                             prepared_data = data_item[1]
-                            self.helper.log_debug(
+                            self.helper.connector_logger.debug(
                                 f"Generator prepared data {prepared_data}"
                             )
                             collection = data_item[0][0]
                             generator = data_item[0][1]
-                            self.helper.log_debug(
+                            self.helper.connector_logger.debug(
                                 f"Generator data collection:{collection} , generator: {generator}"
                             )
                             collection_name_for_config_map = collection.replace(
@@ -291,7 +301,9 @@ class ExternalImportConnector:
                                 count = 0
                                 for event in parsed_portion:
                                     count += 1
-                                    self.helper.log_info(f"Parsing {count}/{size}")
+                                    self.helper.connector_logger.info(
+                                        f"Parsing {count}/{size}"
+                                    )
 
                                     bundle_objects = self._collect_intelligence(
                                         collection,
@@ -304,7 +316,7 @@ class ExternalImportConnector:
                                         objects=bundle_objects, allow_custom=True
                                     ).serialize()
 
-                                    self.helper.log_info(
+                                    self.helper.connector_logger.info(
                                         f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
                                     )
                                     self.helper.send_stix2_bundle(
@@ -312,7 +324,7 @@ class ExternalImportConnector:
                                         update=self.update_existing_data,
                                         work_id=work_id,
                                     )
-                                    self.helper.log_debug(
+                                    self.helper.connector_logger.debug(
                                         f"Sending {str(bundle_objects)} STIX objects to OpenCTI..."
                                     )
 
@@ -323,13 +335,13 @@ class ExternalImportConnector:
                                 self.set_or_update_state(prepared_data=prepared_data)
 
                     except Exception:
-                        self.helper.log_error(format_exc())
+                        self.helper.connector_logger.error(format_exc())
 
                     # Store the current timestamp as a last run
                     message = f"{self.helper.connect_name} connector successfully run, storing last_run as {timestamp}"
-                    self.helper.log_info(message)
+                    self.helper.connector_logger.info(message)
 
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"Grabbing current state and update it with last_run: {timestamp}"
                     )
                     self.set_or_update_state(timestamp=timestamp)
@@ -340,7 +352,9 @@ class ExternalImportConnector:
                         timestamp=timestamp,
                         last_run=last_run,
                     )
-                    self.helper.log_info(f"Last_run stored, next run in: {next_run_it}")
+                    self.helper.connector_logger.info(
+                        f"Last_run stored, next run in: {next_run_it}"
+                    )
                 else:
                     self.helper.metric.state("idle")
                     next_run_it = ExternalImportHelper.get_next_run_it(
@@ -349,21 +363,25 @@ class ExternalImportConnector:
                         timestamp=timestamp,
                         last_run=last_run,
                     )
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"{self.helper.connect_name} connector will not run, "
                         f"next run in:  {next_run_it} "
                     )
 
             except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info(f"{self.helper.connect_name} connector stopped")
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name} connector stopped"
+                )
                 sys.exit(0)
             except Exception:
                 self.helper.metric.inc("error_count")
                 self.helper.metric.state("stopped")
-                self.helper.log_error(format_exc())
+                self.helper.connector_logger.error(format_exc())
 
             if self.helper.connect_run_and_terminate:
-                self.helper.log_info(f"{self.helper.connect_name} connector ended")
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name} connector ended"
+                )
                 sys.exit(0)
 
             time.sleep(60)

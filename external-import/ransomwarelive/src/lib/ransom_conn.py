@@ -37,7 +37,6 @@ class RansomwareAPIConnector:
         helper (OpenCTIConnectorHelper): The helper to use.
         interval (str): The interval to use. It SHOULD be a string in the format '7d', '12h', '10m', '30s' where the
         final letter SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively.
-        update_existing_data (str): Whether to update existing data or not in OpenCTI.
     """
 
     def __init__(self):
@@ -66,7 +65,6 @@ class RansomwareAPIConnector:
             self.helper.log_error(msg)
             raise ValueError(msg) from _
 
-        update_existing_data = os.environ.get("CONNECTOR_UPDATE_EXISTING_DATA", "false")
         create_threat_actor = os.environ.get("CONNECTOR_CREATE_THREAT_ACTOR", "false")
         self.tlp_marking = "TLP:WHITE"
         self.marking = TLP_WHITE
@@ -76,29 +74,12 @@ class RansomwareAPIConnector:
             identity_class="organization",
             type="identity",
             object_marking_refs=[self.marking.get("id")],
-            contact_information="https://www.ransomware.live/#/about?id=⚙️-integration-with-opencti",
+            contact_information="https://www.ransomware.live/about#data",
             x_opencti_reliability="A - Completely reliable",
             allow_custom=True,
         )
         self.author = author
 
-        if isinstance(update_existing_data, str) and update_existing_data.lower() in [
-            "true",
-            "false",
-        ]:
-            self.update_existing_data = update_existing_data.lower() == "true"
-        elif isinstance(update_existing_data, bool) and update_existing_data.lower in [
-            True,
-            False,
-        ]:
-            self.update_existing_data = update_existing_data
-        else:
-            msg = (
-                f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'."
-                f" It SHOULD be either `true` or `false`. `false` is assumed. "
-            )
-            self.helper.log_warning(msg)
-            self.update_existing_data = "false"
         if isinstance(create_threat_actor, str) and create_threat_actor.lower() in [
             "true",
             "false",
@@ -280,12 +261,10 @@ class RansomwareAPIConnector:
                 filters={
                     "mode": "and",
                     "filters": [
-                        {"key": "entity_type", "values": ["Sector"], "operator": "eq"},
                         {
-                            "key": "name",
-                            "values": sector,
-                            "mode": "or",
-                            "operator": "search",
+                            "key": "entity_type",
+                            "values": ["Sector"],
+                            "operator": "eq",
                         },
                     ],
                     "filterGroups": [
@@ -293,16 +272,14 @@ class RansomwareAPIConnector:
                             "mode": "or",
                             "filters": [
                                 {
-                                    "key": "x_opencti_aliases",
-                                    "values": sector,
-                                    "mode": "or",
-                                    "operator": "search",
-                                },
-                                {
                                     "key": "name",
                                     "values": sector,
-                                    "mode": "or",
-                                    "operator": "search",
+                                    "operator": "eq",
+                                },
+                                {
+                                    "key": "x_opencti_aliases",
+                                    "values": sector,
+                                    "operator": "eq",
                                 },
                             ],
                             "filterGroups": [],
@@ -338,12 +315,12 @@ class RansomwareAPIConnector:
         if group_name in ("lockbit3", "lockbit2"):
             return ExternalReference(
                 source_name="Ransom Note",
-                url="https://www.ransomware.live/#/notes/lockbit",
+                url="https://www.ransomware.live/ransomnotes/lockbit",
                 description="Sample Ransom Note",
             )
         return ExternalReference(
             source_name="Ransom Note",
-            url=f"https://www.ransomware.live/#/notes/{group_name}",
+            url=f"https://www.ransomware.live/ransomnotes/{group_name}",
             description="Sample Ransom Note",
         )
 
@@ -385,7 +362,7 @@ class RansomwareAPIConnector:
         """Generates STIX objects from the ransomware.live API data"""
 
         # Creating Victim object
-        post_title = item.get("post_title")
+        post_title = item.get("victim")
         victim_name, identity_class = (
             (post_title, "organization")
             if len(post_title) > 2
@@ -401,12 +378,12 @@ class RansomwareAPIConnector:
         )
 
         # RansomNote External Reference
-        external_references_group = self.ransom_note_generator(item.get("group_name"))
+        external_references_group = self.ransom_note_generator(item.get("group"))
 
         # Creating Threat Actor object
         threat_actor = None
         if self.create_threat_actor:
-            threat_actor_name = item.get("group_name")
+            threat_actor_name = item.get("group")
             threat_actor = ThreatActor(
                 id=pycti.ThreatActorGroup.generate_id(threat_actor_name),
                 name=threat_actor_name,
@@ -425,10 +402,7 @@ class RansomwareAPIConnector:
 
         # Creating Intrusion Set object
         try:
-            if (
-                item.get("group_name") == "lockbit3"
-                or item.get("group_name") == "lockbit2"
-            ):
+            if item.get("group") == "lockbit3" or item.get("group") == "lockbit2":
                 intrusion_set = IntrusionSet(
                     id=pycti.IntrusionSet.generate_id("lockbit"),
                     name="lockbit",
@@ -442,14 +416,14 @@ class RansomwareAPIConnector:
                 )
 
             else:
-                intrusionset_name = item.get("group_name")
+                intrusionset_name = item.get("group")
                 intrusion_set = IntrusionSet(
                     id=pycti.IntrusionSet.generate_id(intrusionset_name),
                     name=intrusionset_name,
                     labels=["ransomware"],
                     created_by_ref=self.author.get("id"),
                     description=self.threat_description_generator(
-                        item.get("group_name"), group_data
+                        item.get("group"), group_data
                     ),
                     object_marking_refs=[self.marking.get("id")],
                     external_references=[external_references_group],
@@ -489,11 +463,9 @@ class RansomwareAPIConnector:
         if self.create_threat_actor:
             object_refs.append(target_relation.get("id"))
             object_refs.append(relation_is_ta.get("id"))
-        report_name = (
-            item.get("group_name") + " has published a new victim: " + post_title
-        )
+        report_name = item.get("group") + " has published a new victim: " + post_title
         report_created = datetime.fromisoformat(item.get("discovered"))
-        report_published = datetime.fromisoformat(item.get("published"))
+        report_published = datetime.fromisoformat(item.get("attackdate"))
         report = Report(
             id=pycti.Report.generate_id(report_name, report_published),
             report_types=["Ransomware-report"],
@@ -537,26 +509,24 @@ class RansomwareAPIConnector:
                         intrusion_set.get("id"), sector_id, "targets"
                     )
                     bundle.append(relation_sec_vic)
-                    bundle.append(relation_sec_TA)
                     bundle.append(relation_is_sec)
 
                     report.get("object_refs").append(sector_id)
                     report.get("object_refs").append(relation_sec_vic.get("id"))
-                    report.get("object_refs").append(relation_sec_TA.get("id"))
                     report.get("object_refs").append(relation_is_sec.get("id"))
         except Exception as e:
             self.helper.log_error(str(e))
 
         # Creating Domain object
-        if self.is_domain(item.get("post_title")):
+        if self.is_domain(item.get("victim")):
 
-            domain_name = item.get("post_title")
+            domain_name = item.get("victim")
             # Extracting domain name
             domain_name = self.domain_extractor(domain_name)
             # Fetching domain description
             description = self.fetch_country_domain(domain_name)
 
-            domain = self.domain_generator(item.get("post_title"), description)
+            domain = self.domain_generator(item.get("victim"), description)
             relation_vi_do = self.relationship_generator(
                 domain.get("id"), victim.get("id"), "belongs-to"
             )
@@ -582,14 +552,14 @@ class RansomwareAPIConnector:
             bundle.append(relation_vi_do)
 
         elif (
-            item.get("website") != ""
-            and not self.is_domain(item.get("post_title"))
-            and item.get("website") is not None
+            item.get("domain") != ""
+            and not self.is_domain(item.get("victim"))
+            and item.get("domain") is not None
         ):
 
-            if self.domain_extractor(item.get("website")) is not None:
+            if self.domain_extractor(item.get("domain")) is not None:
 
-                domain_name = self.domain_extractor(item.get("website"))
+                domain_name = self.domain_extractor(item.get("domain"))
 
                 description = self.fetch_country_domain(domain_name)
                 try:
@@ -673,8 +643,8 @@ class RansomwareAPIConnector:
     # Collects historic intelligence from ransomware.live
     def collect_historic_intelligence(self):
         """Collects historic intelligence from ransomware.live"""
-        base_url = "https://api.ransomware.live/victims/"
-        groups_url = "https://api.ransomware.live/groups"
+        base_url = "https://api.ransomware.live/v2/victims/"
+        groups_url = "https://api.ransomware.live/v2/groups"
         headers = {"accept": "application/json", "User-Agent": "OpenCTI"}
 
         # fetching group information
@@ -713,7 +683,7 @@ class RansomwareAPIConnector:
                                 )
                             except Exception as e:
                                 self.helper.log_error(
-                                    f"Error creating STIX objects: {item.get('post_title')}"
+                                    f"Error creating STIX objects: {item.get('victim')}"
                                 )
                                 self.helper.log_error(str(e))
 
@@ -734,7 +704,6 @@ class RansomwareAPIConnector:
                             if bundle is not None:
                                 self.helper.send_stix2_bundle(
                                     bundle,
-                                    update=self.update_existing_data,
                                     work_id=self.work_id,
                                 )
 
@@ -755,8 +724,8 @@ class RansomwareAPIConnector:
 
     def collect_intelligence(self, last_run) -> list:
 
-        url = "https://api.ransomware.live/recentvictims"
-        groups_url = "https://api.ransomware.live/groups"
+        url = "https://api.ransomware.live/v2/recentvictims"
+        groups_url = "https://api.ransomware.live/v2/groups"
         headers = {"accept": "application/json"}
 
         # fetching group information
@@ -812,7 +781,6 @@ class RansomwareAPIConnector:
                         if bundle is not None:
                             self.helper.send_stix2_bundle(
                                 bundle,
-                                update=self.update_existing_data,
                                 work_id=self.work_id,
                             )
                 self.helper.log_info(
@@ -928,7 +896,6 @@ class RansomwareAPIConnector:
                         if bundle_objects:
                             self.helper.send_stix2_bundle(
                                 bundle,
-                                update=self.update_existing_data,
                                 work_id=work_id,
                             )
 

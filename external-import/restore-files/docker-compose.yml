@@ -1,14 +1,13 @@
 version: "3"
 services:
   connector-restore-files:
-    image: opencti/connector-restore-files:6.5.3
+    image: opencti/connector-restore-files:6.5.10
     environment:
       - OPENCTI_URL=http://localhost # Local OpenCTI URL
       - OPENCTI_TOKEN=ChangeMe # Local OpenCTI token
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=RestoreFiles
       - CONNECTOR_SCOPE=restore
-      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - BACKUP_PROTOCOL=local # Protocol for file copy (only `local` is supported for now).
       - BACKUP_PATH=/tmp # Path to be used to copy the data, can be relative or absolute.

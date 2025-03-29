@@ -10,9 +10,8 @@
 """
 
 import os
-import time
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -231,53 +230,70 @@ class RFNotes:
 
     def run(self):
         """Run connector on a schedule"""
-        timestamp = int(time.time())
-        now = datetime.utcfromtimestamp(timestamp)
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id,
-            "Recorded Future Analyst Notes run @ " + now.strftime("%Y-%m-%d %H:%M:%S"),
-        )
-        self.helper.log_info("[ANALYST NOTES] Pulling analyst notes")
 
-        current_state = self.helper.get_state()
-        tas = self.rfapi.get_threat_actors()
-        if current_state is not None and "last_run" in current_state:
-            last_run = datetime.utcfromtimestamp(current_state["last_run"]).strftime(
-                "%Y-%m-%d %H:%M:%S"
+        # Get the current state
+        now = datetime.now()
+        current_timestamp = int(datetime.timestamp(now))
+        current_state = self.helper.get_state() or {}
+
+        if current_state is not None and "last_analyst_notes_run" in current_state:
+            last_analyst_notes_run = current_state["last_analyst_notes_run"]
+
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Connector last analyst notes run",
+                {"last_run_datetime": last_analyst_notes_run},
             )
-            self.helper.log_info("Connector last run: " + last_run)
             published = self.last_published_notes_interval
         else:
-            msg = (
-                "Connector has never run. Doing initial pull of "
-                f"{self.rf_initial_lookback} hours"
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Connector has never run...",
+                {"initial_lookback_hours": self.rf_initial_lookback},
             )
-            self.helper.log_info(msg)
             published = self.rf_initial_lookback
+
+        # Friendly name will be displayed on OpenCTI platform
+        friendly_name = "Recorded Future Analyst Notes"
+
+        # Initiate a new work
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
 
         try:
             # Import, convert and send to OpenCTI platform Analyst Notes
+            tas = self.rfapi.get_threat_actors()
             self.convert_and_send(published, tas, work_id)
         except Exception as e:
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(str(e))
 
-        self.helper.set_state({"last_run": timestamp})
+        # Store the current timestamp as a last run of the connector
+        self.helper.connector_logger.debug(
+            "Getting current state and update it with last run of the connector",
+            {"current_timestamp": current_timestamp},
+        )
+
+        current_state = self.helper.get_state() or {}
+        last_run_datetime = datetime.fromtimestamp(
+            current_timestamp, tz=timezone.utc
+        ).strftime("%Y-%m-%d %H:%M:%S")
+        current_state.update({"last_analyst_notes_run": last_run_datetime})
+        self.helper.set_state(state=current_state)
         message = (
-            f"{self.helper.connect_name} connector successfully run, storing last_run for Analyst Notes as "
-            + str(timestamp)
+            f"{self.helper.connect_name} connector successfully run, storing last run for Analyst Notes as "
+            + str(last_run_datetime)
         )
         self.helper.api.work.to_processed(work_id, message)
 
     def convert_and_send(self, published, tas, work_id):
         """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"[ANALYST NOTES] Pull Signatures is {str(self.rf_pull_signatures)} of type "
             f"{type(self.rf_pull_signatures)}"
         )
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"[ANALYST NOTES] Insikt Only is {str(self.rf_insikt_only)} of type {type(self.rf_insikt_only)}"
         )
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"[ANALYST NOTES] Topics are {str(self.rf_topics)} of type {type(self.rf_topics)}"
         )
         notes = []
@@ -291,7 +307,7 @@ class RFNotes:
                     notes.append(new_note)
                     notes_ids.append(new_note["id"])
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"[ANALYST NOTES] Fetched {len(notes)} Analyst notes from API"
         )
         for note in notes:
@@ -308,7 +324,7 @@ class RFNotes:
                 stixnote.from_json(note, self.tlp)
                 stixnote.create_relations()
                 bundle = stixnote.to_stix_bundle()
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     "[ANALYST NOTES] Sending Bundle to server with "
                     + str(len(bundle.objects))
                     + " objects"
@@ -318,7 +334,7 @@ class RFNotes:
                     work_id=work_id,
                 )
             except Exception as exception:
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     f"[ANALYST NOTES] Bundle has been skipped due to exception: "
                     f"{str(exception)}"
                 )
@@ -345,7 +361,7 @@ class RFConnector:
             )
             self.alerts.run()
         else:
-            self.RF.helper.log_info("[ALERTS] Alerts fetching disabled")
+            self.RF.helper.connector_logger.info("[ALERTS] Alerts fetching disabled")
 
         # Start RF Alert playbook
         if self.RF.rf_playbook_alert_enable:
@@ -360,7 +376,7 @@ class RFConnector:
             )
             self.alerts_playbook.run()
         else:
-            self.RF.helper.log_info(
+            self.RF.helper.connector_logger.info(
                 "[PLAYBOOK ALERTS] Playbook alerts fetching disabled"
             )
 
@@ -375,7 +391,9 @@ class RFConnector:
             )
             self.risk_list.start()
         else:
-            self.RF.helper.log_info("[RISK LISTS] Risk list fetching disabled")
+            self.RF.helper.connector_logger.info(
+                "[RISK LISTS] Risk list fetching disabled"
+            )
 
         # Pull RF Threat actors and Malware from Threat map
         if self.RF.rf_pull_threat_maps:
@@ -387,7 +405,9 @@ class RFConnector:
             )
             self.threat_maps.start()
         else:
-            self.RF.helper.log_info("[THREAT MAPS] Threat maps fetching disabled")
+            self.RF.helper.connector_logger.info(
+                "[THREAT MAPS] Threat maps fetching disabled"
+            )
 
         # Pull Analyst Notes if enabled
         if self.RF.rf_pull_analyst_notes:
@@ -407,7 +427,9 @@ class RFConnector:
             )
             self.analyst_notes.run()
         else:
-            self.RF.helper.log_info("[ANALYST NOTES] Analyst notes fetching disabled")
+            self.RF.helper.connector_logger.info(
+                "[ANALYST NOTES] Analyst notes fetching disabled"
+            )
 
     def run_all_processes(self):
         if self.RF.duration_period:

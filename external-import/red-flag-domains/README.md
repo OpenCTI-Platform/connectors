@@ -13,7 +13,6 @@ This connector facilitates the import of domain names from the Red Flag Domains 
 | `connector_id`                   | `CONNECTOR_ID`                   | A valid arbitrary `UUIDv4` that must be unique for this connector.                                 |
 | `connector_name`                 | `CONNECTOR_NAME`                 | The name of the connector, can be just "Red Flag Domains"                                          |
 | `connector_scope`                | `CONNECTOR_SCOPE`                | Must be `red-flag-domains`.                                                                        |
-| `connector_confidence_level`     | `CONNECTOR_CONFIDENCE_LEVEL`     | The default confidence level for created relationships (0 -> 100).                                 |
 | `connector_update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | If an entity already exists, update its attributes with information provided by this connector.    |
 | `connector_log_level`            | `CONNECTOR_LOG_LEVEL`            | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).      |
 | `redflagdomains_url`             | `REDFLAGDOMAINS_URL`             | The Red Flag Domains URL.                                                                          |
@@ -31,7 +30,6 @@ connector-redflag-domains:
     - CONNECTOR_ID=CONNECTOR_ID
     - "CONNECTOR_NAME=Red Flag Domains"
     - CONNECTOR_SCOPE=red-flag-domains
-    - CONNECTOR_CONFIDENCE_LEVEL=70
     - CONNECTOR_UPDATE_EXISTING_DATA=False
     - CONNECTOR_LOG_LEVEL=info
     - REDFLAGDOMAINS_URL=https://dl.red.flag.domains/daily/

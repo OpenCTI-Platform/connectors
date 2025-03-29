@@ -44,14 +44,14 @@ class ConnectorTemplate:
 
     """
 
-    def __init__(self):
+    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
 
         # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.config = config
+        self.helper = helper
         self.client = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
 

@@ -16,32 +16,39 @@ class IntelManager:
         :param entity: OpenCTI entity (either an indicator, observable or file) to add external reference to
         :param intel_document_id: ID of Tanium intel document to add as external reference
         """
-        entity_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
-            "id", entity
-        )
-        intel_document_url = (
-            self.tanium_api_handler.get_url().replace("-api", "")
-            + "/#/threatresponse/intel/"
-            + str(intel_document_id)
-        )
-        external_reference = self.helper.api.external_reference.create(
-            source_name=self.helper.connect_name,
-            url=intel_document_url,
-            external_id=str(intel_document_id),
-            description="Intel document within the Tanium platform.",
-        )
+        try:
+            entity_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
+                "id", entity
+            )
+            intel_document_url = (
+                self.tanium_api_handler.get_url().replace("-api", "")
+                + "/#/threatresponse/intel/"
+                + str(intel_document_id)
+            )
+            external_reference = self.helper.api.external_reference.create(
+                source_name=self.helper.connect_name,
+                url=intel_document_url,
+                external_id=str(intel_document_id),
+                description="Intel document within the Tanium platform.",
+            )
 
-        # /!\ OpenCTI API shouldn't be used in stream connectors - waiting for a better solution
-        if entity["type"] == "indicator":
-            self.helper.api.stix_domain_object.add_external_reference(
-                id=entity_opencti_id,
-                external_reference_id=external_reference["id"],
+            # /!\ OpenCTI API shouldn't be used in stream connectors - waiting for a better solution
+            if entity["type"] == "indicator":
+                self.helper.api.stix_domain_object.add_external_reference(
+                    id=entity_opencti_id,
+                    external_reference_id=external_reference["id"],
+                )
+            else:
+                self.helper.api.stix_cyber_observable.add_external_reference(
+                    id=entity_opencti_id,
+                    external_reference_id=external_reference["id"],
+                )
+        except:
+            self.helper.connector_logger.error(
+                "[ERROR] Cannot create external reference",
+                {"source_name": self.helper.connect_name, "url": intel_document_url},
             )
-        else:
-            self.helper.api.stix_cyber_observable.add_external_reference(
-                id=entity_opencti_id,
-                external_reference_id=external_reference["id"],
-            )
+            return
 
     def _delete_entity_external_reference(self, intel_document_id):
         """

@@ -111,7 +111,7 @@ def _extract_stix_from_nistnvd2(
                 cpe=cpe, converter_to_stix=converter_to_stix, logger=logger
             )
             if vuln is not None:
-                result.extend(
+                result.append(
                     _create_rel_has(
                         software=software,
                         vulnerability=vuln,

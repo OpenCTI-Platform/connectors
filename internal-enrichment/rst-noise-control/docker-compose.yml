@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-rst-noise-control:
-    image: opencti/connector-rst-noise-control:6.5.3
+    image: opencti/connector-rst-noise-control:6.5.10
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -18,6 +18,5 @@ services:
       - RST_NOISE_CONTROL_CHANGE_ACTION_SCORE_CHANGE=10     # reduce score and confidence by M
       - RST_NOISE_CONTROL_DROP_ACTION_SCORE_CHANGE=50       # reduce score and confidence by N
       - RST_NOISE_CONTROL_DROP_ACTION_DETECTION_FLAG=true   # if action is Drop, unset the detection flag
-      - RST_NOISE_CONTROL_DROP_CREATED_BY_FILTER=RST Cloud   # comma separated list of authors that are to be excluded from automatic check
     depends_on:
       - opencti
