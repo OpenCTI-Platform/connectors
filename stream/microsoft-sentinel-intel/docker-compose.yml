@@ -1,0 +1,23 @@
+version: '3'
+services:
+  connector-microsoft-sentinel-intel:
+    image: opencti/connector-microsoft-sentinel-intel:6.5.10
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - "CONNECTOR_NAME=Microsoft Sentinel Intel"
+      - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
+      - CONNECTOR_LOG_LEVEL=error
+      - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe # Azure Tenant ID
+      - MICROSOFT_SENTINEL_INTEL_CLIENT_ID=ChangeMe # Azure App Client ID
+      - MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET=ChangeMe # Azure App Client Secret
+      - "MICROSOFT_GRAPH_INTEL_TARGET_PRODUCT=Azure Sentinel" # "Azure Sentinel" or "Microsoft Defender ATP"
+      - MICROSOFT_SENTINEL_INTEL_LOGIN_URL=https://login.microsoft.com
+      - MICROSOFT_SENTINEL_INTEL_BASE_URL=https://sentinel.microsoft.com
+      - MICROSOFT_SENTINEL_INTEL_RESOURCE_PATH=/beta/security/tiIndicators
+      - MICROSOFT_SENTINEL_INTEL_EXPIRE_TIME=30 # Number of days for IOC to expire in Sentinel
+    restart: unless-stopped

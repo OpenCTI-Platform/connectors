@@ -1020,7 +1020,7 @@ class StixNote:
                 continue
             elif type_ not in ENTITY_TYPE_MAPPER:
                 msg = f"[ANALYST NOTES] Cannot convert entity {name} to STIX2 because it is of type {type_}"
-                self.helper.log_warning(msg)
+                self.helper.connector_logger.warning(msg)
                 continue
             else:
                 rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, tlp)
@@ -1037,7 +1037,7 @@ class StixNote:
                             INDICATOR_TYPE_URL_MAPPER[type_], name
                         )
                         if risk_score < self.risk_threshold:
-                            self.helper.log_info(
+                            self.helper.connector_logger.info(
                                 f"[ANALYST NOTES] Ignoring entity {name} as its risk score is lower than the defined risk threshold"
                             )
                             continue
@@ -1108,7 +1108,7 @@ class StixNote:
         for topic in topics:
             name = topic["name"]
             if name not in self.report_type_mapper:
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     "[ANALYST NOTES] Could not map a report type for type {}".format(
                         name
                     )

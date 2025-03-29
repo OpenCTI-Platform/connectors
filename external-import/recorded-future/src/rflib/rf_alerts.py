@@ -14,7 +14,7 @@ from pycti import (
 )
 
 from .constants import TLP_MAP
-from .make_markdown_table import make_markdown_table
+from .utils import is_ip_v4_address, is_ip_v6_address, make_markdown_table
 
 
 class Vocabulary:
@@ -28,7 +28,7 @@ class RecordedFutureAlertConnector(threading.Thread):
         threading.Thread.__init__(self)
         self.helper = helper
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "Starting Recorded Future Alert connector module initialization"
         )
 
@@ -133,16 +133,20 @@ class RecordedFutureAlertConnector(threading.Thread):
         )
 
         self.update_rules()
+
         timestamp = datetime.datetime.now(pytz.timezone("UTC"))
-        current_state = self.helper.get_state()
-        if current_state is not None and "last_alert_run" in current_state:
-            current_state_datetime = datetime.datetime.strptime(
-                current_state["last_alert_run"], "%Y-%m-%dT%H:%M:%S"
+        current_state = self.helper.get_state() or {}
+
+        if current_state is not None and "last_alerts_run" in current_state:
+
+            last_alerts_run = datetime.datetime.strptime(
+                current_state["last_alerts_run"], "%Y-%m-%dT%H:%M:%S"
             )
-            if current_state_datetime.date() == datetime.datetime.today().date():
+
+            if last_alerts_run.date() == datetime.datetime.today().date():
                 self.run_for_time_period(
                     trigger=str(datetime.datetime.today().date()),
-                    after=current_state["last_alert_run"],
+                    after=current_state["last_alerts_run"],
                 )
                 for alert in self.api_recorded_future.alerts:
                     try:
@@ -153,25 +157,26 @@ class RecordedFutureAlertConnector(threading.Thread):
                             {"alert_id": alert.alert_id, "error_msg": str(err)},
                         )
                     timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
-                    self.helper.set_state(
+
+                    current_state = self.helper.get_state() or {}
+                    current_state.update(
                         {
-                            "last_alert_run": timestamp_checkpoint.strftime(
+                            "last_alerts_run": timestamp_checkpoint.strftime(
                                 "%Y-%m-%dT%H:%M:%S"
                             )
                         }
                     )
+                    self.helper.set_state(current_state)
             else:
                 local_alerts = []
                 self.run_for_time_period(
-                    trigger=str(current_state_datetime.date()),
-                    after=current_state["last_alert_run"],
+                    trigger=str(last_alerts_run.date()),
+                    after=current_state["last_alerts_run"],
                 )
                 local_alerts.extend(self.api_recorded_future.alerts)
-                day_delta = (
-                    datetime.datetime.today().date() - current_state_datetime.date()
-                )
+                day_delta = datetime.datetime.today().date() - last_alerts_run.date()
                 for i in range(1, day_delta.days + 1):
-                    day = current_state_datetime.date() + datetime.timedelta(days=i)
+                    day = last_alerts_run.date() + datetime.timedelta(days=i)
                     self.run_for_time_period(trigger=str(day))
                     local_alerts.extend(self.api_recorded_future.alerts)
                 for alert in local_alerts:
@@ -183,13 +188,16 @@ class RecordedFutureAlertConnector(threading.Thread):
                             {"alert_id": alert.alert_id, "error_msg": str(err)},
                         )
                     timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
-                    self.helper.set_state(
+
+                    current_state = self.helper.get_state() or {}
+                    current_state.update(
                         {
-                            "last_alert_run": timestamp_checkpoint.strftime(
+                            "last_alerts_run": timestamp_checkpoint.strftime(
                                 "%Y-%m-%dT%H:%M:%S"
                             )
                         }
                     )
+                    self.helper.set_state(current_state)
         else:
             self.run_for_time_period(trigger=str(datetime.datetime.today().date()))
             for alert in self.api_recorded_future.alerts:
@@ -201,17 +209,23 @@ class RecordedFutureAlertConnector(threading.Thread):
                         {"alert_id": alert.alert_id, "error_msg": str(err)},
                     )
                 timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
-                self.helper.set_state(
+
+                current_state = self.helper.get_state() or {}
+                current_state.update(
                     {
-                        "last_alert_run": timestamp_checkpoint.strftime(
+                        "last_alerts_run": timestamp_checkpoint.strftime(
                             "%Y-%m-%dT%H:%M:%S"
                         )
                     }
                 )
+                self.helper.set_state(current_state)
 
-        self.helper.set_state(
-            {"last_alert_run": timestamp.strftime("%Y-%m-%dT%H:%M:%S")}
+        current_state = self.helper.get_state() or {}
+        current_state.update(
+            {"last_alerts_run": timestamp.strftime("%Y-%m-%dT%H:%M:%S")}
         )
+        self.helper.set_state(current_state)
+
         message = f"{self.helper.connect_name} connector successfully run for Recorded Future Alerts"
         self.helper.api.work.to_processed(self.work_id, message)
 
@@ -298,18 +312,36 @@ class RecordedFutureAlertConnector(threading.Thread):
                     bundle_objects.append(stix_relationship)
 
                 elif entity["type"] == "IpAddress":
-                    stix_ipv4address = stix2.IPv4Address(
-                        value=entity["name"],
-                        object_marking_refs=self.tlp,
-                        custom_properties={
-                            "x_opencti_created_by_ref": self.author["id"],
-                        },
-                    )
-                    stix_relationship = self._generate_stix_relationship(
-                        stix_ipv4address.id, "related-to", stix_incident.id
-                    )
-                    bundle_objects.append(stix_ipv4address)
-                    bundle_objects.append(stix_relationship)
+                    stix_ip_address = None
+                    ip_address_value = entity["name"]
+                    if is_ip_v4_address(ip_address_value):
+                        stix_ip_address = stix2.IPv4Address(
+                            value=ip_address_value,
+                            object_marking_refs=self.tlp,
+                            custom_properties={
+                                "x_opencti_created_by_ref": self.author["id"],
+                            },
+                        )
+                    elif is_ip_v6_address(ip_address_value):
+                        stix_ip_address = stix2.IPv6Address(
+                            value=ip_address_value,
+                            object_marking_refs=self.tlp,
+                            custom_properties={
+                                "x_opencti_created_by_ref": self.author["id"],
+                            },
+                        )
+                    else:
+                        self.helper.connector_logger.warning(
+                            "Invalid IP address, the entity will be skipped.",
+                            {"ip_address": ip_address_value},
+                        )
+
+                    if stix_ip_address:
+                        stix_relationship = self._generate_stix_relationship(
+                            stix_ip_address.id, "related-to", stix_incident.id
+                        )
+                        bundle_objects.append(stix_ip_address)
+                        bundle_objects.append(stix_relationship)
                 elif entity["type"] == "EmailAddress":
                     stix_emailaddress = stix2.EmailAddress(
                         value=entity["name"],
@@ -530,9 +562,11 @@ class RecordedFutureAlertConnector(threading.Thread):
             self.recordedfuture_alert_time, after=after
         )
         if len(self.api_recorded_future.alerts) == 0:
-            self.helper.log_info("[" + str(trigger) + "] No alert found : exiting")
+            self.helper.connector_logger.info(
+                "[" + str(trigger) + "] No alert found : exiting"
+            )
         else:
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 "["
                 + str(trigger)
                 + "] "
