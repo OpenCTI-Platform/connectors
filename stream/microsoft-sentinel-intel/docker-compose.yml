@@ -15,9 +15,8 @@ services:
       - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe # Azure Tenant ID
       - MICROSOFT_SENTINEL_INTEL_CLIENT_ID=ChangeMe # Azure App Client ID
       - MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET=ChangeMe # Azure App Client Secret
-      - "MICROSOFT_GRAPH_INTEL_TARGET_PRODUCT=Azure Sentinel" # "Azure Sentinel" or "Microsoft Defender ATP"
-      - MICROSOFT_SENTINEL_INTEL_LOGIN_URL=https://login.microsoft.com
-      - MICROSOFT_SENTINEL_INTEL_BASE_URL=https://sentinel.microsoft.com
-      - MICROSOFT_SENTINEL_INTEL_RESOURCE_PATH=/beta/security/tiIndicators
-      - MICROSOFT_SENTINEL_INTEL_EXPIRE_TIME=30 # Number of days for IOC to expire in Sentinel
+      - SENTINEL_INTEL_LOGIN_TYPE=client_secret
+      - SENTINEL_INTEL_WORKSPACE_ID⁼ChangeMe
+      - "SENTINEL_INTEL_SOURCE_SYSTEM=Opencti Stream Connector"
+
     restart: unless-stopped

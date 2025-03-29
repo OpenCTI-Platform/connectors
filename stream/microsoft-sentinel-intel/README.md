@@ -1,14 +1,13 @@
 # OpenCTI Microsoft Sentinel Intelligence Connector
 
-This OpenCTI connector allows the ability to create or delete data from your OpenCTI platform to either the Microsoft
-Sentinel or Microsoft Defender for Endpoint platform utilizing
-the [Microsoft Graph API Threat Intelligence Indicator](https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta).
+This OpenCTI connector allows the ability to create and update data from your OpenCTI platform to Microsoft Sentinel
 Microsoft has a detailed guide on how to get started with connecting your threat intelligence platform to Sentinel
-found [here](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/data/sentinel-threat-intelligence#import-threat-indicators-with-the-platforms-data-connector).
+found [here](https://learn.microsoft.com/en-us/azure/sentinel/connect-threat-intelligence-upload-api).
 
 ## Installation
 
-If you don't know how to get the `tenant_id`, `client_id`, and `client_secret` information, here's a screenshot to
+It is recommended to use a managed identity for authentication. It's also possible to use an app registration.
+If you don't know how to get the `tenant_id`, `client_id`, and `client_secret` for the app registrationinformation, here's a screenshot to
 help !
 ![Sentinel_variables](./doc/sentinel_info_variables.png)
 
@@ -57,24 +56,16 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for Sentinel Connector:
 
-| Parameter `microsoft_sentinel_intel`   | config.yml       | Docker environment variable              | Default  | Mandatory | Example                       | Description                                                                                                                                                                                                                                                                                                                                                       |
-|-------------------------------------|------------------|------------------------------------------|----------|-----------|-------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Tenant ID                           | `tenant_id`      | `MICROSOFT_SENTINEL_INTEL_TENANT_ID`        | /        | Yes       | /                             | Your Azure App Tenant ID, see the screenshot to help you find this information.                                                                                                                                                                                                                                                                                   |
-| Client ID                           | `client_id`      | `MICROSOFT_SENTINEL_INTEL_CLIENT_ID`        | /        | Yes       | /                             | Your Azure App Client ID, see the screenshot to help you find this information.                                                                                                                                                                                                                                                                                   |
-| Client Secret                       | `client_secret`  | `MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET`    | /        | Yes       | /                             | Your Azure App Client secret, See the screenshot to help you find this information.                                                                                                                                                                                                                                                                               |
-| Login Url                           | `login_url`      | `MICROSOFT_SENTINEL_INTEL_LOGIN_URL`        | /        | No        | `https://login.microsoft.com` | Login URL for Microsoft which is `https://login.microsoft.com`                                                                                                                                                                                                                                                                                                    |
-| API Base URL                        | `base_url`       | `MICROSOFT_SENTINEL_INTEL_BASE_URL`         | /        | No        | `https://graph.microsoft.com` | The resource the API will use which is `https://sentinel.microsoft.com`                                                                                                                                                                                                                                                                                              |
-| Resource Url Path                   | `resource_path`  | `MICROSOFT_SENTINEL_INTEL_RESOURCE_PATH`    | /        | No        | `/beta/security/tiIndicators` | The request URL that will be used which is `/beta/security/tiIndicators`                                                                                                                                                                                                                                                                                          |
-| Expire Time                         | `expire_time`    | `MICROSOFT_SENTINEL_INTEL_EXPIRE_TIME`      | /        | Yes       | `30`                          | Number of days for your indicator to expire in Sentinel. Suggestion of `30` as a default                                                                                                                                                                                                                                                                          |
-| Target Product                      | `target_product` | `MICROSOFT_SENTINEL_INTEL_TARGET_PRODUCT`   | /        | Yes       | `Azure Sentinel`              | `Azure Sentinel` or `Microsoft Defender ATP`                                                                                                                                                                                                                                                                                                                      |
-| Action                              | `action`         | `MICROSOFT_SENTINEL_INTEL_ACTION`           | /        | No        | `alert`                       | The action to apply if the indicator is matched from within the targetProduct security tool. Possible values are: `unknown`, `allow`, `block`, `alert`.                                                                                                                                                                                                           |
-| TLP Level                           | `tlp_level`      | `MICROSOFT_SENTINEL_INTEL_TLP_LEVEL`        | /        | No        | `amber`                       | This will overide all TLP values submitted to Sentinel to this. Possible TLP values are `unknown`, `white`, `green`, `amber`, `red`                                                                                                                                                                                                                               |
-| Passive Only                        | `passive_only`   | `MICROSOFT_SENTINEL_INTEL_PASSIVE_ONLY`     | /        | No        | `true`                        | Determines if the indicator should trigger an event that is visible to an end-user. When set to `True` security tools will not notify the end user that a ‘hit’ has occurred. This is most often treated as audit or silent mode by security products where they will simply log that a match occurred but will not perform the action. Default value is `False`. |
-
+| Parameter `microsoft_sentinel_intel` | config.yml      | Docker environment variable              | Default                    | Mandatory | Example | Description                                                                         |
+|--------------------------------------|-----------------|------------------------------------------|----------------------------|-----------|---------|-------------------------------------------------------------------------------------|
+| Tenant ID                            | `tenant_id`     | `MICROSOFT_SENTINEL_INTEL_TENANT_ID`     | /                          | Yes       | /       | Your Azure App Tenant ID, see the screenshot to help you find this information.     |
+| Client ID                            | `client_id`     | `MICROSOFT_SENTINEL_INTEL_CLIENT_ID`     | /                          | Yes       | /       | Your Azure App Client ID, see the screenshot to help you find this information.     |
+| Client Secret                        | `client_secret` | `MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET` | /                          | Yes       | /       | Your Azure App Client secret, See the screenshot to help you find this information. |
+| Source System                        | `source_system` | `MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM` | /                          | Yes       | /       | Your Azure Workspace ID                                                             |
+| Workspace ID                         | `workspace_id`  | `MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID`  | 'Opencti Stream Connector' | No        | /       | The name of the source system                                                       |
+| Login Type                           | `login_type`    | `MICROSOFT_SENTINEL_INTEL_LOGIN_TYPE`    | 'client_secret'            | No        | /       | The type of authentication, possible values: client_secret / managed_identity       |
 
 ### Known Behavior
 
 - When creating, updating or deleting and IOC, it can take few minutes before seeing it into Microsoft Sentinel TI
-- When creating an email address, it will display the `Types` as `Other`
-
-![Display of Email Address on MSTI](./doc/ioc_msti.png)
+- Deleting indicators is currently not supported
