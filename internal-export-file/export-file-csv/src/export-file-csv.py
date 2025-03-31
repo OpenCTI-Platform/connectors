@@ -26,7 +26,9 @@ class ExportFileCsv:
             False,
             ";",
         )
-        self.errors: list[Exception] = [] # error holder to be reset before each new process
+        self.errors: list[Exception] = (
+            []
+        )  # error holder to be reset before each new process
 
     def export_dict_list_to_csv(self, data):
         output = io.StringIO()
@@ -102,8 +104,12 @@ class ExportFileCsv:
                         row.append("")
                 csv_data.append(row)
             except Exception as err:
-                self.helper.connector_logger.warning("Error with csv input data, one line cannot be exported." + str(err))
-                self.errors.append("Error with csv input data, one line cannot be exported.")
+                self.helper.connector_logger.warning(
+                    "Error with csv input data, one line cannot be exported." + str(err)
+                )
+                self.errors.append(
+                    "Error with csv input data, one line cannot be exported."
+                )
         writer = csv.writer(
             output,
             delimiter=self.export_file_csv_delimiter,
@@ -168,8 +174,7 @@ class ExportFileCsv:
         entity_type = data["entity_type"]
         main_filter = data.get("main_filter")
         access_filter = data.get("access_filter")
-        self.errors = [] # reset before launching main process
-        
+        self.errors = []  # reset before launching main process
 
         # Single export always containing object_refs
         # Full but no relationships
@@ -309,9 +314,9 @@ class ExportFileCsv:
         if len(self.errors) > 0:
             msg = f"Some values were not processed in CSV (for {len(self.errors)} lines). See connector logs for details."
             # to uncomment when it's possible to download a csv on OpenCTI despite warning on export.
-            #self.helper.api.work.report_expectation(
+            # self.helper.api.work.report_expectation(
             #    work_id=self.helper.work_id, error={"error": msg, "source": "CONNECTOR"}
-            #)
+            # )
             return msg
         return "Export done"
 
