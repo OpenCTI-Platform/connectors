@@ -29,39 +29,24 @@ class Country(BaseGeolocation):
     """Define Country."""
 
     name: str = Field(..., description="The country name.", min_length=1)
-    multi_polygon: Optional[list[list[tuple[float, float]]]] = Field(
-        None, description="The country multi-polygon in WGS84."
-    )
 
 
 class Region(BaseGeolocation):
     """DEfine Region."""
 
     name: str = Field(..., description="The region name.", min_length=1)
-    multi_polygon: Optional[list[list[tuple[float, float]]]] = Field(
-        None, description="The region multi-polygon in WGS84."
-    )
 
 
 class Area(BaseGeolocation):
     """DEfine Area."""
 
     name: str = Field(..., description="The area name.", min_length=1)
-    multi_polygon: Optional[list[list[tuple[float, float]]]] = Field(
-        None, description="The area multi-polygon in WGS84."
-    )
 
 
 class City(BaseGeolocation):
     """Define City."""
 
     name: str = Field(..., description="The city name.", min_length=1)
-    latitude: Optional[float] = Field(
-        None, description="The position latitude in WGS84."
-    )
-    longitude: Optional[float] = Field(
-        None, description="The position longitude in WGS84."
-    )
 
 
 class Position(BaseGeolocation):

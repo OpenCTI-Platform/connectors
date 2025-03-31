@@ -42,24 +42,6 @@ def test_country_minimal_initialization():
     assert country.name == "Test Country"  # noqa: S101
 
 
-def test_country_full_initialization():
-    """Test Country initialization."""
-    # Given  data
-    data = {
-        "name": "Test Country",
-        "multi_polygon": [[(0, 0), (0, 1), (1, 1), (1, 0), (0, 0)]],
-    }
-
-    # When initializing Country
-    country = Country.model_validate(data)
-
-    # Then it should initialize without errors
-    assert country.name == "Test Country"  # noqa: S101
-    assert country.multi_polygon == [  # noqa: S101
-        [(0, 0), (0, 1), (1, 1), (1, 0), (0, 0)]
-    ]
-
-
 def test_region_minimal_initialization():
     """Test that Region initializes correctly."""
     # Given valid data
@@ -70,24 +52,6 @@ def test_region_minimal_initialization():
 
     # Then it should initialize without errors
     assert region.name == "Test Region"  # noqa: S101
-
-
-def test_region_full_initialization():
-    """Test Region initialization."""
-    # Given  data
-    data = {
-        "name": "Test Region",
-        "multi_polygon": [[(0, 0), (0, 1), (1, 1), (1, 0), (0, 0)]],
-    }
-
-    # When initializing Region
-    region = Region.model_validate(data)
-
-    # Then it should initialize without errors
-    assert region.name == "Test Region"  # noqa: S101
-    assert region.multi_polygon == [  # noqa: S101
-        [(0, 0), (0, 1), (1, 1), (1, 0), (0, 0)]
-    ]
 
 
 def test_area_minimal_initialization():
@@ -102,24 +66,6 @@ def test_area_minimal_initialization():
     assert area.name == "Test Area"  # noqa: S101
 
 
-def test_area_full_initialization():
-    """Test Area initialization."""
-    # Given  data
-    data = {
-        "name": "Test Area",
-        "multi_polygon": [[(0, 0), (0, 1), (1, 1), (1, 0), (0, 0)]],
-    }
-
-    # When initializing Area
-    area = Area.model_validate(data)
-
-    # Then it should initialize without errors
-    assert area.name == "Test Area"  # noqa: S101
-    assert area.multi_polygon == [  # noqa: S101
-        [(0, 0), (0, 1), (1, 1), (1, 0), (0, 0)]
-    ]
-
-
 def test_city_minimal_initialization():
     """Test that City initializes correctly."""
     # Given valid data
@@ -130,20 +76,6 @@ def test_city_minimal_initialization():
 
     # Then it should initialize without errors
     assert city.name == "Test City"  # noqa: S101
-
-
-def test_city_full_initialization():
-    """Test City initialization."""
-    # Given  data
-    data = {"name": "Test City", "latitude": 0, "longitude": 0}
-
-    # When initializing City
-    city = City.model_validate(data)
-
-    # Then it should initialize without errors
-    assert city.name == "Test City"  # noqa: S101
-    assert city.latitude == 0  # noqa: S101
-    assert city.longitude == 0  # noqa: S101
 
 
 def test_position_minimal_initialization():
