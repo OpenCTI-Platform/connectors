@@ -188,9 +188,7 @@ class MicrosoftGraphSecurityIntelConnector:
             )
             # Delete existing references if any
             for ref in indicator_external_references:
-                self.helper.api.external_reference.delete(
-                    id=ref["id"]
-                )
+                self.helper.api.external_reference.delete(id=ref["id"])
             # Update OpenCTI SDO external references
             external_reference = self.helper.api.external_reference.create(
                 source_name=self.config.target_product.replace("Azure", "Microsoft"),
@@ -275,7 +273,7 @@ class MicrosoftGraphSecurityIntelConnector:
         except TypeError as e:
             print(f"TypeError: {e}")
         return external_id_list
-    
+
     def _delete_sentinel_indicator(self, observable_data) -> bool:
         """
         Delete Threat Intelligence Indicators on Sentinel corresponding to an OpenCTI observable.
