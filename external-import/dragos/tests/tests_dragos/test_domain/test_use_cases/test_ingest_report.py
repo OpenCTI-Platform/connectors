@@ -3,7 +3,16 @@ from typing import Generator, Optional
 import dragos.domain.models.octi as octi
 from dragos.domain.models.octi.enums import TLPLevel
 from dragos.domain.use_cases.ingest_report import ReportProcessor
-from dragos.interfaces import Indicator, Report, Tag
+from dragos.interfaces import Geocoding, Indicator, Report, Tag
+from dragos.interfaces.geocoding import Country
+
+
+class StubGeocoding(Geocoding):
+    """Stub implementation of _Geocoding for testing purposes."""
+
+    def find_from_name(self, name: str) -> Country:
+        """Return a Country."""
+        return Country(name=name)
 
 
 class StubTag(Tag):
@@ -12,12 +21,12 @@ class StubTag(Tag):
     @property
     def _type(self) -> str:
         """Return the Stub Tag type."""
-        return "Geolocation"
+        return "Geographiclocation"
 
     @property
     def _value(self) -> str:
         """Return the Stub Tag value."""
-        return "my_place"
+        return "Test country"
 
 
 class StubIndicator(Indicator):
@@ -78,7 +87,10 @@ class StubReport(Report):
 
 def test_report_processor_should_process_a_valid_report():
     # Given: A ReportProcessor and a valid report
-    report_processor = ReportProcessor(tlp_level=TLPLevel.AMBER.value)
+    report_processor = ReportProcessor(
+        tlp_level=TLPLevel.AMBER.value,
+        geocoding=StubGeocoding(),
+    )
     stub_report = StubReport()
 
     # When: Processing it

@@ -1,14 +1,15 @@
 """Offer tools to ingest Report and related entities from Dragos reports."""
 
 import logging
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any, Generator, Optional
 
 from dragos.domain.models import octi
 from dragos.domain.models.octi.enums import OrganizationType
 from dragos.domain.use_cases.common import BaseUseCase, UseCaseError
 
 if TYPE_CHECKING:
-    from dragos.interfaces import Indicator, Report, Tag
+    from dragos.domain.models.octi.enums import TLPLevel
+    from dragos.interfaces import Geocoding, Indicator, Report, Tag
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,11 @@ class ReportProcessor(BaseUseCase):
         ...   entities = processor.run_on(report)
 
     """
+
+    def __init__(self, tlp_level: "TLPLevel", geocoding: "Geocoding"):
+        """Initialize the reports ingestion use case."""
+        BaseUseCase.__init__(self, tlp_level)
+        self.geocoding = geocoding
 
     def _make_artifact(self, indicator: "Indicator") -> octi.Artifact:
         """Make an OCTI Artifact from report's indicator."""
@@ -87,6 +93,58 @@ class ReportProcessor(BaseUseCase):
             markings=[self.tlp_marking],
         )
 
+    def _make_location(
+        self, tag: "Tag"
+    ) -> Optional[
+        octi.LocationAdministrativeArea
+        | octi.LocationCity
+        | octi.LocationCountry
+        | octi.LocationPosition
+        | octi.LocationRegion
+    ]:
+        """Make an OCTI Location from report's tag."""
+        location = self.geocoding.find_from_name(tag.value)
+        if not location:
+            logger.warning(f"Location not found for tag value: {tag.value}")
+            return None
+
+        location_type = location.__class__.__name__
+        match location_type:
+            case "Area":
+                return octi.LocationAdministrativeArea(
+                    name=location.name,
+                    latitude=location.latitude,
+                    longitude=location.longitude,
+                    author=self.author,
+                    markings=[self.tlp_marking],
+                )
+            case "City":
+                return octi.LocationCity(
+                    name=location.name,
+                    latitude=location.latitude,
+                    longitude=location.longitude,
+                    author=self.author,
+                    markings=[self.tlp_marking],
+                )
+            case "Country":
+                return octi.LocationCountry(
+                    name=location.name, author=self.author, markings=[self.tlp_marking]
+                )
+            case "Position":
+                return octi.LocationPosition(
+                    name=location.name,
+                    latitude=location.latitude,
+                    longitude=location.longitude,
+                    author=self.author,
+                    markings=[self.tlp_marking],
+                )
+            case "Region":
+                return octi.LocationRegion(
+                    name=location.name, author=self.author, markings=[self.tlp_marking]
+                )
+            case _:
+                raise UseCaseError(f"Unsupported location type: {location_type}")
+
     def _make_organization(self, tag: "Tag") -> octi.Organization:
         """Make an OCTI Organization from report's tag."""
         return octi.Organization(
@@ -131,7 +189,9 @@ class ReportProcessor(BaseUseCase):
                 case "industry" | "naics":
                     yield self._make_sector(related_tag)
                 case "geographiclocation":
-                    yield None  # Location
+                    location = self._make_location(related_tag)
+                    if location:
+                        yield location
                 case "hacker group" | "threatgroup" | "externalname":
                     yield self._make_intrusion_set(related_tag)
                 case "government organization":
