@@ -19,3 +19,4 @@ microsoft_sentinel_intel:
   source_system: 'Opencti Stream Connector'
   workspace_id: 'ChangeMe'
   login_type: 'client_secret'
+  delete_extensions: True

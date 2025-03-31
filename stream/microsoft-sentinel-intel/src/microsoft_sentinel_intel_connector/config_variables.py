@@ -55,21 +55,59 @@ class ConfigConnector:
         )
 
         self.workspace_id = get_config_variable(
-            "SENTINEL_INTEL_WORKSPACE_ID", ["sentinel_intel", "workspace_id"], self.load
+            "MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID",
+            ["sentinel_intel", "workspace_id"],
+            self.load,
         )
 
         self.source_system = get_config_variable(
-            "SENTINEL_INTEL_SOURCE_SYSTEM",
-            ["sentinel_intel", "source_system"],
+            "MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM",
+            ["microsoft_sentinel_intel", "source_system"],
             self.load,
             False,
             "Opencti Stream Connector",
         )
 
-        self.source_system = get_config_variable(
-            "SENTINEL_INTEL_LOGIN_TYPE",
-            ["sentinel_intel", "login_type"],
+        self.login_type = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_LOGIN_TYPE",
+            ["microsoft_sentinel_intel", "login_type"],
             self.load,
             False,
             "client_secret",
+        )
+
+        self.resource_group = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP",
+            ["microsoft_sentinel_intel", "resource_group"],
+            self.load,
+            False,
+        )
+
+        self.subscription_id = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID",
+            ["microsoft_sentinel_intel", "subscription_id"],
+            self.load,
+            False,
+        )
+
+        self.workspace_name = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME",
+            ["microsoft_sentinel_intel", "workspace_name"],
+            self.load,
+            False,
+        )
+
+        self.delete_extensions = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_DELETE_EXTENSIONS",
+            ["microsoft_sentinel_intel", "delete_extensions"],
+            self.load,
+            False,
+            True,
+        )
+
+        self.extra_labels = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_EXTRA_LABELS",
+            ["microsoft_sentinel_intel", "extra_labels"],
+            self.load,
+            False,
         )

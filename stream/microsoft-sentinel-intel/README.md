@@ -56,16 +56,21 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for Sentinel Connector:
 
-| Parameter `microsoft_sentinel_intel` | config.yml      | Docker environment variable              | Default                    | Mandatory | Example | Description                                                                         |
-|--------------------------------------|-----------------|------------------------------------------|----------------------------|-----------|---------|-------------------------------------------------------------------------------------|
-| Tenant ID                            | `tenant_id`     | `MICROSOFT_SENTINEL_INTEL_TENANT_ID`     | /                          | Yes       | /       | Your Azure App Tenant ID, see the screenshot to help you find this information.     |
-| Client ID                            | `client_id`     | `MICROSOFT_SENTINEL_INTEL_CLIENT_ID`     | /                          | Yes       | /       | Your Azure App Client ID, see the screenshot to help you find this information.     |
-| Client Secret                        | `client_secret` | `MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET` | /                          | Yes       | /       | Your Azure App Client secret, See the screenshot to help you find this information. |
-| Source System                        | `source_system` | `MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM` | /                          | Yes       | /       | Your Azure Workspace ID                                                             |
-| Workspace ID                         | `workspace_id`  | `MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID`  | 'Opencti Stream Connector' | No        | /       | The name of the source system                                                       |
-| Login Type                           | `login_type`    | `MICROSOFT_SENTINEL_INTEL_LOGIN_TYPE`    | 'client_secret'            | No        | /       | The type of authentication, possible values: client_secret / managed_identity       |
+| Parameter `microsoft_sentinel_intel` | config.yml          | Docker environment variable                  | Default                    | Mandatory | Example       | Description                                                                         |
+|--------------------------------------|---------------------|----------------------------------------------|----------------------------|-----------|---------------|-------------------------------------------------------------------------------------|
+| Tenant ID                            | `tenant_id`         | `MICROSOFT_SENTINEL_INTEL_TENANT_ID`         | /                          | Yes       | /             | Your Azure App Tenant ID, see the screenshot to help you find this information.     |
+| Client ID                            | `client_id`         | `MICROSOFT_SENTINEL_INTEL_CLIENT_ID`         | /                          | Yes       | /             | Your Azure App Client ID, see the screenshot to help you find this information.     |
+| Client Secret                        | `client_secret`     | `MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET`     | /                          | Yes       | /             | Your Azure App Client secret, See the screenshot to help you find this information. |
+| Source System                        | `source_system`     | `MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM`     | 'Opencti Stream Connector' | Yes       | /             | The name of the source system displayed in Microsoft Sentinel                       |
+| Workspace ID                         | `workspace_id`      | `MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID`      | /                          | Yes       | /             | Your Azure Workspace ID                                                             |
+| Resource Group                       | `resource_group`    | `MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP`    | /                          | Yes       | /             | The name of the resource group where the log analytics is                           |
+| Subscription ID                      | `subscription_id`   | `MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID`   | /                          | Yes       | /             | The subscription id where the Log Analytics is                                      |
+| Workspace name                       | `workspace_name`    | `MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME`    | /                          | Yes       | /             | The name of the log analytics workspace                                             |
+| Delete Extensions                    | `delete_extensions` | `MICROSOFT_SENTINEL_INTEL_DELETE_EXTENSIONS` | True                       | No        | /             | Delete the extensions in the stix bundle sent to the SIEM                           |
+| Login Type                           | `login_type`        | `MICROSOFT_SENTINEL_INTEL_LOGIN_TYPE`        | 'client_secret'            | No        | /             | The type of authentication, possible values: client_secret / managed_identity       |
+| Extra labels                         | `extra_labels`      | `MICROSOFT_SENTINEL_INTEL_EXTRA_LABELS`      | /                          | No        | "prod,detect" | Extra labels added to the bundle sent. String separated by comma                    |
 
 ### Known Behavior
 
 - When creating, updating or deleting and IOC, it can take few minutes before seeing it into Microsoft Sentinel TI
-- Deleting indicators is currently not supported
+- Deleting indicators is supported !
