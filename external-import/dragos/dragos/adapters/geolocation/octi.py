@@ -8,9 +8,9 @@ from dragos.interfaces.geocoding import (
     City,
     Country,
     Geocoding,
+    GeocodingRetrievalError,
     Position,
     Region,
-    GeocodingRetrievalError,
 )
 
 if TYPE_CHECKING:
