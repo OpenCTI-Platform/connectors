@@ -101,7 +101,7 @@ class ExportFileCsv:
                         row.append("")
                 csv_data.append(row)
             except Exception as err:
-                self.helper.log_error("ERROR with csv input data." + str(err))
+                self.helper.connector_logger.warning("ERROR with csv input data." + str(err))
         writer = csv.writer(
             output,
             delimiter=self.export_file_csv_delimiter,
