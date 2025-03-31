@@ -156,26 +156,28 @@ class MicrosoftDefenderIncidentsConnector:
 
                     # ipEvidence
                     case "#microsoft.graph.security.ipEvidence":
-                        version = detect_ip_version(evidence.get("ipAddress"))
-                        # Create Stix IPv4Address
-                        if version == "ipv4":
-                            stix_ip = self.converter_to_stix.create_evidence_ipv4(
-                                evidence
-                            )
-                        else:
-                            stix_ip = self.converter_to_stix.create_evidence_ipv6(
-                                evidence
-                            )
-                        if stix_ip:
-                            stix_objects.append(stix_ip)
-                            stix_relationship_ip = (
-                                self.converter_to_stix.create_relationship(
-                                    source_id=stix_ip.id,
-                                    target_id=stix_incident.id,
-                                    relationship_type="related-to",
+                        # check whether the ipEvidence contains an observable ipAddress
+                        if evidence.get("ipAddress", None):
+                            version = detect_ip_version(evidence.get("ipAddress"))
+                            # Create Stix IPv4Address
+                            if version == "ipv4":
+                                stix_ip = self.converter_to_stix.create_evidence_ipv4(
+                                    evidence
                                 )
-                            )
-                            stix_objects.append(stix_relationship_ip)
+                            else:
+                                stix_ip = self.converter_to_stix.create_evidence_ipv6(
+                                    evidence
+                                )
+                            if stix_ip:
+                                stix_objects.append(stix_ip)
+                                stix_relationship_ip = (
+                                    self.converter_to_stix.create_relationship(
+                                        source_id=stix_ip.id,
+                                        target_id=stix_incident.id,
+                                        relationship_type="related-to",
+                                    )
+                                )
+                                stix_objects.append(stix_relationship_ip)
 
                     # urlEvidence
                     case "#microsoft.graph.security.urlEvidence":
