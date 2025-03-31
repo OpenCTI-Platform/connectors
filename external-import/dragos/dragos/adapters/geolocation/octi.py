@@ -1,7 +1,7 @@
 """Implement Geocoding Interface to provide Geolocation data to the connector from OpenCTI platform."""
 
 from logging import getLogger
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from dragos.interfaces.geocoding import (
     Area,
@@ -14,7 +14,9 @@ from dragos.interfaces.geocoding import (
 )
 
 if TYPE_CHECKING:
-    from pycti.api.opencti_api_client import OpenCTIApiClient
+    from pycti.api.opencti_api_client import (  # type: ignore[import-untyped]
+        OpenCTIApiClient,
+    )
 
 logger = getLogger(__name__)
 
@@ -26,36 +28,38 @@ class OctiGeocoding(Geocoding):
         """Initialize the Geocoding Adapter."""
         self._api_client = api_client
 
-    def _search_by_name_and_alias(self: "OctiGeocoding", name: str) -> dict:
+    def _search_by_name_and_alias(self: "OctiGeocoding", name: str) -> list[Any]:
         """Search for geocoding data."""
-        return self._api_client.stix_domain_object.list(
-            types=["Country", "Region", "City", "Position", "Administrative-Area"],
-            filters={
-                "mode": "or",
-                "filters": [
-                    {
-                        "key": [
-                            "name",
-                            "x_opencti_aliases",
-                        ],
-                        "values": [name],
-                    }
-                ],
-                "filterGroups": [],
-            },
-            # search = name
-            # first
-            # after
-            # order_by
-            # order_mode
-            # custom_attributes
-            # get_all
-            # with_pagination
-            # with_files
+        return list(
+            self._api_client.stix_domain_object.list(
+                types=["Country", "Region", "City", "Position", "Administrative-Area"],
+                filters={
+                    "mode": "or",
+                    "filters": [
+                        {
+                            "key": [
+                                "name",
+                                "x_opencti_aliases",
+                            ],
+                            "values": [name],
+                        }
+                    ],
+                    "filterGroups": [],
+                },
+                # search = name
+                # first
+                # after
+                # order_by
+                # order_mode
+                # custom_attributes
+                # get_all
+                # with_pagination
+                # with_files
+            )
         )
 
     def find_from_name(
-        self: "Geocoding", name: str
+        self: "OctiGeocoding", name: str
     ) -> Optional[Country | Region | Area | City | Position]:
         """Retrieve geocoding data.
 
