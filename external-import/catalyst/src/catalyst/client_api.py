@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, Dict, List
+from typing import Dict, List
 
 from python_catalyst import CatalystClient, PostCategory, TLPLevel
 
@@ -45,127 +45,19 @@ class ConnectorClient:
         :return: A list of STIX objects
         """
         try:
-            # Get the last run date to determine what to fetch
-            last_run_datetime = None
-            current_state = self.helper.get_state()
-
-            if current_state is not None and "last_run" in current_state:
-                try:
-                    last_run_datetime = datetime.datetime.strptime(
-                        current_state["last_run"], "%Y-%m-%d %H:%M:%S"
-                    )
-                    if last_run_datetime.tzinfo is None:
-                        last_run_datetime = last_run_datetime.replace(
-                            tzinfo=datetime.timezone.utc
-                        )
-                    self.logger.info(
-                        f"Last run datetime: {last_run_datetime.isoformat()}"
-                    )
-                except ValueError:
-                    self.logger.error(
-                        f"Invalid last_run datetime format, fetching data for the last {self.config.sync_days_back} days"
-                    )
-
-            if last_run_datetime is None:
-                sync_days_back = 365  # Default fallback
-                if hasattr(self.config, "sync_days_back"):
-                    sync_days_back = self.config.sync_days_back
-                    if type(sync_days_back) == str:
-                        sync_days_back = int(sync_days_back)
-                last_run_datetime = datetime.datetime.now(
-                    datetime.timezone.utc
-                ) - datetime.timedelta(days=sync_days_back)
-
+            last_run_datetime = self._get_last_run_datetime()
             self.logger.info(
                 f"Fetching member contents updated since: {last_run_datetime.isoformat()}"
             )
 
-            tlp_filters = self._parse_tlp_filters()
+            all_member_contents = self._fetch_filtered_contents(last_run_datetime)
+            unique_contents = self._deduplicate_contents(all_member_contents)
 
-            category_filters = self._parse_category_filters()
-
-            all_member_contents = []
-
-            if not tlp_filters and not category_filters:
-                self.logger.info(
-                    "No specific TLP or category filters set. Fetching all member contents."
-                )
-                member_contents = self.client.get_updated_member_contents(
-                    since=last_run_datetime, tlp=None, category=None
-                )
-                all_member_contents.extend(member_contents)
-            else:
-                # If only one filter is specified, iterate over it
-                if tlp_filters and not category_filters:
-                    for tlp in tlp_filters:
-                        self.logger.info(
-                            f"Fetching member contents with TLP filter: {tlp.value}"
-                        )
-                        member_contents = self.client.get_updated_member_contents(
-                            since=last_run_datetime, tlp=[tlp], category=None
-                        )
-                        all_member_contents.extend(member_contents)
-
-                # If only category filter is specified, iterate over it
-                elif category_filters and not tlp_filters:
-                    for category in category_filters:
-                        self.logger.info(
-                            f"Fetching member contents with category filter: {category.value}"
-                        )
-                        member_contents = self.client.get_updated_member_contents(
-                            since=last_run_datetime, tlp=None, category=category
-                        )
-                        all_member_contents.extend(member_contents)
-
-                else:
-                    for tlp in tlp_filters:
-                        for category in category_filters:
-                            self.logger.info(
-                                f"Fetching member contents with TLP: {tlp.value} and category: {category.value}"
-                            )
-                            member_contents = self.client.get_updated_member_contents(
-                                since=last_run_datetime, tlp=[tlp], category=category
-                            )
-                            all_member_contents.extend(member_contents)
-
-            unique_contents = {}
-            for content in all_member_contents:
-                content_id = content.get("id")
-                if content_id and content_id not in unique_contents:
-                    unique_contents[content_id] = content
-
-            member_contents = list(unique_contents.values())
-
-            self.logger.info(
-                f"Retrieved {len(member_contents)} unique updated member contents from CATALYST API"
-            )
-
-            if not member_contents:
+            if not unique_contents:
                 self.logger.info("No updated member contents found.")
                 return []
 
-            stix_objects = []
-            for content in member_contents:
-                try:
-                    report, related_objects = (
-                        self.client.create_report_from_member_content(content)
-                    )
-                    if report:
-                        stix_objects.append(report)
-                    if related_objects:
-                        stix_objects.extend(related_objects)
-                except Exception as err:
-                    self.logger.error(
-                        f"Error processing content {content.get('id')}: {str(err)}"
-                    )
-
-            stix_objects.append(self.client.converter.identity)
-            stix_objects.append(self.client.converter.tlp_marking)
-
-            self.logger.info(
-                f"Converted member contents to {len(stix_objects)} STIX objects"
-            )
-
+            stix_objects = self._convert_to_stix_objects(unique_contents)
             return stix_objects
 
         except Exception as err:
@@ -173,6 +65,103 @@ class ConnectorClient:
             if hasattr(err, "response") and hasattr(err.response, "text"):
                 self.logger.error(f"API response error: {err.response.text}")
             return []
+
+    def _get_last_run_datetime(self) -> datetime.datetime:
+        current_state = self.helper.get_state()
+        last_run = current_state.get("last_run") if current_state else None
+
+        if last_run:
+            try:
+                last_run_datetime = datetime.datetime.strptime(
+                    last_run, "%Y-%m-%d %H:%M:%S"
+                )
+                if last_run_datetime.tzinfo is None:
+                    last_run_datetime = last_run_datetime.replace(
+                        tzinfo=datetime.timezone.utc
+                    )
+                self.logger.info(f"Last run datetime: {last_run_datetime.isoformat()}")
+                return last_run_datetime
+            except ValueError:
+                self.logger.error(
+                    "Invalid last_run format, falling back to sync_days_back"
+                )
+
+        sync_days_back = int(getattr(self.config, "sync_days_back", 365))
+        return datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+            days=sync_days_back
+        )
+
+    def _fetch_filtered_contents(self, since: datetime.datetime) -> List[Dict]:
+        tlp_filters = self._parse_tlp_filters()
+        category_filters = self._parse_category_filters()
+
+        if not tlp_filters and not category_filters:
+            self.logger.info(
+                "No specific TLP or category filters set. Fetching all member contents."
+            )
+            return self.client.get_updated_member_contents(
+                since=since, tlp=None, category=None
+            )
+
+        results = []
+        if tlp_filters and not category_filters:
+            for tlp in tlp_filters:
+                self.logger.info(f"Fetching with TLP: {tlp.value}")
+                results += self.client.get_updated_member_contents(
+                    since=since, tlp=[tlp], category=None
+                )
+
+        elif category_filters and not tlp_filters:
+            for category in category_filters:
+                self.logger.info(f"Fetching with category: {category.value}")
+                results += self.client.get_updated_member_contents(
+                    since=since, tlp=None, category=category
+                )
+
+        else:
+            for tlp in tlp_filters:
+                for category in category_filters:
+                    self.logger.info(
+                        f"Fetching with TLP: {tlp.value} and category: {category.value}"
+                    )
+                    results += self.client.get_updated_member_contents(
+                        since=since, tlp=[tlp], category=category
+                    )
+
+        return results
+
+    def _deduplicate_contents(self, contents: List[Dict]) -> List[Dict]:
+        unique = {}
+        for content in contents:
+            content_id = content.get("id")
+            if content_id and content_id not in unique:
+                unique[content_id] = content
+        self.logger.info(
+            f"Retrieved {len(unique)} unique updated member contents from CATALYST API"
+        )
+        return list(unique.values())
+
+    def _convert_to_stix_objects(self, contents: List[Dict]) -> List[Dict]:
+        stix_objects = []
+        for content in contents:
+            try:
+                report, related = self.client.create_report_from_member_content(content)
+                if report:
+                    stix_objects.append(report)
+                if related:
+                    stix_objects.extend(related)
+            except Exception as err:
+                self.logger.error(
+                    f"Error processing content {content.get('id')}: {str(err)}"
+                )
+
+        stix_objects.append(self.client.converter.identity)
+        stix_objects.append(self.client.converter.tlp_marking)
+
+        self.logger.info(
+            f"Converted member contents to {len(stix_objects)} STIX objects"
+        )
+        return stix_objects
 
     def _parse_tlp_filters(self) -> List[TLPLevel]:
         """

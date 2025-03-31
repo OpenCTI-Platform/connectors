@@ -1,13 +1,11 @@
-import datetime
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 import pytest
-from python_catalyst import TLPLevel, PostCategory
+from python_catalyst import PostCategory, TLPLevel
 
 from catalyst.client_api import ConnectorClient
-from .common_fixtures import setup_config
 
-import unittest
+from .common_fixtures import setup_config  # noqa: F401
 
 
 @pytest.mark.usefixtures("setup_config")
@@ -309,7 +307,7 @@ class TestConnectorClient:
                 "id": "test-marking",
             }
 
-            client = ConnectorClient(mock_opencti_helper, mock_config)
+            _ = ConnectorClient(mock_opencti_helper, mock_config)
 
             with patch.object(
                 mock_opencti_helper.connector_logger, "error"

@@ -118,7 +118,7 @@ class CatalystConnector:
                 )
 
             # Friendly name will be displayed on OpenCTI platform
-            friendly_name = "Connector template feed"
+            friendly_name = "CATALYST Connector"
 
             # Initiate a new work
             work_id = self.helper.api.work.initiate_work(

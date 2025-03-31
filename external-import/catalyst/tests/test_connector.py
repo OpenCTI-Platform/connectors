@@ -1,6 +1,4 @@
-import sys
-from datetime import datetime, timezone
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch
 
 import pytest
 
