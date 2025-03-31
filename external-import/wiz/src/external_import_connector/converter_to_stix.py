@@ -30,7 +30,7 @@ class ConverterToStix:
         """
         external_reference = stix2.ExternalReference(
             source_name=source_name,
-            url="https://threats.wiz.io/",
+            url="https://www.wiz.io/api/feed/cloud-threat-landscape/stix.json",
             description="A comprehensive threat intelligence database of cloud security "
             "incidents, actors, tools and techniques. Powered by Wiz Research.",
         )
