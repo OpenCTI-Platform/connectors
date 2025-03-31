@@ -4,7 +4,7 @@ import pytest
 from catalyst.client_api import ConnectorClient
 from python_catalyst import PostCategory, TLPLevel
 
-from .common_fixtures import setup_config  # noqa: F401
+# from .common_fixtures import setup_config  # noqa: F401
 
 
 @pytest.mark.usefixtures("setup_config")
