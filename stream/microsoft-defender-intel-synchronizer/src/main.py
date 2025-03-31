@@ -1,7 +1,7 @@
 import traceback
 
 from microsoft_defender_intel_synchronizer_connector import (
-    MicrosoftDefenderIntelConnector,
+    MicrosoftDefenderIntelSynchronizerConnector,
 )
 
 if __name__ == "__main__":
@@ -15,7 +15,7 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        connector = MicrosoftDefenderIntelConnector()
+        connector = MicrosoftDefenderIntelSynchronizerConnector()
         connector.run()
     except Exception:
         traceback.print_exc()
