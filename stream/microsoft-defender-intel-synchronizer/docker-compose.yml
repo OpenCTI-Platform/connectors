@@ -6,9 +6,6 @@ services:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
-      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
-      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       - "CONNECTOR_NAME=Microsoft Defender Intel Synchronizer"
       - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
       - CONNECTOR_LOG_LEVEL=error
