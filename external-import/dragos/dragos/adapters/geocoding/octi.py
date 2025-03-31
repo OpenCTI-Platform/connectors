@@ -74,12 +74,12 @@ class OctiGeocoding(Geocoding):
         results = self._search_by_name_and_alias(name)
         count = len(results)
         if count > 1:
-            logger.warning(
+            logger.info(
                 f"Multiple results found for {name}. Unable to determine the correct geolocation."
             )
             return None
         if count == 0:
-            logger.warning(f"No results found for {name}.")
+            logger.info(f"No results found for {name}.")
             return None
 
         entity = dict(results[0])
@@ -102,7 +102,7 @@ class OctiGeocoding(Geocoding):
                 case "Administrative-Area":
                     # No name attribute returned for Administrative-Area entity.
                     # return Area(name=entity["name"])
-                    logger.warning(
+                    logger.info(
                         "Administrative-Area entity type not supported. Unable to determine the correct geolocation"
                     )
                     return None
