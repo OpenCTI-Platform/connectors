@@ -1,10 +1,6 @@
 # OpenCTI Microsoft Defender Intel
 
-This OpenCTI connector allows the ability to create or delete data from your OpenCTI platform to either the Microsoft
-Sentinel or Microsoft Defender for Endpoint platform utilizing
-the [Microsoft Graph API Threat Intelligence Indicator](https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta).
-Microsoft has a detailed guide on how to get started with connecting your threat intelligence platform to Sentinel
-found [here](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/data/sentinel-threat-intelligence#import-threat-indicators-with-the-platforms-data-connector).
+This connector allows you to stream indicators from OpenCTI to Microsoft Defender Intelligence utilizing native Microsoft Defender APIs.
 
 ## Installation
 
