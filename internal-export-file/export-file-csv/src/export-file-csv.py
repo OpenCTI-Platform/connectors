@@ -102,7 +102,8 @@ class ExportFileCsv:
                         row.append("")
                 csv_data.append(row)
             except Exception as err:
-                self.helper.connector_logger.warning("ERROR with csv input data." + str(err))
+                self.helper.connector_logger.warning("Error with csv input data, one line cannot be exported." + str(err))
+                self.errors.append("Error with csv input data, one line cannot be exported.")
         writer = csv.writer(
             output,
             delimiter=self.export_file_csv_delimiter,
@@ -305,8 +306,12 @@ class ExportFileCsv:
             list_filters = json.dumps(list_params)
             self._export_list(data, entities_list, list_filters)
 
-        if errors:
-            msg = f"Some values were not processed in CSV ({len(self.errors)}). See connector logs for details."
+        if len(self.errors) > 0:
+            msg = f"Some values were not processed in CSV (for {len(self.errors)} lines). See connector logs for details."
+            # to uncomment when it's possible to download a csv on OpenCTI despite warning on export.
+            #self.helper.api.work.report_expectation(
+            #    work_id=self.helper.work_id, error={"error": msg, "source": "CONNECTOR"}
+            #)
             return msg
         return "Export done"
 
