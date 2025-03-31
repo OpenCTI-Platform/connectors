@@ -224,19 +224,47 @@ class IntrusionSet(DomainObject):
         )
 
 
+class OCTIStixLocation(stix2.Location):
+    """Override stix2 Location to skip some constraints incompatible with OpenCTI Locations entities."""
+
+    def _check_object_constraints(self):
+        """Override _check_object_constraints method."""
+        location_type = (self.x_opencti_location_type or "").lower()
+        if location_type in ["administrative-area", "city", "position"]:
+            if self.get("precision") is not None:
+                self._check_properties_dependency(
+                    ["longitude", "latitude"], ["precision"]
+                )
+
+            self._check_properties_dependency(["latitude"], ["longitude"])
+            self._check_properties_dependency(["longitude"], ["latitude"])
+
+            # Skip region/country/latitude/longitude presence check because all of them are optional on OpenCTI
+            # even though at least one of them is required in the STIX2.1 spec
+        else:
+            super(OCTIStixLocation, self)._check_object_constraints()
+
+
 class _Location(DomainObject):
     """Represents a location entity."""
 
     _location_type: LocationType = PrivateAttr(...)
 
-    name: Optional[str] = Field(
-        None,
+    name: str = Field(
+        ...,
         description="A name used to identify the Location.",
     )
     description: Optional[str] = Field(
         None,
         description="A textual description of the Location.",
     )
+
+
+class LocationAdministrativeArea(_Location):
+    """Represent an administrative area entity."""
+
+    _location_type: LocationType = PrivateAttr(LocationType.ADMINISTRATIVE_AREA.value)
+
     latitude: Optional[float] = Field(
         None,
         description="The latitude of the Location in decimal degrees.",
@@ -245,37 +273,9 @@ class _Location(DomainObject):
         None,
         description="The longitude of the Location in decimal degrees.",
     )
-    precision: Optional[float] = Field(
-        None,
-        description="Defines the precision of the coordinates specified by the latitude and longitude properties.",
-    )
-    region: Optional[Region] = Field(
-        None,
-        description="The region that this Location describes.",
-    )
-    country: Optional[str] = Field(
-        None,
-        description="The country that this Location describes.",
-    )
-    administrative_area: Optional[str] = Field(
-        None,
-        description="The state, province, or other sub-national administrative area that this Location describes.",
-    )
-    city: Optional[str] = Field(
-        None,
-        description="The city that this Location describes.",
-    )
-    street_address: Optional[str] = Field(
-        None,
-        description="The street address that this Location describes.",
-    )
-    postal_code: Optional[str] = Field(
-        None,
-        description="The postal code for this Location.",
-    )
 
     def to_stix2_object(self) -> stix2.Location:
-        return stix2.Location(
+        return OCTIStixLocation(
             id=pycti.Location.generate_id(
                 name=self.name,
                 x_opencti_location_type=self._location_type,
@@ -283,19 +283,19 @@ class _Location(DomainObject):
                 longitude=self.longitude,
             ),
             name=self.name,
+            administrative_area=self.name,
             description=self.description,
             latitude=self.latitude,
             longitude=self.longitude,
-            precision=self.precision,
-            region=self.region,
-            country=self.country,
-            administrative_area=self.administrative_area,
-            city=self.city,
-            street_address=self.street_address,
-            postal_code=self.postal_code,
             custom_properties=dict(
                 x_opencti_location_type=self._location_type,
             ),
+            region=None,
+            country=None,
+            city=None,
+            street_address=None,
+            postal_code=None,
+            precision=None,
             created=None,
             modified=None,
             revoked=None,
@@ -307,34 +307,178 @@ class _Location(DomainObject):
         )
 
 
-class LocationAdministrativeArea(_Location):
-    """Represent an administrative area entity."""
-
-    _location_type = LocationType.ADMINISTRATIVE_AREA.value
-
-
 class LocationCity(_Location):
     """Represent a city entity."""
 
-    _location_type = LocationType.CITY.value
+    _location_type: LocationType = PrivateAttr(LocationType.CITY.value)
+
+    latitude: Optional[float] = Field(
+        None,
+        description="The latitude of the Location in decimal degrees.",
+    )
+    longitude: Optional[float] = Field(
+        None,
+        description="The longitude of the Location in decimal degrees.",
+    )
+
+    def to_stix2_object(self) -> stix2.Location:
+        return OCTIStixLocation(
+            id=pycti.Location.generate_id(
+                name=self.name,
+                x_opencti_location_type=self._location_type,
+                latitude=self.latitude,
+                longitude=self.longitude,
+            ),
+            name=self.name,
+            city=self.name,
+            description=self.description,
+            latitude=self.latitude,
+            longitude=self.longitude,
+            custom_properties=dict(
+                x_opencti_location_type=self._location_type,
+            ),
+            region=None,
+            country=None,
+            administrative_area=None,
+            precision=None,
+            street_address=None,
+            postal_code=None,
+            created=None,
+            modified=None,
+            revoked=None,
+            labels=None,
+            confidence=None,
+            lang=None,
+            granular_markings=None,
+            extensions=None,
+        )
 
 
 class LocationCountry(_Location):
     """Represent a country entity."""
 
-    _location_type = LocationType.COUNTRY.value
+    _location_type: LocationType = PrivateAttr(LocationType.COUNTRY.value)
+
+    def to_stix2_object(self) -> stix2.Location:
+        return OCTIStixLocation(
+            id=pycti.Location.generate_id(
+                name=self.name,
+                x_opencti_location_type=self._location_type,
+            ),
+            name=self.name,
+            country=self.name,
+            description=self.description,
+            custom_properties=dict(
+                x_opencti_location_type=self._location_type,
+            ),
+            latitude=None,
+            longitude=None,
+            precision=None,
+            region=None,
+            administrative_area=None,
+            city=None,
+            street_address=None,
+            postal_code=None,
+            created=None,
+            modified=None,
+            revoked=None,
+            labels=None,
+            confidence=None,
+            lang=None,
+            granular_markings=None,
+            extensions=None,
+        )
 
 
 class LocationPosition(_Location):
     """Represent a position entity."""
 
-    _location_type = LocationType.POSITION.value
+    _location_type: LocationType = PrivateAttr(LocationType.POSITION.value)
+
+    latitude: Optional[float] = Field(
+        None,
+        description="The latitude of the Location in decimal degrees.",
+    )
+    longitude: Optional[float] = Field(
+        None,
+        description="The longitude of the Location in decimal degrees.",
+    )
+    street_address: Optional[str] = Field(
+        None,
+        description="The street address that this Location describes.",
+    )
+    postal_code: Optional[str] = Field(
+        None,
+        description="The postal code for this Location.",
+    )
+
+    def to_stix2_object(self) -> stix2.Location:
+        return OCTIStixLocation(
+            id=pycti.Location.generate_id(
+                name=self.name,
+                x_opencti_location_type=self._location_type,
+                latitude=self.latitude,
+                longitude=self.longitude,
+            ),
+            name=self.name,
+            description=self.description,
+            latitude=self.latitude,
+            longitude=self.longitude,
+            street_address=self.street_address,
+            postal_code=self.postal_code,
+            custom_properties=dict(
+                x_opencti_location_type=self._location_type,
+            ),
+            region=None,
+            country=None,
+            city=None,
+            administrative_area=None,
+            precision=None,
+            created=None,
+            modified=None,
+            revoked=None,
+            labels=None,
+            confidence=None,
+            lang=None,
+            granular_markings=None,
+            extensions=None,
+        )
 
 
 class LocationRegion(_Location):
     """Represent a region entity."""
 
-    _location_type = LocationType.REGION.value
+    _location_type: LocationType = PrivateAttr(LocationType.REGION.value)
+
+    def to_stix2_object(self) -> stix2.Location:
+        return OCTIStixLocation(
+            id=pycti.Location.generate_id(
+                name=self.name,
+                x_opencti_location_type=self._location_type,
+            ),
+            name=self.name,
+            region=self.name,
+            description=self.description,
+            custom_properties=dict(
+                x_opencti_location_type=self._location_type,
+            ),
+            latitude=None,
+            longitude=None,
+            precision=None,
+            country=None,
+            administrative_area=None,
+            city=None,
+            street_address=None,
+            postal_code=None,
+            created=None,
+            modified=None,
+            revoked=None,
+            labels=None,
+            confidence=None,
+            lang=None,
+            granular_markings=None,
+            extensions=None,
+        )
 
 
 class Malware(DomainObject):

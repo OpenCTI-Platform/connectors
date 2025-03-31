@@ -274,9 +274,6 @@ def test_intrusion_set_class_should_accept_valid_input(input_data):
         # pytest.param(
         #     {
         #         "name": "Test IntrusionSet",
-        #         "pattern": "[url:value='http://example.com']",
-        #         "pattern_type": octi_enums.PatternType.STIX.value,
-        #         "observable_type": octi_enums.ObservableType.URL.value,
         #         "markings": [fake_valid_tlp_marking()],
         #     },
         #     "author",
@@ -328,6 +325,562 @@ def test_intrusion_set_to_stix2_object_returns_valid_stix_object():
     assert stix2_obj.resource_level == input_data.get("resource_level")
     assert stix2_obj.primary_motivation == input_data.get("primary_motivation")
     assert stix2_obj.secondary_motivations == input_data.get("secondary_motivations")
+
+
+@pytest.mark.parametrize(
+    "input_data",
+    [
+        pytest.param(
+            {
+                "name": "Test Location Administrative Area",
+                "description": "Test Location Administrative Area description",
+                "latitude": 48.8575,
+                "longitude": 2.3514,
+                "author": fake_valid_organization_author(),
+                "external_references": [fake_external_reference()],
+                "markings": [fake_valid_tlp_marking()],
+            },
+            id="full_valid_data",
+        ),
+        pytest.param(
+            {
+                "name": "Test Location Administrative Area",
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            id="minimal_valid_data",
+        ),
+    ],
+)
+def test_location_administrative_area_class_should_accept_valid_input(input_data):
+    # Given: Valid location administrative area input data
+    # When: Creating an location administrative area object
+    location_administrative_area = octi.LocationAdministrativeArea.model_validate(
+        input_data
+    )
+
+    # Then: The location administrative area object should be valid
+    assert location_administrative_area.id is not None
+    assert location_administrative_area.name == input_data.get("name")
+    assert location_administrative_area.description == input_data.get("description")
+    assert location_administrative_area.latitude == input_data.get("latitude")
+    assert location_administrative_area.longitude == input_data.get("longitude")
+    assert location_administrative_area.author == input_data.get("author")
+    assert location_administrative_area.external_references == input_data.get(
+        "external_references"
+    )
+    assert location_administrative_area.markings == input_data.get("markings")
+
+
+@pytest.mark.parametrize(
+    "input_data, error_field",
+    [
+        pytest.param(
+            {
+                "description": "Test Location Administrative Area description",
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            "name",
+            id="missing_name",
+        ),
+        pytest.param(
+            {
+                "name": "Test Location Administrative Area",
+                "latitude": "wrong latitude",
+                "longitude": 2.3514,
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            "latitude",
+            id="invalid_latitude_type",
+        ),
+        # pytest.param(
+        #     {
+        #         "name": "Test LocationAdministrativeArea",
+        #         "markings": [fake_valid_tlp_marking()],
+        #     },
+        #     "author",
+        #     id="missing_author",
+        # ),
+    ],
+)
+def test_location_administrative_area_class_should_not_accept_invalid_input(
+    input_data, error_field
+):
+    # Given: Invalid input data for the LocationAdministrativeArea class
+    # When: Trying to create a LocationAdministrativeArea instance
+    # Then: A ValidationError should be raised
+    with pytest.raises(ValidationError) as err:
+        octi.LocationAdministrativeArea.model_validate(input_data)
+    assert str(error_field) in str(err)
+
+
+def test_location_administrative_area_to_stix2_object_returns_valid_stix_object():
+    # Given: A valid location administrative area
+    input_data = {
+        "name": "Test Location Administrative",
+        "description": "Test Location Administrative description",
+        "latitude": 48.8575,
+        "longitude": 2.3514,
+        "author": fake_valid_organization_author(),
+        "external_references": [fake_external_reference()],
+        "markings": [fake_valid_tlp_marking()],
+    }
+    location_administrative_area = octi.LocationAdministrativeArea.model_validate(
+        input_data
+    )
+
+    # When: calling to_stix2_object method
+    stix2_obj = location_administrative_area.to_stix2_object()
+
+    # Then: A valid STIX2.1 Location is returned
+    assert isinstance(stix2_obj, stix2.Location) is True
+    assert stix2_obj.id is not None
+    assert stix2_obj.name == input_data.get("name")
+    assert stix2_obj.administrative_area == input_data.get("name")
+    assert stix2_obj.description == input_data.get("description")
+    assert stix2_obj.latitude == input_data.get("latitude")
+    assert stix2_obj.longitude == input_data.get("longitude")
+    assert (
+        stix2_obj.x_opencti_location_type
+        == octi_enums.LocationType.ADMINISTRATIVE_AREA.value
+    )
+
+
+@pytest.mark.parametrize(
+    "input_data",
+    [
+        pytest.param(
+            {
+                "name": "Test Location City",
+                "description": "Test Location City description",
+                "latitude": 48.8575,
+                "longitude": 2.3514,
+                "author": fake_valid_organization_author(),
+                "external_references": [fake_external_reference()],
+                "markings": [fake_valid_tlp_marking()],
+            },
+            id="full_valid_data",
+        ),
+        pytest.param(
+            {
+                "name": "Test Location City",
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            id="minimal_valid_data",
+        ),
+    ],
+)
+def test_location_city_class_should_accept_valid_input(input_data):
+    # Given: Valid location city input data
+    # When: Creating an location city object
+    location_city = octi.LocationCity.model_validate(input_data)
+
+    # Then: The location city object should be valid
+    assert location_city.id is not None
+    assert location_city.name == input_data.get("name")
+    assert location_city.description == input_data.get("description")
+    assert location_city.latitude == input_data.get("latitude")
+    assert location_city.longitude == input_data.get("longitude")
+    assert location_city.author == input_data.get("author")
+    assert location_city.external_references == input_data.get("external_references")
+    assert location_city.markings == input_data.get("markings")
+
+
+@pytest.mark.parametrize(
+    "input_data, error_field",
+    [
+        pytest.param(
+            {
+                "description": "Test Location City description",
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            "name",
+            id="missing_name",
+        ),
+        pytest.param(
+            {
+                "name": "Test Location City",
+                "latitude": "wrong latitude",
+                "longitude": 2.3514,
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            "latitude",
+            id="invalid_latitude_type",
+        ),
+        # pytest.param(
+        #     {
+        #         "name": "Test Location City",
+        #         "markings": [fake_valid_tlp_marking()],
+        #     },
+        #     "author",
+        #     id="missing_author",
+        # ),
+    ],
+)
+def test_location_city_class_should_not_accept_invalid_input(input_data, error_field):
+    # Given: Invalid input data for the LocationCity class
+    # When: Trying to create a LocationCity instance
+    # Then: A ValidationError should be raised
+    with pytest.raises(ValidationError) as err:
+        octi.LocationCity.model_validate(input_data)
+    assert str(error_field) in str(err)
+
+
+def test_location_city_to_stix2_object_returns_valid_stix_object():
+    # Given: A valid location city
+    input_data = {
+        "name": "Test Location City",
+        "description": "Test Location City description",
+        "latitude": 48.8575,
+        "longitude": 2.3514,
+        "author": fake_valid_organization_author(),
+        "external_references": [fake_external_reference()],
+        "markings": [fake_valid_tlp_marking()],
+    }
+    location_city = octi.LocationCity.model_validate(input_data)
+
+    # When: calling to_stix2_object method
+    stix2_obj = location_city.to_stix2_object()
+
+    # Then: A valid STIX2.1 Location is returned
+    assert isinstance(stix2_obj, stix2.Location) is True
+    assert stix2_obj.id is not None
+    assert stix2_obj.name == input_data.get("name")
+    assert stix2_obj.city == input_data.get("name")
+    assert stix2_obj.description == input_data.get("description")
+    assert stix2_obj.latitude == input_data.get("latitude")
+    assert stix2_obj.longitude == input_data.get("longitude")
+    assert stix2_obj.x_opencti_location_type == octi_enums.LocationType.CITY.value
+
+
+@pytest.mark.parametrize(
+    "input_data",
+    [
+        pytest.param(
+            {
+                "name": "Test Location Country",
+                "description": "Test Location Country description",
+                "author": fake_valid_organization_author(),
+                "external_references": [fake_external_reference()],
+                "markings": [fake_valid_tlp_marking()],
+            },
+            id="full_valid_data",
+        ),
+        pytest.param(
+            {
+                "name": "Test Location Country",
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            id="minimal_valid_data",
+        ),
+    ],
+)
+def test_location_country_class_should_accept_valid_input(input_data):
+    # Given: Valid location country input data
+    # When: Creating an location country object
+    location_country = octi.LocationCountry.model_validate(input_data)
+
+    # Then: The location country object should be valid
+    assert location_country.id is not None
+    assert location_country.name == input_data.get("name")
+    assert location_country.description == input_data.get("description")
+    assert location_country.author == input_data.get("author")
+    assert location_country.external_references == input_data.get("external_references")
+    assert location_country.markings == input_data.get("markings")
+
+
+@pytest.mark.parametrize(
+    "input_data, error_field",
+    [
+        pytest.param(
+            {
+                "description": "Test Location Country description",
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            "name",
+            id="missing_name",
+        ),
+        pytest.param(
+            {
+                "name": "Test Location Country",
+                "description": False,
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            "description",
+            id="invalid_description_type",
+        ),
+        # pytest.param(
+        #     {
+        #         "name": "Test Location Country",
+        #         "markings": [fake_valid_tlp_marking()],
+        #     },
+        #     "author",
+        #     id="missing_author",
+        # ),
+    ],
+)
+def test_location_country_class_should_not_accept_invalid_input(
+    input_data, error_field
+):
+    # Given: Invalid input data for the LocationCountry class
+    # When: Trying to create a LocationCountry instance
+    # Then: A ValidationError should be raised
+    with pytest.raises(ValidationError) as err:
+        octi.LocationCountry.model_validate(input_data)
+    assert str(error_field) in str(err)
+
+
+def test_location_country_to_stix2_object_returns_valid_stix_object():
+    # Given: A valid location country
+    input_data = {
+        "name": "Test Location Country",
+        "description": "Test Location Country description",
+        "author": fake_valid_organization_author(),
+        "external_references": [fake_external_reference()],
+        "markings": [fake_valid_tlp_marking()],
+    }
+    location_country = octi.LocationCountry.model_validate(input_data)
+
+    # When: calling to_stix2_object method
+    stix2_obj = location_country.to_stix2_object()
+
+    # Then: A valid STIX2.1 LocationCountry is returned
+    assert isinstance(stix2_obj, stix2.Location) is True
+    assert stix2_obj.id is not None
+    assert stix2_obj.name == input_data.get("name")
+    assert stix2_obj.country == input_data.get("name")
+    assert stix2_obj.description == input_data.get("description")
+    assert stix2_obj.x_opencti_location_type == octi_enums.LocationType.COUNTRY.value
+
+
+@pytest.mark.parametrize(
+    "input_data",
+    [
+        pytest.param(
+            {
+                "name": "Test Location Position",
+                "description": "Test Location Position description",
+                "latitude": 48.8575,
+                "longitude": 2.3514,
+                "street_address": "random street",
+                "postal_code": "random code",
+                "author": fake_valid_organization_author(),
+                "external_references": [fake_external_reference()],
+                "markings": [fake_valid_tlp_marking()],
+            },
+            id="full_valid_data",
+        ),
+        pytest.param(
+            {
+                "name": "Test Location Position",
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            id="minimal_valid_data",
+        ),
+    ],
+)
+def test_location_position_class_should_accept_valid_input(input_data):
+    # Given: Valid location position input data
+    # When: Creating an location position object
+    location_position = octi.LocationPosition.model_validate(input_data)
+
+    # Then: The location position object should be valid
+    assert location_position.id is not None
+    assert location_position.name == input_data.get("name")
+    assert location_position.description == input_data.get("description")
+    assert location_position.latitude == input_data.get("latitude")
+    assert location_position.longitude == input_data.get("longitude")
+    assert location_position.street_address == input_data.get("street_address")
+    assert location_position.postal_code == input_data.get("postal_code")
+    assert location_position.author == input_data.get("author")
+    assert location_position.external_references == input_data.get(
+        "external_references"
+    )
+    assert location_position.markings == input_data.get("markings")
+
+
+@pytest.mark.parametrize(
+    "input_data, error_field",
+    [
+        pytest.param(
+            {
+                "description": "Test Location Position description",
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            "name",
+            id="missing_name",
+        ),
+        pytest.param(
+            {
+                "name": "Test Location Position",
+                "street_address": False,
+                "postal_code": "random code",
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            "street_address",
+            id="invalid_street_address_type",
+        ),
+        # pytest.param(
+        #     {
+        #         "name": "Test Location Position",
+        #         "markings": [fake_valid_tlp_marking()],
+        #     },
+        #     "author",
+        #     id="missing_author",
+        # ),
+    ],
+)
+def test_location_position_class_should_not_accept_invalid_input(
+    input_data, error_field
+):
+    # Given: Invalid input data for the LocationPosition class
+    # When: Trying to create a LocationPosition instance
+    # Then: A ValidationError should be raised
+    with pytest.raises(ValidationError) as err:
+        octi.LocationPosition.model_validate(input_data)
+    assert str(error_field) in str(err)
+
+
+def test_location_position_to_stix2_object_returns_valid_stix_object():
+    # Given: A valid location position
+    input_data = {
+        "name": "Test Location Position",
+        "description": "Test Location Position description",
+        "latitude": 48.8575,
+        "longitude": 2.3514,
+        "street_address": "random street",
+        "postal_code": "random code",
+        "author": fake_valid_organization_author(),
+        "external_references": [fake_external_reference()],
+        "markings": [fake_valid_tlp_marking()],
+    }
+    location_position = octi.LocationPosition.model_validate(input_data)
+
+    # When: calling to_stix2_object method
+    stix2_obj = location_position.to_stix2_object()
+
+    # Then: A valid STIX2.1 LocationPosition is returned
+    assert isinstance(stix2_obj, stix2.Location) is True
+    assert stix2_obj.id is not None
+    assert stix2_obj.name == input_data.get("name")
+    assert stix2_obj.description == input_data.get("description")
+    assert stix2_obj.latitude == input_data.get("latitude")
+    assert stix2_obj.longitude == input_data.get("longitude")
+    assert stix2_obj.street_address == input_data.get("street_address")
+    assert stix2_obj.postal_code == input_data.get("postal_code")
+    assert stix2_obj.x_opencti_location_type == octi_enums.LocationType.POSITION.value
+
+
+@pytest.mark.parametrize(
+    "input_data",
+    [
+        pytest.param(
+            {
+                "name": "Test Location Region",
+                "description": "Test Location Region description",
+                "author": fake_valid_organization_author(),
+                "external_references": [fake_external_reference()],
+                "markings": [fake_valid_tlp_marking()],
+            },
+            id="full_valid_data",
+        ),
+        pytest.param(
+            {
+                "name": "Test Location Region",
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            id="minimal_valid_data",
+        ),
+    ],
+)
+def test_location_region_class_should_accept_valid_input(input_data):
+    # Given: Valid location region input data
+    # When: Creating an location region object
+    location_region = octi.LocationRegion.model_validate(input_data)
+
+    # Then: The location region object should be valid
+    assert location_region.id is not None
+    assert location_region.name == input_data.get("name")
+    assert location_region.description == input_data.get("description")
+    assert location_region.author == input_data.get("author")
+    assert location_region.external_references == input_data.get("external_references")
+    assert location_region.markings == input_data.get("markings")
+
+
+@pytest.mark.parametrize(
+    "input_data, error_field",
+    [
+        pytest.param(
+            {
+                "description": "Test Location Region description",
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            "name",
+            id="missing_name",
+        ),
+        pytest.param(
+            {
+                "name": "Test Location Region",
+                "description": False,
+                "author": fake_valid_organization_author(),
+                "markings": [fake_valid_tlp_marking()],
+            },
+            "description",
+            id="invalid_description_type",
+        ),
+        # pytest.param(
+        #     {
+        #         "name": "Test Location Region",
+        #         "markings": [fake_valid_tlp_marking()],
+        #     },
+        #     "author",
+        #     id="missing_author",
+        # ),
+    ],
+)
+def test_location_region_class_should_not_accept_invalid_input(input_data, error_field):
+    # Given: Invalid input data for the LocationRegion class
+    # When: Trying to create a LocationRegion instance
+    # Then: A ValidationError should be raised
+    with pytest.raises(ValidationError) as err:
+        octi.LocationRegion.model_validate(input_data)
+    assert str(error_field) in str(err)
+
+
+def test_location_region_to_stix2_object_returns_valid_stix_object():
+    # Given: A valid location region
+    input_data = {
+        "name": "Test Location Region",
+        "description": "Test Location Region description",
+        "author": fake_valid_organization_author(),
+        "external_references": [fake_external_reference()],
+        "markings": [fake_valid_tlp_marking()],
+    }
+    location_region = octi.LocationRegion.model_validate(input_data)
+
+    # When: calling to_stix2_object method
+    stix2_obj = location_region.to_stix2_object()
+
+    # Then: A valid STIX2.1 LocationRegion is returned
+    assert isinstance(stix2_obj, stix2.Location) is True
+    assert stix2_obj.id is not None
+    assert stix2_obj.name == input_data.get("name")
+    assert stix2_obj.region == input_data.get("name")
+    assert stix2_obj.description == input_data.get("description")
+    assert stix2_obj.x_opencti_location_type == octi_enums.LocationType.REGION.value
 
 
 @pytest.mark.parametrize(
