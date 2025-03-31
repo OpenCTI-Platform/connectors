@@ -26,6 +26,7 @@ class ExportFileCsv:
             False,
             ";",
         )
+        self.errors: list[Exception] = [] # error holder to be reset before each new process
 
     def export_dict_list_to_csv(self, data):
         output = io.StringIO()
@@ -166,6 +167,8 @@ class ExportFileCsv:
         entity_type = data["entity_type"]
         main_filter = data.get("main_filter")
         access_filter = data.get("access_filter")
+        self.errors = [] # reset before launching main process
+        
 
         # Single export always containing object_refs
         # Full but no relationships
@@ -302,6 +305,9 @@ class ExportFileCsv:
             list_filters = json.dumps(list_params)
             self._export_list(data, entities_list, list_filters)
 
+        if errors:
+            msg = f"Some values were not processed in CSV ({len(self.errors)}). See connector logs for details."
+            return msg
         return "Export done"
 
     # Start the main loop
