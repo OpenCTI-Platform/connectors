@@ -16,33 +16,24 @@ class ConverterToStix:
     def __init__(self, helper, config):
         self.helper = helper
         self.config = config
-        self.author = self.create_author(self.helper.connect_name)
-        self.external_reference = self.create_external_reference(
+        self.author = self._create_author(self.helper.connect_name)
+        self.external_reference = self._create_external_reference(
             self.helper.connect_name
         )
         self.tlp_marking = self._create_tlp_marking(level=self.config.tlp_level.lower())
 
     @staticmethod
-    def create_external_reference(source_name: str) -> dict:
-        """
-        Create external reference
-        :return: External reference STIX2 list
-        """
-        external_reference = stix2.ExternalReference(
+    def _create_external_reference(source_name: str) -> stix2.ExternalReference:
+        return stix2.ExternalReference(
             source_name=source_name,
             url="https://www.wiz.io/api/feed/cloud-threat-landscape/stix.json",
             description="A comprehensive threat intelligence database of cloud security "
             "incidents, actors, tools and techniques. Powered by Wiz Research.",
         )
-        return external_reference
 
     @staticmethod
-    def create_author(name: str) -> dict:
-        """
-        Create Author
-        :return: Author in Stix2 object
-        """
-        author = stix2.Identity(
+    def _create_author(name: str) -> stix2.Identity:
+        return stix2.Identity(
             id=Identity.generate_id(name=name, identity_class="organization"),
             name=name,
             identity_class="organization",
@@ -51,10 +42,9 @@ class ConverterToStix:
             "intelligence staking, multi-organisation decentralised data structures and "
             "human-centred interfaces",
         )
-        return author
 
     @staticmethod
-    def _create_tlp_marking(level):
+    def _create_tlp_marking(level) -> stix2.MarkingDefinition:
         mapping = {
             "white": stix2.TLP_WHITE,
             "clear": stix2.TLP_WHITE,
