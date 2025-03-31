@@ -1,9 +1,8 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from python_catalyst import PostCategory, TLPLevel
-
 from catalyst.client_api import ConnectorClient
+from python_catalyst import PostCategory, TLPLevel
 
 from .common_fixtures import setup_config  # noqa: F401
 
