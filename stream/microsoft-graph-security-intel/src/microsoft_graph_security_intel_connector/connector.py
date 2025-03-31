@@ -106,9 +106,69 @@ class MicrosoftGraphSecurityIntelConnector:
                 "[CREATE] Cannot convert STIX indicator { " + indicator_opencti_id + "}"
             )
 
+    def get_indicator_external_references(self, indicator_id, source_name):
+        """
+        Retrieves all external references associated with a specific indicator
+        and filters them by source_name.
+
+        Args:
+            indicator_id: The ID of the indicator.
+            source_name: The source_name to filter by.
+
+        Returns:
+            A list of external references that match the source_name.
+        """
+        try:
+            # Construct the GraphQL query
+            query = """
+                query IndicatorExternalReferences($id: String!) {
+                    stixDomainObject(id: $id) {
+                        externalReferences {
+                            edges {
+                                node {
+                                    id
+                                    source_name
+                                    # Add other fields you need
+                                }
+                            }
+                        }
+                    }
+                }
+            """
+
+            # Execute the query
+            result = self.helper.api.query(query, {"id": indicator_id})
+
+            external_references = []
+
+            if (
+                result
+                and result.get("data")
+                and result["data"].get("stixDomainObject")
+                and result["data"]["stixDomainObject"].get("externalReferences")
+                and result["data"]["stixDomainObject"]["externalReferences"].get(
+                    "edges"
+                )
+            ):
+                for edge in result["data"]["stixDomainObject"]["externalReferences"][
+                    "edges"
+                ]:
+                    reference = edge["node"]
+                    if reference.get("source_name") == source_name:
+                        external_references.append(reference)
+
+            return external_references
+
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"Error retrieving external references: {e}"
+            )
+            return []
+
     def _create_sentinel_indicator(self, observable_data):
         """
         Create a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
+        Identify and delete existing external references from the target product, replacing with the most current.
         :param observable_data: OpenCTI observable data
         :return: True if the indicator has been successfully created, False otherwise
         """
@@ -117,11 +177,20 @@ class MicrosoftGraphSecurityIntelConnector:
             observable_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
                 "id", observable_data
             )
+            source_name = self.config.target_product
             self.helper.connector_logger.info(
                 "[CREATE] Indicator created",
                 {"sentinel_id": result["id"], "opencti_id": observable_opencti_id},
             )
-
+            # Check for existing external references with the same source_name
+            indicator_external_references = self.get_indicator_external_references(
+                observable_opencti_id, source_name
+            )
+            # Delete existing references if any
+            for ref in indicator_external_references:
+                self.helper.api.external_reference.delete(
+                    id=ref["id"]
+                )
             # Update OpenCTI SDO external references
             external_reference = self.helper.api.external_reference.create(
                 source_name=self.config.target_product.replace("Azure", "Microsoft"),
@@ -186,6 +255,27 @@ class MicrosoftGraphSecurityIntelConnector:
                 },
             )
 
+    def _get_external_id(self, observable_data):
+        """
+        Extracts the external_id from the observable data
+        :param: observable_data: OpenCTI observable data
+        :return: Sentinel or Defender external_id or none if not found
+        """
+        external_id_list = []
+        source_name = self.config.target_product
+
+        try:
+            if "external_references" in observable_data:
+                external_references = observable_data["external_references"]
+                for ref in external_references:
+                    if ref.get("source_name") == source_name and ref.get("external_id"):
+                        external_id_list.append(ref["external_id"])
+        except KeyError as e:
+            print(f"KeyError: {e}")
+        except TypeError as e:
+            print(f"TypeError: {e}")
+        return external_id_list
+    
     def _delete_sentinel_indicator(self, observable_data) -> bool:
         """
         Delete Threat Intelligence Indicators on Sentinel corresponding to an OpenCTI observable.
@@ -196,37 +286,22 @@ class MicrosoftGraphSecurityIntelConnector:
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
             "id", observable_data
         )
-        indicators_data = self.api.search_indicators(observable_data)
-        for indicator_data in indicators_data:
-            result = self.api.delete_indicator(indicator_data["id"])
-            if result:
-                self.helper.connector_logger.info(
-                    "[DELETE] Indicator deleted",
-                    {"sentinel_id": indicator_data["id"], "opencti_id": opencti_id},
-                )
-                external_reference = self.helper.api.external_reference.read(
-                    filters={
-                        "mode": "and",
-                        "filters": [
-                            {
-                                "key": "source_name",
-                                "values": [
-                                    self.config.target_product.replace(
-                                        "Azure", "Microsoft"
-                                    )
-                                ],
-                            },
-                            {
-                                "key": "external_id",
-                                "values": [indicator_data["id"]],
-                            },
-                        ],
-                        "filterGroups": [],
+        target_product = self.config.target_product
+        external_id_list = self._get_external_id(observable_data)
+        for external_id in external_id_list:
+            if (
+                target_product
+                in observable_data["external_references"][0]["source_name"]
+            ):
+                result = self.api.delete_indicator(external_id)
+                if result:
+                    log_message = "[DELETE] Indicator deleted"
+                    log_attributes = {
+                        f"{target_product.lower().replace(' ', '_')}_id": external_id,
+                        "opencti_id": opencti_id,
                     }
-                )
-                if external_reference is not None:
-                    self.helper.api.external_reference.delete(external_reference["id"])
-            did_delete = result
+                    self.helper.connector_logger.info(log_message, log_attributes)
+                    did_delete = True
         return did_delete
 
     def _handle_create_event(self, data):
