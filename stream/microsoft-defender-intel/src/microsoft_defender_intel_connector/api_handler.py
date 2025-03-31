@@ -114,7 +114,7 @@ class DefenderApiHandler:
                 {"url_path": f"{method.upper()} {url}"},
             ) from err
 
-    def _build_request_body(self, observable: dict) -> dict:
+    def _build_request_body(self, observable: dict, defender_id: str | None) -> dict:
         """
         Build Defender POST/PATCH request's body from an observable.
         :param observable: Observable to build body from
@@ -151,9 +151,11 @@ class DefenderApiHandler:
                 "severity": get_severity(observable),
                 "generateAlert": True,
             }
+            if defender_id is not None:
+                body["id"] = defender_id
         return body
 
-    def get_indicators(self) -> list[dict] | None:
+    def get_indicators(self) -> list[dict]:
         """
         Get Threat Intelligence Indicators from Defender.
         :return: List of Threat Intelligence Indicators if request is successful, None otherwise
@@ -167,6 +169,37 @@ class DefenderApiHandler:
             result = result + data["value"]
         return result
 
+    def find_indicators(self, value) -> list[dict] | None:
+        """
+        Get Threat Intelligence Indicators from Defender.
+        :param value: Value of the indicator
+        :return: List of Threat Intelligence Indicators if request is successful, None otherwise
+        """
+        params = f"$filter=indicatorValue eq '{value}'"
+        data = self._send_request(
+            "get", f"{self.config.base_url}{self.config.resource_path}", params=params
+        )
+        result = data["value"]
+        while "@odata.nextLink" in data and data["@odata.nextLink"] is not None:
+            data = self._send_request("get", data["@odata.nextLink"])
+            result = result + data["value"]
+        return result
+
+    def post_indicator(self, observable: dict, defender_id: str | None) -> dict | None:
+        """
+        Create a Threat Intelligence Indicator on Defender from an OpenCTI observable.
+        :param observable: OpenCTI observable to create Threat Intelligence Indicator for
+        :param defender_id: Defender ID
+        :return: Threat Intelligence Indicator if request is successful, None otherwise
+        """
+        request_body_observable = self._build_request_body(observable, defender_id)
+        data = self._send_request(
+            "post",
+            f"{self.config.base_url}{self.config.resource_path}",
+            json=request_body_observable,
+        )
+        return data
+
     def post_indicators(self, observables: list[dict]) -> dict | None:
         """
         Create a Threat Intelligence Indicator on Defender from an OpenCTI observable.
@@ -175,7 +208,7 @@ class DefenderApiHandler:
         """
         request_body = {"Indicators": []}
         for observable in observables:
-            request_body_observable = self._build_request_body(observable)
+            request_body_observable = self._build_request_body(observable, None)
             if request_body_observable is not None:
                 request_body["Indicators"].append(request_body_observable)
 
