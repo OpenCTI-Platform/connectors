@@ -263,7 +263,7 @@ class _Location(DomainObject):
 class LocationAdministrativeArea(_Location):
     """Represent an administrative area entity."""
 
-    _location_type: LocationType = PrivateAttr(LocationType.ADMINISTRATIVE_AREA.value)
+    _location_type: LocationType = PrivateAttr(LocationType.ADMINISTRATIVE_AREA)
 
     latitude: Optional[float] = Field(
         None,
@@ -278,7 +278,7 @@ class LocationAdministrativeArea(_Location):
         return OCTIStixLocation(
             id=pycti.Location.generate_id(
                 name=self.name,
-                x_opencti_location_type=self._location_type,
+                x_opencti_location_type=self._location_type.value,
                 latitude=self.latitude,
                 longitude=self.longitude,
             ),
@@ -288,7 +288,7 @@ class LocationAdministrativeArea(_Location):
             latitude=self.latitude,
             longitude=self.longitude,
             custom_properties=dict(
-                x_opencti_location_type=self._location_type,
+                x_opencti_location_type=self._location_type.value,
             ),
             region=None,
             country=None,
@@ -310,7 +310,7 @@ class LocationAdministrativeArea(_Location):
 class LocationCity(_Location):
     """Represent a city entity."""
 
-    _location_type: LocationType = PrivateAttr(LocationType.CITY.value)
+    _location_type: LocationType = PrivateAttr(LocationType.CITY)
 
     latitude: Optional[float] = Field(
         None,
@@ -325,7 +325,7 @@ class LocationCity(_Location):
         return OCTIStixLocation(
             id=pycti.Location.generate_id(
                 name=self.name,
-                x_opencti_location_type=self._location_type,
+                x_opencti_location_type=self._location_type.value,
                 latitude=self.latitude,
                 longitude=self.longitude,
             ),
@@ -335,7 +335,7 @@ class LocationCity(_Location):
             latitude=self.latitude,
             longitude=self.longitude,
             custom_properties=dict(
-                x_opencti_location_type=self._location_type,
+                x_opencti_location_type=self._location_type.value,
             ),
             region=None,
             country=None,
@@ -357,19 +357,19 @@ class LocationCity(_Location):
 class LocationCountry(_Location):
     """Represent a country entity."""
 
-    _location_type: LocationType = PrivateAttr(LocationType.COUNTRY.value)
+    _location_type: LocationType = PrivateAttr(LocationType.COUNTRY)
 
     def to_stix2_object(self) -> stix2.Location:
         return OCTIStixLocation(
             id=pycti.Location.generate_id(
                 name=self.name,
-                x_opencti_location_type=self._location_type,
+                x_opencti_location_type=self._location_type.value,
             ),
             name=self.name,
             country=self.name,
             description=self.description,
             custom_properties=dict(
-                x_opencti_location_type=self._location_type,
+                x_opencti_location_type=self._location_type.value,
             ),
             latitude=None,
             longitude=None,
@@ -393,7 +393,7 @@ class LocationCountry(_Location):
 class LocationPosition(_Location):
     """Represent a position entity."""
 
-    _location_type: LocationType = PrivateAttr(LocationType.POSITION.value)
+    _location_type: LocationType = PrivateAttr(LocationType.POSITION)
 
     latitude: Optional[float] = Field(
         None,
@@ -416,7 +416,7 @@ class LocationPosition(_Location):
         return OCTIStixLocation(
             id=pycti.Location.generate_id(
                 name=self.name,
-                x_opencti_location_type=self._location_type,
+                x_opencti_location_type=self._location_type.value,
                 latitude=self.latitude,
                 longitude=self.longitude,
             ),
@@ -427,7 +427,7 @@ class LocationPosition(_Location):
             street_address=self.street_address,
             postal_code=self.postal_code,
             custom_properties=dict(
-                x_opencti_location_type=self._location_type,
+                x_opencti_location_type=self._location_type.value,
             ),
             region=None,
             country=None,
@@ -448,7 +448,7 @@ class LocationPosition(_Location):
 class LocationRegion(_Location):
     """Represent a region entity."""
 
-    _location_type: LocationType = PrivateAttr(LocationType.REGION.value)
+    _location_type: LocationType = PrivateAttr(LocationType.REGION)
 
     name: Region = Field(
         ...,
@@ -459,13 +459,13 @@ class LocationRegion(_Location):
         return OCTIStixLocation(
             id=pycti.Location.generate_id(
                 name=self.name,
-                x_opencti_location_type=self._location_type,
+                x_opencti_location_type=self._location_type.value,
             ),
             name=self.name,
             region=self.name,
             description=self.description,
             custom_properties=dict(
-                x_opencti_location_type=self._location_type,
+                x_opencti_location_type=self._location_type.value,
             ),
             latitude=None,
             longitude=None,
