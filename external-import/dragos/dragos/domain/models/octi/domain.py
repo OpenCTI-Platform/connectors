@@ -225,7 +225,7 @@ class IntrusionSet(DomainObject):
 
 
 class OCTIStixLocation(stix2.Location):
-    """Override stix2 Location to skip some constraints incompatible with OpenCTI Locations entities."""
+    """Override stix2 Location to skip some constraints incompatible with OpenCTI Location entities."""
 
     def _check_object_constraints(self):
         """Override _check_object_constraints method."""
@@ -449,6 +449,11 @@ class LocationRegion(_Location):
     """Represent a region entity."""
 
     _location_type: LocationType = PrivateAttr(LocationType.REGION.value)
+
+    name: Region = Field(
+        ...,
+        description="A name used to identify the Location.",
+    )
 
     def to_stix2_object(self) -> stix2.Location:
         return OCTIStixLocation(
