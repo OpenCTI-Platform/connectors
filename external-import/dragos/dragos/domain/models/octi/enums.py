@@ -6,15 +6,16 @@ class PermissiveEnum(StrEnum):
     """Enum that allows for missing values."""
 
     @classmethod
-    def _missing_(cls, value):
+    def _missing_(cls: type["PermissiveEnum"], value: object) -> "PermissiveEnum":
+        _value = str(value)
         warnings.warn(
-            f"Value '{value}' is out of {cls.__name__} defined values.",
+            f"Value '{_value}' is out of {cls.__name__} defined values.",
             UserWarning,
             stacklevel=3,
         )
         # Return a dynamically created instance
-        obj = str.__new__(cls, value)
-        obj._value_ = value
+        obj = str.__new__(cls, _value)
+        obj._value_ = _value
         return obj
 
 

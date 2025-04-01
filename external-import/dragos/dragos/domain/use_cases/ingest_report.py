@@ -208,7 +208,9 @@ class ReportProcessor(BaseUseCase):
     ) -> Generator[tuple["octi.Observable", "octi.Indicator"], Any, Any]:
         """Make an OCTI Observable and Indicator generator from Dragos report related indicators."""
 
-        def make_observable(related_indicator: "Indicator") -> "octi.Observable":
+        def make_observable(
+            related_indicator: "Indicator",
+        ) -> Optional["octi.Observable"]:
             """Make an OCTI observable from a Dragos report related indicator."""
             dragos_indicator_type = related_indicator.type.lower()
             match dragos_indicator_type:
