@@ -1,5 +1,4 @@
 import sys
-
 from datetime import datetime, timedelta, timezone
 from threading import Lock, Thread
 from typing import NotRequired, Optional, TypedDict, cast
