@@ -53,7 +53,7 @@ class DomainObject(BaseEntity):
 
     @abstractmethod
     def to_stix2_object(self) -> Any:
-        """Make stix object"""
+        """Make stix object."""
 
 
 class Indicator(DomainObject):
@@ -224,10 +224,10 @@ class IntrusionSet(DomainObject):
         )
 
 
-class OCTIStixLocation(stix2.Location):
+class OCTIStixLocation(stix2.Location): # type: ignore[misc]  # stix2 does not provide stubs
     """Override stix2 Location to skip some constraints incompatible with OpenCTI Location entities."""
 
-    def _check_object_constraints(self):
+    def _check_object_constraints(self) -> None:
         """Override _check_object_constraints method."""
         location_type = (self.x_opencti_location_type or "").lower()
         if location_type in ["administrative-area", "city", "position"]:
@@ -248,7 +248,7 @@ class OCTIStixLocation(stix2.Location):
 class _Location(DomainObject):
     """Represents a location entity."""
 
-    _location_type: LocationType = PrivateAttr(...)
+    _location_type: LocationType = PrivateAttr()
 
     name: str = Field(
         ...,
@@ -275,6 +275,7 @@ class LocationAdministrativeArea(_Location):
     )
 
     def to_stix2_object(self) -> stix2.Location:
+        """Make stix object."""
         return OCTIStixLocation(
             id=pycti.Location.generate_id(
                 name=self.name,
@@ -287,7 +288,7 @@ class LocationAdministrativeArea(_Location):
             description=self.description,
             latitude=self.latitude,
             longitude=self.longitude,
-            custom_properties=dict(
+            custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
                 x_opencti_location_type=self._location_type.value,
             ),
             region=None,
@@ -322,6 +323,7 @@ class LocationCity(_Location):
     )
 
     def to_stix2_object(self) -> stix2.Location:
+        """Make stix object."""
         return OCTIStixLocation(
             id=pycti.Location.generate_id(
                 name=self.name,
@@ -334,7 +336,7 @@ class LocationCity(_Location):
             description=self.description,
             latitude=self.latitude,
             longitude=self.longitude,
-            custom_properties=dict(
+            custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
                 x_opencti_location_type=self._location_type.value,
             ),
             region=None,
@@ -360,6 +362,7 @@ class LocationCountry(_Location):
     _location_type: LocationType = PrivateAttr(LocationType.COUNTRY)
 
     def to_stix2_object(self) -> stix2.Location:
+        """Make stix object."""
         return OCTIStixLocation(
             id=pycti.Location.generate_id(
                 name=self.name,
@@ -368,7 +371,7 @@ class LocationCountry(_Location):
             name=self.name,
             country=self.name,
             description=self.description,
-            custom_properties=dict(
+            custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
                 x_opencti_location_type=self._location_type.value,
             ),
             latitude=None,
@@ -413,6 +416,7 @@ class LocationPosition(_Location):
     )
 
     def to_stix2_object(self) -> stix2.Location:
+        """Make stix object."""
         return OCTIStixLocation(
             id=pycti.Location.generate_id(
                 name=self.name,
@@ -426,7 +430,7 @@ class LocationPosition(_Location):
             longitude=self.longitude,
             street_address=self.street_address,
             postal_code=self.postal_code,
-            custom_properties=dict(
+            custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
                 x_opencti_location_type=self._location_type.value,
             ),
             region=None,
@@ -456,6 +460,7 @@ class LocationRegion(_Location):
     )
 
     def to_stix2_object(self) -> stix2.Location:
+        """Make stix object."""
         return OCTIStixLocation(
             id=pycti.Location.generate_id(
                 name=self.name,
@@ -464,7 +469,7 @@ class LocationRegion(_Location):
             name=self.name,
             region=self.name,
             description=self.description,
-            custom_properties=dict(
+            custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
                 x_opencti_location_type=self._location_type.value,
             ),
             latitude=None,
@@ -752,6 +757,7 @@ class Sector(DomainObject):
     )
 
     def to_stix2_object(self) -> stix2.Identity:
+        """Make stix object."""
         return stix2.Identity(
             id=pycti.Identity.generate_id(
                 identity_class=self._identity_class, name=self.name
@@ -855,7 +861,7 @@ class Vulnerability(DomainObject):
             ],
             created_by_ref=self.author.id if self.author else None,
             object_marking_refs=[marking.id for marking in self.markings or []],
-            custom_properties=dict(
+            custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
                 x_opencti_aliases=self.aliases,
                 x_opencti_cvss_base_score=self.cvss_score,
                 x_opencti_cvss_base_severity=self.cvss_severity,

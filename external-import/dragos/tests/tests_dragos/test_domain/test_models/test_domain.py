@@ -1,3 +1,4 @@
+"""Offer tests for the OpenCTI doamin models."""
 from datetime import datetime, timezone
 
 import dragos.domain.models.octi as octi
@@ -8,14 +9,17 @@ from pydantic import ValidationError
 
 
 def fake_valid_organization_author():
+    """Return a valid Organization Author."""
     return octi.OrganizationAuthor(name="Valid Author")
 
 
 def fake_valid_tlp_marking():
+    """Return a valid TLP Marking."""
     return octi.TLPMarking(level=octi_enums.TLPLevel.RED.value)
 
 
 def fake_external_reference():
+    """Return a valid External Reference."""
     return octi.ExternalReference(
         source_name="Test Source",
         description="Test Description",
@@ -25,6 +29,7 @@ def fake_external_reference():
 
 
 def fake_valid_indicator():
+    """Return a valid Indicator."""
     return octi.Indicator(
         name="Test Indicator",
         pattern="[url:value='http://example.com']",
@@ -78,26 +83,29 @@ def fake_valid_indicator():
     ],
 )
 def test_indicator_class_should_accept_valid_input(input_data):
+    """Test that the Indicator class accepts valid input."""
     # Given: Valid indicator input data
     # When: Creating an indicator object
     indicator = octi.Indicator.model_validate(input_data)
 
     # Then: The indicator object should be valid
-    assert indicator.id is not None
-    assert indicator.name == input_data.get("name")
-    assert indicator.description == input_data.get("description")
-    assert indicator.pattern == input_data.get("pattern")
-    assert indicator.pattern_type == input_data.get("pattern_type")
-    assert indicator.observable_type == input_data.get("observable_type")
-    assert indicator.indicator_types == input_data.get("indicator_types")
-    assert indicator.platforms == input_data.get("platforms")
-    assert indicator.kill_chain_phases == input_data.get("kill_chain_phases")
-    assert indicator.valid_from == input_data.get("valid_from")
-    assert indicator.valid_until == input_data.get("valid_until")
-    assert indicator.score == input_data.get("score")
-    assert indicator.author == input_data.get("author")
-    assert indicator.external_references == input_data.get("external_references")
-    assert indicator.markings == input_data.get("markings")
+    assert (  # noqa: S101
+        indicator.id is not None
+        and indicator.name == input_data.get("name")
+        and indicator.description == input_data.get("description")
+        and indicator.pattern == input_data.get("pattern")
+        and indicator.pattern_type == input_data.get("pattern_type")
+        and indicator.observable_type == input_data.get("observable_type")
+        and indicator.indicator_types == input_data.get("indicator_types")
+        and indicator.platforms == input_data.get("platforms")
+        and indicator.kill_chain_phases == input_data.get("kill_chain_phases")
+        and indicator.valid_from == input_data.get("valid_from")
+        and indicator.valid_until == input_data.get("valid_until")
+        and indicator.score == input_data.get("score")
+        and indicator.author == input_data.get("author")
+        and indicator.external_references == input_data.get("external_references")
+        and indicator.markings == input_data.get("markings")
+    )
 
 
 @pytest.mark.parametrize(
@@ -140,15 +148,17 @@ def test_indicator_class_should_accept_valid_input(input_data):
     ],
 )
 def test_indicator_class_should_not_accept_invalid_input(input_data, error_field):
+    """Test that the Indicator class does not accept invalid input."""
     # Given: Invalid input data for the Indicator class
     # When: Trying to create a Indicator instance
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.Indicator.model_validate(input_data)
-    assert str(error_field) in str(err)
+    assert str(error_field) in str(err)  # noqa: S101
 
 
 def test_indicator_to_stix2_object_returns_valid_stix_object():
+    """Test that Indicator.to_stix2_object returns a valid STIX Indicator."""
     # Given: A valid indicator
     input_data = {
         "name": "Test Indicator",
@@ -178,19 +188,21 @@ def test_indicator_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = indicator.to_stix2_object()
 
-    # Then: A valid STIX2.1 Indicator is returned
-    assert isinstance(stix2_obj, stix2.Indicator) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.pattern == input_data.get("pattern")
-    assert stix2_obj.pattern_type == input_data.get("pattern_type")
-    assert stix2_obj.indicator_types == input_data.get("indicator_types")
-    assert stix2_obj.valid_from == input_data.get("valid_from")
-    assert stix2_obj.valid_until == input_data.get("valid_until")
-    assert stix2_obj.x_opencti_score == 50
-    assert stix2_obj.x_mitre_platforms == input_data.get("platforms")
-    assert stix2_obj.x_opencti_main_observable_type == input_data.get("observable_type")
+    # Then: A valid STIX Indicator is returned
+    assert (  # noqa: S101
+        isinstance(stix2_obj, stix2.Indicator)
+        and stix2_obj.id is not None
+        and stix2_obj.name == input_data.get("name")
+        and stix2_obj.description == input_data.get("description")
+        and stix2_obj.pattern == input_data.get("pattern")
+        and stix2_obj.pattern_type == input_data.get("pattern_type")
+        and stix2_obj.indicator_types == input_data.get("indicator_types")
+        and stix2_obj.valid_from == input_data.get("valid_from")
+        and stix2_obj.valid_until == input_data.get("valid_until")
+        and stix2_obj.x_opencti_score == 50
+        and stix2_obj.x_mitre_platforms == input_data.get("platforms")
+        and stix2_obj.x_opencti_main_observable_type == input_data.get("observable_type")
+    )
 
 
 @pytest.mark.parametrize(
@@ -227,27 +239,27 @@ def test_indicator_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_intrusion_set_class_should_accept_valid_input(input_data):
+    """Test that the IntrusionSet class accepts valid input."""
     # Given: Valid intrusion set input data
     # When: Creating an intrusion set object
     intrusion_set = octi.IntrusionSet.model_validate(input_data)
 
     # Then: The intrusion set object should be valid
-    assert intrusion_set.id is not None
-    assert intrusion_set.name == input_data.get("name")
-    assert intrusion_set.description == input_data.get("description")
-    assert intrusion_set.aliases == input_data.get("aliases")
-    assert intrusion_set.first_seen == input_data.get("first_seen")
-    assert intrusion_set.last_seen == input_data.get("last_seen")
-    assert intrusion_set.goals == input_data.get("goals")
-    assert intrusion_set.resource_level == input_data.get("resource_level")
-    assert intrusion_set.primary_motivation == input_data.get("primary_motivation")
-    assert intrusion_set.secondary_motivations == input_data.get(
-        "secondary_motivations"
+    assert (  # noqa: S101
+        intrusion_set.id is not None
+        and intrusion_set.name == input_data.get("name")
+        and intrusion_set.description == input_data.get("description")
+        and intrusion_set.aliases == input_data.get("aliases")
+        and intrusion_set.first_seen == input_data.get("first_seen")
+        and intrusion_set.last_seen == input_data.get("last_seen")
+        and intrusion_set.goals == input_data.get("goals")
+        and intrusion_set.resource_level == input_data.get("resource_level")
+        and intrusion_set.primary_motivation == input_data.get("primary_motivation")
+        and intrusion_set.secondary_motivations == input_data.get("secondary_motivations")
+        and intrusion_set.author == input_data.get("author")
+        and intrusion_set.external_references == input_data.get("external_references")
+        and intrusion_set.markings == input_data.get("markings")
     )
-    assert intrusion_set.author == input_data.get("author")
-    assert intrusion_set.external_references == input_data.get("external_references")
-    assert intrusion_set.markings == input_data.get("markings")
-
 
 @pytest.mark.parametrize(
     "input_data, error_field",
@@ -282,15 +294,17 @@ def test_intrusion_set_class_should_accept_valid_input(input_data):
     ],
 )
 def test_intrusion_set_class_should_not_accept_invalid_input(input_data, error_field):
+    """Test that the IntrusionSet class does not accept invalid input."""
     # Given: Invalid input data for the IntrusionSet class
     # When: Trying to create a IntrusionSet instance
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.IntrusionSet.model_validate(input_data)
-    assert str(error_field) in str(err)
+    assert str(error_field) in str(err)  # noqa: S101
 
 
 def test_intrusion_set_to_stix2_object_returns_valid_stix_object():
+    """Test that IntrusionSet.to_stix2_object returns a valid STIX IntrusionSet."""
     # Given: A valid intrusion set
     input_data = {
         "name": "Test Intrusion Set",
@@ -313,18 +327,21 @@ def test_intrusion_set_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = intrusion_set.to_stix2_object()
 
-    # Then: A valid STIX2.1 IntrusionSet is returned
-    assert isinstance(stix2_obj, stix2.IntrusionSet) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.aliases == input_data.get("aliases")
-    assert stix2_obj.first_seen == input_data.get("first_seen")
-    assert stix2_obj.last_seen == input_data.get("last_seen")
-    assert stix2_obj.goals == input_data.get("goals")
-    assert stix2_obj.resource_level == input_data.get("resource_level")
-    assert stix2_obj.primary_motivation == input_data.get("primary_motivation")
-    assert stix2_obj.secondary_motivations == input_data.get("secondary_motivations")
+    # Then: A valid STIX IntrusionSet is returned
+    assert (  # noqa: S101
+        isinstance(stix2_obj, stix2.IntrusionSet)
+        and stix2_obj.id is not None
+        and stix2_obj.name == input_data.get("name")
+        and stix2_obj.description == input_data.get("description")
+        and stix2_obj.aliases == input_data.get("aliases")
+        and stix2_obj.first_seen == input_data.get("first_seen")
+        and stix2_obj.last_seen == input_data.get("last_seen")
+        and stix2_obj.goals == input_data.get("goals")
+        and stix2_obj.resource_level == input_data.get("resource_level")
+        and stix2_obj.primary_motivation == input_data.get("primary_motivation")
+        and stix2_obj.secondary_motivations == input_data.get("secondary_motivations")
+    )
+
 
 
 @pytest.mark.parametrize(
@@ -353,6 +370,7 @@ def test_intrusion_set_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_location_administrative_area_class_should_accept_valid_input(input_data):
+    """Test that the LocationAdministrativeArea class accepts valid input."""
     # Given: Valid location administrative area input data
     # When: Creating an location administrative area object
     location_administrative_area = octi.LocationAdministrativeArea.model_validate(
@@ -360,16 +378,17 @@ def test_location_administrative_area_class_should_accept_valid_input(input_data
     )
 
     # Then: The location administrative area object should be valid
-    assert location_administrative_area.id is not None
-    assert location_administrative_area.name == input_data.get("name")
-    assert location_administrative_area.description == input_data.get("description")
-    assert location_administrative_area.latitude == input_data.get("latitude")
-    assert location_administrative_area.longitude == input_data.get("longitude")
-    assert location_administrative_area.author == input_data.get("author")
-    assert location_administrative_area.external_references == input_data.get(
-        "external_references"
+    assert (  # noqa: S101
+        location_administrative_area.id is not None
+        and location_administrative_area.name == input_data.get("name")
+        and location_administrative_area.description == input_data.get("description")
+        and location_administrative_area.latitude == input_data.get("latitude")
+        and location_administrative_area.longitude == input_data.get("longitude")
+        and location_administrative_area.author == input_data.get("author")
+        and location_administrative_area.external_references == input_data.get("external_references")
+        and location_administrative_area.markings == input_data.get("markings")
     )
-    assert location_administrative_area.markings == input_data.get("markings")
+
 
 
 @pytest.mark.parametrize(
@@ -408,15 +427,17 @@ def test_location_administrative_area_class_should_accept_valid_input(input_data
 def test_location_administrative_area_class_should_not_accept_invalid_input(
     input_data, error_field
 ):
+    """Test that the LocationAdministrativeArea class does not accept invalid input."""
     # Given: Invalid input data for the LocationAdministrativeArea class
     # When: Trying to create a LocationAdministrativeArea instance
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.LocationAdministrativeArea.model_validate(input_data)
-    assert str(error_field) in str(err)
+    assert str(error_field) in str(err)  # noqa: S101
 
 
 def test_location_administrative_area_to_stix2_object_returns_valid_stix_object():
+    """Test that LocationAdministrativeArea.to_stix2_object returns a valid STIX Location."""
     # Given: A valid location administrative area
     input_data = {
         "name": "Test Location Administrative",
@@ -434,16 +455,16 @@ def test_location_administrative_area_to_stix2_object_returns_valid_stix_object(
     # When: calling to_stix2_object method
     stix2_obj = location_administrative_area.to_stix2_object()
 
-    # Then: A valid STIX2.1 Location is returned
-    assert isinstance(stix2_obj, stix2.Location) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.administrative_area == input_data.get("name")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.latitude == input_data.get("latitude")
-    assert stix2_obj.longitude == input_data.get("longitude")
-    assert (
-        stix2_obj.x_opencti_location_type
+    # Then: A valid STIX Location is returned
+    assert (  # noqa: S101
+        isinstance(stix2_obj, stix2.Location)
+        and stix2_obj.id is not None
+        and stix2_obj.name == input_data.get("name")
+        and stix2_obj.administrative_area == input_data.get("name")
+        and stix2_obj.description == input_data.get("description")
+        and stix2_obj.latitude == input_data.get("latitude")
+        and stix2_obj.longitude == input_data.get("longitude")
+        and stix2_obj.x_opencti_location_type
         == octi_enums.LocationType.ADMINISTRATIVE_AREA.value
     )
 
@@ -474,19 +495,22 @@ def test_location_administrative_area_to_stix2_object_returns_valid_stix_object(
     ],
 )
 def test_location_city_class_should_accept_valid_input(input_data):
+    """Test that the LocationCity class accepts valid input."""
     # Given: Valid location city input data
     # When: Creating an location city object
     location_city = octi.LocationCity.model_validate(input_data)
 
     # Then: The location city object should be valid
-    assert location_city.id is not None
-    assert location_city.name == input_data.get("name")
-    assert location_city.description == input_data.get("description")
-    assert location_city.latitude == input_data.get("latitude")
-    assert location_city.longitude == input_data.get("longitude")
-    assert location_city.author == input_data.get("author")
-    assert location_city.external_references == input_data.get("external_references")
-    assert location_city.markings == input_data.get("markings")
+    assert (  # noqa: S101
+        location_city.id is not None
+        and location_city.name == input_data.get("name")
+        and location_city.description == input_data.get("description")
+        and location_city.latitude == input_data.get("latitude")
+        and location_city.longitude == input_data.get("longitude")
+        and location_city.author == input_data.get("author")
+        and location_city.external_references == input_data.get("external_references")
+        and location_city.markings == input_data.get("markings")
+    )
 
 
 @pytest.mark.parametrize(
@@ -523,15 +547,17 @@ def test_location_city_class_should_accept_valid_input(input_data):
     ],
 )
 def test_location_city_class_should_not_accept_invalid_input(input_data, error_field):
+    """Test that the LocationCity class does not accept invalid input."""
     # Given: Invalid input data for the LocationCity class
     # When: Trying to create a LocationCity instance
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.LocationCity.model_validate(input_data)
-    assert str(error_field) in str(err)
+    assert str(error_field) in str(err)  # noqa: S101
 
 
 def test_location_city_to_stix2_object_returns_valid_stix_object():
+    """Test that LocationCity.to_stix2_object returns a valid STIX Location."""
     # Given: A valid location city
     input_data = {
         "name": "Test Location City",
@@ -547,15 +573,17 @@ def test_location_city_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = location_city.to_stix2_object()
 
-    # Then: A valid STIX2.1 Location is returned
-    assert isinstance(stix2_obj, stix2.Location) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.city == input_data.get("name")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.latitude == input_data.get("latitude")
-    assert stix2_obj.longitude == input_data.get("longitude")
-    assert stix2_obj.x_opencti_location_type == octi_enums.LocationType.CITY.value
+    # Then: A valid STIX Location is returned
+    assert (  # noqa: S101
+        isinstance(stix2_obj, stix2.Location)
+        and stix2_obj.id is not None
+        and stix2_obj.name == input_data.get("name")
+        and stix2_obj.city == input_data.get("name")
+        and stix2_obj.description == input_data.get("description")
+        and stix2_obj.latitude == input_data.get("latitude")
+        and stix2_obj.longitude == input_data.get("longitude")
+        and stix2_obj.x_opencti_location_type == octi_enums.LocationType.CITY.value
+    )
 
 
 @pytest.mark.parametrize(
@@ -582,17 +610,20 @@ def test_location_city_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_location_country_class_should_accept_valid_input(input_data):
+    """Test that the LocationCountry class accepts valid input."""
     # Given: Valid location country input data
     # When: Creating an location country object
     location_country = octi.LocationCountry.model_validate(input_data)
 
     # Then: The location country object should be valid
-    assert location_country.id is not None
-    assert location_country.name == input_data.get("name")
-    assert location_country.description == input_data.get("description")
-    assert location_country.author == input_data.get("author")
-    assert location_country.external_references == input_data.get("external_references")
-    assert location_country.markings == input_data.get("markings")
+    assert (  # noqa: S101
+        location_country.id is not None
+        and location_country.name == input_data.get("name")
+        and location_country.description == input_data.get("description")
+        and location_country.author == input_data.get("author")
+        and location_country.external_references == input_data.get("external_references")
+        and location_country.markings == input_data.get("markings")
+    )
 
 
 @pytest.mark.parametrize(
@@ -630,15 +661,17 @@ def test_location_country_class_should_accept_valid_input(input_data):
 def test_location_country_class_should_not_accept_invalid_input(
     input_data, error_field
 ):
+    """Test that the LocationCountry class does not accept invalid input."""
     # Given: Invalid input data for the LocationCountry class
     # When: Trying to create a LocationCountry instance
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.LocationCountry.model_validate(input_data)
-    assert str(error_field) in str(err)
+    assert str(error_field) in str(err)  # noqa: S101
 
 
 def test_location_country_to_stix2_object_returns_valid_stix_object():
+    """Test that LocationCountry.to_stix2_object returns a valid STIX Location."""
     # Given: A valid location country
     input_data = {
         "name": "Test Location Country",
@@ -652,13 +685,15 @@ def test_location_country_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = location_country.to_stix2_object()
 
-    # Then: A valid STIX2.1 LocationCountry is returned
-    assert isinstance(stix2_obj, stix2.Location) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.country == input_data.get("name")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.x_opencti_location_type == octi_enums.LocationType.COUNTRY.value
+    # Then: A valid STIX LocationCountry is returned
+    assert (  # noqa: S101
+        isinstance(stix2_obj, stix2.Location)
+        and stix2_obj.id is not None
+        and stix2_obj.name == input_data.get("name")
+        and stix2_obj.country == input_data.get("name")
+        and stix2_obj.description == input_data.get("description")
+        and stix2_obj.x_opencti_location_type == octi_enums.LocationType.COUNTRY.value
+    )
 
 
 @pytest.mark.parametrize(
@@ -689,23 +724,24 @@ def test_location_country_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_location_position_class_should_accept_valid_input(input_data):
+    """Test that the LocationPosition class accepts valid input."""
     # Given: Valid location position input data
     # When: Creating an location position object
     location_position = octi.LocationPosition.model_validate(input_data)
 
     # Then: The location position object should be valid
-    assert location_position.id is not None
-    assert location_position.name == input_data.get("name")
-    assert location_position.description == input_data.get("description")
-    assert location_position.latitude == input_data.get("latitude")
-    assert location_position.longitude == input_data.get("longitude")
-    assert location_position.street_address == input_data.get("street_address")
-    assert location_position.postal_code == input_data.get("postal_code")
-    assert location_position.author == input_data.get("author")
-    assert location_position.external_references == input_data.get(
-        "external_references"
+    assert (  # noqa: S101
+        location_position.id is not None
+        and location_position.name == input_data.get("name")
+        and location_position.description == input_data.get("description")
+        and location_position.latitude == input_data.get("latitude")
+        and location_position.longitude == input_data.get("longitude")
+        and location_position.street_address == input_data.get("street_address")
+        and location_position.postal_code == input_data.get("postal_code")
+        and location_position.author == input_data.get("author")
+        and location_position.external_references == input_data.get("external_references")
+        and location_position.markings == input_data.get("markings")
     )
-    assert location_position.markings == input_data.get("markings")
 
 
 @pytest.mark.parametrize(
@@ -744,15 +780,17 @@ def test_location_position_class_should_accept_valid_input(input_data):
 def test_location_position_class_should_not_accept_invalid_input(
     input_data, error_field
 ):
+    """Test that the LocationPosition class does not accept invalid input."""
     # Given: Invalid input data for the LocationPosition class
     # When: Trying to create a LocationPosition instance
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.LocationPosition.model_validate(input_data)
-    assert str(error_field) in str(err)
+    assert str(error_field) in str(err) # noqa: S101
 
 
 def test_location_position_to_stix2_object_returns_valid_stix_object():
+    """Test that LocationPosition.to_stix2_object returns a valid STIX Location."""
     # Given: A valid location position
     input_data = {
         "name": "Test Location Position",
@@ -770,16 +808,18 @@ def test_location_position_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = location_position.to_stix2_object()
 
-    # Then: A valid STIX2.1 LocationPosition is returned
-    assert isinstance(stix2_obj, stix2.Location) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.latitude == input_data.get("latitude")
-    assert stix2_obj.longitude == input_data.get("longitude")
-    assert stix2_obj.street_address == input_data.get("street_address")
-    assert stix2_obj.postal_code == input_data.get("postal_code")
-    assert stix2_obj.x_opencti_location_type == octi_enums.LocationType.POSITION.value
+    # Then: A valid STIX LocationPosition is returned
+    assert (  # noqa: S101
+        isinstance(stix2_obj, stix2.Location)
+        and stix2_obj.id is not None
+        and stix2_obj.name == input_data.get("name")
+        and stix2_obj.description == input_data.get("description")
+        and stix2_obj.latitude == input_data.get("latitude")
+        and stix2_obj.longitude == input_data.get("longitude")
+        and stix2_obj.street_address == input_data.get("street_address")
+        and stix2_obj.postal_code == input_data.get("postal_code")
+        and stix2_obj.x_opencti_location_type == octi_enums.LocationType.POSITION.value
+    )
 
 
 @pytest.mark.parametrize(
@@ -806,17 +846,20 @@ def test_location_position_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_location_region_class_should_accept_valid_input(input_data):
+    """Test that the LocationRegion class accepts valid input."""
     # Given: Valid location region input data
     # When: Creating an location region object
     location_region = octi.LocationRegion.model_validate(input_data)
 
     # Then: The location region object should be valid
-    assert location_region.id is not None
-    assert location_region.name == input_data.get("name")
-    assert location_region.description == input_data.get("description")
-    assert location_region.author == input_data.get("author")
-    assert location_region.external_references == input_data.get("external_references")
-    assert location_region.markings == input_data.get("markings")
+    assert (  # noqa: S101
+        location_region.id is not None
+        and location_region.name == input_data.get("name")
+        and location_region.description == input_data.get("description")
+        and location_region.author == input_data.get("author")
+        and location_region.external_references == input_data.get("external_references")
+        and location_region.markings == input_data.get("markings")
+    )
 
 
 @pytest.mark.parametrize(
@@ -852,15 +895,17 @@ def test_location_region_class_should_accept_valid_input(input_data):
     ],
 )
 def test_location_region_class_should_not_accept_invalid_input(input_data, error_field):
+    """Test that the LocationRegion class does not accept invalid input."""
     # Given: Invalid input data for the LocationRegion class
     # When: Trying to create a LocationRegion instance
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.LocationRegion.model_validate(input_data)
-    assert str(error_field) in str(err)
+    assert str(error_field) in str(err)  # noqa: S101
 
 
 def test_location_region_to_stix2_object_returns_valid_stix_object():
+    """Test that LocationRegion.to_stix2_object returns a valid STIX Location."""
     # Given: A valid location region
     input_data = {
         "name": "Test Location Region",
@@ -874,13 +919,15 @@ def test_location_region_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = location_region.to_stix2_object()
 
-    # Then: A valid STIX2.1 LocationRegion is returned
-    assert isinstance(stix2_obj, stix2.Location) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.region == input_data.get("name")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.x_opencti_location_type == octi_enums.LocationType.REGION.value
+    # Then: A valid STIX LocationRegion is returned
+    assert (  # noqa: S101
+        isinstance(stix2_obj, stix2.Location)
+        and stix2_obj.id is not None
+        and stix2_obj.name == input_data.get("name")
+        and stix2_obj.region == input_data.get("name")
+        and stix2_obj.description == input_data.get("description")
+        and stix2_obj.x_opencti_location_type == octi_enums.LocationType.REGION.value
+    )
 
 
 @pytest.mark.parametrize(
@@ -932,30 +979,29 @@ def test_location_region_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_malware_class_should_accept_valid_input(input_data):
+    """Test that the Malware class accepts valid input."""
     # Given: Valid malware input data
     # When: Creating an malware object
     malware = octi.Malware.model_validate(input_data)
 
     # Then: The malware object should be valid
-    assert malware.id is not None
-    assert malware.name == input_data.get("name")
-    assert malware.is_family == input_data.get("is_family")
-    assert malware.description == input_data.get("description")
-    assert malware.aliases == input_data.get("aliases")
-    assert malware.types == input_data.get("types")
-    assert malware.first_seen == input_data.get("first_seen")
-    assert malware.last_seen == input_data.get("last_seen")
-    assert malware.architecture_execution_envs == input_data.get(
-        "architecture_execution_envs"
+    assert (  # noqa: S101
+        malware.id is not None
+        and malware.name == input_data.get("name")
+        and malware.is_family == input_data.get("is_family")
+        and malware.description == input_data.get("description")
+        and malware.aliases == input_data.get("aliases")
+        and malware.types == input_data.get("types")
+        and malware.first_seen == input_data.get("first_seen")
+        and malware.last_seen == input_data.get("last_seen")
+        and malware.architecture_execution_envs == input_data.get("architecture_execution_envs")
+        and malware.implementation_languages == input_data.get("implementation_languages")
+        and malware.kill_chain_phases == input_data.get("kill_chain_phases")
+        and malware.capabilities == input_data.get("capabilities")
+        and malware.author == input_data.get("author")
+        and malware.external_references == input_data.get("external_references")
+        and malware.markings == input_data.get("markings")
     )
-    assert malware.implementation_languages == input_data.get(
-        "implementation_languages"
-    )
-    assert malware.kill_chain_phases == input_data.get("kill_chain_phases")
-    assert malware.capabilities == input_data.get("capabilities")
-    assert malware.author == input_data.get("author")
-    assert malware.external_references == input_data.get("external_references")
-    assert malware.markings == input_data.get("markings")
 
 
 @pytest.mark.parametrize(
@@ -992,15 +1038,17 @@ def test_malware_class_should_accept_valid_input(input_data):
     ],
 )
 def test_malware_class_should_not_accept_invalid_input(input_data, error_field):
+    """Test that the Malware class does not accept invalid input."""
     # Given: Invalid input data for the Malware class
     # When: Trying to create a Malware instance
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.Malware.model_validate(input_data)
-    assert str(error_field) in str(err)
+    assert str(error_field) in str(err)  # noqa: S101
 
 
 def test_malware_to_stix2_object_returns_valid_stix_object():
+    """Test that Malware.to_stix2_object returns a valid STIX Malware."""
     # Given: A valid malware
     input_data = {
         "name": "Test Malware",
@@ -1036,27 +1084,29 @@ def test_malware_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = malware.to_stix2_object()
 
-    # Then: A valid STIX2.1 Malware is returned
-    assert isinstance(stix2_obj, stix2.Malware) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.is_family == input_data.get("is_family")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.aliases == input_data.get("aliases")
-    assert stix2_obj.malware_types == input_data.get("types")
-    assert stix2_obj.first_seen == input_data.get("first_seen")
-    assert stix2_obj.last_seen == input_data.get("last_seen")
-    assert stix2_obj.architecture_execution_envs == input_data.get(
-        "architecture_execution_envs"
+    # Then: A valid STIX Malware is returned
+    assert (  # noqa: S101
+        isinstance(stix2_obj, stix2.Malware)
+        and stix2_obj.id is not None
+        and stix2_obj.name == input_data.get("name")
+        and stix2_obj.is_family == input_data.get("is_family")
+        and stix2_obj.description == input_data.get("description")
+        and stix2_obj.aliases == input_data.get("aliases")
+        and stix2_obj.malware_types == input_data.get("types")
+        and stix2_obj.first_seen == input_data.get("first_seen")
+        and stix2_obj.last_seen == input_data.get("last_seen")
+        and stix2_obj.architecture_execution_envs == input_data.get(
+            "architecture_execution_envs"
+        )
+        and stix2_obj.implementation_languages == input_data.get(
+            "implementation_languages"
+        )
+        and stix2_obj.kill_chain_phases == [
+            kill_chain_phase.to_stix2_object()
+            for kill_chain_phase in input_data.get("kill_chain_phases")
+        ]
+        and stix2_obj.capabilities == input_data.get("capabilities")
     )
-    assert stix2_obj.implementation_languages == input_data.get(
-        "implementation_languages"
-    )
-    assert stix2_obj.kill_chain_phases == [
-        kill_chain_phase.to_stix2_object()
-        for kill_chain_phase in input_data.get("kill_chain_phases")
-    ]
-    assert stix2_obj.capabilities == input_data.get("capabilities")
 
 
 @pytest.mark.parametrize(
@@ -1087,21 +1137,24 @@ def test_malware_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_organization_class_should_accept_valid_input(input_data):
+    """Test that the Organization class accepts valid input."""
     # Given: Valid organization input data
     # When: Creating an organization object
     organization = octi.Organization.model_validate(input_data)
 
     # Then: The organization object should be valid
-    assert organization.id is not None
-    assert organization.name == input_data.get("name")
-    assert organization.description == input_data.get("description")
-    assert organization.author == input_data.get("author")
-    assert organization.external_references == input_data.get("external_references")
-    assert organization.markings == input_data.get("markings")
-    assert organization.contact_information == input_data.get("contact_information")
-    assert organization.organization_type == input_data.get("organization_type")
-    assert organization.reliability == input_data.get("reliability")
-    assert organization.aliases == input_data.get("aliases")
+    assert (  # noqa: S101
+        organization.id is not None
+        and organization.name == input_data.get("name")
+        and organization.description == input_data.get("description")
+        and organization.author == input_data.get("author")
+        and organization.external_references == input_data.get("external_references")
+        and organization.markings == input_data.get("markings")
+        and organization.contact_information == input_data.get("contact_information")
+        and organization.organization_type == input_data.get("organization_type")
+        and organization.reliability == input_data.get("reliability")
+        and organization.aliases == input_data.get("aliases")
+    )
 
 
 @pytest.mark.parametrize(
@@ -1119,15 +1172,17 @@ def test_organization_class_should_accept_valid_input(input_data):
     ],
 )
 def test_organization_class_should_not_accept_invalid_input(input_data, error_field):
+    """Test that the Organization class does not accept invalid input."""
     # Given: Invalid input data for the Organization class
     # When: Trying to create an Organization instance
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.Organization.model_validate(input_data)
-    assert str(error_field) in str(err)
+    assert str(error_field) in str(err) # noqa: S101
 
 
 def test_organization_to_stix2_object_returns_valid_stix_object():
+    """Test that Organization.to_stix2_object returns a valid STIX Identity."""
     # Given: A valid organization
     input_data = {
         "name": "Test Organization",
@@ -1145,16 +1200,18 @@ def test_organization_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = organization.to_stix2_object()
 
-    # Then: A valid STIX2.1 Identity is returned
-    assert isinstance(stix2_obj, stix2.Identity) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.identity_class == octi_enums.IdentityClass.ORGANIZATION.value
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.contact_information == input_data.get("contact_information")
-    assert stix2_obj.x_opencti_organization_type == input_data.get("organization_type")
-    assert stix2_obj.x_opencti_reliability == input_data.get("reliability")
-    assert stix2_obj.x_opencti_aliases == input_data.get("aliases")
+    # Then: A valid STIX Identity is returned
+    assert (  # noqa: S101
+        isinstance(stix2_obj, stix2.Identity)
+        and stix2_obj.id is not None
+        and stix2_obj.identity_class == octi_enums.IdentityClass.ORGANIZATION.value
+        and stix2_obj.name == input_data.get("name")
+        and stix2_obj.description == input_data.get("description")
+        and stix2_obj.contact_information == input_data.get("contact_information")
+        and stix2_obj.x_opencti_organization_type == input_data.get("organization_type")
+        and stix2_obj.x_opencti_reliability == input_data.get("reliability")
+        and stix2_obj.x_opencti_aliases == input_data.get("aliases")
+    )
 
 
 @pytest.mark.parametrize(
@@ -1187,21 +1244,24 @@ def test_organization_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_report_class_should_accept_valid_input(input_data):
+    """Test that the Report class accepts valid input."""
     # Given: Valid report input data
     # When: Creating a report object
     report = octi.Report.model_validate(input_data)
 
     # Then: The report object should be valid
-    assert report.id is not None
-    assert report.name == input_data.get("name")
-    assert report.publication_date == input_data.get("publication_date")
-    assert report.report_types == input_data.get("report_types")
-    assert report.reliability == input_data.get("reliability")
-    assert report.description == input_data.get("description")
-    assert report.author == input_data.get("author")
-    assert report.external_references == input_data.get("external_references")
-    assert report.markings == input_data.get("markings")
-    assert report.objects == input_data.get("objects")
+    assert (  # noqa: S101
+        report.id is not None
+        and report.name == input_data.get("name")
+        and report.publication_date == input_data.get("publication_date")
+        and report.report_types == input_data.get("report_types")
+        and report.reliability == input_data.get("reliability")
+        and report.description == input_data.get("description")
+        and report.author == input_data.get("author")
+        and report.external_references == input_data.get("external_references")
+        and report.markings == input_data.get("markings")
+        and report.objects == input_data.get("objects")
+    )
 
 
 @pytest.mark.parametrize(
@@ -1226,15 +1286,17 @@ def test_report_class_should_accept_valid_input(input_data):
     ],
 )
 def test_report_class_should_not_accept_invalid_input(input_data, error_field):
+    """Test that the Report class does not accept invalid input."""
     # Given: Invalid input data for the Report class
     # When: Trying to create a Report instance
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.Report.model_validate(input_data)
-    assert str(error_field) in str(err)
+    assert str(error_field) in str(err)  # noqa: S101
 
 
 def test_report_to_stix2_object_returns_valid_stix_object():
+    """Test that Report.to_stix2_object returns a valid STIX Report."""
     # Given: A valid report
     input_data = {
         "name": "Test Report",
@@ -1252,15 +1314,17 @@ def test_report_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = report.to_stix2_object()
 
-    # Then: A valid STIX2.1 Report is returned
-    assert isinstance(stix2_obj, stix2.Report) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.published == input_data.get("publication_date")
-    assert stix2_obj.report_types == input_data.get("report_types")
-    assert stix2_obj.x_opencti_reliability == input_data.get("reliability")
-    assert stix2_obj.object_refs == [obj.id for obj in input_data.get("objects")]
+    # Then: A valid STIX Report is returned
+    assert (  # noqa: S101
+        isinstance(stix2_obj, stix2.Report)
+        and stix2_obj.id is not None
+        and stix2_obj.name == input_data.get("name")
+        and stix2_obj.description == input_data.get("description")
+        and stix2_obj.published == input_data.get("publication_date")
+        and stix2_obj.report_types == input_data.get("report_types")
+        and stix2_obj.x_opencti_reliability == input_data.get("reliability")
+        and stix2_obj.object_refs == [obj.id for obj in input_data.get("objects")]
+    )
 
 
 @pytest.mark.parametrize(
@@ -1293,20 +1357,23 @@ def test_report_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_sector_class_should_accept_valid_input(input_data):
+    """Test that the Sector class accepts valid input."""
     # Given: Valid sector input data
     # When: Creating an sector object
     sector = octi.Sector.model_validate(input_data)
 
     # Then: The sector object should be valid
-    assert sector.id is not None
-    assert sector.name == input_data.get("name")
-    assert sector.description == input_data.get("description")
-    assert sector.author == input_data.get("author")
-    assert sector.external_references == input_data.get("external_references")
-    assert sector.markings == input_data.get("markings")
-    assert sector.sectors == input_data.get("sectors")
-    assert sector.reliability == input_data.get("reliability")
-    assert sector.aliases == input_data.get("aliases")
+    assert (  # noqa: S101
+        sector.id is not None
+        and sector.name == input_data.get("name")
+        and sector.description == input_data.get("description")
+        and sector.author == input_data.get("author")
+        and sector.external_references == input_data.get("external_references")
+        and sector.markings == input_data.get("markings")
+        and sector.sectors == input_data.get("sectors")
+        and sector.reliability == input_data.get("reliability")
+        and sector.aliases == input_data.get("aliases")
+    )
 
 
 @pytest.mark.parametrize(
@@ -1324,15 +1391,17 @@ def test_sector_class_should_accept_valid_input(input_data):
     ],
 )
 def test_sector_class_should_not_accept_invalid_input(input_data, error_field):
+    """Test that the Sector class does not accept invalid input."""
     # Given: Invalid input data for the Sector class
     # When: Trying to create an Sector instance
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.Sector.model_validate(input_data)
-    assert str(error_field) in str(err)
+    assert str(error_field) in str(err)  # noqa: S101
 
 
 def test_sector_to_stix2_object_returns_valid_stix_object():
+    """Test that Sector.to_stix2_object returns a valid STIX Identity."""
     # Given: A valid sector
     input_data = {
         "name": "Test Sector",
@@ -1351,15 +1420,17 @@ def test_sector_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = sector.to_stix2_object()
 
-    # Then: A valid STIX2.1 Identity is returned
-    assert isinstance(stix2_obj, stix2.Identity) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.identity_class == octi_enums.IdentityClass.CLASS.value
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.sectors == input_data.get("sectors")
-    assert stix2_obj.x_opencti_reliability == input_data.get("reliability")
-    assert stix2_obj.x_opencti_aliases == input_data.get("aliases")
+    # Then: A valid STIX Identity is returned
+    assert (  # noqa: S101
+        isinstance(stix2_obj, stix2.Identity)
+        and stix2_obj.id is not None
+        and stix2_obj.identity_class == octi_enums.IdentityClass.CLASS.value
+        and stix2_obj.name == input_data.get("name")
+        and stix2_obj.description == input_data.get("description")
+        and stix2_obj.sectors == input_data.get("sectors")
+        and stix2_obj.x_opencti_reliability == input_data.get("reliability")
+        and stix2_obj.x_opencti_aliases == input_data.get("aliases")
+    )
 
 
 @pytest.mark.parametrize(
@@ -1396,30 +1467,27 @@ def test_sector_to_stix2_object_returns_valid_stix_object():
     ],
 )
 def test_vulnerability_class_should_accept_valid_input(input_data):
+    """Test that the Vulnerability class accepts valid input."""
     # Given: Valid vulnerability input data
     # When: Creating an vulnerability object
     vulnerability = octi.Vulnerability.model_validate(input_data)
 
     # Then: The vulnerability object should be valid
-    assert vulnerability.id is not None
-    assert vulnerability.name == input_data.get("name")
-    assert vulnerability.description == input_data.get("description")
-    assert vulnerability.aliases == input_data.get("aliases")
-    assert vulnerability.cvss_score == input_data.get("cvss_score")
-    assert vulnerability.cvss_severity == input_data.get("cvss_severity")
-    assert vulnerability.cvss_attack_vector == input_data.get("cvss_attack_vector")
-    assert vulnerability.cvss_integrity_impact == input_data.get(
-        "cvss_integrity_impact"
+    assert (  # noqa: S101
+        vulnerability.id is not None
+        and vulnerability.name == input_data.get("name")
+        and vulnerability.description == input_data.get("description")
+        and vulnerability.aliases == input_data.get("aliases")
+        and vulnerability.cvss_score == input_data.get("cvss_score")
+        and vulnerability.cvss_severity == input_data.get("cvss_severity")
+        and vulnerability.cvss_attack_vector == input_data.get("cvss_attack_vector")
+        and vulnerability.cvss_integrity_impact == input_data.get("cvss_integrity_impact")
+        and vulnerability.cvss_availability_impact == input_data.get("cvss_availability_impact")
+        and vulnerability.cvss_confidentiality_impact == input_data.get("cvss_confidentiality_impact")
+        and vulnerability.is_cisa_kev == input_data.get("is_cisa_kev")
+        and vulnerability.epss_score == input_data.get("epss_score")
+        and vulnerability.epss_percentile == input_data.get("epss_percentile")
     )
-    assert vulnerability.cvss_availability_impact == input_data.get(
-        "cvss_availability_impact"
-    )
-    assert vulnerability.cvss_confidentiality_impact == input_data.get(
-        "cvss_confidentiality_impact"
-    )
-    assert vulnerability.is_cisa_kev == input_data.get("is_cisa_kev")
-    assert vulnerability.epss_score == input_data.get("epss_score")
-    assert vulnerability.epss_percentile == input_data.get("epss_percentile")
 
 
 @pytest.mark.parametrize(
@@ -1437,15 +1505,17 @@ def test_vulnerability_class_should_accept_valid_input(input_data):
     ],
 )
 def test_vulnerability_class_should_not_accept_invalid_input(input_data, error_field):
+    """Test that the Vulnerability class does not accept invalid input."""
     # Given: Invalid input data for the Vulnerability class
     # When: Trying to create an Vulnerability instance
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.Vulnerability.model_validate(input_data)
-    assert str(error_field) in str(err)
+    assert str(error_field) in str(err)  # noqa: S101
 
 
 def test_vulnerability_to_stix2_object_returns_valid_stix_object():
+    """Test that Vulnerability.to_stix2_object returns a valid STIX Identity."""
     # Given: A valid vulnerability
     input_data = {
         "name": "Test Vulnerability",
@@ -1469,26 +1539,20 @@ def test_vulnerability_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = vulnerability.to_stix2_object()
 
-    # Then: A valid STIX2.1 Identity is returned
-    assert isinstance(stix2_obj, stix2.Vulnerability) is True
-    assert stix2_obj.id is not None
-    assert stix2_obj.name == input_data.get("name")
-    assert stix2_obj.description == input_data.get("description")
-    assert stix2_obj.x_opencti_aliases == input_data.get("aliases")
-    assert stix2_obj.x_opencti_cvss_base_score == input_data.get("cvss_score")
-    assert stix2_obj.x_opencti_cvss_base_severity == input_data.get("cvss_severity")
-    assert stix2_obj.x_opencti_cvss_attack_vector == input_data.get(
-        "cvss_attack_vector"
+    # Then: A valid STIX Identity is returned
+    assert (  # noqa: S101
+        isinstance(stix2_obj, stix2.Vulnerability)
+        and stix2_obj.id is not None
+        and stix2_obj.name == input_data.get("name")
+        and stix2_obj.description == input_data.get("description")
+        and stix2_obj.x_opencti_aliases == input_data.get("aliases")
+        and stix2_obj.x_opencti_cvss_base_score == input_data.get("cvss_score")
+        and stix2_obj.x_opencti_cvss_base_severity == input_data.get("cvss_severity")
+        and stix2_obj.x_opencti_cvss_attack_vector == input_data.get("cvss_attack_vector")
+        and stix2_obj.x_opencti_cvss_integrity_impact == input_data.get("cvss_integrity_impact")
+        and stix2_obj.x_opencti_cvss_availability_impact == input_data.get("cvss_availability_impact")
+        and stix2_obj.x_opencti_cvss_confidentiality_impact == input_data.get("cvss_confidentiality_impact")
+        and stix2_obj.x_opencti_cisa_kev == input_data.get("is_cisa_kev")
+        and stix2_obj.x_opencti_epss_score == input_data.get("epss_score")
+        and stix2_obj.x_opencti_epss_percentile == input_data.get("epss_percentile")
     )
-    assert stix2_obj.x_opencti_cvss_integrity_impact == input_data.get(
-        "cvss_integrity_impact"
-    )
-    assert stix2_obj.x_opencti_cvss_availability_impact == input_data.get(
-        "cvss_availability_impact"
-    )
-    assert stix2_obj.x_opencti_cvss_confidentiality_impact == input_data.get(
-        "cvss_confidentiality_impact"
-    )
-    assert stix2_obj.x_opencti_cisa_kev == input_data.get("is_cisa_kev")
-    assert stix2_obj.x_opencti_epss_score == input_data.get("epss_score")
-    assert stix2_obj.x_opencti_epss_percentile == input_data.get("epss_percentile")

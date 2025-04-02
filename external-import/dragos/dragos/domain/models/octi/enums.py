@@ -1,3 +1,5 @@
+"""Offer enum for OpenCTI models."""
+
 import warnings
 from enum import StrEnum
 
@@ -21,6 +23,7 @@ class PermissiveEnum(StrEnum):
 
 class AccountType(PermissiveEnum):
     """Account Type Open Vocabulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_k2b7lkt45f0i
     """
 
@@ -39,6 +42,7 @@ class AccountType(PermissiveEnum):
 
 class AttackMotivation(PermissiveEnum):
     """Attack Motivation Open Vocabulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_dmb1khqsn650
     """
 
@@ -56,6 +60,7 @@ class AttackMotivation(PermissiveEnum):
 
 class AttackResourceLevel(PermissiveEnum):
     """Attack Resource Level Open Vocabulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_moarppphq8vq
     """
 
@@ -69,6 +74,7 @@ class AttackResourceLevel(PermissiveEnum):
 
 class CvssSeverity(StrEnum):
     """CVSS Severity Enum.
+
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/domain/vulnerability.js#L10
     """
 
@@ -81,6 +87,7 @@ class CvssSeverity(StrEnum):
 
 class EncryptionAlgorithm(StrEnum):
     """Encryption Algorithm Enum.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_nfgle8k7nbo4
     """
 
@@ -91,6 +98,7 @@ class EncryptionAlgorithm(StrEnum):
 
 class HashAlgorithm(PermissiveEnum):
     """Hash Algorithm Open Vocabulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_tumklw3o2gyz
     """
 
@@ -106,6 +114,7 @@ class HashAlgorithm(PermissiveEnum):
 
 class IdentityClass(PermissiveEnum):
     """Identity Class Open Vocaubulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_be1dktvcmyu
     """
 
@@ -119,6 +128,7 @@ class IdentityClass(PermissiveEnum):
 
 class ImplementationLanguage(PermissiveEnum):
     """Implementation Language Open Vocabulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_1s3o9ou3pbq
     """
 
@@ -147,6 +157,7 @@ class ImplementationLanguage(PermissiveEnum):
 
 class IndicatorType(PermissiveEnum):
     """Indicator Type Open Vocabulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_cvhfwe3t9vuo
     """
 
@@ -161,6 +172,7 @@ class IndicatorType(PermissiveEnum):
 
 class IndustrySector(PermissiveEnum):
     """Industry Sector Open Vocabulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_oogrswk3onck
     """
 
@@ -208,6 +220,7 @@ class IndustrySector(PermissiveEnum):
 
 class LocationType(StrEnum):
     """Location Type Enum.
+
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/stixDomainObject.ts#L47
     """
 
@@ -220,6 +233,7 @@ class LocationType(StrEnum):
 
 class MalwareCapability(PermissiveEnum):
     """Malware Capability Open Vocabulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_2b6es5hl7gmc
     """
 
@@ -264,6 +278,7 @@ class MalwareCapability(PermissiveEnum):
 
 class MalwareType(PermissiveEnum):
     """Malware Type Open Vocabulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_oxlc4df65spl
     """
 
@@ -293,6 +308,7 @@ class MalwareType(PermissiveEnum):
 
 class ObservableType(StrEnum):
     """Observable Type Enum.
+
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/stixCyberObservable.ts#L4
     """
 
@@ -332,6 +348,7 @@ class ObservableType(StrEnum):
 
 class OrganizationType(PermissiveEnum):
     """Organization Type Open Vocabulary.
+
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L770
     """
 
@@ -344,6 +361,7 @@ class OrganizationType(PermissiveEnum):
 
 class PatternType(PermissiveEnum):
     """Pattern Type Open Vocabulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_9lfdvxnyofxw
     """
 
@@ -361,6 +379,7 @@ class PatternType(PermissiveEnum):
 
 class Platform(PermissiveEnum):
     """Platform Open Vocabulary.
+
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L797
     """
 
@@ -372,6 +391,7 @@ class Platform(PermissiveEnum):
 
 class ProcessorArchitecture(PermissiveEnum):
     """Processor Architecture Open Vocabulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_iup9ob79qwei
     """
 
@@ -387,6 +407,7 @@ class ProcessorArchitecture(PermissiveEnum):
 
 class Region(PermissiveEnum):
     """Region Open Vocabulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_i1sw27qw1v0s
     """
 
@@ -427,6 +448,7 @@ class Region(PermissiveEnum):
 
 class Reliability(PermissiveEnum):
     """Reliability Open Vocabulary.
+
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L866
     """
 
@@ -440,6 +462,7 @@ class Reliability(PermissiveEnum):
 
 class ReportType(PermissiveEnum):
     """Report Type Open Vocabulary.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_9lfdvxnyofxw
     """
 
@@ -455,6 +478,7 @@ class ReportType(PermissiveEnum):
 
 class TLPLevel(StrEnum):
     """TLP Level Enum.
+
     See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/identifier.js#L76
     """
 
@@ -467,6 +491,7 @@ class TLPLevel(StrEnum):
 
 class WindowsIntegrityLevel(StrEnum):
     """Windows Integrity Level Enum.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_n8wq1912g4ts
     """
 
@@ -478,6 +503,7 @@ class WindowsIntegrityLevel(StrEnum):
 
 class WindowsRegistryDatatype(StrEnum):
     """Windows Registry Datatype Enum.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_emk4vrhg6ccn
     """
 
@@ -499,6 +525,7 @@ class WindowsRegistryDatatype(StrEnum):
 
 class WindowsServiceStartType(StrEnum):
     """Windows Service Start Type Enum.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_91c2s0q9p4f3
     """
 
@@ -511,6 +538,7 @@ class WindowsServiceStartType(StrEnum):
 
 class WindowsServiceStatus(StrEnum):
     """Windows Service Status Enum.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_t6oit3qe17hs
     """
 
@@ -525,6 +553,7 @@ class WindowsServiceStatus(StrEnum):
 
 class WindowsServiceType(StrEnum):
     """Windows Service Type Enum.
+
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_e8mzqdysuuve
     """
 

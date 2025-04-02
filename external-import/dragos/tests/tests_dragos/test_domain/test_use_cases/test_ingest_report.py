@@ -1,3 +1,5 @@
+"""Offer tests for the ingest_report module."""
+
 from typing import Generator, Optional
 
 import dragos.domain.models.octi as octi
@@ -86,6 +88,7 @@ class StubReport(Report):
 
 
 def test_report_processor_should_process_a_valid_report():
+    """Test that ReportProcessor can process a valid report."""
     # Given: A ReportProcessor and a valid report
     report_processor = ReportProcessor(
         tlp_level=TLPLevel.AMBER.value,
@@ -97,12 +100,14 @@ def test_report_processor_should_process_a_valid_report():
     octi_entities = report_processor.run_on(stub_report)
 
     # Then: ReportProcessor returns a list of OCTI entities
-    assert isinstance(octi_entities, list) is True
-    assert any(isinstance(entity, octi.Report) for entity in octi_entities)
-    assert any(isinstance(entity, octi.Observable) for entity in octi_entities)
-    assert any(isinstance(entity, octi.Indicator) for entity in octi_entities)
-    assert any(
-        isinstance(entity, octi.IndicatorBasedOnObservable) for entity in octi_entities
+    assert (  # noqa: S101
+        isinstance(octi_entities, list)
+        and any(isinstance(entity, octi.Report) for entity in octi_entities)
+        and any(isinstance(entity, octi.Observable) for entity in octi_entities)
+        and any(isinstance(entity, octi.Indicator) for entity in octi_entities)
+        and any(
+            isinstance(entity, octi.IndicatorBasedOnObservable) for entity in octi_entities
+        )
+        and any(isinstance(entity, octi.OrganizationAuthor) for entity in octi_entities)
+        and any(isinstance(entity, octi.TLPMarking) for entity in octi_entities)
     )
-    assert any(isinstance(entity, octi.OrganizationAuthor) for entity in octi_entities)
-    assert any(isinstance(entity, octi.TLPMarking) for entity in octi_entities)

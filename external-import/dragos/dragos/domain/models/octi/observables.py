@@ -116,7 +116,7 @@ class Artifact(Observable):
     def _custom_properties_to_stix(self) -> dict[str, Any]:
         """Convert custom properties to stix."""
         custom_properties = super()._custom_properties_to_stix()
-        custom_properties.update(dict(x_opencti_additional_names=self.additional_names))
+        custom_properties.update({"x_opencti_additional_names": self.additional_names})
         return custom_properties
 
     def to_stix2_object(self) -> stix2.v21.Artifact:
@@ -291,7 +291,7 @@ class File(Observable):
     def _custom_properties_to_stix(self) -> dict[str, Any]:
         """Convert custom properties to stix."""
         custom_properties = super()._custom_properties_to_stix()
-        custom_properties.update(dict(x_opencti_additional_names=self.additional_names))
+        custom_properties.update({"x_opencti_additional_names": self.additional_names})
         return custom_properties
 
     def to_stix2_object(self) -> stix2.File:
