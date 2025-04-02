@@ -1,14 +1,4 @@
 # OpenCTI External Ingestion Connector ServiceNow
-
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
-
 Table of Contents
 
 - [OpenCTI External Ingestion Connector ServiceNow](#opencti-external-ingestion-connector-servicenow)
@@ -33,7 +23,16 @@ Table of Contents
 
 ### Requirements
 
-- OpenCTI Platform >= 6...
+- pycti==6.5.10
+- validators==0.33.0
+- pydantic>=2.10, <3
+- requests~=2.32.3
+- stix2~=3.0.1
+- PyYAML==6.0.2
+- aiohttp~=3.11.11
+- tenacity~=9.0.0
+- pydantic-settings==2.8.1
+- python-dotenv>=1.0.1, <2
 
 ## Configuration variables
 
@@ -46,36 +45,46 @@ Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
 |---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+| OpenCTI URL   | `url`      | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | `token`    | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
 ### Base connector environment variables
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Parameter `Connector`       | config.yml                    | Docker environment variable             | Default           | Mandatory | Description                                                                                      |
+|-----------------------------|-------------------------------|-----------------------------------------|-------------------|-----------|--------------------------------------------------------------------------------------------------|
+| ID                          | `id`                          | `CONNECTOR_ID`                          | /                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                                        |
+| Type                        | `type`                        | `CONNECTOR_TYPE`                        | `EXTERNAL_IMPORT` | No        | Should always be set to `EXTERNAL_IMPORT` for this connector.                                    |
+| Name                        | `name`                        | `CONNECTOR_NAME`                        | `ServiceNow`      | No        | Name of the connector.                                                                           |
+| Scope                       | `scope`                       | `CONNECTOR_SCOPE`                       | `ServiceNow`      | No        | The scope or type of data the connector is importing, either a MIME type or Stix Object.         |
+| Log level                   | `log_level`                   | `CONNECTOR_LOG_LEVEL`                   | `error`           | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.           |
+| Duration period             | `duration_period`             | `CONNECTOR_DURATION_PERIOD`             | `PT24H`           | No        | Determines the time interval between each launch of the connector in ISO 8601, ex: `PT24H`.      |
+| Queue threshold             | `queue_threshold`             | `CONNECTOR_QUEUE_THRESHOLD`             | `500`             | No        | Used to determine the limit (RabbitMQ) in MB at which the connector must go into buffering mode. |
+| Run and terminate           | `run_and_terminate`           | `CONNECTOR_RUN_AND_TERMINATE`           | `False`           | No        | Launch the connector once if set to `True`.                                                      |
+| Send to queue               | `send_to_queue`               | `CONNECTOR_SEND_TO_QUEUE`               | `True`            | No        | If set to `True`, the connector will send data to the queue.                                     |
+| Send to directory           | `send_to_directory`           | `CONNECTOR_SEND_TO_DIRECTORY`           | `False`           | No        | If set to `True`, the connector will send data to a directory.                                   |
+| Send to directory path      | `send_to_directory_path`      | `CONNECTOR_SEND_TO_DIRECTORY_PATH`      | /                 | No        | The path to the directory where data will be sent if `CONNECTOR_SEND_TO_DIRECTORY` is `True`.    |
+| Send to directory retention | `send_to_directory_retention` | `CONNECTOR_SEND_TO_DIRECTORY_RETENTION` | `7`               | No        | The number of days to retain data in the directory.                                              |
 
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
+| Parameter `ServiceNow` | config.yml          | Docker environment variable    | Default | Mandatory | Description                                                                        |
+|------------------------|---------------------|--------------------------------|---------|-----------|------------------------------------------------------------------------------------|
+| Instance name          | `instance_name`     | `SERVICENOW_INSTANCE_NAME`     | /       | Yes       | Representing the ServiceNow server name.                                           |
+| Instance username      | `instance_username` | `SERVICENOW_INSTANCE_USERNAME` | /       | Yes       | The username used to authenticate with the ServiceNow instance.                    |
+| Instance password      | `instance_password` | `SERVICENOW_INSTANCE_PASSWORD` | /       | Yes       | The password for the ServiceNow account used for authentication.                   |
+| Import start date      | `import_start_date` | `SERVICENOW_IMPORT_START_DATE` | /       | Yes       | The date from which data import should start. (Format YYYY-MM-DD)                  |
+| TLP level              | `tlp_level`         | `SERVICENOW_TLP_LEVEL`         | `clear` | No        | TLP markings for exported data (Available: clear, green, amber, amber+strict, red) |
 
 ## Deployment
 
 ### Docker Deployment
 
 Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
+version of OpenCTI you're running. Example, `pycti==6.5.10`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.

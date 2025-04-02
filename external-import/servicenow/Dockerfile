@@ -1,5 +1,4 @@
 FROM python:3.12-alpine
-ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy the connector
 COPY src /opt/opencti-connector-servicenow
@@ -11,7 +10,8 @@ RUN apk update && apk upgrade && \
 
 RUN cd /opt/opencti-connector-servicenow && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del git build-base && \
+    rm -rf /var/cache/apk/*
 
 # Expose and entrypoint
 COPY entrypoint.sh /
