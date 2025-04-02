@@ -1,8 +1,9 @@
 import traceback
 
+from pycti import OpenCTIConnectorHelper
+
 from external_import_connector import ConnectorTemplate
 from external_import_connector.config_loader import ConfigConnector
-from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     """

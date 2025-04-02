@@ -19,7 +19,9 @@ connector:
   #send_to_directory_path: 'ChangeMe'
   #send_to_directory_retention: 7
 
-connector_template:
+# WARNING: Connector name cannot have underscore "_" in their name
+#   It is only used to split the connector config
+connectortemplate:
   api_base_url: 'ChangeMe'
   api_key: 'ChangeMe'
   tlp_level: 'ChangeMe' # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
