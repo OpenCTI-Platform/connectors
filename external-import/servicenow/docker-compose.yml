@@ -1,30 +1,33 @@
 version: '3'
 services:
   connector-servicenow:
-    image: opencti/connector-servicenow:6.2.4
+    image: opencti/connector-servicenow:6.5.9
     environment:
-      # Connector's generic execution parameters
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=CHANGEME
-      # Connector's definition parameters REQUIRED
-      - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=CHANGEME
-      - CONNECTOR_SCOPE=CHANGEME
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=CHANGEME # ISO8601 format in String, start with 'P...' for Period
+      # OpenCTI parameters
+      - OPENCTI_URL=CHANGEME # REQUIRED
+      - OPENCTI_TOKEN=CHANGEME # REQUIRED
+
+      # Connector parameters
+      - CONNECTOR_ID=CHANGEME # REQUIRED
 
       # Connector's definition parameters OPTIONAL
-      # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
-      # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
-      # - CONNECTOR_SEND_TO_QUEUE=True # Default True
-      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False 
-      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
-      # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
+      #- CONNECTOR_NAME=CHANGEME # OPTIONAL - Default: ServiceNow
+      #- CONNECTOR_SCOPE=CHANGEME # OPTIONAL - Default: ServiceNow
+      #- CONNECTOR_LOG_LEVEL=CHANGEME # OPTIONAL - Default: error
+      #- CONNECTOR_DURATION_PERIOD=CHANGEME # OPTIONAL - Default: PT24H (ISO8601 format in String, start with P...)
+      #- CONNECTOR_QUEUE_THRESHOLD=CHANGEME # OPTIONAL - Default: 500 MBytes, Float accepted
+      #- CONNECTOR_RUN_AND_TERMINATE=CHANGEME # OPTIONAL - Default: False, True run connector once
+      #- CONNECTOR_SEND_TO_QUEUE=CHANGEME # OPTIONAL - Default: True
+      #- CONNECTOR_SEND_TO_DIRECTORY=CHANGEME # OPTIONAL - Default: False
+      #- CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME # OPTIONAL - if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+      #- CONNECTOR_SEND_TO_DIRECTORY_RETENTION=CHANGEME # OPTIONAL - Default: 7, in days
 
-      # Connector's custom execution parameters
-      - CONNECTOR_SERVICENOW_API_BASE_URL=CHANGEME
-      - CONNECTOR_SERVICENOW_API_KEY=CHANGEME
-      - CONNECTOR_SERVICENOW_TLP_LEVEL=CHANGEME # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
+      # ServiceNow parameters
+      - SERVICENOW_INSTANCE_NAME=CHANGEME # REQUIRED
+      - SERVICENOW_INSTANCE_USERNAME=CHANGEME # REQUIRED
+      - SERVICENOW_INSTANCE_PASSWORD=CHANGEME # REQUIRED
+      - SERVICENOW_IMPORT_START_DATE=CHANGEME # REQUIRED - Format YYYY-MM-DD
+      #- SERVICENOW_TLP_LEVEL=CHANGEME # OPTIONAL - Default: clear (available: clear, white, green, amber, amber+strict, red)
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME

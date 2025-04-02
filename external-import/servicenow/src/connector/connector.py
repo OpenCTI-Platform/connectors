@@ -1,11 +1,10 @@
 import sys
 from datetime import datetime, timezone
 
+from connector.services.client_api import ServiceNowClient
+from connector.services.config_loader import ServiceNowConfig
+from connector.services.converter_to_stix import ConverterToStix
 from pycti import OpenCTIConnectorHelper
-
-from .client_api import ConnectorClient
-from .config_loader import ConfigConnector
-from .converter_to_stix import ConverterToStix
 
 
 class ConnectorServicenow:
@@ -44,15 +43,13 @@ class ConnectorServicenow:
 
     """
 
-    def __init__(self):
-        """
-        Initialize the Connector with necessary configurations
-        """
+    def __init__(self, config: ServiceNowConfig, helper: OpenCTIConnectorHelper):
+        """Initialize the Connector with necessary configurations"""
 
         # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.client = ConnectorClient(self.helper, self.config)
+        self.config = config
+        self.helper = helper
+        self.client = ServiceNowClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
     def _collect_intelligence(self) -> list:
