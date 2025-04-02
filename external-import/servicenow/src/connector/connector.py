@@ -1,9 +1,7 @@
 import sys
 from datetime import datetime, timezone
 
-from connector.services.client_api import ServiceNowClient
-from connector.services.config_loader import ServiceNowConfig
-from connector.services.converter_to_stix import ConverterToStix
+from connector.services import ConverterToStix, ServiceNowClient, ServiceNowConfig
 from pycti import OpenCTIConnectorHelper
 
 

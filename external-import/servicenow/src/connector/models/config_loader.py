@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Annotated, Literal, Optional
 
-from connector.models.common import FrozenBaseSettings
+from connector.models import FrozenBaseSettings
 from pydantic import (
     Field,
     HttpUrl,
