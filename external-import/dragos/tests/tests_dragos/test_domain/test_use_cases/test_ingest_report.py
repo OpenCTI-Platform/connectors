@@ -106,7 +106,8 @@ def test_report_processor_should_process_a_valid_report():
         and any(isinstance(entity, octi.Observable) for entity in octi_entities)
         and any(isinstance(entity, octi.Indicator) for entity in octi_entities)
         and any(
-            isinstance(entity, octi.IndicatorBasedOnObservable) for entity in octi_entities
+            isinstance(entity, octi.IndicatorBasedOnObservable)
+            for entity in octi_entities
         )
         and any(isinstance(entity, octi.OrganizationAuthor) for entity in octi_entities)
         and any(isinstance(entity, octi.TLPMarking) for entity in octi_entities)

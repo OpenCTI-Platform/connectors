@@ -224,7 +224,7 @@ class IntrusionSet(DomainObject):
         )
 
 
-class OCTIStixLocation(stix2.Location): # type: ignore[misc]  # stix2 does not provide stubs
+class OCTIStixLocation(stix2.Location):  # type: ignore[misc]  # stix2 does not provide stubs
     """Override stix2 Location to skip some constraints incompatible with OpenCTI Location entities."""
 
     def _check_object_constraints(self) -> None:

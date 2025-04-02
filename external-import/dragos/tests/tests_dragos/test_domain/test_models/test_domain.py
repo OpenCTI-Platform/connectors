@@ -1,4 +1,5 @@
 """Offer tests for the OpenCTI doamin models."""
+
 from datetime import datetime, timezone
 
 import dragos.domain.models.octi as octi
@@ -201,7 +202,8 @@ def test_indicator_to_stix2_object_returns_valid_stix_object():
         and stix2_obj.valid_until == input_data.get("valid_until")
         and stix2_obj.x_opencti_score == 50
         and stix2_obj.x_mitre_platforms == input_data.get("platforms")
-        and stix2_obj.x_opencti_main_observable_type == input_data.get("observable_type")
+        and stix2_obj.x_opencti_main_observable_type
+        == input_data.get("observable_type")
     )
 
 
@@ -255,11 +257,13 @@ def test_intrusion_set_class_should_accept_valid_input(input_data):
         and intrusion_set.goals == input_data.get("goals")
         and intrusion_set.resource_level == input_data.get("resource_level")
         and intrusion_set.primary_motivation == input_data.get("primary_motivation")
-        and intrusion_set.secondary_motivations == input_data.get("secondary_motivations")
+        and intrusion_set.secondary_motivations
+        == input_data.get("secondary_motivations")
         and intrusion_set.author == input_data.get("author")
         and intrusion_set.external_references == input_data.get("external_references")
         and intrusion_set.markings == input_data.get("markings")
     )
+
 
 @pytest.mark.parametrize(
     "input_data, error_field",
@@ -343,7 +347,6 @@ def test_intrusion_set_to_stix2_object_returns_valid_stix_object():
     )
 
 
-
 @pytest.mark.parametrize(
     "input_data",
     [
@@ -385,10 +388,10 @@ def test_location_administrative_area_class_should_accept_valid_input(input_data
         and location_administrative_area.latitude == input_data.get("latitude")
         and location_administrative_area.longitude == input_data.get("longitude")
         and location_administrative_area.author == input_data.get("author")
-        and location_administrative_area.external_references == input_data.get("external_references")
+        and location_administrative_area.external_references
+        == input_data.get("external_references")
         and location_administrative_area.markings == input_data.get("markings")
     )
-
 
 
 @pytest.mark.parametrize(
@@ -621,7 +624,8 @@ def test_location_country_class_should_accept_valid_input(input_data):
         and location_country.name == input_data.get("name")
         and location_country.description == input_data.get("description")
         and location_country.author == input_data.get("author")
-        and location_country.external_references == input_data.get("external_references")
+        and location_country.external_references
+        == input_data.get("external_references")
         and location_country.markings == input_data.get("markings")
     )
 
@@ -739,7 +743,8 @@ def test_location_position_class_should_accept_valid_input(input_data):
         and location_position.street_address == input_data.get("street_address")
         and location_position.postal_code == input_data.get("postal_code")
         and location_position.author == input_data.get("author")
-        and location_position.external_references == input_data.get("external_references")
+        and location_position.external_references
+        == input_data.get("external_references")
         and location_position.markings == input_data.get("markings")
     )
 
@@ -786,7 +791,7 @@ def test_location_position_class_should_not_accept_invalid_input(
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.LocationPosition.model_validate(input_data)
-    assert str(error_field) in str(err) # noqa: S101
+    assert str(error_field) in str(err)  # noqa: S101
 
 
 def test_location_position_to_stix2_object_returns_valid_stix_object():
@@ -994,8 +999,10 @@ def test_malware_class_should_accept_valid_input(input_data):
         and malware.types == input_data.get("types")
         and malware.first_seen == input_data.get("first_seen")
         and malware.last_seen == input_data.get("last_seen")
-        and malware.architecture_execution_envs == input_data.get("architecture_execution_envs")
-        and malware.implementation_languages == input_data.get("implementation_languages")
+        and malware.architecture_execution_envs
+        == input_data.get("architecture_execution_envs")
+        and malware.implementation_languages
+        == input_data.get("implementation_languages")
         and malware.kill_chain_phases == input_data.get("kill_chain_phases")
         and malware.capabilities == input_data.get("capabilities")
         and malware.author == input_data.get("author")
@@ -1095,13 +1102,12 @@ def test_malware_to_stix2_object_returns_valid_stix_object():
         and stix2_obj.malware_types == input_data.get("types")
         and stix2_obj.first_seen == input_data.get("first_seen")
         and stix2_obj.last_seen == input_data.get("last_seen")
-        and stix2_obj.architecture_execution_envs == input_data.get(
-            "architecture_execution_envs"
-        )
-        and stix2_obj.implementation_languages == input_data.get(
-            "implementation_languages"
-        )
-        and stix2_obj.kill_chain_phases == [
+        and stix2_obj.architecture_execution_envs
+        == input_data.get("architecture_execution_envs")
+        and stix2_obj.implementation_languages
+        == input_data.get("implementation_languages")
+        and stix2_obj.kill_chain_phases
+        == [
             kill_chain_phase.to_stix2_object()
             for kill_chain_phase in input_data.get("kill_chain_phases")
         ]
@@ -1178,7 +1184,7 @@ def test_organization_class_should_not_accept_invalid_input(input_data, error_fi
     # Then: A ValidationError should be raised
     with pytest.raises(ValidationError) as err:
         octi.Organization.model_validate(input_data)
-    assert str(error_field) in str(err) # noqa: S101
+    assert str(error_field) in str(err)  # noqa: S101
 
 
 def test_organization_to_stix2_object_returns_valid_stix_object():
@@ -1481,9 +1487,12 @@ def test_vulnerability_class_should_accept_valid_input(input_data):
         and vulnerability.cvss_score == input_data.get("cvss_score")
         and vulnerability.cvss_severity == input_data.get("cvss_severity")
         and vulnerability.cvss_attack_vector == input_data.get("cvss_attack_vector")
-        and vulnerability.cvss_integrity_impact == input_data.get("cvss_integrity_impact")
-        and vulnerability.cvss_availability_impact == input_data.get("cvss_availability_impact")
-        and vulnerability.cvss_confidentiality_impact == input_data.get("cvss_confidentiality_impact")
+        and vulnerability.cvss_integrity_impact
+        == input_data.get("cvss_integrity_impact")
+        and vulnerability.cvss_availability_impact
+        == input_data.get("cvss_availability_impact")
+        and vulnerability.cvss_confidentiality_impact
+        == input_data.get("cvss_confidentiality_impact")
         and vulnerability.is_cisa_kev == input_data.get("is_cisa_kev")
         and vulnerability.epss_score == input_data.get("epss_score")
         and vulnerability.epss_percentile == input_data.get("epss_percentile")
@@ -1548,10 +1557,14 @@ def test_vulnerability_to_stix2_object_returns_valid_stix_object():
         and stix2_obj.x_opencti_aliases == input_data.get("aliases")
         and stix2_obj.x_opencti_cvss_base_score == input_data.get("cvss_score")
         and stix2_obj.x_opencti_cvss_base_severity == input_data.get("cvss_severity")
-        and stix2_obj.x_opencti_cvss_attack_vector == input_data.get("cvss_attack_vector")
-        and stix2_obj.x_opencti_cvss_integrity_impact == input_data.get("cvss_integrity_impact")
-        and stix2_obj.x_opencti_cvss_availability_impact == input_data.get("cvss_availability_impact")
-        and stix2_obj.x_opencti_cvss_confidentiality_impact == input_data.get("cvss_confidentiality_impact")
+        and stix2_obj.x_opencti_cvss_attack_vector
+        == input_data.get("cvss_attack_vector")
+        and stix2_obj.x_opencti_cvss_integrity_impact
+        == input_data.get("cvss_integrity_impact")
+        and stix2_obj.x_opencti_cvss_availability_impact
+        == input_data.get("cvss_availability_impact")
+        and stix2_obj.x_opencti_cvss_confidentiality_impact
+        == input_data.get("cvss_confidentiality_impact")
         and stix2_obj.x_opencti_cisa_kev == input_data.get("is_cisa_kev")
         and stix2_obj.x_opencti_epss_score == input_data.get("epss_score")
         and stix2_obj.x_opencti_epss_percentile == input_data.get("epss_percentile")
