@@ -113,22 +113,20 @@ class ReportProcessor(BaseUseCase):
             case "Area":
                 return octi.LocationAdministrativeArea(
                     name=location.name,
-                    latitude=location.latitude,
-                    longitude=location.longitude,
                     author=self.author,
                     markings=[self.tlp_marking],
                 )
             case "City":
                 return octi.LocationCity(
                     name=location.name,
-                    latitude=location.latitude,
-                    longitude=location.longitude,
                     author=self.author,
                     markings=[self.tlp_marking],
                 )
             case "Country":
                 return octi.LocationCountry(
-                    name=location.name, author=self.author, markings=[self.tlp_marking]
+                    name=location.name,
+                    author=self.author,
+                    markings=[self.tlp_marking],
                 )
             case "Position":
                 return octi.LocationPosition(
@@ -140,7 +138,9 @@ class ReportProcessor(BaseUseCase):
                 )
             case "Region":
                 return octi.LocationRegion(
-                    name=location.name, author=self.author, markings=[self.tlp_marking]
+                    name=location.name,
+                    author=self.author,
+                    markings=[self.tlp_marking],
                 )
             case _:
                 raise UseCaseError(f"Unsupported location type: {location_type}")
