@@ -1,25 +1,26 @@
-opencti:
-  url: 'http://localhost:PORT'
-  token: 'ChangeMe'
+opencti: # OpenCTI Parameters
+  url: 'http://localhost:PORT' # REQUIRED
+  token: 'ChangeMe' # REQUIRED
 
-connector:
-  id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
-  name: 'ServiceNow'
-  scope: 'ChangeMe'
-  log_level: 'info'
-  duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
+connector: # Connector Parameters
+  id: 'ChangeMe' # REQUIRED
   #============================================#
   # Optional connector's definition parameters #
   #============================================#
-  #queue_threshold: 500
-  #run_and_terminate: 'False'
-  #send_to_queue: 'True'
-  #send_to_directory: 'False'
-  #send_to_directory_path: 'ChangeMe'
-  #send_to_directory_retention: 7
+  #name: 'ChangeMe' # OPTIONAL - Default: 'ServiceNow'
+  #scope: 'ChangeMe' # OPTIONAL - Default: 'ServiceNow'
+  #log_level: 'ChangeMe' # OPTIONAL - Default: 'error'
+  #duration_period: 'ChangeMe' # OPTIONAL - Default: 'PT24H' (ISO8601 format in String, start with P...)
+  #queue_threshold: ChangeMe # OPTIONAL - Default: 500 MBytes, Float accepted
+  #run_and_terminate: ChangeMe # OPTIONAL - Default: False, True run connector once
+  #send_to_queue: ChangeMe # OPTIONAL - Default: True
+  #send_to_directory: ChangeMe # OPTIONAL - Default: False
+  #send_to_directory_path: 'ChangeMe' # OPTIONAL - if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+  #send_to_directory_retention: ChangeMe # OPTIONAL - Default: 7, in days
 
-connector_servicenow:
-  api_base_url: 'ChangeMe'
-  api_key: 'ChangeMe'
-  tlp_level: 'ChangeMe' # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
+servicenow: # Servicenow Parameters
+  instance_name: 'ChangeMe' # REQUIRED
+  instance_username: 'ChangeMe' # REQUIRED
+  instance_password: 'ChangeMe' # REQUIRED
+  import_start_date: 'ChangeMe' # REQUIRED - Format: 'YYYY-MM-DD'
+  tlp_level: 'ChangeMe' # OPTIONAL - Default: 'clear' (available: clear, green, amber, amber+strict, red)

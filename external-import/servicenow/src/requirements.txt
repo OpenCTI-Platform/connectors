@@ -1,4 +1,10 @@
-pycti==6.5.2
-pyyaml~=6.0.2
-requests~=2.32.3
+pycti==6.5.10
 validators==0.33.0
+pydantic>=2.10, <3
+requests~=2.32.3
+stix2~=3.0.1
+PyYAML==6.0.2
+aiohttp~=3.11.11
+tenacity~=9.0.0
+pydantic-settings==2.8.1
+python-dotenv>=1.0.1, <2

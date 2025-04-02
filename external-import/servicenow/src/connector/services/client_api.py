@@ -1,7 +1,7 @@
 import requests
 
 
-class ConnectorClient:
+class ServiceNowClient:
     def __init__(self, helper, config):
         """
         Initialize the client with necessary configurations
