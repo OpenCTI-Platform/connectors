@@ -65,7 +65,7 @@ class OctiGeocoding(Geocoding):
 
         Examples:
             >>> from pycti import OpenCTIApiClient
-            >>> from dragos.adapters.geolocation.octi import OctiGeocoding
+            >>> from dragos.adapters.geocoding.octi import OctiGeocoding
             >>> client = OpenCTIApiClient(url="https://demo.opencti.io", token="YOUR_TOKEN")
             >>> geocoding = OctiGeocoding(client)
             >>> geolocation = geocoding.find_from_name("France")
