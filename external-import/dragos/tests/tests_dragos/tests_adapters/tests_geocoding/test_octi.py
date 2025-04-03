@@ -7,7 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from dragos.adapters.geolocation.octi import OctiGeocoding
+from dragos.adapters.geocoding.octi import OctiGeocoding
 from dragos.interfaces.geocoding import (
     City,
     Country,
