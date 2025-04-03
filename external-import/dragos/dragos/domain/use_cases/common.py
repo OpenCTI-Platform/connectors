@@ -21,7 +21,8 @@ class BaseUseCase:
         self.tlp_marking = TLPMarking(level=tlp_level)
         self.author = OrganizationAuthor(
             name="Dragos",
-            description="Dragos WorldView provides actionable information and recommendations on threats to operations technology (OT) environments.",
+            description="Dragos WorldView provides actionable information and recommendations"
+            " on threats to operations technology (OT) environments.",
             contact_information="https://www.dragos.com/us/contact",
             organization_type="vendor",
             reliability=None,
