@@ -209,21 +209,21 @@ class ReportProcessor(BaseUseCase):
         """Make an OCTI Observable and Indicator generator from Dragos report related indicators."""
 
         def make_observable(
-            related_indicator: "Indicator",
+            _related_indicator: "Indicator",  # shadow name (same variable name bellow)
         ) -> Optional["octi.Observable"]:
             """Make an OCTI observable from a Dragos report related indicator."""
-            dragos_indicator_type = related_indicator.type.lower()
+            dragos_indicator_type = _related_indicator.type.lower()
             match dragos_indicator_type:
                 case "artifact":
-                    return self._make_artifact(related_indicator)
+                    return self._make_artifact(_related_indicator)
                 case "domain":
-                    return self._make_domain_name(related_indicator)
+                    return self._make_domain_name(_related_indicator)
                 case "ip":
-                    return self._make_ip_address(related_indicator)
+                    return self._make_ip_address(_related_indicator)
                 case "md5" | "sha1" | "sha256":
-                    return self._make_file(related_indicator)
+                    return self._make_file(_related_indicator)
                 case "url":
-                    return self._make_url(related_indicator)
+                    return self._make_url(_related_indicator)
                 case _:
                     logger.warning(
                         f"Unsupported indicator type {dragos_indicator_type}"
