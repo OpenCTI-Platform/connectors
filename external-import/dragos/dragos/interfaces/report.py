@@ -68,8 +68,7 @@ class _Indicator(ABC, FrozenBaseModel):
         "ip",
         "domain",
         "artifact",
-        "url",
-        "email",  # indicator types are supposed to be known !
+        "url",  # indicator types are supposed to be known !
     ] = Field(
         ...,
         description="The Dragos Indicator type.",
