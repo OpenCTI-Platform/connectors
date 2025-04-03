@@ -102,7 +102,7 @@ class VirusTotalConnector:
             "VIRUSTOTAL_INCLUDE_ATTRIBUTES_IN_NOTE",
             ["virustotal", "include_attributes_in_note"],
             config,
-            default=False
+            default=False,
         )
 
     def resolve_default_value(self, stix_entity):
@@ -286,7 +286,11 @@ class VirusTotalConnector:
                         + str(result.get("result") or "N/A")
                         + " | \n"
                     )
-                content += builder.create_notes_attributes_content() if self.include_attributes_in_note else ""
+                content += (
+                    builder.create_notes_attributes_content()
+                    if self.include_attributes_in_note
+                    else ""
+                )
                 builder.create_note("VirusTotal Report", content)
         return builder.send_bundle()
 
@@ -390,9 +394,15 @@ class VirusTotalConnector:
             raise ValueError(json_data["error"]["message"])
         if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
-        get_url_related_object = self.client.get_url_related_objects(url=opencti_entity["observable_value"],
-                                            relationship="last_serving_ip_address")
-        url_related_object_data = get_url_related_object.get("data", {}) if isinstance(get_url_related_object, dict) else {}
+        get_url_related_object = self.client.get_url_related_objects(
+            url=opencti_entity["observable_value"],
+            relationship="last_serving_ip_address",
+        )
+        url_related_object_data = (
+            get_url_related_object.get("data", {})
+            if isinstance(get_url_related_object, dict)
+            else {}
+        )
 
         builder = VirusTotalBuilder(
             self.helper,

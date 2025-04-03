@@ -326,7 +326,7 @@ class VirusTotalClient:
             Base64 encoded string without padding
         """
         return base64.b64encode(contents.encode()).decode().replace("=", "")
-    
+
     def get_url_related_objects(self, url, relationship):
         """
         Retrieve URL report based on the given URL.
