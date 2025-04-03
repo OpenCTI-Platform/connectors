@@ -4,6 +4,7 @@ import ipaddress
 from typing import TYPE_CHECKING
 
 from dragos.domain.models.octi import OrganizationAuthor, TLPMarking
+from dragos.domain.models.octi.enums import OrganizationType
 
 if TYPE_CHECKING:
     from dragos.domain.models.octi.enums import TLPLevel
@@ -24,7 +25,7 @@ class BaseUseCase:
             description="Dragos WorldView provides actionable information and recommendations"
             " on threats to operations technology (OT) environments.",
             contact_information="https://www.dragos.com/us/contact",
-            organization_type="vendor",
+            organization_type=OrganizationType.VENDOR,
             reliability=None,
             aliases=None,
             author=None,
