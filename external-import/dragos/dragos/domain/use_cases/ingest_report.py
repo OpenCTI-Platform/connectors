@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Generator, Optional
 from dragos.domain.models import octi
 from dragos.domain.models.octi.enums import OrganizationType
 from dragos.domain.use_cases.common import BaseUseCase, UseCaseError
+from dragos.interfaces import Area, City, Country, Position, Region
 
 if TYPE_CHECKING:
     from dragos.domain.models.octi.enums import TLPLevel
@@ -108,27 +109,26 @@ class ReportProcessor(BaseUseCase):
             logger.warning(f"Location not found for tag value: {tag.value}")
             return None
 
-        location_type = location.__class__.__name__
-        match location_type:
-            case "Area":
+        match location:
+            case Area():
                 return octi.LocationAdministrativeArea(
                     name=location.name,
                     author=self.author,
                     markings=[self.tlp_marking],
                 )
-            case "City":
+            case City():
                 return octi.LocationCity(
                     name=location.name,
                     author=self.author,
                     markings=[self.tlp_marking],
                 )
-            case "Country":
+            case Country():
                 return octi.LocationCountry(
                     name=location.name,
                     author=self.author,
                     markings=[self.tlp_marking],
                 )
-            case "Position":
+            case Position():
                 return octi.LocationPosition(
                     name=location.name,
                     latitude=location.latitude,
@@ -136,7 +136,7 @@ class ReportProcessor(BaseUseCase):
                     author=self.author,
                     markings=[self.tlp_marking],
                 )
-            case "Region":
+            case Region():
                 return octi.LocationRegion(
                     name=location.name,
                     author=self.author,
