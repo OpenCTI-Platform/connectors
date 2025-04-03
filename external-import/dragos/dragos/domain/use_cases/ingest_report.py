@@ -143,7 +143,7 @@ class ReportProcessor(BaseUseCase):
                     markings=[self.tlp_marking],
                 )
             case _:
-                raise UseCaseError(f"Unsupported location type: {location_type}")
+                raise UseCaseError(f"Unsupported location type: {type(location)}")
 
     def _make_organization(self, tag: "Tag") -> octi.Organization:
         """Make an OCTI Organization from report's tag."""
