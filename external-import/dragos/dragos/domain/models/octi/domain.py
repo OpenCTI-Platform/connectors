@@ -242,7 +242,7 @@ class OCTIStixLocation(stix2.Location):  # type: ignore[misc]  # stix2 does not 
             # Skip region/country/latitude/longitude presence check because all of them are optional on OpenCTI
             # even though at least one of them is required in the STIX2.1 spec
         else:
-            super(OCTIStixLocation, self)._check_object_constraints()
+            super()._check_object_constraints()
 
 
 class _Location(ABC, DomainObject):
