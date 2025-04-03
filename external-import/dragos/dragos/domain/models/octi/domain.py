@@ -1,6 +1,6 @@
 """Define OpenCTI entities."""
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Any, Optional
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
@@ -245,7 +245,7 @@ class OCTIStixLocation(stix2.Location):  # type: ignore[misc]  # stix2 does not 
             super(OCTIStixLocation, self)._check_object_constraints()
 
 
-class _Location(DomainObject):
+class _Location(ABC, DomainObject):
     """Represents a location entity."""
 
     _location_type: LocationType = PrivateAttr()
