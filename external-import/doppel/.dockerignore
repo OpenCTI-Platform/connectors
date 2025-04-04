@@ -1,3 +1,4 @@
-src/config.yml
 src/__pycache__
 src/config.yml.sample
+venv
+.gitignore
