@@ -3,18 +3,15 @@ services:
   connector-doppel:
     image: doppel-connector:latest
     environment:
-      - DOPPEL_API_URL=https://api.doppel.com/v1/alerts
-      - DOPPEL_API_KEY=
+      - DOPPEL_API_KEY=AIzaSyDuWpWKgwazrrvgYsrW7R6_InJ_W6P9DlE
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=
-      - CONNECTOR_ID= # Valid UUIDv4
+      - OPENCTI_TOKEN=1c56a117-f05a-4d86-b0cc-c0668c70c341
+      - CONNECTOR_ID=0150bc73-18b1-4c51-860a-fbbbcdc10a8f
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=Doppel Threat Intelligence
       - CONNECTOR_SCOPE=doppel
       - CONNECTOR_LOG_LEVEL=info
-      - POLLING_INTERVAL=60 
+      - UPDATE_EXISTING_DATA=true
+      - POLLING_INTERVAL=3600 
       - HISTORICAL_POLLING_DAYS=30
-      - MAX_RETRIES=3
-      - RETRY_DELAY=30
-      - STOP_ON_FAILURE=false
     restart: always
