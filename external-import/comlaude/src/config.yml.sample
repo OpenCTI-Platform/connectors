@@ -8,6 +8,8 @@ connector:
   name: 'Comlaude'
   scope: 'SCO' # MIME type or SCO
   log_level: 'info'
+  duration_period: 'PT2H'    # Example: PT2H for a 2-hour period
+  queue_threshold: 100       # Optional value, adjust as needed
 
 comlaude:
   interval: 2
@@ -16,5 +18,5 @@ comlaude:
   api_key: 'ChangeMe'
   group_id: 'ChangeMe'
   start_time: '1970-01-01T00:00:00Z'
-  update_existing_data: 'True'
   labels: 'comlaude,safelist'
+  score: 50                  # Default score value

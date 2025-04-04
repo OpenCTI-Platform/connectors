@@ -36,12 +36,13 @@ class ConversionError(Exception):
 class RFStixEntity:
     """Parent class"""
 
-    def __init__(self, name, _type, author=None, tlp="red"):
+    def __init__(self, name, _type, author=None, tlp="red", first_seen=None):
         self.name = name
         self.type = _type
         self.author = author or self._create_author()
         self.tlp = TLP_MAP.get(tlp, None)
         self.stix_obj = None
+        self.first_seen = first_seen
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -73,7 +74,7 @@ class RFStixEntity:
 class Indicator(RFStixEntity):
     """Base class for Indicators of Compromise (IP, Hash, URL, Domain)"""
 
-    def __init__(self, name, _type, author, tlp):
+    def __init__(self, name, _type, author, tlp, first_seen=None):
         super().__init__(name, _type, author, tlp)
         self.stix_indicator = None
         self.stix_observable = None
@@ -83,6 +84,7 @@ class Indicator(RFStixEntity):
         self.objects = []
         self.tlp = TLP_MAP.get(tlp, None)
         self.description = None
+        self.first_seen = first_seen
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -107,7 +109,7 @@ class Indicator(RFStixEntity):
             name=self.name,
             description=self.description,
             pattern_type="stix",
-            valid_from=datetime.now(),
+            valid_from=self.first_seen,
             pattern=self._create_pattern(),
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
@@ -219,8 +221,8 @@ class Indicator(RFStixEntity):
 
 
 class IPAddress(Indicator):
-    def __init__(self, name, _type, author=None, tlp=None):
-        super().__init__(name, _type, author, tlp)
+    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
+        super().__init__(name, _type, author, tlp, first_seen)
 
     """Converts IP address to IP indicator and observable"""
 
@@ -274,8 +276,8 @@ class IPAddress(Indicator):
 class Domain(Indicator):
     """Converts Domain to Domain indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None):
-        super().__init__(name, _type, author, tlp)
+    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
+        super().__init__(name, _type, author, tlp, first_seen)
 
     def _create_pattern(self):
         return f"[domain-name:value = '{self.name}']"
@@ -287,8 +289,8 @@ class Domain(Indicator):
 class URL(Indicator):
     """Converts URL to URL indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None):
-        super().__init__(name, _type, author, tlp)
+    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
+        super().__init__(name, _type, author, tlp, first_seen)
 
     def _create_pattern(self):
         ioc = self.name.replace("\\", "\\\\")
@@ -302,8 +304,8 @@ class URL(Indicator):
 class FileHash(Indicator):
     """Converts Hash to File indicator and observable"""
 
-    def __init__(self, name, _type, author=None, tlp=None):
-        super().__init__(name, _type, author, tlp)
+    def __init__(self, name, _type, author=None, tlp=None, first_seen=None):
+        super().__init__(name, _type, author, tlp, first_seen)
         self.algorithm = self._determine_algorithm()
 
     def _determine_algorithm(self):
@@ -735,8 +737,8 @@ class Vulnerability(RFStixEntity):
 class DetectionRule(RFStixEntity):
     """Represents a Yara, Sigma or SNORT rule"""
 
-    def __init__(self, name, _type, content, author, tlp=None):
-        super().__init__(name, _type, author, tlp)
+    def __init__(self, name, _type, content, author, tlp=None, first_seen=None):
+        super().__init__(name, _type, author, tlp, first_seen)
         # TODO: possibly need to accomodate multi-rule. Right now just shoving everything in one
 
         self.name = name.split(".")[0]
@@ -756,7 +758,7 @@ class DetectionRule(RFStixEntity):
             name=self.name,
             pattern_type=self.type,
             pattern=self.content,
-            valid_from=datetime.now(),
+            valid_from=self.first_seen,
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
         )
@@ -1018,7 +1020,7 @@ class StixNote:
                 continue
             elif type_ not in ENTITY_TYPE_MAPPER:
                 msg = f"[ANALYST NOTES] Cannot convert entity {name} to STIX2 because it is of type {type_}"
-                self.helper.log_warning(msg)
+                self.helper.connector_logger.warning(msg)
                 continue
             else:
                 rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, tlp)
@@ -1035,7 +1037,7 @@ class StixNote:
                             INDICATOR_TYPE_URL_MAPPER[type_], name
                         )
                         if risk_score < self.risk_threshold:
-                            self.helper.log_info(
+                            self.helper.connector_logger.info(
                                 f"[ANALYST NOTES] Ignoring entity {name} as its risk score is lower than the defined risk threshold"
                             )
                             continue
@@ -1106,7 +1108,7 @@ class StixNote:
         for topic in topics:
             name = topic["name"]
             if name not in self.report_type_mapper:
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     "[ANALYST NOTES] Could not map a report type for type {}".format(
                         name
                     )

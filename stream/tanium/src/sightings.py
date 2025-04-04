@@ -176,7 +176,7 @@ class TaniumSightings(threading.Thread):
                                 stix_relation_observable = stix2.Relationship(
                                     id=StixCoreRelationship.generate_id(
                                         "related-to",
-                                        entity["standard_i"],
+                                        entity["standard_id"],
                                         stix_incident.id,
                                     ),
                                     relationship_type="related-to",

@@ -47,11 +47,11 @@ The configuration variables for the connector can be set in `docker-compose.yml`
 
 | Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                      |
 |-----------------|------------|-----------------------------|-----------------|-----------|----------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                        |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                    |
+| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                        |                 |
 | Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                           |
 | Connector Scope | scope      | `CONNECTOR_SCOPE`           | vulnerability   | Yes       | The scope or type of data the connector is importing (e.g., vulnerability).      |
 | Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options: `debug`, `info`, `warn`, `error`. |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | / | Yes | Determine the interval between two runs of the connector. Should be an ISO duration string (for instance `PT1D`) |
 
 ### Connector extra parameters environment variables
 

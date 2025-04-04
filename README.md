@@ -17,8 +17,9 @@ the [OpenCTI ecosystem dedicated space](https://filigran.notion.site/OpenCTI-Eco
 
 ## Contributing
 
-If you want to help use improve or develop new connector, please check out the *
-*[development documentation for new connectors](https://docs.opencti.io/latest/development/connectors)**. If you want to
+If you want to help use improve or develop new connector, please check out the **[development documentation for new connectors](https://docs.opencti.io/latest/development/connectors)** or go to our templates folder to find the right template for your connector, the README file will guide you through the process: [Connector templates](./templates). 
+
+If you want to
 make your connector available to the community, **please create a Pull Request on this repository**, then we will
 integrate it to the CI and in
 the [OpenCTI ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).

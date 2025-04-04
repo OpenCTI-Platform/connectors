@@ -8,7 +8,7 @@ connector:
   live_stream_id: 'live' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true
   live_stream_no_dependencies: true
-  name: 'Tanium Stream'
+  name: 'Tanium Threat Response Intel'
   scope: 'tanium' # Reserved
   log_level: 'info'
 

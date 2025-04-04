@@ -7,7 +7,6 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Phishunt'
   scope: 'phishunt'
-  confidence_level: 40 # From 0 (Unknown) to 100 (Fully trusted)
   create_indicator: False
   update_existing_data: false
   log_level: 'info'

@@ -6,7 +6,7 @@ from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
-from .converter_to_stix import ConverterToStix
+from .converter_to_stix import ConverterError, ConverterToStix
 from .utils import SUPPORTED_COLLECTIONS
 
 
@@ -65,24 +65,25 @@ class ConnectorZvelo:
                 continue
 
             # Convert into STIX2 object and add it on a list
-            if collection == "threat":
+            converter_method = {
+                "threat": self.converter_to_stix.convert_threat_to_stix,
+                "phish": self.converter_to_stix.convert_phish_to_stix,
+                "malicious": self.converter_to_stix.convert_malicious_to_stix,
+            }.get(collection)
+
+            if not converter_method:
+                self.helper.connector_logger.warning(
+                    f"[CONNECTOR] Unsupported collection: {collection}"
+                )
+                continue
+            else:
                 for entity in entities:
-                    entity_to_stix_objects = (
-                        self.converter_to_stix.convert_threat_to_stix(entity)
-                    )
-                    stix_objects.extend(entity_to_stix_objects)
-            if collection == "phish":
-                for entity in entities:
-                    entity_to_stix_objects = (
-                        self.converter_to_stix.convert_phish_to_stix(entity)
-                    )
-                    stix_objects.extend(entity_to_stix_objects)
-            if collection == "malicious":
-                for entity in entities:
-                    entity_to_stix_objects = (
-                        self.converter_to_stix.convert_malicious_to_stix(entity)
-                    )
-                    stix_objects.extend(entity_to_stix_objects)
+                    try:
+                        stix_objects.extend(converter_method(entity))
+                    except ConverterError as err:
+                        message = f"[CONNECTOR] An error occurred while converting {entity} to stix, skipping entity."
+                        self.helper.connector_logger.error(message, {"error": str(err)})
+                        continue
 
         return stix_objects
 

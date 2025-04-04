@@ -22,3 +22,4 @@ connector:
 connector_template:
   api_base_url: 'ChangeMe'
   api_key: 'ChangeMe'
+  tlp_level: 'ChangeMe' # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'

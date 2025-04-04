@@ -60,3 +60,11 @@ class ConfigConnector:
             self.load,
             required=False,
         )
+
+        self.tlp_level = get_config_variable(
+            "CONNECTOR_IPSUM_TLP_LEVEL",
+            ["connector_ipsum", "tlp_level"],
+            self.load,
+            required=False,
+            default="white",
+        )

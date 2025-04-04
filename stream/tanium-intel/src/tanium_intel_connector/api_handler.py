@@ -149,7 +149,7 @@ class TaniumApiHandler:
                 "content-disposition": f"attachment; filename={entity['name']}.yara",
                 "type": "yara",
                 "name": entity["name"].strip(),
-                "description": entity["description"].replace("\n", " ").strip(),
+                "description": entity.get("description", "").replace("\n", " ").strip(),
             },
         )
         return intel_document
@@ -173,7 +173,7 @@ class TaniumApiHandler:
             url_path,
             json={
                 "name": entity["name"],
-                "description": entity["description"],
+                "description": entity.get("description", ""),
                 "platforms": platforms,
                 "contents": entity["pattern"],
             },
@@ -320,14 +320,14 @@ class TaniumApiHandler:
                 "filename": filename,
                 "document": entity["pattern"],
                 "name": entity["name"],
-                "description": entity["description"],
+                "description": entity.get("description", ""),
             },
             headers={
                 "content-type": "application/octet-stream",
                 "content-disposition": "attachment; filename=" + filename,
                 "type": "yara",
                 "name": filename.strip(),
-                "description": entity["description"].replace("\n", " ").strip(),
+                "description": entity.get("description", "").replace("\n", " ").strip(),
             },
         )
         return intel_document
@@ -349,7 +349,7 @@ class TaniumApiHandler:
             url_path,
             json={
                 "name": entity["name"],
-                "description": entity["description"],
+                "description": entity.get("description", ""),
                 "platforms": platforms,
                 "contents": entity["pattern"],
             },

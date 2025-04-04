@@ -2,7 +2,7 @@ import ipaddress
 
 import stix2
 import validators
-from pycti import Identity, StixCoreRelationship
+from pycti import Identity, MarkingDefinition, StixCoreRelationship
 
 
 class ConverterToStix:
@@ -13,10 +13,12 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper):
+    def __init__(self, helper, config):
         self.helper = helper
+        self.config = config
         self.author = self.create_author()
         self.external_reference = self.create_external_reference()
+        self.tlp_marking = self._create_tlp_marking(level=self.config.tlp_level.lower())
 
     @staticmethod
     def create_external_reference() -> list:
@@ -44,6 +46,26 @@ class ConverterToStix:
             description="DESCRIPTION",
         )
         return author
+
+    @staticmethod
+    def _create_tlp_marking(level):
+        mapping = {
+            "white": stix2.TLP_WHITE,
+            "clear": stix2.TLP_WHITE,
+            "green": stix2.TLP_GREEN,
+            "amber": stix2.TLP_AMBER,
+            "amber+strict": stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                custom_properties={
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:AMBER+STRICT",
+                },
+            ),
+            "red": stix2.TLP_RED,
+        }
+        return mapping[level]
 
     def create_relationship(
         self, source_id: str, relationship_type: str, target_id: str

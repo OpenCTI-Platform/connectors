@@ -77,7 +77,6 @@ class ArticleImporter:
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
-                        confidence=self.helper.connect_confidence_level,
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
@@ -113,7 +112,6 @@ class ArticleImporter:
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
-                        confidence=self.helper.connect_confidence_level,
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
@@ -150,7 +148,6 @@ class ArticleImporter:
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
-                        confidence=self.helper.connect_confidence_level,
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
@@ -187,7 +184,6 @@ class ArticleImporter:
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
-                        confidence=self.helper.connect_confidence_level,
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
@@ -224,7 +220,6 @@ class ArticleImporter:
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
-                        confidence=self.helper.connect_confidence_level,
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
@@ -297,7 +292,6 @@ class ArticleImporter:
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
-                        confidence=self.helper.connect_confidence_level,
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
@@ -334,7 +328,6 @@ class ArticleImporter:
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
-                        confidence=self.helper.connect_confidence_level,
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
@@ -371,7 +364,6 @@ class ArticleImporter:
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
-                        confidence=self.helper.connect_confidence_level,
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
@@ -409,7 +401,6 @@ class ArticleImporter:
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
-                        confidence=self.helper.connect_confidence_level,
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
@@ -449,7 +440,6 @@ class ArticleImporter:
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
-                        confidence=self.helper.connect_confidence_level,
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
@@ -490,7 +480,6 @@ class ArticleImporter:
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
-                        confidence=self.helper.connect_confidence_level,
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
@@ -530,7 +519,6 @@ class ArticleImporter:
                         created=created,
                         pattern_type="stix",
                         pattern=pattern,
-                        confidence=self.helper.connect_confidence_level,
                         labels=self.article["tags"],
                         object_marking_refs=tlp_marking,
                         created_by_ref=self.author,
@@ -647,7 +635,6 @@ class ArticleImporter:
                         stix2.Identity(
                             id=Identity.generate_id(entity["name"], "class"),
                             name=entity["name"],
-                            confidence=self.helper.connect_confidence_level,
                             identity_class="class",
                             created_by_ref=self.author,
                             allow_custom=True,
@@ -658,7 +645,6 @@ class ArticleImporter:
                         stix2.Location(
                             id=Location.generate_id(entity["name"], "Country"),
                             name=entity["name"],
-                            confidence=self.helper.connect_confidence_level,
                             x_opencti_location_type="Country",
                             country=entity["name"],
                             created_by_ref=self.author,
@@ -670,7 +656,6 @@ class ArticleImporter:
                         stix2.IntrusionSet(
                             id=IntrusionSet.generate_id(entity["name"]),
                             name=entity["name"],
-                            confidence=self.helper.connect_confidence_level,
                             created_by_ref=self.author,
                             object_marking_refs=report_tlp,
                             allow_custom=True,
@@ -681,7 +666,6 @@ class ArticleImporter:
                         stix2.Malware(
                             id=Malware.generate_id(entity["name"]),
                             name=entity["name"],
-                            confidence=self.helper.connect_confidence_level,
                             is_family=True,
                             created_by_ref=self.author,
                             object_marking_refs=report_tlp,
@@ -693,7 +677,6 @@ class ArticleImporter:
                         stix2.Tool(
                             id=Tool.generate_id(entity["name"]),
                             name=entity["name"],
-                            confidence=self.helper.connect_confidence_level,
                             created_by_ref=self.author,
                             object_marking_refs=report_tlp,
                             allow_custom=True,
@@ -706,7 +689,6 @@ class ArticleImporter:
                                 name=entity["name"], x_mitre_id=entity["x_mitre_id"]
                             ),
                             name=entity["name"],
-                            confidence=self.helper.connect_confidence_level,
                             created_by_ref=self.author,
                             object_marking_refs=report_tlp,
                             allow_custom=True,
@@ -717,7 +699,6 @@ class ArticleImporter:
                         stix2.Vulnerability(
                             id=Vulnerability.generate_id(entity["name"]),
                             name=entity["name"],
-                            confidence=self.helper.connect_confidence_level,
                             created_by_ref=self.author,
                             object_marking_refs=report_tlp,
                             allow_custom=True,
@@ -737,7 +718,6 @@ class ArticleImporter:
                         source_ref=indicator.id,
                         target_ref=threat.id,
                         object_marking_refs=report_tlp,
-                        confidence=self.helper.connect_confidence_level,
                         allow_custom=True,
                     )
                 )
@@ -752,7 +732,6 @@ class ArticleImporter:
                         source_ref=threat.id,
                         target_ref=victim.id,
                         object_marking_refs=report_tlp,
-                        confidence=self.helper.connect_confidence_level,
                         allow_custom=True,
                     )
                 )
@@ -767,7 +746,6 @@ class ArticleImporter:
                         source_ref=threat.id,
                         target_ref=vulnerability.id,
                         object_marking_refs=report_tlp,
-                        confidence=self.helper.connect_confidence_level,
                         allow_custom=True,
                     )
                 )
@@ -782,7 +760,6 @@ class ArticleImporter:
                         source_ref=threat.id,
                         target_ref=attack_pattern.id,
                         object_marking_refs=report_tlp,
-                        confidence=self.helper.connect_confidence_level,
                         allow_custom=True,
                     )
                 )
@@ -808,7 +785,6 @@ class ArticleImporter:
                 name=self.article.get("title", "RiskIQ Threat Report"),
                 description=self.article["summary"],
                 report_types=["threat-report"],
-                confidence=self.helper.connect_confidence_level,
                 created_by_ref=self.author,
                 created=created,
                 published=published,

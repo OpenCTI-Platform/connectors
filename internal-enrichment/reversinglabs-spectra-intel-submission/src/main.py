@@ -134,7 +134,6 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
         relationship,
     ):
         stix_indicator_with_relationship = []
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         rl_threat_platform = results["platform"]
 
         # Create indicator
@@ -145,7 +144,6 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
             labels=results["labels"],
             pattern=indicator_pattern,
             created_by_ref=self.reversinglabs_identity["standard_id"],
-            valid_from=now,
             object_marking_refs=[stix2.TLP_AMBER],
             custom_properties={
                 "pattern_type": "stix",

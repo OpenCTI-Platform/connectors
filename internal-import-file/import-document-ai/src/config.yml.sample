@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'changeMeInUUID'
+  type: 'INTERNAL_IMPORT_FILE'
+  name: 'ImportDocumentAI'
+  scope: 'application/pdf,text/plain,text/html,text/markdown'
+  validate_before_import: true 
+  log_level: 'info'
+  web_service_url: 'http://localhost:PORT'
+  licence_key_pem: |
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----

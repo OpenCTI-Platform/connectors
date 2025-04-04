@@ -15,7 +15,7 @@ class ExternalImportHelper:
         """
         try:
             interval = cfg.connector_duration_period
-            helper.log_info(
+            helper.connector_logger.info(
                 f"Verifying integrity of the CONNECTOR__DURATION_PERIOD value: '{interval}'"
             )
 
@@ -27,11 +27,12 @@ class ExternalImportHelper:
 
             return interval  # Return the validated ISO-8601 duration string
         except Exception as ex:
+            interval = cfg.connector_duration_period
             msg = (
                 f"Error ({ex}) when grabbing CONNECTOR__DURATION_PERIOD environment variable: '{interval}'. "
                 "It SHOULD be a valid ISO-8601 duration string (e.g., 'P7D', 'PT12H', 'PT10M', 'PT30S')."
             )
-            helper.log_error(msg)
+            helper.connector_logger.error(msg)
             raise ValueError(msg) from ex
 
     @staticmethod
@@ -51,7 +52,7 @@ class ExternalImportHelper:
             # Convert timedelta to seconds
             return int(duration.total_seconds())
         except Exception as ex:
-            helper.log_error(
+            helper.connector_logger.error(
                 f"Error when converting CONNECTOR__DURATION_PERIOD environment variable: '{interval}'. {str(ex)}"
             )
             raise ValueError(
@@ -77,7 +78,7 @@ class ExternalImportHelper:
                 f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. "
                 "It SHOULD be either `true` or `false`. `false` is assumed. "
             )
-            helper.log_warning(msg)
+            helper.connector_logger.warning(msg)
             update_existing_data = "false"
 
         return update_existing_data

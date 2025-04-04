@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
-  name: 'Tanium Sightings'
+  name: 'Tanium Threat Response Incidents'
   scope: 'tanium' # Reserved
   log_level: 'info'
   duration_period: 'PT12H'

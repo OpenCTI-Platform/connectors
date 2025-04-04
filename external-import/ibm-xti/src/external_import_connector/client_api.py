@@ -1,13 +1,13 @@
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from external_import_connector.formatter import OpenCTISTIXFormatter
 from pycti import OpenCTIConnectorHelper
 from stix2 import TAXIICollectionSource
 from stix2.parsing import parse
 from taxii2client.v21 import Server, as_pages
 
 from .config_variables import ConfigConnector
+from .formatter import OpenCTISTIXFormatter
 
 
 class ConnectorClient:
@@ -21,7 +21,7 @@ class ConnectorClient:
         Initialize the client with necessary configurations
         """
         self.__helper = helper
-        self.__formatter = OpenCTISTIXFormatter(helper)
+        self.__formatter = OpenCTISTIXFormatter(helper, config)
 
         self.__taxii_server = Server(
             config.taxii_server_url, user=config.taxii_user, password=config.taxii_pass
@@ -48,12 +48,8 @@ class ConnectorClient:
         obj["x_opencti_created_by_ref"] = self.__identity["standard_id"]
         typ = obj["type"]
 
-        args: list[Any] = [obj]
-        if typ == "report":
-            args.append(alias)
-
         if typ in ["report", "indicator", "vulnerability"]:
-            getattr(self.__formatter, f"format_{typ}")(*args)
+            getattr(self.__formatter, f"format_{typ}")(obj, alias)
 
     def __process_object(
         self, obj: dict[str, Any], alias: str, col_type: str, stix_objects: list[Any]
@@ -75,7 +71,7 @@ class ConnectorClient:
             self.__helper.connector_logger.info(
                 f"type = {stix_obj.get('type')}, id = {stix_obj.get('id')}, name={stix_obj.get('name')}"
             )
-            for ref in stix_obj.get("object_refs"):
+            for ref in stix_obj.get("object_refs", []):
                 self.__helper.connector_logger.info(f"        reference = {ref}")
         else:
             if col_type != "report":

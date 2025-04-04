@@ -3,7 +3,6 @@ version: 2.1
 setup: true
 orbs:
   slack: circleci/slack@4.15.0
-  ms-teams: cloudradar-monitoring/ms-teams@0.0.1
   continuation: circleci/continuation@1.1.0
 
 executors:
@@ -32,10 +31,7 @@ jobs:
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           name: install dependencies
-          command: pip install black isort --user
-      - run:
-          name: confirm black version
-          command: black --version
+          command: pip install -r ci-requirements.txt --user
       - run:
           name: run isort check
           command: isort --profile black --check .
@@ -45,9 +41,6 @@ jobs:
       - slack/notify:
           event: fail
           template: basic_fail_1
-      - ms-teams/report:
-          only_on_fail: true
-          webhook_url: $MS_TEAMS_WEBHOOK_URL
   base_linter:
     docker:
       - image: alpine/flake8
@@ -61,9 +54,6 @@ jobs:
       - slack/notify:
           event: fail
           template: basic_fail_1
-      - ms-teams/report:
-          only_on_fail: true
-          webhook_url: $MS_TEAMS_WEBHOOK_URL
   linter:
     docker:
       - image: cimg/python:3.12
@@ -80,9 +70,6 @@ jobs:
       - slack/notify:
           event: fail
           template: basic_fail_1
-      - ms-teams/report:
-          only_on_fail: true
-          webhook_url: $MS_TEAMS_WEBHOOK_URL
   test:
     docker:
       - image: cimg/python:3.11
@@ -92,7 +79,7 @@ jobs:
       - run: sudo apt-get update -qq && sudo apt install curl gettext-base
       - run:
           name: install dependencies
-          command: pip install pytest --user
+          command: pip install -r ci-requirements.txt --user
       - run:
           name: Run tests
           command: bash run_test.sh
@@ -111,16 +98,11 @@ jobs:
       - run:
           name: Execute Python Script
           command: python .circleci/scripts/generate_ci.py
-
       - continuation/continue:
           configuration_path: dynamic.yml
-
       - slack/notify:
           event: fail
           template: basic_fail_1
-      - ms-teams/report:
-          only_on_fail: true
-          webhook_url: $MS_TEAMS_WEBHOOK_URL
   notify:
     parameters:
       notification_executor:
@@ -133,63 +115,26 @@ jobs:
       - slack/notify:
           event: pass
           template: basic_success_1
-      - ms-teams/report:
-          only_on_fail: false
-          webhook_url: $MS_TEAMS_WEBHOOK_URL
 
 workflows:
-  version: 2.1
   connectors:
-    when:
-      not: << pipeline.git.tag >>
     jobs:
-      - ensure_formatting
-      - base_linter
-      - linter
-      - test
-      - build:
-          name: "build_rolling"
-          ci_executor:
-            name: ci_environment
-            tags: "rolling"
-          requires:
-            - ensure_formatting
-            - base_linter
-            - linter
-            - test
+      - ensure_formatting:
           filters:
-            branches:
-              only:
-                - master
-      - build:
-          name: "build_prerelease"
-          ci_executor:
-            name: ci_environment
-            tags: "prerelease"
-          requires:
-            - ensure_formatting
-            - base_linter
-            - linter
-            - test
+              tags:
+                only: /.*/
+      - base_linter:
           filters:
-            branches:
-              only:
-                - /release\/.*/
-      - notify:
-          name: "send_notifications"
-          notification_executor:
-            name: ci_notifications
-          requires:
-            - build_rolling
-            - build_prerelease
-
-  connectors_release:
-    when: << pipeline.git.tag >>
-    jobs:
-      - ensure_formatting
-      - base_linter
-      - linter
-      - test
+            tags:
+              only: /.*/
+      - linter:
+          filters:
+            tags:
+              only: /.*/
+      - test:
+          filters:
+            tags:
+              only: /.*/
       - build:
           name: "build_release"
           ci_executor:
@@ -205,14 +150,58 @@ workflows:
               only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
             branches:
               ignore: /.*/
+      - build:
+          name: "build_prerelease"
+          ci_executor:
+            name: ci_environment
+            tags: "prerelease"
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
+          filters:
+            branches:
+              only:
+                - /release\/.*/
+      - build:
+          name: "build_rolling"
+          ci_executor:
+            name: ci_environment
+            tags: "rolling"
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
+          filters:
+            branches:
+              only:
+                - master
       - notify:
-          name: "send_notifications"
+          name: "send_notifications_release"
           notification_executor:
             name: ci_notifications
           requires:
             - build_release
           filters:
             tags:
-              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
-            branches:
-              ignore: /.*/
+              only: /.*/
+      - notify:
+          name: "send_notifications_rolling"
+          notification_executor:
+            name: ci_notifications
+          requires:
+            - build_rolling
+          filters:
+            tags:
+              only: /.*/
+      - notify:
+          name: "send_notifications_prerelease"
+          notification_executor:
+            name: ci_notifications
+          requires:
+            - build_prerelease
+          filters:
+            tags:
+              only: /.*/

@@ -112,7 +112,6 @@ class Indicator(RFStixEntity):
             id=pycti.Indicator.generate_id(self._create_pattern()),
             name=self.name,
             pattern_type="stix",
-            valid_from=datetime.now(),
             pattern=self._create_pattern(),
             created_by_ref=self.author.id,
             custom_properties={"x_opencti_score": self.risk_score or None},
@@ -410,7 +409,6 @@ class DetectionRule(RFStixEntity):
             name=self.name,
             pattern_type=self.type,
             pattern=self.content,
-            valid_from=datetime.now(),
             created_by_ref=self.author.id,
         )
 

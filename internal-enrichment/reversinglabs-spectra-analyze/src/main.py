@@ -69,7 +69,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         )
 
         self.reversinglabs_spectra_user_agent = (
-            "ReversingLabs Spectra Analyze OpenCTI v1.1.0"
+            "ReversingLabs Spectra Analyze OpenCTI v1.2.0"
         )
 
     """
@@ -202,23 +202,33 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             try:
                 response = self.a1000client.get_detailed_report_v2(
                     sample_hashes=self.hash,
-                    retry=True,
+                    retry=False,
                 )
-
-                if response.status_code == 200:
-                    analysis_report = json.loads(response.text)
-                else:
-                    raise Exception(
-                        f"{self.helper.connect_name}: There was issue with getting report from Spectra Analyze. HTTP Status code {str(response.status_code)}"
-                    )
             except Exception as err:
                 raise ValueError(
                     f"{self.helper.connect_name}: Looks like the sample you are trying to access may not be available on your Spectra Analyze instance. On Spectra Analyze run fetch and analyze on the sample."
                 ) from err
+
+            if response.status_code == 200:
+                analysis_report = json.loads(response.text)
+            else:
+                raise Exception(
+                    f"{self.helper.connect_name}: There was issue with getting report from Spectra Analyze. HTTP Status code {str(response.status_code)}"
+                )
         else:
             raise ValueError(
                 f"{self.helper.connect_name}: Unsupported type provided for analysis result retrieval!"
             )
+
+        return analysis_report
+
+    def _submit_file_for_classification(self, stix_entity, opencti_entity, hash):
+
+        response = self.a1000client.get_classification_v3(
+            sample_hash=hash, local_only=False, av_scanners=False
+        )
+
+        analysis_report = json.loads(response.text)
 
         return analysis_report
 
@@ -310,6 +320,50 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 + str(results["file_size"])
                 + " B. "
                 + results["story"]
+            )
+
+            # Creating label out of classification
+            results["labels"].append(results["classification"])
+
+        except Exception as err:
+            raise ValueError(
+                f"{self.helper.connect_name}: INFO: Fetching analysis data failed. Please try again shortly!"
+            ) from err
+
+        # Add score and description to the Observable
+        self._upsert_observable(results)
+
+        return results
+
+    def _process_file_classification_results(
+        self, stix_objects, stix_entity, opencti_entity, analysis_result
+    ):
+        self.stix_objects = stix_objects
+        self.stix_entity = stix_entity
+        self.opencti_entity = opencti_entity
+        self.analysis_result = analysis_result
+
+        results = {}
+        results["labels"] = []
+
+        try:
+            results["sample_name"] = self.analysis_result["sha1"]
+            results["classification"] = self.analysis_result["classification"]
+            results["sha256"] = self.analysis_result["sha256"]
+            if results["classification"] in ("suspicious", "malicious"):
+                threat_name = self.analysis_result["classification_result"].split(".")
+                results["threat_name"] = threat_name
+                results["platform"] = threat_name[0]
+                results["threat_type"] = threat_name[1]
+                results["malware_family_name"] = threat_name[2]
+                # Creating label out of malware type and family
+                results["labels"].append(results["threat_type"])
+                results["labels"].append(results["malware_family_name"])
+            results["risk_score"] = self.analysis_result["riskscore"]
+            results["score"] = results["risk_score"] * 10
+            results["description"] = (
+                "Sample was processed by Spectra Analyze! Sample is classified as "
+                + results["classification"]
             )
 
             # Creating label out of classification
@@ -490,7 +544,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         relationship,
     ):
         stix_indicator_with_relationship = []
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         rl_threat_platform = results["platform"]
 
         # Create indicator
@@ -501,7 +554,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             labels=results["labels"],
             pattern=indicator_pattern,
             created_by_ref=self.reversinglabs_identity["standard_id"],
-            valid_from=now,
             object_marking_refs=[stix2.TLP_AMBER],
             custom_properties={
                 "pattern_type": "stix",
@@ -575,7 +627,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 name=sha1,
                 description=description,
                 labels=labels,
-                valid_from=now,
                 pattern=f"[file:hashes. 'SHA-1' = '{sha1}']",
                 created_by_ref=self.reversinglabs_identity["standard_id"],
                 object_marking_refs=[stix2.TLP_AMBER],
@@ -594,7 +645,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 name=download_url,
                 description=description,
                 labels=labels,
-                valid_from=now,
                 pattern=f"[url:value = '{download_url}']",
                 created_by_ref=self.reversinglabs_identity["standard_id"],
                 object_marking_refs=[stix2.TLP_AMBER],
@@ -799,7 +849,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 name=one_domain.get("requested_domain"),
                 description="Created from Spectra Analyze Domain report.",
                 labels=labels,
-                valid_from=now,
                 pattern=f"[domain-name:value = '{one_domain.get('requested_domain')}']",
                 created_by_ref=self.reversinglabs_identity["standard_id"],
                 object_marking_refs=[stix2.TLP_AMBER],
@@ -936,7 +985,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 name=one_url.get("requested_url"),
                 description="Created from Spectra Analyze URL report.",
                 labels=labels,
-                valid_from=now,
                 pattern=f"[url:value = '{one_url.get('requested_url')}']",
                 created_by_ref=self.reversinglabs_identity["standard_id"],
                 object_marking_refs=[stix2.TLP_AMBER],
@@ -1064,7 +1112,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             name=self.domain_sample,
             description="Created from Spectra Analyze Domain report.",
             labels=labels,
-            valid_from=now,
             pattern=f"[domain-name:value = '{self.domain_sample}']",
             created_by_ref=self.reversinglabs_identity["standard_id"],
             object_marking_refs=[stix2.TLP_AMBER],
@@ -1195,7 +1242,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             name=self.url_sample,
             description="Created from Spectra Analyze URL report.",
             labels=labels,
-            valid_from=now,
             pattern=f"[url:value = '{self.url_sample}']",
             created_by_ref=self.reversinglabs_identity["standard_id"],
             object_marking_refs=[stix2.TLP_AMBER],
@@ -1284,6 +1330,29 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             f"{self.helper.connect_name}: Number of stix bundles sent to workers round 1: {str(len(bundles_sent))}"
         )
 
+    def _process_malicious(self, stix_objects, stix_entity, results):
+        if (results["classification"] == "malicious") or (
+            results["classification"] == "suspicious"
+        ):
+
+            self.helper.log_info(
+                f"{self.helper.connect_name}: Create STIX objects for malicious sample results!"
+            )
+
+            # Create indicators based on result
+            self._create_indicators(results)
+
+            # Create Malware and add relationship to artifact
+            self._generate_stix_malware(results)
+
+            # Create Stix Bundle and send it to OpenCTI
+            bundle = self._generate_stix_bundle(stix_objects, stix_entity)
+            bundles_sent = self.helper.send_stix2_bundle(bundle)
+
+            self.helper.log_info(
+                f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
+            )
+
     def _process_message(self, data: Dict):
         stix_objects = data["stix_objects"]
         stix_entity = data["stix_entity"]
@@ -1318,38 +1387,36 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                     hash = ent_hash["hash"]
                     hash_type = ent_hash["algorithm"]
 
+            # Get file classification
+            analysis_result = self._submit_file_for_classification(
+                stix_entity, opencti_entity, hash
+            )
+
+            if not analysis_result:
+                self.helper.log_info(
+                    f"{self.helper.connect_name}: There is no analysis result for provided sample!"
+                )
+
+            # Integrate classification analysis results with OpenCTI
+            if "results" not in analysis_result:
+
+                results = self._process_file_classification_results(
+                    stix_objects, stix_entity, opencti_entity, analysis_result
+                )
+
+                self._process_malicious(stix_objects, stix_entity, results)
+
             # Submit File sample for analysis
             analysis_result = self._submit_file_for_analysis(
                 stix_entity, opencti_entity, hash, hash_type
             )
 
-            if not analysis_result:
-                raise ValueError(
-                    f"{self.helper.connect_name}: Provided sample does not exist on the appliance. Try to upload it first and re-run!"
+            # Integrate file analysis results with OpenCTI
+            if "results" in analysis_result:
+                results = self._process_file_analysis_result(
+                    stix_objects, stix_entity, opencti_entity, analysis_result
                 )
-
-            # Integrate analysis results with OpenCTI
-            results = self._process_file_analysis_result(
-                stix_objects, stix_entity, opencti_entity, analysis_result
-            )
-
-            if (results["classification"] == "malicious") or (
-                results["classification"] == "suspicious"
-            ):
-
-                # Create indicators based on result
-                self._create_indicators(results)
-
-                # Create Malware and add relationship to artifact
-                self._generate_stix_malware(results)
-
-                # Create Stix Bundle and send it to OpenCTI
-                bundle = self._generate_stix_bundle(stix_objects, stix_entity)
-                bundles_sent = self.helper.send_stix2_bundle(bundle)
-
-                self.helper.log_info(
-                    f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
-                )
+                self._process_malicious(stix_objects, stix_entity, results)
 
         elif opencti_type == "Url":
             url_sample = stix_entity["value"]
@@ -1380,23 +1447,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 stix_objects, stix_entity, opencti_entity, analysis_result
             )
 
-            if (results["classification"] == "malicious") or (
-                results["classification"] == "suspicious"
-            ):
-
-                # Create indicators based on result
-                self._create_indicators(results)
-
-                # Create Malware and add relationship to artifact
-                self._generate_stix_malware(results)
-
-                # Create Stix Bundle and send it to OpenCTI
-                bundle = self._generate_stix_bundle(stix_objects, stix_entity)
-                bundles_sent = self.helper.send_stix2_bundle(bundle)
-
-                self.helper.log_info(
-                    f"{self.helper.connect_name}: Number of stix bundles sent to workers round 1: {str(len(bundles_sent))}"
-                )
+            self._process_malicious(stix_objects, stix_entity, results)
 
         elif opencti_type == "IPv4-Addr":
             ip_sample = stix_entity["value"]

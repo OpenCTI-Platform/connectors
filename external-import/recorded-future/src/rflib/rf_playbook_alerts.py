@@ -7,7 +7,7 @@ import stix2
 from pycti import StixCoreRelationship
 
 from .constants import TLP_MAP
-from .make_markdown_table import make_markdown_table
+from .utils import make_markdown_table
 
 
 class RecordedFuturePlaybookAlertConnector(threading.Thread):
@@ -24,7 +24,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         threading.Thread.__init__(self)
         self.helper = helper
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "Starting Recorded Future Playbook Alert connector module initialization"
         )
 
@@ -66,7 +66,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         timestamp = datetime.datetime.now(pytz.timezone("UTC"))
         self.work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id,
-            "Recorded Future Playbook Alert",
+            "Recorded Future Playbook Alerts",
         )
         current_state = self.helper.get_state()
         playbook_types = [
@@ -78,10 +78,10 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             self.api_recorded_future.playbook_alerts_summaries = []
             if (
                 current_state is not None
-                and str("last_playbook_alert_run_" + playbook_type) in current_state
+                and str("last_playbook_alerts_run_" + playbook_type) in current_state
             ):
                 current_state_datetime = datetime.datetime.strptime(
-                    current_state[str("last_playbook_alert_run_" + playbook_type)],
+                    current_state[str("last_playbook_alerts_run_" + playbook_type)],
                     "%Y-%m-%dT%H:%M:%S",
                 )
                 self.api_recorded_future.get_playbook_id(
@@ -106,7 +106,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
 
             for plb_alert in self.api_recorded_future.playbook_alerts_summaries:
                 try:
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         plb_alert.title + " - " + plb_alert.playbook_alert_id
                     )
                     playbook_alert = (
@@ -131,7 +131,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                             + playbook_alert["data"]["playbook_alert_id"]
                         )
                 except Exception as err:
-                    self.helper.log_error(err)
+                    self.helper.connector_logger.error(err)
                 self.update_state(plb_alert.category)
 
         for playbook_type in playbook_types:
@@ -144,22 +144,34 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
 
     def debug(self, text):
         if self.debug_var:
-            self.helper.log_error(text)
+            self.helper.connector_logger.error(text)
 
     def update_state(self, playbook_type):
         timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
-        current_state = self.helper.get_state()
-        if current_state is not None:
-            current_state[str("last_playbook_alert_run_" + playbook_type)] = (
-                timestamp_checkpoint.strftime("%Y-%m-%dT%H:%M:%S")
+        current_state = self.helper.get_state() or {}
+        if (
+            current_state is not None
+            and str("last_playbook_alerts_run_" + playbook_type) in current_state
+        ):
+            last_playbook_alerts_run = timestamp_checkpoint.strftime(
+                "%Y-%m-%dT%H:%M:%S"
+            )
+
+            current_state.update(
+                {"last_playbook_alerts_run_" + playbook_type: last_playbook_alerts_run}
             )
             self.helper.set_state(current_state)
         else:
-            current_state_new = {}
-            current_state_new[str("last_playbook_alert_run_" + playbook_type)] = (
-                timestamp_checkpoint.strftime("%Y-%m-%dT%H:%M:%S")
+            last_playbook_alerts_run = timestamp_checkpoint.strftime(
+                "%Y-%m-%dT%H:%M:%S"
             )
-            self.helper.set_state(current_state_new)
+
+            current_state = self.helper.get_state() or {}
+            current_state.update(
+                {"last_playbook_alerts_run_" + playbook_type: last_playbook_alerts_run}
+            )
+
+            self.helper.set_state(current_state)
 
     def create_incident_from_playbook_alert_code_repo_leakage(self, playbook_alert):
         bundle_objects = []
@@ -203,7 +215,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             incident_type=playbook_alert["data"]["panel_status"]["case_rule_label"],
             labels=[str(playbook_alert["data"]["panel_status"]["case_rule_label"])],
             external_references=[stix_external_ref],
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
         )
         bundle_objects.append(stix_incident)
 
@@ -288,7 +300,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             abstract="# Evidence summary panel",
             content=summary_content,
             object_refs=[stix_incident.id],
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
         )
         bundle_objects.append(stix_note)
         bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
@@ -340,7 +352,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             ],
             incident_type=playbook_alert["data"]["panel_status"]["case_rule_label"],
             labels=["Identity Novel Exposures"],
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
         )
         bundle_objects.append(stix_incident)
         summary_content = ""
@@ -456,16 +468,18 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                                 "infrastructure"
                             ][subkey],
                             object_marking_refs=self.tlp,
-                            custom_properties={"x_opencti_created_by_ref": self.author},
+                            custom_properties={
+                                "x_opencti_created_by_ref": self.author["id"]
+                            },
                         )
                         stix_relationship = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
-                                "related-to", stix_incident.id, stix_ipv4address.id
+                                "related-to", stix_ipv4address.id, stix_incident.id
                             ),
                             relationship_type="related-to",
-                            source_ref=stix_incident.id,
-                            target_ref=stix_ipv4address.id,
-                            created_by_ref=self.author,
+                            source_ref=stix_ipv4address.id,
+                            target_ref=stix_incident.id,
+                            created_by_ref=self.author["id"],
                             object_marking_refs=self.tlp,
                         )
                         bundle_objects.append(stix_ipv4address)
@@ -512,7 +526,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             abstract="# Evidence summary panel",
             content=summary_content,
             object_refs=[stix_incident.id],
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
         )
         bundle_objects.append(stix_note)
         bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
@@ -556,7 +570,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
             ],
             incident_type=playbook_alert["data"]["panel_status"]["case_rule_label"],
             labels=["Domain Abuse"],
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
         )
         bundle_objects.append(stix_incident)
         stix_url = stix2.DomainName(
@@ -565,12 +579,12 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         )
         stix_relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
-                "related-to", stix_incident.id, stix_url.id
+                "related-to", stix_url.id, stix_incident.id
             ),
             relationship_type="related-to",
-            source_ref=stix_incident.id,
-            target_ref=stix_url.id,
-            created_by_ref=self.author,
+            source_ref=stix_url.id,
+            target_ref=stix_incident.id,
+            created_by_ref=self.author["id"],
             object_marking_refs=self.tlp,
         )
         bundle_objects.append(stix_url)
@@ -598,7 +612,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 abstract="# Evidence WhoIs panel",
                 content=evidence_whois_content,
                 object_refs=[stix_incident.id],
-                created_by_ref=self.author,
+                created_by_ref=self.author["id"],
             )
             bundle_objects.append(stix_note)
         if len(playbook_alert["data"]["panel_evidence_dns"]) > 0 and (
@@ -622,12 +636,12 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 )
                 stix_relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "related-to", stix_incident.id, stix_ipv4address.id
+                        "related-to", stix_ipv4address.id, stix_incident.id
                     ),
                     relationship_type="related-to",
-                    source_ref=stix_incident.id,
-                    target_ref=stix_ipv4address.id,
-                    created_by_ref=self.author,
+                    source_ref=stix_ipv4address.id,
+                    target_ref=stix_incident.id,
+                    created_by_ref=self.author["id"],
                     object_marking_refs=self.tlp,
                 )
                 bundle_objects.append(stix_ipv4address)
@@ -656,12 +670,12 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 )
                 stix_relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "related-to", stix_incident.id, stix_domain.id
+                        "related-to", stix_domain.id, stix_incident.id
                     ),
                     relationship_type="related-to",
-                    source_ref=stix_incident.id,
-                    target_ref=stix_domain.id,
-                    created_by_ref=self.author,
+                    source_ref=stix_domain.id,
+                    target_ref=stix_incident.id,
+                    created_by_ref=self.author["id"],
                     object_marking_refs=self.tlp,
                 )
                 bundle_objects.append(stix_domain)
@@ -677,7 +691,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 abstract="# Evidence DNS panel",
                 content=evidence_dns_content,
                 object_refs=[stix_incident.id],
-                created_by_ref=self.author,
+                created_by_ref=self.author["id"],
             )
             bundle_objects.append(stix_note)
         evidence_summary_content = ""

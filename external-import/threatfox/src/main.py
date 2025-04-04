@@ -480,7 +480,6 @@ class ThreatFox:
                 indicator_types=[indicator_type],
                 pattern_type="stix",
                 pattern=pattern_value,
-                valid_from=datetime.now(UTC),
                 labels=ioc.tags,
                 object_marking_refs=[stix2.TLP_WHITE],
                 created_by_ref=self.identity["standard_id"],

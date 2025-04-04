@@ -1,8 +1,42 @@
+import functools
 import ipaddress
+from typing import Callable
 
 import stix2
 from dateutil.parser import parse
 from pycti import Identity, Indicator, Malware, StixCoreRelationship
+from stix2.exceptions import InvalidValueError
+
+
+class ConverterError(Exception):
+    """
+    Custom exception class for handling known conversion errors.
+    """
+
+
+def known_converter_error(
+    func: Callable[["ConverterToStix", ...], stix2.v21._STIXBase21],
+) -> Callable[["ConverterToStix", ...], stix2.v21._STIXBase21]:
+    """
+    Decorator to catch known conversion errors and raise custom exception.
+    Args:
+        func: Function to decorate
+    Returns:
+        Decorated function
+    """
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except InvalidValueError as error:
+            msg = (
+                f"Invalid value while converting to stix object. data: {args}, {kwargs}"
+            )
+            self.helper.connector_logger.error(msg)
+            raise ConverterError(msg) from error
+
+    return wrapper
 
 
 class ConverterToStix:
@@ -119,6 +153,7 @@ class ConverterToStix:
         )
         return stix_relationship
 
+    @known_converter_error
     def convert_threat_to_stix(self, data) -> list[stix2.v21._STIXBase21]:
         """
         Convert threat IOC into STIX entities (indicator and related observables)
@@ -260,6 +295,7 @@ class ConverterToStix:
 
         return bundle_objects
 
+    @known_converter_error
     def convert_phish_to_stix(self, data) -> list[stix2.v21._STIXBase21]:
         """
         Convert phish IOC into STIX entities (indicator and related observables)
@@ -325,6 +361,7 @@ class ConverterToStix:
 
         return bundle_objects
 
+    @known_converter_error
     def convert_malicious_to_stix(self, data) -> list[stix2.v21._STIXBase21]:
         """
         Convert malicious IOC into STIX entities (indicator and related observables)
