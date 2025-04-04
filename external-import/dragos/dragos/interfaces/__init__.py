@@ -11,10 +11,8 @@ from .geocoding import (
     Position,
     Region,
 )
-from .report import ReportRetrievalError, Reports
-from .report import _Indicator as Indicator
-from .report import _Report as Report
-from .report import _Tag as Tag
+from .report import ReportRetrievalError, Reports, Indicator, Report, Indicator, Tag
+
 
 __all__ = [
     "Area",

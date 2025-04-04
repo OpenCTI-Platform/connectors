@@ -32,32 +32,22 @@ def _validate_pdf_bytes(value: bytes, info: ValidationInfo) -> bytes:
 PDFBytes = Annotated[bytes, AfterValidator(_validate_pdf_bytes)]
 
 
-class _Tag(ABC, FrozenBaseModel):
+class Tag(FrozenBaseModel):
     """Interface for Dragos Tag."""
 
     # Not an enum, use cases should handle the values and logs accordingly
     type: str = Field(..., description="The Dragos Tag type.", min_length=1)
     value: str = Field(..., description="The Dragos Tag value.", min_length=1)
 
-    def __init__(self) -> None:
+    def __init__(self, type: str, value: str) -> None:
         """Initialize the Tag."""
         try:
-            FrozenBaseModel.__init__(self, type=self._type, value=self._value)
+            FrozenBaseModel.__init__(self, type=type, value=value)
         except ValidationError as e:
             raise ReportRetrievalError("Failed to retrieve Tag") from e
 
-    @property
-    @abstractmethod
-    def _type(self) -> str:
-        pass
 
-    @property
-    @abstractmethod
-    def _value(self) -> str:
-        pass
-
-
-class _Indicator(ABC, FrozenBaseModel):
+class Indicator(FrozenBaseModel):
     """Interface for Dragos Indicator."""
 
     value: str = Field(..., description="The Dragos Indicator value.", min_length=1)
@@ -81,38 +71,18 @@ class _Indicator(ABC, FrozenBaseModel):
     )
     # Unused : kill_chain, confidence, severity, attack_techniques, products
 
-    def __init__(self) -> None:
+    def __init__(self, value: str, type: str, first_seen: str, last_seen: str) -> None:
         """Initialize the Indicator."""
         try:
             FrozenBaseModel.__init__(
                 self,
-                value=self._value,
-                type=self._type,
-                first_seen=self._first_seen,
-                last_seen=self._last_seen,
+                value=value,
+                type=type,
+                first_seen=first_seen,
+                last_seen=last_seen,
             )
         except ValidationError as e:
             raise ReportRetrievalError("Failed to retrieve Indicator") from e
-
-    @property
-    @abstractmethod
-    def _value(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def _type(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def _first_seen(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def _last_seen(self) -> str:
-        pass
 
 
 class _Report(ABC, FrozenBaseModel):
