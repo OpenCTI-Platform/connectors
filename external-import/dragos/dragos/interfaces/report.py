@@ -85,7 +85,7 @@ class Indicator(FrozenBaseModel):
             raise ReportRetrievalError("Failed to retrieve Indicator") from e
 
 
-class _Report(ABC, FrozenBaseModel):
+class Report(ABC, FrozenBaseModel):
     """Interface for Dragos Report."""
 
     serial: str = Field(..., description="The Dragos Report ID.", min_length=1)
@@ -98,72 +98,40 @@ class _Report(ABC, FrozenBaseModel):
     )
     summary: str = Field(..., description="The Dragos Report executive_summary.")
 
-    pdf: Optional[PDFBytes] = Field(
-        None, description="The Dragos Report PDF file.", min_length=1
-    )
-
-    related_tags: Generator[_Tag, None, None] = Field(
-        ..., description="The Dragos Report related tags."
-    )
-    related_indicators: Generator[_Indicator, None, None] = Field(
-        ..., description="The Dragos Report related indicators."
-    )
-
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        serial: str,
+        title: str,
+        created_at: str,
+        updated_at: str,
+        summary: str,
+    ) -> None:
         """Initialize the Report."""
         try:
             FrozenBaseModel.__init__(
                 self,
-                serial=self._serial,
-                title=self._title,
-                created_at=self._created_at,
-                updated_at=self._updated_at,
-                summary=self._summary,
-                related_tags=self._related_tags,
-                related_indicators=self._related_indicators,
-                pdf=self._pdf,
+                serial=serial,
+                title=title,
+                created_at=created_at,
+                updated_at=updated_at,
+                summary=summary,
             )
         except ValidationError as e:
             raise ReportRetrievalError("Failed to retrieve Report") from e
 
     @property
     @abstractmethod
-    def _serial(self) -> str:
+    def pdf(self) -> Optional[bytes]:
         pass
 
     @property
     @abstractmethod
-    def _title(self) -> str:
+    def related_tags(self) -> Generator[Tag, None, None]:
         pass
 
     @property
     @abstractmethod
-    def _created_at(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def _updated_at(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def _summary(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def _pdf(self) -> Optional[bytes]:
-        pass
-
-    @property
-    @abstractmethod
-    def _related_tags(self) -> Generator[_Tag, None, None]:
-        pass
-
-    @property
-    @abstractmethod
-    def _related_indicators(self) -> Generator[_Indicator, None, None]:
+    def related_indicators(self) -> Generator[Indicator, None, None]:
         pass
 
 
@@ -171,5 +139,5 @@ class Reports(ABC):
     """Interface for Dragos Reports Retrieval."""
 
     @abstractmethod
-    def iter(self, since: AwareDatetime) -> Generator[_Report, None, None]:
+    def iter(self, since: AwareDatetime) -> Generator[Report, None, None]:
         """List all Dragos reports."""
