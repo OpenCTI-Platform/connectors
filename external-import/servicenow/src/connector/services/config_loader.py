@@ -1,0 +1,36 @@
+from connector.models import ConfigLoader
+from pydantic import ValidationError
+
+
+class ServiceNowConfig:
+    def __init__(self):
+        """Initialize the connector with necessary configurations"""
+        self.load = self._load_config()
+
+    @staticmethod
+    def _load_config() -> dict:
+        """
+        Load the application configuration using Pydantic Settings.
+
+        The configuration is loaded from a single source, following a specific order:
+        1. .env file (DotEnvSettingsSource) → If present, it is used as the primary configuration source.
+        2. config.yml file (YamlConfigSettingsSource) → If the .env file is missing, the YAML configuration is used instead.
+        3. System environment variables (EnvSettingsSource) → If neither a '.env' nor a 'config.yml' file is found,
+           the system environment variables are used as the last fallback.
+
+        It validates the configuration using Models Pydantic and ensures that only valid settings are returned.
+        Additionally, any parameters set to `None` will be automatically excluded from the final dictionary.
+
+        Returns:
+            dict: A dictionary containing the validated configuration.
+        """
+        try:
+
+            load_settings = ConfigLoader()
+            return load_settings.model_dump(exclude_none=True)
+
+        except ValidationError as err:
+            raise ValueError(err)
+
+        except Exception as err:
+            raise ValueError(err)
