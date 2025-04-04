@@ -46,7 +46,7 @@ Below are the parameters you'll need to set for the connector:
 | Polling interval       | polling_interval        |   `POLLING_INTERVAL`        | 3600    | Yes       | Specifies the time interval between checks for new/updated data.        |
 | Historical Pollig Days | historical_polling_days |   `HISTORICAL_POLLING_DAYS` | 30      | Yes       | Defines the number of past days to initially retrieve data from.      |
 | Max Retries            | max_retries             |   `MAX_RETRIES`             | 3       | Yes       | Defines the number of retry on failure                  |
-| Retry Delay            | retry_delay             |   `RETRY DELAY`             | 30      | Yes       | Defines time between teo retres            |
+| Retry Delay            | retry_delay             |   `RETRY DELAY`             | 30      | Yes       | Defines time between two retry            |
 
 ## Deployment
 
@@ -94,7 +94,7 @@ python3 main.py
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `polling_interval`.
 
 However, if you would like to force an immediate download of a new batch of entities, navigate to:
 
@@ -109,8 +109,6 @@ download of data by re-running the connector.
 ## Debugging
 
 The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
 
 ## Additional information
 
