@@ -193,7 +193,7 @@ class ConnectorTemplate:
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
         :return: None
         """
-        self.helper.schedule_iso(
+        self.helper.schedule_process(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )
