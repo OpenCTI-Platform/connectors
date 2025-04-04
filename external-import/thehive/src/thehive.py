@@ -312,7 +312,7 @@ class TheHive:
         return mappings.get(key, mappings[0])
 
     def get_updated_date(self, item, last_date):
-        """Get the highest date observed within item and last_date."""
+        """Get the highest date observed within item and "last_date"."""
         if "updatedAt" in item and item["updatedAt"] is not None:
             new_date = int(item["updatedAt"] / 1000) + 1
             self.helper.log_debug(
