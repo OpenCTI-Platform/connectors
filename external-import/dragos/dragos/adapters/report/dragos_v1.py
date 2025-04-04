@@ -1,18 +1,17 @@
 import asyncio
-from typing import Generator, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Generator, Optional
 
-from pydantic import PrivateAttr
-from dragos.interfaces import Indicator, Report, Reports, Tag
 from client_api.v1 import DragosClientAPIV1
 from client_api.v1.product import ProductResponse
+from dragos.interfaces import Indicator, Report, Reports, Tag
+from pydantic import PrivateAttr
 
 if TYPE_CHECKING:
     from datetime import datetime, timedelta
 
-    from yarl import URL
-
-    from client_api.v1.product import TagResponse
     from client_api.v1.indicator import IndicatorResponse
+    from client_api.v1.product import TagResponse
+    from yarl import URL
 
 
 class ExtendedProductResponse:

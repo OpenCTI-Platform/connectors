@@ -6,10 +6,10 @@ import typing
 
 import pytest
 from dragos.interfaces.report import (
-    ReportRetrievalError,
-    Reports,
     Indicator,
     Report,
+    ReportRetrievalError,
+    Reports,
     Tag,
 )
 from pydantic import ValidationError
