@@ -60,7 +60,10 @@ class BaseRFConnector:
             "RECORDED_FUTURE_PULL_RISK_LIST", ["rf", "pull_risk_list"], config
         )
         self.rf_riskrules_as_label = get_config_variable(
-            "RECORDED_FUTURE_RISKRULES_AS_LABEL", ["rf", "riskrules_as_label"], config, default=False
+            "RECORDED_FUTURE_RISKRULES_AS_LABEL",
+            ["rf", "riskrules_as_label"],
+            config,
+            default=False,
         )
         self.rf_insikt_only = get_config_variable(
             "RECORDED_FUTURE_INSIKT_ONLY", ["rf", "insikt_only"], config
