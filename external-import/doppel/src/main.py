@@ -4,7 +4,7 @@ import yaml
 import json
 import requests
 from datetime import datetime, timedelta, timezone
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle, Indicator, Identity
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
 import uuid
@@ -16,10 +16,11 @@ config = yaml.safe_load(open(CONFIG_PATH, "r")) if os.path.isfile(CONFIG_PATH) e
 # OpenCTI Helper Initialization
 helper = OpenCTIConnectorHelper(config)
 
+
 def get_config_variable(env_var, config_keys, config, required=False):
     value = os.getenv(env_var)
     if value is not None:
-        return value 
+        return value
 
     temp = config
     for key in config_keys:
@@ -32,8 +33,9 @@ def get_config_variable(env_var, config_keys, config, required=False):
 
     if required:
         raise ValueError(f"Missing required config variable: {env_var} or {'.'.join(config_keys)}")
-    
-    return None 
+
+    return None
+
 
 # Retrieve configuration variables
 API_URL = get_config_variable("DOPPEL_API_URL", ["doppel", "api_url"], config, True)
@@ -45,9 +47,11 @@ RETRY_DELAY = int(get_config_variable("RETRY_DELAY", ["doppel", "retry_delay"], 
 UPDATE_EXISTING_DATA = get_config_variable("UPDATE_EXISTING_DATA", ["doppel", "update_existing_data"], config, False)
 UPDATE_EXISTING_DATA = UPDATE_EXISTING_DATA.lower() == "true" if isinstance(UPDATE_EXISTING_DATA, str) else bool(UPDATE_EXISTING_DATA)
 
+
 def get_created_after_timestamp(days):
     past_time = datetime.now(timezone.utc) - timedelta(days=days)
     return past_time.strftime("%Y-%m-%dT%H:%M:%S")
+
 
 def log_retry(retry_state):
     helper.log_info(
@@ -55,6 +59,7 @@ def log_retry(retry_state):
         f"after exception: {retry_state.outcome.exception()}. "
         f"Sleeping {retry_state.next_action.sleep} seconds..."
     )
+
 
 @retry(
     stop=stop_after_attempt(MAX_RETRIES),
@@ -74,7 +79,7 @@ def fetch_alerts():
         response = requests.get(API_URL, headers=headers, params=params)
 
         if response.status_code == 400:
-            helper.log_error(f"Check for invalid API or token")
+            helper.log_error("Check for invalid API or token.")
             return []
         elif response.status_code == 401:
             helper.log_error("Authentication failed! Check your Doppel API key.")
@@ -90,6 +95,7 @@ def fetch_alerts():
         helper.log_error(f"Error fetching alerts: {str(e)}")
         raise  # Let Tenacity catch it and retry
 
+
 DOPPEL_IDENTITY = Identity(
     id=f"identity--{str(uuid.uuid4())}",
     name="Doppel",
@@ -97,6 +103,7 @@ DOPPEL_IDENTITY = Identity(
     description="Threat Intelligence Provider",
     allow_custom=True
 )
+
 
 def convert_to_stix(alerts):
     stix_objects = [DOPPEL_IDENTITY]
@@ -133,7 +140,7 @@ def convert_to_stix(alerts):
             pattern=pattern,
             pattern_type="stix",
             confidence=50 if alert.get("queue_state") == "monitoring" else 80,
-            labels=labels,            
+            labels=labels,
             created=created_at,
             created_by_ref=created_by_ref,
             external_references=[{
@@ -157,9 +164,10 @@ def convert_to_stix(alerts):
 
     return Bundle(objects=stix_objects, allow_custom=True).serialize() if stix_objects else None
 
+
 def send_to_opencti(stix_bundle):
     try:
-        if isinstance(stix_bundle, dict):  
+        if isinstance(stix_bundle, dict):
             stix_bundle = json.dumps(stix_bundle)
 
         if not stix_bundle:
@@ -172,10 +180,11 @@ def send_to_opencti(stix_bundle):
             stix_bundle,
             update=UPDATE_EXISTING_DATA
         )
-        helper.log_info(f"STIX bundle sent successfully")
+        helper.log_info("STIX bundle sent successfully")
 
     except Exception as e:
         helper.log_error(f"Error sending STIX bundle: {str(e)}")
+
 
 def main():
     while True:
@@ -193,6 +202,7 @@ def main():
             time.sleep(POLLING_INTERVAL)
         except Exception as e:
             helper.log_error(f"Unexpected error in main loop: {str(e)}")
+
 
 if __name__ == "__main__":
     helper.log_info("Starting Doppel OpenCTI Connector...")
