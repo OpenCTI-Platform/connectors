@@ -50,7 +50,7 @@ jobs:
           webhook_url: $MS_TEAMS_WEBHOOK_URL
   base_linter:
     docker:
-      - image: alpine/flake8
+      - image: alpine/flake8:7.1.2
     working_directory: ~/repo
     steps:
       - checkout
