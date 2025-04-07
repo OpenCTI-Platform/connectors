@@ -14,43 +14,6 @@ if TYPE_CHECKING:
     from yarl import URL
 
 
-class ExtendedProductResponse:
-    """Extend ProductResponse from Dragos API v1 to include indicators and pdf."""
-
-    def __init__(self, product: "ProductResponse", client: "DragosClientAPIV1") -> None:
-        """Initialize the ExtendedProductResponse."""
-        self.product = product
-        self._client = client
-
-    @property
-    def indicators(self) -> list["IndicatorResponse"]:
-        """Get all indicators related to the product."""
-
-        async def iter_indicators():
-            """Iterate over all indicators."""
-            async_indicators = self._client.indicator.iter_indicators(
-                serials=[self.product.serial]
-            )
-
-            return [indicator async for indicator in async_indicators]
-
-        indicators = asyncio.run(iter_indicators())
-        return indicators
-
-    @property
-    def pdf(self) -> Optional[bytes]:
-        """Get the PDF of the product."""
-
-        async def get_pdf():
-            """Get the PDF of the product."""
-            return await self._client.product.get_product_pdf(
-                serial=self.product.serial
-            )
-
-        pdf = asyncio.run(get_pdf())
-        return pdf
-
-
 class TagAPIV1(Tag):
     """Define Tag from Dragos API v1."""
 
@@ -116,6 +79,43 @@ class ReportAPIV1(Report):
             yield IndicatorAPIV1.from_indicator_response(indicator)
 
 
+class ExtendedProductResponse:
+    """Extend ProductResponse from Dragos API v1 to include indicators and pdf."""
+
+    def __init__(self, product: "ProductResponse", client: "DragosClientAPIV1") -> None:
+        """Initialize the ExtendedProductResponse."""
+        self.product = product
+        self._client = client
+
+    @property
+    def indicators(self) -> list["IndicatorResponse"]:
+        """Get all indicators related to the product."""
+
+        async def iter_indicators():
+            """Iterate over all indicators."""
+            async_indicators = self._client.indicator.iter_indicators(
+                serials=[self.product.serial]
+            )
+
+            return [indicator async for indicator in async_indicators]
+
+        indicators = asyncio.run(iter_indicators())
+        return indicators
+
+    @property
+    def pdf(self) -> Optional[bytes]:
+        """Get the PDF of the product."""
+
+        async def get_pdf():
+            """Get the PDF of the product."""
+            return await self._client.product.get_product_pdf(
+                serial=self.product.serial
+            )
+
+        pdf = asyncio.run(get_pdf())
+        return pdf
+
+
 class ReportsAPIV1(Reports):
     """Dragos API v1 adapter for reports."""
 
@@ -141,17 +141,15 @@ class ReportsAPIV1(Reports):
     def iter(self, since: "datetime") -> Generator[Report, None, None]:
         """List all Dragos reports."""
 
-        async def iter_reports():
+        async def iter_products():
             """Iterate over all products."""
             product_responses = self._client.product.iter_products(updated_after=since)
 
             return [
-                ReportAPIV1.from_product_response(
-                    ExtendedProductResponse(product=product, client=self._client)
-                )
+                ExtendedProductResponse(product=product, client=self._client)
                 async for product in product_responses
             ]
 
-        reports = asyncio.run(iter_reports())
-        for report in reports:
-            yield report
+        products = asyncio.run(iter_products())
+        for product in products:
+            yield ReportAPIV1.from_product_response(product)
