@@ -8,8 +8,12 @@ import requests
 import yaml
 from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle, Identity, Indicator
-from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
-                      wait_exponential)
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 # Load configuration
 CONFIG_PATH = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
