@@ -61,7 +61,7 @@ class Position(BaseGeolocation):
     )
 
 
-class Geocoding(ABC, FrozenBaseModel):
+class Geocoding(ABC):
     """Interface for Geocoding data.
 
     This class should be implemented to be used as a geocoding service.
