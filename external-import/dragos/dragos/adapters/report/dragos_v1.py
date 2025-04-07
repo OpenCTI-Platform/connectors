@@ -1,4 +1,7 @@
+"""Dragos API v1 adapter for reports."""
+
 import asyncio
+from io import BytesIO
 from typing import TYPE_CHECKING, Generator, Optional
 
 from client_api.v1 import DragosClientAPIV1
@@ -19,7 +22,7 @@ class TagAPIV1(Tag):
 
     @classmethod
     def from_tag_response(cls, tag_response: "TagResponse") -> "TagAPIV1":
-        """Convert TagResponse to Tag."""
+        """Convert TagResponse instance to TagAPIV1 instance."""
         return cls(
             type=tag_response.tag_type,
             value=tag_response.text,
@@ -33,7 +36,7 @@ class IndicatorAPIV1(Indicator):
     def from_indicator_response(
         cls, indicator_response: "IndicatorResponse"
     ) -> "IndicatorAPIV1":
-        """Convert IndicatorResponse to Indicator."""
+        """Convert IndicatorResponse instance to IndicatorAPIV1 instance."""
         return cls(
             type=indicator_response.indicator_type,
             value=indicator_response.value,
@@ -51,7 +54,7 @@ class ReportAPIV1(Report):
     def from_product_response(
         cls, product_response: "ExtendedProductResponse"
     ) -> "ReportAPIV1":
-        """Convert ProductResponse to Report."""
+        """Convert ExtendedProductResponse instance to ReportAPIV1 instance."""
         cls._product_response = product_response
 
         product = product_response.product
@@ -65,16 +68,18 @@ class ReportAPIV1(Report):
 
     @property
     def pdf(self) -> Optional[bytes]:
+        """Get report's PDF content."""
         return self._product_response.pdf
 
     @property
     def related_tags(self) -> Generator[Tag, None, None]:
-        """List all related tags."""
+        """Get all related tags."""
         for tag in self._product_response.product.tags:
             yield TagAPIV1.from_tag_response(tag)
 
     @property
     def related_indicators(self) -> Generator[Indicator, None, None]:
+        """Gett all related indicators."""
         for indicator in self._product_response.indicators:
             yield IndicatorAPIV1.from_indicator_response(indicator)
 
@@ -91,7 +96,7 @@ class ExtendedProductResponse:
     def indicators(self) -> list["IndicatorResponse"]:
         """Get all indicators related to the product."""
 
-        async def iter_indicators():
+        async def iter_indicators() -> list[IndicatorResponse]:
             """Iterate over all indicators."""
             async_indicators = self._client.indicator.iter_indicators(
                 serials=[self.product.serial]
@@ -106,7 +111,7 @@ class ExtendedProductResponse:
     def pdf(self) -> Optional[bytes]:
         """Get the PDF of the product."""
 
-        async def get_pdf():
+        async def get_pdf() -> BytesIO:
             """Get the PDF of the product."""
             return await self._client.product.get_product_pdf(
                 serial=self.product.serial
@@ -131,8 +136,8 @@ class ReportsAPIV1(Reports):
         """Initialize the adapter."""
         self._client = DragosClientAPIV1(
             base_url=base_url,
-            token=token,
-            secret=secret,
+            token=token,  # type: ignore[arg-type]
+            secret=secret,  # type: ignore[arg-type]
             timeout=timeout,
             retry=retry,
             backoff=backoff,
@@ -141,7 +146,7 @@ class ReportsAPIV1(Reports):
     def iter(self, since: "datetime") -> Generator[Report, None, None]:
         """List all Dragos reports."""
 
-        async def iter_products():
+        async def iter_products() -> list[ExtendedProductResponse]:
             """Iterate over all products."""
             product_responses = self._client.product.iter_products(updated_after=since)
 

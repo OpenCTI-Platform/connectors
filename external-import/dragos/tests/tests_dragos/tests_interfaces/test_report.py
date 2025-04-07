@@ -117,7 +117,6 @@ def tests_implemented_interface_attributes_are_read_only(instance):
 
 def test_tag_should_raise_data_retrieval_error_with_incorrect_attribute():
     """Test that the Tag raises a data retrieval error with incorrect attributes."""
-
     # Given invalid Tag arguments
     # When instantiating the IncorrectStubTag
     # Then a data retrieval error is raised
@@ -155,7 +154,6 @@ def test_indicator_should_cast_datetime():
 
 def test_indicator_should_raise_validation_error_with_incorrect_attribute():
     """Test that the Indicator raises a data retrieval error with incorrect attributes."""
-
     # Given invalid Indicator arguments
     # When instantiating the IncorrectStubIndicator
     # Then a data retrieval error should be raised

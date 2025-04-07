@@ -1,23 +1,22 @@
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from client_api.v1 import DragosClientAPIV1
 from client_api.v1.indicator import IndicatorResponse
 from client_api.v1.product import ProductResponse, TagResponse
 from dragos.adapters.report.dragos_v1 import (
-    ReportsAPIV1,
-    ReportAPIV1,
-    IndicatorAPIV1,
-    TagAPIV1,
     ExtendedProductResponse,
+    IndicatorAPIV1,
+    ReportAPIV1,
+    ReportsAPIV1,
+    TagAPIV1,
 )
 from yarl import URL
 
 
 def fake_tag_response():
     """Return a fake TagResponse."""
-
     return TagResponse.model_validate(
         {
             "text": "my_text",
@@ -28,7 +27,6 @@ def fake_tag_response():
 
 def fake_product_response():
     """Return a fake ProductResponse."""
-
     return ProductResponse.model_validate(
         {
             "serial": "12345",
@@ -51,7 +49,6 @@ def fake_product_response():
 
 def fake_indicator_response():
     """Return a fake IndicatorResponse."""
-
     return IndicatorResponse.model_validate(
         {
             "id": 1,
@@ -80,7 +77,6 @@ def fake_indicator_response():
 @pytest.fixture
 def mock_dragos_client():
     """Fixture to create a mock Dragos client."""
-
     client = Mock(spec=DragosClientAPIV1)
 
     client.product = Mock()
@@ -104,7 +100,6 @@ def mock_dragos_client():
 
 def test_reports_api_v1_lists_all_reports(mock_dragos_client):
     """Test that the ReportsAPIV1 generates reports."""
-
     # Given an instance of ReportsAPIV1
     reports_api_v1 = ReportsAPIV1(
         base_url=URL("http://example.com"),
@@ -129,7 +124,6 @@ def test_report_api_v1_from_product_response_returns_report(
     mock_dragos_client,
 ):
     """Test ReportAPIV1.from_product_response factory method."""
-
     # Given a ProductResponse from DragosClientAPIV1
     product_response = ProductResponse.model_validate(fake_product_response())
     extended_product_response = ExtendedProductResponse(
@@ -161,7 +155,6 @@ def test_report_api_v1_from_product_response_returns_report(
 
 def test_tag_api_v1_from_tag_response_returns_tag():
     """Test TagAPIV1.from_tag_response factory method."""
-
     # Given a TagResponse from DragosClientAPIV1
     tag_response = TagResponse.model_validate(fake_tag_response())
 
@@ -176,7 +169,6 @@ def test_tag_api_v1_from_tag_response_returns_tag():
 
 def test_indicator_api_v1_from_indicator_response_returns_indicator():
     """Test IndicatorAPIV1.from_indicator_response factory method."""
-
     # Given an IndicatorResponse from DragosClientAPIV1
     indicator_response = IndicatorResponse.model_validate(fake_indicator_response())
 
