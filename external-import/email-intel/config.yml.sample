@@ -1,0 +1,31 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'External Import Connector Template'
+  scope: 'ChangeMe'
+  log_level: 'info'
+  duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
+  #============================================#
+  # Optional connector's definition parameters #
+  #============================================#
+  #queue_threshold: 500
+  #run_and_terminate: 'False'
+  #send_to_queue: 'True'
+  #send_to_directory: 'False'
+  #send_to_directory_path: 'ChangeMe'
+  #send_to_directory_retention: 7
+
+# WARNING: Connector name cannot have underscore "_" in their name
+#   It is only used to split the connector config
+email_intel:
+  imap_host: changeMe
+  imap_port: 993
+  imap_ssl: True
+  imap_username: changeMe
+  imap_password: changeMe
+  imap_mailbox: changeMe
+  relative_import_since_days: 1
