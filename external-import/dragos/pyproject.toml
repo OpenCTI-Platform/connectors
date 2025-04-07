@@ -51,11 +51,11 @@ all = [
 [tool.setuptools.packages.find]
 where = ["."]
 
-[tool.pytest]
+
+[tool.pytest.ini_options]
 testpaths = [
     "./tests",
 ]
-[tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
 
 
