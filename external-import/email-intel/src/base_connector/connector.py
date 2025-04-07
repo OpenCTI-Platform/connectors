@@ -11,7 +11,7 @@ from pycti import OpenCTIConnectorHelper
 
 ConfigType = TypeVar("ConfigType", bound=BaseConnectorConfig)
 ClientType = TypeVar("ClientType", bound=BaseClient)
-ConverterType = TypeVar("ConverterType", bound=BaseConverter[Any, Any])
+ConverterType = TypeVar("ConverterType", bound=BaseConverter)
 
 
 class BaseConnector(abc.ABC, Generic[ConfigType, ClientType, ConverterType]):

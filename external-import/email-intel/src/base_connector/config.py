@@ -1,5 +1,6 @@
 import abc
 import datetime
+from pathlib import Path
 
 from base_connector.enums import LogLevelType
 from pycti import ConnectorType
@@ -7,6 +8,7 @@ from pydantic import BaseModel, Field, HttpUrl, model_validator
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
+    SettingsConfigDict,
     YamlConfigSettingsSource,
 )
 
@@ -94,12 +96,13 @@ class BaseConnectorConfig(abc.ABC, BaseSettings):
     opencti: _OpenCTIConfig
     connector: _ConnectorConfig
 
-    class Config:
-        # files needs to be at the same level as the module
-        yaml_file = "../../config.yml"
-        env_file = "../../.env"
-        env_nested_delimiter = "_"
-        env_nested_max_split = 1
+    # files needs to be at the same level as the module
+    model_config = SettingsConfigDict(
+        yaml_file="../../config.yml",
+        env_file="../../.env",
+        env_nested_delimiter="_",
+        env_nested_max_split=1,
+    )
 
     @classmethod
     def settings_customise_sources(
@@ -111,12 +114,18 @@ class BaseConnectorConfig(abc.ABC, BaseSettings):
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         """
-        Define the sources and their order for loading the settings values.
-        The order is as follows as the configuration files set must be loaded first
-        to avoid confusions with the environment variables.
+        Customise the sources of settings for the connector.
+
+        This method is called by the Pydantic BaseSettings class to determine the order of sources
+
+        The configuration come in this order either from:
+            1. YAML file
+            2. .env file
+            3. Environment variables
+            4. Default values
         """
-        return (
-            YamlConfigSettingsSource(settings_cls),  # First: fallback YAML file
-            dotenv_settings,  # Optional: fallback to .env file
-            env_settings,  # Optional: environment variables
-        )
+        if Path(settings_cls.model_config["yaml_file"]).is_file():  # type: ignore
+            return (YamlConfigSettingsSource(settings_cls),)
+        if Path(settings_cls.model_config["env_file"]).is_file():  # type: ignore
+            return (dotenv_settings,)
+        return (env_settings,)
