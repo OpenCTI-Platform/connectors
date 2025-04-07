@@ -1,9 +1,9 @@
 opencti:
   url: 'http://localhost:8080'
-  token: '1c56a117-f05a-4d86-b0cc-c0668c70c341'
+  token: 'ChangeMe'
 
 connector:
-  id: '1ec0cbd2-9c1c-4711-8e00-c099960e196e' # Valid UUIDv4
+  id: 'ChangeMe' # Valid UUIDv4
   type: 'EXTERNAL_IMPORT'
   name: 'AbuseIPDB IP Blacklist'
   scope: 'abuseipdb' # MIME type or SCO
@@ -11,7 +11,7 @@ connector:
 
 abuseipdb:
   api_url: 'https://api.abuseipdb.com/api/v2/blacklist'
-  api_key: 'c8edf7fca8719ad49dab90d0deb7af31552898ece08ec6c15ab4ff037c8d46eca55c21648cdb9037'
+  api_key: 'ChangeMe'
   score: 100
   limit: 1000
   interval: 2 # In days, must be strictly greater than 1

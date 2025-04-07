@@ -4,12 +4,12 @@ services:
     image: opencti/connector-abuseipdb-ipblacklist:6.5.11
     environment:
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=1c56a117-f05a-4d86-b0cc-c0668c70c341
-      - CONNECTOR_ID=1ec0cbd2-9c1c-4711-8e00-c099960e196e # Valid UUIDv4
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe # Valid UUIDv4
       - "CONNECTOR_NAME=AbuseIPDB IP Blacklist"
       - CONNECTOR_SCOPE=abuseipdb
       - CONNECTOR_LOG_LEVEL=error
-      - ABUSEIPDB_URL=https://api.abuseipdb.com/api/v2/blacklist
+      - ABUSEIPDB_URL=ChangeMe
       - ABUSEIPDB_API_KEY=c8edf7fca8719ad49dab90d0deb7af31552898ece08ec6c15ab4ff037c8d46eca55c21648cdb9037
       - ABUSEIPDB_SCORE=100
       - ABUSEIPDB_LIMIT=10000
