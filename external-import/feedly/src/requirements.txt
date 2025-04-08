@@ -1,4 +1,4 @@
-pycti==6.5.11
+pycti==6.6.0
 feedly-client==0.26
 schedule==1.2.2
 Markdown==3.7
