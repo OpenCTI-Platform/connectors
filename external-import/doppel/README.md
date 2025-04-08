@@ -65,8 +65,12 @@ Example:
 docker build . -t [IMAGE NAME]:latest
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Make sure to replace the environment variables in the main OpenCTI `docker-compose.yml` file with the appropriate configurations for your environment.
+Then, start the container using that updated docker-compose.yml.
+
+
+## Additional note
+Although the Doppel connector folder contains its own `docker-compose.yml`, it’s not used directly. Instead, the connector should be integrated into the main OpenCTI `docker-compose.yml` alongside the other services.
 
 ```shell
 docker compose up -d
@@ -91,6 +95,9 @@ Then, start the connector from recorded-future/src:
 ```shell
 python3 main.py
 ```
+
+## Additional note
+If you are using it independently, remember that the connector will try to connect to the RabbitMQ on the port configured in the OpenCTI platform.
 
 ## Usage
 
