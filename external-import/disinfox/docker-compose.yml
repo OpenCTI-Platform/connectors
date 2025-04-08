@@ -1,10 +1,7 @@
 version: '3'
 services:
   connector-disinfox:
-    build:
-      context: .
-    volumes:
-      - ./src:/opt/opencti-connector-template
+    image: opencti/connector-disinfox:6.4.2
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=${OPENCTI_URL}
@@ -33,5 +30,11 @@ services:
       # - HTTP_PROXY=CHANGEME
       # - HTTPS_PROXY=CHANGEME
       # - NO_PROXY=CHANGEME
-    restart: always
+    # networks:
+    #   - docker_default
+
+# networks:
+#   default:
+#     external: true
+#     name: docker_default
 
