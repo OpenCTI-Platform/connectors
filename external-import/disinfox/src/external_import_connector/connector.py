@@ -5,7 +5,6 @@ from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
 from .config_variables import ConfigConnector
-from .converter_to_stix import ConverterToStix
 
 
 class ConnectorDisinfox:
@@ -53,7 +52,6 @@ class ConnectorDisinfox:
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
         self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper)
 
     def _collect_intelligence(self) -> list:
         """
