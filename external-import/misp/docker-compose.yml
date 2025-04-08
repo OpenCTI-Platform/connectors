@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-misp:
-    image: opencti/connector-misp:6.5.8
+    image: opencti/connector-misp:6.5.11
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -43,4 +43,5 @@ services:
       - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT=false #  Optional, import unsupported observable as x_opencti_text
       - MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT=true #  Optional, import unsupported observable as x_opencti_text just with the value
       - MISP_INTERVAL=5 # Required, in minutes
+      - MISP_PROPAGATE_LABELS=false # Optional, propagate labels to the observables
     restart: always

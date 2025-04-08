@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-template:
-    image: opencti/connector-template:6.5.8
+    image: opencti/connector-template:6.5.11
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost

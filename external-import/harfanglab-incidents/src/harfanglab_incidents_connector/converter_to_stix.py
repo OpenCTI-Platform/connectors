@@ -91,6 +91,7 @@ class ConverterToStix:
         octi_identity = opencti.Identity(
             name=agent.hostname,
             identity_class="system",
+            author=self.author,
             object_marking_refs=[self.marking_definition.id],
         )
         return octi_identity

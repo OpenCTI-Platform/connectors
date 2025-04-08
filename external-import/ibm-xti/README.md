@@ -57,24 +57,26 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Parameter       | config.yml      | Docker environment variable | Default         | Mandatory | Description                                                                                |
+|-----------------|-----------------|-----------------------------|-----------------|-----------|--------------------------------------------------------------------------------------------|
+| Connector ID    | id              | `CONNECTOR_ID`              |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                                  |
+| Connector Type  | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                              |
+| Connector Name  | name            | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                     |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.   |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | PT5M            | No        | Determines the time interval between each launch of the connector in ISO 8601, ex: `PT5M`. |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.     |
 
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter         | config.yml        | Docker environment variable | Default                    | Mandatory | Description                                                    |
-|-------------------|-------------------|-----------------------------|----------------------------|-----------|----------------------------------------------------------------|
-| TAXII Server URL  | taxii_server_url  | `TAXII_SERVER_URL`          |                            | Yes       | The base URL of the IBM X-Force PTI TAXII Server               |
-| TAXII User        | taxii_user        | `TAXII_USER`                |                            | Yes       | Your TAXII Server username                                     |
-| TAXII Password    | taxii_pass        | `TAXII_PASS`                |                            | Yes       | Your TAXII Server password                                     |
-| TAXII Collections | taxii_collections | `TAXII_COLLECTIONS`         | All authorized collections | No        | Optionally limit ingestion to specified TAXII collections only |
+| Parameter         | config.yml         | Docker environment variable           | Default                    | Mandatory | Description                                                    |
+|-------------------|--------------------|---------------------------------------|----------------------------|-----------|----------------------------------------------------------------|
+| TAXII Server URL  | taxii_server_url   | `CONNECTOR_IBM_XTI_TAXII_SERVER_URL`  |                            | Yes       | The base URL of the IBM X-Force PTI TAXII Server               |
+| TAXII User        | taxii_user         | `CONNECTOR_IBM_XTI_TAXII_USER`        |                            | Yes       | Your TAXII Server username                                     |
+| TAXII Password    | taxii_pass         | `CONNECTOR_IBM_XTI_TAXII_PASS`        |                            | Yes       | Your TAXII Server password                                     |
+| TAXII Collections | taxii_collections  | `CONNECTOR_IBM_XTI_TAXII_COLLECTIONS` | All authorized collections | No        | Optionally limit ingestion to specified TAXII collections only. This should be a comma-separated list (spaces allowed) of collection IDs, not the names or aliases |
+| Observables       | create_observables | `CONNECTOR_IBM_XTI_CREATE_OBSERVABLES`|                            | No        | Optionally control whether to define observables from indicators |
 
 ## Deployment
 
