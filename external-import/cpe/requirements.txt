@@ -1,2 +1,2 @@
-pycti==6.5.11
+pycti==6.6.0
 langcodes

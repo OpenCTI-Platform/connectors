@@ -4,7 +4,7 @@ The HostIO Connector is an internal enrichment connector for OpenCTI, designed t
 ## Installation
 
 ### Requirements
-- OpenCTI Platform >= 6.5.11
+- OpenCTI Platform >= 6.6.0
 - Access to HostIO and IPinfo APIs
 
 ### Configuration
