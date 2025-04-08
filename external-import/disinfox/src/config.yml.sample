@@ -5,8 +5,8 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
-  name: 'External Import Connector Template'
-  scope: 'ChangeMe'
+  name: 'DISINFOX Connector'
+  scope: 'stix2'
   log_level: 'info'
   duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
   #============================================#
@@ -19,6 +19,6 @@ connector:
   #send_to_directory_path: 'ChangeMe'
   #send_to_directory_retention: 7
 
-connector_template:
+disinfox:
   api_base_url: 'ChangeMe'
   api_key: 'ChangeMe'

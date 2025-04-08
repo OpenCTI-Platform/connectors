@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Go to the right directory
-cd /opt/opencti-connector-template
+cd /opt/disinfox
 
 # Launch the worker
 python3 main.py
