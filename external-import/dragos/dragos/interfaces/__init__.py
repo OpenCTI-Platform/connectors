@@ -1,7 +1,6 @@
 """Provide the interface of the connector for configuration and dragos report."""
 
 from .common import DataRetrievalError
-from .config import ConfigLoader, ConfigRetrievalError
 from .geocoding import (
     Area,
     City,
@@ -17,8 +16,6 @@ __all__ = [
     "Area",
     "City",
     "Country",
-    "ConfigLoader",  # for typing purposes in application layer
-    "ConfigRetrievalError",  # for error handling in application layer
     "DataRetrievalError",  # for error handling in application layer
     "Geocoding",  # for typing purposes in application layer
     "GeocodingRetrievalError",  # for error handling in application or usecase layers
