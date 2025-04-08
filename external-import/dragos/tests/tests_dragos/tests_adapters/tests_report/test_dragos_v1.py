@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -79,21 +80,46 @@ def mock_dragos_client():
     """Fixture to create a mock Dragos client."""
     client = Mock(spec=DragosClientAPIV1)
 
+    # Mock Dragos Product client
     client.product = Mock()
-    # Mock iter_products async generator
-    mock_async_iter_products = AsyncMock()
-    mock_async_iter_products.__aiter__.return_value = [fake_product_response()] * 3
-    client.product.iter_products.return_value = mock_async_iter_products
-    # Mock get_product_pdf async method
-    mock_async_get_product_pdf = AsyncMock()
-    mock_async_get_product_pdf.return_value = b"PDF content"
-    client.product.get_product_pdf.return_value = mock_async_get_product_pdf()
 
+    # Mock iter_products async generator
+    def mock_iter_products_return_value():
+        mock_async_iter_products = AsyncMock()
+        mock_async_iter_products.__aiter__.return_value = [fake_product_response()] * 3
+        return mock_async_iter_products
+
+    # Return a new AsyncMock instance on every call
+    client.product.iter_products.side_effect = (
+        lambda updated_after: mock_iter_products_return_value()
+    )
+
+    # Mock get_product_pdf async method
+    def mock_get_product_pdf_return_value():
+        mock_async_get_product_pdf = AsyncMock()
+        mock_async_get_product_pdf.return_value = BytesIO(b"%PDF-1%%EOF")
+        return mock_async_get_product_pdf()
+
+    # Return a new AsyncMock instance on every call
+    client.product.get_product_pdf.side_effect = (
+        lambda serial: mock_get_product_pdf_return_value()
+    )
+
+    # Mock Dragos Indicator client
     client.indicator = Mock()
+
     # Mock iter_indicators async generator
-    mock_async_iter_indicators = AsyncMock()
-    mock_async_iter_indicators.__aiter__.return_value = [fake_indicator_response()] * 3
-    client.indicator.iter_indicators.return_value = mock_async_iter_indicators
+    def mock_iter_indicators_return_value():
+        mock_async_iter_indicators = AsyncMock()
+        mock_async_iter_indicators.__aiter__.return_value = [
+            fake_indicator_response()
+        ] * 3
+        return mock_async_iter_indicators
+
+    # Return a new AsyncMock instance in every call
+    client.indicator.iter_indicators.side_effect = (
+        lambda serials: mock_iter_indicators_return_value()
+    )
 
     return client
 

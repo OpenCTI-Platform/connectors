@@ -39,12 +39,22 @@ class Tag(FrozenBaseModel):
     type: str = Field(..., description="The Dragos Tag type.", min_length=1)
     value: str = Field(..., description="The Dragos Tag value.", min_length=1)
 
-    def __init__(self, type: str, value: str) -> None:
+    def __init__(self) -> None:
         """Initialize the Tag."""
         try:
-            FrozenBaseModel.__init__(self, type=type, value=value)
+            FrozenBaseModel.__init__(self, type=self._type, value=self._value)
         except ValidationError as e:
             raise ReportRetrievalError("Failed to retrieve Tag") from e
+
+    @property
+    @abstractmethod
+    def _type(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def _value(self) -> str:
+        pass
 
 
 class Indicator(FrozenBaseModel):
@@ -71,18 +81,38 @@ class Indicator(FrozenBaseModel):
     )
     # Unused : kill_chain, confidence, severity, attack_techniques, products
 
-    def __init__(self, value: str, type: str, first_seen: str, last_seen: str) -> None:
+    def __init__(self) -> None:
         """Initialize the Indicator."""
         try:
             FrozenBaseModel.__init__(
                 self,
-                value=value,
-                type=type,
-                first_seen=first_seen,
-                last_seen=last_seen,
+                value=self._value,
+                type=self._type,
+                first_seen=self._first_seen,
+                last_seen=self._last_seen,
             )
         except ValidationError as e:
             raise ReportRetrievalError("Failed to retrieve Indicator") from e
+
+    @property
+    @abstractmethod
+    def _value(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def _type(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def _first_seen(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def _last_seen(self) -> str:
+        pass
 
 
 class Report(ABC, FrozenBaseModel):
@@ -98,40 +128,72 @@ class Report(ABC, FrozenBaseModel):
     )
     summary: str = Field(..., description="The Dragos Report executive_summary.")
 
-    def __init__(
-        self,
-        serial: str,
-        title: str,
-        created_at: str,
-        updated_at: str,
-        summary: str,
-    ) -> None:
+    pdf: Optional[PDFBytes] = Field(
+        None, description="The Dragos Report PDF file.", min_length=1
+    )
+
+    related_tags: Generator[Tag, None, None] = Field(
+        ..., description="The Dragos Report related tags."
+    )
+    related_indicators: Generator[Indicator, None, None] = Field(
+        ..., description="The Dragos Report related indicators."
+    )
+
+    def __init__(self) -> None:
         """Initialize the Report."""
         try:
             FrozenBaseModel.__init__(
                 self,
-                serial=serial,
-                title=title,
-                created_at=created_at,
-                updated_at=updated_at,
-                summary=summary,
+                serial=self._serial,
+                title=self._title,
+                created_at=self._created_at,
+                updated_at=self._updated_at,
+                summary=self._summary,
+                related_tags=self._related_tags,
+                related_indicators=self._related_indicators,
+                pdf=self._pdf,
             )
         except ValidationError as e:
             raise ReportRetrievalError("Failed to retrieve Report") from e
 
     @property
     @abstractmethod
-    def pdf(self) -> Optional[bytes]:
+    def _serial(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def related_tags(self) -> Generator[Tag, None, None]:
+    def _title(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def related_indicators(self) -> Generator[Indicator, None, None]:
+    def _created_at(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def _updated_at(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def _summary(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def _pdf(self) -> Optional[bytes]:
+        pass
+
+    @property
+    @abstractmethod
+    def _related_tags(self) -> Generator[Tag, None, None]:
+        pass
+
+    @property
+    @abstractmethod
+    def _related_indicators(self) -> Generator[Indicator, None, None]:
         pass
 
 

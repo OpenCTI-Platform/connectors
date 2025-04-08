@@ -17,46 +17,74 @@ class StubGeocoding(Geocoding):
         return Country(name=name)
 
 
+class StubTag(Tag):
+    """Stub Tag implementation for testing purposes."""
+
+    @property
+    def _type(self) -> str:
+        """Return the Stub Tag type."""
+        return "Geographiclocation"
+
+    @property
+    def _value(self) -> str:
+        """Return the Stub Tag value."""
+        return "Test country"
+
+
+class StubIndicator(Indicator):
+    """Stub Indicator implementation for testing purposes."""
+
+    @property
+    def _value(self):
+        return "192.0.0.1"
+
+    @property
+    def _type(self):
+        return "ip"
+
+    @property
+    def _first_seen(self) -> str:
+        return "1970-01-01T00:00:00Z"
+
+    @property
+    def _last_seen(self) -> str:
+        return "1970-01-02T00:00:00Z"
+
+
 class StubReport(Report):
     """Stub Report implementation for testing purposes."""
 
     @property
-    def related_tags(self) -> Generator[Tag, None, None]:
-        yield from [stub_valid_tag()]
+    def _serial(self) -> str:
+        return "12345"
 
     @property
-    def related_indicators(self) -> Generator[Indicator, None, None]:
-        yield from [stub_valid_indicator()] * 3
+    def _title(self) -> str:
+        return "Sample Report"
 
     @property
-    def pdf(self) -> Optional[bytes]:
+    def _created_at(self) -> str:
+        return "1970-01-01T00:00:00Z"
+
+    @property
+    def _updated_at(self) -> str:
+        return "1970-01-01T00:00:00Z"
+
+    @property
+    def _summary(self) -> str:
+        return "This is a sample report summary."
+
+    @property
+    def _related_tags(self) -> Generator[Tag, None, None]:
+        yield from [StubTag()]
+
+    @property
+    def _related_indicators(self) -> Generator[Indicator, None, None]:
+        yield from [StubIndicator()] * 3
+
+    @property
+    def _pdf(self) -> Optional[bytes]:
         return None
-
-
-def stub_valid_tag() -> Tag:
-    """Return a stub valid tag."""
-    return Tag(type="Geolocation", value="my_place")
-
-
-def stub_valid_indicator() -> Indicator:
-    """Return a stub valid indicator."""
-    return Indicator(
-        value="192.0.0.1",
-        type="ip",
-        first_seen="1970-01-01T00:00:00Z",
-        last_seen="1970-01-02T00:00:00Z",
-    )
-
-
-def stub_valid_report() -> StubReport:
-    """Return a stub valid report."""
-    return StubReport(
-        serial="12345",
-        title="Sample Report",
-        created_at="1970-01-01T00:00:00Z",
-        updated_at="1970-01-01T00:00:00Z",
-        summary="This is a sample report summary.",
-    )
 
 
 def test_report_processor_should_process_a_valid_report():
@@ -66,7 +94,7 @@ def test_report_processor_should_process_a_valid_report():
         tlp_level=TLPLevel.AMBER.value,
         geocoding=StubGeocoding(),
     )
-    stub_report = stub_valid_report()
+    stub_report = StubReport()
 
     # When: Processing it
     octi_entities = report_processor.run_on(stub_report)

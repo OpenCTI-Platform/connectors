@@ -5,44 +5,71 @@ from io import BytesIO
 from typing import TYPE_CHECKING, Generator, Optional
 
 from client_api.v1 import DragosClientAPIV1
-from client_api.v1.product import ProductResponse
+from client_api.v1.indicator import IndicatorResponse
+from client_api.v1.product import ProductResponse, TagResponse
 from dragos.interfaces import Indicator, Report, Reports, Tag
 from pydantic import PrivateAttr
 
 if TYPE_CHECKING:
     from datetime import datetime, timedelta
 
-    from client_api.v1.indicator import IndicatorResponse
-    from client_api.v1.product import TagResponse
     from yarl import URL
 
 
 class TagAPIV1(Tag):
     """Define Tag from Dragos API v1."""
 
+    _tag_response: "TagResponse" = PrivateAttr()
+
     @classmethod
     def from_tag_response(cls, tag_response: "TagResponse") -> "TagAPIV1":
         """Convert TagResponse instance to TagAPIV1 instance."""
-        return cls(
-            type=tag_response.tag_type,
-            value=tag_response.text,
-        )
+        cls._tag_response = tag_response
+        return cls()
+
+    @property
+    def _type(self) -> str:
+        """Get tag type."""
+        return self._tag_response.tag_type
+
+    @property
+    def _value(self) -> str:
+        """Get tag value."""
+        return self._tag_response.text
 
 
 class IndicatorAPIV1(Indicator):
     """Define Indicator from Dragos API v1."""
+
+    _indicator_response: "IndicatorResponse" = PrivateAttr()
 
     @classmethod
     def from_indicator_response(
         cls, indicator_response: "IndicatorResponse"
     ) -> "IndicatorAPIV1":
         """Convert IndicatorResponse instance to IndicatorAPIV1 instance."""
-        return cls(
-            type=indicator_response.indicator_type,
-            value=indicator_response.value,
-            first_seen=indicator_response.first_seen,
-            last_seen=indicator_response.last_seen,
-        )
+        cls._indicator_response = indicator_response
+        return cls()
+
+    @property
+    def _type(self) -> str:
+        """Get indicator type."""
+        return self._indicator_response.indicator_type
+
+    @property
+    def _value(self) -> str:
+        """Get indicator value."""
+        return self._indicator_response.value
+
+    @property
+    def _first_seen(self) -> str:
+        """Get the date the indicator has been first seen."""
+        return self._indicator_response.first_seen
+
+    @property
+    def _last_seen(self) -> str:
+        """Get the date the indicator has been last seen."""
+        return self._indicator_response.last_seen
 
 
 class ReportAPIV1(Report):
@@ -56,29 +83,49 @@ class ReportAPIV1(Report):
     ) -> "ReportAPIV1":
         """Convert ExtendedProductResponse instance to ReportAPIV1 instance."""
         cls._product_response = product_response
-
-        product = product_response.product
-        return cls(
-            serial=product.serial,
-            title=product.title,
-            created_at=product.release_date,
-            updated_at=product.updated_at,
-            summary=product.executive_summary,
-        )
+        return cls()
 
     @property
-    def pdf(self) -> Optional[bytes]:
+    def _serial(self) -> str:
+        """Get report's serial."""
+        return self._product_response.product.serial
+
+    @property
+    def _title(self) -> str:
+        """Get report's title."""
+        return self._product_response.product.title
+
+    @property
+    def _created_at(self) -> str:
+        """Get report's creation date."""
+        return self._product_response.product.release_date
+
+    @property
+    def _updated_at(self) -> str:
+        """Get report's last update date."""
+        return self._product_response.product.updated_at
+
+    @property
+    def _summary(self) -> str:
+        """Get report's summary."""
+        return self._product_response.product.executive_summary
+
+    @property
+    def _pdf(self) -> Optional[bytes]:
         """Get report's PDF content."""
-        return self._product_response.pdf
+        pdf_bytes = self._product_response.pdf
+        if pdf_bytes:
+            return pdf_bytes.read()
+        return None
 
     @property
-    def related_tags(self) -> Generator[Tag, None, None]:
+    def _related_tags(self) -> Generator[Tag, None, None]:
         """Get all related tags."""
         for tag in self._product_response.product.tags:
             yield TagAPIV1.from_tag_response(tag)
 
     @property
-    def related_indicators(self) -> Generator[Indicator, None, None]:
+    def _related_indicators(self) -> Generator[Indicator, None, None]:
         """Gett all related indicators."""
         for indicator in self._product_response.indicators:
             yield IndicatorAPIV1.from_indicator_response(indicator)
@@ -108,7 +155,7 @@ class ExtendedProductResponse:
         return indicators
 
     @property
-    def pdf(self) -> Optional[bytes]:
+    def pdf(self) -> Optional[BytesIO]:
         """Get the PDF of the product."""
 
         async def get_pdf() -> BytesIO:
