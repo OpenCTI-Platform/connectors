@@ -15,5 +15,5 @@ connector:
 stixify:
   base_url: 'https://api.stixify.com/'
   api_key: CHANGEME
-  dossier_ids: '' # comma separated feed ids
+  dossier_ids: '' # comma separated dossier ids
   interval: 1 # interval in hours

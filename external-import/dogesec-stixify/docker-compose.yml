@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-taxii2:
+  connector-stixify:
     image: opencti/connector-stixify:6.5.1
     environment:
       - OPENCTI_URL=http://opencti:8080

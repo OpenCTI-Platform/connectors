@@ -32,6 +32,11 @@ class StixifyConnector:
         self.dossier_ids = dossier_ids.split(',') if dossier_ids else []
         self.interval = self._get_param('interval', is_number=True)
 
+        if not self.dossier_ids:
+            self.helper.log_error("at least one dossier id required")
+            self.helper.stop()
+            exit(0)
+
         self.session = requests.Session()
         self.session.headers = {
             'API-KEY': self.api_key,
