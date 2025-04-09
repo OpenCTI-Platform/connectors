@@ -1,0 +1,9 @@
+opencti :
+  url : http://test-opencti-url/
+  token : test-opencti-token
+connector :
+  id  : test-connector-id
+  name  : External Import Connector Template
+  type  : EXTERNAL_IMPORT
+  scope : ChangeMe
+  duration_period : PT5M
