@@ -6,14 +6,10 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 import yaml
-from pycti import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import Bundle, Identity, Indicator
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_exponential)
 
 # Load configuration
 CONFIG_PATH = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -22,55 +18,35 @@ config = yaml.safe_load(open(CONFIG_PATH, "r")) if os.path.isfile(CONFIG_PATH) e
 # OpenCTI Helper Initialization
 helper = OpenCTIConnectorHelper(config)
 
-
-def get_config_variable(env_var, config_keys, config, required=False):
-    value = os.getenv(env_var)
-    if value is not None:
-        return value
-
-    temp = config
-    for key in config_keys:
-        temp = temp.get(key, None)
-        if temp is None:
-            break
-
-    if temp is not None:
-        return temp
-
-    if required:
-        raise ValueError(
-            f"Missing required config variable: {env_var} or {'.'.join(config_keys)}"
-        )
-
-    return None
-
-
 # Retrieve configuration variables
-API_URL = get_config_variable("DOPPEL_API_URL", ["doppel", "api_url"], config, True)
-API_KEY = get_config_variable("DOPPEL_API_KEY", ["doppel", "api_key"], config, True)
-HISTORICAL_POLLING_DAYS = int(
-    get_config_variable(
-        "HISTORICAL_POLLING_DAYS", ["doppel", "historical_polling_days"], config, True
-    )
+API_URL = get_config_variable("DOPPEL_API_URL", ["doppel", "api_url"], config)
+API_KEY = get_config_variable("DOPPEL_API_KEY", ["doppel", "api_key"], config)
+
+HISTORICAL_POLLING_DAYS = get_config_variable(
+    "HISTORICAL_POLLING_DAYS",
+    ["doppel", "historical_polling_days"],
+    config,
+    isNumber=True,
 )
-POLLING_INTERVAL = int(
-    get_config_variable(
-        "POLLING_INTERVAL", ["doppel", "polling_interval"], config, True
-    )
+POLLING_INTERVAL = get_config_variable(
+    "POLLING_INTERVAL", ["doppel", "polling_interval"], config, isNumber=True
 )
-MAX_RETRIES = int(
-    get_config_variable("MAX_RETRIES", ["doppel", "max_retries"], config, True)
+MAX_RETRIES = get_config_variable(
+    "MAX_RETRIES", ["doppel", "max_retries"], config, isNumber=True
 )
-RETRY_DELAY = int(
-    get_config_variable("RETRY_DELAY", ["doppel", "retry_delay"], config, True)
+RETRY_DELAY = get_config_variable(
+    "RETRY_DELAY", ["doppel", "retry_delay"], config, isNumber=True
 )
-UPDATE_EXISTING_DATA = get_config_variable(
-    "UPDATE_EXISTING_DATA", ["doppel", "update_existing_data"], config, False
+
+# Correct boolean handling
+UPDATE_EXISTING_DATA_RAW = get_config_variable(
+    "UPDATE_EXISTING_DATA", ["doppel", "update_existing_data"], config, default="false"
 )
+
 UPDATE_EXISTING_DATA = (
-    UPDATE_EXISTING_DATA.lower() == "true"
-    if isinstance(UPDATE_EXISTING_DATA, str)
-    else bool(UPDATE_EXISTING_DATA)
+    UPDATE_EXISTING_DATA_RAW.lower() == "true"
+    if isinstance(UPDATE_EXISTING_DATA_RAW, str)
+    else bool(UPDATE_EXISTING_DATA_RAW)
 )
 
 
@@ -126,6 +102,21 @@ def fetch_alerts():
         raise  # Let Tenacity catch it and retry
 
 
+def parse_iso_datetime(timestamp_str: str, field_name: str, alert_id: str) -> str:
+    if not timestamp_str:
+        return ""
+    try:
+        return (
+            datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S.%f").isoformat(
+                timespec="seconds"
+            )
+            + "Z"
+        )
+    except ValueError as e:
+        helper.log_error(f"[{alert_id}] Failed to parse '{field_name}': {e}")
+        return ""
+
+
 DOPPEL_IDENTITY = Identity(
     id=f"identity--{str(uuid.uuid4())}",
     name="Doppel",
@@ -140,26 +131,20 @@ def convert_to_stix(alerts):
     created_by_ref = DOPPEL_IDENTITY.id
 
     for alert in alerts:
-        alert_uuid = str(uuid.uuid4())
-        helper.log_info(f"Processing alert ID: {alert.get('id', 'Unknown')}")
-
-        created_at = alert.get("created_at", "")
-        if created_at:
-            try:
-                created_at = (
-                    datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%S.%f").isoformat(
-                        timespec="seconds"
-                    )
-                    + "Z"
-                )
-            except ValueError as e:
-                helper.log_error(
-                    f"Failed to parse created_at for alert ID {alert.get('id', 'Unknown')}: {str(e)}"
-                )
-                created_at = ""
-
         entity = alert.get("entity", "Unknown")
         pattern = f"[entity:value = '{entity}']"
+
+        alert_uuid = (Indicator.generate_id(pattern),)
+        helper.log_info(f"Processing alert ID: {alert.get('id', 'Unknown')}")
+
+        created_at = parse_iso_datetime(
+            alert.get("created_at", ""), "created_at", alert_uuid
+        )
+        modified = parse_iso_datetime(
+            alert.get("last_activity_timestamp", ""),
+            "last_activity_timestamp",
+            alert_uuid,
+        )
 
         audit_logs = alert.get("audit_logs", [])
         audit_log_text = "\n".join(
@@ -184,6 +169,7 @@ def convert_to_stix(alerts):
             confidence=50 if alert.get("queue_state") == "monitoring" else 80,
             labels=labels,
             created=created_at,
+            modified=modified,
             created_by_ref=created_by_ref,
             external_references=[
                 {
@@ -198,7 +184,6 @@ def convert_to_stix(alerts):
                 "x_opencti_platform": alert.get("platform", "Unknown"),
                 "x_opencti_source": alert.get("source", "Unknown"),
                 "x_opencti_notes": alert.get("notes", ""),
-                "x_opencti_last_activity": alert.get("last_activity_timestamp", ""),
                 "x_opencti_audit_logs": audit_log_text,
                 "x_opencti_entity_content": entity_content,
             },
