@@ -17,7 +17,11 @@ repos:
     hooks:
     - id: isort
       name: isort (python)
-      args: ['--profile black']
+      args:
+        - '--profile'
+        - 'black'
+        - '--line-length'
+        - '88'
 -   repo: local
     hooks:
     - id: gpg-signed-commit

@@ -96,10 +96,10 @@ class ReportImporter:
             raise ConnectionError(
                 "ImportDocumentAI webservice seems to be unreachable, have you configured your connector properly ?"
             )
-        except HTTPError:
+        except HTTPError as e:
             raise HTTPError(
-                f"{response.status_code}, request failed with reason : {response.json()['detail']}"
-            )
+                f"{response.status_code}, request failed with reason : {e}"
+            ) from e
         parsed = response.json()
         if not parsed:
             return "No information extracted from report"

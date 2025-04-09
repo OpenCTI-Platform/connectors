@@ -3,7 +3,7 @@ import time
 
 from pycti import OpenCTIConnectorHelper
 
-from .api_handler import SentinelApiHandler
+from .api_handler import DefenderApiHandler
 from .config_variables import ConfigConnector
 from .utils import (
     FILE_HASH_TYPES_MAPPER,
@@ -49,7 +49,7 @@ class MicrosoftDefenderIntelSynchronizerConnector:
         # Load configuration file and connection helper
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.api = SentinelApiHandler(self.helper, self.config)
+        self.api = DefenderApiHandler(self.helper, self.config)
 
     def _convert_indicator_to_observables(self, data) -> list[dict]:
         """
@@ -100,7 +100,7 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                 if state is None:
                     state = {}
                 opencti_all_indicators = []
-                sentinel_indicators_to_delete = []
+                defender_indicators_to_delete = []
                 opencti_indicators_to_create = []
 
                 # Get OpenCTI indicators
@@ -154,11 +154,11 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                 )
 
                 # Get Microsoft Defender Indicators
-                sentinel_indicators = self.api.get_indicators()
+                defender_indicators = self.api.get_indicators()
 
                 self.helper.connector_logger.info(
                     "Found "
-                    + str(len(sentinel_indicators))
+                    + str(len(defender_indicators))
                     + " indicators in Microsoft Defender"
                 )
 
@@ -168,17 +168,17 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                 )
                 opencti_all_indicators = opencti_all_indicators[:15000]
 
-                for sentinel_indicator in sentinel_indicators:
+                for defender_indicator in defender_indicators:
                     is_found = False
                     for opencti_indicator in opencti_all_indicators:
-                        if sentinel_indicator[
+                        if defender_indicator[
                             "externalId"
                         ] == OpenCTIConnectorHelper.get_attribute_in_extension(
                             "id", opencti_indicator
                         ):
                             is_found = True
                     if not is_found:
-                        sentinel_indicators_to_delete.append(sentinel_indicator)
+                        defender_indicators_to_delete.append(defender_indicator)
 
                 for opencti_indicator in opencti_all_indicators:
                     observables = self._convert_indicator_to_observables(
@@ -186,8 +186,8 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                     )
                     for observable_data in observables:
                         is_found = False
-                        for sentinel_indicator in sentinel_indicators:
-                            if sentinel_indicator[
+                        for defender_indicator in defender_indicators:
+                            if defender_indicator[
                                 "externalId"
                             ] == OpenCTIConnectorHelper.get_attribute_in_extension(
                                 "id", observable_data
@@ -197,35 +197,35 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                             opencti_indicators_to_create.append(observable_data)
 
                 # Dedup
-                sentinel_indicators_to_delete = {
-                    obj["id"]: obj for obj in reversed(sentinel_indicators_to_delete)
+                defender_indicators_to_delete = {
+                    obj["id"]: obj for obj in reversed(defender_indicators_to_delete)
                 }
-                sentinel_indicators_to_delete = list(
-                    sentinel_indicators_to_delete.values()
+                defender_indicators_to_delete = list(
+                    defender_indicators_to_delete.values()
                 )
-                sentinel_indicators_to_delete_ids = [
-                    sentinel_indicator_to_delete["id"]
-                    for sentinel_indicator_to_delete in sentinel_indicators_to_delete
+                defender_indicators_to_delete_ids = [
+                    defender_indicator_to_delete["id"]
+                    for defender_indicator_to_delete in defender_indicators_to_delete
                 ]
                 self.helper.connector_logger.info(
                     "[DELETE] Deleting "
-                    + str(len(sentinel_indicators_to_delete))
+                    + str(len(defender_indicators_to_delete))
                     + " indicators..."
                 )
-                if len(sentinel_indicators_to_delete_ids) > 0:
-                    sentinel_indicators_to_delete_ids_chunked = chunker_list(
-                        sentinel_indicators_to_delete_ids, 500
+                if len(defender_indicators_to_delete_ids) > 0:
+                    defender_indicators_to_delete_ids_chunked = chunker_list(
+                        defender_indicators_to_delete_ids, 500
                     )
                     for (
-                        sentinel_indicators_to_delete_ids_chunk
-                    ) in sentinel_indicators_to_delete_ids_chunked:
+                        defender_indicators_to_delete_ids_chunk
+                    ) in defender_indicators_to_delete_ids_chunked:
                         try:
                             self.api.delete_indicators(
-                                sentinel_indicators_to_delete_ids_chunk
+                                defender_indicators_to_delete_ids_chunk
                             )
                             self.helper.connector_logger.info(
                                 "[DELETE] Deleted "
-                                + str(len(sentinel_indicators_to_delete_ids_chunk))
+                                + str(len(defender_indicators_to_delete_ids_chunk))
                                 + " indicators"
                             )
                         except Exception as e:

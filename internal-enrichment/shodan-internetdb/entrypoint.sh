@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-shodan-internetdb
 
 # Start the connector
-python3 -m shodan_internetdb
+python3 main.py

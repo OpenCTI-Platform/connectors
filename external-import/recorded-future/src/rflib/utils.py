@@ -1,3 +1,6 @@
+import ipaddress
+
+
 def make_markdown_table(array):
     """the same input as above"""
 
@@ -19,3 +22,21 @@ def make_markdown_table(array):
     markdown += "> "
 
     return markdown
+
+
+def is_ip_v4_address(value: str) -> bool:
+    """Check if value is a valid IP V4 address."""
+    try:
+        ipaddress.IPv4Address(value)
+        return True
+    except ipaddress.AddressValueError:
+        return False
+
+
+def is_ip_v6_address(value: str) -> bool:
+    """Check if value is a valid IP V6 address."""
+    try:
+        ipaddress.IPv6Address(value)
+        return True
+    except ipaddress.AddressValueError:
+        return False

@@ -15,16 +15,16 @@ from .utils import (
 )
 
 
-class SentinelApiHandlerError(Exception):
+class DefenderApiHandlerError(Exception):
     def __init__(self, msg, metadata):
         self.msg = msg
         self.metadata = metadata
 
 
-class SentinelApiHandler:
+class DefenderApiHandler:
     def __init__(self, helper, config):
         """
-        Init Sentinel Intel API handler.
+        Init Defender Intel API handler.
         :param helper: PyCTI helper instance
         :param config: Connector config variables
         """
@@ -85,7 +85,7 @@ class SentinelApiHandler:
 
     def _send_request(self, method: str, url: str, **kwargs) -> dict | None:
         """
-        Send a request to Sentinel API.
+        Send a request to Defender API.
         :param method: Request HTTP method
         :param url: Request URL
         :param kwargs: Any arguments valid for session.requests() method
@@ -109,16 +109,16 @@ class SentinelApiHandler:
                 return response.json()
 
         except (RetryError, HTTPError, Timeout, ConnectionError) as err:
-            raise SentinelApiHandlerError(
+            raise DefenderApiHandlerError(
                 "[API] An error occured during request",
                 {"url_path": f"{method.upper()} {url}"},
             ) from err
 
     def _build_request_body(self, observable: dict) -> dict:
         """
-        Build Sentinel POST/PATCH request's body from an observable.
+        Build Defender POST/PATCH request's body from an observable.
         :param observable: Observable to build body from
-        :return: Dict containing keys/values required for POST/PATCH requests on Sentinel.
+        :return: Dict containing keys/values required for POST/PATCH requests on Defender.
         """
         if "hashes" in observable:
             if "sha256" in observable["hashes"]:
@@ -155,7 +155,7 @@ class SentinelApiHandler:
 
     def get_indicators(self) -> list[dict] | None:
         """
-        Get Threat Intelligence Indicators from Sentinel.
+        Get Threat Intelligence Indicators from Defender.
         :return: List of Threat Intelligence Indicators if request is successful, None otherwise
         """
         data = self._send_request(
@@ -169,7 +169,7 @@ class SentinelApiHandler:
 
     def post_indicators(self, observables: list[dict]) -> dict | None:
         """
-        Create a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
+        Create a Threat Intelligence Indicator on Defender from an OpenCTI observable.
         :param observables: OpenCTI observables to create Threat Intelligence Indicator for
         :return: Threat Intelligence Indicator if request is successful, None otherwise
         """
@@ -188,7 +188,7 @@ class SentinelApiHandler:
 
     def delete_indicators(self, indicators_ids: list[str]) -> bool:
         """
-        Delete a Threat Intelligence Indicator on Sentinel corresponding to an OpenCTI observable.
+        Delete a Threat Intelligence Indicator on Defender corresponding to an OpenCTI observable.
         :param indicators_ids: Indicators IDs
         :return: True if request is successful, False otherwise
         """
@@ -202,7 +202,7 @@ class SentinelApiHandler:
 
     def delete_indicator(self, indicator_id: str) -> bool:
         """
-        Delete a Threat Intelligence Indicator on Sentinel corresponding to an OpenCTI observable.
+        Delete a Threat Intelligence Indicator on Defender corresponding to an OpenCTI observable.
         :param indicator_id: OpenCTI observable to delete Threat Intelligence Indicator for
         :return: True if request is successful, False otherwise
         """

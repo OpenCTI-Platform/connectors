@@ -3,7 +3,7 @@ import itertools
 import re
 
 import stix2
-from pycti import Note
+from pycti import Note, Report
 
 from . import utils
 from .common import create_stix_relationship
@@ -170,6 +170,9 @@ class MandiantReport:
 
     def update_report(self):
         report = utils.retrieve(self.bundle, "type", "report")
+        report["published"] = report["created"]
+        report["x_opencti_stix_ids"] = [report["id"]]
+        report["id"] = Report.generate_id(report["name"], report["published"])
         report["created_by_ref"] = self.identity["standard_id"]
         report["report_types"] = [self.report_type]
         report["object_refs"] = list(
