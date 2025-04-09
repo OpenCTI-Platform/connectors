@@ -30,7 +30,7 @@ class StixifyConnector:
         self.api_key = self._get_param('api_key')
         dossier_ids = self._get_param('dossier_ids')
         self.dossier_ids = dossier_ids.split(',') if dossier_ids else []
-        self.interval = self._get_param('interval', is_number=True)
+        self.interval_hours = self._get_param('interval_hours', is_number=True)
 
         if not self.dossier_ids:
             self.helper.log_error("at least one dossier id required")
@@ -167,7 +167,7 @@ class StixifyConnector:
     
     def run(self):
         self.helper.log_info("Starting Stixify")
-        schedule.every(self.interval).hours.do(self.run_once)
+        schedule.every(self.interval_hours).hours.do(self.run_once)
         self.run_once()
         while True:
             schedule.run_pending()

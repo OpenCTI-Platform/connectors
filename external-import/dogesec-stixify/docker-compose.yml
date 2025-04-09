@@ -13,5 +13,5 @@ services:
       - STIXIFY_BASE_URL=http://api.stixify.com/
       - STIXIFY_API_KEY=
       - STIXIFY_DOSSIER_IDS=
-      - STIXIFY_INTERVAL=1
+      - STIXIFY_INTERVAL_HOURS=1
     restart: always
