@@ -17,6 +17,7 @@ from pycti import (
     StixCoreRelationship,
 )
 from ReversingLabs.SDK.a1000 import A1000
+from ReversingLabs.SDK.helper import NotFoundError
 
 ZIP_MIME_TYPES = (
     "application/x-bzip",
@@ -199,21 +200,29 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             file_mime_type = "None"
             is_archive = False
 
+            analysis_report = None
             try:
                 response = self.a1000client.get_detailed_report_v2(
                     sample_hashes=self.hash,
                     retry=False,
                 )
-            except Exception as err:
-                raise ValueError(
-                    f"{self.helper.connect_name}: Looks like the sample you are trying to access may not be available on your Spectra Analyze instance. On Spectra Analyze run fetch and analyze on the sample."
-                ) from err
-
-            if response.status_code == 200:
+                # If no exception is raised, assume the response is valid
                 analysis_report = json.loads(response.text)
-            else:
-                raise Exception(
-                    f"{self.helper.connect_name}: There was issue with getting report from Spectra Analyze. HTTP Status code {str(response.status_code)}"
+            except NotFoundError:
+                self.helper.log_info(
+                    f"{self.helper.connect_name}: Detailed analysis report not found. Falling back to classification result."
+                )
+            except Exception as err:
+                self.helper.log_info(
+                    f"{self.helper.connect_name}: Detailed analysis retrieval failed: {err}"
+                )
+            # If we did not get a valid analysis report, fallback to the classification result.
+            if analysis_report is None:
+                self.helper.log_info(
+                    f"{self.helper.connect_name}: Falling back to classification result."
+                )
+                analysis_report = self._submit_file_for_classification(
+                    stix_entity, opencti_entity, self.hash
                 )
         else:
             raise ValueError(
