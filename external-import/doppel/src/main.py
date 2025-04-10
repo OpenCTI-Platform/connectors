@@ -1,243 +1,54 @@
 import json
-import os
 import time
-import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
-import requests
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import Bundle, Identity, Indicator
-from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
-                      wait_exponential)
+from pycti import OpenCTIConnectorHelper
+
+from api.doppel_api import fetch_alerts
+from openCTI.client import send_to_opencti
+from openCTI.stix_converter import convert_alert_to_bundle
+from utils.config_helper import load_config, load_connector_config
+from utils.state_handler import get_last_run, set_last_run
 
 # Load configuration
-CONFIG_PATH = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-config = yaml.safe_load(open(CONFIG_PATH, "r")) if os.path.isfile(CONFIG_PATH) else {}
-
-# OpenCTI Helper Initialization
+config = load_config()
 helper = OpenCTIConnectorHelper(config)
+connector_config = load_connector_config(config)
 
-# Retrieve configuration variables
-API_URL = get_config_variable("DOPPEL_API_URL", ["doppel", "api_url"], config)
-API_KEY = get_config_variable("DOPPEL_API_KEY", ["doppel", "api_key"], config)
+API_URL = connector_config["API_URL"]
+API_KEY = connector_config["API_KEY"]
+POLLING_INTERVAL = connector_config["POLLING_INTERVAL"]
+MAX_RETRIES = connector_config["MAX_RETRIES"]
+RETRY_DELAY = connector_config["RETRY_DELAY"]
+HISTORICAL_POLLING_DAYS = connector_config["HISTORICAL_POLLING_DAYS"]
+UPDATE_EXISTING_DATA = connector_config["UPDATE_EXISTING_DATA"]
 
-HISTORICAL_POLLING_DAYS = get_config_variable(
-    "HISTORICAL_POLLING_DAYS",
-    ["doppel", "historical_polling_days"],
-    config,
-    isNumber=True,
-)
-POLLING_INTERVAL = get_config_variable(
-    "POLLING_INTERVAL", ["doppel", "polling_interval"], config, isNumber=True
-)
-MAX_RETRIES = get_config_variable(
-    "MAX_RETRIES", ["doppel", "max_retries"], config, isNumber=True
-)
-RETRY_DELAY = get_config_variable(
-    "RETRY_DELAY", ["doppel", "retry_delay"], config, isNumber=True
-)
+if __name__ == "__main__":
+    helper.log_info("Starting Doppel OpenCTI connector...")
 
-# Correct boolean handling
-UPDATE_EXISTING_DATA_RAW = get_config_variable(
-    "UPDATE_EXISTING_DATA", ["doppel", "update_existing_data"], config, default="false"
-)
-
-UPDATE_EXISTING_DATA = (
-    UPDATE_EXISTING_DATA_RAW.lower() == "true"
-    if isinstance(UPDATE_EXISTING_DATA_RAW, str)
-    else bool(UPDATE_EXISTING_DATA_RAW)
-)
-
-
-def get_created_after_timestamp(days):
-    past_time = datetime.now(timezone.utc) - timedelta(days=days)
-    return past_time.strftime("%Y-%m-%dT%H:%M:%S")
-
-
-def log_retry(retry_state):
-    helper.log_info(
-        f"Retrying fetch_alerts (attempt #{retry_state.attempt_number}) "
-        f"after exception: {retry_state.outcome.exception()}. "
-        f"Sleeping {retry_state.next_action.sleep} seconds..."
-    )
-
-
-@retry(
-    stop=stop_after_attempt(MAX_RETRIES),
-    wait=wait_exponential(multiplier=1, min=RETRY_DELAY, max=60),
-    retry=retry_if_exception_type(requests.RequestException),
-    before_sleep=log_retry,
-    reraise=True,
-)
-def fetch_alerts():
-    headers = {"x-api-key": API_KEY, "accept": "application/json"}
-    created_after = get_created_after_timestamp(HISTORICAL_POLLING_DAYS)
-    params = {"created_after": created_after}
-
-    helper.log_info(
-        f"Fetching alerts from Doppel API with created_after={created_after}..."
-    )
-
-    try:
-        response = requests.get(API_URL, headers=headers, params=params)
-
-        if response.status_code == 400:
-            helper.log_error("Check for invalid API or token.")
-            return []
-        elif response.status_code == 401:
-            helper.log_error("Authentication failed! Check your Doppel API key.")
-            return []
-        elif response.status_code == 403:
-            helper.log_error(
-                "Access denied! Your Doppel API key might not have the right permissions."
-            )
-            return []
-
-        response.raise_for_status()
-        return response.json().get("alerts", [])
-
-    except requests.RequestException as e:
-        helper.log_error(f"Error fetching alerts: {str(e)}")
-        raise  # Let Tenacity catch it and retry
-
-
-def parse_iso_datetime(timestamp_str: str, field_name: str, alert_id: str) -> str:
-    if not timestamp_str:
-        return ""
-    try:
-        return (
-            datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S.%f").isoformat(
-                timespec="seconds"
-            )
-            + "Z"
-        )
-    except ValueError as e:
-        helper.log_error(f"[{alert_id}] Failed to parse '{field_name}': {e}")
-        return ""
-
-
-DOPPEL_IDENTITY = Identity(
-    id=f"identity--{str(uuid.uuid4())}",
-    name="Doppel",
-    identity_class="organization",
-    description="Threat Intelligence Provider",
-    allow_custom=True,
-)
-
-
-def convert_to_stix(alerts):
-    stix_objects = [DOPPEL_IDENTITY]
-    created_by_ref = DOPPEL_IDENTITY.id
-
-    for alert in alerts:
-        entity = alert.get("entity", "Unknown")
-        pattern = f"[entity:value = '{entity}']"
-
-        alert_uuid = (Indicator.generate_id(pattern),)
-        helper.log_info(f"Processing alert ID: {alert.get('id', 'Unknown')}")
-
-        created_at = parse_iso_datetime(
-            alert.get("created_at", ""), "created_at", alert_uuid
-        )
-        modified = parse_iso_datetime(
-            alert.get("last_activity_timestamp", ""),
-            "last_activity_timestamp",
-            alert_uuid,
-        )
-
-        audit_logs = alert.get("audit_logs", [])
-        audit_log_text = "\n".join(
-            [
-                f"{log['timestamp']}: {log['type']} - {log['value']}"
-                for log in audit_logs
-            ]
-        )
-
-        entity_content = alert.get("entity_content", {})
-
-        entity_state = alert.get("entity_state", "unknown")
-        severity = alert.get("severity", "unknown")
-        queue_state = alert.get("queue_state", "unknown")
-        labels = [queue_state, entity_state, severity]
-
-        indicator = Indicator(
-            id=f"indicator--{alert_uuid}",
-            name=entity,
-            pattern=pattern,
-            pattern_type="stix",
-            confidence=50 if alert.get("queue_state") == "monitoring" else 80,
-            labels=labels,
-            created=created_at,
-            modified=modified,
-            created_by_ref=created_by_ref,
-            external_references=[
-                {
-                    "source_name": "Doppel",
-                    "url": alert.get("doppel_link"),
-                    "external_id": alert.get("id"),
-                }
-            ],
-            custom_properties={
-                "x_opencti_brand": alert.get("brand", "Unknown"),
-                "x_opencti_product": alert.get("product", "Unknown"),
-                "x_opencti_platform": alert.get("platform", "Unknown"),
-                "x_opencti_source": alert.get("source", "Unknown"),
-                "x_opencti_notes": alert.get("notes", ""),
-                "x_opencti_audit_logs": audit_log_text,
-                "x_opencti_entity_content": entity_content,
-            },
-            allow_custom=True,
-        )
-        stix_objects.append(indicator)
-
-    return (
-        Bundle(objects=stix_objects, allow_custom=True).serialize()
-        if stix_objects
-        else None
-    )
-
-
-def send_to_opencti(stix_bundle):
-    try:
-        if isinstance(stix_bundle, dict):
-            stix_bundle = json.dumps(stix_bundle)
-
-        if not stix_bundle:
-            helper.log_error("STIX bundle is empty or invalid.")
-            return
-
-        bundle_dict = json.loads(stix_bundle)
-        helper.log_info(
-            f"Sending STIX bundle with {len(bundle_dict.get('objects', []))} objects to OpenCTI."
-        )
-        helper.send_stix2_bundle(stix_bundle, update=UPDATE_EXISTING_DATA)
-        helper.log_info("STIX bundle sent successfully")
-
-    except Exception as e:
-        helper.log_error(f"Error sending STIX bundle: {str(e)}")
-
-
-def main():
     while True:
         try:
             helper.log_info("Starting data fetch cycle...")
-            alerts = fetch_alerts()
-            if alerts:
-                stix_bundle = convert_to_stix(alerts)
-                if stix_bundle:
-                    send_to_opencti(stix_bundle)
-                else:
-                    helper.log_error("Failed to create a valid STIX bundle.")
 
-            helper.log_info(
-                f"Sleeping for {POLLING_INTERVAL} seconds before next fetch..."
-            )
-            time.sleep(POLLING_INTERVAL)
+            # Get last run timestamp
+            created_after = get_last_run(helper, HISTORICAL_POLLING_DAYS)
+
+            alerts = fetch_alerts(helper, API_URL, API_KEY, created_after, MAX_RETRIES, RETRY_DELAY)
+            helper.log_info(f"Fetched {len(alerts)} alerts from Doppel")
+
+            if alerts:
+                stix_bundle = convert_alert_to_bundle(alerts, helper)
+
+                if stix_bundle:
+                    send_to_opencti(stix_bundle, helper, UPDATE_EXISTING_DATA)
+                else:
+                    helper.log_info("No valid alerts to send.")
+
+            # Save current timestamp as last run
+            set_last_run(helper)
+
         except Exception as e:
             helper.log_error(f"Unexpected error in main loop: {str(e)}")
 
-
-if __name__ == "__main__":
-    helper.log_info("Starting Doppel OpenCTI Connector...")
-    main()
+        helper.log_info(f"Sleeping for {POLLING_INTERVAL} seconds before next run...")
+        time.sleep(POLLING_INTERVAL)
