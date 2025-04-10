@@ -2,7 +2,7 @@
 
 This connector fetches alerts from the Doppel API and imports them into OpenCTI.
 
-## Installation
+
 
 ### Requirements
 
@@ -10,24 +10,16 @@ This connector fetches alerts from the Doppel API and imports them into OpenCTI.
 - Access to a **Doppel tenant** (API key and API URL)
 
 
+
 ##  Configuration
 
-The connector accepts config via:
-
-- `docker-compose.yml` (Docker mode)
-- `config.yml` (manual mode)
+There are a number of configuration options, which can be set either in the main OpenCTI docker-compose.yml (for Docker deployment) or in the connector’s config.yml (for manual/standalone deployment).
 
  Docker **env vars override** values in `config.yml`.
 
 
-## Configuration variables
-
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
-
 ###  Configuration Parameters
 
-These environment variables can be set via `config.yml` or in `docker-compose.yml`.
 
 | Parameter               | Env Variable                 | Default          | Required | Description                                                   |
 |------------------------|------------------------------|------------------|----------|---------------------------------------------------------------|
@@ -63,15 +55,17 @@ docker build . -t [IMAGE NAME]:latest
 
 Make sure to replace the environment variables in the main OpenCTI `docker-compose.yml` file with the appropriate configurations for your environment.
 Then, start the container using that updated docker-compose.yml.
- 
-
-## Additional note
-Although the Doppel connector folder contains its own `docker-compose.yml`, it’s not used directly. Instead, the connector should be integrated into the main OpenCTI `docker-compose.yml` alongside the other services.
 
 ```shell
 docker compose up -d
 # -d for detached
 ```
+ 
+
+> ⚠️ **Note**  
+> Although the Doppel connector folder contains its own `docker-compose.yml`, it’s not used directly.  
+> The connector should be integrated into the **main OpenCTI `docker-compose.yml`** file alongside the other services.
+
 
 ### Manual Deployment
 
@@ -86,27 +80,22 @@ Install the required python dependencies (preferably in a virtual environment):
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+Then, start the connector from doppel/src:
 
 ```shell
 python3 main.py
 ```
 
-## Additional note
-If you are using it independently, remember that the connector will try to connect to the RabbitMQ on the port configured in the OpenCTI platform.
+> ⚠️ **Note**  
+>If you are using it independently, remember that the connector will try to connect to the RabbitMQ on the port configured in the OpenCTI platform.
 
 ## Usage
 
 After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `polling_interval`.
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+## Verification
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
-
-## Behavior
+To verify the connector is working, you can navigate to Data->Entities in the OpenCTI platform and see the new imported data there. For troubleshooting or additional verification, please view the Connector logs.
 
 
 ## Debugging
