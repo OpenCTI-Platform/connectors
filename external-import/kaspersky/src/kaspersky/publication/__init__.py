@@ -1,1 +1,0 @@
-"""Kaspersky publication module."""

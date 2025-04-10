@@ -1,6 +1,0 @@
-pycti==6.2.14
-countryinfo
-validators
-ipinfo
-pandas
-tabulate # Required for Pandas to Markdown

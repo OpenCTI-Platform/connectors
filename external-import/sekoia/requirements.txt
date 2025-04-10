@@ -1,2 +1,0 @@
-pycti==6.2.14
-python-dateutil==2.9.0.post0

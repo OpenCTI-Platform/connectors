@@ -1,1 +1,0 @@
-"""Kaspersky Master IOC module."""

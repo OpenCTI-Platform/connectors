@@ -1,3 +1,0 @@
-pycti==6.2.14
-stix2
-thehive4py>=2.0.0b

@@ -1,4 +1,0 @@
-pycti==6.2.14
-pydantic==2.8.2
-valhallaAPI==0.6.0
-python-dateutil==2.9.0.post0

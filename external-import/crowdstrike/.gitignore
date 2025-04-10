@@ -1,6 +1,0 @@
-config.yml
-__pycache__
-logs
-*.gql
-src/crowdstrike-client
-test
