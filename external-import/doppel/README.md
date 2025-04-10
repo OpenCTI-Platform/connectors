@@ -1,54 +1,50 @@
 # OpenCTI Doppel Connector
 
-The connector uses the Doppel API to fetch alerts.
+This connector fetches alerts from the Doppel API and imports them into OpenCTI as.
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6...
+- OpenCTI Platform version >= 6.x
+- Access to a **Doppel tenant** (API key and API URL)
+
+
+## 🔧 Configuration
+
+The connector accepts config via:
+
+- `docker-compose.yml` (Docker mode)
+- `config.yml` (manual mode)
+
+💡 Docker **env vars override** values in `config.yml`.
+
 
 ## Configuration variables
 
 There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
 in `config.yml` (for manual deployment).
 
-### OpenCTI environment variables
+### 🔧 Configuration Parameters
 
-Below are the parameters you'll need to set for OpenCTI:
+These environment variables can be set via `config.yml` or in `docker-compose.yml`.
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+| Parameter               | Env Variable                 | Default          | Required | Description                                                   |
+|------------------------|------------------------------|------------------|----------|---------------------------------------------------------------|
+| OpenCTI URL            | `OPENCTI_URL`                | -                | Yes      | URL of the OpenCTI platform                                   |
+| OpenCTI Token          | `OPENCTI_TOKEN`              | -                | Yes      | API token for OpenCTI                                         |
+| Connector ID           | `CONNECTOR_ID`               | -                | Yes      | Unique UUID for this connector instance                       |
+| Connector Name         | `CONNECTOR_NAME`             | -                | Yes      | Name to display inside OpenCTI                                |
+| Connector Type         | `CONNECTOR_TYPE`             | `EXTERNAL_IMPORT`| Yes      | Should always be `EXTERNAL_IMPORT`                            |
+| Connector Scope        | `CONNECTOR_SCOPE`            | -                | Yes      | Scope of the data being imported (e.g., `Indicator`)          |
+| Log Level              | `CONNECTOR_LOG_LEVEL`        | `info`           | No       | Log verbosity (`debug`, `info`, `warn`, `error`)              |
+| Doppel API URL         | `DOPPEL_API_URL`             | -                | Yes      | URL for Doppel alerts API                                     |
+| Doppel API Key         | `DOPPEL_API_KEY`             | -                | Yes      | API Key to authenticate with Doppel                           |
+| Update Existing Data   | `UPDATE_EXISTING_DATA`       | `true`           | No       | Whether to update existing STIX objects in OpenCTI            |
+| Polling Interval       | `POLLING_INTERVAL`           | `3600`           | No       | Interval (in seconds) between API polling                     |
+| Historical Polling Days| `HISTORICAL_POLLING_DAYS`    | `30`             | No       | Days of historical data to pull on first run                  |
 
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the connector:
-
-| Parameter              | config.yml              | Docker environment variable | Default | Mandatory | Description |
-|------------------------|-------------------------|-----------------------------|---------|-----------|-------------|
-| API URL                | api_url                 |   `DOPPEL_API_URL`          |         | YES       |             |
-| API key                | api_key                 |   `DOPPEL_API_KEY`          |         | Yes       | Authentication key for accessing the data source's API.            |
-| Update Existing Data   | update_existing_data    |   `UPDATE_EXISTING_DATA`    | true    | Yes       | Controls whether the connector updates existing OpenCTI objects with new data from the source            |
-| Polling interval       | polling_interval        |   `POLLING_INTERVAL`        | 3600    | Yes       | Specifies the time interval between checks for new/updated data.        |
-| Historical Pollig Days | historical_polling_days |   `HISTORICAL_POLLING_DAYS` | 30      | Yes       | Defines the number of past days to initially retrieve data from.      |
-| Max Retries            | max_retries             |   `MAX_RETRIES`             | 3       | Yes       | Defines the number of retry on failure                  |
-| Retry Delay            | retry_delay             |   `RETRY DELAY`             | 30      | Yes       | Defines time between two retry            |
-
-## Deployment
+### Deployment
 
 ### Docker Deployment
 
@@ -67,7 +63,7 @@ docker build . -t [IMAGE NAME]:latest
 
 Make sure to replace the environment variables in the main OpenCTI `docker-compose.yml` file with the appropriate configurations for your environment.
 Then, start the container using that updated docker-compose.yml.
-
+ 
 
 ## Additional note
 Although the Doppel connector folder contains its own `docker-compose.yml`, it’s not used directly. Instead, the connector should be integrated into the main OpenCTI `docker-compose.yml` alongside the other services.
