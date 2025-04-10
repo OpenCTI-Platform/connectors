@@ -27,7 +27,7 @@ class CVEListV5Connector:
         
         # Connector config
         self.start_year = int(get_config_variable("CVE_HISTORY_START_YEAR", ["cvelistv5", "start_year"], config))
-        self.update_interval = int(get_config_variable("CVE_INTERVAL", ["cvelistv5", "interval"], config)) * 60
+        #self.update_interval = int(get_config_variable("CVE_INTERVAL", ["cvelistv5", "interval"], config)) * 60
         self.duration_period = get_config_variable("CONNECTOR_DURATION_PERIOD", ["connector", "duration_period"], config)
         
         self._log_message(f"Initiliazing: Cloning CVEProject/cvelistV5...")

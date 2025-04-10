@@ -93,10 +93,13 @@ class CVEProcessor:
         labels = []
         for problemType in cna["problemTypes"]:
             for cwe in  problemType['descriptions']:
+                # Extract cwe id
                 if 'cweId' in cwe:
                     labels.append(cwe['cweId'])
                 if 'CWE-' in cwe['description'] and 'cweId' not in cwe:
                     labels.append(cwe['description'].split(" ")[0].replace(":",""))
+                # Extract description
+                if 'CWE-' in cwe['description']:
                     labels.append(" ".join(cwe['description'].split(" ")[1:]))
                 else:
                     labels.append(cwe['description'])
