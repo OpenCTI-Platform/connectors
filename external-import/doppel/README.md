@@ -10,14 +10,14 @@ This connector fetches alerts from the Doppel API and imports them into OpenCTI 
 - Access to a **Doppel tenant** (API key and API URL)
 
 
-## 🔧 Configuration
+##  Configuration
 
 The connector accepts config via:
 
 - `docker-compose.yml` (Docker mode)
 - `config.yml` (manual mode)
 
-💡 Docker **env vars override** values in `config.yml`.
+ Docker **env vars override** values in `config.yml`.
 
 
 ## Configuration variables
@@ -25,7 +25,7 @@ The connector accepts config via:
 There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
 in `config.yml` (for manual deployment).
 
-### 🔧 Configuration Parameters
+###  Configuration Parameters
 
 These environment variables can be set via `config.yml` or in `docker-compose.yml`.
 
