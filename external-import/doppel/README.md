@@ -1,6 +1,6 @@
 # OpenCTI Doppel Connector
 
-This connector fetches alerts from the Doppel API and imports them into OpenCTI as.
+This connector fetches alerts from the Doppel API and imports them into OpenCTI.
 
 ## Installation
 
