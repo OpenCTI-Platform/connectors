@@ -100,7 +100,7 @@ To verify the connector is working, you can navigate to Data->Entities in the Op
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
+The connector can be debugged by setting the appropriate log level.
 
 ## Additional information
 
