@@ -1,9 +1,7 @@
 version: '3'
 services:
   connector-catalyst:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: opencti/connector-catalyst:6.6.2
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
