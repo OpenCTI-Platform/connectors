@@ -21,6 +21,10 @@ class TagAPIV1(Tag):
 
     _tag_response: "TagResponse" = PrivateAttr()
 
+    def __init__(self) -> None:
+        """Initialize the Tag instance."""
+        Tag.__init__(self)
+
     @classmethod
     def from_tag_response(cls, tag_response: "TagResponse") -> "TagAPIV1":
         """Convert TagResponse instance to TagAPIV1 instance."""
@@ -30,7 +34,7 @@ class TagAPIV1(Tag):
     @property
     def _type(self) -> str:
         """Get tag type."""
-        return self._tag_response.tag_type
+        return self._tag_response.tag_type or ""
 
     @property
     def _value(self) -> str:
@@ -43,6 +47,10 @@ class IndicatorAPIV1(Indicator):
 
     _indicator_response: "IndicatorResponse" = PrivateAttr()
 
+    def __init__(self) -> None:
+        """Initialize the Indcator instance."""
+        Indicator.__init__(self)
+
     @classmethod
     def from_indicator_response(
         cls, indicator_response: "IndicatorResponse"
@@ -54,7 +62,8 @@ class IndicatorAPIV1(Indicator):
     @property
     def _type(self) -> str:
         """Get indicator type."""
-        return self._indicator_response.indicator_type
+        return self._indicator_response.indicator_type  # type: ignore[return-value]
+        # expected ['sha256', 'ip', 'domain', 'md5', 'sha1']  are only strs
 
     @property
     def _value(self) -> str:
@@ -64,18 +73,22 @@ class IndicatorAPIV1(Indicator):
     @property
     def _first_seen(self) -> str:
         """Get the date the indicator has been first seen."""
-        return self._indicator_response.first_seen
+        return self._indicator_response.first_seen.isoformat()
 
     @property
     def _last_seen(self) -> str:
         """Get the date the indicator has been last seen."""
-        return self._indicator_response.last_seen
+        return self._indicator_response.last_seen.isoformat()
 
 
 class ReportAPIV1(Report):
     """Define Report from Dragos API v1."""
 
     _product_response: "ExtendedProductResponse" = PrivateAttr()
+
+    def __init__(self) -> None:
+        """Initialize the Report instance."""
+        Report.__init__(self)
 
     @classmethod
     def from_product_response(
@@ -98,12 +111,12 @@ class ReportAPIV1(Report):
     @property
     def _created_at(self) -> str:
         """Get report's creation date."""
-        return self._product_response.product.release_date
+        return self._product_response.product.release_date.isoformat()
 
     @property
     def _updated_at(self) -> str:
         """Get report's last update date."""
-        return self._product_response.product.updated_at
+        return self._product_response.product.updated_at.isoformat()
 
     @property
     def _summary(self) -> str:
