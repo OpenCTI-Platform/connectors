@@ -13,6 +13,7 @@ from pydantic import PrivateAttr
 if TYPE_CHECKING:
     from datetime import datetime, timedelta
 
+    from pydantic import SecretStr
     from yarl import URL
 
 
@@ -187,8 +188,8 @@ class ReportsAPIV1(Reports):
     def __init__(
         self,
         base_url: "URL",
-        token: str,
-        secret: str,
+        token: "SecretStr",
+        secret: "SecretStr",
         timeout: "timedelta",
         retry: int,
         backoff: "timedelta",
@@ -196,8 +197,8 @@ class ReportsAPIV1(Reports):
         """Initialize the adapter."""
         self._client = DragosClientAPIV1(
             base_url=base_url,
-            token=token,  # type: ignore[arg-type]
-            secret=secret,  # type: ignore[arg-type]
+            token=token,
+            secret=secret,
             timeout=timeout,
             retry=retry,
             backoff=backoff,
