@@ -15,7 +15,7 @@ This connector fetches alerts from the Doppel API and imports them into OpenCTI.
 
 There are a number of configuration options, which can be set either in the main OpenCTI docker-compose.yml (for Docker deployment) or in the connector’s config.yml (for manual/standalone deployment).
 
- Docker **env vars override** values in `config.yml`.
+ Docker **env vvariables override** values in `config.yml`.
 
 
 ###  Configuration Parameters
@@ -46,12 +46,12 @@ sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
 
-Example:
-
 ```shell
 # Replace the IMAGE NAME with the appropriate value
 docker build . -t [IMAGE NAME]:latest
 ```
+Example:
+docker build -t doppel-connector:latest . (Use same image name in `docker-compose.yml`)
 
 Make sure to replace the environment variables in the main OpenCTI `docker-compose.yml` file with the appropriate configurations for your environment.
 Then, start the container using that updated docker-compose.yml.

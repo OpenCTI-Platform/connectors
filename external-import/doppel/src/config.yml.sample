@@ -10,7 +10,6 @@ connector:
   log_level: 'info'
 
 doppel:
-  api_url: 'https://api.doppel.com/v1/alerts'
   api_key: changeMe
   update_existing_data: true
   polling_interval: 3600
