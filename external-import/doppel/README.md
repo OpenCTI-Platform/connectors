@@ -15,7 +15,7 @@ This connector fetches alerts from the Doppel API and imports them into OpenCTI.
 
 There are a number of configuration options, which can be set either in the main OpenCTI docker-compose.yml (for Docker deployment) or in the connector’s config.yml (for manual/standalone deployment).
 
- Docker **env vvariables override** values in `config.yml`.
+ Docker **env variables override** values in `config.yml`.
 
 
 ###  Configuration Parameters
