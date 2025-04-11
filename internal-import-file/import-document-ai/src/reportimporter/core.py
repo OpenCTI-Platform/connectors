@@ -38,10 +38,14 @@ class ReportImporter:
             "IMPORT_DOCUMENT_CREATE_INDICATOR",
             ["import_document", "create_indicator"],
             config,
+            default=False,
         )
         self.file = None
         self.web_service_url = get_config_variable(
-            "CONNECTOR_WEB_SERVICE_URL", ["connector", "web_service_url"], config
+            "CONNECTOR_WEB_SERVICE_URL",
+            ["connector", "web_service_url"],
+            config,
+            default="https://importdoc.ariane.filigran.io",
         )
         license_key_pem = get_config_variable(
             "CONNECTOR_LICENCE_KEY_PEM", ["connector", "licence_key_pem"], config
