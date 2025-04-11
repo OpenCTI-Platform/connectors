@@ -2,6 +2,7 @@
 set -e
 
 connector_dir=$1
+cd connector_dir
 venv_name=".temp_venv"
 
 if [ -d "$venv_name" ]; then

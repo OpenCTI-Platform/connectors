@@ -88,7 +88,7 @@ jobs:
             for file in $TEST_FILES; do
               connector_dir=$(dirname "$file")
               echo "Running tests in $connector_dir"
-              (cd "$connector_dir" && ./run_test.sh)
+              (bash run_test.sh "$connector_dir" )
             done
   build:
     parameters:
