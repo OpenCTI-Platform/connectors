@@ -8,6 +8,7 @@ from api.doppel_api import fetch_alerts
 from openCTI.client import send_to_opencti
 from openCTI.stix_converter import convert_alert_to_bundle
 from utils.config_helper import load_config, load_connector_config
+from utils.constants import DOPPEL_ALERTS_ENDPOINT, DOPPEL_API_BASE_URL
 from utils.state_handler import get_last_run, set_last_run
 
 # Load configuration
@@ -15,7 +16,6 @@ config = load_config()
 helper = OpenCTIConnectorHelper(config)
 connector_config = load_connector_config(config)
 
-API_URL = connector_config["API_URL"]
 API_KEY = connector_config["API_KEY"]
 POLLING_INTERVAL = connector_config["POLLING_INTERVAL"]
 MAX_RETRIES = connector_config["MAX_RETRIES"]
@@ -33,6 +33,7 @@ if __name__ == "__main__":
             # Get last run timestamp
             created_after = get_last_run(helper, HISTORICAL_POLLING_DAYS)
 
+            API_URL = DOPPEL_API_BASE_URL + DOPPEL_ALERTS_ENDPOINT
             alerts = fetch_alerts(helper, API_URL, API_KEY, created_after, MAX_RETRIES, RETRY_DELAY)
             helper.log_info(f"Fetched {len(alerts)} alerts from Doppel")
 

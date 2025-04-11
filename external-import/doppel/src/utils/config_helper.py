@@ -17,7 +17,6 @@ def load_config():
 
 def load_connector_config(config):
     return {
-        "API_URL": get_config_variable("DOPPEL_API_URL", ["doppel", "api_url"], config),
         "API_KEY": get_config_variable("DOPPEL_API_KEY", ["doppel", "api_key"], config),
         "POLLING_INTERVAL": get_config_variable("POLLING_INTERVAL", ["doppel", "polling_interval"], config, isNumber=True),
         "MAX_RETRIES": get_config_variable("MAX_RETRIES", ["doppel", "max_retries"], config, isNumber=True),
