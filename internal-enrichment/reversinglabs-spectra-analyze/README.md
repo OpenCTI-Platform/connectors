@@ -17,7 +17,8 @@ The connector works for the following observable types in OpenCTI:
 
 ### Requirements
 
-- OpenCTI Platform >= 6.2.4
+- OpenCTI Platform >= 6.5.6
+- Verified and tested on 6.0.10 and 6.5.6
 
 ### Configuration
 
