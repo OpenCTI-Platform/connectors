@@ -870,7 +870,6 @@ def test_location_region_class_should_accept_valid_input(input_data):
             "description",
             id="invalid_description_type",
         ),
-
     ],
 )
 def test_location_region_class_should_not_accept_invalid_input(input_data, error_field):
