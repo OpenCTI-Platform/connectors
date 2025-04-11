@@ -475,6 +475,11 @@ class Sekoia(object):
 
     def _load_data_sets(self):
         # Mapping between SEKOIA sectors/locations and OpenCTI ones
+        ## MODIFICATION BY CYRILYXE
+        #   Use of the global variable : gbl_scriptDir
+        #   For using absolute path and not relative ones
+        global gbl_scriptDir  # noqa: F824
+
         self.helper.log_info("Loading locations mapping")
         with open(gbl_scriptDir + "/data/geography_mapping.json") as fp:
             self._geography_mapping: Dict = json.load(fp)
