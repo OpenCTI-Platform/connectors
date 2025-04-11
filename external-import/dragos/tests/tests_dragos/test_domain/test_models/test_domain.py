@@ -135,17 +135,6 @@ def test_indicator_class_should_accept_valid_input(input_data):
             "observable_type",
             id="invalid_observable_type",
         ),
-        # pytest.param(
-        #     {
-        #         "name": "Test Indicator",
-        #         "pattern": "[url:value='http://example.com']",
-        #         "pattern_type": octi_enums.PatternType.STIX.value,
-        #         "observable_type": octi_enums.ObservableType.URL.value,
-        #         "markings": [fake_valid_tlp_marking()],
-        #     },
-        #     "author",
-        #     id="missing_author",
-        # ),
     ],
 )
 def test_indicator_class_should_not_accept_invalid_input(input_data, error_field):
@@ -287,14 +276,6 @@ def test_intrusion_set_class_should_accept_valid_input(input_data):
             "aliases",
             id="invalid_aliases_type",
         ),
-        # pytest.param(
-        #     {
-        #         "name": "Test IntrusionSet",
-        #         "markings": [fake_valid_tlp_marking()],
-        #     },
-        #     "author",
-        #     id="missing_author",
-        # ),
     ],
 )
 def test_intrusion_set_class_should_not_accept_invalid_input(input_data, error_field):
@@ -889,14 +870,6 @@ def test_location_region_class_should_accept_valid_input(input_data):
             "description",
             id="invalid_description_type",
         ),
-        # pytest.param(
-        #     {
-        #         "name": "Test Location Region",
-        #         "markings": [fake_valid_tlp_marking()],
-        #     },
-        #     "author",
-        #     id="missing_author",
-        # ),
     ],
 )
 def test_location_region_class_should_not_accept_invalid_input(input_data, error_field):
@@ -1033,15 +1006,6 @@ def test_malware_class_should_accept_valid_input(input_data):
             "is_family",
             id="invalid_is_family_type",
         ),
-        # pytest.param(
-        #     {
-        #         "name": "Test Malware",
-        #         "is_family": False,
-        #         "markings": [fake_valid_tlp_marking()],
-        #     },
-        #     "author",
-        #     id="missing_author",
-        # ),
     ],
 )
 def test_malware_class_should_not_accept_invalid_input(input_data, error_field):
