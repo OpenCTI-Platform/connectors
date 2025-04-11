@@ -43,6 +43,9 @@ class Intel471Connector:
             "INTEL471_API_KEY", ["intel471", "api_key"], config
         )
         proxy_url = get_config_variable("INTEL471_PROXY", ["intel471", "proxy"], config)
+        proxy_headers = get_config_variable(
+            "INTEL471_PROXY_HEADERS", ["intel471", "proxy_headers"], config
+        )
         ioc_score = get_config_variable(
             "INTEL471_IOC_SCORE",
             ["intel471", "ioc_score"],
@@ -85,6 +88,7 @@ class Intel471Connector:
                         initial_history,
                         update_existing_data,
                         proxy_url,
+                        proxy_headers,
                         ioc_score,
                     ),
                     interval,
