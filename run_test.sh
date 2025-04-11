@@ -22,7 +22,7 @@ else
   source "$venv_name/bin/activate"
 
   pip install --upgrade pip
-  pip install -r "$connector_dir/test-requirements.txt"
+  pip install -r "$test_requirements_files"
 
   echo "Running tests for $connector_dir"
   pytest "$connector_dir/tests"
