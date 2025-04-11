@@ -6,16 +6,16 @@ import typing
 
 import pytest
 from dragos.interfaces.report import (
+    Indicator,
+    Report,
     ReportRetrievalError,
     Reports,
-    _Indicator,
-    _Report,
-    _Tag,
+    Tag,
 )
 from pydantic import ValidationError
 
 
-class StubTag(_Tag):
+class StubTag(Tag):
     """Stub Tag implementation for testing purposes."""
 
     @property
@@ -29,7 +29,7 @@ class StubTag(_Tag):
         return "my_place"
 
 
-class StubIndicator(_Indicator):
+class StubIndicator(Indicator):
     """Stub Indicator implementation for testing purposes."""
 
     @property
@@ -49,7 +49,7 @@ class StubIndicator(_Indicator):
         return "1970-01-01T00:00:00Z"
 
 
-class StubReport(_Report):
+class StubReport(Report):
     """Stub Report implementation for testing purposes."""
 
     @property
@@ -73,13 +73,13 @@ class StubReport(_Report):
         return "This is a sample report summary."
 
     @property
-    def _related_tags(self) -> typing.Generator[_Tag, None, None]:
+    def _related_tags(self) -> typing.Generator[Tag, None, None]:
         yield from [StubTag()]
 
     @property
     def _related_indicators(
         self,
-    ) -> typing.Generator[_Indicator, None, None]:
+    ) -> typing.Generator[Indicator, None, None]:
         yield from [StubIndicator()] * 3
 
     @property
@@ -90,7 +90,7 @@ class StubReport(_Report):
 class StubReports(Reports):
     """Stub Reports implementation for testing purposes."""
 
-    def iter(self, since) -> typing.Generator[_Report, typing.Any, typing.Any]:
+    def iter(self, since) -> typing.Generator[Report, typing.Any, typing.Any]:
         """List the reports."""
         _ = since
         yield from [StubReport()]
@@ -99,9 +99,9 @@ class StubReports(Reports):
 @pytest.mark.parametrize(
     "interface",
     [
-        pytest.param(_Tag, id="Tag"),
-        pytest.param(_Indicator, id="Indicator"),
-        pytest.param(_Report, id="Report"),
+        pytest.param(Tag, id="Tag"),
+        pytest.param(Indicator, id="Indicator"),
+        pytest.param(Report, id="Report"),
         pytest.param(Reports, id="Reports"),
     ],
 )

@@ -32,7 +32,7 @@ def _validate_pdf_bytes(value: bytes, info: ValidationInfo) -> bytes:
 PDFBytes = Annotated[bytes, AfterValidator(_validate_pdf_bytes)]
 
 
-class _Tag(ABC, FrozenBaseModel):
+class Tag(FrozenBaseModel):
     """Interface for Dragos Tag."""
 
     # Not an enum, use cases should handle the values and logs accordingly
@@ -57,7 +57,7 @@ class _Tag(ABC, FrozenBaseModel):
         pass
 
 
-class _Indicator(ABC, FrozenBaseModel):
+class Indicator(FrozenBaseModel):
     """Interface for Dragos Indicator."""
 
     value: str = Field(..., description="The Dragos Indicator value.", min_length=1)
@@ -115,7 +115,7 @@ class _Indicator(ABC, FrozenBaseModel):
         pass
 
 
-class _Report(ABC, FrozenBaseModel):
+class Report(ABC, FrozenBaseModel):
     """Interface for Dragos Report."""
 
     serial: str = Field(..., description="The Dragos Report ID.", min_length=1)
@@ -132,10 +132,10 @@ class _Report(ABC, FrozenBaseModel):
         None, description="The Dragos Report PDF file.", min_length=1
     )
 
-    related_tags: Generator[_Tag, None, None] = Field(
+    related_tags: Generator[Tag, None, None] = Field(
         ..., description="The Dragos Report related tags."
     )
-    related_indicators: Generator[_Indicator, None, None] = Field(
+    related_indicators: Generator[Indicator, None, None] = Field(
         ..., description="The Dragos Report related indicators."
     )
 
@@ -188,12 +188,12 @@ class _Report(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _related_tags(self) -> Generator[_Tag, None, None]:
+    def _related_tags(self) -> Generator[Tag, None, None]:
         pass
 
     @property
     @abstractmethod
-    def _related_indicators(self) -> Generator[_Indicator, None, None]:
+    def _related_indicators(self) -> Generator[Indicator, None, None]:
         pass
 
 
@@ -201,5 +201,5 @@ class Reports(ABC):
     """Interface for Dragos Reports Retrieval."""
 
     @abstractmethod
-    def iter(self, since: AwareDatetime) -> Generator[_Report, None, None]:
+    def iter(self, since: AwareDatetime) -> Generator[Report, None, None]:
         """List all Dragos reports."""
