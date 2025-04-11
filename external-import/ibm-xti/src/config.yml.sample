@@ -24,3 +24,4 @@ connector_ibm_xti:
   taxii_user: 'ChangeMe'
   taxii_pass: 'ChangeMe'
   #taxii_collections: 'ChangeMe, ChangeMe'
+  #create_observables: 'True'

@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-vxvault:
-    image: opencti/connector-vxvault:6.5.10
+    image: opencti/connector-vxvault:6.6.3
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
