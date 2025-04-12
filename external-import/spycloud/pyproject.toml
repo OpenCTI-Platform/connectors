@@ -14,7 +14,7 @@ authors = [
 requires-python = ">= 3.11, <3.13"
 dependencies = [
     "pycti==6.6.3",
-    "pydantic~=2.10.4",
+    "pydantic~=2.11.3",
     "requests~=2.32.2",
     "stix2~=3.0.1",
     "validators~=0.34.0",
