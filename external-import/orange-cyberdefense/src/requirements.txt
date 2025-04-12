@@ -2,5 +2,5 @@ pycti==6.6.3
 datalake-scripts==2.7.3
 html2text==2024.2.26
 beautifulsoup4==4.13.3
-lxml==5.3.0
+lxml==5.3.2
 html5lib==1.1
