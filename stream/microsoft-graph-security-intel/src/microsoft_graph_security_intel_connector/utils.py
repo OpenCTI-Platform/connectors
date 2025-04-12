@@ -16,6 +16,7 @@ IOC_TYPES = {
     "IPV4-ADDR": "networkIPv4",
     "IPV6-ADDR": "networkIPv6",
     "DOMAIN-NAME": "domainName",
+    "HOSTNAME": "domainName",
     "EMAIL-ADDR": "email",
     "URL": "url",
     "FILE": "file",
