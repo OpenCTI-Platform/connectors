@@ -2,7 +2,7 @@
 version: 2.1
 setup: true
 orbs:
-  slack: circleci/slack@4.15.0
+  slack: circleci/slack@5.1.1
   continuation: circleci/continuation@1.1.0
 
 executors:
