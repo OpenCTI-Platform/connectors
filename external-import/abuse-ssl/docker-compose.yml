@@ -9,6 +9,6 @@ services:
       - "CONNECTOR_NAME=Abuse.ch SSL Blacklist"
       - CONNECTOR_SCOPE=abusessl
       - CONNECTOR_LOG_LEVEL=error
-      - ABUSESSL_URL=https://sslbl.abuse.ch/blacklist/sslipblacklist.csv
+      - ABUSESSL_URL=https://sslbl.abuse.ch/blacklist/sslblacklist.csv
       - ABUSESSL_INTERVAL=360 # Time to wait in minutes between subsequent requests
     restart: always
