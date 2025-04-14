@@ -1,2 +1,2 @@
-src/config.yml
-src/__pycache__
+config.yml
+__pycache__/

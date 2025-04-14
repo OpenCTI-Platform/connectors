@@ -5,6 +5,7 @@ opencti:
 connector:
   id: 'CHANGEME'
   type: 'EXTERNAL_IMPORT'
+<<<<<<< Updated upstream
   name: 'VULMATCH'
   scope:'=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,vulnerability,campaign,incident,indicator,infrastructure,location,note,threat-actor,tool,software'
   log_level: 'info'
@@ -18,3 +19,20 @@ taxii2:
   initial_history: 24
   interval: 24
   verify_ssl: True
+=======
+  name: 'Vulmatch'
+  scope: 'vulmatch'
+  confidence_level: 70
+  update_existing_data: false
+  log_level: 'info'
+
+vulmatch:
+  base_url: 'https://api.vulmatch.com/'
+  api_key: CHANGEME
+  sbom_only: true
+  cvss_base_score_min: CHANGEME #-1 to not use filter
+  epss_score_min: CHANGEME #-1 to not use filter
+
+  backfill_days: 100 #max 356
+  interval_days: 1 # interval in days #how often to check for new data using filter
+>>>>>>> Stashed changes
