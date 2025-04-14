@@ -24,11 +24,12 @@ Docker **env variables override** values in `config.yml`.
 | Connector Type          | `CONNECTOR_TYPE`          | `EXTERNAL_IMPORT` | Yes      | Should always be `EXTERNAL_IMPORT`                   |
 | Connector Scope         | `CONNECTOR_SCOPE`         | -                 | Yes      | Scope of the data being imported (e.g., `Indicator`) |
 | Log Level               | `CONNECTOR_LOG_LEVEL`     | `info`            | No       | Log verbosity (`debug`, `info`, `warn`, `error`)     |
-| Doppel API URL          | `DOPPEL_API_URL`          | -                 | Yes      | URL for Doppel alerts API                            |
 | Doppel API Key          | `DOPPEL_API_KEY`          | -                 | Yes      | API Key to authenticate with Doppel                  |
 | Update Existing Data    | `UPDATE_EXISTING_DATA`    | `true`            | No       | Whether to update existing STIX objects in OpenCTI   |
 | Polling Interval        | `POLLING_INTERVAL`        | `3600`            | No       | Interval (in seconds) between API polling            |
 | Historical Polling Days | `HISTORICAL_POLLING_DAYS` | `30`              | No       | Days of historical data to pull on first run         |
+| Max Retries             | `MAX_RETRIES`             | `3`               | No       | Number of retries to fetch alerts in case of filure           |
+| Retry Delay             | `RETRY_DELAY`             | `30`              | No       | Delay (in seconds) between retry attempts when fetching alerts.        |
 
 ## Deployment
 

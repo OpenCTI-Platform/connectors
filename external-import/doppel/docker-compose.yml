@@ -14,4 +14,6 @@ services:
       - UPDATE_EXISTING_DATA=true
       - POLLING_INTERVAL=3600 
       - HISTORICAL_POLLING_DAYS=30
+      - MAX_RETRIES=3
+      - RETRY_DELAY=30
     restart: always
