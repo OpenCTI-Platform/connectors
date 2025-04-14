@@ -4,13 +4,12 @@ import sys
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from pycti import (  # type: ignore[import-untyped]  # PyCTI is not typed
-    OpenCTIConnectorHelper,  
-)
-
 from dragos.domain.use_cases.common import UseCaseError
 from dragos.domain.use_cases.ingest_report import ReportProcessor
 from dragos.interfaces.common import DataRetrievalError
+from pycti import (  # type: ignore[import-untyped]  # PyCTI is not typed
+    OpenCTIConnectorHelper,
+)
 
 if TYPE_CHECKING:
     from dragos.interfaces.config import ConfigLoader
