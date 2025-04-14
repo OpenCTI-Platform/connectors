@@ -156,7 +156,7 @@ class Connector:
             self._acquire_since = datetime.fromisoformat(last_run_datetime_state)
         else:
             self._logger.debug("[CONNECTOR] Connector has never run successfully.")
-            _acquire_since = self._config.dragos.import_start_date
+            self._acquire_since = self._config.dragos.import_start_date
 
         # Initiate a new work
         self.work_id = self._helper.api.work.initiate_work(
