@@ -1,7 +1,7 @@
 """Define the interface for Dragos Product."""
 
 from abc import ABC, abstractmethod
-from typing import Annotated, Generator, Literal, Optional
+from typing import Annotated, Generator, Iterator, Literal, Optional
 
 from dragos.interfaces.common import DataRetrievalError, FrozenBaseModel
 from pydantic import (
@@ -201,5 +201,5 @@ class Reports(ABC):
     """Interface for Dragos Reports Retrieval."""
 
     @abstractmethod
-    def iter(self, since: AwareDatetime) -> Generator[Report, None, None]:
+    def iter(self, since: AwareDatetime) -> Iterator[Report]:
         """List all Dragos reports."""

@@ -3,7 +3,7 @@
 import asyncio
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import AsyncGenerator, Literal, Optional
+from typing import AsyncIterator, Literal, Optional
 
 from pydantic import AwareDatetime, Field, HttpUrl
 
@@ -209,14 +209,61 @@ class ProductClientAPIV1(BaseClientAPIV1):
                 products.products.extend(page_data.products)
         return products
 
-    async def iter_products(
+    def _make_product_iterator(
+            self,
+            page_size: int = 50,
+            updated_after: Optional[AwareDatetime] = None,
+            released_after: Optional[AwareDatetime] = None,
+            serials: Optional[list[str]] = None,
+            indicator: Optional[str] = None,
+    ) -> AsyncIterator[ProductResponse]:
+        class _AsyncIterator(AsyncIterator[ProductResponse]):
+            """Async iterator for the products."""
+
+            def __init__(_self: "_AsyncIterator") -> None:  # noqa: N805  # _self is to differentaite from self
+                _self.current_page = 0
+                _self.items: list[ProductResponse] = []  # page cache
+                _self.index_in_items = 0
+                _self.total_pages: Optional[int] = None # will be updated after 1st call
+
+            def __aiter__(_self) -> "_AsyncIterator":  # noqa: N805
+                return _self
+
+            async def __anext__(_self) -> ProductResponse:  # noqa: N805
+                # Load next page if needed
+                if _self.index_in_items >= len(_self.items):
+                    # not using directly page_size because last page might contain less items
+                    if _self.total_pages is not None and _self.current_page > _self.total_pages:
+                        raise StopAsyncIteration
+                    _self.page_response = await self._get_1_page(
+                            page = _self.current_page + 1,
+                            page_size=page_size,
+                            updated_after=updated_after,
+                            released_after=released_after,
+                            serials=serials,
+                            indicator=indicator,
+                        )
+                    _self.current_page += 1
+                    _self.index_in_items = 0
+                    _self.total_pages = _self.page_response.total_pages
+                    _self.items = _self.page_response.products
+
+                if len(_self.items) == 0:
+                    raise StopAsyncIteration
+
+                item = _self.items[_self.index_in_items]
+                _self.index_in_items += 1
+                return item
+        return _AsyncIterator()
+
+    def iter_products(
         self,
         page_size: int = 50,
         updated_after: Optional[AwareDatetime] = None,
         released_after: Optional[AwareDatetime] = None,
         serials: Optional[list[str]] = None,
         indicator: Optional[str] = None,
-    ) -> AsyncGenerator[ProductResponse, None]:
+    ) -> AsyncIterator[ProductResponse]:
         """Get products from the Dragos Worldview API with an async generator.
 
         Args:
@@ -250,21 +297,14 @@ class ProductClientAPIV1(BaseClientAPIV1):
             >>> asyncio.run(main())
 
         """
-        page = 1
-        while True:
-            products: ProductsResponse = await self._get_1_page(
-                page=1,
-                page_size=page_size,
-                updated_after=updated_after,
-                released_after=released_after,
-                serials=serials,
-                indicator=indicator,
-            )
-            for product in products.products:
-                yield product
-            if page >= products.total_pages:
-                break
-            page += 1
+        return self._make_product_iterator(
+            page_size=page_size,
+            updated_after=updated_after,
+            released_after=released_after,
+            serials=serials,
+            indicator=indicator,
+        )
+
 
     async def get_product(self, serial: str) -> ProductResponse:
         """Get a product from the Dragos Worldview API.

@@ -2,7 +2,7 @@
 
 import asyncio
 from io import BytesIO
-from typing import TYPE_CHECKING, Generator, Optional
+from typing import TYPE_CHECKING, Generator, Iterator, Optional
 
 from client_api.v1 import DragosClientAPIV1
 from client_api.v1.indicator import IndicatorResponse
@@ -204,7 +204,7 @@ class ReportsAPIV1(Reports):
             backoff=backoff,
         )
 
-    def iter(self, since: "datetime") -> Generator[Report, None, None]:
+    def iter(self, since: "datetime") -> Iterator[Report]:
         """List all Dragos reports."""
 
         async def iter_products() -> list[ExtendedProductResponse]:
@@ -216,6 +216,6 @@ class ReportsAPIV1(Reports):
                 async for product in product_responses
             ]
 
+
         products = asyncio.run(iter_products())
-        for product in products:
-            yield ReportAPIV1.from_product_response(product)
+        return iter([ReportAPIV1.from_product_response(product) for product in products])

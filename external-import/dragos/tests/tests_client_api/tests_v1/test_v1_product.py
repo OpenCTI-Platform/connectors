@@ -11,6 +11,7 @@
     - Test that invalid response content leads to DragosAPIError.
 """
 from datetime import datetime, timedelta, timezone
+from typing import AsyncIterator
 from aiohttp import ClientResponseError
 from pydantic import SecretStr
 import pytest
@@ -213,8 +214,16 @@ async def test_invalid_product_response_content_leads_to_dragos_api_error(
         if inspect.isasyncgenfunction(method):
             async for _ in method(**parameters):
                 pass
-        else:  # else
-            _ = await method(**parameters)
+        elif inspect.iscoroutinefunction(method):
+            _  = await method(**parameters)
+        else:
+            result = method(**parameters)
+            if isinstance(result, AsyncIterator):
+                async for _ in result:
+                    pass
+            else:
+                raise NotImplementedError
+
 
 
 @pytest.mark.parametrize(
@@ -266,7 +275,14 @@ async def test_invalid_product_response_code_leads_to_dragos_api_error_and_retri
         if inspect.isasyncgenfunction(method):
             async for _ in method(**parameters):
                 pass
-        else:  # else
-            _ = await method(**parameters)
+        elif inspect.iscoroutinefunction(method):
+            _  = await method(**parameters)
+        else:
+            result = method(**parameters)
+            if isinstance(result, AsyncIterator):
+                async for _ in result:
+                    pass
+            else:
+                raise NotImplementedError
 
     assert client._get.call_count == client._retry  # noqa: S101
