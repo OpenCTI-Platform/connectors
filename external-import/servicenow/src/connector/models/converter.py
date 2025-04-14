@@ -4,7 +4,6 @@ from typing import Any, Literal, Optional
 
 import pycti
 import stix2
-from connector.models import SecurityIncidentResponse
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 

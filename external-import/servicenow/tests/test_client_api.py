@@ -1,7 +1,7 @@
 # isort: skipfile
 """Offer tests for client_api"""
 
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 from urllib.parse import urlparse
 
 import pytest
