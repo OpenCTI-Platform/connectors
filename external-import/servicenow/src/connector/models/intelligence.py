@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import field_validator, BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class TaskResponse(BaseModel):
@@ -16,21 +16,13 @@ class TaskResponse(BaseModel):
     security_tags: Optional[list[str]] = Field(default=None)
     comments_and_work_notes: Optional[str] = Field(default=None)
 
-    @field_validator(
-        "sys_tags",
-        "security_tags",
-        mode="before"
-    )
+    @field_validator("sys_tags", "security_tags", mode="before")
     def parse_list(cls, value):
         if isinstance(value, str):
             return [x.strip() for x in value.split(",") if x.strip()]
         return value
 
-    @field_validator(
-        "sys_created_on",
-        "sys_updated_on", "due_date",
-        mode="before"
-    )
+    @field_validator("sys_created_on", "sys_updated_on", "due_date", mode="before")
     def parse_datetime(cls, value):
         if isinstance(value, str) and not value.strip():
             return None
@@ -59,19 +51,18 @@ class SecurityIncidentResponse(BaseModel):
 
     @field_validator(
         "mitre_technique",
-        "mitre_tactic", "mitre_group","mitre_malware", "mitre_tool",
-        mode="before"
+        "mitre_tactic",
+        "mitre_group",
+        "mitre_malware",
+        "mitre_tool",
+        mode="before",
     )
     def parse_list(cls, value):
         if isinstance(value, str):
             return [x.strip() for x in value.split(",") if x.strip()]
         return value
 
-    @field_validator(
-        "estimated_end",
-        "sys_created_on", "sys_updated_on",
-        mode="before"
-    )
+    @field_validator("estimated_end", "sys_created_on", "sys_updated_on", mode="before")
     def parse_datetime(cls, value):
         if isinstance(value, str) and not value.strip():
             return None

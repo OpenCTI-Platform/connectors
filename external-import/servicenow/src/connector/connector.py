@@ -1,23 +1,27 @@
+import asyncio
 import sys
 from datetime import datetime, timezone
-import asyncio
 from typing import Any, Generator
 
-from connector.models import ConfigLoader, AttackPattern, IntrusionSet, Malware
 from aiohttp import ClientConnectionError, ClientResponseError
 from connector.models import (
+    AttackPattern,
+    ConfigLoader,
+    IntrusionSet,
+    Malware,
     SecurityIncidentResponse,
     TaskResponse,
 )
 from connector.services import (
     ConverterToStix,
-    ServiceNowClient,
     DateTimeFormat,
+    ServiceNowClient,
     Utils,
 )
-from pydantic import ValidationError
 from pycti import OpenCTIConnectorHelper
+from pydantic import ValidationError
 from tenacity import RetryError
+
 
 class ConnectorServicenow:
     """
@@ -84,11 +88,11 @@ class ConnectorServicenow:
 
         # Friendly name will be displayed on OpenCTI platform
         friendly_name = f"ServiceNow - run @ {now_utc_isoformat}"
-        return self.helper.api.work.initiate_work(self.config.connector.id, friendly_name)
+        return self.helper.api.work.initiate_work(
+            self.config.connector.id, friendly_name
+        )
 
-    def _send_intelligence(
-            self, work_id: str, prepared_objects: list
-    ) -> int:
+    def _send_intelligence(self, work_id: str, prepared_objects: list) -> int:
         """
         This method prepares and sends unique STIX objects to OpenCTI.
         This method takes a list of objects prepared by the models, extracts their STIX representations, creates a serialized STIX bundle and It then sends this bundle to OpenCTI.
@@ -103,8 +107,7 @@ class ConnectorServicenow:
         """
         if prepared_objects is not None and len(prepared_objects) != 0:
             get_stix_representation_objects = [
-                obj.stix2_representation
-                for obj in prepared_objects
+                obj.stix2_representation for obj in prepared_objects
             ]
 
             stix_objects_bundle = self.helper.stix2_create_bundle(
@@ -149,7 +152,9 @@ class ConnectorServicenow:
         classified_results = []
 
         for index, result in enumerate(results):
-            task_name = task_names[index] if isinstance(task_names, list) else task_names
+            task_name = (
+                task_names[index] if isinstance(task_names, list) else task_names
+            )
 
             if isinstance(result, RetryError):
                 inner_exception = result.last_attempt.exception()
@@ -165,7 +170,7 @@ class ConnectorServicenow:
                             "error": str(inner_exception),
                             "status": inner_exception.status,
                             "url": inner_exception.request_info.url,
-                        }
+                        },
                     )
                 elif isinstance(inner_exception, ClientConnectionError):
                     self.helper.connector_logger.warning(
@@ -175,7 +180,7 @@ class ConnectorServicenow:
                             "task_name": task_name,
                             "error_name": inner_exception_name,
                             "error": str(inner_exception),
-                        }
+                        },
                     )
                 else:
                     self.helper.connector_logger.warning(
@@ -185,7 +190,7 @@ class ConnectorServicenow:
                             "task_name": task_name,
                             "error_name": inner_exception_name,
                             "error": str(inner_exception),
-                        }
+                        },
                     )
             else:
                 classified_results.append(result)
@@ -208,13 +213,18 @@ class ConnectorServicenow:
                 "get_severity_to_exclude": self.client.get_severity_to_exclude(),
                 "get_priority_to_exclude": self.client.get_priority_to_exclude(),
             }
-            collected_prerequisites_tasks = await asyncio.gather(*prerequisites_tasks.values(), return_exceptions=True)
+            collected_prerequisites_tasks = await asyncio.gather(
+                *prerequisites_tasks.values(), return_exceptions=True
+            )
 
             prerequisites_task_names = list(prerequisites_tasks.keys())
-            classified_result_prerequisites_tasks = self._classify_results(collected_prerequisites_tasks, prerequisites_task_names)
+            classified_result_prerequisites_tasks = self._classify_results(
+                collected_prerequisites_tasks, prerequisites_task_names
+            )
 
-            get_state_to_exclude, get_severity_to_exclude, get_priority_to_exclude = classified_result_prerequisites_tasks
-
+            get_state_to_exclude, get_severity_to_exclude, get_priority_to_exclude = (
+                classified_result_prerequisites_tasks
+            )
 
             main_tasks = {
                 "get_security_incidents": self.client.get_security_incidents(
@@ -225,8 +235,12 @@ class ConnectorServicenow:
                 )
             }
 
-            collected_security_incidents = await asyncio.gather(*main_tasks.values(), return_exceptions=True)
-            classified_result_main_tasks = self._classify_results(collected_security_incidents, "get_security_incidents")
+            collected_security_incidents = await asyncio.gather(
+                *main_tasks.values(), return_exceptions=True
+            )
+            classified_result_main_tasks = self._classify_results(
+                collected_security_incidents, "get_security_incidents"
+            )
 
             security_incidents_list = classified_result_main_tasks[0].get("result", [])
             if not security_incidents_list:
@@ -238,7 +252,9 @@ class ConnectorServicenow:
             security_incident_tasks = [
                 (
                     security_incident,
-                    asyncio.create_task(self.client.get_tasks(security_incident.get("sys_id"))),
+                    asyncio.create_task(
+                        self.client.get_tasks(security_incident.get("sys_id"))
+                    ),
                     # Todo get_observables
                 )
                 for security_incident in security_incidents_list
@@ -248,14 +264,14 @@ class ConnectorServicenow:
 
             for si_incident, si_task in security_incident_tasks:
                 collected_tasks = await asyncio.gather(si_task, return_exceptions=True)
-                security_incident_id = si_incident.get('sys_id')
+                security_incident_id = si_incident.get("sys_id")
 
                 tasks = collected_tasks[0].get("result", [])
-                classified_result_task = self._classify_results(tasks, security_incident_id)
+                classified_result_task = self._classify_results(
+                    tasks, security_incident_id
+                )
 
-                security_incidents_combined = {
-                    "get_security_incident": si_incident
-                }
+                security_incidents_combined = {"get_security_incident": si_incident}
                 if tasks:
                     security_incidents_combined["get_tasks"] = classified_result_task
 
@@ -297,7 +313,9 @@ class ConnectorServicenow:
 
                     if isinstance(intelligence_value, dict):
                         try:
-                            validated_per_collection_name[intelligence_name] = intelligence_model.model_validate(intelligence_value)
+                            validated_per_collection_name[intelligence_name] = (
+                                intelligence_model.model_validate(intelligence_value)
+                            )
                         except ValidationError as err:
                             self.helper.connector_logger.warning(
                                 "[VALIDATION] A validation error has occurred on an incident security. "
@@ -328,7 +346,9 @@ class ConnectorServicenow:
                                     },
                                 )
                                 continue
-                        validated_per_collection_name[intelligence_name] = validated_list
+                        validated_per_collection_name[intelligence_name] = (
+                            validated_list
+                        )
                 if validated_per_collection_name:
                     validated_intelligence.append(validated_per_collection_name)
             self.helper.connector_logger.info(
@@ -355,11 +375,21 @@ class ConnectorServicenow:
                 case_incident_object_refs = []
 
                 mitre_mapping = {
-                    "mitre_technique": lambda x, y: self.converter_to_stix.make_attack_pattern(mitre_name, mitre_id),
-                    "mitre_tactic": lambda x, y: self.converter_to_stix.make_attack_pattern(mitre_name, mitre_id),
-                    "mitre_group": lambda x, y: self.converter_to_stix.make_intrusion_set(mitre_name, mitre_alias),
-                    "mitre_malware": lambda x, y: self.converter_to_stix.make_malware(mitre_name, mitre_alias),
-                    "mitre_tool": lambda x, y: self.converter_to_stix.make_tool(mitre_name, mitre_alias),
+                    "mitre_technique": lambda x, y: self.converter_to_stix.make_attack_pattern(
+                        mitre_name, mitre_id
+                    ),
+                    "mitre_tactic": lambda x, y: self.converter_to_stix.make_attack_pattern(
+                        mitre_name, mitre_id
+                    ),
+                    "mitre_group": lambda x, y: self.converter_to_stix.make_intrusion_set(
+                        mitre_name, mitre_alias
+                    ),
+                    "mitre_malware": lambda x, y: self.converter_to_stix.make_malware(
+                        mitre_name, mitre_alias
+                    ),
+                    "mitre_tool": lambda x, y: self.converter_to_stix.make_tool(
+                        mitre_name, mitre_alias
+                    ),
                 }
 
                 for key, make in mitre_mapping.items():
@@ -375,7 +405,9 @@ class ConnectorServicenow:
 
                                 make_attack_pattern_object = make(mitre_name, mitre_id)
                                 stix_objects.append(make_attack_pattern_object)
-                                case_incident_object_refs.append(make_attack_pattern_object)
+                                case_incident_object_refs.append(
+                                    make_attack_pattern_object
+                                )
                         else:
                             # MITRE Group / MITRE Malware / MITRE Tool
                             # Example: ["G0102 (Wizard Spider)"] -> [mitre_name (mitre_alias)]
@@ -385,18 +417,26 @@ class ConnectorServicenow:
 
                                 make_other_mitre_object = make(mitre_name, mitre_alias)
                                 stix_objects.append(make_other_mitre_object)
-                                case_incident_object_refs.append(make_other_mitre_object)
+                                case_incident_object_refs.append(
+                                    make_other_mitre_object
+                                )
 
                 # Todo Make Observables object -> Observable
 
                 # Transform comment in markdown for security_incident
-                new_description = self.utils.transform_description_to_markdown(security_incident_object.description, security_incident_object.comments_and_work_notes)
+                new_description = self.utils.transform_description_to_markdown(
+                    security_incident_object.description,
+                    security_incident_object.comments_and_work_notes,
+                )
                 security_incident_object.comments_and_work_notes = new_description
                 # Normalises severity for OpenCTI by finding the first match among known levels
                 severity_matched = next(
-                    (item for item in ["low","medium","high","critical"]
-                     if item in security_incident_object.severity.lower()),
-                    None
+                    (
+                        item
+                        for item in ["low", "medium", "high", "critical"]
+                        if item in security_incident_object.severity.lower()
+                    ),
+                    None,
                 )
                 security_incident_object.severity = severity_matched
                 if severity_matched is None:
@@ -404,12 +444,16 @@ class ConnectorServicenow:
                         "[WARNING] Severity has not been correctly identified and will be ignored.",
                         {
                             "security_incident_id": security_incident_object.sys_id,
-                            "severity_in_security_incident" : security_incident_object.severity,
-                        }
+                            "severity_in_security_incident": security_incident_object.severity,
+                        },
                     )
 
                 # Make Security Incident object -> CustomObjectCaseIncident
-                make_custom_case_incident = self.converter_to_stix.make_custom_case_incident(security_incident_object, case_incident_object_refs)
+                make_custom_case_incident = (
+                    self.converter_to_stix.make_custom_case_incident(
+                        security_incident_object, case_incident_object_refs
+                    )
+                )
                 stix_objects.append(make_custom_case_incident)
 
                 # Make Tasks object -> CustomObjectTask
@@ -417,10 +461,16 @@ class ConnectorServicenow:
                 if all_tasks_object:
                     for task in all_tasks_object:
                         # Transform comment in markdown
-                        new_description_task = self.utils.transform_description_to_markdown(task.description, task.comments_and_work_notes)
+                        new_description_task = (
+                            self.utils.transform_description_to_markdown(
+                                task.description, task.comments_and_work_notes
+                            )
+                        )
                         task.comments_and_work_notes = new_description_task
                         all_labels = [*task.sys_tags, *task.security_tags]
-                        make_custom_task = self.converter_to_stix.make_custom_task(task, make_custom_case_incident, all_labels)
+                        make_custom_task = self.converter_to_stix.make_custom_task(
+                            task, make_custom_case_incident, all_labels
+                        )
                         stix_objects.append(make_custom_task)
 
             if stix_objects:
@@ -429,7 +479,9 @@ class ConnectorServicenow:
                 stix_objects.append(author)
 
                 # Make Markings object
-                markings = self.converter_to_stix.make_tlp_marking(level=self.config.servicenow.tlp_level)
+                markings = self.converter_to_stix.make_tlp_marking(
+                    level=self.config.servicenow.tlp_level
+                )
                 stix_objects.append(markings)
 
             self.helper.connector_logger.info(
@@ -451,7 +503,9 @@ class ConnectorServicenow:
             )
 
             validated_intelligence = self._valid_intelligence(collected_intelligence)
-            transformed_intelligence = self._transform_intelligence(validated_intelligence)
+            transformed_intelligence = self._transform_intelligence(
+                validated_intelligence
+            )
 
             self.helper.connector_logger.info(
                 "[CONNECTOR] Finalisation of the preparing of intelligence from ServiceNow"
@@ -476,7 +530,9 @@ class ConnectorServicenow:
         """
         try:
             # Initialization to get the current date and time in various formats.
-            current_utc_datetime, current_utc_isoformat, current_timestamp = self.utils.get_now().values()
+            current_utc_datetime, current_utc_isoformat, current_timestamp = (
+                self.utils.get_now().values()
+            )
 
             # Get the current state
             current_state = self.helper.get_state()
@@ -487,7 +543,9 @@ class ConnectorServicenow:
                 {
                     "connector_name": self.config.connector.name,
                     "connector_start_time": current_utc_isoformat,
-                    "last_run_isoformat":  self.last_run if self.last_run else "Connector has never run",
+                    "last_run_isoformat": (
+                        self.last_run if self.last_run else "Connector has never run"
+                    ),
                 },
             )
 

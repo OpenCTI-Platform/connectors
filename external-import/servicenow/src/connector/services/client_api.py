@@ -3,6 +3,7 @@ from datetime import datetime
 from aiohttp import ClientSession
 from tenacity import retry, stop_after_attempt, wait_exponential_jitter
 
+
 class ServiceNowClient:
     def __init__(self, helper, config):
         """
@@ -24,9 +25,8 @@ class ServiceNowClient:
         # Define headers in session and update when needed
         self.headers = {
             "x-sn-apikey": self.config.servicenow.api_key,
-            "Content-Type": 'application/json'
+            "Content-Type": "application/json",
         }
-
 
     def _build_url(self, table_name: str, query_parameters: str):
         """Method for building the url for the api request.
@@ -37,13 +37,14 @@ class ServiceNowClient:
 
         Returns:
             str: The full URL for the API request.
-          """
+        """
         url = f"https://{self.instance_name}.service-now.com/api/now/{self.api_version}/table/{table_name}?{query_parameters}"
         return url
 
-
-    async def _list_matched(self, targeted_labels: list[str], table_name: str, query_parameters: str) -> str :
-        """ Get the values of the element
+    async def _list_matched(
+        self, targeted_labels: list[str], table_name: str, query_parameters: str
+    ) -> str:
+        """Get the values of the element
 
         Args:
             targeted_labels(list[str]): labels used to keep the corresponding values.
@@ -56,18 +57,29 @@ class ServiceNowClient:
         official_list = await self._request_data(table_name, query_parameters)
 
         list_matched = [
-            item.get("value") for item in official_list.get("result", [])
-            if item.get("value") is not None and any(word.lower() in item.get("label", "").lower() for word in targeted_labels)
+            item.get("value")
+            for item in official_list.get("result", [])
+            if item.get("value") is not None
+            and any(
+                word.lower() in item.get("label", "").lower()
+                for word in targeted_labels
+            )
         ]
         list_matched_convert_to_str = ",".join(list_matched)
 
         list_unmatched = [
-            word for word in targeted_labels
-            if not any(word.lower() in item.get("label", "").lower() for item in official_list.get("result", []))
+            word
+            for word in targeted_labels
+            if not any(
+                word.lower() in item.get("label", "").lower()
+                for item in official_list.get("result", [])
+            )
         ]
 
         if list_unmatched:
-            list_available = [item.get("label", "") for item in official_list.get("result", [])]
+            list_available = [
+                item.get("label", "") for item in official_list.get("result", [])
+            ]
             self.helper.connector_logger.warning(
                 "[FILTERING] When filtering by exclusion, some of your configuration parameters were not taken into "
                 "account, see list_unmatched and list_available.",
@@ -89,7 +101,9 @@ class ServiceNowClient:
             "sysparm_query=name=sn_si_incident^element=state"
             "&sysparm_fields=label,value"
         )
-        return await self._list_matched(self.state_to_exclude, table_name, query_parameters)
+        return await self._list_matched(
+            self.state_to_exclude, table_name, query_parameters
+        )
 
     async def get_severity_to_exclude(self):
         if self.severity_to_exclude is None:
@@ -99,24 +113,27 @@ class ServiceNowClient:
             "sysparm_query=name=sn_si_incident^element=severity"
             "&sysparm_fields=label,value"
         )
-        return await self._list_matched(self.severity_to_exclude, table_name, query_parameters)
+        return await self._list_matched(
+            self.severity_to_exclude, table_name, query_parameters
+        )
 
     async def get_priority_to_exclude(self):
         if self.priority_to_exclude is None:
             return None
         table_name = "sys_choice"
         query_parameters = (
-            "sysparm_query=name=task^element=priority"
-            "&sysparm_fields=label,value"
+            "sysparm_query=name=task^element=priority" "&sysparm_fields=label,value"
         )
-        return await self._list_matched(self.priority_to_exclude, table_name, query_parameters)
+        return await self._list_matched(
+            self.priority_to_exclude, table_name, query_parameters
+        )
 
     async def get_security_incidents(
-            self,
-            state_to_exclude: str | None,
-            severity_to_exclude:str | None,
-            priority_to_exclude:str | None,
-            last_run: str | None,
+        self,
+        state_to_exclude: str | None,
+        severity_to_exclude: str | None,
+        priority_to_exclude: str | None,
+        last_run: str | None,
     ) -> dict:
         table_name = "sn_si_incident"
 
@@ -141,14 +158,15 @@ class ServiceNowClient:
             "estimated_end",
             "comments_and_work_notes",
         ]
-        sysparm_fields = ','.join(list_sysparm_fields)
-
+        sysparm_fields = ",".join(list_sysparm_fields)
 
         sysparm_query = ""
         filters_sysparm_query = []
 
         if self.import_start_date:
-            filters_sysparm_query.append(f"sys_updated_on>{self.import_start_date if not last_run else last_run}")
+            filters_sysparm_query.append(
+                f"sys_updated_on>{self.import_start_date if not last_run else last_run}"
+            )
         if state_to_exclude:
             filters_sysparm_query.append(f"stateNOT IN{state_to_exclude}")
         if severity_to_exclude:
@@ -156,7 +174,7 @@ class ServiceNowClient:
         if priority_to_exclude:
             filters_sysparm_query.append(f"priorityNOT IN{priority_to_exclude}")
 
-        if len(filters_sysparm_query) != 0 :
+        if len(filters_sysparm_query) != 0:
             sysparm_query = "^".join(filters_sysparm_query)
 
         filter_query_parameters = []
@@ -188,7 +206,7 @@ class ServiceNowClient:
             "sys_created_on",
             "sys_updated_on",
         ]
-        sysparm_fields = ','.join(list_sysparm_fields)
+        sysparm_fields = ",".join(list_sysparm_fields)
 
         query_parameters = (
             f"sysparm_query=parent={security_incident_id}"
@@ -201,17 +219,18 @@ class ServiceNowClient:
 
     async def _request_data(self, table_name: str, query_parameters: str):
         url_built = self._build_url(table_name, query_parameters)
+
         @retry(
             stop=stop_after_attempt(max_attempt_number=self.api_retry),
-            wait=wait_exponential_jitter(initial=1, max=self.api_backoff, exp_base=2, jitter=1),
+            wait=wait_exponential_jitter(
+                initial=1, max=self.api_backoff, exp_base=2, jitter=1
+            ),
         )
         async def _retry_wrapped():
             async with ClientSession(
-                    headers=self.headers, raise_for_status=True
+                headers=self.headers, raise_for_status=True
             ) as session:
                 async with session.get(url=url_built) as response:
                     return await response.json()
+
         return await _retry_wrapped()
-
-
-

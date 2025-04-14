@@ -2,18 +2,18 @@ from datetime import datetime
 from typing import Literal
 
 from connector.models import (
-    Author,
-    TLPMarking,
-    ExternalReference,
     AttackPattern,
+    Author,
+    CustomCaseIncident,
+    CustomTask,
+    ExternalReference,
     IntrusionSet,
     Malware,
-    Tool,
-    CustomTask,
-    CustomCaseIncident,
     Relationship,
     SecurityIncidentResponse,
     TaskResponse,
+    TLPMarking,
+    Tool,
 )
 
 
@@ -29,8 +29,9 @@ class ConverterToStix:
         self.helper = helper
         self.config = config
         self._author = self.make_author()
-        self._tlp_marking = self.make_tlp_marking(level=self.config.servicenow.tlp_level)
-
+        self._tlp_marking = self.make_tlp_marking(
+            level=self.config.servicenow.tlp_level
+        )
 
     @staticmethod
     def make_author() -> Author:
@@ -47,7 +48,9 @@ class ConverterToStix:
         )
 
     @staticmethod
-    def make_tlp_marking(level: Literal["clear", "green", "amber", "amber+strict", "red"]) -> TLPMarking:
+    def make_tlp_marking(
+        level: Literal["clear", "green", "amber", "amber+strict", "red"],
+    ) -> TLPMarking:
         """Creates a TLP marking definition object and its representation in STIX 2.1 format.
         This marking is used to classify the confidentiality level of the data.
         Args:
@@ -59,10 +62,10 @@ class ConverterToStix:
 
     @staticmethod
     def make_external_reference(
-            collection:str,
-            url:str,
-            description:str=None,
-            external_id:str=None,
+        collection: str,
+        url: str,
+        description: str = None,
+        external_id: str = None,
     ) -> ExternalReference:
         return ExternalReference(
             source_name=f"ServiceNow - {collection}",
@@ -135,7 +138,12 @@ class ConverterToStix:
             author=self._author,
         )
 
-    def make_custom_task(self, data: TaskResponse, case_incident: CustomCaseIncident, all_labels:list[str]) -> CustomTask:
+    def make_custom_task(
+        self,
+        data: TaskResponse,
+        case_incident: CustomCaseIncident,
+        all_labels: list[str],
+    ) -> CustomTask:
         return CustomTask(
             name=f"{data.number} {data.short_description}",
             description=data.comments_and_work_notes,
@@ -148,7 +156,9 @@ class ConverterToStix:
             author=self._author,
         )
 
-    def make_custom_case_incident(self, data: SecurityIncidentResponse, case_incident_object_refs: list) -> CustomCaseIncident:
+    def make_custom_case_incident(
+        self, data: SecurityIncidentResponse, case_incident_object_refs: list
+    ) -> CustomCaseIncident:
         return CustomCaseIncident(
             name=f"{data.number} {data.short_description}",
             description=data.comments_and_work_notes,
@@ -163,11 +173,11 @@ class ConverterToStix:
         )
 
     def make_relationship(
-            self,
-            source_object,
-            relationship_type: str,
-            target_object,
-            start_time: datetime = None,
+        self,
+        source_object,
+        relationship_type: str,
+        target_object,
+        start_time: datetime = None,
     ) -> Relationship:
         """Creates a relationship object and its representation in STIX 2.1 format.
 

@@ -1,18 +1,18 @@
 from connector.models.common import ConfigBaseSettings
 from connector.models.config_loader import ConfigLoader
-from connector.models.intelligence import SecurityIncidentResponse, TaskResponse
 from connector.models.converter import (
-    Author,
-    TLPMarking,
-    ExternalReference,
     AttackPattern,
+    Author,
+    CustomCaseIncident,
+    CustomTask,
+    ExternalReference,
     IntrusionSet,
     Malware,
-    Tool,
-    CustomTask,
-    CustomCaseIncident,
     Relationship,
+    TLPMarking,
+    Tool,
 )
+from connector.models.intelligence import SecurityIncidentResponse, TaskResponse
 
 __all__ = [
     "ConfigLoader",

@@ -1,6 +1,7 @@
+import re
 from datetime import UTC, datetime, timezone
 from enum import Enum
-import re
+
 
 class DateTimeFormat(Enum):
     DATETIME = "datetime"  # Object datetime
@@ -76,9 +77,9 @@ class Utils:
                     date = match.group(1).strip()
                     author = match.group(2).strip()
                     message = match.group(3).strip()
-                    message = re.sub(r'\[/?code]', '', message)
-                    message = re.sub(r'<.*?>', '', message)
-                    message = re.sub(r'\n', '', message)
+                    message = re.sub(r"\[/?code]", "", message)
+                    message = re.sub(r"<.*?>", "", message)
+                    message = re.sub(r"\n", "", message)
                     markdown += f"| {date} | {author} | {message} |\n"
 
         return markdown

@@ -20,9 +20,18 @@ from pydantic_settings import (
 )
 
 HttpUrlToString = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
-TimedeltaInSeconds = Annotated[timedelta, PlainSerializer(lambda v: int(v.total_seconds()), return_type=int)]
-TLPToLower = Annotated[Literal["clear", "green", "amber", "amber+strict", "red"], PlainValidator(lambda v: v.lower() if isinstance(v,str) else v)]
-LogLevelToLower = Annotated[Literal["debug", "info", "warn", "error"], PlainValidator(lambda v: v.lower() if isinstance(v, str) else v)]
+TimedeltaInSeconds = Annotated[
+    timedelta, PlainSerializer(lambda v: int(v.total_seconds()), return_type=int)
+]
+TLPToLower = Annotated[
+    Literal["clear", "green", "amber", "amber+strict", "red"],
+    PlainValidator(lambda v: v.lower() if isinstance(v, str) else v),
+]
+LogLevelToLower = Annotated[
+    Literal["debug", "info", "warn", "error"],
+    PlainValidator(lambda v: v.lower() if isinstance(v, str) else v),
+]
+
 
 class _ConfigLoaderOCTI(ConfigBaseSettings):
     """Interface for loading OpenCTI dedicated configuration."""
@@ -120,26 +129,29 @@ class _ConfigLoaderServiceNow(ConfigBaseSettings):
     )
     state_to_exclude: Optional[list[str]] = Field(
         default=None,
-        description="List of security incident states to exclude from import."
+        description="List of security incident states to exclude from import.",
     )
     severity_to_exclude: Optional[list[str]] = Field(
         default=None,
-        description="List of security incident severities to exclude from import."
+        description="List of security incident severities to exclude from import.",
     )
     priority_to_exclude: Optional[list[str]] = Field(
         default=None,
-        description="List of security incident priorities to exclude from import."
+        description="List of security incident priorities to exclude from import.",
     )
     tlp_level: Optional[TLPToLower] = Field(
         default="red",
         description="Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
     )
 
-    @field_validator("state_to_exclude", "severity_to_exclude", "priority_to_exclude", mode="before")
+    @field_validator(
+        "state_to_exclude", "severity_to_exclude", "priority_to_exclude", mode="before"
+    )
     def parse_list(cls, value):
         if isinstance(value, str):
             return [x.strip().lower() for x in value.split(",") if x.strip()]
         return value
+
 
 class ConfigLoader(ConfigBaseSettings):
     """Interface for loading global configuration settings."""
