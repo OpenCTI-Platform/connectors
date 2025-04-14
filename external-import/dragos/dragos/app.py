@@ -39,7 +39,6 @@ class Connector:
         # send to OpenCTI
         self._send_bundle(self._helper.stix2_create_bundle(stix_objects))
 
-
     # Explicit workflow
     def work(self) -> None:
         """Define the main process of the connector."""
