@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from aiohttp import ClientSession
 from tenacity import retry, stop_after_attempt, wait_exponential_jitter
 

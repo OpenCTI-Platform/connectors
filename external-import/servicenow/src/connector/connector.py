@@ -1,14 +1,9 @@
 import asyncio
 import sys
-from datetime import datetime, timezone
-from typing import Any, Generator
 
 from aiohttp import ClientConnectionError, ClientResponseError
 from connector.models import (
-    AttackPattern,
     ConfigLoader,
-    IntrusionSet,
-    Malware,
     SecurityIncidentResponse,
     TaskResponse,
 )
