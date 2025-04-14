@@ -28,13 +28,13 @@ def fetch_alerts(helper, api_url, api_key, created_after, max_retries, retry_del
             response = requests.get(api_url, headers=headers, params=params)
 
             if response.status_code == 400:
-                helper.log_error("Check for invalid API or token.")
+                helper.log_error("The request sent to the Doppel API is invalid. Check query parameters and payload format.")
                 return []
             elif response.status_code == 401:
                 helper.log_error("Authentication failed! Check your Doppel API key.")
                 return []
             elif response.status_code == 403:
-                helper.log_error("Access denied! Your Doppel API key might not have the right permissions.")
+                helper.log_error("Access denied! Your Doppel API key does not have the required permissions.")
                 return []
 
             response.raise_for_status()

@@ -15,5 +15,7 @@ def send_to_opencti(stix_bundle, helper, update_existing):
         helper.send_stix2_bundle(stix_bundle, update=update_existing)
         helper.log_info("STIX bundle sent successfully")
 
+    except ValueError as e:
+        helper.log_error(f"ValueError: {e} — Due to an empty or invalid STIX bundle.")
     except Exception as e:
         helper.log_error(f"Error sending STIX bundle: {str(e)}")
