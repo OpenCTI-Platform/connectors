@@ -111,7 +111,7 @@ class ConnectorClient:
             "limit": limit,
             "skip": 0,
             "sort": "updated_at:asc",
-            "embed": "asset"
+            "embed": "asset",
         }
         has_more = True
         reports = []
