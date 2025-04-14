@@ -352,7 +352,7 @@ class CustomCaseIncident(Converter):
             object_marking_refs=[marking.id for marking in self.markings or []],
             object_refs=[obj.id for obj in self.objects or []],
             external_references=[],
-            created=datetime.now(),
+            created=self.created,
             custom_properties={
                 "x_opencti_labels": [self.labels] if self.labels else [],
                 "x_opencti_created_by_ref": self.author.id,
