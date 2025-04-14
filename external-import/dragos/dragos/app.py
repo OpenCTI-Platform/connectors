@@ -30,23 +30,15 @@ class Connector:
     LAST_RUN_KEY = "last_run"
 
     # Define ETL
-    def _process_report(self, report: "Report") -> bool:
-        """Fetch data, transform and send bundle. Return True if successful, False otherwise."""
-        try:
-            # extract entities with the report processor
-            entities = self._report_processor.run_on(report)
-            # transform to stix2 objects
-            stix_objects = [entity.to_stix2_object() for entity in entities]
-            # send to OpenCTI
-            self._send_bundle(self._helper.stix2_create_bundle(stix_objects))
-            return True
+    def _process_report(self, report: "Report") -> None:
+        """Transform and send bundle. Return True if successful, False otherwise."""
+        # extract entities with the report processor
+        entities = self._report_processor.run_on(report)
+        # transform to stix2 objects
+        stix_objects = [entity.to_stix2_object() for entity in entities]
+        # send to OpenCTI
+        self._send_bundle(self._helper.stix2_create_bundle(stix_objects))
 
-        except DataRetrievalError as e:
-            self._logger.warning(f"Data retrieval error: {str(e)}")
-        except UseCaseError as e:
-            self._logger.warning(f"Use case error: {str(e)}")
-
-        return False
 
     # Explicit workflow
     def work(self) -> None:
@@ -62,8 +54,23 @@ class Connector:
         try:
             self._initiate_work()
             successes: list[bool] = []
-            for report in self._reports.iter(since=self._acquire_since):
-                successes.append(self._process_report(report))
+            while True:
+                try:
+                    for report in self._reports.iter(since=self._acquire_since):
+                        self._process_report(report)
+                        successes.append(True)
+                    else:
+                        break
+                except DataRetrievalError as e:
+                    # log the error
+                    self._logger.warning(f"Data retrieval error: {str(e)}")
+                    successes.append(False)
+                    continue
+                except UseCaseError as e:
+                    self._logger.warning(f"Use case error: {str(e)}")
+                    successes.append(False)
+                except StopIteration:
+                    break
 
             # update error flag if not all successes
             # do not fail if no reports were found
@@ -104,11 +111,9 @@ class Connector:
         # To be intialized during work
         # keep track of current work
         self.work_id = None
-        # keep track of current work datetime to update state
-        # when finalizing work
+        # keep track of current work datetime to update state when finalizing work
         self._work_start_datetime: datetime | None = None
-        # keep track of last run datetime
-        # for ingestion driving
+        # keep track of last run datetime for ingestion driving
         self._acquire_since: datetime | None = None
 
     def _log_error(self, error_message: str) -> None:
