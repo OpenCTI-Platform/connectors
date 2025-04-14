@@ -4,17 +4,16 @@ from typing import Any, Literal, Optional
 
 import pycti
 import stix2
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
-
 from connector.models import SecurityIncidentResponse
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 class Converter(BaseModel):
     """
-     Base class for OpenCTI models.
-     OpenCTI models are extended implementations of STIX 2.1 specification.
-     All OpenCTI models implement `to_stix2_object` method to return a validated and formatted STIX 2.1 dict.
-     """
+    Base class for OpenCTI models.
+    OpenCTI models are extended implementations of STIX 2.1 specification.
+    All OpenCTI models implement `to_stix2_object` method to return a validated and formatted STIX 2.1 dict.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -53,6 +52,7 @@ class Converter(BaseModel):
         (usually from stix2 python lib objects)
         """
 
+
 class Author(Converter):
     """Represent an author identity, typically an organization."""
 
@@ -74,7 +74,6 @@ class Author(Converter):
         description="Reference to the description of the author.",
     )
 
-
     def to_stix2_object(self) -> stix2.Identity:
         """Converted to Stix 2.1 object."""
         return stix2.Identity(
@@ -85,11 +84,13 @@ class Author(Converter):
             identity_class=self.identity_class,
             description=self.description,
             custom_properties={"x_opencti_organization_type": self.organization_type},
-            external_references=[stix2.ExternalReference(
-                source_name="ServiceNow",
-                url="https://www.servicenow.com/",
-                description="Official site of ServiceNow.",
-            )]
+            external_references=[
+                stix2.ExternalReference(
+                    source_name="ServiceNow",
+                    url="https://www.servicenow.com/",
+                    description="Official site of ServiceNow.",
+                )
+            ],
         )
 
 
@@ -147,12 +148,11 @@ class ExternalReference(Converter):
             external_id=self.external_id,
         )
 
+
 class AttackPattern(Converter):
     """Represent an Attack Pattern Object."""
 
-    name: str = Field(
-        description="Name of the attack pattern.", min_length=1
-    )
+    name: str = Field(description="Name of the attack pattern.", min_length=1)
     external_id: Optional[str] = Field(
         default=None,
         description="External ID of the attack pattern.",
@@ -176,7 +176,9 @@ class AttackPattern(Converter):
     def to_stix2_object(self) -> stix2.AttackPattern:
         """Make stix object."""
         return stix2.AttackPattern(
-            id=pycti.AttackPattern.generate_id(name=self.name, x_mitre_id=self.external_id),
+            id=pycti.AttackPattern.generate_id(
+                name=self.name, x_mitre_id=self.external_id
+            ),
             created_by_ref=self.author.id,
             name=self.name,
             description=self.description,
@@ -187,11 +189,11 @@ class AttackPattern(Converter):
             },
         )
 
+
 class IntrusionSet(Converter):
     """Represent an Intrusion Set Object."""
-    name: str = Field(
-        description="Name of the attack pattern.", min_length=1
-    )
+
+    name: str = Field(description="Name of the attack pattern.", min_length=1)
     aliases: Optional[str] = Field(
         default=None,
         description="Aliases of the attack pattern.",
@@ -219,18 +221,18 @@ class IntrusionSet(Converter):
             aliases=self.aliases,
         )
 
+
 class Malware(Converter):
     """Represent a Malware Object."""
-    name: str = Field(
-        description="Name of the attack pattern.", min_length=1
-    )
+
+    name: str = Field(description="Name of the attack pattern.", min_length=1)
     aliases: Optional[str] = Field(
         default=None,
         description="Aliases of the attack pattern.",
     )
     is_family: Optional[bool] = Field(
         default=False,
-        description="Indicates whether the malware is a family (True) or a specific instance/sample (False)."
+        description="Indicates whether the malware is a family (True) or a specific instance/sample (False).",
     )
     description: Optional[str] = Field(
         default=None,
@@ -256,12 +258,11 @@ class Malware(Converter):
             aliases=self.aliases,
         )
 
+
 class Tool(Converter):
     """Represent a Tool Object."""
 
-    name: str = Field(
-        description="Name of the attack pattern.", min_length=1
-    )
+    name: str = Field(description="Name of the attack pattern.", min_length=1)
     aliases: Optional[str] = Field(
         default=None,
         description="Aliases of the attack pattern.",
@@ -288,6 +289,7 @@ class Tool(Converter):
             object_marking_refs=[marking.id for marking in self.markings or []],
             aliases=self.aliases,
         )
+
 
 class CustomCaseIncident(Converter):
     """Represent a Custom Object Case Incident."""
@@ -355,7 +357,7 @@ class CustomCaseIncident(Converter):
             custom_properties={
                 "x_opencti_labels": [self.labels] if self.labels else [],
                 "x_opencti_created_by_ref": self.author.id,
-            }
+            },
         )
 
 
@@ -398,9 +400,7 @@ class CustomTask(Converter):
     def to_stix2_object(self) -> pycti.CustomObjectTask:
         """Converted to Stix 2.1 object."""
         return pycti.CustomObjectTask(
-            id=pycti.Task.generate_id(
-                self.name, self.created
-            ),
+            id=pycti.Task.generate_id(self.name, self.created),
             name=self.name,
             description=self.description,
             created=self.created,
@@ -409,10 +409,9 @@ class CustomTask(Converter):
             object_marking_refs=[marking.id for marking in self.markings or []],
             labels=self.labels,
             external_references=self.external_references,
-            custom_properties={
-                "x_opencti_created_by_ref": self.author.id
-            }
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
         )
+
 
 class Relationship(Converter):
     """Represent a Base relationship."""
@@ -424,18 +423,14 @@ class Relationship(Converter):
         default=None,
         description="This optional timestamp represents the earliest time at which the Relationship between the objects exists.",
     )
-    relationship_type: str = Field(
-        description="Reference to the type of relationship."
-    )
+    relationship_type: str = Field(description="Reference to the type of relationship.")
     source: Converter = Field(
         description="Reference to the source entity of the relationship."
     )
     target: Converter = Field(
         description="Reference to the target entity of the relationship."
     )
-    markings: list[TLPMarking] = Field(
-        description="References for object marking."
-    )
+    markings: list[TLPMarking] = Field(description="References for object marking.")
 
     def to_stix2_object(self) -> stix2.Relationship:
         """Converted to Stix 2.1 object."""
@@ -450,17 +445,3 @@ class Relationship(Converter):
             object_marking_refs=[marking.id for marking in self.markings],
             created_by_ref=self.author.id,
         )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
