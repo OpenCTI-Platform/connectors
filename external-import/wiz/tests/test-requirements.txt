@@ -1,0 +1,5 @@
+# Main dependencies needs to be installed
+-r ../src/requirements.txt
+pytest==8.3.5
+pytest-mock==3.14.0
+freezegun==1.5.1

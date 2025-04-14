@@ -329,6 +329,13 @@ class Misp:
             "MISP_INTERVAL", ["misp", "interval"], config, isNumber=True
         )
 
+        self.misp_propagate_labels = get_config_variable(
+            "MISP_PROPAGATE_LABELS",
+            ["misp", "propagate_labels"],
+            config,
+            default=False,
+        )
+
         # Initialize MISP
         self.misp = PyMISP(
             url=self.misp_url,
@@ -1114,7 +1121,12 @@ class Misp:
                 attribute_markings = self.resolve_markings(
                     attribute["Tag"], with_default=False
                 )
-                attribute_tags = self.resolve_tags(attribute["Tag"])
+
+                if not self.misp_propagate_labels:
+                    attribute_tags = self.resolve_tags(attribute["Tag"])
+                else:
+                    attribute_tags.extend(self.resolve_tags(attribute["Tag"]))
+
                 if len(attribute_markings) == 0:
                     attribute_markings = event_markings
             else:
