@@ -5,7 +5,6 @@ from unittest.mock import Mock, call
 from dragos.app import Connector
 from dragos.domain.use_cases.common import UseCaseError
 from dragos.interfaces.common import DataRetrievalError
-from dragos.interfaces.config import ConfigRetrievalError
 
 
 def test_connector_initialization():
