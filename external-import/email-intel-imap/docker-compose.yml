@@ -1,0 +1,8 @@
+version: '3'
+services:
+  email-intel-imap:
+#    image: opencti/connector-email-intel-imap:6.6.4
+    build:
+      context: .
+    # Make sure to copy .env.sample to .env and set the variables
+    env_file: .env
