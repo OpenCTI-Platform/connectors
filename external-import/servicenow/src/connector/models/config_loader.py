@@ -2,11 +2,12 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Annotated, Literal, Optional
 
-from connector.models import FrozenBaseSettings
+from connector.models import ConfigBaseSettings
 from pydantic import (
     Field,
     HttpUrl,
     PlainSerializer,
+    PlainValidator,
     PositiveInt,
     field_validator,
 )
@@ -15,37 +16,31 @@ from pydantic_settings import (
     DotEnvSettingsSource,
     EnvSettingsSource,
     PydanticBaseSettingsSource,
-    SettingsConfigDict,
     YamlConfigSettingsSource,
 )
 
 HttpUrlToString = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
+TimedeltaInSeconds = Annotated[timedelta, PlainSerializer(lambda v: int(v.total_seconds()), return_type=int)]
+TLPToLower = Annotated[Literal["clear", "green", "amber", "amber+strict", "red"], PlainValidator(lambda v: v.lower() if isinstance(v,str) else v)]
+LogLevelToLower = Annotated[Literal["debug", "info", "warn", "error"], PlainValidator(lambda v: v.lower() if isinstance(v, str) else v)]
 
-
-class _ConfigLoaderOCTI(FrozenBaseSettings):
+class _ConfigLoaderOCTI(ConfigBaseSettings):
     """Interface for loading OpenCTI dedicated configuration."""
-
-    model_config = SettingsConfigDict(str_strip_whitespace=True, str_min_length=1)
 
     # Config Loader OpenCTI
     url: HttpUrlToString = Field(
-        ...,
         description="The OpenCTI platform URL.",
     )
     token: str = Field(
-        ...,
         description="The token of the user who represents the connector in the OpenCTI platform.",
     )
 
 
-class _ConfigLoaderConnector(FrozenBaseSettings):
+class _ConfigLoaderConnector(ConfigBaseSettings):
     """Interface for loading Connector dedicated configuration."""
-
-    model_config = SettingsConfigDict(str_strip_whitespace=True, str_min_length=1)
 
     # Config Loader Connector
     id: str = Field(
-        ...,
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     type: Optional[str] = Field(
@@ -60,7 +55,7 @@ class _ConfigLoaderConnector(FrozenBaseSettings):
         default="ServiceNow",
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
-    log_level: Optional[Literal["debug", "info", "warn", "error"]] = Field(
+    log_level: Optional[LogLevelToLower] = Field(
         default="error",
         description="Determines the verbosity of the logs.",
     )
@@ -98,45 +93,65 @@ class _ConfigLoaderConnector(FrozenBaseSettings):
         return "EXTERNAL_IMPORT"
 
 
-class _ConfigLoaderServiceNow(FrozenBaseSettings):
+class _ConfigLoaderServiceNow(ConfigBaseSettings):
     """Interface for loading ServiceNow dedicated configuration."""
-
-    model_config = SettingsConfigDict(str_strip_whitespace=True, str_min_length=1)
 
     # Config Loader ServiceNow
     instance_name: str = Field(
-        ...,
         description="Corresponds to server instance name (will be used for API requests).",
     )
-    instance_username: str = Field(
-        ...,
-        description="This is the name of the user who created the instance.",
+    api_key: str = Field(
+        description="Secure identifier used to validate access to ServiceNow APIs.",
     )
-    instance_password: str = Field(
-        ...,
-        description="This is the password of the user who created the instance.",
+    api_version: Optional[str] = Field(
+        default="v2",
+        description="ServiceNow API version used for REST requests.",
+    )
+    api_retry: Optional[int] = Field(
+        default=5,
+        description="Maximum number of retry attempts in case of API failure.",
+    )
+    api_backoff: Optional[TimedeltaInSeconds] = Field(
+        default="PT30S",
+        description="Exponential backoff duration between API retries (ISO 8601 duration format).",
     )
     import_start_date: date = Field(
-        ...,
         description="Start date of first import (ISO date format).",
     )
-    tlp_level: Literal["clear", "green", "amber", "amber+strict", "red"] = Field(
-        ...,
-        description="TLP level to apply on objects imported into OpenCTI.",
+    state_to_exclude: Optional[list[str]] = Field(
+        default=None,
+        description="List of security incident states to exclude from import."
+    )
+    severity_to_exclude: Optional[list[str]] = Field(
+        default=None,
+        description="List of security incident severities to exclude from import."
+    )
+    priority_to_exclude: Optional[list[str]] = Field(
+        default=None,
+        description="List of security incident priorities to exclude from import."
+    )
+    tlp_level: Optional[TLPToLower] = Field(
+        default="red",
+        description="Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
     )
 
+    @field_validator("state_to_exclude", "severity_to_exclude", "priority_to_exclude", mode="before")
+    def parse_list(cls, value):
+        if isinstance(value, str):
+            return [x.strip().lower() for x in value.split(",") if x.strip()]
+        return value
 
-class ConfigLoader(FrozenBaseSettings):
+class ConfigLoader(ConfigBaseSettings):
     """Interface for loading global configuration settings."""
 
-    model_config = SettingsConfigDict(env_nested_delimiter="_", env_nested_max_split=1)
-
-    opencti: _ConfigLoaderOCTI = Field(..., description="OpenCTI configurations.")
+    opencti: _ConfigLoaderOCTI = Field(
+        description="OpenCTI configurations.",
+    )
     connector: _ConfigLoaderConnector = Field(
-        ..., description="Connector configurations."
+        description="Connector configurations.",
     )
     servicenow: _ConfigLoaderServiceNow = Field(
-        ..., description="ServiceNow configurations."
+        description="ServiceNow configurations.",
     )
 
     @classmethod

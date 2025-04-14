@@ -1,8 +1,20 @@
-import ipaddress
+from datetime import datetime
+from typing import Literal
 
-import stix2
-import validators
-from pycti import Identity, MarkingDefinition, StixCoreRelationship
+from connector.models import (
+    Author,
+    TLPMarking,
+    ExternalReference,
+    AttackPattern,
+    IntrusionSet,
+    Malware,
+    Tool,
+    CustomTask,
+    CustomCaseIncident,
+    Relationship,
+    SecurityIncidentResponse,
+    TaskResponse,
+)
 
 
 class ConverterToStix:
@@ -16,158 +28,162 @@ class ConverterToStix:
     def __init__(self, helper, config):
         self.helper = helper
         self.config = config
-        self.author = self.create_author()
-        self.external_reference = self.create_external_reference()
-        self.tlp_marking = self._create_tlp_marking(level=self.config.tlp_level.lower())
+        self._author = self.make_author()
+        self._tlp_marking = self.make_tlp_marking(level=self.config.servicenow.tlp_level)
+
 
     @staticmethod
-    def create_external_reference() -> list:
+    def make_author() -> Author:
+        """Make an Author object and its representation in STIX 2.1 format.
+        The author represents ServiceNow as the source of the data.
+
+        Returns:
+            Author: A Author object and its representation in STIX 2.1 format.
         """
-        Create external reference
-        :return: External reference STIX2 list
-        """
-        external_reference = stix2.ExternalReference(
-            source_name="External Source",
-            url="CHANGEME",
-            description="DESCRIPTION",
+        return Author(
+            name="ServiceNow",
+            organization_type="vendor",
+            description="ServiceNow is an intelligent cloud platform designed to automate, connect and optimize workflows across the enterprise. It enables organizations to modernize their processes, improve employee and customer experience, and enhance their agility in the face of constant change.",
         )
-        return [external_reference]
 
     @staticmethod
-    def create_author() -> dict:
+    def make_tlp_marking(level: Literal["clear", "green", "amber", "amber+strict", "red"]) -> TLPMarking:
+        """Creates a TLP marking definition object and its representation in STIX 2.1 format.
+        This marking is used to classify the confidentiality level of the data.
+        Args:
+            level (str): user-defined level (default is TLP red)
+        Returns:
+            TLPMarking: A TLP marking definition object and its representation in STIX 2.1 format.
         """
-        Create Author
-        :return: Author in Stix2 object
-        """
-        author = stix2.Identity(
-            id=Identity.generate_id(name="Source Name", identity_class="organization"),
-            name="Source Name",
-            identity_class="organization",
-            description="DESCRIPTION",
+        return TLPMarking(level=level)
+
+    @staticmethod
+    def make_external_reference(
+            collection:str,
+            url:str,
+            description:str=None,
+            external_id:str=None,
+    ) -> ExternalReference:
+        return ExternalReference(
+            source_name=f"ServiceNow - {collection}",
+            url=url,
+            description=description,
+            external_id=external_id,
         )
-        return author
 
-    @staticmethod
-    def _create_tlp_marking(level):
-        mapping = {
-            "white": stix2.TLP_WHITE,
-            "clear": stix2.TLP_WHITE,
-            "green": stix2.TLP_GREEN,
-            "amber": stix2.TLP_AMBER,
-            "amber+strict": stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                custom_properties={
-                    "x_opencti_definition_type": "TLP",
-                    "x_opencti_definition": "TLP:AMBER+STRICT",
-                },
-            ),
-            "red": stix2.TLP_RED,
-        }
-        return mapping[level]
+    def make_attack_pattern(self, mitre_name: str, mitre_id: str) -> AttackPattern:
+        """Make an Attack Pattern object and its representation in STIX 2.1 format.
+        The attack pattern is represented by the mitre Technique/Tactic in ServiceNow.
+        Args:
+            mitre_name (str): Represents the name of the attack pattern.
+            mitre_id (str): Represents the external id of the attack pattern.
+        Returns:
+            AttackPattern: An object containing an attack pattern and its representation in STIX 2.1 format.
+        """
+        return AttackPattern(
+            name=mitre_name,
+            external_id=mitre_id,
+            markings=[self._tlp_marking],
+            author=self._author,
+        )
 
-    def create_relationship(
-        self, source_id: str, relationship_type: str, target_id: str
-    ) -> dict:
+    def make_intrusion_set(self, mitre_name: str, mitre_alias: str) -> IntrusionSet:
+        """Make an Intrusion Set object and its representation in STIX 2.1 format.
+        The intrusion set is represented by the mitre group in ServiceNow.
+        Args:
+            mitre_name (str): Represents the name of the intrusion set.
+            mitre_alias (str): Represents the alias of the intrusion set.
+        Returns:
+            IntrusionSet: An object containing an intrusion set and its representation in STIX 2.1 format.
         """
-        Creates Relationship object
-        :param source_id: ID of source in string
-        :param relationship_type: Relationship type in string
-        :param target_id: ID of target in string
-        :return: Relationship STIX2 object
+        return IntrusionSet(
+            name=mitre_name,
+            aliases=mitre_alias,
+            markings=[self._tlp_marking],
+            author=self._author,
+        )
+
+    def make_malware(self, mitre_name: str, mitre_alias: str) -> Malware:
+        """Make a Malware object and its representation in STIX 2.1 format.
+        The malware is represented by the mitre malware in ServiceNow.
+        Args:
+            mitre_name (str): Represents the name of the malware.
+            mitre_alias (str): Represents the alias of the malware.
+        Returns:
+            Malware: An object containing a malware and its representation in STIX 2.1 format.
         """
-        relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                relationship_type, source_id, target_id
-            ),
+        return Malware(
+            name=mitre_name,
+            aliases=mitre_alias,
+            markings=[self._tlp_marking],
+            author=self._author,
+        )
+
+    def make_tool(self, mitre_name: str, mitre_alias: str) -> Tool:
+        """Make a Tool object and its representation in STIX 2.1 format.
+        The tool is represented by the mitre Tool in ServiceNow.
+        Args:
+            mitre_name (str): Represents the name of the tool.
+            mitre_alias (str): Represents the alias of the tool.
+        Returns:
+            Tool: An object containing a tool and its representation in STIX 2.1 format.
+        """
+        return Tool(
+            name=mitre_name,
+            aliases=mitre_alias,
+            markings=[self._tlp_marking],
+            author=self._author,
+        )
+
+    def make_custom_task(self, data: TaskResponse, case_incident: CustomCaseIncident, all_labels:list[str]) -> CustomTask:
+        return CustomTask(
+            name=f"{data.number} {data.short_description}",
+            description=data.comments_and_work_notes,
+            created=data.sys_created_on,
+            due_date=data.due_date,
+            labels=all_labels,
+            objects=case_incident,
+            markings=[self._tlp_marking],
+            external_references=[],
+            author=self._author,
+        )
+
+    def make_custom_case_incident(self, data: SecurityIncidentResponse, case_incident_object_refs: list) -> CustomCaseIncident:
+        return CustomCaseIncident(
+            name=f"{data.number} {data.short_description}",
+            description=data.comments_and_work_notes,
+            created=data.sys_created_on,
+            severity=data.severity,
+            priority=data.priority,
+            types=data.category,
+            labels=data.subcategory,
+            markings=[self._tlp_marking],
+            author=self._author,
+            objects=case_incident_object_refs,
+        )
+
+    def make_relationship(
+            self,
+            source_object,
+            relationship_type: str,
+            target_object,
+            start_time: datetime = None,
+    ) -> Relationship:
+        """Creates a relationship object and its representation in STIX 2.1 format.
+
+        Args:
+            source_object: The source object.
+            relationship_type (str): The type of the relationship.
+            target_object: The target object to relate to the source.
+            start_time (datetime, optional): The time the relationship started being relevant or observed.
+        Returns:
+            Relationship: A Relationship object and its representation in STIX 2.1 format.
+        """
+        return Relationship(
             relationship_type=relationship_type,
-            source_ref=source_id,
-            target_ref=target_id,
-            created_by_ref=self.author,
-            external_references=self.external_reference,
+            source=source_object,
+            target=target_object,
+            start_time=start_time,
+            markings=[self._tlp_marking],
+            author=self._author,
         )
-        return relationship
-
-    # ===========================#
-    # Other Examples
-    # ===========================#
-
-    @staticmethod
-    def _is_ipv6(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv6
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv6Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
-    @staticmethod
-    def _is_ipv4(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv4
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv4Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
-    @staticmethod
-    def _is_domain(value: str) -> bool:
-        """
-        Valid domain name regex including internationalized domain name
-        :param value: Value in string
-        :return: A boolean
-        """
-        is_valid_domain = validators.domain(value)
-
-        if is_valid_domain:
-            return True
-        else:
-            return False
-
-    def create_obs(self, value: str) -> dict:
-        """
-        Create observable according to value given
-        :param value: Value in string
-        :return: Stix object for IPV4, IPV6 or Domain
-        """
-        if self._is_ipv6(value) is True:
-            stix_ipv6_address = stix2.IPv6Address(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.external_reference,
-                },
-            )
-            return stix_ipv6_address
-        elif self._is_ipv4(value) is True:
-            stix_ipv4_address = stix2.IPv4Address(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.external_reference,
-                },
-            )
-            return stix_ipv4_address
-        elif self._is_domain(value) is True:
-            stix_domain_name = stix2.DomainName(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.external_reference,
-                },
-            )
-            return stix_domain_name
-        else:
-            self.helper.connector_logger.error(
-                "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
-                {"value": value},
-            )

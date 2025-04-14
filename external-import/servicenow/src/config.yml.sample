@@ -2,25 +2,33 @@ opencti: # OpenCTI Parameters
   url: 'http://localhost:PORT' # REQUIRED
   token: 'ChangeMe' # REQUIRED
 
-connector: # Connector Parameters
-  id: 'ChangeMe' # REQUIRED
-  #============================================#
-  # Optional connector's definition parameters #
-  #============================================#
-  #name: 'ChangeMe' # OPTIONAL - Default: 'ServiceNow'
-  #scope: 'ChangeMe' # OPTIONAL - Default: 'ServiceNow'
-  #log_level: 'ChangeMe' # OPTIONAL - Default: 'error'
-  #duration_period: 'ChangeMe' # OPTIONAL - Default: 'PT24H' (ISO8601 format in String, start with P...)
-  #queue_threshold: ChangeMe # OPTIONAL - Default: 500 MBytes, Float accepted
-  #run_and_terminate: ChangeMe # OPTIONAL - Default: False, True run connector once
-  #send_to_queue: ChangeMe # OPTIONAL - Default: True
-  #send_to_directory: ChangeMe # OPTIONAL - Default: False
-  #send_to_directory_path: 'ChangeMe' # OPTIONAL - if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
-  #send_to_directory_retention: ChangeMe # OPTIONAL - Default: 7, in days
+connector:
+  # Connector definition parameters - REQUIRED
+  id: 'ChangeMe'
 
-servicenow: # Servicenow Parameters
-  instance_name: 'ChangeMe' # REQUIRED
-  instance_username: 'ChangeMe' # REQUIRED
-  instance_password: 'ChangeMe' # REQUIRED
-  import_start_date: 'ChangeMe' # REQUIRED - Format: 'YYYY-MM-DD'
-  tlp_level: 'ChangeMe' # OPTIONAL - Default: 'clear' (available: clear, green, amber, amber+strict, red)
+  # Connector definition parameters - OPTIONAL
+  #name: 'ChangeMe' # Default: 'ServiceNow'
+  #scope: 'ChangeMe' # Default: 'ServiceNow'
+  #log_level: 'ChangeMe' # Default: 'error'
+  #duration_period: 'ChangeMe' # Default: 'PT24H' (ISO8601 format in String, start with P...)
+  #queue_threshold: ChangeMe # Default: 500 MBytes, Float accepted
+  #run_and_terminate: ChangeMe # Default: False, True run connector once
+  #send_to_queue: ChangeMe # Default: True
+  #send_to_directory: ChangeMe # Default: False
+  #send_to_directory_path: 'ChangeMe' # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+  #send_to_directory_retention: ChangeMe # Default: 7, in days
+
+servicenow:
+  # ServiceNow definition parameters - REQUIRED
+  instance_name: 'ChangeMe'
+  api_key: 'ChangeMe'
+  import_start_date: 'ChangeMe' # Format 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'
+
+  # ServiceNow definition parameters - OPTIONAL
+  #api_version: 'ChangeMe' # Default: "v2"
+  #api_retry: ChangeMe # Default: 5
+  #api_backoff: 'ChangeMe' # Default: 'PT30S'
+  #state_to_exclude: 'ChangeMe' # Examples: "eradicate,analysis,closed,cancelled,draft,contain,review,recover"
+  #severity_to_exclude: 'ChangeMe' # Examples: "high,medium,low"
+  #priority_to_exclude: 'ChangeMe' # Examples: "critical,high,moderate,low,planning"
+  #tlp_level: 'ChangeMe' # Default: 'red' (available: clear, green, amber, amber+strict, red)

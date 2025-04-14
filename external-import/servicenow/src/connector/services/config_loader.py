@@ -8,7 +8,7 @@ class ServiceNowConfig:
         self.load = self._load_config()
 
     @staticmethod
-    def _load_config() -> dict:
+    def _load_config() -> ConfigLoader:
         """
         Load the application configuration using Pydantic Settings.
 
@@ -19,15 +19,14 @@ class ServiceNowConfig:
            the system environment variables are used as the last fallback.
 
         It validates the configuration using Models Pydantic and ensures that only valid settings are returned.
-        Additionally, any parameters set to `None` will be automatically excluded from the final dictionary.
 
         Returns:
-            dict: A dictionary containing the validated configuration.
+            ConfigLoader: A model containing the validated configuration.
         """
         try:
 
             load_settings = ConfigLoader()
-            return load_settings.model_dump(exclude_none=True)
+            return load_settings
 
         except ValidationError as err:
             raise ValueError(err)
