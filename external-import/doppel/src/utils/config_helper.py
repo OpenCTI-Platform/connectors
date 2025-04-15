@@ -5,12 +5,34 @@ from pycti import get_config_variable
 
 
 def load_config():
-    """Load YAML config file from the current directory."""
+    """Load YAML config file from the current directory and validate log level/type early."""
     config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../config.yml")
+    config = {}
+
     if os.path.isfile(config_path):
         with open(config_path, "r") as file:
-            return yaml.safe_load(file)
-    return {}
+            config = yaml.safe_load(file) or {}
+
+    # Validate CONNECTOR_LOG_LEVEL
+    log_level = get_config_variable("CONNECTOR_LOG_LEVEL", ["connector", "log_level"], config, default="info").lower()
+    valid_log_levels = ["info", "error", "debug", "warn"]
+    if log_level not in valid_log_levels:
+        raise ValueError(f"Invalid CONNECTOR_LOG_LEVEL '{log_level}'. Allowed values: {valid_log_levels}")
+
+    # Validate CONNECTOR_TYPE
+    connector_type = get_config_variable("CONNECTOR_TYPE", ["connector", "type"], config)
+    valid_types = [
+        "INTERNAL_ENRICHMENT",
+        "EXTERNAL_IMPORT",
+        "INTERNAL_IMPORT_FILE",
+        "INTERNAL_EXPORT_FILE",
+        "EXTERNAL_ENRICHMENT",
+        "STREAM",
+    ]
+    if not connector_type or connector_type not in valid_types:
+        raise ValueError(f"Invalid CONNECTOR_TYPE '{connector_type}'. Allowed values: {valid_types}")
+
+    return config
 
 
 def validate_required_positive_integer(value, name):
@@ -29,7 +51,7 @@ def validate_required_string(value, name):
     if not value:
         raise ValueError(f"Missing required configuration: {name}")
     return value
-    
+
 
 def load_connector_config(config, helper):
     try:
