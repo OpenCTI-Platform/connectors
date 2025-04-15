@@ -31,8 +31,9 @@ dependencies = [
 
 [project.optional-dependencies]
 test= [
-    "pytest >=8.1.1, <9",   
+    "pytest >=8.1.1, <9",
     "pytest-asyncio >= 0.25.3, <1",
+    "freezegun >=1.2.0, <2"
 ]
 dev = [
     "black >=25.1, <26",  # Code formatter
@@ -97,6 +98,7 @@ exclude = [
 target-version = "py312"
 
 [tool.ruff.lint]
+# Never enforce `I001` (unsorted import). Already handle with isort
 # Never enforce `E501` (line length violations). Already handle with black
 # Never enforce `F821` (Undefined name `null`). incorrect issue with notebook
 # Never enforce `D213` (Multi-line docstring summary should start at the second line) conflict with our docstring convention
@@ -107,7 +109,7 @@ target-version = "py312"
 # Never enforce `D407` (Missing dashed underline after section) 
 # Never enforce `D408` (Section underline should be in the line following the section’s name) 
 # Never enforce `D409` (Section underline should match the length of its name)
-ignore = ["D203", "E501", "F821", "D205", "D213" , "D211", "G004", "TRY003", "D104", "D407", "D408", "D409"]
+ignore = ["I001", "D203", "E501", "F821", "D205", "D213" , "D211", "G004", "TRY003", "D104", "D407", "D408", "D409"]
 select = ["E", "F", "W", "D", "G", "T", "B", "C", "N", "I", "S"]
 
 [tool.mypy]

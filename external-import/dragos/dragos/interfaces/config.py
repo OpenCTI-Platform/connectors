@@ -5,7 +5,7 @@ To develop an adapter based on it simply implement the abstract properties.
 """
 
 from abc import ABC, abstractmethod
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from logging import getLogger
 from typing import Any, Literal, Optional, Self
 
@@ -15,6 +15,7 @@ from pydantic import (
     HttpUrl,
     SecretStr,
     ValidationError,
+    field_validator,
     model_validator,
 )
 
@@ -27,7 +28,7 @@ class ConfigRetrievalError(Exception):
     """Known errors wrapper for config loaders."""
 
 
-class _ConfigLoaderOCTI(ABC, FrozenBaseModel):
+class ConfigLoaderOCTI(ABC, FrozenBaseModel):
     '''Interface for loading OpenCTI dedicated configuration.
 
     Examples:
@@ -82,7 +83,7 @@ class _ConfigLoaderOCTI(ABC, FrozenBaseModel):
         pass
 
 
-class _ConfigLoaderConnector(ABC, FrozenBaseModel):
+class ConfigLoaderConnector(ABC, FrozenBaseModel):
     """Interface for loading connector dedicated configuration."""
 
     id: str = Field(
@@ -111,27 +112,27 @@ class _ConfigLoaderConnector(ABC, FrozenBaseModel):
         description="Duration between two scheduled runs of the connector (ISO format).",
     )
     queue_threshold: Optional[int] = Field(
-        ...,
+        None,
         description="Connector queue max size in Mbytes. Default to 500.",  # default handled by PyCTI, see OpenCTIHelper
     )
     run_and_terminate: Optional[bool] = Field(
-        ...,
+        None,
         description="Connector run-and-terminate flag.",
     )
     send_to_queue: Optional[bool] = Field(
-        ...,
+        True,
         description="Connector send-to-queue flag.",
     )
     send_to_directory: Optional[bool] = Field(
-        ...,
+        None,
         description="Connector send-to-directory flag.",
     )
     send_to_directory_path: Optional[str] = Field(
-        ...,
+        None,
         description="Connector send-to-directory path.",
     )
     send_to_directory_retention: Optional[int] = Field(
-        ...,
+        None,
         description="Connector send-to-directory retention.",
     )
 
@@ -220,20 +221,24 @@ class _ConfigLoaderConnector(ABC, FrozenBaseModel):
             or self.send_to_directory_retention is None
         )
         if missing_directory_path_or_retention_value:
-            raise ValueError(
+            raise ConfigRetrievalError(
                 "Missing send_to_directory_path and/or send_to_directory_retention values."
             )
 
-        missing_send_to_directory_value = self.send_to_directory is None and (
+        missing_send_to_directory_value = (
+            self.send_to_directory is None or self.send_to_directory is False
+        ) and (
             self.send_to_directory_path is not None
             or self.send_to_directory_retention is not None
         )
         if missing_send_to_directory_value:
-            raise ValueError("Missing send_to_directory value.")
+            raise ConfigRetrievalError(
+                "send_to_directory_path or send_to_directory_retention values should not be set if send_to_directory is False."
+            )
         return self
 
 
-class _ConfigLoaderDragos(ABC, FrozenBaseModel):
+class ConfigLoaderDragos(ABC, FrozenBaseModel):
     """Interface for loading Dragos dedicated configuration."""
 
     api_base_url: HttpUrl = Field(
@@ -244,11 +249,11 @@ class _ConfigLoaderDragos(ABC, FrozenBaseModel):
         ...,
         description="Dragos API token.",
     )
-    import_start_date: AwareDatetime = Field(
+    import_start_date: AwareDatetime | timedelta = Field(
         ...,
         description="Start date of first import (ISO format).",
     )
-    tlp_level: Literal["clear", "green", "amber", "amber+strict", "red"] = Field(
+    tlp_level: Literal["white", "green", "amber", "amber+strict", "red"] = Field(
         ...,
         description="TLP level to apply on objects imported into OpenCTI.",
     )
@@ -285,16 +290,29 @@ class _ConfigLoaderDragos(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _tlp_level(self) -> Literal["clear", "green", "amber", "amber+strict", "red"]:
+    def _tlp_level(self) -> str:
         pass
+
+    @field_validator("import_start_date", mode="after")
+    @classmethod
+    def _convert_import_start_date_relative_to_utc_datetime(
+        cls, value: AwareDatetime | timedelta
+    ) -> AwareDatetime:
+        """Allow relative import_start_date values (timedelta)."""
+        if isinstance(value, timedelta):
+            logger.info(
+                msg="Converting relative import_start_date to UTC datetime.",
+            )
+            return datetime.now(tz=timezone.utc) - value
+        return value
 
 
 class ConfigLoader(ABC, FrozenBaseModel):
     """Interface for loading configuration settings."""
 
-    opencti: _ConfigLoaderOCTI = Field(..., description="OpenCTI config.")
-    connector: _ConfigLoaderConnector = Field(..., description="Connector config.")
-    dragos: _ConfigLoaderDragos = Field(..., description="Dragos config.")
+    opencti: ConfigLoaderOCTI = Field(..., description="OpenCTI config.")
+    connector: ConfigLoaderConnector = Field(..., description="Connector config.")
+    dragos: ConfigLoaderDragos = Field(..., description="Dragos config.")
 
     def __init__(self) -> None:
         """Initialize configuration loader."""
@@ -312,17 +330,17 @@ class ConfigLoader(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _opencti(self) -> _ConfigLoaderOCTI:
+    def _opencti(self) -> ConfigLoaderOCTI:
         pass
 
     @property
     @abstractmethod
-    def _connector(self) -> _ConfigLoaderConnector:
+    def _connector(self) -> ConfigLoaderConnector:
         pass
 
     @property
     @abstractmethod
-    def _dragos(self) -> _ConfigLoaderDragos:
+    def _dragos(self) -> ConfigLoaderDragos:
         pass
 
     def to_dict(self, token_as_plaintext: bool = False) -> dict[str, Any]:
