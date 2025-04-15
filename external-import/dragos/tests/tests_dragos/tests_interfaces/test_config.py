@@ -6,15 +6,16 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from dragos.interfaces.config import (
     ConfigLoader,
+    ConfigLoaderConnector,
+    ConfigLoaderDragos,
+    ConfigLoaderOCTI,
     ConfigRetrievalError,
-    _ConfigLoaderConnector,
-    _ConfigLoaderDragos,
-    _ConfigLoaderOCTI,
 )
+from freezegun import freeze_time
 from pydantic import ValidationError
 
 
-class StubConfigLoaderOCTI(_ConfigLoaderOCTI):
+class StubConfigLoaderOCTI(ConfigLoaderOCTI):
     """Stub adapter for testing purpose."""
 
     @property
@@ -26,7 +27,7 @@ class StubConfigLoaderOCTI(_ConfigLoaderOCTI):
         return "api-token"
 
 
-class StubConfigLoaderConnector(_ConfigLoaderConnector):
+class StubConfigLoaderConnector(ConfigLoaderConnector):
     """Stub adapter for testing purpose."""
 
     @property
@@ -59,7 +60,7 @@ class StubConfigLoaderConnector(_ConfigLoaderConnector):
 
     @property
     def _send_to_queue(self):
-        return False
+        return True
 
     @property
     def _send_to_directory(self):
@@ -67,14 +68,14 @@ class StubConfigLoaderConnector(_ConfigLoaderConnector):
 
     @property
     def _send_to_directory_path(self):
-        return "/path/to/dir"
+        return None
 
     @property
     def _send_to_directory_retention(self):
-        return 0
+        return None
 
 
-class StubConfigLoaderDragos(_ConfigLoaderDragos):
+class StubConfigLoaderDragos(ConfigLoaderDragos):
     """Stub adapter for testing purpose."""
 
     @property
@@ -95,6 +96,8 @@ class StubConfigLoaderDragos(_ConfigLoaderDragos):
 
 
 class StubConfigLoader(ConfigLoader):
+    """Stub adapter for testing purpose."""
+
     @property
     def _opencti(self):
         return StubConfigLoaderOCTI()
@@ -111,13 +114,14 @@ class StubConfigLoader(ConfigLoader):
 @pytest.mark.parametrize(
     "interface",
     [
-        pytest.param(_ConfigLoaderOCTI, id="_ConfigLoaderOCTI"),
-        pytest.param(_ConfigLoaderConnector, id="_ConfigLoaderConnector"),
-        pytest.param(_ConfigLoaderDragos, id="_ConfigLoaderDragos"),
+        pytest.param(ConfigLoaderOCTI, id="_ConfigLoaderOCTI"),
+        pytest.param(ConfigLoaderConnector, id="_ConfigLoaderConnector"),
+        pytest.param(ConfigLoaderDragos, id="_ConfigLoaderDragos"),
         pytest.param(ConfigLoader, id="ConfigLoader"),
     ],
 )
 def test_interface_is_abstract(interface):
+    """Test that the interface is an abstract class."""
     # Given: An interface class
     # When: Checking type of interface
     # Then: It should be a ABC subclass
@@ -180,24 +184,26 @@ def test_config_loader_connector_has_correct_attributes():
     stub_config_loader_connector = StubConfigLoaderConnector()
 
     # Then: The instance should have the correct attributes
-    assert stub_config_loader_connector.id == "uuid"  # noqa: S101
-    assert (
+    assert (  # noqa: S101  # we indeed call assert in test
+        stub_config_loader_connector.id == "uuid"
+    )
+    assert (  # noqa: S101 # we indeed call assert in test
         stub_config_loader_connector.type == "EXTERNAL_IMPORT"
-    )  # hardcoded  # noqa: S101
+    )  # noqa: S101
     assert stub_config_loader_connector.name == "Stub Connector"  # noqa: S101
     assert stub_config_loader_connector.scope == ["stub"]  # noqa: S101
     assert stub_config_loader_connector.log_level == "error"  # noqa: S101
-    assert stub_config_loader_connector.duration_period == timedelta(
+    assert stub_config_loader_connector.duration_period == timedelta(  # noqa: S101
         minutes=5
-    )  # noqa: S101
+    )
     assert stub_config_loader_connector.queue_threshold == 0  # noqa: S101
     assert stub_config_loader_connector.run_and_terminate is False  # noqa: S101
-    assert stub_config_loader_connector.send_to_queue is False  # noqa: S101
+    assert stub_config_loader_connector.send_to_queue is True  # noqa: S101
     assert stub_config_loader_connector.send_to_directory is False  # noqa: S101
-    assert (
-        stub_config_loader_connector.send_to_directory_path == "/path/to/dir"
-    )  # noqa: S101
-    assert stub_config_loader_connector.send_to_directory_retention == 0  # noqa: S101
+    assert stub_config_loader_connector.send_to_directory_path is None  # noqa: S101
+    assert (  # noqa: S101
+        stub_config_loader_connector.send_to_directory_retention is None
+    )
 
 
 def test_config_loader_connector_raises_config_retrieval_error_with_incorrect_attributes():
@@ -241,16 +247,50 @@ def test_config_loader_dragos_has_correct_attributes():
     stub_config_loader_dragos = StubConfigLoaderDragos()
 
     # Then: The instance should have the correct attributes
-    assert (  # noqa: S101
+    assert (  # noqa: S101 # we indeed call assert in test
         str(stub_config_loader_dragos.api_base_url) == "http://localhost:8080/"
     )  # trailing slash is coming from URL object serialization
-    assert (
+    assert (  # noqa: S101
         stub_config_loader_dragos.api_token.get_secret_value() == "api-token"
-    )  # noqa: S101
+    )
     assert stub_config_loader_dragos.import_start_date == datetime(  # noqa: S101
         1970, 1, 1, 0, 0, 0, tzinfo=timezone.utc
     )
     assert stub_config_loader_dragos.tlp_level == "amber"  # noqa: S101
+
+
+@freeze_time("2010-01-01T01:00:00", tz_offset=2)  # CEST
+def test_config_dragos_import_start_handless_relative_import_start_date():
+    """Test that the _ConfigLoaderDragos handles relative import start date."""
+
+    # Given: Valid implementation of ConfigLoaderDragos
+    # When: Instantiating StubConfigLoaderDragos with relative import start date
+    class StubConfigLoaderDragos(ConfigLoaderDragos):
+        """Stub adapter for testing purpose."""
+
+        @property
+        def _api_base_url(self):
+            return "http://localhost:8080"
+
+        @property
+        def _api_token(self):
+            return "api-token"
+
+        @property
+        def _import_start_date(self):
+            return "PT5M"  # Relative import start date
+
+        @property
+        def _tlp_level(self):
+            return "amber"
+
+    stub_config_loader_dragos = StubConfigLoaderDragos()
+
+    # Then: The instance should have the correct attributes
+    assert (  # noqa: S101 # we indeed call assert in test
+        stub_config_loader_dragos.import_start_date
+        == datetime.now(tz=timezone.utc) - timedelta(minutes=5)
+    )
 
 
 def test_config_loader_dragos_raises_config_retrieval_error_with_incorrect_attributes():
@@ -275,12 +315,12 @@ def test_config_loader_has_correct_attributes():
     stub_config = StubConfigLoader()
 
     # Then: The instance should have the correct attributes
-    assert (
+    assert (  # noqa: S101 we indeed call assert in test
         isinstance(stub_config.opencti, StubConfigLoaderOCTI) is True
-    )  # noqa: S101 we indeed call assert in test
-    assert (
+    )
+    assert (  # noqa: S101
         isinstance(stub_config.connector, StubConfigLoaderConnector) is True
-    )  # noqa: S101
+    )
     assert isinstance(stub_config.dragos, StubConfigLoaderDragos) is True  # noqa: S101
 
 
