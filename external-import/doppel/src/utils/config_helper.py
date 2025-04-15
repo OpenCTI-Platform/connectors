@@ -29,7 +29,7 @@ def validate_required_string(value, name):
     if not value:
         raise ValueError(f"Missing required configuration: {name}")
     return value
-
+    
 
 def load_connector_config(config, helper):
     try:
@@ -48,11 +48,14 @@ def load_connector_config(config, helper):
         retry_delay = validate_required_positive_integer(retry_delay, "RETRY_DELAY")
         historical_days = validate_required_positive_integer(historical_days, "HISTORICAL_POLLING_DAYS")
 
-        update_existing = (
-            update_existing_raw.lower() == "true"
-            if isinstance(update_existing_raw, str)
-            else bool(update_existing_raw)
-        )
+        # Validate and parse boolean string
+        if isinstance(update_existing_raw, str):
+            update_existing_lower = update_existing_raw.strip().lower()
+            if update_existing_lower not in ["true", "false"]:
+                raise ValueError(f"UPDATE_EXISTING_DATA must be 'true' or 'false'. Got: {update_existing_raw}")
+            update_existing = update_existing_lower == "true"
+        else:
+            update_existing = bool(update_existing_raw)
 
         return {
             "API_KEY": api_key,
