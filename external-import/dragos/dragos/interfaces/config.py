@@ -112,27 +112,27 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
         description="Duration between two scheduled runs of the connector (ISO format).",
     )
     queue_threshold: Optional[int] = Field(
-        ...,
+        None,
         description="Connector queue max size in Mbytes. Default to 500.",  # default handled by PyCTI, see OpenCTIHelper
     )
     run_and_terminate: Optional[bool] = Field(
-        ...,
+        None,
         description="Connector run-and-terminate flag.",
     )
     send_to_queue: Optional[bool] = Field(
-        ...,
+        True,
         description="Connector send-to-queue flag.",
     )
     send_to_directory: Optional[bool] = Field(
-        ...,
+        None,
         description="Connector send-to-directory flag.",
     )
     send_to_directory_path: Optional[str] = Field(
-        ...,
+        None,
         description="Connector send-to-directory path.",
     )
     send_to_directory_retention: Optional[int] = Field(
-        ...,
+        None,
         description="Connector send-to-directory retention.",
     )
 
@@ -226,12 +226,10 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
             )
 
         missing_send_to_directory_value = (
-            self.send_to_directory is None
-            or self.send_to_directory is False
-            and (
-                self.send_to_directory_path is not None
-                or self.send_to_directory_retention is not None
-            )
+            self.send_to_directory is None or self.send_to_directory is False
+        ) and (
+            self.send_to_directory_path is not None
+            or self.send_to_directory_retention is not None
         )
         if missing_send_to_directory_value:
             raise ConfigRetrievalError(
