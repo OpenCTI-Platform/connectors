@@ -1,0 +1,317 @@
+{
+    "ip": "TEST.IP.186.190",
+    "reputation": "malicious",
+    "ip_range": "TEST.IP.160.0/19",
+    "background_noise": "medium",
+    "confidence": "high",
+    "background_noise_score": 7,
+    "ip_range_score": 5,
+    "as_name": "M247 Europe SRL",
+    "as_num": 9009,
+    "ip_range_24": "TEST.IP.186.0/24",
+    "ip_range_24_reputation": "malicious",
+    "ip_range_24_score": 5,
+    "location": {
+        "country": "US",
+        "city": "New York",
+        "latitude": 40.7157,
+        "longitude": -74.0
+    },
+    "reverse_dns": null,
+    "behaviors": [
+        {
+            "name": "http:scan",
+            "label": "HTTP Scan",
+            "description": "IP has been reported for performing actions related to HTTP vulnerability scanning and discovery.",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "http:exploit",
+            "label": "HTTP Exploit",
+            "description": "IP has been reported for attempting to exploit a vulnerability in a web application.",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "http:bruteforce",
+            "label": "HTTP Bruteforce",
+            "description": "IP has been reported for performing a HTTP brute force attack (either generic HTTP probing or applicative related brute force).",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "tcp:scan",
+            "label": "TCP Scan",
+            "description": "IP has been reported for performing TCP port scanning.",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "http:spam",
+            "label": "Web form spam",
+            "description": "IP has been reported trying to perform spam via web forms/forums.",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "http:crawl",
+            "label": "HTTP Crawl",
+            "description": "IP has been reported for performing aggressive crawling of web applications.",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "http:dos",
+            "label": "HTTP DoS",
+            "description": "IP has been reported trying to perform denial of service attacks.",
+            "references": [
+
+            ]
+        }
+    ],
+    "history": {
+        "first_seen": "2023-06-13T19:00:00+00:00",
+        "last_seen": "2024-04-18T08:15:00+00:00",
+        "full_age": 311,
+        "days_age": 310
+    },
+    "classifications": {
+        "false_positives": [
+
+        ],
+        "classifications": [
+            {
+                "name": "community-blocklist",
+                "label": "CrowdSec Community Blocklist",
+                "description": "IP belongs to the CrowdSec Community Blocklist"
+            }
+        ]
+    },
+    "attack_details": [
+        {
+            "name": "crowdsecurity/CVE-2022-26134",
+            "label": "Confluence CVE-2022-26134",
+            "description": "Detect CVE-2022-26134 exploits",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "crowdsecurity/http-path-traversal-probing",
+            "label": "HTTP Path Traversal Exploit",
+            "description": "Detect path traversal attempt",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "crowdsecurity/http-sensitive-files",
+            "label": "Access to sensitive files over HTTP",
+            "description": "Detect attempt to access to sensitive files (.log, .db ..) or folders (.git)",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "crowdsecurity/http-probing",
+            "label": "HTTP Probing",
+            "description": "Detect site scanning/probing from a single ip",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "crowdsecurity/http-cve-2021-41773",
+            "label": "CVE-2021-41773",
+            "description": "cve-2021-41773",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "crowdsecurity/http-open-proxy",
+            "label": "HTTP Open Proxy Probing",
+            "description": "Detect scan for open proxy",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "firewallservices/pf-scan-multi_ports",
+            "label": "PF Scan Multi Ports",
+            "description": "ban IPs that are scanning us",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "crowdsecurity/http-sqli-probbing-detection",
+            "label": "SQL Injection Attempt",
+            "description": "A scenario that detects SQL injection probing with minimal false positives",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "crowdsecurity/http-backdoors-attempts",
+            "label": "Scanning for backdoors",
+            "description": "Detect attempt to common backdoors",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "crowdsecurity/http-bad-user-agent",
+            "label": "Bad User Agent",
+            "description": "Detect usage of bad User Agent",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "crowdsecurity/http-crawl-non_statics",
+            "label": "Aggressive Crawl",
+            "description": "Detect aggressive crawl on non static resources",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "crowdsecurity/http-admin-interface-probing",
+            "label": "HTTP Admin Interface Probing",
+            "description": "Detect generic HTTP admin interface probing",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "crowdsecurity/http-dos-swithcing-ua",
+            "label": "HTTP DOS with varying UA",
+            "description": "Detect DoS tools switching user-agent too fast",
+            "references": [
+
+            ]
+        }
+    ],
+    "target_countries": {
+        "US": 37,
+        "DE": 17,
+        "FR": 12,
+        "GB": 8,
+        "JP": 6,
+        "NL": 5,
+        "PL": 3,
+        "HU": 3,
+        "AU": 2,
+        "CH": 1
+    },
+    "mitre_techniques": [
+        {
+            "name": "T1110",
+            "label": "Brute Force",
+            "description": "Adversaries may use brute force techniques to gain access to accounts when passwords are unknown or when password hashes are obtained.",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "T1595",
+            "label": "Active Scanning",
+            "description": "Adversaries may execute active reconnaissance scans to gather information that can be used during targeting.",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "T1190",
+            "label": "Exploit Public-Facing Application",
+            "description": "Adversaries may attempt to exploit a weakness in an Internet-facing host or system to initially access a network.",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "T1589",
+            "label": "Gather Victim Identity Information",
+            "description": "Adversaries may gather information about the victim's identity that can be used during targeting.",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "T1018",
+            "label": "Remote System Discovery",
+            "description": "Adversaries may attempt to get a listing of other systems by IP address, hostname, or other logical identifier on a network that may be used for Lateral Movement from the current system.",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "T1046",
+            "label": "Network Service Discovery",
+            "description": "Adversaries may attempt to get a listing of services running on remote hosts and local network infrastructure devices, including those that may be vulnerable to remote software exploitation.",
+            "references": [
+
+            ]
+        },
+        {
+            "name": "T1498",
+            "label": "Network Denial of Service",
+            "description": "Adversaries may perform Network Denial of Service (DoS) attacks to degrade or block the availability of targeted resources to users.",
+            "references": [
+
+            ]
+        }
+    ],
+    "cves": [
+        "CVE-2021-41773",
+        "CVE-2022-26134"
+    ],
+    "scores": {
+        "overall": {
+            "aggressiveness": 5,
+            "threat": 2,
+            "trust": 5,
+            "anomaly": 1,
+            "total": 4
+        },
+        "last_day": {
+            "aggressiveness": 1,
+            "threat": 4,
+            "trust": 0,
+            "anomaly": 1,
+            "total": 2
+        },
+        "last_week": {
+            "aggressiveness": 1,
+            "threat": 4,
+            "trust": 2,
+            "anomaly": 1,
+            "total": 3
+        },
+        "last_month": {
+            "aggressiveness": 2,
+            "threat": 4,
+            "trust": 5,
+            "anomaly": 1,
+            "total": 4
+        }
+    },
+    "references": [
+        {
+            "name": "list:firehol_cybercrime",
+            "label": "Firehol cybercrime tracker list",
+            "description": "CyberCrime, a project tracking command and control. This list contains command and control IP addresses.",
+            "references": [
+                "https://iplists.firehol.org/?ipset=cybercrime"
+            ]
+        }
+    ]
+}

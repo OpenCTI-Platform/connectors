@@ -1,0 +1,16 @@
+services:
+  connector-hunt-io:
+    image: opencti/connector-hunt-io:6.3.13
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_NAME=Hunt IO
+      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,StixFile
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT24H
+
+      # Connector's custom execution parameters
+      - CONNECTOR_HUNT_UI_API_BASE_URL=${CONNECTOR_HUNT_UI_API_BASE_URL}
+      - CONNECTOR_HUNT_UI_API_KEY=${CONNECTOR_HUNT_UI_API_KEY}
+    restart: always

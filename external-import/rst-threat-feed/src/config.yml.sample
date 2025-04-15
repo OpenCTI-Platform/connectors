@@ -1,0 +1,33 @@
+opencti:
+  url: "http://opencti:8080"
+  token: "ChangeMe"
+
+connector:
+  id: "9288e3aa-3f94-4505-b31b-69585c47081b" # Valid UUIDv4
+  type: "EXTERNAL_IMPORT"
+  name: "RST Threat Feed"
+  scope: "application/json" # MIME type or SCO
+  log_level: "info"
+
+rst-threat-feed:
+  baseurl: "https://api.rstcloud.net/v1/"
+  apikey: "ChangeMe"
+  contimeout: 10
+  readtimeout: 30
+  retry: 5
+  interval: 86400
+  ssl_verify: true
+  min_score_import: 20  
+  latest: day #day, 1h, 4h, 12h
+  # allows to control what indicator types to consume or create separate connectors per indicator type
+  ip: true
+  domain: true
+  url: true
+  hash: true
+  # sets x_opencti_detection for each indicator type to true or false if more than the specified threshold
+  min_score_detection_ip: 45
+  min_score_detection_domain: 45
+  min_score_detection_url: 45
+  min_score_detection_hash: 45
+  only_new: true
+  only_attributed: false

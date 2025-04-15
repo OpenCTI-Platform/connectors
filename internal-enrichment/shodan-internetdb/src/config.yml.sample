@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+  json_logging: false
+
+connector:
+  id: "ChangeMe"
+  type: "INTERNAL_ENRICHMENT"
+  name: "Shodan InternetDB"
+  scope: "IPv4-Addr"
+  auto: true
+  log_level: "info"
+
+shodan:
+  max_tlp: "TLP:CLEAR"
+  ssl_verify: true
+

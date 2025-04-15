@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Silobreaker Cyber Threat Intelligence'
+  scope: 'silobreaker'
+  log_level: 'info'
+  duration_period: 'PT60M'
+
+silobreaker:
+  api_url: 'https://api.silobreaker.com'
+  api_key: 'ChangeMe'
+  api_shared: 'ChangeMe'
+  lists: '138809,96910,36592,55112,50774' # Infostealers and Keyloggers, RAT Malware, Ransomware, APTs, Threat Publications
+  import_start_date: '2024-09-01'
+  interval: 60 # Required, in minutes

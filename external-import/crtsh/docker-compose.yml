@@ -1,0 +1,26 @@
+version: '3'
+services:
+  connector-crtsh:
+    image: opencti/connector-crtsh:6.6.4
+    environment:
+      # Connector's definition parameters:
+      - CONNECTOR_NAME=${CONNECTOR_NAME}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE}
+      # Connector's generic execution parameters:
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL}
+      - CONNECTOR_RUN_EVERY=${CONNECTOR_RUN_EVERY}
+      # Connector's custom execution parameters:
+      # Domain to search for e.g., google.com
+      - CRTSH_DOMAIN=${CRTSH_DOMAIN}
+      # Comma separated list of labels e.g., crtsh,osint
+      - CRTSH_LABELS=${CRTSH_LABELS}
+      # TLP Marking Refs e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED
+      - CRTSH_MARKING_REFS=${CRTSH_MARKING_REFS}
+      # Filters epired certificates. One of the following: true, false
+      - CRTSH_IS_EXPIRED=${CRTSH_IS_EXPIRED}
+      # Applies a wildcard expression for the Domain. One of the following: true, false
+      - CRTSH_IS_WILDCARD=${CRTSH_IS_WILDCARD}
+    restart: always

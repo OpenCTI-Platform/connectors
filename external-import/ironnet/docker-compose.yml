@@ -1,0 +1,16 @@
+version: '3'
+services:
+  connector-ironnet:
+    image: opencti/connector-ironnet:6.6.4
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - "CONNECTOR_NAME=IronNet threat intel"
+      - CONNECTOR_SCOPE=ironnet
+      - CONNECTOR_LOG_LEVEL=error
+      - IRONNET_API_URL=https://api.threatanalysis.io/prod/all/1d/json
+      - IRONNET_API_KEY=ChangeMe
+      - IRONNET_CREATE_INDICATORS=true
+      - IRONNET_CREATE_IP_INDICATORS=true
+    restart: always

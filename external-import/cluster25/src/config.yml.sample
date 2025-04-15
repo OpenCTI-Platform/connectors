@@ -1,0 +1,25 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Cluster25'
+  scope: 'cluster25'
+  log_level: 'info'
+
+cluster25:
+  base_url: 'https://api.intelligence.cluster25.io/api/v1'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  indicator_types:
+    - "ipv4"
+    - "domain"
+    - "md5"
+    - "sha1"
+    - "sha256"
+    - "url"
+    - "email"
+    - "ipv6"
+    - "filename"

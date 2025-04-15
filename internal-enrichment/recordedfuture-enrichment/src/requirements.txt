@@ -1,0 +1,16 @@
+antlr4-python3-runtime
+chardet
+datefinder
+idna
+pika
+pycti
+python-dateutil
+pytz
+regex
+rfapi
+simplejson
+six
+sseclient
+stix2
+stix2-patterns
+urllib3

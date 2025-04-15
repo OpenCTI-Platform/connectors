@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Diode Import'
+  run_and_terminate: false
+  log_level: 'info'
+
+diode_import:
+  get_from_directory_path: '/path'
+  get_from_directory_retention: 7
+  applicant_mappings: "source_user_id1:target_user_id1,source_user_id2:target_user_id2"

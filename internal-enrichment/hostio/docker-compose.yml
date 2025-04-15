@@ -1,0 +1,24 @@
+version: '3'
+services:
+  connector-hostio:
+    image: opencti/connector-hostio:6.6.4
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=#Changeme
+      # Connector's definition parameters:
+      - CONNECTOR_NAME=hostio
+      - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name,IPv6-Addr
+      - CONNECTOR_ID=#Changeme
+      - CONNECTOR_CONFIDENCE_LEVEL=70 # From 0 (Unknown) to 100 (Fully trusted).
+      - CONNECTOR_LOG_LEVEL=error
+      # HostIO-Specific Parameters:
+      - HOSTIO_TOKEN=  # Token for HostIO or IPInfo API.
+      - HOSTIO_LIMIT=5  # Limit for returned results, update to match the page limit for your subscription (default 5 for Free subscription).
+      - HOSTIO_LABELS=hostio,osint  # Comma-separated list of labels to add to the entities. e.g., "hostio,osint"
+      - HOSTIO_MARKING_REFS=TLP:WHITE  # TLP Marking Reference e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED
+      - HOSTIO_TLP_MAX=TLP:AMBER  # Maximum TLP level to process, e.g., TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:RED
+    restart: always
+networks:
+  default:
+    external: true
+    name: docker_default

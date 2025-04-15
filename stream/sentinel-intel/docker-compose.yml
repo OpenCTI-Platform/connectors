@@ -1,0 +1,26 @@
+version: '3'
+services:
+  connector-sentinel-intel:
+    image: opencti/connector-sentinel-intel:6.6.4
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - "CONNECTOR_NAME=Microsoft Sentinel"
+      - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
+      - CONNECTOR_LOG_LEVEL=error
+      - SENTINEL_INTEL_TENANT_ID=ChangeMe # Azure Tentant ID
+      - SENTINEL_INTEL_CLIENT_ID=ChangeMe # Azure App Client ID
+      - SENTINEL_INTEL_CLIENT_SECRET=ChangeMe # Azure App Client Secret
+      - "SENTINEL_INTEL_TARGET_PRODUCT=Azure Sentinel" # "Azure Sentinel" or "Microsoft Defender ATP"
+      - SENTINEL_INTEL_LOGIN_URL=https://login.microsoft.com
+      - SENTINEL_INTEL_BASE_URL=https://graph.microsoft.com
+      - SENTINEL_INTEL_RESOURCE_PATH=/beta/security/tiIndicators
+      - SENTINEL_INTEL_EXPIRE_TIME=30 # Number of days for IOC to expire in Sentinel
+      - SENTINEL_INTEL_ACTION=alert # Optional: Setting this will override all alerts to be this action (unknown, allow, block, alert)
+      - SENTINEL_INTEL_TLP_LEVEL=amber # Optional: This will override all TLP submitted to Sentinel. (unknown, white, green, amber, red)
+      - SENTINEL_INTEL_PASSIVE_ONLY=false # Optional: Defaults to false.
+    restart: unless-stopped

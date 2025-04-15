@@ -1,0 +1,27 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'MISP Feed (Botvrij)'
+  scope: 'misp-feed-botvrij'
+  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: false
+  run_and_terminate: false
+  log_level: 'info'
+
+misp_feed:
+  url: 'https://www.botvrij.eu/data/feed-osint/'
+  ssl_verify: true
+  create_reports: true # Required, create report for MISP event
+  report_type: 'misp-event' # Report typpe to use for event
+  import_from_date: '2010-01-01' # Required, import all event from this date
+  create_indicators: true # Required, create indicators from attributes
+  create_observables: true # Required, create observables from attributes
+  create_object_observables: true # Required, create text observables for MISP objects
+  import_to_ids_no_score: 40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
+  import_unsupported_observables_as_text: false # Optional, import unsupported observable as x_opencti_text
+  import_with_attachments: true # Optional, try to import a PDF file from the attachment attribute
+  interval: 60 # Required, in minutes

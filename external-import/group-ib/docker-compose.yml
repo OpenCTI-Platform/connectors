@@ -1,0 +1,16 @@
+version: '3'
+services:
+  connector:
+    build: .
+    container_name: ${CONNECTOR_DOCKER_CONTAINER_NAME}
+    image: opencti/connector-group-ib:6.3.1
+    volumes:
+      - ./docs/:/opt/connector/docs/
+    env_file:
+      .env
+    restart: always
+
+networks:
+  default:
+    external: true
+    name: docker_default

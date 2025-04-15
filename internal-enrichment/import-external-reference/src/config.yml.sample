@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'ImportExternalReference'
+  scope: 'External-Reference'
+  auto: false # Enable/disable auto-import of file
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+import_external_reference:
+  import_as_pdf: true # Import as PDF file
+  import_as_md: true # Import as MarkDown file
+  import_pdf_as_md: true # If import_as_md is true, try to convert PDF as Markdown

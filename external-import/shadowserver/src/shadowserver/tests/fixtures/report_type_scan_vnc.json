@@ -1,0 +1,20 @@
+[
+    {
+        "asn": 98765,
+        "banner": "RFB 003.009",
+        "city": "LOS ANGELES",
+        "geo": "US",
+        "hostname": "123-456-789-012.biz.spectrum.com",
+        "hostname_source": "ptr",
+        "ip": "123.456.789.12",
+        "naics": 123456,
+        "port": 5901,
+        "product": "VNC protocol 3.9",
+        "protocol": "tcp",
+        "region": "CALIFORNIA",
+        "sector": "Communications, Service Provider, and Hosting Service",
+        "severity": "medium",
+        "tag": "vnc",
+        "timestamp": "2022-12-31 23:59:59Z"
+    }
+]

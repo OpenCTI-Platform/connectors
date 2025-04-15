@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Citalid'
+  scope: 'citalid'
+  run_and_terminate: false
+  log_level: 'info'
+
+citalid:
+  customer_sub_domain_url: 'https://ChangeMe.citalid.com'
+  user: 'ChangeMe'
+  password: 'ChangeMe'
+  interval: 24 # In hours

@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 67f792b7-5ac5-4f5b-87ef-ca395ffee3a3
+
+connector:
+  id: af24527e-857d-4b70-9803-e7fdfa8421ea
+  type: 'EXTERNAL_IMPORT'
+  name: 'Stopforumspam'
+  scope: 'stopforumspam'
+  confidence_level: 60 # From 0 (Unknown) to 100 (Fully trusted)
+  create_indicator: False
+  update_existing_data: false
+  log_level: 'info'
+
+phishunt:
+  url: 'https://www.stopforumspam.com/downloads/toxic_domains_whole_filtered_50000.txt'
+  create_indicators: True
+  interval: 2 # In days, must be strictly greater than 1

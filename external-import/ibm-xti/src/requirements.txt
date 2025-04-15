@@ -1,0 +1,6 @@
+pycti==6.6.4
+validators==0.34.0
+stix2
+taxii2-client
+markdown-it-py
+cvss

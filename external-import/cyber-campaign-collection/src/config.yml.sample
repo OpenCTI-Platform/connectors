@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Cyber Monitor Github'
+  scope: 'report'
+  run_and_terminate: false
+  log_level: 'info'
+
+cyber_monitor:
+  github_token: '' # If not provided, rate limit will be very low
+  from_year: '2018'
+  interval: 4 # In days, must be strictly greater than 1

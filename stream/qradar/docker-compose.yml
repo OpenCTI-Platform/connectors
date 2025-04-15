@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-qradar:
-    image: opencti/connector-qradar:6.2.14
+    image: opencti/connector-qradar:6.6.4
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -12,10 +12,9 @@ services:
       - CONNECTOR_NAME=OpenCTI QRADAR Connector
       - CONNECTOR_SCOPE=qradar
       - CONNECTOR_LOG_LEVEL=error
-      - QRADAR_URL=https://QRADAR1.changeme.com
-      - QRADAR_URL_REFERENCE=ChangeMe # Default /api/reference_data_collections/sets
-      - QRADAR_TOKEN=Token1
+      - QRADAR_URL=https://qradar1.changeme.com
       - QRADAR_SSL_VERIFY=true
-      - QRADAR_REFERENCE_NAME=opencti
+      - QRADAR_TOKEN=ChangeMe
+      - QRADAR_REFERENCE_NAME=OpenCTI
       - QRADAR_IGNORE_TYPES=label,marking-definition,identity
     restart: always

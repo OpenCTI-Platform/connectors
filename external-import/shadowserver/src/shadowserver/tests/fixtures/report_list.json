@@ -1,0 +1,98 @@
+[
+    {
+        "file": "2024-01-04-blocklist-company-ip.csv",
+        "id": "**************",
+        "report": "company",
+        "timestamp": "2024-01-04",
+        "type": "blocklist",
+        "url": "https://www.shadowserver.org/what-we-do/network-reporting/blocklist-report/"
+    },
+    {
+        "file": "2024-01-04-device_id-company-ip.csv",
+        "id": "**************",
+        "report": "company",
+        "timestamp": "2024-01-04",
+        "type": "device_id",
+        "url": "https://www.shadowserver.org/what-we-do/network-reporting/device-identification-report/"
+    },
+    {
+        "file": "2024-01-04-scan_cwmp-company-ip.csv",
+        "id": "**************",
+        "report": "company",
+        "timestamp": "2024-01-04",
+        "type": "scan_cwmp",
+        "url": "https://www.shadowserver.org/what-we-do/network-reporting/open-cwmp-report/"
+    },
+    {
+        "file": "2024-01-04-scan_http-company-ip.csv",
+        "id": "**************",
+        "report": "company",
+        "timestamp": "2024-01-04",
+        "type": "scan_http",
+        "url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-http-report/"
+    },
+    {
+        "file": "2024-01-04-scan_ics-company-ip.csv",
+        "id": "**************",
+        "report": "company",
+        "timestamp": "2024-01-04",
+        "type": "scan_ics",
+        "url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-ics-report/"
+    },
+    {
+        "file": "2024-01-04-scan_ntp-company-ip.csv",
+        "id": "**************",
+        "report": "company",
+        "timestamp": "2024-01-04",
+        "type": "scan_ntp",
+        "url": "https://www.shadowserver.org/what-we-do/network-reporting/ntp-version-report/"
+    },
+    {
+        "file": "2024-01-04-scan_snmp-company-ip.csv",
+        "id": "**************",
+        "report": "company",
+        "timestamp": "2024-01-04",
+        "type": "scan_snmp",
+        "url": "https://www.shadowserver.org/what-we-do/network-reporting/open-snmp-report/"
+    },
+    {
+        "file": "2024-01-04-scan_ssh-company-ip.csv",
+        "id": "**************",
+        "report": "company",
+        "timestamp": "2024-01-04",
+        "type": "scan_ssh",
+        "url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-ssh-report/"
+    },
+    {
+        "file": "2024-01-04-scan_ssl-company-ip.csv",
+        "id": "**************",
+        "report": "company",
+        "timestamp": "2024-01-04",
+        "type": "scan_ssl",
+        "url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-ssl-report/"
+    },
+    {
+        "file": "2024-01-04-scan_ssl_freak-company-ip.csv",
+        "id": "**************",
+        "report": "company",
+        "timestamp": "2024-01-04",
+        "type": "scan_ssl_freak",
+        "url": "https://www.shadowserver.org/what-we-do/network-reporting/ssl-freak-report/"
+    },
+    {
+        "file": "2024-01-04-scan_ssl_poodle-company-ip.csv",
+        "id": "**************",
+        "report": "company",
+        "timestamp": "2024-01-04",
+        "type": "scan_ssl_poodle",
+        "url": "https://www.shadowserver.org/what-we-do/network-reporting/ssl-poodle-report/"
+    },
+    {
+        "file": "2024-01-04-scan_vnc-company-ip.csv",
+        "id": "**************",
+        "report": "company",
+        "timestamp": "2024-01-04",
+        "type": "scan_vnc",
+        "url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-vnc-report/"
+    }
+]

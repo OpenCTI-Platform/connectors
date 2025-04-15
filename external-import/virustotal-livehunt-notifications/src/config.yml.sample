@@ -1,0 +1,32 @@
+opencti:
+  url: 'ChangeMe'
+  token: 'ChangeMe'
+
+connector:
+  id: 'virustotal_livehunt_notifications'
+  type: 'EXTERNAL_IMPORT'
+  name: 'VirusTotal Livehunt Notifications'
+  scope: 'StixFile,Indicator,Incident'
+  create_indicator: False
+  log_level: 'info'
+
+virustotal_livehunt_notifications:
+  api_key: 'ChangeMe' # Private API Key
+  interval_sec: 300 # Time to wait in seconds between subsequent requests
+  create_alert: True # If True, create alerts (incident) from the notification
+  extensions: 'exe,dll' # (Optional) Comma separated filter to only download files matching these extensions
+  min_file_size: 1000 # (Optional) Don't download files smaller than this many bytes
+  max_file_size: 52428800 # (Optional) Don't download files larger than this many bytes
+  max_age_days: 3  # Create the alert only if the first submission is not older than `max_old_days` to avoid creating alerts with re-submissions
+  min_positives: 5 # (Optional) Don't download files with less than this many vendors marking malicious
+  create_file: True # If True, create a file object and link it to the alert
+  upload_artifact: False # If True, upload the artifact to opencti
+  create_yara_rule: True # If True, create a yara indicator and link it to the alert and the file
+  delete_notification: False # If True, remove the notification on VT
+  filter_with_tag: "" # (Optional) Tag to filter the notifications, empty = no filtering
+  alert_prefix: 'VT' # Prefix that is added in alert title
+  av_list: 'Avast,BitDefender,ClamAV,CrowdStrike,Cybereason,ESET-NOD32,FireEye,Fortinet,Kaspersky,Paloalto,Symantec,TrendMicro' # List of AVs to add in description
+  yara_label_prefix: 'vt:yara:' # Prefix that is added in yara label
+  livehunt_label_prefix: 'vt:lh:' # Prefix that is added in livehunt label
+  livehunt_tag_prefix: '' # Prefix used to state that the tag is imported from Livehunt
+  enable_label_enrichment: True # Add livehunt name and matched yara rules label to the alert

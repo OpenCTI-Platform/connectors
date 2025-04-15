@@ -1,0 +1,25 @@
+services:
+  connector-stream-importer:
+    image: opencti/connector-stream-importer:6.6.4
+    environment:
+      # Connector's definition parameters:
+      - CONNECTOR_NAME=StreamImporterConnector
+      - CONNECTOR_SCOPE=stream-importer
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      # Connector's generic execution parameters:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_RUN_EVERY=1m
+      # Connector's custom execution parameters:
+      - PERFECT_SYNC=false
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_SRC_PATH=opencti-export/opencti-stream
+      - MINIO_DST_PATH=opencti-export-done
+      - MINIO_ACCESS_KEY=opencti
+      - MINIO_SECRET_KEY=ChangeMe
+      - MINIO_SECURE=false
+      - MINIO_CERT_CHECK=false
+    restart: always

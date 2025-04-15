@@ -1,0 +1,28 @@
+version: "3"
+services:
+  connector-rst-report-hub:
+    image: opencti/connector-rst-report-hub:6.6.4
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=aa817c8b-abae-460a-9ebc-97b1551e70ee
+      - CONNECTOR_NAME=RST Report Hub
+      - CONNECTOR_SCOPE=application/json,application/pdf
+      - CONNECTOR_LOG_LEVEL=info
+      - RST_REPORT_HUB_BASE_URL=https://api.rstcloud.net/v1
+      - RST_REPORT_HUB_API_KEY=${RST_REPORT_HUB_API_KEY}
+      - RST_REPORT_HUB_CONNECTION_TIMEOUT=30
+      - RST_REPORT_HUB_READ_TIMEOUT=30
+      - RST_REPORT_HUB_RETRY_DELAY=30
+      - RST_REPORT_HUB_RETRY_ATTEMPTS=5
+      - RST_REPORT_HUB_IMPORT_START_DATE=${RST_REPORT_HUB_STARTDATE}
+      - RST_REPORT_HUB_FETCH_INTERVAL=300
+      - RST_REPORT_HUB_LANGUAGE=eng
+      - RST_REPORT_HUB_CREATE_OBSERVABLES=false
+      - RST_REPORT_HUB_CREATE_RELATED_TO=true
+      - RST_REPORT_HUB_CREATE_CUSTOM_TTPS=true
+      - RST_REPORT_HUB_SET_DETECTION_FLAG=false
+      - RST_REPORT_HUB_REPORT_LABELS_DISABLED=label_you_do_not_want_to_be_populated,another_label_you_want_to_avoid
+    restart: always
+    depends_on:
+      - opencti

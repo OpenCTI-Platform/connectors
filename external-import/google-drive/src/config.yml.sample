@@ -1,0 +1,27 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Google Drive'
+  scope: 'google-drive'
+  confidence_level: 30 # From 0 (Unknown) to 100 (Fully trusted)
+  run_and_terminate: false
+  log_level: 'info'
+
+google_drive:
+  project_id: ''
+  private_key_id: ''
+  private_key: ''
+  client_email: ''
+  client_id: ''
+  client_x509_cert_url: ''
+  folder_name: ''
+  types: "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" # Separate by commas
+  report_author: ""
+  report_type: "threat-report"
+  report_marking: "TLP:AMBER"
+  report_labels: "google-drive,import" # Separated by commas
+  interval: 5 # In minutes

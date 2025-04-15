@@ -1,0 +1,17 @@
+version: '3'
+services:
+  connector-citalid:
+    image: opencti/connector-citalid:6.6.4
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Citalid
+      - CONNECTOR_SCOPE=citalid
+      - CONNECTOR_RUN_AND_TERMINATE=false
+      - CONNECTOR_LOG_LEVEL=error
+      - CITALID_CUSTOMER_SUB_DOMAIN_URL='https://ChangeMe.citalid.com'
+      - CITALID_USER=ChangeMe
+      - CITALID_PASSWORD=ChangeMe
+      - CITALID_INTERVAL=24 # In hours
+    restart: always

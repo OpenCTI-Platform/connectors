@@ -207,6 +207,10 @@ h4 {
   float: right;
 }
 
+#content img {
+  max-width: 100%;
+}
+
 section {
   padding-top: 1cm;
 }
@@ -231,7 +235,7 @@ table {
 }
 tr,
 td {
-  word-break: break-all;
+  word-break: break-word;
 }
 td {
   padding: 15px;

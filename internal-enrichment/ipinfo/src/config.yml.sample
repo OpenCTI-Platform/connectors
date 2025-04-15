@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'IpInfo'
+  scope: 'IPv4-Addr,IPv6-Addr'
+  auto: true # Enable/disable auto-enrichment of observables
+  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+ipinfo:
+  token: 'ChangeMe'
+  max_tlp: 'TLP:AMBER'
+  use_asn_name: true      # Set false if you want ASN name to be just the number e.g. AS8075

@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-rst-noise-control:
+    image: opencti/connector-rst-noise-control:6.6.4
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=3a3be5a8-775c-4b11-b7a8-6373ac7cd844
+      - CONNECTOR_NAME=RST Noise Control
+      - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name,Url,StixFile,indicator
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_LOG_LEVEL=error
+      - RST_NOISE_CONTROL_BASE_URL=https://api.rstcloud.net/v1
+      - RST_NOISE_CONTROL_API_KEY=${RST_NOISE_CONTROL_API_KEY}
+      - RST_NOISE_CONTROL_MAX_TLP=TLP:AMBER+STRICT
+      - RST_NOISE_CONTROL_UPDATE_CONFIDENCE=true
+      - RST_NOISE_CONTROL_UPDATE_SCORE=true
+      - RST_NOISE_CONTROL_CHANGE_ACTION_SCORE_CHANGE=10     # reduce score and confidence by M
+      - RST_NOISE_CONTROL_DROP_ACTION_SCORE_CHANGE=50       # reduce score and confidence by N
+      - RST_NOISE_CONTROL_DROP_ACTION_DETECTION_FLAG=true   # if action is Drop, unset the detection flag
+    depends_on:
+      - opencti

@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'Shodan'
+  scope: 'IPv4-Addr,Indicator'
+  auto: true # Enable/disable auto-enrichment of observables
+  log_level: 'info'
+
+shodan:
+  token: 'ChangeMe'
+  max_tlp: 'TLP:AMBER'
+  default_score: 50
+  import_search_results: true
+  create_note: true
+  use_isp_name_for_asn: false

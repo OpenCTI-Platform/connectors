@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Common Vulnerabilities and Exposures'
+  scope: 'identity,vulnerability'
+  run_and_terminate: false
+  log_level: 'info'
+
+cve:
+  base_url: 'https://services.nvd.nist.gov/rest/json/cves' # Required
+  api_key: 'ChangeMe' # Required
+  interval: 6 # Required, in hours advice min 2
+  max_date_range: 120 # In days, max 120
+  maintain_data: True # Required, retrieve only updated data
+  pull_history: False # If True, history_start_year is required
+  history_start_year: 2019 # Required if pull_history is True, min 2019 (see documentation CVE and CVSS base score V3.1)
+

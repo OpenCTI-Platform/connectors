@@ -1,0 +1,20 @@
+version: '3'
+services:
+  connector-reversinglabs-spectra-analyze:
+    image: opencti/connector-reversinglabs-spectra-analyze
+    environment:
+      - CONNECTOR_NAME=ReversingLabs Spectra Analyze
+      - CONNECTOR_SCOPE=Artifact,Url,StixFile,File,IPv4-Addr,Domain-Name
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=Changeme
+      - CONNECTOR_ID=Changeme
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted).
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_AUTO=false
+      - REVERSINGLABS_SPECTRA_ANALYZE_URL=Changeme
+      - REVERSINGLABS_SPECTRA_ANALYZE_TOKEN=Changeme
+      - REVERSINGLABS_MAX_TLP=TLP:AMBER
+      - REVERSINGLABS_SANDBOX_OS=windows10
+      - REVERSINGLABS_CLOUD_ANALYSIS=true
+      - REVERSINGLABS_CREATE_INDICATORS=true
+    restart: always

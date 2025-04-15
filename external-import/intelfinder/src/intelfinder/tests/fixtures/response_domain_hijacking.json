@@ -1,0 +1,775 @@
+{
+    "code": 0,
+    "error": "",
+    "alerts_number": 8,
+    "alerts": [
+        {
+            "_id": "6564772a80467d7447057cc3",
+            "subscription": "Domain Hijacking",
+            "priority": 2,
+            "status": 1,
+            "status_change": null,
+            "status_changer": null,
+            "update_id": "6564772a80467d7447057cc3",
+            "last_update": "2023-11-27 11:02:02",
+            "keyword": "company.biz",
+            "added_on": "2023-11-27 11:02:02",
+            "title": "Potential Domain Hijacking - company.biz",
+            "description": "The domain <strong><u>company.biz</strong></u> is pointing to unfamiliar IP addresses which do not  appear within the IP ranges provided as assets.<br>This may indicate that the domain has been hijacked by cybercriminals, who altered the A records associated with the domain, resulting in the domain pointing to a different website such as a Phishing attack. Alternatively, the website may have been legitimately moved to a new hosting provider, a CDN (Content Distribution Network) may host company's website on a new location, or the domain has expired.",
+            "details": "The domain is pointing to 3 suspected IP addresses, the details of which are provided below.<br>%elements%Following is a current screenshot of the site.",
+            "recommendation": "We recommend investigating whether the suspected IP addresses associated with the domain are legitimately used by company or its service providers. If the IP addresses are unfamiliar, we recommend checking whether the domain has expired.<br>If the domain is still owned by company, but it is pointing to an unfamiliar IP address, we recommend investigating the site now pointed to by the domain to determine the nature and severity of the threat. If a threat is identified, it is recommended to contact the domain registrar.<br>The details of the hosting providers that control the IP addresses are also provided in the details above in the event you wish to attempt to takedown the site.",
+            "base_elements": [
+                {
+                    "label": "Domain",
+                    "value": "company.biz"
+                },
+                {
+                    "label": "IP Address",
+                    "value": "8.8.8.8"
+                },
+                {
+                    "label": "IP Address 1",
+                    "value": "8.8.4.4"
+                },
+                {
+                    "label": "Hosting Company 1",
+                    "value": "Amazon Technologies Inc."
+                },
+                {
+                    "label": "Abuse Info 1",
+                    "value": "Amazon EC2 Abuse\n+1-206-555-0000\nabuse@amazonaws.com"
+                },
+                {
+                    "label": "Tech Info 1",
+                    "value": "Amazon EC2 Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "NOC Info 1",
+                    "value": "Amazon AWS Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "IP Address 2",
+                    "value": "1.1.1.1"
+                },
+                {
+                    "label": "Hosting Company 2",
+                    "value": "Amazon Technologies Inc."
+                },
+                {
+                    "label": "IP Address 3",
+                    "value": "2001:4860:4860::8888"
+                },
+                {
+                    "label": "Abuse Info 2",
+                    "value": "Amazon EC2 Abuse\n+1-206-555-0000\nabuse@amazonaws.com"
+                },
+                {
+                    "label": "Tech Info 2",
+                    "value": "Amazon EC2 Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "NOC Info 2",
+                    "value": "Amazon AWS Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "IP Address 3",
+                    "value": "4.4.4.4"
+                },
+                {
+                    "label": "Hosting Company 3",
+                    "value": "Amazon Technologies Inc."
+                },
+                {
+                    "label": "Abuse Info 3",
+                    "value": "Amazon EC2 Abuse\n+1-206-555-0000\nabuse@amazonaws.com"
+                },
+                {
+                    "label": "Tech Info 3",
+                    "value": "Amazon EC2 Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "NOC Info 3",
+                    "value": "Amazon AWS Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "Domain WHOIS",
+                    "value": "company.biz domain lookup results from whois.biz server:\n\nDomain Name: company.biz\nRegistry Domain ID: D43912762-BIZ\nRegistrar WHOIS Server: whois.comlaude.com\nRegistrar URL: www.comlaude.com\nUpdated Date: 2023-02-04T23:07:40Z\nCreation Date: 2011-03-02T22:09:18Z\nRegistry Expiry Date: 2024-03-01T23:59:59Z\nRegistrar: Nom-iq Ltd. dba COM LAUDE\nRegistrar IANA ID: 470\nRegistrar Abuse Contact Email: abuse@comlaude.com\nRegistrar Abuse Contact Phone: +44.2074218250\nDomain Status: clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited\nDomain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited\nDomain Status: clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited\nRegistry Registrant ID: REDACTED FOR PRIVACY\nRegistrant Name: REDACTED FOR PRIVACY\nRegistrant Organization: Whois Privacy - Com Laude\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant City: REDACTED FOR PRIVACY\nRegistrant State/Province:\nRegistrant Postal Code: REDACTED FOR PRIVACY\nRegistrant Country: GB\nRegistrant Phone: REDACTED FOR PRIVACY\nRegistrant Phone Ext: REDACTED FOR PRIVACY\nRegistrant Fax: REDACTED FOR PRIVACY\nRegistrant Fax Ext: REDACTED FOR PRIVACY\nRegistrant Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nRegistry Admin ID: REDACTED FOR PRIVACY\nAdmin Name: REDACTED FOR PRIVACY\nAdmin Organization: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin City: REDACTED FOR PRIVACY\nAdmin State/Province: REDACTED FOR PRIVACY\nAdmin Postal Code: REDACTED FOR PRIVACY\nAdmin Country: REDACTED FOR PRIVACY\nAdmin Phone: REDACTED FOR PRIVACY\nAdmin Phone Ext: REDACTED FOR PRIVACY\nAdmin Fax: REDACTED FOR PRIVACY\nAdmin Fax Ext: REDACTED FOR PRIVACY\nAdmin Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nRegistry Tech ID: REDACTED FOR PRIVACY\nTech Name: REDACTED FOR PRIVACY\nTech Organization: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech City: REDACTED FOR PRIVACY\nTech State/Province: REDACTED FOR PRIVACY\nTech Postal Code: REDACTED FOR PRIVACY\nTech Country: REDACTED FOR PRIVACY\nTech Phone: REDACTED FOR PRIVACY\nTech Phone Ext: REDACTED FOR PRIVACY\nTech Fax: REDACTED FOR PRIVACY\nTech Fax Ext: REDACTED FOR PRIVACY\nTech Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nName Server: nssui.comlaude.ch\nName Server: nsgbr.comlaude.co.uk\nName Server: nsusa.comlaude.net\nDNSSEC: unsigned\nURL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/\n&gt;&gt;&gt; Last update of WHOIS database: 2023-11-27T11:00:33Z &lt;&lt;&lt;\nFor more information on Whois status codes, please visit https://icann.org/epp\nThe Service is provided so that you may look up certain information in relation to domain names that we store in our database.\nUse of the Service is subject to our policies, in particular you should familiarise yourself with our Acceptable Use Policy and our Privacy Policy.\nThe information provided by this Service is 'as is' and we make no guarantee of it its accuracy.\nYou agree that by your use of the Service you will not use the information provided by us in a way which is:\n* inconsistent with any applicable laws,\n* inconsistent with any policy issued by us,\n* to generate, distribute, or facilitate unsolicited mass email, promotions, advertisings or other solicitations, or\n* to enable high volume, automated, electronic processes that apply to the Service.\nYou acknowledge that:\n* a response from the Service that a domain name is 'available', does not guarantee that is able to be registered,\n* we may restrict, suspend or terminate your access to the Service at any time, and\n* the copying, compilation, repackaging, dissemination or other use of the information provided by the Service is not permitted, without our express written consent.\nThis information has been prepared and published in order to represent administrative and technical management of the TLD.\nWe may discontinue or amend any part or the whole of these Terms of Service from time to time at our absolute discretion."
+                }
+            ],
+            "comments": [],
+            "updates": [],
+            "elements": [
+                {
+                    "label": "Domain",
+                    "value": "company.biz"
+                },
+                {
+                    "label": "IP Address",
+                    "value": "8.8.8.8"
+                },
+                {
+                    "label": "IP Address 1",
+                    "value": "1.1.1.1"
+                },
+                {
+                    "label": "Hosting Company 1",
+                    "value": "Amazon Technologies Inc."
+                },
+                {
+                    "label": "Abuse Info 1",
+                    "value": "Amazon EC2 Abuse\n+1-206-555-0000\nabuse@amazonaws.com"
+                },
+                {
+                    "label": "Tech Info 1",
+                    "value": "Amazon EC2 Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "NOC Info 1",
+                    "value": "Amazon AWS Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "IP Address 2",
+                    "value": "8.8.4.4"
+                },
+                {
+                    "label": "Hosting Company 2",
+                    "value": "Amazon Technologies Inc."
+                },
+                {
+                    "label": "Abuse Info 2",
+                    "value": "Amazon EC2 Abuse\n+1-206-555-0000\nabuse@amazonaws.com"
+                },
+                {
+                    "label": "Tech Info 2",
+                    "value": "Amazon EC2 Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "NOC Info 2",
+                    "value": "Amazon AWS Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "IP Address 3",
+                    "value": "4.4.4.4"
+                },
+                {
+                    "label": "Hosting Company 3",
+                    "value": "Amazon Technologies Inc."
+                },
+                {
+                    "label": "Abuse Info 3",
+                    "value": "Amazon EC2 Abuse\n+1-206-555-0000\nabuse@amazonaws.com"
+                },
+                {
+                    "label": "Tech Info 3",
+                    "value": "Amazon EC2 Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "NOC Info 3",
+                    "value": "Amazon AWS Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "IP Address 3",
+                    "value": "2001:4860:4860::8888"
+                },
+                {
+                    "label": "URL",
+                    "value": "https://google.com"
+                },
+                {
+                    "label": "Domain WHOIS",
+                    "value": "company.biz domain lookup results from whois.biz server:\n\nDomain Name: company.biz\nRegistry Domain ID: D43912762-BIZ\nRegistrar WHOIS Server: whois.comlaude.com\nRegistrar URL: www.comlaude.com\nUpdated Date: 2023-02-04T23:07:40Z\nCreation Date: 2011-03-02T22:09:18Z\nRegistry Expiry Date: 2024-03-01T23:59:59Z\nRegistrar: Nom-iq Ltd. dba COM LAUDE\nRegistrar IANA ID: 470\nRegistrar Abuse Contact Email: abuse@comlaude.com\nRegistrar Abuse Contact Phone: +44.2074218250\nDomain Status: clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited\nDomain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited\nDomain Status: clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited\nRegistry Registrant ID: REDACTED FOR PRIVACY\nRegistrant Name: REDACTED FOR PRIVACY\nRegistrant Organization: Whois Privacy - Com Laude\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant City: REDACTED FOR PRIVACY\nRegistrant State/Province:\nRegistrant Postal Code: REDACTED FOR PRIVACY\nRegistrant Country: GB\nRegistrant Phone: REDACTED FOR PRIVACY\nRegistrant Phone Ext: REDACTED FOR PRIVACY\nRegistrant Fax: REDACTED FOR PRIVACY\nRegistrant Fax Ext: REDACTED FOR PRIVACY\nRegistrant Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nRegistry Admin ID: REDACTED FOR PRIVACY\nAdmin Name: REDACTED FOR PRIVACY\nAdmin Organization: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin City: REDACTED FOR PRIVACY\nAdmin State/Province: REDACTED FOR PRIVACY\nAdmin Postal Code: REDACTED FOR PRIVACY\nAdmin Country: REDACTED FOR PRIVACY\nAdmin Phone: REDACTED FOR PRIVACY\nAdmin Phone Ext: REDACTED FOR PRIVACY\nAdmin Fax: REDACTED FOR PRIVACY\nAdmin Fax Ext: REDACTED FOR PRIVACY\nAdmin Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nRegistry Tech ID: REDACTED FOR PRIVACY\nTech Name: REDACTED FOR PRIVACY\nTech Organization: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech City: REDACTED FOR PRIVACY\nTech State/Province: REDACTED FOR PRIVACY\nTech Postal Code: REDACTED FOR PRIVACY\nTech Country: REDACTED FOR PRIVACY\nTech Phone: REDACTED FOR PRIVACY\nTech Phone Ext: REDACTED FOR PRIVACY\nTech Fax: REDACTED FOR PRIVACY\nTech Fax Ext: REDACTED FOR PRIVACY\nTech Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nName Server: nssui.comlaude.ch\nName Server: nsgbr.comlaude.co.uk\nName Server: nsusa.comlaude.net\nDNSSEC: unsigned\nURL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/\n&gt;&gt;&gt; Last update of WHOIS database: 2023-11-27T11:00:33Z &lt;&lt;&lt;\nFor more information on Whois status codes, please visit https://icann.org/epp\nThe Service is provided so that you may look up certain information in relation to domain names that we store in our database.\nUse of the Service is subject to our policies, in particular you should familiarise yourself with our Acceptable Use Policy and our Privacy Policy.\nThe information provided by this Service is 'as is' and we make no guarantee of it its accuracy.\nYou agree that by your use of the Service you will not use the information provided by us in a way which is:\n* inconsistent with any applicable laws,\n* inconsistent with any policy issued by us,\n* to generate, distribute, or facilitate unsolicited mass email, promotions, advertisings or other solicitations, or\n* to enable high volume, automated, electronic processes that apply to the Service.\nYou acknowledge that:\n* a response from the Service that a domain name is 'available', does not guarantee that is able to be registered,\n* we may restrict, suspend or terminate your access to the Service at any time, and\n* the copying, compilation, repackaging, dissemination or other use of the information provided by the Service is not permitted, without our express written consent.\nThis information has been prepared and published in order to represent administrative and technical management of the TLD.\nWe may discontinue or amend any part or the whole of these Terms of Service from time to time at our absolute discretion."
+                }
+            ]
+        },
+        {
+            "_id": "65652067b14656611a059be4",
+            "subscription": "Similar Domain Registration",
+            "priority": 3,
+            "status": 1,
+            "status_change": null,
+            "status_changer": null,
+            "update_id": "65652067b14656611a059be4",
+            "last_update": "2023-11-27 23:04:07",
+            "keyword": "company.co",
+            "added_on": "2023-11-27 23:04:07",
+            "title": "New Similar Domain - agentdiecompanyera.com",
+            "description": "IntelFinder has identified the domain <u><strong>agentdiecompanyera.com</strong></u>, which is similar to one of company's domains, <strong><u>company.co</u></strong>.<br><br>A website is associated with the domain. However, IntelFinder was unable to determine its nature.",
+            "details": "%elements%Following is a current screenshot of the site:",
+            "recommendation": "We recommend investigating the contents of the website in order to determine its threat to company. If the website and/or domain are suspected to be associated with malicious activity targeting company, or if there is a violation of company's trademarks in any way, we recommend attempting to take both down.<br><br>The domain can be taken down by contacting its registrar, which can be contacted either by sending a takedown request by E-mail to <strong><u>abuse@godaddy.com</u></strong>, or by calling <strong><u>480-624-2505</u></strong>. To take down the website associated with the domain, contact the web hosting provider either by sending a takedown request by E-mail to <strong><u>amzn-noc-contact@amazon.com</u></strong> and <strong><u>abuse@amazonaws.com</u></strong>, or by calling <strong><u>+1-206-555-0000</u></strong>.<br><br>If the takedown attempts of the domain are unsuccessful, you can try submitting a claim through ICANN's Uniform Domain Name Dispute Resolution Policy (more information available <a href=\"https://www.icann.org/resources/pages/dndr-2012-02-25-en#udrp\" target=\"_blank\">here</a>).<br><br>If the domain is deemed suspicious, we also recommend to blacklisting it in any URL and mail filtering systems being used, to prevent employees from accessing it, or receiving Phishing letters that originate from it.",
+            "base_elements": [
+                {
+                    "label": "Domain",
+                    "value": "agentdiecompanyera.com"
+                },
+                {
+                    "label": "Similar to Domain",
+                    "value": "company.co"
+                },
+                {
+                    "label": "Registered On",
+                    "value": "2023-11-25"
+                },
+                {
+                    "label": "Registrar",
+                    "value": "GoDaddy.com, LLC"
+                },
+                {
+                    "label": "Registrar Information",
+                    "value": "Registrar WHOIS Server: whois.godaddy.com\nRegistrar URL: http://www.godaddy.com\nRegistrar: GoDaddy.com, LLC\nRegistrar IANA ID: 146\nRegistrar Abuse Contact Email: abuse@godaddy.com\nRegistrar Abuse Contact Phone: 480-624-2505"
+                },
+                {
+                    "label": "Hosting Company",
+                    "value": "Amazon Technologies Inc."
+                },
+                {
+                    "label": "IP Addresses",
+                    "value": "8.8.8.8\n1.1.1.1"
+                },
+                {
+                    "label": "Name Servers",
+                    "value": "ns65.domaincontrol.com\nns66.domaincontrol.com"
+                }
+            ],
+            "comments": [],
+            "updates": [],
+            "elements": [
+                {
+                    "label": "Domain",
+                    "value": "agentdiecompanyera.com"
+                },
+                {
+                    "label": "Similar to Domain",
+                    "value": "company.co"
+                },
+                {
+                    "label": "Registered On",
+                    "value": "2023-11-25"
+                },
+                {
+                    "label": "Registrar",
+                    "value": "GoDaddy.com, LLC"
+                },
+                {
+                    "label": "IP Addresses",
+                    "value": "1.1.1.1\n4.4.4.4"
+                },
+                {
+                    "label": "Name Servers",
+                    "value": "ns65.domaincontrol.com\nns66.domaincontrol.com"
+                }
+            ]
+        },
+        {
+            "_id": "65652af197c25b2c690c3472",
+            "subscription": "Similar Domain Registration",
+            "priority": 3,
+            "status": 1,
+            "status_change": null,
+            "status_changer": null,
+            "update_id": "65652af197c25b2c690c3472",
+            "last_update": "2023-11-27 23:49:05",
+            "keyword": "company.co",
+            "added_on": "2023-11-27 23:49:05",
+            "title": "New Similar Domain - companyzz.com",
+            "description": "IntelFinder has identified the domain <u><strong>companyzz.com</strong></u>, which is similar to one of company's domains, <strong><u>company.co</u></strong>.<br><br>A website is associated with the domain. However, IntelFinder was unable to determine its nature.",
+            "details": "%elements%Following is a current screenshot of the site",
+            "recommendation": "We recommend investigating the contents of the website in order to determine its threat to company. If the website and/or domain are suspected to be associated with malicious activity targeting company, or if there is a violation of company's trademarks in any way, we recommend attempting to take both down.<br><br>The domain can be taken down by contacting its registrar, which can be contacted either by sending a takedown request by E-mail to <strong><u>abuse@register.it</u></strong>, or by calling <strong><u>+39.05520021555</u></strong>. To take down the website associated with the domain, contact the web hosting provider either by sending a takedown request by E-mail to <strong><u>hostmaster@ripe.net</u></strong> and <strong><u>abuse@ripe.net</u></strong>, or by calling <strong><u>+31 20 535 4444</u></strong> and <strong><u>+31205354444</u></strong>.<br><br>If the takedown attempts of the domain are unsuccessful, you can try submitting a claim through ICANN's Uniform Domain Name Dispute Resolution Policy (more information available <a href=\"https://www.icann.org/resources/pages/dndr-2012-02-25-en#udrp\" target=\"_blank\">here</a>).<br><br>If the domain is deemed suspicious, we also recommend to blacklisting it in any URL and mail filtering systems being used, to prevent employees from accessing it, or receiving Phishing letters that originate from it.",
+            "base_elements": [
+                {
+                    "label": "Domain",
+                    "value": "companyzz.com"
+                },
+                {
+                    "label": "Similar to Domain",
+                    "value": "company.co"
+                },
+                {
+                    "label": "Registered On",
+                    "value": "2023-11-24"
+                },
+                {
+                    "label": "Registrar",
+                    "value": "Register SPA"
+                },
+                {
+                    "label": "IP Address",
+                    "value": "4.4.4.4"
+                },
+                {
+                    "label": "Name Servers",
+                    "value": "ns1.amenworld.com\nns2.amenworld.com"
+                },
+                {
+                    "label": "Mail Server",
+                    "value": "mail-fr.securemail.pro"
+                }
+            ],
+            "comments": [],
+            "updates": [],
+            "elements": [
+                {
+                    "label": "Domain",
+                    "value": "companyzz.com"
+                },
+                {
+                    "label": "Similar to Domain",
+                    "value": "company.co"
+                },
+                {
+                    "label": "Registered On",
+                    "value": "2023-11-24"
+                },
+                {
+                    "label": "Registrar",
+                    "value": "Register SPA"
+                },
+                {
+                    "label": "Registrar Information",
+                    "value": "Registrar WHOIS Server: whois.register.it\nRegistrar URL: http://www.register.it\nRegistrar: Register SPA\nRegistrar IANA ID: 168\nRegistrar Abuse Contact Email: abuse@register.it\nRegistrar Abuse Contact Phone: +39.05520021555"
+                },
+                {
+                    "label": "Hosting Information",
+                    "value": "Address:        P.O. Box 10096\nCity:           Amsterdam\nStateProv:\nPostalCode:     1001EB\nCountry:        NL\nOrgTechPhone:  +31 20 535 4444\nOrgTechEmail:  hostmaster@ripe.net\nOrgAbusePhone:  +31205354444\nOrgAbuseEmail:  abuse@ripe.net"
+                },
+                {
+                    "label": "IP Address",
+                    "value": "4.4.4.4"
+                },
+                {
+                    "label": "Name Servers",
+                    "value": "ns1.amenworld.com\nns2.amenworld.com"
+                },
+                {
+                    "label": "Mail Server",
+                    "value": "mail-fr.securemail.pro"
+                }
+            ]
+        },
+        {
+            "_id": "65652f28c19656fd010057c2",
+            "subscription": "Trademark Application Filing",
+            "priority": 1,
+            "status": 1,
+            "status_change": null,
+            "status_changer": null,
+            "update_id": "65652f28c19656fd010057c2",
+            "last_update": "2023-11-28 00:07:04",
+            "keyword": "R1S",
+            "added_on": "2023-11-28 00:07:04",
+            "title": "Trademark Application Identified - ASDF",
+            "description": "IntelFinder has identified a Chinese trademark application of <strong><u>ASDF</u></strong>, filed by <strong><u>asdf</u></strong>  on 07/06/2020. The application has been accepted by the trademark office on 07/07/2022 and is now active until 07/06/2032.",
+            "details": "%elements%Additional information on the filing is available on the <a href=\"http://wcjs.sbj.cnipa.gov.cn/\" target=\"_blank\">Chinese trademark office website</a>. To find the filing, click on the green magnifying glass icon, then search for \"ASDFASDF\" on the second field from the top.<br><br>Following is the logo associated with the trademark",
+            "recommendation": "We recommend assessing whether the trademark filing  infringes on company's trademarks. If the application does appear to be an infringement, it is recommended to reach out to trademark attorneys in China for consultation.",
+            "base_elements": [
+                {
+                    "label": "Trademarked Brand",
+                    "value": "ASDF"
+                },
+                {
+                    "label": "Filed in",
+                    "value": "China"
+                },
+                {
+                    "label": "Filing Date",
+                    "value": "2020-07-06"
+                },
+                {
+                    "label": "Preliminary Review Date",
+                    "value": "2022-04-06"
+                },
+                {
+                    "label": "Registered On",
+                    "value": "2022-07-07"
+                },
+                {
+                    "label": "Expires On",
+                    "value": "2032-07-06"
+                }
+            ],
+            "comments": [],
+            "updates": [],
+            "elements": [
+                {
+                    "label": "Trademarked Brand",
+                    "value": "ASDF"
+                },
+                {
+                    "label": "Filing Date",
+                    "value": "2020-07-06"
+                },
+                {
+                    "label": "Preliminary Review Date",
+                    "value": "2022-04-06"
+                },
+                {
+                    "label": "Registered On",
+                    "value": "2022-07-07"
+                },
+                {
+                    "label": "Expires On",
+                    "value": "2032-07-06"
+                }
+            ]
+        },
+        {
+            "_id": "65652fdc1e05388f3100f242",
+            "subscription": "Trademark Application Filing",
+            "priority": 1,
+            "status": 1,
+            "status_change": null,
+            "status_changer": null,
+            "update_id": "65652fdc1e05388f3100f242",
+            "last_update": "2023-11-28 00:10:04",
+            "keyword": "R1S",
+            "added_on": "2023-11-28 00:10:04",
+            "title": "Trademark Application Identified - ASDF",
+            "description": "IntelFinder has identified a Chinese trademark application of <strong><u>ASDF</u></strong>, filed by <strong><u>ASDFASDF (RANDOMMM)</u></strong>  on 07/06/2020. The application has been accepted by the trademark office on 10/21/2022 and is now active until 10/20/2032.",
+            "recommendation": "IntelFinder has identified a Chinese trademark application of <strong><u>ASDF</u></strong>, filed by <strong><u>ASDFASDF (RANDOMMM)</u></strong>  on 07/06/2020. The application has been accepted by the trademark office on 10/21/2022 and is now active until 10/20/2032.",
+            "details": "%elements%Additional information on the filing is available on the <a href=\"http://wcjs.sbj.cnipa.gov.cn/\" target=\"_blank\">Chinese trademark office website</a>. To find the filing, click on the green magnifying glass icon, then search for \"1111111111\" on the second field from the top.<br><br>Following is the logo associated with the trademark.",
+            "base_elements": [
+                {
+                    "label": "Trademarked Brand",
+                    "value": "ASDF"
+                },
+                {
+                    "label": "Trademark Applicant",
+                    "value": "ASDFASDF (RANDOMMM)"
+                },
+                {
+                    "label": "Filing Number",
+                    "value": "1111111111"
+                },
+                {
+                    "label": "Filed in",
+                    "value": "China"
+                },
+                {
+                    "label": "Filing Date",
+                    "value": "2020-07-06"
+                },
+                {
+                    "label": "Preliminary Review Date",
+                    "value": "2022-07-20"
+                },
+                {
+                    "label": "Registered On",
+                    "value": "2022-10-21"
+                },
+                {
+                    "label": "Expires On",
+                    "value": "2032-10-20"
+                }
+            ],
+            "comments": [],
+            "updates": [],
+            "elements": [
+                {
+                    "label": "Trademarked Brand",
+                    "value": "ASDF"
+                },
+                {
+                    "label": "Trademark Applicant",
+                    "value": "ASDFASDF (RANDOMMM)"
+                },
+                {
+                    "label": "Filing Number",
+                    "value": "1111111111"
+                },
+                {
+                    "label": "Filed in",
+                    "value": "China"
+                },
+                {
+                    "label": "Filing Date",
+                    "value": "2020-07-06"
+                },
+                {
+                    "label": "Preliminary Review Date",
+                    "value": "2022-07-20"
+                },
+                {
+                    "label": "Registered On",
+                    "value": "2022-10-21"
+                },
+                {
+                    "label": "Expires On",
+                    "value": "2032-10-20"
+                }
+            ]
+        },
+        {
+            "_id": "65652fdfd281654ac4047e73",
+            "subscription": "Similar Domain Registration",
+            "priority": 3,
+            "status": 1,
+            "status_change": null,
+            "status_changer": null,
+            "update_id": "65652fdfd281654ac4047e73",
+            "last_update": "2023-11-28 00:10:07",
+            "keyword": "company.biz",
+            "added_on": "2023-11-28 00:10:07",
+            "title": "New Similar Domain - comanyyyd.com",
+            "description": "IntelFinder has identified the domain <u><strong>comanyyyd.com</strong></u>, which is similar to one of company's domains, <strong><u>company.biz</u></strong>.<br><br>A website is associated with the domain. However, IntelFinder was unable to determine its nature.",
+            "details": "%elements%",
+            "recommendation": "We recommend investigating the contents of the website in order to determine its threat to company. If the website and/or domain are suspected to be associated with malicious activity targeting company, or if there is a violation of company's trademarks in any way, we recommend attempting to take both down.<br><br>The domain can be taken down by contacting its registrar, which can be contacted either by sending a takedown request by E-mail to <strong><u>abuse@name.com</u></strong>, or by calling <strong><u>1112223333</u></strong>. To take down the website associated with the domain, contact the web hosting provider either by sending a takedown request by E-mail to <strong><u>rir@cloudflare.com</u></strong> and <strong><u>abuse@cloudflare.com</u></strong>, or by calling <strong><u>+1-650-319-8930</u></strong>.<br><br>If the takedown attempts of the domain are unsuccessful, you can try submitting a claim through ICANN's Uniform Domain Name Dispute Resolution Policy (more information available <a href=\"https://www.icann.org/resources/pages/dndr-2012-02-25-en#udrp\" target=\"_blank\">here</a>).<br><br>If the domain is deemed suspicious, we also recommend to blacklisting it in any URL and mail filtering systems being used, to prevent employees from accessing it, or receiving Phishing letters that originate from it.",
+            "base_elements": [
+                {
+                    "label": "Domain",
+                    "value": "comanyyyd.com"
+                },
+                {
+                    "label": "Similar to Domain",
+                    "value": "company.yachts"
+                },
+                {
+                    "label": "Registered On",
+                    "value": "2023-11-24"
+                },
+                {
+                    "label": "Registrar",
+                    "value": "Name.com, Inc."
+                },
+                {
+                    "label": "Registrar Information",
+                    "value": "Registrar WHOIS Server: whois.name.com\nRegistrar URL: http://www.name.com\nRegistrar: Name.com, Inc.\nRegistrar IANA ID: 625\nRegistrar Abuse Contact Email: abuse@name.com\nRegistrar Abuse Contact Phone: 1112223333"
+                },
+                {
+                    "label": "Hosting Company",
+                    "value": "Cloudflare, Inc."
+                },
+                {
+                    "label": "IP Addresses",
+                    "value": "1.1.1.1\n8.8.8.8"
+                },
+                {
+                    "label": "Name Servers",
+                    "value": "harlan.ns.cloudflare.com\nrosemary.ns.cloudflare.com"
+                }
+            ],
+            "comments": [],
+            "updates": [],
+            "elements": [
+                {
+                    "label": "Domain",
+                    "value": "comanyyyd.com"
+                },
+                {
+                    "label": "Similar to Domain",
+                    "value": "company.yachts"
+                },
+                {
+                    "label": "Registered On",
+                    "value": "2023-11-24"
+                },
+                {
+                    "label": "Registrar",
+                    "value": "Name.com, Inc."
+                },
+                {
+                    "label": "IP Addresses",
+                    "value": "1.1.1.1\n8.8.8.8"
+                },
+                {
+                    "label": "Name Servers",
+                    "value": "harlan.ns.cloudflare.com\nrosemary.ns.cloudflare.com"
+                }
+            ]
+        },
+        {
+            "_id": "656531f80e77453f9b0e85c2",
+            "subscription": "Trademark Application Filing",
+            "priority": 1,
+            "status": 1,
+            "status_change": null,
+            "status_changer": null,
+            "update_id": "656531f80e77453f9b0e85c2",
+            "last_update": "2023-11-28 00:19:04",
+            "keyword": "R1T",
+            "added_on": "2023-11-28 00:19:04",
+            "title": "Trademark Application Identified - ASDF",
+            "description": "IntelFinder has identified a Chinese trademark application of <strong><u>ASDF</u></strong>, filed by <strong><u>ASDFASDF RANDOM</u></strong>  on 05/06/2022. The application has been accepted by the trademark office on 11/07/2022 and is now active until 11/06/2032.",
+            "details": "%elements%Additional information on the filing is available on the <a href=\"http://wcjs.sbj.cnipa.gov.cn/\" target=\"_blank\">Chinese trademark office website</a>. To find the filing, click on the green magnifying glass icon, then search for \"11111111111\" on the second field from the top.<br><br>Following is the logo associated with the trademark:",
+            "recommendation": "We recommend assessing whether the trademark filing  infringes on company's trademarks. If the application does appear to be an infringement, it is recommended to reach out to trademark attorneys in China for consultation.",
+            "base_elements": [
+                {
+                    "label": "Trademarked Brand",
+                    "value": "ASDF"
+                },
+                {
+                    "label": "Filing Status",
+                    "value": "to issue a document of registration certificate"
+                },
+                {
+                    "label": "Trademark Applicant",
+                    "value": "ASDFASDF RANDOM"
+                },
+                {
+                    "label": "Filing Number",
+                    "value": "11111111111"
+                },
+                {
+                    "label": "Filed in",
+                    "value": "China"
+                },
+                {
+                    "label": "Filing Date",
+                    "value": "2022-05-06"
+                },
+                {
+                    "label": "Preliminary Review Date",
+                    "value": "2022-08-06"
+                },
+                {
+                    "label": "Registered On",
+                    "value": "2022-11-07"
+                },
+                {
+                    "label": "Expires On",
+                    "value": "2032-11-06"
+                },
+                {
+                    "label": "URL",
+                    "value": "https://google.com"
+                }
+            ],
+            "comments": [],
+            "updates": [],
+            "elements": [
+                {
+                    "label": "Trademarked Brand",
+                    "value": "ASDF"
+                },
+                {
+                    "label": "Filing Status",
+                    "value": "to issue a document of registration certificate"
+                },
+                {
+                    "label": "Trademark Applicant",
+                    "value": "ASDFASDF RANDOM"
+                },
+                {
+                    "label": "Filing Number",
+                    "value": "11111111111"
+                },
+                {
+                    "label": "Filed in",
+                    "value": "China"
+                },
+                {
+                    "label": "Filing Date",
+                    "value": "2022-05-06"
+                },
+                {
+                    "label": "Preliminary Review Date",
+                    "value": "2022-08-06"
+                },
+                {
+                    "label": "Registered On",
+                    "value": "2022-11-07"
+                },
+                {
+                    "label": "Expires On",
+                    "value": "2032-11-06"
+                },
+                {
+                    "label": "URL",
+                    "value": "https://google.com"
+                }
+            ]
+        },
+        {
+            "_id": "656534c7b355f46fe6010352",
+            "subscription": "Trademark Application Filing",
+            "priority": 3,
+            "status": 1,
+            "status_change": null,
+            "status_changer": null,
+            "update_id": "656534c7b355f46fe6010352",
+            "last_update": "2023-11-28 00:31:03",
+            "keyword": "company",
+            "added_on": "2023-11-28 00:31:03",
+            "title": "Trademark Application Identified - AIcompany",
+            "description": "IntelFinder has identified a Chinese trademark application of <strong><u>AIcompany</u></strong>, filed by <strong><u>ASDFASDF (RANDOMMM)</u></strong>  on 08/06/2023. ",
+            "details": "%elements%Additional information on the filing is available on the <a href=\"http://wcjs.sbj.cnipa.gov.cn/\" target=\"_blank\">Chinese trademark office website</a>. To find the filing, click on the green magnifying glass icon, then search for \"11111111111\" on the second field from the top.",
+            "recommendation": "We recommend assessing whether the trademark filing  infringes on company's trademarks. If the application does appear to be an infringement, it is recommended to reach out to trademark attorneys in China for consultation.",
+            "base_elements": [
+                {
+                    "label": "Trademarked Brand",
+                    "value": "AIcompany"
+                },
+                {
+                    "label": "Filing Status",
+                    "value": "applying dispatch"
+                },
+                {
+                    "label": "Trademark Applicant",
+                    "value": "ASDFASDF (RANDOMMM)"
+                },
+                {
+                    "label": "Filing Number",
+                    "value": "11111111111"
+                },
+                {
+                    "label": "Filed in",
+                    "value": "China"
+                },
+                {
+                    "label": "Filing Date",
+                    "value": "2023-08-06"
+                },
+                {
+                    "label": "Preliminary Review Date",
+                    "value": "2023-11-13"
+                }
+            ],
+            "comments": [],
+            "updates": [],
+            "elements": [
+                {
+                    "label": "Trademarked Brand",
+                    "value": "AIcompany"
+                },
+                {
+                    "label": "Filing Status",
+                    "value": "applying dispatch"
+                },
+                {
+                    "label": "Trademark Applicant",
+                    "value": "ASDFASDF (RANDOMMM)"
+                },
+                {
+                    "label": "Filing Number",
+                    "value": "11111111111"
+                },
+                {
+                    "label": "Filed in",
+                    "value": "China"
+                },
+                {
+                    "label": "Filing Date",
+                    "value": "2023-08-06"
+                },
+                {
+                    "label": "IP Address 3",
+                    "value": "2001:4860:4860::8888"
+                },
+                {
+                    "label": "IP Address 3",
+                    "value": "8.8.8.8"
+                },
+                {
+                    "label": "Domain",
+                    "value": "test.example.com"
+                },
+                {
+                    "label": "Preliminary Review Date",
+                    "value": "2023-11-13"
+                },
+                {
+                    "label": "URL",
+                    "value": "https://google.com"
+                }
+            ]
+        }
+    ]
+}

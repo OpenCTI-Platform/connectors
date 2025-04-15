@@ -1,0 +1,26 @@
+version: '3'
+services:
+  connector-anyrun-task:
+    image: opencti/connector-anyrun-task:6.6.4
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=ANY.RUN task
+      - CONNECTOR_SCOPE=Artifact,Url
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_CONFIDENCE_LEVEL=75 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - ANYRUN_TOKEN=ChangeMe
+      - ANYRUN_TASK_TIMER=120
+      - ANYRUN_OS=windows
+      - ANYRUN_OS_BITNESS=64 # 32, 64
+      - ANYRUN_OS_VERSION=10 # "7", "8.1", "10", "11"
+      - ANYRUN_OS_LOCALE=en-US
+      - ANYRUN_OS_BROWSER=Google Chrome # "Google Chrome", "Mozilla Firefox", "Opera", "Internet Explorer", "Microsoft Edge"
+      - ANYRUN_PRIVACY=bylink # "public", "bylink", "owner", "team"
+      - ANYRUN_AUTOMATED_INTERACTIVITY=False # Automated Interactivity (ML) option
+      - ANYRUN_IOC=True # Add IOCs
+      - ANYRUN_MITRE=False # Add mitre attack patterns relationships
+      - ANYRUN_PROCESSES=False # Add malicious processes
+    restart: always

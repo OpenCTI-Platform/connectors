@@ -1,0 +1,19 @@
+version: "3"
+services:
+  connector-phishunt:
+    image: opencti/connector-phishunt:6.6.4
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe(UUIDv4 token)
+      - CONNECTOR_ID=ChangeMe(UUIDv4 token)
+      - CONNECTOR_NAME=Phishunt
+      - CONNECTOR_SCOPE=phishunt
+      - CONNECTOR_LOG_LEVEL=error
+      - PHISHUNT_API_KEY= # Optional, if not provided, consume only https://phishunt.io/feed.txt
+      - PHISHUNT_CREATE_INDICATORS=true
+      - PHISHUNT_DEFAULT_X_OPENCTI_SCORE=40 # Optional: default is 40
+      - PHISHUNT_X_OPENCTI_SCORE_DOMAIN=40 # Optional
+      - PHISHUNT_X_OPENCTI_SCORE_IP=40 # Optional
+      - PHISHUNT_X_OPENCTI_SCORE_URL=60 # Optional
+      - PHISHUNT_INTERVAL=3 # In days, must be strictly greater than 1
+    restart: always

@@ -1,0 +1,33 @@
+version: '1'
+services:
+  connector-cisco_sma:
+    image: opencti/connector-cisco-sma:6.6.4
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=CISCO-SMA
+      - CONNECTOR_LOG_LEVEL=error
+      - CISCO_SMA_API_KEY=CHANGME
+      - CISCO_SMA_URL=https://panacea.threatgrid.eu/api/v3/feeds/
+      - CISCO_SMA_IOC_SCORE=50                # The score to be set on Indicators and Observables
+      - CISCO_SMA_AUTORUN_REGISTRY=false      # Contains registry entry data derived from querying registry changes known for persistence
+      - CISCO_SMA_BANKING_DNS=true            # Banking Trojan Network Communications
+      - CISCO_SMA_DGA_DNS=true                # DGA Domains with pseudo-randomly generated names
+      - CISCO_SMA_DLL_HIJACKING_DNS=true      # Feed contains Domains communicated to by samples leveraging DLL Sideloading and/or hijacking techniques
+      - CISCO_SMA_DOC_NET_COM_DNS=true        # Document (PDF, Office) Network Communications
+      - CISCO_SMA_DOWNLOADED_PE_DNS=true      # Samples Downloading Executables Network Communications
+      - CISCO_SMA_DYNAMIC_DNS=true            # Samples Leveraging Dynamic DNS Providers
+      - CISCO_SMA_IRC_DNS=true                # Internet Relay Chat (IRC) Network Communications
+      - CISCO_SMA_MODIFIED_HOSTS_DNS=true     # Modified Windows Hosts File Network Communications
+      - CISCO_SMA_PARKED_DNS=true             # Parked Domains resolving to RFC1918, Localhost and Broadcast Addresses
+      - CISCO_SMA_PUBLIC_IP_CHECK_DNS=true    # Check For Public IP Address Network Communications
+      - CISCO_SMA_RANSOMWARE_DNS=true         # Samples Communicating with Ransomware Servers
+      - CISCO_SMA_RAT_DNS=true                # Remote Access Trojan (RAT) Network Communications
+      - CISCO_SMA_SCHEDULED_TASKS=false       # Feed containing scheduled task data observed during sample execution
+      - CISCO_SMA_SINKHOLED_IP_DNS=true       # DNS entries for samples communicating with a known dns sinkhole
+      - CISCO_SMA_STOLEN_CERT_DNS=true         # DNS Entries observed from samples signed with a stolen certificate
+      - CISCO_SMA_INTERVAL=24                 # In hours
+      - CISCO_SMA_MARKING=TLP:AMBER+STRICT
+    restart: always

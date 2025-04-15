@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Common Platform Enumeration'
+  scope: 'software'
+  log_level: 'info'
+
+cpe:
+  base_url: 'https://services.nvd.nist.gov/rest/json/cpes/2.0' # Required
+  api_key: 'ChangeMe' # Required
+  interval: '6h' # Required, in hours advice min 6

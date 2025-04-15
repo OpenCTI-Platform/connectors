@@ -1,0 +1,14 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'changeme'
+
+connector:
+  id: 'changme'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Zerofox'
+  scope: 'zerofox'
+  log_level: 'info'
+
+zerofox:
+  username: 'changeme'
+  password: 'changeme'

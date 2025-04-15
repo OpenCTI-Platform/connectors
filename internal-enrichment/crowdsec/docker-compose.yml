@@ -1,0 +1,18 @@
+version: '3'
+services:
+  connector-crowdsec:
+    image: opencti/connector-crowdsec:6.6.4
+    environment:
+      - OPENCTI_URL=http://opencti:8080 # OpenCTI API URL
+      - OPENCTI_TOKEN=ChangeMe # Add OpenCTI API token here
+      - CONNECTOR_ID=ChangeMe # Add CrowdSec connector ID (any valid UUID v4)
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr # MIME type or Stix Object
+      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_NAME=CrowdSec
+      - CROWDSEC_KEY=ChangeMe # Add CrowdSec's CTI API Key
+      - CROWDSEC_API_VERSION=v2 #v2 is the only supported version for now
+    restart: always
+  # If you add it to your OpenCTI docker-compose, add depends_on: - opencti

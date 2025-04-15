@@ -1,4 +1,4 @@
-FROM python:3.11-alpine
+FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
 
 # Copy the connector
@@ -13,5 +13,7 @@ RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-de
 
 # Expose and entrypoint
 COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh && chmod -R 0777 /opt/opencti-connector-import-document
+WORKDIR /opt/opencti-connector-import-document
+ENV HOME=/opt/opencti-connector-import-document
 ENTRYPOINT ["/entrypoint.sh"]

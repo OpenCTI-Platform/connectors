@@ -1,20 +1,32 @@
 repos:
--   repo: https://github.com/psf/black
-    rev: 20.8b1
+-   repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 25.1.0
     hooks:
     -   id: black
 -   repo: https://github.com/PyCQA/flake8
-    rev: 3.8.4
+    rev: 7.2.0
     hooks:
     -   id: flake8
         args: ['--ignore=E,W']
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.4.0
+    rev: v5.0.0
     hooks:
     -   id: check-yaml
 -   repo: https://github.com/pycqa/isort
-    rev: 5.10.1
+    rev: 6.0.1
     hooks:
     - id: isort
       name: isort (python)
-      arts: ['--profile black']
+      args:
+        - '--profile'
+        - 'black'
+        - '--line-length'
+        - '88'
+-   repo: local
+    hooks:
+    - id: gpg-signed-commit
+      name: GPG Signed Commit Check
+      entry: bash -c 'for commit_sha in $(git log --pretty=%h master..); do git verify-commit "$commit_sha" || echo "error unsigned commit $commit_sha" && exit 1; done'
+      language: system
+      stages: [pre-push, manual]
+      minimum_pre_commit_version: '3.2.0'

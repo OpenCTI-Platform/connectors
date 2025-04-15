@@ -1,8 +1,11 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base"
+    "config:recommended"
   ],
+  "pre-commit": {
+    "enabled": true
+  },
   "labels": [
     "dependencies",
     "filigran team"
@@ -10,8 +13,17 @@
   "prConcurrentLimit": 2,
   "packageRules": [
     {
-      "matchUpdateTypes": ["minor"],
+      "matchUpdateTypes": [
+        "minor"
+      ],
       "prPriority": 5
     }
-  ]
+  ],
+  "timezone": "Europe/Paris",
+  "schedule": [
+    "after 10pm every weekday",
+    "every weekend",
+    "before 5am every weekday"
+  ],
+  "updateNotScheduled": false
 }

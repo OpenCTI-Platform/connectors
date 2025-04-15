@@ -1,0 +1,23 @@
+version: '3'
+services:
+  connector-urlscan-enrichment:
+    image: opencti/connector-urlscan-enrichment:6.6.4
+    environment:
+      # OpenCTI's generic execution parameters:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Connector's generic execution parameters:
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Urlscan
+      - CONNECTOR_SCOPE=url,ipv4-addr,ipv6-addr
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_LOG_LEVEL=error
+      # Connector's custom execution parameters:
+      - URLSCAN_ENRICHMENT_API_KEY=ChangeMe
+      - URLSCAN_ENRICHMENT_API_BASE_URL=https://urlscan.io/api/v1/
+      - URLSCAN_ENRICHMENT_IMPORT_SCREENSHOT=true
+      - URLSCAN_ENRICHMENT_VISIBILITY=public # Available values : public, unlisted, private
+      - URLSCAN_ENRICHMENT_SEARCH_FILTERED_BY_DATE=>now-1y # Available : ">now-1h", ">now-1d", ">now-1y", "[2022 TO 2023]", "[2022/01/01 TO 2023/12/01]"
+      - URLSCAN_ENRICHMENT_MAX_TLP=TLP:AMBER # Required, Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+      - URLSCAN_ENRICHMENT_CREATE_INDICATOR=true
+    restart: always

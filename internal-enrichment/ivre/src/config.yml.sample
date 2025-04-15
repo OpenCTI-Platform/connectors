@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'IVRE-ChangeMeInstanceName'
+  auto: true
+  scope: 'autonomous-system,domain-name,ipv4-addr,ipv6-addr,mac-addr,x509-certificate'
+  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+ivre:
+  db_url: # mongodb://host/ivre or http://user:password@host/cgi
+  db_url_data: # maxmind:///usr/share/ivre/geoip or http://user:password@host/cgi
+  db_url_passive: # mongodb://host/ivre or http://user:password@host/cgi
+  db_url_scans: # mongodb://host/ivre or http://user:password@host/cgi
+  max_tlp: 'TLP:RED'
+  use_data: # true or false
+  use_passive: # true or false
+  use_passive_as: # true or false
+  use_passive_domain: # true or false
+  use_scans: # true or false
+  use_scans_as: # true or false
+  use_scans_domain: # true or false

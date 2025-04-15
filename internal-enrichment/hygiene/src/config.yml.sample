@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'Hygiene'
+  scope: 'IPv4-Addr,IPv6-Addr,Domain-Name,StixFile,Artifact'
+  auto: true # Enable/disable auto-enrichment of observables
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+hygiene:
+  warninglists_slow_search: false  # Enable warning lists slow search mode
