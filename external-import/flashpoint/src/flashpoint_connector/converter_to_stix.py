@@ -1,4 +1,5 @@
 import base64
+from datetime import datetime
 
 import stix2
 from dateparser import parse
@@ -19,7 +20,7 @@ from pycti import (
     ThreatActorIndividual,
     Tool,
 )
-
+from .utils import is_domain, is_ipv4, is_ipv6
 
 class ConverterToStix:
     """
@@ -363,6 +364,43 @@ A media attachment ({alert.get("media_name")}) is available in Data section
         return markdown_content
 
     @staticmethod
+    def convert_ccm_alert_to_markdown_content(alert):
+        """
+        :param alert:
+        :return:
+        """
+        markdown_content = f"""
+### Credential
+- **Username**: {alert.get("username")}
+- **Password**: {alert.get("password")}
+- **Domain**: {alert.get("domain")}
+- **Affected Domain**: {alert.get("affected_domain")}
+- **Affected Url**: {alert.get("affected_url")}
+
+### Password Complexity
+- **Length**: {alert.get("password_complexity").get("length")}
+- **Lowercase Letter**: {alert.get("password_complexity").get("has_lowercase")}
+- **Uppercase Letter**: {alert.get("password_complexity").get("has_uppercase")}
+- **Number**: {alert.get("password_complexity").get("has_number")}
+- **Symbol**: {alert.get("password_complexity").get("has_symbol")}
+
+### Breach
+- **Title**: {alert.get("breach").get("title")}
+- **Sourced From**: {alert.get("breach").get("source")}
+- **Source Type**: {alert.get("breach").get("source_type")}
+- **Breached At**: {alert.get("breach").get("created_at").get("date-time")}
+- **Discovered At**: {alert.get("breach").get("first_observed_at").get("date-time")}
+"""
+        if alert.get("infected_host_attributes", None):
+            infection_details = f"""
+### Infection / Malware Data
+- **Malware Family**: {alert.get("infected_host_attributes").get("malware").get("family")}
+- **Malware Version**: {alert.get("infected_host_attributes").get("malware").get("version")}
+"""
+            markdown_content += infection_details
+        return markdown_content
+
+    @staticmethod
     def generate_incident_name(alert):
         """
         :param alert:
@@ -637,4 +675,293 @@ A media attachment ({alert.get("media_name")}) is available in Data section
             media_content,
             relationship_publishes,
         ]
+        return stix_objects
+
+    @staticmethod
+    def generate_ccm_incident_name(alert):
+        """
+        :param alert:
+        :return:
+        """
+        name = (
+                "CCM Alert: "
+                + alert.get("username")
+                + " - "
+                + alert.get("fpid")
+        )
+        return name
+
+    @staticmethod
+    def generate_ccm_incident_description(alert):
+        """
+        :param alert:
+        :return:
+        """
+        description = (f"""
+A compromised credential has been detected for username:  **{alert.get("username")}** 
+on affected URL: **{alert.get("affected_url")}**.
+The alert was triggered on **{datetime.fromtimestamp(alert.get("header_").get("indexed_at"))
+.strftime('%B %d, %Y, at %I:%M %p UTC')}**.
+For more details about this alert, please consult the Content tab.
+"""
+        )
+        return description
+
+    def convert_domain_affected_domain(self, value):
+        """
+        :param value:
+        :return:
+        """
+        if is_domain(value):
+            stix_affected_domain = stix2.DomainName(
+                value=value,
+                object_marking_refs=[self.marking.get("id")],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+            return stix_affected_domain
+
+        elif is_ipv4(value):
+            stix_affected_domain = stix2.IPv4Address(
+                value=value,
+                object_marking_refs=[self.marking.get("id")],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+            return stix_affected_domain
+
+        elif is_ipv6(value):
+            stix_affected_domain = stix2.IPv6Address(
+                value=value,
+                object_marking_refs=[self.marking.get("id")],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+            return stix_affected_domain
+        else:
+            self.helper.connector_logger.warning(f"Unable to convert 'domain' or 'affected_domain' value to a STIX observable, value: {value}")
+            return None
+
+    def alert_to_ccm_incident(self, alert, create_related_entities):
+        """
+        Convert a Flashpoint CCM Alert into an OpenCTI STIX incident
+        :param alert:
+        :param create_related_entities:
+        :return:
+        """
+
+        stix_objects = [self.marking]
+
+        # generated incident name
+        incident_name = self.generate_ccm_incident_name(alert)
+
+        # generated incident description
+        incident_description = self.generate_ccm_incident_description(alert)
+
+        # alert date
+        alert_date = alert.get("breach").get("created_at").get("date-time")
+
+        # generate octi incident id
+        incident_id = Incident.generate_id(
+            name=incident_name, created=alert_date
+        )
+
+        # add the origin and source as labels
+        labels = [
+            alert.get("breach").get("source_type"),
+        ]
+
+        # generate a content based on alert useful information
+        markdown_content = self.convert_ccm_alert_to_markdown_content(alert)
+
+        # add the alert formatted content into a file attached to the incident
+        files = []
+        markdown_content_bytes = markdown_content.encode("utf-8")
+        base64_bytes = base64.b64encode(markdown_content_bytes)
+        files.append(
+            {
+                "name": "alert.md",
+                "data": base64_bytes,
+                "mime_type": "text/markdown",
+                "no_trigger_import": False,
+            }
+        )
+
+        # alert flashpoint reference
+        flashpoint_base_url = "https://app.flashpoint.io/cti/ato/credential/"
+        flashpoint_url = flashpoint_base_url + alert.get("credential_record_fpid")+"::"+alert.get("fpid")
+        incident_external_reference = stix2.ExternalReference(
+            source_name="Flashpoint", url=flashpoint_url
+        )
+
+        # create the incident
+        stix_incident = stix2.Incident(
+            id=incident_id,
+            name=incident_name,
+            created=alert_date,
+            first_seen=alert_date,
+            last_seen=alert.get("last_observed_at").get("date-time"),
+            description=incident_description,
+            created_by_ref=self.author_id,
+            allow_custom=True,
+            incident_type="compromised credential",
+            labels=labels,
+            severity="low",
+            object_marking_refs=[self.marking.get("id")],
+            source="Flashpoint CCM",
+            external_references=[incident_external_reference],
+            custom_properties={"x_opencti_files": files},
+        )
+        stix_objects.append(stix_incident)
+
+        if "email" in alert:
+            stix_email = stix2.EmailAddress(
+                value=alert.get("email"),
+                object_marking_refs=[self.marking.get("id")],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+            stix_objects.append(stix_email)
+
+            # create relation between incident and email
+            relationship_uses = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to",
+                    stix_email.id,
+                    stix_incident.id,
+                ),
+                relationship_type="related-to",
+                created_by_ref=self.author_id,
+                source_ref=stix_email.id,
+                target_ref=stix_incident.id,
+                object_marking_refs=[self.marking.get("id")],
+                allow_custom=True,
+            )
+            stix_objects.append(relationship_uses)
+
+        if "domain" in alert:
+            stix_domain = self.convert_domain_affected_domain(alert.get("domain"))
+            stix_objects.append(stix_domain)
+
+            # create relation between incident and email
+            relationship_uses = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to",
+                    stix_domain.id,
+                    stix_incident.id,
+                ),
+                relationship_type="related-to",
+                created_by_ref=self.author_id,
+                source_ref=stix_domain.id,
+                target_ref=stix_incident.id,
+                object_marking_refs=[self.marking.get("id")],
+                allow_custom=True,
+            )
+            stix_objects.append(relationship_uses)
+
+        if "affected_domain" in alert:
+            stix_affected_domain = self.convert_domain_affected_domain(alert.get("affected_domain"))
+            stix_objects.append(stix_affected_domain)
+
+            # create relation between incident and email
+            relationship_uses = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to",
+                    stix_affected_domain.id,
+                    stix_incident.id,
+                ),
+                relationship_type="related-to",
+                created_by_ref=self.author_id,
+                source_ref=stix_affected_domain.id,
+                target_ref=stix_incident.id,
+                object_marking_refs=[self.marking.get("id")],
+                allow_custom=True,
+            )
+            stix_objects.append(relationship_uses)
+
+        if "affected_url" in alert:
+            stix_url = stix2.URL(
+                value=alert.get("affected_url"),
+                object_marking_refs=[self.marking.get("id")],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+            stix_objects.append(stix_url)
+
+            # create relation between incident and email
+            relationship_uses = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to",
+                    stix_url.id,
+                    stix_incident.id,
+                ),
+                relationship_type="related-to",
+                created_by_ref=self.author_id,
+                source_ref=stix_url.id,
+                target_ref=stix_incident.id,
+                object_marking_refs=[self.marking.get("id")],
+                allow_custom=True,
+            )
+            stix_objects.append(relationship_uses)
+
+        if "username" in alert and "password" in alert:
+            stix_account = stix2.UserAccount(
+                account_login=alert.get("username"),
+                credential=alert.get("password"),
+                object_marking_refs=[self.marking.get("id")],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+            stix_objects.append(stix_account)
+
+            # create relation between incident and email
+            relationship_uses = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to",
+                    stix_account.id,
+                    stix_incident.id,
+                ),
+                relationship_type="related-to",
+                created_by_ref=self.author_id,
+                source_ref=stix_account.id,
+                target_ref=stix_incident.id,
+                object_marking_refs=[self.marking.get("id")],
+                allow_custom=True,
+            )
+            stix_objects.append(relationship_uses)
+
+        if ("infected_host_attributes" in alert and
+                "malware" in alert.get("infected_host_attributes")):
+            malware_family = alert.get("infected_host_attributes").get("malware").get("family")
+            stix_malware = stix2.Malware(
+                id=Malware.generate_id(malware_family),
+                name=malware_family,
+                created_by_ref=self.author_id,
+                is_family=True,
+                allow_custom=True,
+            )
+            stix_objects.append(stix_malware)
+
+            # create relation between incident and email
+            relationship_uses = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to",
+                    stix_malware.id,
+                    stix_incident.id,
+                ),
+                relationship_type="related-to",
+                created_by_ref=self.author_id,
+                source_ref=stix_malware.id,
+                target_ref=stix_incident.id,
+                object_marking_refs=[self.marking.get("id")],
+                allow_custom=True,
+            )
+            stix_objects.append(relationship_uses)
+
         return stix_objects

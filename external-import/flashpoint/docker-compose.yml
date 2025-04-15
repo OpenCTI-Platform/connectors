@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-flashpoint:
-    image: opencti/connector-flashpoint:6.6.4
+    image: opencti/connector-flashpoint:6.5.10
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -15,7 +15,8 @@ services:
       - FLASHPOINT_IMPORT_REPORTS=true
       - FLASHPOINT_IMPORT_INDICATORS=true
       - FLASHPOINT_IMPORT_COMMUNITIES=false
-      - FLASHPOINT_IMPORT_ALERTS=true
+      - FLASHPOINT_IMPORT_ALERTS=false
+      - FLASHPOINT_IMPORT_CCM_ALERTS=false
       - FLASHPOINT_COMMUNITIES_QUERIES=cybersecurity,cyberattack
       - FLASHPOINT_INDICATORS_IN_REPORTS=false
       - FLASHPOINT_INTERVAL=5 # In minutes

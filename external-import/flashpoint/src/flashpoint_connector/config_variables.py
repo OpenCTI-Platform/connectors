@@ -114,6 +114,13 @@ class ConfigConnector:
             default=False,
         )
 
+        self.import_ccm_alerts = get_config_variable(
+            "FLASHPOINT_IMPORT_CCM_ALERTS",
+            ["flashpoint", "import_ccm_alerts"],
+            self.load,
+            default=False,
+        )
+
         # deprecated configuration option, use duration_period instead
         self.flashpoint_interval: int = get_config_variable(
             "FLASHPOINT_INTERVAL",

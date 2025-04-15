@@ -1,4 +1,6 @@
 import base64
+from datetime import datetime
+from dateparser import parse
 
 import requests
 
@@ -111,6 +113,7 @@ class ConnectorClient:
             "limit": limit,
             "skip": 0,
             "sort": "updated_at:asc",
+            "embed": "asset"
         }
         has_more = True
         reports = []
@@ -149,3 +152,44 @@ class ConnectorClient:
         response.raise_for_status()
         data = response.json()
         return data
+
+    def get_ccm_alerts(self, start_date):
+        """
+        :return:
+        """
+        alerts = []
+        url = self.flashpoint_api_url + "/sources/v1/noncommunities/search"
+        start_time_date = parse(start_date)
+        start_time = datetime.timestamp(start_time_date)
+        query = '+basetypes:(credential-sighting)'
+        query += f' +header_.indexed_at: [{int(start_time)} TO now]'  # type: ignore
+
+        body = {
+            "query": query,
+            "sort": ["header_.indexed_at:asc"],
+            "size": 25,
+            "scroll": "2m"
+        }
+        has_more = True
+        total = 0
+        while has_more:
+            response = self.session.post(url, json=body)
+            response.raise_for_status()
+            data = response.json()
+            if isinstance(data.get("hits").get("total"), str):
+                total = data.get("hits").get("total")
+            elif isinstance(data.get("hits").get("total"), dict):
+                total = data.get("hits").get("total").get("value")
+            for hit in data.get("hits").get("hits"):
+                alerts.append(hit)
+
+            if total == len(alerts):
+                has_more = False
+            else:
+                url = self.flashpoint_api_url + "/sources/v1/noncommunities/scroll?scroll=2m"
+                body = {
+                    "scroll_id": data.get("_scroll_id")
+                }
+
+        print("je suis dans get_ccm_alerts")
+        return alerts
