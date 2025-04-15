@@ -60,7 +60,7 @@ class StubConfigLoaderConnector(ConfigLoaderConnector):
 
     @property
     def _send_to_queue(self):
-        return False
+        return True
 
     @property
     def _send_to_directory(self):
@@ -198,10 +198,10 @@ def test_config_loader_connector_has_correct_attributes():
     )
     assert stub_config_loader_connector.queue_threshold == 0  # noqa: S101
     assert stub_config_loader_connector.run_and_terminate is False  # noqa: S101
-    assert stub_config_loader_connector.send_to_queue is False  # noqa: S101
+    assert stub_config_loader_connector.send_to_queue is True  # noqa: S101
     assert stub_config_loader_connector.send_to_directory is False  # noqa: S101
     assert stub_config_loader_connector.send_to_directory_path is None  # noqa: S101
-    assert ( # noqa: S101
+    assert (  # noqa: S101
         stub_config_loader_connector.send_to_directory_retention is None
     )
 
