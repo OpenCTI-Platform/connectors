@@ -24,6 +24,12 @@ def fixture_email_intel_config_dict() -> dict[str, dict[str, Any]]:
         },
         "email_intel_imap": {
             "tlp_level": "white",
+            "relative_import_start_date": "P30D",
+            "host": "imap.test.com",
+            "port": 993,
+            "username": "foo",
+            "password": "bar",
+            "mailbox": "INBOX",
         },
     }
 

@@ -12,3 +12,9 @@ connector:
 
 email_intel_imap:
   tlp_level: 'amber+strict'
+  relative_import_start_date: 'P30D'
+  host: 'ChangeMe'
+  port: 'ChangeMe'
+  username: 'ChangeMe'
+  password: 'ChangeMe'
+  mailbox: 'INBOX'
