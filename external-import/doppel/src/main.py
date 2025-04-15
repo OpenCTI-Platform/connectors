@@ -14,7 +14,7 @@ from utils.state_handler import get_last_run, set_last_run
 # Load configuration
 config = load_config()
 helper = OpenCTIConnectorHelper(config)
-connector_config = load_connector_config(config)
+connector_config = load_connector_config(config, helper)
 
 API_KEY = connector_config["API_KEY"]
 POLLING_INTERVAL = connector_config["POLLING_INTERVAL"]
