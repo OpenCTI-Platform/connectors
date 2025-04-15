@@ -29,6 +29,7 @@ class _ConfigLoaderYAMLOCTI(ConfigLoaderOCTI):
     def from_dict(cls, config: dict[str, Any]) -> None:
         """Initialize the OpenCTI configuration loader."""
         cls._raw_config = config
+        return cls()
 
     @property
     def _url(self) -> str:
@@ -52,6 +53,7 @@ class _ConfigLoaderYAMLConnector(ConfigLoaderConnector):
     def from_dict(cls, config: dict[str, Any]) -> None:
         """Initialize the Connector configuration loader."""
         cls._raw_config = config
+        return cls()
 
     @property
     def _id(self) -> str:
@@ -103,10 +105,15 @@ class _ConfigLoaderYAMLDragos(ConfigLoaderDragos):
 
     _raw_config: dict[str, Any] = PrivateAttr()
 
+    def __init__(self) -> None:
+        """Initialize the Dragos configuration loader."""
+        super().__init__()
+
     @classmethod
     def from_dict(cls, config: dict[str, Any]) -> None:
         """Initialize the Dragos configuration loader."""
         cls._raw_config = config
+        return cls()
 
     @property
     def _api_base_url(self) -> str:
