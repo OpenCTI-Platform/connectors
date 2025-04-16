@@ -63,11 +63,11 @@ class ConnectorServicenow:
         self.client = ServiceNowClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
         self.utils = Utils()
-        self.last_run = None
+        self.last_run_start_datetime = None
+        self.last_run_end_datetime_with_ingested_data = None
 
     def _initiate_work(self) -> str:
-        """
-        Starts a work process.
+        """Starts a work process.
         Sends a request to the API with the initiate_work method to initialize the work.
 
         Returns:
@@ -88,8 +88,7 @@ class ConnectorServicenow:
         )
 
     def _send_intelligence(self, work_id: str, prepared_objects: list) -> int:
-        """
-        This method prepares and sends unique STIX objects to OpenCTI.
+        """This method prepares and sends unique STIX objects to OpenCTI.
         This method takes a list of objects prepared by the models, extracts their STIX representations, creates a serialized STIX bundle and It then sends this bundle to OpenCTI.
         If prepared objects exist, the method ensures that only unique objects with an 'id' attribute are included. After sending the STIX objects, it keeps inform of the number of bundles sent.
 
@@ -122,8 +121,7 @@ class ConnectorServicenow:
             return length_bundle_sent
 
     def _complete_work(self, work_id: str) -> None:
-        """
-        Marks the work process as complete.
+        """Marks the work process as complete.
         This method logs the completion of the work for a specific work ID.
         Sends a request to the API with the to_processed method to complete the work.
 
@@ -193,9 +191,9 @@ class ConnectorServicenow:
         return classified_results
 
     async def _collect_intelligence(self) -> list | None:
-        """
-        Collect intelligence from the source and convert into STIX object
-        :return: List of STIX objects
+        """Collect intelligence from the source and convert into STIX object
+        Returns:
+            List of STIX objects or None
         """
         try:
 
@@ -218,7 +216,7 @@ class ConnectorServicenow:
             )
 
             get_state_to_exclude, get_severity_to_exclude, get_priority_to_exclude = (
-                classified_result_prerequisites_tasks
+                classified_result_prerequisites_tasks if classified_result_prerequisites_tasks else (None, None, None)
             )
 
             main_tasks = {
@@ -226,7 +224,7 @@ class ConnectorServicenow:
                     get_state_to_exclude,
                     get_severity_to_exclude,
                     get_priority_to_exclude,
-                    self.last_run,
+                    self.last_run_start_datetime,
                 )
             }
 
@@ -237,7 +235,7 @@ class ConnectorServicenow:
                 collected_security_incidents, "get_security_incidents"
             )
 
-            security_incidents_list = classified_result_main_tasks[0].get("result", [])
+            security_incidents_list = classified_result_main_tasks[0].get("result", []) if classified_result_main_tasks else []
             if not security_incidents_list:
                 self.helper.connector_logger.info(
                     "[CONNECTOR] No security incidents found.",
@@ -261,7 +259,7 @@ class ConnectorServicenow:
                 collected_tasks = await asyncio.gather(si_task, return_exceptions=True)
                 security_incident_id = si_incident.get("sys_id")
 
-                tasks = collected_tasks[0].get("result", [])
+                tasks = collected_tasks[0].get("result", []) if collected_tasks else []
                 classified_result_task = self._classify_results(
                     tasks, security_incident_id
                 )
@@ -515,8 +513,7 @@ class ConnectorServicenow:
             raise
 
     def process_message(self) -> None:
-        """
-        The main process used by the connector to collect intelligence.
+        """The main process used by the connector to collect intelligence.
         This method launches the connector, processes the current state,
         collects intelligence data and updates the state of the last successful execution.
 
@@ -524,22 +521,24 @@ class ConnectorServicenow:
             None
         """
         try:
-            # Initialization to get the current date and time in various formats.
-            current_utc_datetime, current_utc_isoformat, current_timestamp = (
-                self.utils.get_now().values()
-            )
+            # Initialization to get the current start utc iso format.
+            current_start_utc_isoformat = self.utils.get_now(DateTimeFormat.ISO)
 
             # Get the current state
             current_state = self.helper.get_state()
-            self.last_run = current_state.get("last_run") if current_state else None
+            self.last_run_start_datetime = current_state.get("last_run_start_datetime") if current_state else None
+            self.last_run_end_datetime_with_ingested_data = current_state.get("last_run_end_datetime_with_ingested_data") if current_state else None
 
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starting connector...",
                 {
                     "connector_name": self.config.connector.name,
-                    "connector_start_time": current_utc_isoformat,
-                    "last_run_isoformat": (
-                        self.last_run if self.last_run else "Connector has never run"
+                    "connector_start_time": current_start_utc_isoformat,
+                    "last_run_start_datetime": (
+                        self.last_run_start_datetime if self.last_run_start_datetime else "Connector has never run"
+                    ),
+                    "last_run_end_datetime_with_ingested_data": (
+                        self.last_run_end_datetime_with_ingested_data if self.last_run_end_datetime_with_ingested_data else "Connector has never ingested data"
                     ),
                 },
             )
@@ -553,24 +552,25 @@ class ConnectorServicenow:
                     collected_intelligence
                 )
                 self._send_intelligence(work_id, prepared_intelligence)
+                self.last_run_end_datetime_with_ingested_data = self.utils.get_now(DateTimeFormat.ISO)
 
-            new_state_utc_isoformat = self.utils.get_now(DateTimeFormat.ISO)
-
-            # Store the current utc isoformat as a last run of the connector.
+            # Store the current start utc isoformat as a last run of the connector.
             self.helper.connector_logger.info(
                 "[CONNECTOR] Getting current state and update it with last run of the connector.",
                 {
-                    "current_state": current_state,
-                    "new_state": new_state_utc_isoformat,
+                    "current_state": self.last_run_start_datetime,
+                    "new_last_run_start_datetime": current_start_utc_isoformat,
                 },
             )
-            if current_state:
-                current_state["last_run"] = new_state_utc_isoformat
+            if self.last_run_start_datetime:
+                current_state["last_run_start_datetime"] = current_start_utc_isoformat
             else:
-                current_state = {"last_run": new_state_utc_isoformat}
+                current_state = {"last_run_start_datetime": current_start_utc_isoformat}
+
+            if self.last_run_end_datetime_with_ingested_data:
+                current_state["last_run_end_datetime_with_ingested_data"] = self.last_run_end_datetime_with_ingested_data
 
             self.helper.set_state(current_state)
-
             self._complete_work(work_id)
 
         except (KeyboardInterrupt, SystemExit):
@@ -583,8 +583,7 @@ class ConnectorServicenow:
             self.helper.connector_logger.error(str(err))
 
     def run(self) -> None:
-        """
-        Run the main process encapsulated in a scheduler
+        """Run the main process encapsulated in a scheduler
         It allows you to schedule the process to run at a certain intervals
         This specific scheduler from the pycti connector helper will also check the queue size of a connector
         If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
@@ -593,7 +592,8 @@ class ConnectorServicenow:
         It requires the `duration_period` connector variable in ISO-8601 standard format
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
         If `duration_period` is set to 0 then it will function as a run and terminate
-        :return: None
+        Returns:
+            None
         """
         self.helper.schedule_process(
             message_callback=self.process_message,

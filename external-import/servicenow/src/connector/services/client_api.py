@@ -4,9 +4,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential_jitter
 
 class ServiceNowClient:
     def __init__(self, helper, config):
-        """
-        Initialize the client with necessary configurations
-        """
+        """Initialize the client with necessary configurations"""
         self.helper = helper
         self.config = config
 
@@ -42,15 +40,20 @@ class ServiceNowClient:
     async def _list_matched(
         self, targeted_labels: list[str], table_name: str, query_parameters: str
     ) -> str:
-        """Get the values of the element
+        """This method queries ServiceNow's "sys_choice" table_name using a parameterized query, with the aim of matching labels defined by configuration environment variables (targeted_labels = "state_to_exclude" or "severity_to_exclude" or "priority_to_exclude") with those available in ServiceNow (for fields such as state, severity and priority).
+
+        If a match is found, the method extracts the associated integer values (ServiceNow internal values) and concatenates them into a string, which is used in the query parameters when retrieving security incidents.
+
+        In the event of a failed match, a warning message is recorded in the logs, specifying the unrecognized tags and the set of values available in the queried table.
 
         Args:
-            targeted_labels(list[str]): labels used to keep the corresponding values.
-            table_name(str): table to request
-            query_parameters (str): str query to filter data table.
+            targeted_labels(list[str]): A list of elements that may come from the “state_to_exclude”,
+                                        “severity_to_exclude”, “priority_to_exclude” environment variables.
+            table_name(str): Name of the ServiceNow table to be requested
+            query_parameters (str): Parameters to be included in the request to filter data retrieved from ServiceNow.
 
         Returns:
-            (str): The concatenated values filtered thanks to labels.
+            str:  The filtered concatenated values, corresponding to the labels to be excluded.
         """
         official_list = await self._request_data(table_name, query_parameters)
 
@@ -91,7 +94,14 @@ class ServiceNowClient:
 
         return list_matched_convert_to_str
 
-    async def get_state_to_exclude(self):
+    async def get_state_to_exclude(self) -> str | None:
+        """Prepares the parameters needed to extract the statuses to be excluded from ServiceNow, according to the configuration defined in "state_to_exclude".
+
+        This method defines the target table ("sys_choice") and builds the query parameters to retrieve the names and values of the states configured in ServiceNow.
+
+        Returns:
+            str | None: A string of numerical values corresponding to excluded states, or "None" if no exclusion is defined.
+        """
         if self.state_to_exclude is None:
             return None
         table_name = "sys_choice"
@@ -103,7 +113,14 @@ class ServiceNowClient:
             self.state_to_exclude, table_name, query_parameters
         )
 
-    async def get_severity_to_exclude(self):
+    async def get_severity_to_exclude(self) -> str | None:
+        """Prepares the parameters needed to extract the severity to be excluded from ServiceNow, according to the configuration defined in "severity_to_exclude".
+
+        This method defines the target table_name ("sys_choice") and builds the query parameters to retrieve the names and values of the severity configured in ServiceNow.
+
+        Returns:
+            str | None: A string of numerical values corresponding to excluded severity, or "None" if no exclusion is defined.
+        """
         if self.severity_to_exclude is None:
             return None
         table_name = "sys_choice"
@@ -115,7 +132,14 @@ class ServiceNowClient:
             self.severity_to_exclude, table_name, query_parameters
         )
 
-    async def get_priority_to_exclude(self):
+    async def get_priority_to_exclude(self) -> str | None:
+        """Prepares the parameters needed to extract the priority to be excluded from ServiceNow, according to the configuration defined in "priority_to_exclude".
+
+        This method defines the target table ("sys_choice") and builds the query parameters to retrieve the names and values of the priority configured in ServiceNow.
+
+        Returns:
+            str | None: A string of numerical values corresponding to excluded severity, or "None" if no exclusion is defined.
+        """
         if self.priority_to_exclude is None:
             return None
         table_name = "sys_choice"
@@ -133,6 +157,18 @@ class ServiceNowClient:
         priority_to_exclude: str | None,
         last_run: str | None,
     ) -> dict:
+        """Retrieves security incidents from ServiceNow by applying exclusion filters on state, severity, priority and last execution date (or "import_start_date" for the first run of the connector).
+
+        This method dynamically builds query parameters to query ServiceNow's "sn_si_incident" table.
+        The fields returned are predefined and cover all the metadata required to model a security incident.
+
+        Args:
+            state_to_exclude (str | None): Comma-separated status values to be excluded.
+            severity_to_exclude (str | None): Severity values to exclude, separated by commas.
+            priority_to_exclude (str | None): Comma-separated priority values to exclude.
+            last_run (str | None): Datetime of last connector run (in ISO format).
+        Returns:
+        """
         table_name = "sn_si_incident"
 
         # To find all available fields, see ServiceNow's API REST explorer in Table_name "sn_si_incident"
@@ -189,6 +225,14 @@ class ServiceNowClient:
         return await self._request_data(table_name, query_parameters)
 
     async def get_tasks(self, security_incident_id: str):
+        """Retrieves tasks associated with a specific security incident from ServiceNow.
+        This method queries the "sn_si_task" table_name, filtering results by the identifier ("sys_id") of the parent security incident ("security_incident_id"). It retrieves a set of predefined fields for each task.
+
+        Args:
+            security_incident_id (str): The ServiceNow identifier ("sys_id") of the security incident for which the tasks are to be retrieved.
+        Returns:
+             dict: The results returned by the ServiceNow API containing the list of tasks associated with the specified security incident.
+        """
         table_name = "sn_si_task"
 
         # To find all available fields, see ServiceNow's API REST explorer in Table_name "sn_si_task"
@@ -216,6 +260,10 @@ class ServiceNowClient:
         return await self._request_data(table_name, query_parameters)
 
     async def _request_data(self, table_name: str, query_parameters: str):
+        """
+        Args:
+        Returns:
+        """
         url_built = self._build_url(table_name, query_parameters)
 
         @retry(

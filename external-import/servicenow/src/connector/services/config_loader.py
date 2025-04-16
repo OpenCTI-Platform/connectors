@@ -9,8 +9,7 @@ class ServiceNowConfig:
 
     @staticmethod
     def _load_config() -> ConfigLoader:
-        """
-        Load the application configuration using Pydantic Settings.
+        """Load the application configuration using Pydantic Settings.
 
         The configuration is loaded from a single source, following a specific order:
         1. .env file (DotEnvSettingsSource) → If present, it is used as the primary configuration source.
