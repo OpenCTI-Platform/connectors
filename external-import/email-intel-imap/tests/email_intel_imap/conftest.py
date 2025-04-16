@@ -1,7 +1,7 @@
 import os
 from copy import deepcopy
 from typing import Any
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 from email_intel_imap.config import ConnectorConfig
@@ -53,3 +53,13 @@ def fixture_mock_email_intel_imap_config(
 @pytest.fixture(name="mocked_helper")
 def fixture_mocked_helper(mocker: MockerFixture) -> Mock:
     return mocker.patch("pycti.OpenCTIConnectorHelper", Mock())
+
+
+@pytest.fixture(name="mocked_mail_box")
+def fixture_mocked_mail_box(mocker: MockerFixture) -> MagicMock:
+    mocked_mail_box = mocker.patch("email_intel_imap.client.MailBox")
+    mocked_mail_box_instance = MagicMock()
+    mocked_mail_box.return_value.login.return_value.__enter__.return_value = (
+        mocked_mail_box_instance
+    )
+    return mocked_mail_box_instance
