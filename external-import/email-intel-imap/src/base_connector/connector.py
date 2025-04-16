@@ -93,6 +93,7 @@ class BaseConnector(abc.ABC, Generic[ConfigType, ClientType, ConverterType]):
         )
 
         if stix_objects := self._collect_intelligence():
+            stix_objects.extend([self.converter.author, self.converter.tlp_marking])
             stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
             bundles_sent = self.helper.send_stix2_bundle(
                 stix_objects_bundle,
