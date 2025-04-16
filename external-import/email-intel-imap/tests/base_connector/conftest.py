@@ -1,6 +1,7 @@
 import os
 from copy import deepcopy
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 from pytest_mock import MockerFixture
@@ -50,3 +51,10 @@ def fixture_mocked_environ(
             if sub_value:
                 environ[f"{key.upper()}_{sub_key.upper()}"] = str(sub_value)
     mocker.patch("os.environ", environ)
+
+
+@pytest.fixture(name="mocked_config")
+def fixture_mocked_config() -> Mock:
+    config = Mock()
+    config.tlp_level = "white"
+    return config
