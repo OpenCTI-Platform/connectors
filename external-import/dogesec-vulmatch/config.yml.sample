@@ -5,21 +5,6 @@ opencti:
 connector:
   id: 'CHANGEME'
   type: 'EXTERNAL_IMPORT'
-<<<<<<< Updated upstream
-  name: 'VULMATCH'
-  scope:'=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,vulnerability,campaign,incident,indicator,infrastructure,location,note,threat-actor,tool,software'
-  log_level: 'info'
-
-taxii2:
-  discovery_url: 'https://app.vulmatch.com/taxii/taxii2'
-  username: CHANGEME
-  password: CHANGEME
-  v2.1: True
-  collections: 'CHANGEME'
-  initial_history: 24
-  interval: 24
-  verify_ssl: True
-=======
   name: 'Vulmatch'
   scope: 'vulmatch'
   confidence_level: 70
@@ -35,4 +20,3 @@ vulmatch:
 
   backfill_days: 100 #max 356
   interval_days: 1 # interval in days #how often to check for new data using filter
->>>>>>> Stashed changes
