@@ -144,6 +144,15 @@ class ConverterToStix:
         case_incident: CustomCaseIncident,
         all_labels: list[str],
     ) -> CustomTask:
+        """Make a CustomTask object and its representation in STIX 2.1 format.
+        The CustomTask is represented by the SIT in ServiceNow.
+        Args:
+            data (TaskResponse): Validated task data from ServiceNow.
+            case_incident (CustomCaseIncident): Security Incident to which this task is linked.
+            all_labels (list[str]): List of labels to associate with the task.
+        Returns:
+            CustomTask: An object containing a task and its representation in STIX 2.1 format.
+        """
         return CustomTask(
             name=f"{data.number} {data.short_description}",
             description=data.comments_and_work_notes,
@@ -159,6 +168,14 @@ class ConverterToStix:
     def make_custom_case_incident(
         self, data: SecurityIncidentResponse, case_incident_object_refs: list
     ) -> CustomCaseIncident:
+        """Make a CustomCaseIncident object and its representation in STIX 2.1 format.
+        The CustomCaseIncident is represented by the SIR in ServiceNow.
+        Args:
+            data (SecurityIncidentResponse): Validated security incident data from ServiceNow.
+            case_incident_object_refs (list): List of security incident-related objects.
+        Returns:
+            CustomCaseIncident: An object containing a security incident and its representation in STIX 2.1 format.
+        """
         return CustomCaseIncident(
             name=f"{data.number} {data.short_description}",
             description=data.comments_and_work_notes,
