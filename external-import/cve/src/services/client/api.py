@@ -19,7 +19,7 @@ class CVEClient:
         :param helper: OCTI helper
         :param header:
         """
-        headers = {"Bearer": api_key, "User-Agent": header}
+        headers = {"apiKey": api_key, "User-Agent": header}
         self.token = api_key
         self.helper = helper
         self.session = requests.Session()
