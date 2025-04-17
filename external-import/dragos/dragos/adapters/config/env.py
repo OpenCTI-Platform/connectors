@@ -91,6 +91,10 @@ class _ConfigLoaderEnvDragos(ConfigLoaderDragos):
         return os.getenv("DRAGOS_API_TOKEN")
 
     @property
+    def _api_secret(self) -> str:
+        return os.getenv("DRAGOS_API_SECRET")
+
+    @property
     def _import_start_date(self) -> str:
         return os.getenv("DRAGOS_IMPORT_START_DATE")
 
