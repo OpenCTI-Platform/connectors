@@ -325,6 +325,7 @@ class ProductClientAPIV1(BaseClientAPIV1):
 
         """
         url = BaseClientAPIV1.format_get_query(self, path=f"products/{serial}/report")
-        resp = await BaseClientAPIV1._get(self, query_url=url)
+        # We use _get_retry here because there is no response model for the PDF report.
+        resp = await BaseClientAPIV1._get_retry(self, query_url=url)
         pdf_bytes = resp._body
         return BytesIO(pdf_bytes)  # type: ignore[arg-type]
