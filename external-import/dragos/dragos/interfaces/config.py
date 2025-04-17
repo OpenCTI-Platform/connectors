@@ -113,7 +113,7 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
     )
     queue_threshold: Optional[int] = Field(
         None,
-        description="Connector queue max size in Mbytes. Default to 500.",  # default handled by PyCTI, see OpenCTIHelper
+        description="Connector queue max size in Mbytes..",
     )
     run_and_terminate: Optional[bool] = Field(
         None,
@@ -249,6 +249,10 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
         ...,
         description="Dragos API token.",
     )
+    api_secret: SecretStr = Field(
+        ...,
+        description="Dragos API secret.",
+    )
     import_start_date: AwareDatetime | timedelta = Field(
         ...,
         description="Start date of first import (ISO format).",
@@ -265,6 +269,7 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
                 self,
                 api_base_url=self._api_base_url,
                 api_token=self._api_token,
+                api_secret=self._api_secret,
                 import_start_date=self._import_start_date,
                 tlp_level=self._tlp_level,
             )
@@ -281,6 +286,11 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
     @property
     @abstractmethod
     def _api_token(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def _api_secret(self) -> str:
         pass
 
     @property
@@ -345,7 +355,7 @@ class ConfigLoader(ABC, FrozenBaseModel):
 
     def to_dict(self, token_as_plaintext: bool = False) -> dict[str, Any]:
         """Gather configuration settings and return them as a dictionary."""
-        return {
+        dct =  {
             "opencti": {
                 "url": self.opencti.url,
                 "token": (
@@ -375,7 +385,23 @@ class ConfigLoader(ABC, FrozenBaseModel):
                     if token_as_plaintext
                     else self.dragos.api_token
                 ),
+                "api_secret": (
+                    self.dragos.api_secret.get_secret_value()
+                    if token_as_plaintext
+                    else self.dragos.api_secret
+                ),
                 "import_start_date": self.dragos.import_start_date,
                 "tlp_level": self.dragos.tlp_level,
             },
         }
+        # recursively remove all None key/value pairs from the dictionary
+        def _remove_none(d: dict[str, Any]) -> dict[str, Any]:
+            """Recursively remove None values from a dictionary.
+
+            Examples:
+                >>> _remove_none({'a': 1, 'b': None, 'c': {'d': 2, 'e': None}})
+                {'a': 1, 'c': {'d': 2}}
+
+            """
+            return {k: _remove_none(v) if isinstance(v, dict) else v for k, v in d.items() if v is not None}
+        return _remove_none(dct)
