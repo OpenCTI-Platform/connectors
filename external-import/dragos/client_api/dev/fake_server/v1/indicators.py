@@ -44,7 +44,14 @@ async def get_indicators(
     if type:
         indicators = [i for i in indicators if i["type"] == type]
     if serial:
-        indicators = [i for i in indicators if i["serial"] in serial]
+        filtered_indicators = []
+        for indicator in indicators:
+            for product in indicator.get("products", []):
+                if product["serial"] in serial:
+                    filtered_indicators.append(indicator)
+                    break
+        indicators = filtered_indicators
+
     if tags:
         indicators = [i for i in indicators if any(tag in i["tags"] for tag in tags)]
 
