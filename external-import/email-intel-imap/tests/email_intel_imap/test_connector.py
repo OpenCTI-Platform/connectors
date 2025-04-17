@@ -25,7 +25,7 @@ def fixture_connector(
 
 @pytest.mark.usefixtures("mocked_mail_box")
 def test_connector_collect_intelligence_empty(connector: Connector) -> None:
-    stix_objects = connector._collect_intelligence()
+    stix_objects = connector.collect_intelligence()
     assert stix_objects == []
 
 
@@ -37,7 +37,7 @@ def test_connector_collect_intelligence(
     email2 = Mock(subject="email 2", date=now, text="email body 2")
 
     mocked_mail_box.fetch.return_value = [email1, email2]
-    stix_objects = connector._collect_intelligence()
+    stix_objects = connector.collect_intelligence()
 
     assert len(stix_objects) == 2
 
