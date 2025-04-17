@@ -8,7 +8,7 @@ STIX_OBJECT = MagicMock()
 
 
 class TestConnector(BaseConnector):
-    def _collect_intelligence(self) -> list[_DomainObject]:
+    def collect_intelligence(self) -> list[_DomainObject]:
         return [STIX_OBJECT]
 
 
@@ -17,7 +17,7 @@ def test_process(mocked_helper: MagicMock) -> None:
     connector = TestConnector(
         helper=mocked_helper, config=Mock(), client=Mock(), converter=Mock()
     )
-    connector._process_message()
+    connector.process_message()
 
     # Assert the work initiation and processing
     mocked_helper.api.work.initiate_work.assert_called_once_with(
@@ -29,6 +29,7 @@ def test_process(mocked_helper: MagicMock) -> None:
     )
 
     # Assert the state management
+    mocked_helper.get_state.assert_called_once_with()
     mocked_helper.set_state.assert_called_once_with(
         state={"last_run": "2025-04-17 15:24:00+00:00"}
     )
