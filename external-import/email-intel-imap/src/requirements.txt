@@ -1,0 +1,4 @@
+-r ./base_connector/requirements.txt
+pycti==6.5.10
+pydantic==2.10.6
+stix2~=3.0.1
