@@ -2,7 +2,6 @@
 VULMATCH Connector
 """
 
-import json
 import os
 import time
 from datetime import UTC, datetime, timedelta
@@ -20,7 +19,7 @@ def parse_bool(value: str):
 
 
 def parse_number(value: int):
-    if not value or value < 0:
+    if not value or value <= 0:
         return None
     return value
 
@@ -49,7 +48,7 @@ class VulmatchConnector:
             self._get_param("epss_score_min", is_number=True, default_value=-1)
         )
         self.interval_days = self._get_param("interval_days", is_number=True)
-        self.backfill_days = self._get_param("backfill_days", is_number=True)
+        self.days_to_backfill = self._get_param("days_to_backfill", is_number=True)
 
         self.session = requests.Session()
         self.session.headers = {
@@ -163,7 +162,7 @@ class VulmatchConnector:
     def _get_state(self) -> dict:
         state = self.helper.get_state() or dict(
             last_vulnerability_modified=(
-                datetime.now(UTC) - timedelta(days=self.backfill_days)
+                datetime.now(UTC) - timedelta(days=self.days_to_backfill)
             ).isoformat()
         )
         return state
