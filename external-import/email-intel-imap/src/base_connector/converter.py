@@ -1,10 +1,12 @@
 import abc
-from typing import Any, Generic, TypeVar
+import datetime
+from typing import Any, Generator, Generic, TypeVar
 
 import pycti
 import stix2
 from base_connector.config import BaseConnectorConfig
 from base_connector.errors import InvalidTlpLevelError
+from base_connector.models import ReportCustomProperties
 from pycti import OpenCTIConnectorHelper
 from pydantic import BaseModel
 
@@ -74,6 +76,26 @@ class BaseConverter(abc.ABC, Generic[EntityType, StixType]):
                     f"Invalid TLP level: {self.config.tlp_level}"
                 )
 
+    def _create_report(
+        self,
+        name: str,
+        published: datetime.datetime,
+        report_types: list[str],
+        x_opencti_content: str,
+    ) -> stix2.Report:
+        return stix2.Report(
+            id=pycti.Report.generate_id(name=name, published=published),
+            name=name,
+            report_types=report_types,
+            published=published,
+            created_by_ref=self.author,
+            object_refs=[self.author],
+            object_marking_refs=[self.tlp_marking],
+            custom_properties=ReportCustomProperties(
+                x_opencti_content=x_opencti_content
+            ).model_dump(),
+        )
+
     @abc.abstractmethod
-    def to_stix(self, entity: EntityType) -> list[StixType]:
+    def to_stix(self, entity: EntityType) -> Generator[StixType, None, None]:
         """Convert the data into STIX 2.1 objects."""

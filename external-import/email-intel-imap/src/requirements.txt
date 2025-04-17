@@ -1,4 +1,5 @@
 -r ./base_connector/requirements.txt
+imap-tools==1.10.0
 pycti==6.5.10
 pydantic==2.10.6
 stix2~=3.0.1
