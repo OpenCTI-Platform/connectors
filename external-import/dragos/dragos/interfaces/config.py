@@ -368,7 +368,7 @@ class ConfigLoader(ABC, FrozenBaseModel):
                 "id": self.connector.id,
                 "type": self.connector.type,
                 "name": self.connector.name,
-                "scope": self.connector.scope,
+                "scope": ",".join(self.connector.scope),
                 "log_level": self.connector.log_level,
                 "duration": self.connector.duration_period,
                 "queue_threshold": self.connector.queue_threshold,
