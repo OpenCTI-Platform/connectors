@@ -25,8 +25,8 @@ connector:
     queue_threshold: 10
     run_and_terminate: false
 dragos:
-    base_url: "https://api.dragos.com"
-    token: "dragos_token"
+    api_base_url: "https://api.dragos.com"
+    api_token: "dragos_token"
     import_start_date: "2023-01-01T00:00:00Z"
     tlp_level: "amber"
 """
