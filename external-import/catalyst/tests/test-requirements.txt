@@ -1,0 +1,5 @@
+# Test dependencies
+pytest>=7.0.0
+pytest-mock>=3.10.0
+pycti>=6.5.8
+python-catalyst

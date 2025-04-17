@@ -1,4 +1,4 @@
-pycti==6.6.1
+pycti==6.6.5
 pyyaml~=6.0.2
 requests~=2.32.3
-validators==0.33.0
+validators==0.34.0
