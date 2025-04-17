@@ -65,7 +65,10 @@ class _ConfigLoaderYAMLConnector(ConfigLoaderConnector):
 
     @property
     def _scope(self) -> list[str]:
-        return self._raw_config.get("scope")
+        scope = self._raw_config.get("scope")
+        if isinstance(scope, str):
+            return [string.strip() for string in scope.split(",")]
+        return scope
 
     @property
     def _log_level(self) -> Literal["debug", "info", "warn", "error"]:
@@ -117,11 +120,11 @@ class _ConfigLoaderYAMLDragos(ConfigLoaderDragos):
 
     @property
     def _api_base_url(self) -> str:
-        return self._raw_config.get("base_url")
+        return self._raw_config.get("api_base_url")
 
     @property
     def _api_token(self) -> str:
-        return self._raw_config.get("token")
+        return self._raw_config.get("api_token")
 
     @property
     def _import_start_date(self) -> str:
