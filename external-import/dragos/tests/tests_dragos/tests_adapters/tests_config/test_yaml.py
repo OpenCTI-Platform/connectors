@@ -27,6 +27,7 @@ connector:
 dragos:
     api_base_url: "https://api.dragos.com"
     api_token: "dragos_token"
+    api_secret: "dragos_secret"
     import_start_date: "2023-01-01T00:00:00Z"
     tlp_level: "amber"
 """

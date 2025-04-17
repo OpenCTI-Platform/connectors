@@ -127,6 +127,10 @@ class _ConfigLoaderYAMLDragos(ConfigLoaderDragos):
         return self._raw_config.get("api_token")
 
     @property
+    def _api_secret(self) -> str:
+        return self._raw_config.get("api_secret")
+
+    @property
     def _import_start_date(self) -> str:
         return self._raw_config.get("import_start_date")
 
