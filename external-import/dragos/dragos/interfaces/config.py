@@ -355,7 +355,7 @@ class ConfigLoader(ABC, FrozenBaseModel):
 
     def to_dict(self, token_as_plaintext: bool = False) -> dict[str, Any]:
         """Gather configuration settings and return them as a dictionary."""
-        dct =  {
+        dct = {
             "opencti": {
                 "url": self.opencti.url,
                 "token": (
@@ -394,6 +394,7 @@ class ConfigLoader(ABC, FrozenBaseModel):
                 "tlp_level": self.dragos.tlp_level,
             },
         }
+
         # recursively remove all None key/value pairs from the dictionary
         def _remove_none(d: dict[str, Any]) -> dict[str, Any]:
             """Recursively remove None values from a dictionary.
@@ -403,5 +404,10 @@ class ConfigLoader(ABC, FrozenBaseModel):
                 {'a': 1, 'c': {'d': 2}}
 
             """
-            return {k: _remove_none(v) if isinstance(v, dict) else v for k, v in d.items() if v is not None}
+            return {
+                k: _remove_none(v) if isinstance(v, dict) else v
+                for k, v in d.items()
+                if v is not None
+            }
+
         return _remove_none(dct)

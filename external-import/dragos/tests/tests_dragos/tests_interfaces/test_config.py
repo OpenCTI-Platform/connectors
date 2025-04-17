@@ -98,6 +98,7 @@ class StubConfigLoaderDragos(ConfigLoaderDragos):
     def _tlp_level(self):
         return "amber"
 
+
 @pytest.fixture(scope="function")
 def config_loader_dragos():
     """Fixture for the ConfigLoaderDragos class."""
@@ -269,7 +270,9 @@ def test_config_loader_dragos_has_correct_attributes():
 
 
 @freeze_time("2010-01-01T01:00:00", tz_offset=2)  # CEST
-def test_config_dragos_import_start_handless_relative_import_start_date(config_loader_dragos):
+def test_config_dragos_import_start_handless_relative_import_start_date(
+    config_loader_dragos,
+):
     """Test that the _ConfigLoaderDragos handles relative import start date."""
 
     # Given: Valid implementation of ConfigLoaderDragos
