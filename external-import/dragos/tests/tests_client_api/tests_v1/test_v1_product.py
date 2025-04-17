@@ -233,6 +233,7 @@ async def test_invalid_product_response_content_leads_to_dragos_api_error(
         pytest.param("get_product", {"serial": "12345"}, id="get_product"),
         pytest.param("get_all_products", {}, id="get_all_products"),
         pytest.param("iter_products", {}, id="get_products"),
+        pytest.param("get_product_pdf", {"serial": "12345"}, id="get_product_pdf"),
     ],
 )
 @pytest.mark.asyncio

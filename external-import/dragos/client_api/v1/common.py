@@ -142,24 +142,8 @@ class BaseClientAPIV1(ABC):  # noqa: B024
                 _ = await resp.read()  # consume the response
                 return resp
 
-    async def get(
-        self, query_url: URL, response_model: type[ResponseModel]
-    ) -> ResponseModel:
-        """Perform a GET request.
-
-        You should use format_get_query to format the query URL.
-
-        Args:
-            query_url (str): The URL to query.
-            response_model (type[T]): The model to validate the response.
-
-        Returns:
-            (BaseModel-like): The validated response.
-
-        Raises:
-            DragosAPIError: If the response is invalid.
-
-        """
+    async def _get_retry(self: "BaseClientAPIV1", query_url: URL) -> "ClientResponse":
+        """Perform a GET request with retry logic."""
         try:
             async for attempt in AsyncRetrying(
                 retry=retry_if_exception_type(
@@ -182,6 +166,27 @@ class BaseClientAPIV1(ABC):  # noqa: B024
             except ClientConnectionError as e:
                 message = f"Cannot connect to the API: {e}"
                 raise DragosAPIError(message) from e
+        return response
+
+    async def get(
+        self, query_url: URL, response_model: type[ResponseModel]
+    ) -> ResponseModel:
+        """Perform a GET request.
+
+        You should use format_get_query to format the query URL.
+
+        Args:
+            query_url (str): The URL to query.
+            response_model (type[T]): The model to validate the response.
+
+        Returns:
+            (BaseModel-like): The validated response.
+
+        Raises:
+            DragosAPIError: If the response is invalid.
+
+        """
+        response = await self._get_retry(query_url)
 
         data = await self._process_raw_response(response)
         try:

@@ -103,12 +103,13 @@ graph LR
 The connector can be configured using:
 
 - Direct environment variables
+
 ```shell
 export ENV_VAR_NAME="..."
 ```
 
 - A `.env` file
-with a .env file
+
 ```shell
 export $(grep -v '^#' .env | xargs -d '\n')
 ```
@@ -123,6 +124,7 @@ connector:
     id: "..."
 ```
 you can then alter the `main.py` file to load the config.yaml using the dedicated adapter:
+
 ```python 
 from dragos.adapters.config import ConfigLoaderYaml
 
@@ -158,11 +160,12 @@ config = ConfigLoaderYaml("path/to/config.yaml")
 
 > 📅 The `import_start_date` can be formatted as a date (ISO8601) or as a duration (e.g., `PT3D` for 3 days ago).
 
+
 ## Additional Information
 
 ### Fake Server
-
-The connector can be run against a fake server to simulate the Dragos API. This is useful for testing and development purposes. See [client-api/README.md](client-api/README.md) for more information on how to set up and use the fake server.
+The connector can be run against a fake server to simulate the Dragos API. This is useful for testing and development purposes.
+See [client-api/README.md](client-api/README.md) for more information on how to set up and use the fake server.
 
 ### Geocoding
 
