@@ -71,9 +71,7 @@ class BaseClientAPIV1(ABC):  # noqa: B024
         """
         self._base_url = base_url / "api" / "v1"
         timeout_seconds: float = timeout.total_seconds()
-        self._timeout = ClientTimeout(
-            total=timeout_seconds, sock_connect=timeout_seconds * 5
-        )
+        self._timeout = ClientTimeout(total=timeout_seconds)
         self._retry = retry
         self._backoff_seconds: float = backoff.total_seconds()
         self._headers = {"accept": "*/*", "API-Token": token, "API-Secret": secret}
