@@ -120,7 +120,12 @@ class ExternalImportConnector:
         self.MITRE_MAPPER = None
 
     def _collect_intelligence(
-        self, collection, ttl, portion, mitre_mapper, flag_instrusion_set_instead_of_threat_actor=False
+        self,
+        collection,
+        ttl,
+        portion,
+        mitre_mapper,
+        flag_instrusion_set_instead_of_threat_actor=False,
     ) -> list:
         """Collect intelligence from the source"""
         raise NotImplementedError

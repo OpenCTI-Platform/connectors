@@ -28,7 +28,12 @@ class CustomConnector(ExternalImportConnector):
         super().__init__()
 
     def _collect_intelligence(
-        self, collection, ttl, event, mitre_mapper, flag_instrusion_set_instead_of_threat_actor=False
+        self,
+        collection,
+        ttl,
+        event,
+        mitre_mapper,
+        flag_instrusion_set_instead_of_threat_actor=False,
     ) -> []:
         """Collects intelligence from channels
 
