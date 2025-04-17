@@ -12,6 +12,7 @@ from dragos.domain.models.octi.common import (
     ExternalReference,
     KillChainPhase,
     TLPMarking,
+    UploadedFile,
 )
 from dragos.domain.models.octi.enums import (
     AttackMotivation,
@@ -702,6 +703,10 @@ class Report(DomainObject):
         None,
         description="Reliability of the report.",
     )
+    files: Optional[list[UploadedFile]] = Field(
+        None,
+        description="Files to upload with the report, e.g. report as a PDF.",
+    )
 
     def to_stix2_object(self) -> stix2.Report:
         """Make stix object."""
@@ -725,6 +730,7 @@ class Report(DomainObject):
             object_marking_refs=[marking.id for marking in self.markings or []],
             custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
                 x_opencti_reliability=self.reliability,
+                x_opencti_files=[file.to_stix2_object() for file in self.files or []],
                 # unused
                 x_opencti_workflow_id=None,  # set by OpenCTI only, workflow ids are customizable
             ),
