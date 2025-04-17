@@ -4,14 +4,15 @@
 
 Stixify is a web application that turns reports into structured threat intelligence.
 
-![](media/obstracts-subscriptions.png)
-![](media/obstracts-extraction-graph.png)
+![](media/stixify-graph.png)
+![](media/stixify-reports.png)
+![](media/stixify-dossiers.png)
 
 [You can read more and sign up for Stixify for free here](https://www.stixify.com/).
 
 The OpenCTI Stixify Connector syncs the intelligence reports held in Stixify Dossier to OpenCTI.
 
-_Note: The OpenCTI Obstracts Connector only works with Stixify Web. It does not work with self-hosted Stixify installations at this time._
+_Note: The OpenCTI Stixify Connector only works with Stixify Web. It does not work with self-hosted Stixify installations at this time._
 
 ## Installation
 
@@ -33,12 +34,12 @@ If you are unfamiliar with how to install OpenCTI Connectors, [you should read t
 
 There are a number of configuration options specific to Stixify, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment). These options are as follows:
 
-| Docker Env variable         | config variable            | Required | Recommended | Description                                                                                                                                                                                                                                                               |
-|-----------------------------|----------------------------|----------|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `STIXIFY_BASE_URL`          | `stixify.base_url`         | TRUE     | `'https://api.stixify.com/'`        | Should always be `'https://api.stixify.com/'`                                                                                                                                                                                                                           |
-| `STIXIFY_API_KEY`          | `stixify.api_key`         | TRUE     | n/a         | The API key used to authenticate to Stixify Web                                                                                                                                                                                                                         |
-| `STIXIFY_DOSSIER_IDS`         | `stixify.dossier_ids`         | TRUE    | n/a        | A list of comma separated dossier IDs (e.g. `'dossier1,dossier2'`. You can get a Dossier ID in the Stixify web app. At least one Dossier ID must be passed. All historical intelligence from reports will be ingested, and new intelligence added to the Dossier will be ingested as per the interval setting. You can use any Dossier visible to the authenticated team (even if the team does not own it). |
-| `STIXIFY_INTERVAL_HOURS` | `stixify.interval_hours`   | TRUE     | `12`          | How often (in hours) this Connector should poll Stixify Web for updates.                                                                           
+| Docker Env variable    | config variable        | Required | Data Type | Recommended                                            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------- | ---------------------- | -------- | --------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `STIXIFY_BASE_URL`       | `stixify.base_url`       | TRUE     | url       | `https://api.stixify.com/` | Should always be `https://api.stixify.com/`                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `STIXIFY_API_KEY`        | `stixify.api_key`        | TRUE     | string    | n/a                                                    | The API key used to authenticate to Stixify Web                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `STIXIFY_DOSSIER_IDS`    | `stixify.dossier_ids`    | TRUE     | uuid      | n/a                                                    | A list of comma separated dossier IDs (e.g. `'dossier1id,dossier2id'`. You can get a Dossier ID in the Stixify web app. At least one Dossier ID must be passed. All historical intelligence from reports will be ingested, and new intelligence added to the Dossier will be ingested as per the interval setting. You can use any Dossier visible to the authenticated team (even if the team you're using to authenticate with does not own it). |
+| `STIXIFY_INTERVAL_HOURS` | `stixify.interval_hours` | TRUE     | integer   | `12`                                                 | How often (in hours) this Connector should poll Stixify Web for updates.                                                                                                                                                                                                                                                                                                                                                                             |                                                                      
 
 ### Verification
 
