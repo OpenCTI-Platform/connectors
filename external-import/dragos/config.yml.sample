@@ -1,17 +1,18 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://localhost:8080'
   token: 'ChangeMe'
 
 connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'Dragos'
-  scope: ['ChangeMe']
-  log_level: 'error'
-  duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
+  scope: ['report', 'vulnerabilities']
+  log_level: 'warning'
+  duration_period: 'PT1D' # Interval given for scheduler process in ISO-8601 format
 
 dragos:
-  api_base_url: ChangeMe
-  api_token: ChangeMe
-  import_start_date: ChangeMe
+  api_base_url: 'https://portal.dragos.com'
+  api_token: 'ChangeMe'
+  api_secret: 'ChangeMe'
+  import_start_date: 'PT30D'
   tlp_level: amber # TLP level to set on imported entities (allowed values are ['white', 'green', 'amber', 'amber+strict', 'red'])
