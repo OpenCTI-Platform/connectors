@@ -6,7 +6,7 @@ from email_intel_imap.converter import ConnectorConverter
 
 
 class Connector(BaseConnector[ConnectorConfig, ConnectorClient, ConnectorConverter]):
-    def _collect_intelligence(self) -> list[stix2.Report]:
+    def collect_intelligence(self) -> list[stix2.Report]:
         return [
             stix_object
             for email in self.client.fetch_from_relative_import_start_date()
