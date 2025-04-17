@@ -1,5 +1,9 @@
 # Comlaude Connector for OpenCTI
 
+| Status            | Date       | Comment |
+| ----------------- |------------| ------- |
+| Filigran Verified | 2025-04-17 |    -    |
+
 The Comlaude Connector is designed to integrate with the [Comlaude API](https://api.comlaude.com/docs) to leverage the `Domain Search Endpoint`. This endpoint provides a comprehensive list of all domains within a specified group, along with detailed information for each domain.
 
 ## Key Features:
