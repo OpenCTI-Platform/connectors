@@ -77,7 +77,9 @@ interface and that it covers the API endpoints you wish to reach. Documentation 
 
 Configuration parameters are set in the .env or config.yml file, depending on the type of integration run:
 - .env file is used when running with docker This file is included in the `.gitignore` (to avoid leaking sensitive data). 
-- config.yml is used when running locally without docker, as if you were running a regular python script.
+- ~~config.yml is used when running locally without docker, as if you were running a regular python script.~~
+/!\ Currently the connector cannot run with config.yml file, only with .env file because of ConnectorHelper instantiation and proxy settings code. /!\
+
 All integration values are duplicated between .env and config.yml
 
 Note that the values that follow can be grabbed within Python code using `self.helper.{PARAMETER}`, i. e., `self.helper.connector_name`.
