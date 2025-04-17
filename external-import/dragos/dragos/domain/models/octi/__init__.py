@@ -1,4 +1,10 @@
-from .common import BaseEntity, ExternalReference, KillChainPhase, TLPMarking
+from .common import (
+    BaseEntity,
+    ExternalReference,
+    KillChainPhase,
+    TLPMarking,
+    UploadedFile,
+)
 from .domain import (
     DomainObject,
     Indicator,
@@ -51,6 +57,7 @@ __all__ = [
     "Report",
     "Sector",
     "TLPMarking",
+    "UploadedFile",
     "Url",
     "Vulnerability",
 ]

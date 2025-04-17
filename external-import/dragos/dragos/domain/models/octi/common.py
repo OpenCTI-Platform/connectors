@@ -1,7 +1,8 @@
 """Offer common tools to create octi entities."""
 
+import base64
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Optional, TypedDict
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
@@ -103,6 +104,45 @@ class ExternalReference(BaseModelWithoutExtra):
             external_id=self.external_id,
             # unused
             hashes=None,
+        )
+
+
+class UploadFileTypedDict(TypedDict):
+    """Stix like TypedDict for UploadedFile."""
+
+    name: str
+    description: Optional[str]
+    data: Optional[str]
+    mime_type: Optional[str]
+
+
+class UploadedFile(BaseModelWithoutExtra):
+    """Represents a SDO's or SCO's corresponding file, such as a Report PDF or an Artifact binary."""
+
+    name: str = Field(
+        ...,
+        description="The name of the file.",
+    )
+    description: Optional[str] = Field(
+        None,
+        description="Description of the file.",
+    )
+    content: Optional[bytes] = Field(
+        None,
+        description="The file content.",
+    )
+    mime_type: Optional[str] = Field(
+        None,
+        description="File mime type.",
+    )
+
+    def to_stix2_object(self) -> UploadFileTypedDict:
+        """Make stix-like object (not defined in stix spec nor lib)."""
+        return UploadFileTypedDict(
+            name=self.name,
+            description=self.description,
+            data=base64.b64encode(self.content).decode("utf-8"),
+            mime_type=self.mime_type,
         )
 
 
