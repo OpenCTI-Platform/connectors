@@ -26,6 +26,7 @@ def valid_config(monkeypatch):
             "CONNECTOR_SEND_TO_DIRECTORY": "false",
             "DRAGOS_API_BASE_URL": "https://api.dragos.com",
             "DRAGOS_API_TOKEN": "dragos_token",
+            "DRAGOS_API_SECRET": "dragos_secret",
             "DRAGOS_IMPORT_START_DATE": "2023-01-01T00:00:00Z",
             "DRAGOS_TLP_LEVEL": "amber",
         }
