@@ -80,11 +80,15 @@ class StubConfigLoaderDragos(ConfigLoaderDragos):
 
     @property
     def _api_base_url(self):
-        return "http://localhost:8080"
+        return "http://localhost:4000"
 
     @property
     def _api_token(self):
         return "api-token"
+
+    @property
+    def _api_secret(self):
+        return "api-secret"
 
     @property
     def _import_start_date(self):
@@ -93,6 +97,11 @@ class StubConfigLoaderDragos(ConfigLoaderDragos):
     @property
     def _tlp_level(self):
         return "amber"
+
+@pytest.fixture(scope="function")
+def config_loader_dragos():
+    """Fixture for the ConfigLoaderDragos class."""
+    return StubConfigLoaderDragos()
 
 
 class StubConfigLoader(ConfigLoader):
@@ -248,7 +257,7 @@ def test_config_loader_dragos_has_correct_attributes():
 
     # Then: The instance should have the correct attributes
     assert (  # noqa: S101 # we indeed call assert in test
-        str(stub_config_loader_dragos.api_base_url) == "http://localhost:8080/"
+        str(stub_config_loader_dragos.api_base_url) == "http://localhost:4000/"
     )  # trailing slash is coming from URL object serialization
     assert (  # noqa: S101
         stub_config_loader_dragos.api_token.get_secret_value() == "api-token"
@@ -260,7 +269,7 @@ def test_config_loader_dragos_has_correct_attributes():
 
 
 @freeze_time("2010-01-01T01:00:00", tz_offset=2)  # CEST
-def test_config_dragos_import_start_handless_relative_import_start_date():
+def test_config_dragos_import_start_handless_relative_import_start_date(config_loader_dragos):
     """Test that the _ConfigLoaderDragos handles relative import start date."""
 
     # Given: Valid implementation of ConfigLoaderDragos
@@ -275,6 +284,10 @@ def test_config_dragos_import_start_handless_relative_import_start_date():
         @property
         def _api_token(self):
             return "api-token"
+
+        @property
+        def _api_secret(self):
+            return "api-secret"
 
         @property
         def _import_start_date(self):
