@@ -1,7 +1,7 @@
 """Offer common tools to create octi entities."""
 
-from abc import ABC, abstractmethod
 import base64
+from abc import ABC, abstractmethod
 from typing import Any, Optional, TypedDict
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
