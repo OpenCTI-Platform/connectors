@@ -292,12 +292,8 @@ class ReportProcessor(BaseUseCase):
             )
             entities.append(based_on_relationship)
         entities.extend(self.make_domain_objects(report))
-
-        # Only append Report, Author and TLP if at least one entity is present
-        # to prevent sending unconsistent bundle in application layer
-        if entities:
-            entities.append(self.make_report(report, entities))
-            entities.append(self.author)
-            entities.append(self.tlp_marking)
+        entities.append(self.make_report(report, entities))
+        entities.append(self.author)
+        entities.append(self.tlp_marking)
 
         return entities

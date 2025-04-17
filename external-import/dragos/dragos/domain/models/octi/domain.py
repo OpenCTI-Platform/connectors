@@ -1,6 +1,7 @@
 """Define OpenCTI entities."""
 
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 from typing import Any, Optional
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
@@ -33,6 +34,7 @@ from dragos.domain.models.octi.enums import (
     ReportType,
 )
 from pydantic import AwareDatetime, Field, PrivateAttr
+from stix2.properties import ListProperty, ReferenceProperty
 
 
 class DomainObject(BaseEntity):
@@ -660,6 +662,18 @@ class OrganizationAuthor(Author, Organization):
         return Organization.to_stix2_object(self)
 
 
+class OCTIStixReport(stix2.v21.Report):
+    """Override stix2 Report to not require any object_refs and so be compliant with OpenCTI Report entities."""
+
+    _properties = OrderedDict(
+        stix2.v21.Report._properties
+    )  # Copy the parent class properties
+    _properties["object_refs"] = ListProperty(
+        ReferenceProperty(valid_types=["SCO", "SDO", "SRO"], spec_version="2.1"),
+        required=False,
+    )
+
+
 class Report(DomainObject):
     """Represent a report."""
 
@@ -675,7 +689,6 @@ class Report(DomainObject):
     objects: list[BaseEntity] = Field(
         ...,
         description="Objects of the report.",
-        min_length=1,
     )
     description: Optional[str] = Field(
         None,
@@ -690,12 +703,12 @@ class Report(DomainObject):
         description="Reliability of the report.",
     )
 
-    def to_stix2_object(self) -> stix2.v21.Report:
+    def to_stix2_object(self) -> stix2.Report:
         """Make stix object."""
         if self._stix2_representation is not None:
             return self._stix2_representation
 
-        return stix2.Report(
+        return OCTIStixReport(
             id=pycti.Report.generate_id(
                 name=self.name, published=self.publication_date
             ),
