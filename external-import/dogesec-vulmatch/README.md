@@ -1,74 +1,57 @@
 # OpenCTI Vulmatch Connector
 
-## Description
+## Overview
 
-Vulmatch is an app that allows you to view disclosed vulnerabilities, providing an alert mechanism if a vulnerability is identified in a product you use.
+Vulmatch is a web application that turns blog posts from your favourite security blogs into structured threat intelligence.
 
-Vulmatch serves data over a TAXII 2.1 server.
+![](media/vulmatch-cve-list.png)
+![](media/vulmatch-graph.png)
 
-This connector ingests STIX 2.1 objects from alerts triggered in your Group from the Vulmatch TAXII 2.1 server.
+[You can read more and sign up for Vulmatch for free here](https://www.vulmatch.com/).
 
-* Vulmatch Website: [https://www.vulmatch.com/](https://www.vulmatch.com/)
-* Vulmatch Website TAXII 2.1 Docs: [https://docs.vulmatch.com/developers/api-intro](https://docs.vulmatch.com/developers/api-intro)
+The OpenCTI Vulmatch Connector syncs vulnerability intelligence from Vulmatch to OpenCTI.
 
-This connector was built using the TAXII2 connector for [OpenCTI](https://github.com/OpenCTI-Platform/opencti) as a base.
-
-## Configuration
-
-### Prerequisites
-
-A Vulmatch account with API access enabled.
-
-More on Vulmatch account plans here: [https://www.vulmatch.com/pricing/](https://www.vulmatch.com/pricing/)
-
-### Install
-
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
-
-| Docker Env variable | config variable | Description
-| --------------------|-----------------|------------
-| TAXII2_USERNAME     | username        | Your Vulmatch username
-| TAXXI2_PASSWORD     | password        | Your Vulmatch API key (NOT password). Can be obtained on the Integration page here: [https://app.vulmatch.com/integrations](https://app.vulmatch.com/integrations)
-| TAXII2_COLLECTIONS  | collections     | Specify what `<API Root>.<Collection Name>` you want to poll. Syntax Detailed below
-
-_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as any other Connector. You should consult the OpenCTI Connector documentation for questions about these values here: [https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8](https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8)._
-
-### Collections and API roots
-
-The value for `TAXII2_COLLECTIONS` should be defined as `<API Root>.<Collection Name>`.
-
-In Vulmatch the `<API Root>` is your Vulmatch Group UUID. This can be obtained on the Group Management page here: [https://app.vulmatch.com/user/manage_group](https://app.vulmatch.com/user/manage_group).
-
-The `<Collection Name>` is also your Vulmatch Group UUID. All alert objects for your Group are reported in your Group's collection.
-
-An example `TAXII2_COLLECTIONS` value, assuming;
-
-* Group UUID=`58267908-8861-4bfe-81c4-0f6ec4bf1c8`
-
-Would be (in `config.yml`)
-
-```
-collections: '58267908-8861-4bfe-81c4-0f6ec4bf1c8.58267908-8861-4bfe-81c4-0f6ec4bf1c8'
-```
+_Note: The OpenCTI Vulmatch Connector only works with Vulmatch Web. It does not work with self-hosted Vulmatch installations at this time._
 
 ## Installation
 
-Please refer to [these](https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8) [three](https://filigran.notion.site/Introduction-9a614638a75746a391cd93a45fe3dc6c) [articles](https://filigran.notion.site/HowTo-Build-your-first-connector-06b2690697404b5ebc6e3556a1385940) in OpenCTI's documentation as the authoritative source on installing connectors.
+### Prerequisites
 
-### Docker
+* A Vulmatch team subscribed to a plan with API access enabled
+* OpenCTI >= 6.5.10
 
-Build a Docker Image using the provided `Dockerfile`. Example: `docker build . -t opencti-vulmatch-import:latest`. Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment. Then, start the docker container with the provided `docker-compose.yml`
+### Generating an Vulmatch API Key
 
-### Manual/VM Deployment
+1. Log in to your Vulmatch account and navigate to "Account Settings"
+2. Locate the API section and select "Create Token"
+3. Select the team you want to use and generate the key
+4. Copy the key, it will be needed for the configoration
 
-Create a file `config.yml` based off the provided `config.yml.sample`. Replace the configuration variables (especially the "ChangeMe" variables) with the appropriate configurations for you environment. Install the required python dependencies (preferably in a virtual environment) with `pip3 install -r requirements.txt` Then, run the `python3 rf_feeds.py` command to start the connector
+### Configoration
 
-## Usage
+If you are unfamiliar with how to install OpenCTI Connectors, [you should read the official documentation here](https://docs.opencti.io/latest/deployment/connectors/).
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at the hourly interval specified in your `docker-compose.yml` or `config.yml`. However, if you would like to force an immediate poll of the Vulmatch TAXII server, navigate to Data management -> Connectors and Workers in the OpenCTI platform. Find the "Vulmatch" connector, and click on the refresh button to reset the connector's state and force a new poll of the Collections. Please note that this will be considered a "first" poll and thus will use the `TAXII2_INITIAL_HISTORY` variable
+There are a number of configuration options specific to Vulmatch, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment). These options are as follows:
 
-## Verification
+| Docker Env variable     | config variable         | Required | Data Type                   | Recommended                                              | Description                                                                                                                                                                                                                                                                                                                               |
+| ----------------------- | ----------------------- | -------- | --------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VULMATCH_BASE_URL       | vulmatch.base_url       | TRUE     | url                         | [https://api.vulmatch.com/'](https://api.vulmatch.com/') | Should always be 'https://api.vulmatch.com/'                                                                                                                                                                                                                                                                                              |
+| VULMATCH_API_KEY        | vulmatch.api_key        | TRUE     | string                      | n/a                                                      | The API key used to authenticate to Vulmatch Web                                                                                                                                                                                                                                                                                          |
+| VULMATCH_SBOM_ONLY      | vulmatch.feed_ids       | TRUE     | boolean                     | n/a                                                      | You can use the Vulmatch connector in two ways. 1) to only ingest vulnerability data related to products in your Vulmatch SBoM (set to true, or 2) to ingest all vulnerabilities that match filters (set to false)                                                                                                                        |
+| VULMATCH_EPSS_SCORE_MIN | vulmatch.epss_score_min | TRUE     | float (to 5 decimal places) | `-1`                                                   | The minimum EPSS score for the vulnerabilities to be ingested. Between `0` - `1`. Setting to `-1` will include vulnerabilities with no EPSS scores.                                                                                                                                                                                 |
+| VULMATCH_CVSS_SCORE_MIN | vulmatch.cvss_score_min | TRUE     | float (to 1 decimal place)  | `-1`                                                   | The minimum CVSS base score for the vulnerabilities to be ingested. Between `0` - `10`. Setting to `-1` will include vulnerabilities with no CVSS scores.                                                                                                                                                                           |
+| VULMATCH_INTERVAL_DAYS  | vulmatch.interval_days  | TRUE     | integer                     | `1`                                                    | How often, in days, this Connector should poll Vulmatch Web for updates. The Vulmatch data is updated once per day.                                                                                                                                                                                                                       |
+| VULMATCH_BACKFILL_DAYS  | vulmatch.backfill_days  | TRUE     | integer                     | `90`                                                   | When the connector is first configured, this setting determines the number of days to backfill for vulnerability data. It uses the modified time of the vulnerability. For example, setting 30 will ingest any vulnerabilities updated within the last 30 days, regardless of when they were published. Maximum value is `365` (1 year) |
 
-To verify the connector is working, you can navigate to Data->Data Curation in the OpenCTI platform and see the new imported data there. For troubleshooting or additional verification, please view the Connector logs.
+### Verification
 
-**Pro-tip**: Creating a new user and API Token for the Connector can help you more easily track which STIX2 objects were created by the Connector.
+To verify the connector is working, you can navigate to `Data` -> `Ingestion` -> `Connectors` -> `Vulmatch`.
+
+## Support
+
+You should contact OpenCTI if you are new to installing Connectors and need support.
+
+If you run into issues when installing this Connector, you can reach the dogesec team as follows:
+
+* [dogesec Community Forum](https://community.dogesec.com/) (recommended)
+* [dogesec Support Portal](https://support.dogesec.com/) (requires a plan with email support)
