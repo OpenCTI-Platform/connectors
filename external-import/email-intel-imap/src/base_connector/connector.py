@@ -89,14 +89,15 @@ class BaseConnector(abc.ABC, Generic[ConfigType, ClientType, ConverterType]):
         )
 
         work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, self.helper.connect_name
+            connector_id=self.helper.connect_id,
+            friendly_name=self.helper.connect_name,
         )
 
         if stix_objects := self._collect_intelligence():
             stix_objects.extend([self.converter.author, self.converter.tlp_marking])
-            stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
+            stix_objects_bundle = self.helper.stix2_create_bundle(items=stix_objects)
             bundles_sent = self.helper.send_stix2_bundle(
-                stix_objects_bundle,
+                bundle=stix_objects_bundle,
                 work_id=work_id,
                 cleanup_inconsistent_bundle=True,
             )
@@ -117,11 +118,11 @@ class BaseConnector(abc.ABC, Generic[ConfigType, ClientType, ConverterType]):
             current_state["last_run"] = now.isoformat(sep=" ", timespec="seconds")
         else:
             current_state = {"last_run": now.isoformat(sep=" ", timespec="seconds")}
-        self.helper.set_state(current_state)
+        self.helper.set_state(state=current_state)
 
         message = f"Connector successfully run, storing last_run as {str(now)}"
 
-        self.helper.api.work.to_processed(work_id, message)
+        self.helper.api.work.to_processed(work_id=work_id, message=message)
         self.helper.connector_logger.info(message)
 
     def process_message(self) -> str | None:
