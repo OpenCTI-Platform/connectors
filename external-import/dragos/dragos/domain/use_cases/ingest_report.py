@@ -225,9 +225,7 @@ class ReportProcessor(BaseUseCase):
                 case "url":
                     return self._make_url(_related_indicator)
                 case _:
-                    logger.info(
-                        f"Unsupported indicator type {dragos_indicator_type}"
-                    )
+                    logger.info(f"Unsupported indicator type {dragos_indicator_type}")
             return None
 
         for related_indicator in report.related_indicators:
@@ -266,7 +264,7 @@ class ReportProcessor(BaseUseCase):
             uploaded_file = octi.UploadedFile(
                 name=f"{report.serial}.pdf",
                 content=report.pdf,
-                mime_type="application/pdf"
+                mime_type="application/pdf",
             )
 
         return octi.Report(

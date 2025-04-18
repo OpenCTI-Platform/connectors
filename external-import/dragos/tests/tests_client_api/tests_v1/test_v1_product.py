@@ -215,7 +215,7 @@ async def test_invalid_product_response_content_leads_to_dragos_api_error(
             async for _ in method(**parameters):
                 pass
         elif inspect.iscoroutinefunction(method):
-            _  = await method(**parameters)
+            _ = await method(**parameters)
         else:
             result = method(**parameters)
             if isinstance(result, AsyncIterator):
@@ -223,6 +223,7 @@ async def test_invalid_product_response_content_leads_to_dragos_api_error(
                     pass
             else:
                 raise NotImplementedError
+
 
 @pytest.mark.parametrize(
     "error_code",
@@ -275,7 +276,7 @@ async def test_invalid_product_response_code_leads_to_dragos_api_error_and_retri
             async for _ in method(**parameters):
                 pass
         elif inspect.iscoroutinefunction(method):
-            _  = await method(**parameters)
+            _ = await method(**parameters)
         else:
             result = method(**parameters)
             if isinstance(result, AsyncIterator):

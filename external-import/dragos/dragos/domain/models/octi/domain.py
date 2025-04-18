@@ -35,7 +35,10 @@ from dragos.domain.models.octi.enums import (
     ReportType,
 )
 from pydantic import AwareDatetime, Field, PrivateAttr
-from stix2.properties import ListProperty, ReferenceProperty  # type: ignore[import-untyped]
+from stix2.properties import (  # type: ignore[import-untyped]
+    ListProperty,
+    ReferenceProperty,
+)
 
 
 class DomainObject(BaseEntity):
@@ -663,7 +666,7 @@ class OrganizationAuthor(Author, Organization):
         return Organization.to_stix2_object(self)
 
 
-class OCTIStixReport(stix2.v21.Report): # type: ignore[misc]
+class OCTIStixReport(stix2.v21.Report):  # type: ignore[misc]
     # considered as Any because stix2 does not provide stubs
     """Override stix2 Report to not require any object_refs and so be compliant with OpenCTI Report entities."""
 

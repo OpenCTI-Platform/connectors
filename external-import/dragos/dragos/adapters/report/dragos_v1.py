@@ -217,4 +217,6 @@ class ReportsAPIV1(Reports):
             ]
 
         products = asyncio.run(iter_products())
-        return iter([ReportAPIV1.from_product_response(product) for product in products])
+        return iter(
+            [ReportAPIV1.from_product_response(product) for product in products]
+        )

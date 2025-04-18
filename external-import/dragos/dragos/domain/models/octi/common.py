@@ -1,7 +1,7 @@
 """Offer common tools to create octi entities."""
 
-from abc import ABC, abstractmethod
 import codecs
+from abc import ABC, abstractmethod
 from typing import Any, Optional, TypedDict
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
@@ -141,7 +141,11 @@ class UploadedFile(BaseModelWithoutExtra):
         return UploadedFileTypedDict(
             name=self.name,
             description=self.description,
-            data=codecs.encode(self.content, 'base64').decode('utf-8') if self.content else None,
+            data=(
+                codecs.encode(self.content, "base64").decode("utf-8")
+                if self.content
+                else None
+            ),
             mime_type=self.mime_type,
         )
 

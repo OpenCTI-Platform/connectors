@@ -4,14 +4,13 @@ import sys
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from pycti import (  # type: ignore[import-untyped]  # PyCTI is not typed
-    OpenCTIConnectorHelper,
-)
-
 from dragos.domain.models.octi.enums import TLPLevel
 from dragos.domain.use_cases.common import UseCaseError
 from dragos.domain.use_cases.ingest_report import ReportProcessor
 from dragos.interfaces.common import DataRetrievalError
+from pycti import (  # type: ignore[import-untyped]  # PyCTI is not typed
+    OpenCTIConnectorHelper,
+)
 
 if TYPE_CHECKING:
     from dragos.interfaces.config import ConfigLoader
@@ -46,10 +45,10 @@ class Connector:
         stix_objects = [entity.to_stix2_object() for entity in entities]
         # send to OpenCTI
         self._logger.debug(
-            "[CONNECTOR] Sending STIX2 objects to OpenCTI", {"stix_objects": stix_objects}
+            "[CONNECTOR] Sending STIX2 objects to OpenCTI",
+            {"stix_objects": stix_objects},
         )
         self._send_bundle(self._helper.stix2_create_bundle(stix_objects))
-
 
     # Explicit workflow
     def work(self) -> None:
@@ -74,11 +73,15 @@ class Connector:
                         break
                 except DataRetrievalError as e:
                     # log the error
-                    self._logger.warning(f"Skipping report due to Data retrieval error: {str(e)}")
+                    self._logger.warning(
+                        f"Skipping report due to Data retrieval error: {str(e)}"
+                    )
                     successes.append(False)
                     continue
                 except UseCaseError as e:
-                    self._logger.warning(f"Skipping report due to Use case error: {str(e)}")
+                    self._logger.warning(
+                        f"Skipping report due to Use case error: {str(e)}"
+                    )
                     successes.append(False)
                 except StopIteration:
                     break

@@ -1,13 +1,15 @@
 """Dragos Connector for OpenCTI."""
+
 import traceback
 from datetime import timedelta
 
-from dragos.app import Connector
 from dragos.adapters.config.env import ConfigLoaderEnv
 from dragos.adapters.geocoding.octi import OctiGeocoding
 from dragos.adapters.report.dragos_v1 import ReportsAPIV1
-from pycti import OpenCTIConnectorHelper  # type: ignore[import-untyped]  # PyCTI is not typed
-
+from dragos.app import Connector
+from pycti import (  # type: ignore[import-untyped]  # PyCTI is not typed
+    OpenCTIConnectorHelper,
+)
 from yarl import URL
 
 if __name__ == "__main__":
