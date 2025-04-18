@@ -106,7 +106,7 @@ class ReportProcessor(BaseUseCase):
         """Make an OCTI Location from report's tag."""
         location = self.geocoding.find_from_name(tag.value)
         if not location:
-            logger.warning(f"Location not found for tag value: {tag.value}")
+            logger.info(f"Location not found for tag value: {tag.value}")
             return None
 
         match location:
@@ -201,7 +201,7 @@ class ReportProcessor(BaseUseCase):
                 case "cve":
                     yield self._make_vulnerability(related_tag)
                 case _:
-                    logger.warning(f"Unsupported tag type {tag_type}")
+                    logger.info(f"Unsupported tag type {tag_type}")
 
     def make_observables_and_indicators(
         self, report: "Report"
@@ -225,7 +225,7 @@ class ReportProcessor(BaseUseCase):
                 case "url":
                     return self._make_url(_related_indicator)
                 case _:
-                    logger.warning(
+                    logger.info(
                         f"Unsupported indicator type {dragos_indicator_type}"
                     )
             return None
@@ -261,12 +261,21 @@ class ReportProcessor(BaseUseCase):
         self, report: "Report", related_objetcs: list["octi.BaseEntity"]
     ) -> octi.Report:
         """Make an OCTI Report from a Dragos report and the related entities."""
+        uploaded_file = None
+        if report.pdf:
+            uploaded_file = octi.UploadedFile(
+                name=f"{report.serial}.pdf",
+                content=report.pdf,
+                mime_type="application/pdf"
+            )
+
         return octi.Report(
             name=report.title,
             publication_date=report.created_at,
             description=report.summary,
             # labels=report.related_tags,
             objects=related_objetcs,
+            files=[uploaded_file] if uploaded_file else None,
             author=self.author,
             markings=[self.tlp_marking],
             # unused
