@@ -11,7 +11,7 @@ connector:
   duration_period: 'PT1D' # Interval given for scheduler process in ISO-8601 format
 
 dragos:
-  api_base_url: 'https://portal.dragos.com' 
+  api_base_url: 'https://portal.dragos.com'
   api_token: 'ChangeMe'
   api_secret: 'ChangeMe'
   import_start_date: 'PT30D'
