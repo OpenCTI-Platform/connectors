@@ -107,7 +107,6 @@ The connector can be configured using:
 
 - Direct environment variables
 
-
 ```shell
 export ENV_VAR_NAME="..."
 ```
@@ -141,14 +140,14 @@ config = ConfigLoaderYaml("path/to/config.yaml")
 ### OpenCTI Environment Variables
 
 | Parameter     | config.yaml key | Docker Env Var  | Mandatory | Description                                |
-|---------------|-----------------|-----------------|-----------|--------------------------------------------|
+| ------------- | --------------- | --------------- | --------- | ------------------------------------------ |
 | OpenCTI URL   | `url`           | `OPENCTI_URL`   | ✅ Yes     | The URL of your OpenCTI instance.          |
 | OpenCTI Token | `token`         | `OPENCTI_TOKEN` | ✅ Yes     | The admin token from the OpenCTI platform. |
 
 ### Base Connector Environment Variables
 
 | Parameter       | config.yaml key   | Docker Env Var              | Default | Mandatory | Description                                                              |
-|-----------------|-------------------|-----------------------------|---------|-----------|--------------------------------------------------------------------------|
+| --------------- | ----------------- | --------------------------- | ------- | --------- | ------------------------------------------------------------------------ |
 | Connector ID    | `id`              | `CONNECTOR_ID`              | —       | ✅ Yes     | A unique UUIDv4 for this connector instance.                             |
 | Connector Name  | `name`            | `CONNECTOR_NAME`            | —       | ✅ Yes     | A human-readable name for this connector.                                |
 | Connector Scope | `scope`           | `CONNECTOR_SCOPE`           | —       | ✅ Yes     | Defines what this connector imports (STIX type or MIME type).            |
@@ -158,7 +157,7 @@ config = ConfigLoaderYaml("path/to/config.yaml")
 ### Connector Extra Parameters
 
 | Parameter         | config.yaml key     | Docker Env Var             | Default | Mandatory | Description                                                                                                                     |
-|-------------------|---------------------|----------------------------|---------|-----------|---------------------------------------------------------------------------------------------------------------------------------|
+| ----------------- | ------------------- | -------------------------- | ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | API Base URL      | `api_base_url`      | `DRAGOS_API_BASE_URL`      | —       | ✅ Yes     | The base URL for the Dragos API.                                                                                                |
 | API Key           | `api_token`         | `DRAGOS_API_TOKEN`         | —       | ✅ Yes     | The API key used to authenticate with the Dragos API.                                                                           |
 | API Secret        | `api_secret`        | `DRAGOS_API_SECRET`        | —       | ✅ Yes     | The API secret used alongside the API key.                                                                                      |
@@ -167,10 +166,10 @@ config = ConfigLoaderYaml("path/to/config.yaml")
 
 > 📅 The `import_start_date` can be formatted as a date (ISO8601) or as a duration (e.g., `PT3D` for 3 days ago).
 
-
 ## Additional Information
 
 ### Fake Server
+
 The connector can be run against a fake server to simulate the Dragos API. This is useful for testing and development purposes.
 See [client-api/README.md](client-api/README.md) for more information on how to set up and use the fake server.
 
