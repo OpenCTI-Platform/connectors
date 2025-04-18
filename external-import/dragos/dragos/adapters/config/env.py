@@ -106,6 +106,10 @@ class _ConfigLoaderEnvDragos(ConfigLoaderDragos):
 class ConfigLoaderEnv(ConfigLoader):
     """Configuration loader from environment variables."""
 
+    def __init__(self) -> None:
+        """Initialize the configuration loader."""
+        super().__init__()
+
     @property
     def _opencti(self) -> ConfigLoaderOCTI:
         return _ConfigLoaderEnvOCTI()  # type: ignore[call-arg]
