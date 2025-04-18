@@ -42,8 +42,8 @@ def test_connector_collect_intelligence(
     connector: Connector, mocked_mail_box: Mock
 ) -> None:
     now = datetime.datetime.now()
-    email1 = Mock(subject="email 1", date=now, text="email body 1")
-    email2 = Mock(subject="email 2", date=now, text="email body 2")
+    email1 = Mock(subject="email 1", date=now, text="email body 1", attachments=[])
+    email2 = Mock(subject="email 2", date=now, text="email body 2", attachments=[])
 
     mocked_mail_box.fetch.return_value = [email1, email2]
     stix_objects = connector.collect_intelligence(None)

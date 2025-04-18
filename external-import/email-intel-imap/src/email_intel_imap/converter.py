@@ -1,7 +1,8 @@
 from typing import Generator
 
 import stix2
-from base_connector import BaseConverter
+from base_connector.converter import BaseConverter
+from base_connector.models import OpenCTIFile
 from imap_tools.message import MailMessage
 from stix2.v21.vocab import REPORT_TYPE_THREAT_REPORT
 
@@ -28,7 +29,17 @@ class ConnectorConverter(BaseConverter):
                 published=entity.date,
                 report_types=[REPORT_TYPE_THREAT_REPORT],
                 x_opencti_content=entity.text,
-                x_opencti_files=[],
+                x_opencti_files=[
+                    OpenCTIFile(
+                        name=attachment.filename,
+                        mime_type=attachment.content_type,
+                        data=attachment.payload,
+                    )
+                    for attachment in entity.attachments
+                    if attachment.content_disposition == "attachment"
+                    and attachment.content_type
+                    in ["application/pdf", "text/csv", "text/plain"]
+                ],
             )
         except Exception as e:
             self.helper.connector_logger.warning(

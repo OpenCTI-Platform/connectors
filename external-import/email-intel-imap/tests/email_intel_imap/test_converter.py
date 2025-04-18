@@ -1,8 +1,10 @@
+import base64
 import datetime
 from unittest.mock import Mock
 
 import pycti
 import pytest
+
 from email_intel_imap.converter import ConnectorConverter
 from stix2 import TLPMarking
 from stix2.utils import STIXdatetime
@@ -34,7 +36,9 @@ def test_converter_tlp_marking(converter: ConnectorConverter) -> None:
 
 def test_converter_to_stix(converter: ConnectorConverter) -> None:
     published = datetime.datetime(2025, 4, 16, 10, 10, 10)
-    mocked_email = Mock(subject="Test Report", date=published, text="Test Content")
+    mocked_email = Mock(
+        subject="Test Report", date=published, text="Test Content", attachments=[]
+    )
 
     report = list(converter.to_stix_objects(entity=mocked_email))
     assert len(report) == 1
@@ -54,7 +58,11 @@ def test_converter_to_stix(converter: ConnectorConverter) -> None:
 def test_converter_to_stix_no_subject(converter: ConnectorConverter) -> None:
     published = datetime.datetime(2025, 4, 16, 10, 10, 10)
     mocked_email = Mock(
-        subject="", date=published, text="Test Content", from_="from_@email.com"
+        subject="",
+        date=published,
+        text="Test Content",
+        from_="from_@email.com",
+        attachments=[],
     )
 
     report = list(converter.to_stix_objects(entity=mocked_email))
@@ -78,6 +86,86 @@ def test_converter_to_stix_with_error(converter: ConnectorConverter) -> None:
     converter.helper.connector_logger.warning.assert_called_with(
         "An error occurred while creating the Report, skipping...",
         {
-            "error": "Object of type 'Mock' is not JSON serializable",
+            "error": "'Mock' object is not iterable",
         },
+    )
+
+
+@pytest.mark.usefixtures("mock_email_intel_imap_config")
+def test_converter_to_stix_with_attachment(converter: ConnectorConverter) -> None:
+    published = datetime.datetime(2025, 4, 16, 10, 10, 10)
+    pdf_file = Mock(
+        filename="test.pdf",
+        content_type="application/pdf",
+        content_disposition="attachment",
+        payload=b"%PDF-1.4\nTest PDF Content",
+    )
+    csv_file = Mock(
+        filename="test.csv",
+        content_type="text/csv",
+        content_disposition="attachment",
+        payload=b"Test CSV Content",
+    )
+    mocked_email = Mock(
+        subject="",
+        date=published,
+        text="Test Content",
+        from_="from_@email.com",
+        attachments=[],
+    )
+
+    # No file
+    report = list(converter.to_stix_objects(entity=mocked_email))[0]
+    assert "x_opencti_files" not in report
+
+    # 1 file
+    mocked_email.attachments = [pdf_file]
+    report = list(converter.to_stix_objects(entity=mocked_email))[0]
+    assert report.x_opencti_files == [
+        {
+            "name": "test.pdf",
+            "mime_type": "application/pdf",
+            "data": base64.b64encode(b"%PDF-1.4\nTest PDF Content"),
+        }
+    ]
+
+    # 2 files
+    mocked_email.attachments = [pdf_file, csv_file]
+    report = list(converter.to_stix_objects(entity=mocked_email))[0]
+    assert report.x_opencti_files == [
+        {
+            "name": "test.pdf",
+            "mime_type": "application/pdf",
+            "data": base64.b64encode(b"%PDF-1.4\nTest PDF Content"),
+        },
+        {
+            "name": "test.csv",
+            "mime_type": "text/csv",
+            "data": base64.b64encode(b"Test CSV Content"),
+        },
+    ]
+
+
+@pytest.mark.usefixtures("mock_email_intel_imap_config")
+def test_converter_to_stix_with_attachment__mime_type_not_in_config(
+    converter: ConnectorConverter,
+) -> None:
+    published = datetime.datetime(2025, 4, 16, 10, 10, 10)
+    mocked_email = Mock(
+        subject="",
+        date=published,
+        text="Test Content",
+        from_="from_@email.com",
+        attachments=[
+            Mock(
+                filename="test.jpeg",
+                content_type="image/jpeg",  # Not in attachments_mime_types
+                content_disposition="attachment",
+                payload=b"\xff\xd8\xff\x00",
+            )
+        ],
+    )
+
+    assert (
+        "x_opencti_files" not in list(converter.to_stix_objects(entity=mocked_email))[0]
     )
