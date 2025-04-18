@@ -1,5 +1,5 @@
 services:
-  connector-proofpoint-tap:
+  connector-dragos:
     # build: .
     image: opencti/connector-dragos:6.6.6
     env_file:
