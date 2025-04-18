@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Generator, Optional
 
 from pycti import OpenCTIConnectorHelper
 from stix2 import TAXIICollectionSource
@@ -92,7 +92,7 @@ class ConnectorClient:
 
     def get_latest_stix_objects(
         self, source: TAXIICollectionSource, added_after: Optional[str]
-    ):
+    ) -> Generator[tuple[list[Any], str | None], None, None]:
         """
         If params is None, retrieve all CVEs in National Vulnerability Database
         :param params: Optional Params to filter what list to return
@@ -116,6 +116,7 @@ class ConnectorClient:
             ):
                 stix_objects = []
                 max_new_added_after = 0.0
+                new_added_after = None
 
                 page_counter += 1
                 objects = page["objects"]
@@ -131,22 +132,23 @@ class ConnectorClient:
                         stix_objects,
                     )
 
-                    if (
-                        obj["type"] == collection.custom_properties["type"]
-                    ):  # only evaluate primary objects
-                        record_timestamp = obj.get("modified") or obj.get("created")
+                    # only evaluate primary objects
+                    if obj["type"] == collection.custom_properties["type"]:
+                        record_timestamp = obj.get("modified")
                         if record_timestamp:
                             record_secs = datetime.fromisoformat(
                                 record_timestamp
                             ).timestamp()
-                        else:
-                            record_secs = datetime.now().timestamp()
+                            max_new_added_after = max(max_new_added_after, record_secs)
 
-                        max_new_added_after = max(max_new_added_after, record_secs)
-
-                new_added_after = datetime.fromtimestamp(
-                    max_new_added_after or datetime.now().timestamp(), timezone.utc
-                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+                if max_new_added_after > 0:
+                    # isoformat returns format '2024-11-11T02:59:04.812000+00:00'. We want '2024-11-11T02:59:04.812Z'
+                    new_added_after = (
+                        datetime.fromtimestamp(
+                            max_new_added_after, timezone.utc
+                        ).isoformat()[:-9]
+                        + "Z"
+                    )
 
                 yield stix_objects, new_added_after
         except Exception as err:  # pylint: disable=broad-exception-caught
