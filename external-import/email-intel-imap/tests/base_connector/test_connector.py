@@ -31,7 +31,7 @@ def test_process(mocked_helper: MagicMock) -> None:
     # Assert the state management
     mocked_helper.get_state.assert_called_once_with()
     mocked_helper.set_state.assert_called_once_with(
-        state={"last_run": "2025-04-17 15:24:00+00:00"}
+        state={"last_run": "2025-04-17T15:24:00+00:00"}
     )
 
     # Assert the STIX object processing

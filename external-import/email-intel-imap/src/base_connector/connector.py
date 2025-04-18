@@ -69,7 +69,7 @@ class BaseConnector(abc.ABC):
     def update_state(
         self, current_state: dict[str, str], run_time: datetime.datetime
     ) -> None:
-        current_state["last_run"] = run_time.isoformat(sep=" ", timespec="seconds")
+        current_state["last_run"] = run_time.isoformat(timespec="seconds")
         self.helper.connector_logger.info(f"Updating state last_run to {run_time}")
         self.helper.set_state(state=current_state)
 
