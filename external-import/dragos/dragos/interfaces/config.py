@@ -357,7 +357,7 @@ class ConfigLoader(ABC, FrozenBaseModel):
         """Gather configuration settings and return them as a dictionary."""
         dct = {
             "opencti": {
-                "url": self.opencti.url,
+                "url": str(self.opencti.url),
                 "token": (
                     self.opencti.token.get_secret_value()
                     if token_as_plaintext

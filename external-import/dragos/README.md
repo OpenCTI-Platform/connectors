@@ -18,6 +18,7 @@
     - [Geocoding](#geocoding)
       - [OpenCTI as a Geocoding Service](#opencti-as-a-geocoding-service)
         - [Supported Geolocation Types](#supported-geolocation-types)
+    - [Unhandled Dragos tags](#unhandled-dragos-tags)
 
 ## Introduction
 
@@ -37,13 +38,11 @@ Here’s a high-level overview to get the connector up and running:
 
 1. **Set environment variables**:
         - In a `.env` file
-        - Inside `docker-compose.yml`
+        - Or inside `docker-compose.yml`
 2. **Pull and run the connector** using Docker:
         ```bash
         docker compose up -d
         ```
-
-> 💡 You must align the `pycti` version in `requirements.txt` with your OpenCTI platform version (e.g., `pycti==6.6.6`).
 
 ## Behavior
 
@@ -164,7 +163,7 @@ config = ConfigLoaderYaml("path/to/config.yaml")
 | Import Start Date | `import_start_date` | `DRAGOS_IMPORT_START_DATE` | —       | ✅ Yes     | The start date for the first data pull (ISO8601 or duration format).                                                            |
 | TLP Level         | `tlp_level`         | `DRAGOS_TLP_LEVEL`         | —       | ✅ Yes     | The TLP (Traffic Light Protocol) level for data being ingested. Valid values: `white`, `green`, `amber`, `amber+strict`, `red`. |
 
-> 📅 The `import_start_date` can be formatted as a date (ISO8601) or as a duration (e.g., `PT3D` for 3 days ago).
+> 📅 The `import_start_date` can be formatted as a date (ISO8601) or as a duration (e.g., `P3D` for 3 days ago).
 
 ## Additional Information
 
@@ -189,3 +188,17 @@ We provide an adapter that allows the OpenCTI platform itself to be used as a ge
 - **Position**
 
 > ⚠️ Currently, the `Administrative-Area` geolocation type is **not supported** with this adapter.
+
+### Unhandled Dragos tags
+
+The connector currently does not handle the following Dragos tags:
+
+- att&ck technique
+- intel requirement
+- temporary activity threat
+- threattype
+- technology
+- protocol
+- operating system
+- vendor
+- malware class

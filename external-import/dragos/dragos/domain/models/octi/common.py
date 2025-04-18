@@ -1,6 +1,6 @@
 """Offer common tools to create octi entities."""
 
-import base64
+import codecs
 from abc import ABC, abstractmethod
 from typing import Any, Optional, TypedDict
 
@@ -107,7 +107,7 @@ class ExternalReference(BaseModelWithoutExtra):
         )
 
 
-class UploadFileTypedDict(TypedDict):
+class UploadedFileTypedDict(TypedDict):
     """Stix like TypedDict for UploadedFile."""
 
     name: str
@@ -136,12 +136,16 @@ class UploadedFile(BaseModelWithoutExtra):
         description="File mime type.",
     )
 
-    def to_stix2_object(self) -> UploadFileTypedDict:
+    def to_stix2_object(self) -> UploadedFileTypedDict:
         """Make stix-like object (not defined in stix spec nor lib)."""
-        return UploadFileTypedDict(
+        return UploadedFileTypedDict(
             name=self.name,
             description=self.description,
-            data=base64.b64encode(self.content).decode("utf-8"),
+            data=(
+                codecs.encode(self.content, "base64").decode("utf-8")
+                if self.content
+                else None
+            ),
             mime_type=self.mime_type,
         )
 

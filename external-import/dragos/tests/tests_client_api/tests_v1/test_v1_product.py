@@ -18,6 +18,7 @@ import warnings
 from unittest.mock import MagicMock, patch, AsyncMock, Mock
 from yarl import URL
 import inspect
+from typing import AsyncIterator
 
 from client_api.errors import DragosAPIError
 from client_api.v1.product import (
@@ -213,8 +214,15 @@ async def test_invalid_product_response_content_leads_to_dragos_api_error(
         if inspect.isasyncgenfunction(method):
             async for _ in method(**parameters):
                 pass
-        else:  # else
+        elif inspect.iscoroutinefunction(method):
             _ = await method(**parameters)
+        else:
+            result = method(**parameters)
+            if isinstance(result, AsyncIterator):
+                async for _ in result:
+                    pass
+            else:
+                raise NotImplementedError
 
 
 @pytest.mark.parametrize(
@@ -267,7 +275,14 @@ async def test_invalid_product_response_code_leads_to_dragos_api_error_and_retri
         if inspect.isasyncgenfunction(method):
             async for _ in method(**parameters):
                 pass
-        else:  # else
+        elif inspect.iscoroutinefunction(method):
             _ = await method(**parameters)
+        else:
+            result = method(**parameters)
+            if isinstance(result, AsyncIterator):
+                async for _ in result:
+                    pass
+            else:
+                raise NotImplementedError
 
     assert client._get.call_count == client._retry  # noqa: S101
