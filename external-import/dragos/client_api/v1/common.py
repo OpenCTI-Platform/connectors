@@ -2,7 +2,7 @@
 """Offer Common tools for the Dragos API V1 endpoints."""
 import json
 from abc import ABC
-from logging import INFO, getLogger
+from logging import DEBUG, getLogger
 from typing import TYPE_CHECKING, Any
 
 from aiohttp import (
@@ -123,7 +123,7 @@ class BaseClientAPIV1(ABC):  # noqa: B024
                 text_data = await response.text()
                 data = json.loads(text_data)
             except json.JSONDecodeError as e:
-                logger.error(f"Error while decoding JSON: {e}")
+                logger.warning(f"Error while decoding JSON: {e}")
                 raise DragosAPIError("Invalid response from the API") from e
         return dict(data)
 
@@ -151,7 +151,7 @@ class BaseClientAPIV1(ABC):  # noqa: B024
                 ),
                 stop=stop_after_attempt(self._retry),
                 wait=wait_fixed(self._backoff_seconds),
-                after=after_log(logger, INFO),
+                after=after_log(logger, DEBUG),
             ):
                 with attempt:
                     response = await self._get(query_url)
@@ -193,5 +193,5 @@ class BaseClientAPIV1(ABC):  # noqa: B024
             return response_model.model_validate(data)
         except ValidationError as e:
             message = f"Invalid response from the API: {e}"
-            logger.debug(message)
+            logger.warning(message)
             raise DragosAPIError(message) from e
