@@ -143,6 +143,7 @@ class CustomConnector(ExternalImportConnector):
 
         stix_intrusion_set = None
         stix_threat_actor = None
+        stix_threat_actor_location_list = None
 
         if flag_instrusion_set_instead_of_threat_actor:
             stix_intrusion_set = report_adapter.generate_stix_intrusion_set(
