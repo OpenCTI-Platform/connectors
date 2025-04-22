@@ -1,5 +1,9 @@
 # Dragos OpenCTI Connector
 
+| Status            | Date       | Comment |
+| ----------------- |------------| ------- |
+| Filigran Verified | 2025-04-22 |    -    |
+
 ## Table of Contents
 
 - [Dragos OpenCTI Connector](#dragos-opencti-connector)
@@ -19,6 +23,10 @@
       - [OpenCTI as a Geocoding Service](#opencti-as-a-geocoding-service)
         - [Supported Geolocation Types](#supported-geolocation-types)
     - [Unhandled Dragos tags](#unhandled-dragos-tags)
+  - [Development](#development)
+    - [Running the Connector Locally](#running-the-connector-locally)
+    - [Commit](#commit)
+    - [Linting and formatting](#linting-and-formatting)
 
 ## Introduction
 
@@ -37,8 +45,7 @@ More information: [https://www.dragos.com/about/](https://www.dragos.com/about/)
 Here’s a high-level overview to get the connector up and running:
 
 1. **Set environment variables**:
-        - In a `.env` file
-        - Or inside `docker-compose.yml`
+        - inside `docker-compose.yml`
 2. **Pull and run the connector** using Docker:
         ```bash
         docker compose up -d
@@ -96,45 +103,10 @@ graph LR
 ### Requirements
 
 - OpenCTI Platform version **6.6.6** or higher
-- Python == 3.12 (for local development)
 - Docker & Docker Compose (for containerized deployment)
 - Valid Dragos API credentials (token + secret)
 
 ## Configuration Variables
-
-The connector can be configured using:
-
-- Direct environment variables
-
-```shell
-export ENV_VAR_NAME="..."
-```
-
-- A `.env` file
-with a .env file
-
-```shell
-export $(grep -v '^#' .env | xargs -d '\n')
-```
-
-- The `environment:` block in `docker-compose.yml`
-
-You can also use a `config.yaml` file to set the configuration variables.
-
-config.yaml should be composed of 2 levels keys/value such as
-
-```yaml
-connector: 
-    id: "..."
-```
-
-you can then alter the `main.py` file to load the config.yaml using the dedicated adapter:
-
-```python
-from dragos.adapters.config import ConfigLoaderYaml
-
-config = ConfigLoaderYaml("path/to/config.yaml")
-```
 
 ### OpenCTI Environment Variables
 
@@ -202,3 +174,59 @@ The connector currently does not handle the following Dragos tags:
 - operating system
 - vendor
 - malware class
+
+## Development
+
+### Running the Connector Locally
+
+The connector is designed to be run in a Docker container. However, if you want to run it locally for development purposes, you can do so by following these steps:
+
+1/ Clone the connectors repository:
+    ```bash
+    git clone <repository-url>
+    ```
+2/ Navigate to the connector directory
+    ```bash
+    cd external-import/dragos
+    ```
+3/ Ensure you are using a Python 3.12 version
+4/ Install the required dependencies:
+    ```bash
+    pip install -e .[dev,test]
+    ```
+    (for legacy purposes, you can also use `pip install -r requirements.txt` that is in editable mode.)
+5/ Set the required variables:
+    In your shell:
+    ```bash
+        export OPENCTI_URL=<your_opencti_url>
+        ...
+    ```
+    OR sourcing a `.env` file:
+    ```bash
+        source .env
+    ```
+    OR creating a "config.yml" file at the root of the project:
+    ```yaml
+        opencti: 
+            url: <your_opencti_url>
+        ...
+    ```
+6/ Run the connector:
+    ```bash
+        python main.py
+    ```
+
+### Commit
+
+Note: Your commits must be signed using a GPG key. Otherwise, your Pull Request will be rejected.
+
+### Linting and formatting
+
+Added to the connectors linteing and formatting rules, this connector is developped and checked using ruff and mypy to ensure the code is type-checked and linted.
+The dedicated configurations are set in the `pyproject.toml` file.
+You can run the following commands to check the code:
+
+```bash
+    python -m ruff check .
+    python -m mypy .
+```
