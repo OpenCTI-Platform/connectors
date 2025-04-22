@@ -15,12 +15,15 @@ class Connector(BaseConnector):
     def collect_intelligence(
         self, last_run: datetime.datetime | None
     ) -> list[stix2.Report]:
-        since_date = (
-            datetime.date.today()
+        since_date = last_run or (
+            datetime.datetime.now(tz=datetime.UTC)
             - self.config.email_intel_imap.relative_import_start_date
         )
         return [
             stix_object
-            for email in self.client.fetch_from_relative_import_start_date(since_date)
+            for email in self.client.fetch_from_relative_import_start_date(
+                since_date.date()
+            )
+            if email.date > since_date
             for stix_object in self.converter.to_stix_objects(email)
         ]

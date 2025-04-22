@@ -64,3 +64,10 @@ def fixture_mocked_mail_box(mocker: MockerFixture) -> MagicMock:
         mocked_mail_box_instance
     )
     return mocked_mail_box_instance
+
+
+@pytest.fixture(name="test_config")
+def fixture_test_config(
+    mock_email_intel_imap_config: None,
+) -> ConnectorConfig:
+    return ConnectorConfig()
