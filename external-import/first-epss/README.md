@@ -1,8 +1,12 @@
+> **⚠️ WARNING:**  
+> This connector is **not the recommended way** to enrich vulnerabilities with EPSS information.  
+> It is strongly advised to use the `internal/enrichment-connector` for FIRST EPSS instead, as it provides a more robust and integrated solution.
+
 # OpenCTI FIRST EPSS external import connector
 
 Table of Contents
 
-- [OpenCTI External Ingestion Connector Template](#opencti-external-ingestion-connector-template)
+- [OpenCTI FIRST EPSS external import connector](#opencti-first-epss-external-import-connector)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -62,7 +66,7 @@ Below are the parameters you'll need to set for the connector:
 
 | Parameter    | config.yml   | Docker environment variable | Default                  | Mandatory | Description |
 |--------------|--------------|-----------------------------|--------------------------|-----------|-------------|
-| API base URL | api_base_url | FIRST_EPSS_API_BASE_URL     | https://epss.cyentia.com | Yes       |             |
+| API base URL | api_base_url | FIRST_EPSS_API_BASE_URL     | <https://epss.cyentia.com> | Yes       |             |
 
 ## Deployment
 
@@ -128,12 +132,10 @@ Describe how the connector functions:
 * Additional relevant details
 -->
 
-
 ## Debugging
 
 The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
 
 <!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 
