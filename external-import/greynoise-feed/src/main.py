@@ -281,13 +281,15 @@ class GreyNoiseFeed:
 
             labels, malwares = self._process_labels(ip, json_data_tags)
 
-            if "first_seen" in data and data["first_seen"]:
-                self.first_seen = parse(data["first_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
-                self.last_seen = parse(data["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if "first_seen" in ip and ip["first_seen"]:
+                first_seen = parse(ip["first_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
+                last_seen = parse(ip["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
             else:
-                self.first_seen = parse(data["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
-                self.last_seen = datetime.strptime(data["last_seen"], "%Y-%m-%d") + timedelta(hours=23)
-                self.last_seen = self.last_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
+                first_seen = parse(ip["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
+                last_seen = datetime.strptime(ip["last_seen"], "%Y-%m-%d") + timedelta(
+                    hours=23
+                )
+                last_seen = last_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
 
             # Generate ExternalReference
             external_reference = stix2.ExternalReference(
