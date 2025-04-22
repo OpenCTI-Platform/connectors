@@ -1,7 +1,7 @@
 version: '3'
 services:
-  connector-external-import-first-epss:
-    image: opencti/opencti-connector-external-import-first-epss:6.5.2
+  connector-first-epss-bulk:
+    image: opencti/connector-first-epss-bulk:6.6.6
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=CHANGEME
