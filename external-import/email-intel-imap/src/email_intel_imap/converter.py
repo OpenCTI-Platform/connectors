@@ -28,6 +28,7 @@ class ConnectorConverter(BaseConverter):
                 published=entity.date,
                 report_types=[REPORT_TYPE_THREAT_REPORT],
                 x_opencti_content=entity.text,
+                x_opencti_files=[],
             )
         except Exception as e:
             self.helper.connector_logger.warning(
