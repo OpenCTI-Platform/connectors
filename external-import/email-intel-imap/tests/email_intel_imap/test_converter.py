@@ -4,7 +4,6 @@ from unittest.mock import Mock
 
 import pycti
 import pytest
-
 from email_intel_imap.converter import ConnectorConverter
 from stix2 import TLPMarking
 from stix2.utils import STIXdatetime

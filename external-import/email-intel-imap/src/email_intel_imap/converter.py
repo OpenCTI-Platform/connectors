@@ -21,6 +21,7 @@ class ConnectorConverter(BaseConverter):
         """
         Convert the data into STIX 2.1 objects by using default parent class object definition.
         """
+
         try:
             if not (name := entity.subject):
                 name = f"<no subject> from {entity.from_}"
