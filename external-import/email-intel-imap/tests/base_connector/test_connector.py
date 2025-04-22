@@ -1,3 +1,4 @@
+import datetime
 from unittest.mock import MagicMock, Mock
 
 import freezegun
@@ -8,7 +9,9 @@ STIX_OBJECT = MagicMock()
 
 
 class TestConnector(BaseConnector):
-    def collect_intelligence(self) -> list[stix2.v21._STIXBase21]:
+    def collect_intelligence(
+        self, last_run: datetime.datetime | None
+    ) -> list[stix2.v21._STIXBase21]:
         return [STIX_OBJECT]
 
 
@@ -29,7 +32,7 @@ def test_process(mocked_helper: MagicMock) -> None:
     )
 
     # Assert the state management
-    mocked_helper.get_state.assert_called_once_with()
+    assert mocked_helper.get_state.call_count == 2
     mocked_helper.set_state.assert_called_once_with(
         state={"last_run": "2025-04-17T15:24:00+00:00"}
     )

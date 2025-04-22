@@ -12,7 +12,9 @@ class Connector(BaseConnector):
     converter: ConnectorConverter
     client: ConnectorClient
 
-    def collect_intelligence(self) -> list[stix2.Report]:
+    def collect_intelligence(
+        self, last_run: datetime.datetime | None
+    ) -> list[stix2.Report]:
         since_date = (
             datetime.date.today()
             - self.config.email_intel_imap.relative_import_start_date

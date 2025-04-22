@@ -60,18 +60,16 @@ class BaseConnector(abc.ABC):
         self.converter = converter
         self.client = client
 
-    def get_state(self) -> dict[str, Any]:
+    def get_last_run(self) -> datetime.datetime | None:
         state = self.helper.get_state() or {}
-        last_run = state.get("last_run", "Connector has never run...")
-        self.helper.connector_logger.info(f"Connector last run: {last_run}")
-        return state
+        last_run_str = state.get("last_run")
+        return datetime.datetime.fromisoformat(last_run_str) if last_run_str else None
 
-    def update_state(
-        self, current_state: dict[str, str], run_time: datetime.datetime
-    ) -> None:
-        current_state["last_run"] = run_time.isoformat(timespec="seconds")
+    def update_last_run(self, run_time: datetime.datetime) -> None:
+        state = self.helper.get_state() or {}
+        state["last_run"] = run_time.isoformat(timespec="seconds")
         self.helper.connector_logger.info(f"Updating state last_run to {run_time}")
-        self.helper.set_state(state=current_state)
+        self.helper.set_state(state=state)
 
     def initiate_work(self) -> str:
         return self.helper.api.work.initiate_work(
@@ -100,13 +98,19 @@ class BaseConnector(abc.ABC):
 
     def process_message(self) -> None:
         run_time = datetime.datetime.now(tz=datetime.UTC)
-        state = self.get_state()
+        last_run = self.get_last_run()
         work_id = self.initiate_work()
 
-        stix_objects = self.collect_intelligence()
+        self.helper.connector_logger.info(
+            f"Connector last run: {last_run.isoformat() if last_run else 'Never'}"
+        )
+
+        stix_objects = self.collect_intelligence(last_run)
+
         self.create_and_send_bundles(work_id, stix_objects)
 
-        self.update_state(state, run_time)
+        self.update_last_run(run_time)
+
         message = f"Connector successfully run, storing last_run as {run_time}"
         self.finalize_work(work_id, message)
 
@@ -138,7 +142,9 @@ class BaseConnector(abc.ABC):
         )
 
     @abc.abstractmethod
-    def collect_intelligence(self) -> list[stix2.v21._STIXBase21]:
+    def collect_intelligence(
+        self, last_run: datetime.datetime | None
+    ) -> list[stix2.v21._STIXBase21]:
         """
         Collect and process the source of CTI.
 
