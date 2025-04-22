@@ -112,7 +112,7 @@ class _ConfigLoaderServiceNow(ConfigBaseSettings):
     api_key: str = Field(
         description="Secure identifier used to validate access to ServiceNow APIs.",
     )
-    api_version: Optional[str] = Field(
+    api_version: Optional[Literal["v1", "v2"]] = Field(
         default="v2",
         description="ServiceNow API version used for REST requests.",
     )

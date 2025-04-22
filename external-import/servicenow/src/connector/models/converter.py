@@ -30,7 +30,7 @@ class Converter(BaseModel):
                 October 4th, 2024]
         """
         self._stix2_representation = self.to_stix2_object()
-        self._id = self._stix2_representation["id"]
+        self._id = self._stix2_representation.get("id")
 
     @property
     def id(self) -> str:
@@ -171,6 +171,10 @@ class AttackPattern(Converter):
         default=None,
         description="Markings of the attack pattern.",
     )
+    external_references: Optional[list[ExternalReference]] = Field(
+        default=None,
+        description="An external link to the parent security incident data.",
+    )
 
     def to_stix2_object(self) -> stix2.AttackPattern:
         """Make stix object."""
@@ -182,6 +186,10 @@ class AttackPattern(Converter):
             name=self.name,
             description=self.description,
             object_marking_refs=[marking.id for marking in self.markings or []],
+            external_references=[
+                external_references.to_stix2_object()
+                for external_references in self.external_references or []
+            ],
             aliases=self.aliases,
             custom_properties={
                 "x_mitre_id": self.external_id,
@@ -208,6 +216,10 @@ class IntrusionSet(Converter):
         default=None,
         description="Markings of the attack pattern.",
     )
+    external_references: Optional[list[ExternalReference]] = Field(
+        default=None,
+        description="An external link to the parent security incident data.",
+    )
 
     def to_stix2_object(self) -> stix2.IntrusionSet:
         """Make stix object."""
@@ -217,6 +229,10 @@ class IntrusionSet(Converter):
             name=self.name,
             description=self.description,
             object_marking_refs=[marking.id for marking in self.markings or []],
+            external_references=[
+                external_references.to_stix2_object()
+                for external_references in self.external_references or []
+            ],
             aliases=self.aliases,
         )
 
@@ -244,6 +260,10 @@ class Malware(Converter):
         default=None,
         description="Markings of the attack pattern.",
     )
+    external_references: Optional[list[ExternalReference]] = Field(
+        default=None,
+        description="An external link to the parent security incident data.",
+    )
 
     def to_stix2_object(self) -> stix2.Malware:
         """Make stix object."""
@@ -254,6 +274,10 @@ class Malware(Converter):
             description=self.description,
             is_family=self.is_family,
             object_marking_refs=[marking.id for marking in self.markings or []],
+            external_references=[
+                external_references.to_stix2_object()
+                for external_references in self.external_references or []
+            ],
             aliases=self.aliases,
         )
 
@@ -277,6 +301,10 @@ class Tool(Converter):
         default=None,
         description="Markings of the attack pattern.",
     )
+    external_references: Optional[list[ExternalReference]] = Field(
+        default=None,
+        description="An external link to the parent security incident data.",
+    )
 
     def to_stix2_object(self) -> stix2.Tool:
         """Make stix object."""
@@ -286,6 +314,10 @@ class Tool(Converter):
             name=self.name,
             description=self.description,
             object_marking_refs=[marking.id for marking in self.markings or []],
+            external_references=[
+                external_references.to_stix2_object()
+                for external_references in self.external_references or []
+            ],
             aliases=self.aliases,
         )
 
@@ -335,9 +367,12 @@ class CustomCaseIncident(Converter):
         default=None,
         description="External references of the case incident.",
     )
-    created: Optional[datetime] = Field(
-        default=None,
+    created: datetime = Field(
         description="The creation date of the case incident.",
+    )
+    updated: Optional[datetime] = Field(
+        default=None,
+        description="The update date of the case incident.",
     )
 
     def to_stix2_object(self) -> pycti.CustomObjectCaseIncident:
@@ -351,8 +386,12 @@ class CustomCaseIncident(Converter):
             response_types=[self.types],
             object_marking_refs=[marking.id for marking in self.markings or []],
             object_refs=[obj.id for obj in self.objects or []],
-            external_references=[],
+            external_references=[
+                external_references.to_stix2_object()
+                for external_references in self.external_references or []
+            ],
             created=self.created,
+            modified=self.updated,
             custom_properties={
                 "x_opencti_labels": [self.labels] if self.labels else [],
                 "x_opencti_created_by_ref": self.author.id,
@@ -369,9 +408,12 @@ class CustomTask(Converter):
     description: str = Field(
         description="A description of the task.",
     )
-    created: Optional[datetime] = Field(
-        default=None,
+    created: datetime = Field(
         description="The creation date of the task.",
+    )
+    updated: Optional[datetime] = Field(
+        default=None,
+        description="The update date of the task.",
     )
     due_date: Optional[datetime] = Field(
         default=None,
@@ -388,10 +430,6 @@ class CustomTask(Converter):
         default=None,
         description="A list of Labels of the task.",
     )
-    external_references: Optional[list[ExternalReference]] = Field(
-        default=None,
-        description="External references of the task.",
-    )
     author: Author = Field(
         description="Author of the task.",
     )
@@ -403,11 +441,11 @@ class CustomTask(Converter):
             name=self.name,
             description=self.description,
             created=self.created,
+            modified=self.updated,
             due_date=self.due_date,
             object_refs=[self.objects.id],
             object_marking_refs=[marking.id for marking in self.markings or []],
             labels=self.labels,
-            external_references=self.external_references,
             custom_properties={"x_opencti_created_by_ref": self.author.id},
         )
 

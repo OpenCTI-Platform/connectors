@@ -375,21 +375,28 @@ class ConnectorServicenow:
 
                 mitre_mapping = {
                     "mitre_technique": lambda x, y: self.converter_to_stix.make_attack_pattern(
-                        mitre_name, mitre_id
+                        mitre_name, mitre_id, external_reference_sir
                     ),
                     "mitre_tactic": lambda x, y: self.converter_to_stix.make_attack_pattern(
-                        mitre_name, mitre_id
+                        mitre_name, mitre_id, external_reference_sir
                     ),
                     "mitre_group": lambda x, y: self.converter_to_stix.make_intrusion_set(
-                        mitre_name, mitre_alias
+                        mitre_name, mitre_alias, external_reference_sir
                     ),
                     "mitre_malware": lambda x, y: self.converter_to_stix.make_malware(
-                        mitre_name, mitre_alias
+                        mitre_name, mitre_alias, external_reference_sir
                     ),
                     "mitre_tool": lambda x, y: self.converter_to_stix.make_tool(
-                        mitre_name, mitre_alias
+                        mitre_name, mitre_alias, external_reference_sir
                     ),
                 }
+
+                # Make External Reference for custom case incident response and Mitre
+                external_reference_sir = self.converter_to_stix.make_external_reference(
+                    security_incident_object.number,
+                    "sn_si_incident",
+                    security_incident_object.sys_id,
+                )
 
                 for key, make in mitre_mapping.items():
                     has_values = getattr(security_incident_object, key, None)
@@ -402,11 +409,9 @@ class ConnectorServicenow:
                                 mitre_name = attack_pattern.split(" ")[1].strip("()")
                                 mitre_id = attack_pattern.split(" ")[0]
 
-                                make_attack_pattern_object = make(mitre_name, mitre_id)
-                                stix_objects.append(make_attack_pattern_object)
-                                case_incident_object_refs.append(
-                                    make_attack_pattern_object
-                                )
+                                attack_pattern_object = make(mitre_name, mitre_id)
+                                stix_objects.append(attack_pattern_object)
+                                case_incident_object_refs.append(attack_pattern_object)
                         else:
                             # MITRE Group / MITRE Malware / MITRE Tool
                             # Example: ["G0102 (Wizard Spider)"] -> [mitre_name (mitre_alias)]
@@ -414,11 +419,9 @@ class ConnectorServicenow:
                                 mitre_name = mitre.split(" ")[0]
                                 mitre_alias = mitre.split(" ")[1].strip("()")
 
-                                make_other_mitre_object = make(mitre_name, mitre_alias)
-                                stix_objects.append(make_other_mitre_object)
-                                case_incident_object_refs.append(
-                                    make_other_mitre_object
-                                )
+                                other_mitre_object = make(mitre_name, mitre_alias)
+                                stix_objects.append(other_mitre_object)
+                                case_incident_object_refs.append(other_mitre_object)
 
                 # Todo Make Observables object -> Observable
 
@@ -447,13 +450,13 @@ class ConnectorServicenow:
                         },
                     )
 
-                # Make Security Incident object -> CustomObjectCaseIncident
-                make_custom_case_incident = (
-                    self.converter_to_stix.make_custom_case_incident(
-                        security_incident_object, case_incident_object_refs
-                    )
+                # Make Security Incident Response object -> CustomObjectCaseIncident
+                custom_case_incident = self.converter_to_stix.make_custom_case_incident(
+                    security_incident_object,
+                    case_incident_object_refs,
+                    external_reference_sir,
                 )
-                stix_objects.append(make_custom_case_incident)
+                stix_objects.append(custom_case_incident)
 
                 # Make Tasks object -> CustomObjectTask
                 all_tasks_object = item.get("get_tasks")
@@ -467,10 +470,11 @@ class ConnectorServicenow:
                         )
                         task.comments_and_work_notes = new_description_task
                         all_labels = [*task.sys_tags, *task.security_tags]
-                        make_custom_task = self.converter_to_stix.make_custom_task(
-                            task, make_custom_case_incident, all_labels
+
+                        custom_task = self.converter_to_stix.make_custom_task(
+                            task, custom_case_incident, all_labels
                         )
-                        stix_objects.append(make_custom_task)
+                        stix_objects.append(custom_task)
 
             if stix_objects:
                 # Make Author object
