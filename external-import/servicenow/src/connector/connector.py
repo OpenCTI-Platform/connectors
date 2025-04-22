@@ -216,7 +216,9 @@ class ConnectorServicenow:
             )
 
             get_state_to_exclude, get_severity_to_exclude, get_priority_to_exclude = (
-                classified_result_prerequisites_tasks if classified_result_prerequisites_tasks else (None, None, None)
+                classified_result_prerequisites_tasks
+                if classified_result_prerequisites_tasks
+                else (None, None, None)
             )
 
             main_tasks = {
@@ -235,7 +237,11 @@ class ConnectorServicenow:
                 collected_security_incidents, "get_security_incidents"
             )
 
-            security_incidents_list = classified_result_main_tasks[0].get("result", []) if classified_result_main_tasks else []
+            security_incidents_list = (
+                classified_result_main_tasks[0].get("result", [])
+                if classified_result_main_tasks
+                else []
+            )
             if not security_incidents_list:
                 self.helper.connector_logger.info(
                     "[CONNECTOR] No security incidents found.",
@@ -526,8 +532,14 @@ class ConnectorServicenow:
 
             # Get the current state
             current_state = self.helper.get_state()
-            self.last_run_start_datetime = current_state.get("last_run_start_datetime") if current_state else None
-            self.last_run_end_datetime_with_ingested_data = current_state.get("last_run_end_datetime_with_ingested_data") if current_state else None
+            self.last_run_start_datetime = (
+                current_state.get("last_run_start_datetime") if current_state else None
+            )
+            self.last_run_end_datetime_with_ingested_data = (
+                current_state.get("last_run_end_datetime_with_ingested_data")
+                if current_state
+                else None
+            )
 
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starting connector...",
@@ -535,10 +547,14 @@ class ConnectorServicenow:
                     "connector_name": self.config.connector.name,
                     "connector_start_time": current_start_utc_isoformat,
                     "last_run_start_datetime": (
-                        self.last_run_start_datetime if self.last_run_start_datetime else "Connector has never run"
+                        self.last_run_start_datetime
+                        if self.last_run_start_datetime
+                        else "Connector has never run"
                     ),
                     "last_run_end_datetime_with_ingested_data": (
-                        self.last_run_end_datetime_with_ingested_data if self.last_run_end_datetime_with_ingested_data else "Connector has never ingested data"
+                        self.last_run_end_datetime_with_ingested_data
+                        if self.last_run_end_datetime_with_ingested_data
+                        else "Connector has never ingested data"
                     ),
                 },
             )
@@ -552,7 +568,9 @@ class ConnectorServicenow:
                     collected_intelligence
                 )
                 self._send_intelligence(work_id, prepared_intelligence)
-                self.last_run_end_datetime_with_ingested_data = self.utils.get_now(DateTimeFormat.ISO)
+                self.last_run_end_datetime_with_ingested_data = self.utils.get_now(
+                    DateTimeFormat.ISO
+                )
 
             # Store the current start utc isoformat as a last run of the connector.
             self.helper.connector_logger.info(
@@ -568,7 +586,9 @@ class ConnectorServicenow:
                 current_state = {"last_run_start_datetime": current_start_utc_isoformat}
 
             if self.last_run_end_datetime_with_ingested_data:
-                current_state["last_run_end_datetime_with_ingested_data"] = self.last_run_end_datetime_with_ingested_data
+                current_state["last_run_end_datetime_with_ingested_data"] = (
+                    self.last_run_end_datetime_with_ingested_data
+                )
 
             self.helper.set_state(current_state)
             self._complete_work(work_id)

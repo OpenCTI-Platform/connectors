@@ -17,6 +17,12 @@ Table of Contents
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
+## Status Filigran
+
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified | -    | -       |
+
 ## Introduction
 
 **Introducing ServiceNow**
@@ -144,6 +150,10 @@ Then, start the connector from recorded-future/src:
 python3 main.py
 ```
 
+---
+
+---
+
 ## Usage
 
 After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
@@ -155,40 +165,146 @@ However, if you would like to force an immediate download of a new batch of enti
 Find the connector, and click on the refresh button to reset the connector's state and force a new
 download of data by re-running the connector.
 
-## Behavior
+---
 
-### Required access to ServiceNow's `sys_choice` table name.
+---
+
+## Connector operating phases
+
+The connector works in three main stages:
+
+1. Collect Intelligence from ServiceNow
+2. Prepare Intelligence (and data transformation)
+3. Send Intelligence to OpenCTI
+
+---
+
+### Phase 1 - Collect Intelligence
+
+During this phase, the connector will make several calls to ServiceNow, and here's the url structure that will be used:
+
+`GET https://<YOUR_INSTANCE_NAME>.service-now.com/api/now/<YOUR_API_VERSION>/table/<TABLE_NAME>?<QUERY_PARAMETERS>`
+
+Three initial calls to retrieve the following metadata:
+- Status
+- Severity
+- Priority
 
 For security incident filtering to work properly, the following environment variables are required:
-  - `STATE_TO_EXCLUDE`
-  - `SEVERITY_TO_EXCLUDE`
-  - `PRIORITY_TO_EXCLUDE`
+- `STATUS_TO_EXCLUDE`
+- `SEVERITY_TO_EXCLUDE`
+- `PRIORITY_TO_EXCLUDE`
 
-The connector must have access to the `sys_choice` table name of your ServiceNow instance. This table is used to match labels to internal field values.
-If access to this table is restricted, or if the values defined in your environment variables do not match the choices configured in your ServiceNow instance, an alert message will be displayed.
-In this case, the retained filter(s) will simply be ignored.
+The connector must have access to the name of the `sys_choice` table in your ServiceNow instance. This table is used to match labels to internal field values.
+If access to this table is restricted, or if the values defined in your environment variables do not match the choices configured in your ServiceNow instance, a warning message will be displayed. In this case, the filter(s) selected will simply be ignored.
+
+The connector retrieves Security Incidents from ServiceNow while applying exclusion filters — if configured — based on `state`, `severity`, and `priority`. If no exclusion is set, all incidents are collected. Additionally, a time-based filter is applied on the update date `sys_updated_on`
+
+Additionally, a time-based filter is applied on the update date `sys_updated_on` and not on the `sys_created_on`:
+
+On the first run, the reference date is defined by the `IMPORT_START_DATE` environment variable. On subsequent runs, the connector uses the `last_run_start_datetime` value to determine which security incidents to collect.
+
+Once the filtered list of Security Incidents is obtained, the connector proceeds to import the following:
+
+- All `Tasks` associated with each incident
+- All `Observables` linked to these incidents (WIP)
+
+---
+
+### Phase 2 - Prepare Intelligence
+
+During this phase, the connector carries out :
+
+- Data validation and modeling via Pydantic
+- Transformation of validated models into OpenCTI compatible STIX 2.1 representations.
+
+All generated entities are associated by default with a `TLP:RED`.
+
+#### Mapping entities from ServiceNow to OpenCTI :
+
+Security Incident:
+
+| SIR in ServiceNow                     | Case incident Response in OpenCTI                                                                                                    |
+|---------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| Number SIR + Short description        | `Name`                                                                                                                               |
+| Severity                              | `Severity` (Can be `Unknown` if the value does not correspond to the levels allowed by OpenCTI: `low`, `medium`, `high`, `critical`) |
+| Priority                              | `Priority`                                                                                                                           |
+| Category                              | `Incident Response Type`                                                                                                             |
+| Subcategory                           | `Labels`                                                                                                                             |
+| Description + Comments and work notes | `Descriptions` (`comments and work notes` become a markdown table)                                                                   |
+
+ServiceNow's `MITRE` fields related to the Security incident are mapped as follows:
+
+| ServiceNow       | OpenCTI          |
+|------------------|------------------|
+| MITRE Technique  | `Attack Pattern` |
+| MITRE Tactic     | `Attack Pattern` |
+| MITRE Group      | `Intrusion Set`  |
+| MITRE Malware    | `Malware`        |
+| MITRE Tool       | `Tool`           |
+
+For each `Task` related to the Security incident:
+
+| SIT in ServiceNow                     | Task in OpenCTI                                                     |
+|---------------------------------------|---------------------------------------------------------------------|
+| Number SIT + Short description        | `Name`                                                              |
+| Due date                              | `Due date`                                                          |
+| Tags + Security Tags                  | `Labels`                                                            |
+| Description + Comments and work notes | `Descriptions` (`comments and work notes` become a markdown table)  |
+
+For each `Observables` related to the Security incident:
+
+---
+
+### Phase 3 - Send Intelligence
+
+Finally, all the STIX representations generated are sent to the OpenCTI platform.
+
+---
+
+---
+
+## Behavior
+
+---
+
+### Release version compatible with the connector
+
+Compatible release versions (tested) for ServiceNow instances are :
+- Yokohama - v2
+- Xanadu - v2
+
+---
 
 ### Security incident import date management
-The connector imports security incidents based on their last update date, not their creation date. This behaviour has both benefits and important implications that you should be aware of.
+The connector imports security incidents based on their last update date (`sys_updated_on`), not their creation date (`sys_created_on`). This behaviour has both benefits and important implications that you should be aware of.
 
 Benefits :
-  - Each time an incident is updated in ServiceNow (e.g. status, severity, comment, etc.), the connector re-imports it with all the updated information.
+  - Each time a security incident is updated in ServiceNow (e.g. `status`, `severity`, `comments`, etc.), the connector re-imports it with all the updated information.
   - This ensures continuous synchronisation with the current status of security incidents in ServiceNow, even after they are initially created.
 
 Please note : 
+  - On the first run, the reference date is defined by the `IMPORT_START_DATE` environment variable. On subsequent runs, the connector uses the `last_run_start_datetime` value to determine which security incidents to collect. 
   - The connector does not distinguish whether the modified field is actually used by it. So an update to an unused field (such as PIR - Post-Incident Review) can still trigger a complete re-import of the security incident without any real change in OpenCTI.
-  - You can also observe the import of security incidents created before the configured import_start_date, but updated after this date.
-  → For example, an incident created in 2024 and updated in 2025 will be imported even if the import_start_date is configured as 2025. In OpenCTI the creation date will be displayed as 2024 as this is its original value.
+  - You can also observe the import of security incidents created before the configured `import_start_date`, but updated after this date.
+  → For example, a security incident created in `2024-01-01` and updated in `2025-05-01` will be imported even if the `import_start_date` is configured as `2025-01-01`. In OpenCTI the creation date will be displayed as `2024-01-01` as this is its original value.
 
-    
-### Prerequisites in ServiceNow (Configure API key)
+---
+
+### Prerequisites in ServiceNow
 
 - Role : Administrator
-- Plugin required : API Key and HMAC Authentication
+- All > Application Manager
 
 ![Application-Manager-01](./__docs__/media/ServiceNow-Application-Manager.png)
 
+- Plugin required : **API Key and HMAC Authentication** (Check that the plugin is correctly installed)
+
 ![Application-Manager-02](./__docs__/media/ServiceNow-Application-Manager-API_Key.png)
+
+- Application required : **Security Incident Response**
+
+![Application-Manager-03](./__docs__/media/ServiceNow-Application-Manager-SIR.png)
 
 ---
 
@@ -278,13 +394,20 @@ There are 3 important steps to obtaining a valid token !
 
 - You can submit the form, and now your token is operational.
 
+---
+
+---
+
 ## Debugging
 
 The connector can be debugged by setting the appropiate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+---
+
+---
 
 ## Additional information
+
 
