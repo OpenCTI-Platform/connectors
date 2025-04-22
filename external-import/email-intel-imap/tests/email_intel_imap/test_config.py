@@ -19,6 +19,7 @@ def test_config() -> None:
     assert config["connector"]["scope"] == ["ChangeMe"]
     assert config["connector"]["duration_period"] == datetime.timedelta(days=1)
 
+    assert len(config["email_intel_imap"]) == 8
     assert config["email_intel_imap"]["tlp_level"] == "white"
     assert config["email_intel_imap"][
         "relative_import_start_date"
@@ -28,3 +29,6 @@ def test_config() -> None:
     assert config["email_intel_imap"]["username"] == "foo"
     assert config["email_intel_imap"]["password"] == "bar"
     assert config["email_intel_imap"]["mailbox"] == "INBOX"
+    assert config["email_intel_imap"]["attachments_mime_types"] == (
+        ["application/pdf", "text/csv", "text/plain"]
+    )

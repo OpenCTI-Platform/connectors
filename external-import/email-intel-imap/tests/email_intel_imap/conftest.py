@@ -30,6 +30,7 @@ def fixture_email_intel_config_dict() -> dict[str, dict[str, Any]]:
             "username": "foo",
             "password": "bar",
             "mailbox": "INBOX",
+            "attachments_mime_types": "application/pdf,text/csv,text/plain",
         },
     }
 
