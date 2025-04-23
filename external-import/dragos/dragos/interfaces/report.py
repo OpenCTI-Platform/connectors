@@ -1,7 +1,7 @@
 """Define the interface for Dragos Product."""
 
 from abc import ABC, abstractmethod
-from typing import Annotated, Generator, Iterator, Literal, Optional
+from typing import Annotated, Iterator, Literal, Optional
 
 from dragos.interfaces.common import DataRetrievalError, FrozenBaseModel
 from pydantic import (
@@ -132,10 +132,8 @@ class Report(ABC, FrozenBaseModel):
         None, description="The Dragos Report PDF file.", min_length=1
     )
 
-    related_tags: Generator[Tag, None, None] = Field(
-        ..., description="The Dragos Report related tags."
-    )
-    related_indicators: Generator[Indicator, None, None] = Field(
+    related_tags: list[Tag] = Field(..., description="The Dragos Report related tags.")
+    related_indicators: list[Indicator] = Field(
         ..., description="The Dragos Report related indicators."
     )
 
@@ -188,12 +186,12 @@ class Report(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _related_tags(self) -> Generator[Tag, None, None]:
+    def _related_tags(self) -> list[Tag]:
         pass
 
     @property
     @abstractmethod
-    def _related_indicators(self) -> Generator[Indicator, None, None]:
+    def _related_indicators(self) -> list[Indicator]:
         pass
 
 

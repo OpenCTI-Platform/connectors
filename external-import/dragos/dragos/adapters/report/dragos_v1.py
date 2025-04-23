@@ -3,7 +3,7 @@
 import asyncio
 from io import BytesIO
 from logging import getLogger
-from typing import TYPE_CHECKING, Generator, Iterator, Optional
+from typing import TYPE_CHECKING, Iterator, Optional
 
 from client_api.v1 import DragosClientAPIV1
 from client_api.v1.indicator import IndicatorResponse
@@ -136,20 +136,24 @@ class ReportAPIV1(Report):
         return None
 
     @property
-    def _related_tags(self) -> Generator[Tag, None, None]:
+    def _related_tags(self) -> list[Tag]:
         """Get all related tags."""
+        tags = []
         for tag in self._product_response.product.tags:
             if not tag.tag_type or not tag.text:
                 # Skip tags without type or text
                 logger.warning("Skipping tag without type or text")
                 continue
-            yield TagAPIV1.from_tag_response(tag)
+            tags.append(TagAPIV1.from_tag_response(tag))
+        return tags  # type: ignore[return-value]  # TagAPIV1 is a subclass of Tag
 
     @property
-    def _related_indicators(self) -> Generator[Indicator, None, None]:
+    def _related_indicators(self) -> list[Indicator]:
         """Gett all related indicators."""
-        for indicator in self._product_response.indicators:
-            yield IndicatorAPIV1.from_indicator_response(indicator)
+        return [
+            IndicatorAPIV1.from_indicator_response(indicator)
+            for indicator in self._product_response.indicators
+        ]
 
 
 class ExtendedProductResponse:
@@ -224,6 +228,8 @@ class ReportsAPIV1(Reports):
             ]
 
         products = asyncio.run(iter_products())
-        return iter(
-            [ReportAPIV1.from_product_response(product) for product in products]
-        )
+        reports = []
+        for product in products:
+            report = ReportAPIV1.from_product_response(product)
+            reports.append(report)
+        return iter(reports)
