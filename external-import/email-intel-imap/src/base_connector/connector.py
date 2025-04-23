@@ -53,7 +53,7 @@ class BaseConnector(abc.ABC):
         helper: OpenCTIConnectorHelper,
         config: BaseConnectorConfig,
         converter: BaseConverter,
-        client: BaseClient,
+        client: BaseClient | None = None,
     ) -> None:
         self.helper = helper
         self.config = config

@@ -10,25 +10,34 @@ from stix2.v21.vocab import REPORT_TYPE_THREAT_REPORT
 
 
 @pytest.fixture(name="connector")
-def fixture_connector(
-    mocked_helper: Mock,
-    mock_email_intel_imap_config: None,
-) -> Connector:
+def fixture_connector(mocked_helper: Mock) -> Connector:
     config = ConnectorConfig()
     return Connector(
         config=config,
         helper=mocked_helper,
-        converter=ConnectorConverter(config=config, helper=mocked_helper),
-        client=ConnectorClient(config=config, helper=mocked_helper),
+        converter=ConnectorConverter(
+            helper=mocked_helper,
+            author_name="Email Intel IMAP",
+            author_description="Email Intel IMAP Connector",
+            tlp_level=config.email_intel_imap.tlp_level,
+        ),
+        client=ConnectorClient(
+            host=config.email_intel_imap.host,
+            port=config.email_intel_imap.port,
+            username=config.email_intel_imap.username,
+            password=config.email_intel_imap.password,
+            mailbox=config.email_intel_imap.mailbox,
+        ),
     )
 
 
-@pytest.mark.usefixtures("mocked_mail_box")
+@pytest.mark.usefixtures("mock_email_intel_imap_config", "mocked_mail_box")
 def test_connector_collect_intelligence_empty(connector: Connector) -> None:
     stix_objects = connector.collect_intelligence()
     assert stix_objects == []
 
 
+@pytest.mark.usefixtures("mock_email_intel_imap_config")
 def test_connector_collect_intelligence(
     connector: Connector, mocked_mail_box: Mock
 ) -> None:

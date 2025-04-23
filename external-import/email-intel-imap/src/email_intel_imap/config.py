@@ -2,7 +2,7 @@ import datetime
 import os
 from typing import Literal
 
-from base_connector.config import BaseConnectorConfig
+from base_connector import BaseConnectorConfig
 from pydantic import BaseModel
 from pydantic_settings import SettingsConfigDict
 
@@ -27,9 +27,3 @@ class ConnectorConfig(BaseConnectorConfig):
     )
 
     email_intel_imap: EmailIntelConfig
-
-    @property
-    def tlp_level(
-        self,
-    ) -> Literal["white", "clear", "green", "amber", "amber+strict", "red"]:
-        return self.email_intel_imap.tlp_level

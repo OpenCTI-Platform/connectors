@@ -1,10 +1,9 @@
 import abc
 import datetime
-from typing import Any, Generator
+from typing import Any, Generator, Literal
 
 import pycti
 import stix2
-from base_connector.config import BaseConnectorConfig
 from base_connector.errors import InvalidTlpLevelError
 from base_connector.models import ReportCustomProperties
 from pycti import OpenCTIConnectorHelper
@@ -20,30 +19,33 @@ class BaseConverter(abc.ABC):
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    author_name: str
-    author_description: str
-
     def __init__(
-        self, helper: OpenCTIConnectorHelper, config: BaseConnectorConfig
+        self,
+        helper: OpenCTIConnectorHelper,
+        author_name: str,
+        author_description: str,
+        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
     ) -> None:
-        super().__init__()
         self.helper = helper
-        self.config = config
-        self.author = self._create_author()
-        self.tlp_marking = self._create_tlp_marking()
+        self.author = self._create_author(
+            name=author_name, description=author_description
+        )
+        self.tlp_marking = self._create_tlp_marking(tlp_level=tlp_level)
 
-    def _create_author(self) -> stix2.Identity:
+    @staticmethod
+    def _create_author(name: str, description: str) -> stix2.Identity:
         return stix2.Identity(
-            id=pycti.Identity.generate_id(
-                name=self.author_name, identity_class="organization"
-            ),
-            name=self.author_name,
+            id=pycti.Identity.generate_id(name=name, identity_class="organization"),
+            name=name,
             identity_class="organization",
-            description=self.author_description,
+            description=description,
         )
 
-    def _create_tlp_marking(self) -> stix2.MarkingDefinition:
-        match self.config.tlp_level:
+    @staticmethod
+    def _create_tlp_marking(
+        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+    ) -> stix2.MarkingDefinition:
+        match tlp_level:
             case "white" | "clear":
                 return stix2.TLP_WHITE
             case "green":
@@ -63,9 +65,7 @@ class BaseConverter(abc.ABC):
             case "red":
                 return stix2.TLP_RED
             case _:  # default
-                raise InvalidTlpLevelError(
-                    f"Invalid TLP level: {self.config.tlp_level}"
-                )
+                raise InvalidTlpLevelError(f"Invalid TLP level: {tlp_level}")
 
     def _create_report(
         self,
@@ -88,5 +88,7 @@ class BaseConverter(abc.ABC):
         )
 
     @abc.abstractmethod
-    def to_stix(self, entity: Any) -> Generator[stix2.v21._STIXBase21, None, None]:
+    def to_stix_objects(
+        self, entity: Any
+    ) -> Generator[stix2.v21._STIXBase21, None, None]:
         """Convert the data into STIX 2.1 objects."""

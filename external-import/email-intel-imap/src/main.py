@@ -20,8 +20,19 @@ def main() -> None:
     """
     config = ConnectorConfig()
     helper = OpenCTIConnectorHelper(config=config.model_dump(mode="json"))
-    converter = ConnectorConverter(helper=helper, config=config)
-    client = ConnectorClient(helper=helper, config=config)
+    converter = ConnectorConverter(
+        helper=helper,
+        author_name="Email Intel IMAP",
+        author_description="Email Intel IMAP Connector",
+        tlp_level=config.email_intel_imap.tlp_level,
+    )
+    client = ConnectorClient(
+        host=config.email_intel_imap.host,
+        port=config.email_intel_imap.port,
+        username=config.email_intel_imap.username,
+        password=config.email_intel_imap.password,
+        mailbox=config.email_intel_imap.mailbox,
+    )
 
     connector = Connector(
         config=config, helper=helper, converter=converter, client=client

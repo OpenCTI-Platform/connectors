@@ -1,5 +1,4 @@
 import datetime
-from typing import Any
 
 import pytest
 from email_intel_imap.config import ConnectorConfig
@@ -8,7 +7,7 @@ from pydantic import HttpUrl
 
 
 @pytest.mark.usefixtures("mock_email_intel_imap_config")
-def test_config(email_intel_config_dict: dict[str, dict[str, Any]]) -> None:
+def test_config() -> None:
     config = ConnectorConfig().model_dump()
 
     assert config["opencti"]["url"] == HttpUrl("http://test-opencti-url/")
