@@ -58,6 +58,17 @@ class QRadarConnector:
         )
         self.headers = {"SEC": self.qradar_token}
 
+        try:
+            self._initialize_reference_sets()
+        except Exception as ex:
+            self.helper.connector_logger.error(
+                "[RefSet Init] Failed processing data {" + str(ex) + "}"
+            )
+
+    def _initialize_reference_sets(self):
+        """
+        :return:
+        """
         # Collections sets
         self.collection_sets = {
             "ipv4-addr": {
@@ -116,6 +127,7 @@ class QRadarConnector:
         r = requests.get(
             url=self.base_url_sets, headers=self.headers, verify=self.qradar_ssl_verify
         )
+        r.raise_for_status()
         data = r.json()
         for key in self.collection_sets.keys():
             already_exist = False
@@ -133,6 +145,7 @@ class QRadarConnector:
                     headers=self.headers,
                     verify=self.qradar_ssl_verify,
                 )
+                r.raise_for_status()
                 result = r.json()
                 self.collection_sets[key]["qradar_id"] = result["id"]
 
