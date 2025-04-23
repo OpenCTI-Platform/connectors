@@ -18,6 +18,7 @@
     - [Base Connector Environment Variables](#base-connector-environment-variables)
     - [Connector Extra Parameters](#connector-extra-parameters)
   - [Additional Information](#additional-information)
+    - [Architectural Decision Records (ADRs)](#architectural-decision-records-adrs)
     - [Fake Server](#fake-server)
     - [Geocoding](#geocoding)
       - [OpenCTI as a Geocoding Service](#opencti-as-a-geocoding-service)
@@ -139,6 +140,10 @@ graph LR
 
 ## Additional Information
 
+### Architectural Decision Records (ADRs)
+
+see [doc/ADRs.md](doc/ADRs.md).
+
 ### Fake Server
 
 The connector can be run against a fake server to simulate the Dragos API. This is useful for testing and development purposes.
@@ -207,7 +212,7 @@ The connector is designed to be run in a Docker container. However, if you want 
     ```
     OR creating a "config.yml" file at the root of the project:
     ```yaml
-        opencti: 
+        opencti:
             url: <your_opencti_url>
         ...
     ```
