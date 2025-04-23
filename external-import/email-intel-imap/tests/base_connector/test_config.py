@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Any, Literal
 
 import pytest
-from base_connector import BaseConnectorConfig, ConfigRetrievalError
+from base_connector.config import BaseConnectorConfig
+from base_connector.errors import ConfigRetrievalError
 from pydantic_settings import SettingsConfigDict
 
 

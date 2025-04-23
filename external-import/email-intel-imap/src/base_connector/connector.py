@@ -2,21 +2,17 @@ import abc
 import datetime
 import sys
 import traceback
-from typing import Any, Generic, TypeVar
+from typing import Any
 
+import stix2
 from base_connector.client import BaseClient
 from base_connector.config import BaseConnectorConfig
 from base_connector.converter import BaseConverter
 from base_connector.errors import ConnectorError, ConnectorWarning
 from pycti import OpenCTIConnectorHelper
-from stix2.base import _DomainObject
-
-ConfigType = TypeVar("ConfigType", bound=BaseConnectorConfig)
-ClientType = TypeVar("ClientType", bound=BaseClient)
-ConverterType = TypeVar("ConverterType", bound=BaseConverter[Any, Any])
 
 
-class BaseConnector(abc.ABC, Generic[ConfigType, ClientType, ConverterType]):
+class BaseConnector(abc.ABC):
     """
     Specifications of the external import connector
 
@@ -55,14 +51,14 @@ class BaseConnector(abc.ABC, Generic[ConfigType, ClientType, ConverterType]):
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        config: ConfigType,
-        client: ClientType,
-        converter: ConverterType,
+        config: BaseConnectorConfig,
+        converter: BaseConverter,
+        client: BaseClient,
     ) -> None:
         self.helper = helper
         self.config = config
-        self.client = client
         self.converter = converter
+        self.client = client
 
     def get_state(self) -> dict[str, Any]:
         state = self.helper.get_state() or {}
@@ -142,7 +138,7 @@ class BaseConnector(abc.ABC, Generic[ConfigType, ClientType, ConverterType]):
         )
 
     @abc.abstractmethod
-    def collect_intelligence(self) -> list[_DomainObject]:
+    def collect_intelligence(self) -> list[stix2.v21._STIXBase21]:
         """
         Collect and process the source of CTI.
 

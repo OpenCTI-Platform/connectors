@@ -5,7 +5,11 @@ from email_intel_imap.config import ConnectorConfig
 from email_intel_imap.converter import ConnectorConverter
 
 
-class Connector(BaseConnector[ConnectorConfig, ConnectorClient, ConnectorConverter]):
+class Connector(BaseConnector):
+    config: ConnectorConfig
+    converter: ConnectorConverter
+    client: ConnectorClient
+
     def collect_intelligence(self) -> list[stix2.Report]:
         return [
             stix_object

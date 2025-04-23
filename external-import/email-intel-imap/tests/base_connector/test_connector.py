@@ -1,14 +1,14 @@
 from unittest.mock import MagicMock, Mock
 
 import freezegun
+import stix2
 from base_connector.connector import BaseConnector
-from stix2.base import _DomainObject
 
 STIX_OBJECT = MagicMock()
 
 
 class TestConnector(BaseConnector):
-    def collect_intelligence(self) -> list[_DomainObject]:
+    def collect_intelligence(self) -> list[stix2.v21._STIXBase21]:
         return [STIX_OBJECT]
 
 

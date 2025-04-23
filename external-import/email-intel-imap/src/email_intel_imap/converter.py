@@ -1,4 +1,4 @@
-from typing import Any, Generator
+from typing import Generator
 
 import stix2
 from base_connector.converter import BaseConverter
@@ -6,7 +6,7 @@ from imap_tools.message import MailMessage
 from stix2.v21.vocab import REPORT_TYPE_THREAT_REPORT
 
 
-class ConnectorConverter(BaseConverter[MailMessage, dict[str, Any]]):
+class ConnectorConverter(BaseConverter):
     """
     Provides methods for converting various types of input data into STIX 2.1 objects.
 

@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pycti
 import pytest
-from base_connector import BaseConverter
+from base_connector.converter import BaseConverter
 from stix2 import TLPMarking
 from stix2.utils import STIXdatetime
 

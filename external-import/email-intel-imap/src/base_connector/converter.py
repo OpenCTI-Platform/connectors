@@ -1,6 +1,6 @@
 import abc
 import datetime
-from typing import Any, Generator, Generic, TypeVar
+from typing import Any, Generator
 
 import pycti
 import stix2
@@ -8,18 +8,9 @@ from base_connector.config import BaseConnectorConfig
 from base_connector.errors import InvalidTlpLevelError
 from base_connector.models import ReportCustomProperties
 from pycti import OpenCTIConnectorHelper
-from pydantic import BaseModel
-
-EntityType = TypeVar("EntityType")
-StixType = TypeVar("StixType", bound=dict[str, Any])
 
 
-class Author(BaseModel):
-    name: str
-    description: str
-
-
-class BaseConverter(abc.ABC, Generic[EntityType, StixType]):
+class BaseConverter(abc.ABC):
     """
     Base class for all converters.
 
@@ -97,5 +88,5 @@ class BaseConverter(abc.ABC, Generic[EntityType, StixType]):
         )
 
     @abc.abstractmethod
-    def to_stix(self, entity: EntityType) -> Generator[StixType, None, None]:
+    def to_stix(self, entity: Any) -> Generator[stix2.v21._STIXBase21, None, None]:
         """Convert the data into STIX 2.1 objects."""
