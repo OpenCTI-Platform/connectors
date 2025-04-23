@@ -3,6 +3,7 @@ from unittest.mock import Mock
 
 import freezegun
 import pytest
+from base_connector import ConnectorError
 from email_intel_imap.client import ConnectorClient
 from email_intel_imap.config import ConnectorConfig
 from email_intel_imap.connector import Connector
@@ -12,7 +13,6 @@ from stix2.v21.vocab import REPORT_TYPE_THREAT_REPORT
 
 @pytest.fixture(name="connector")
 def fixture_connector(mocked_helper: Mock, test_config: ConnectorConfig) -> Connector:
-
     return Connector(
         config=test_config,
         helper=mocked_helper,
@@ -114,3 +114,25 @@ def test_connector_collect_intelligence_since_last_run(
 
     report = stix_objects[0]
     assert report.name == "3"
+
+
+def test_connector_known_warning(connector: Connector, mocked_mail_box: Mock) -> None:
+    today = datetime.datetime.now(tz=datetime.UTC)
+    connector.helper.get_state.return_value = {"last_run": "1970-01-01T00:00:00Z"}
+    mocked_mail_box.fetch.return_value = [Mock(date=today)]
+
+    assert (
+        connector.process()
+        == "An error occurred while creating the Report, skipping..."
+    )
+
+
+def test_connector_known_error(connector: Connector, mocked_mail_box: Mock) -> None:
+    connector.helper.get_state.return_value = {"last_run": "1970-01-01T00:00:00Z"}
+    mocked_mail_box.fetch.side_effect = ConnectorError("Known error")
+
+    assert connector.process() == "Known error"
+
+
+def test_connector_unknown_error(connector: Connector) -> None:
+    assert connector.process() == "Unexpected error. See connector logs for details."

@@ -123,13 +123,16 @@ class BaseConnector(abc.ABC):
             self.helper.connector_logger.info("Connector stopped by user.", meta=meta)
             sys.exit(0)
         except ConnectorWarning as e:
+            meta["error"] = str(e)
             self.helper.connector_logger.warning(str(e), meta=meta)
             return str(e)
         except ConnectorError as e:
+            meta["error"] = str(e)
             self.helper.connector_logger.error(str(e), meta=meta)
             return str(e)
         except Exception as e:
             traceback.print_exc()
+            meta["error"] = str(e)
             self.helper.connector_logger.error(f"Unexpected error: {e}", meta=meta)
             return "Unexpected error. See connector logs for details."
         return None

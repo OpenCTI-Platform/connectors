@@ -1,6 +1,7 @@
 from typing import Generator
 
 import stix2
+from base_connector import ConnectorWarning
 from base_connector.converter import BaseConverter
 from base_connector.models import OpenCTIFile
 from imap_tools.message import MailMessage
@@ -43,7 +44,6 @@ class ConnectorConverter(BaseConverter):
                 ],
             )
         except Exception as e:
-            self.helper.connector_logger.warning(
-                "An error occurred while creating the Report, skipping...",
-                {"error": str(e)},
-            )
+            raise ConnectorWarning(
+                "An error occurred while creating the Report, skipping..."
+            ) from e

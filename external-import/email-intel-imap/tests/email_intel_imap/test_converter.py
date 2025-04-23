@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 import pycti
 import pytest
+from base_connector import ConnectorWarning
 from email_intel_imap.converter import ConnectorConverter
 from stix2 import TLPMarking
 from stix2.utils import STIXdatetime
@@ -80,13 +81,11 @@ def test_converter_to_stix_no_subject(converter: ConnectorConverter) -> None:
 
 
 def test_converter_to_stix_with_error(converter: ConnectorConverter) -> None:
-    report = list(converter.to_stix_objects(entity=Mock()))
-    assert len(report) == 0
-    converter.helper.connector_logger.warning.assert_called_with(
+    with pytest.raises(ConnectorWarning) as exc_info:
+        report = list(converter.to_stix_objects(entity=Mock(attachments=None)))
+        assert len(report) == 0
+    assert exc_info.value.args == (
         "An error occurred while creating the Report, skipping...",
-        {
-            "error": "'Mock' object is not iterable",
-        },
     )
 
 
