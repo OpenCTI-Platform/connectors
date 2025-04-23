@@ -8,7 +8,7 @@ connector:
   name: 'GreyNoise'
   scope: 'IPv4-Addr'
   auto: true # Enable/disable auto-enrichment of observables
-  log_level: 'info'
+  log_level: 'error'
 
 greynoise:
   key: 'ChangeMe'
