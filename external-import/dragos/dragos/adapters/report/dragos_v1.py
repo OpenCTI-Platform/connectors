@@ -2,6 +2,7 @@
 
 import asyncio
 from io import BytesIO
+from logging import getLogger
 from typing import TYPE_CHECKING, Generator, Iterator, Optional
 
 from client_api.v1 import DragosClientAPIV1
@@ -9,6 +10,8 @@ from client_api.v1.indicator import IndicatorResponse
 from client_api.v1.product import ProductResponse, TagResponse
 from dragos.interfaces import Indicator, Report, Reports, Tag
 from pydantic import PrivateAttr
+
+logger = getLogger(__name__)
 
 if TYPE_CHECKING:
     from datetime import datetime, timedelta
@@ -136,6 +139,10 @@ class ReportAPIV1(Report):
     def _related_tags(self) -> Generator[Tag, None, None]:
         """Get all related tags."""
         for tag in self._product_response.product.tags:
+            if not tag.tag_type or not tag.text:
+                # Skip tags without type or text
+                logger.warning("Skipping tag without type or text")
+                continue
             yield TagAPIV1.from_tag_response(tag)
 
     @property
