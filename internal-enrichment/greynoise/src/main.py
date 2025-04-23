@@ -786,7 +786,7 @@ class GreyNoiseConnector:
                 ) + timedelta(hours=23)
                 self.last_seen = self.last_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            self._get_indicator_score((data.get("classification"), "unknown"))
+            self._get_indicator_score(data.get("classification", "unknown"))
 
             # Generate Stix Object for bundle
             labels, malwares = self._process_labels(data, data_tags)
