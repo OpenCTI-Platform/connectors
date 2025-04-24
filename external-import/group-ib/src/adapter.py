@@ -642,15 +642,15 @@ class DataToSTIXAdapter:
         _threat_actor_goals = obj.get("goals")
         _threat_actor_roles = obj.get("roles")
 
-        _date_first_seen = self._retrieve_date(json_date_obj, "first-seen")
-        _date_last_seen = self._retrieve_date(json_date_obj, "last-seen")
+        # _date_first_seen = self._retrieve_date(json_date_obj, "first-seen")
+        # _date_last_seen = self._retrieve_date(json_date_obj, "last-seen")
 
         _portal_link = self._retrieve_link(obj)
 
         threat_actor = None
         locations = None
 
-        if _threat_actor_name:
+        if _threat_actor_name and len(_threat_actor_name) > 2:
             threat_actor = ds.ThreatActor(
                 name=_threat_actor_name,
                 c_type=_type,
@@ -709,15 +709,15 @@ class DataToSTIXAdapter:
         _intrusion_set_goals = obj.get("goals")
         _intrusion_set_roles = obj.get("roles")
 
-        _date_first_seen = self._retrieve_date(json_date_obj, "first-seen")
-        _date_last_seen = self._retrieve_date(json_date_obj, "last-seen")
+        # _date_first_seen = self._retrieve_date(json_date_obj, "first-seen")
+        # _date_last_seen = self._retrieve_date(json_date_obj, "last-seen")
 
         _portal_link = self._retrieve_link(obj)
 
         intrusion_set = None
         locations = None
 
-        if _intrusion_set_name:
+        if _intrusion_set_name and len(_intrusion_set_name) > 2:
             intrusion_set = ds.IntrusionSet(
                 name=_intrusion_set_name,
                 c_type=_type,
