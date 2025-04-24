@@ -14,7 +14,6 @@ import traceback
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-
 from rflib import (
     APP_VERSION,
     AnalystNote,
