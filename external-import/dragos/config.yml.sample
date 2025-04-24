@@ -7,7 +7,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'Dragos'
   scope: ['report', 'vulnerabilities']
-  log_level: 'warning'
+  log_level: 'warn'
   duration_period: 'PT1D' # Interval given for scheduler process in ISO-8601 format
 
 dragos:
