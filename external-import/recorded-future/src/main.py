@@ -24,6 +24,7 @@ from rflib import (
     RiskList,
     StixNote,
     ThreatMap,
+    AnalystNote
 )
 
 
@@ -195,7 +196,7 @@ class BaseRFConnector:
             default=False,
         )
 
-
+'''
 class RFNotes:
     """Connector object"""
 
@@ -339,7 +340,7 @@ class RFNotes:
                     f"{str(exception)}"
                 )
                 continue
-
+'''
 
 class RFConnector:
     def __init__(self):
@@ -411,7 +412,7 @@ class RFConnector:
 
         # Pull Analyst Notes if enabled
         if self.RF.rf_pull_analyst_notes:
-            self.analyst_notes = RFNotes(
+            self.analyst_notes = AnalystNote(
                 self.RF.helper,
                 self.RF.rfapi,
                 self.RF.last_published_notes_interval,
@@ -423,9 +424,9 @@ class RFConnector:
                 self.RF.rf_person_to_TA,
                 self.RF.rf_TA_to_intrusion_set,
                 self.RF.risk_as_score,
-                self.RF.risk_threshold,
+                self.RF.risk_threshold
             )
-            self.analyst_notes.run()
+            self.analyst_notes.start()
         else:
             self.RF.helper.connector_logger.info(
                 "[ANALYST NOTES] Analyst notes fetching disabled"
