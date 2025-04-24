@@ -30,9 +30,10 @@ INSIKT_SOURCE = "VKz42X"
 THREAT_MAPS_PATH = API_BASE + "/threat/maps"
 LINKS_PATH = API_BASE + "/links/search"
 
-ANALYST_NOTES_ENDPOINT = API_BASE +"/analyst-note"
-ANALYST_NOTES_SEARCH_ENDPOINT = API_BASE +"/analyst-note/search"
-ANALYST_NOTES_ATTACHMENT_ENDPOINT = API_BASE +"/analyst-note/attachment"
+ANALYST_NOTES_ENDPOINT = API_BASE + "/analyst-note"
+ANALYST_NOTES_SEARCH_ENDPOINT = API_BASE + "/analyst-note/search"
+ANALYST_NOTES_ATTACHMENT_ENDPOINT = API_BASE + "/analyst-note/attachment"
+
 
 class RFClient:
     """class for talking to the RF API, specifically pulling analyst notes"""
@@ -46,11 +47,11 @@ class RFClient:
         self.helper = helper
 
     def get_analyst_notes(
-            self,
-            published: int,
-            pull_signatures: bool = False,
-            insikt_only: bool = True,
-            topic: str = None,
+        self,
+        published: int,
+        pull_signatures: bool = False,
+        insikt_only: bool = True,
+        topic: str = None,
     ):
         """
         Pulls Analyst Notes from API
@@ -82,14 +83,16 @@ class RFClient:
                 self.helper.connector_logger.info(msg)
 
                 attributes["attachments"] = []
-                if "attachment" in attributes and attributes.get("attachment").endswith(".pdf"):
+                if "attachment" in attributes and attributes.get("attachment").endswith(
+                    ".pdf"
+                ):
                     try:
                         result = self.get_analyst_note_attachment(note["id"])
                         if result:
-                            attachment= {
+                            attachment = {
                                 "name": attributes.get("attachment"),
                                 "content": result,
-                                "type": "pdf"
+                                "type": "pdf",
                             }
                             attributes["attachments"].append(attachment)
                         else:
@@ -99,14 +102,18 @@ class RFClient:
                         msg = f'[ANALYST NOTES] An exception occurred while retrieving PDF attachment of note: {attributes["title"]}, {str(err)}'
                         self.helper.connector_logger.error(msg)
 
-                elif pull_signatures and "attachment" in attributes and attributes.get("attachment"):
+                elif (
+                    pull_signatures
+                    and "attachment" in attributes
+                    and attributes.get("attachment")
+                ):
                     try:
                         result = self.get_attachment(note["id"])
                         if result:
-                            attachment= {
+                            attachment = {
                                 "name": attributes.get("attachment"),
                                 "content": result["rules"][0]["content"],
-                                "type": result["type"]
+                                "type": result["type"],
                             }
                             attributes["attachments"].append(attachment)
                         else:
@@ -121,14 +128,16 @@ class RFClient:
                     except (KeyError, IndexError):
                         self.helper.connector_logger.error(
                             "[ANALYST NOTES] Problem with API response for detection"
-                            "rule for note {}. Rule will not be added".format(note["id"])
+                            "rule for note {}. Rule will not be added".format(
+                                note["id"]
+                            )
                         )
 
                 notes.append(note)
             if total == len(notes):
                 has_more = False
             else:
-                note_params["from"]=data.get("next_offset")
+                note_params["from"] = data.get("next_offset")
         return notes
 
     def get_risk_ip_addresses(self, limit: int = 1000, risk_threshold=65):
@@ -169,7 +178,7 @@ class RFClient:
         :param doc_id:
         :return:
         """
-        url = ANALYST_NOTES_ATTACHMENT_ENDPOINT + "/"+doc_id
+        url = ANALYST_NOTES_ATTACHMENT_ENDPOINT + "/" + doc_id
         res = self.session.get(url)
         res.raise_for_status()
         return res.content

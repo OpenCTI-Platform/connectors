@@ -8,6 +8,7 @@
 # using the foregoing.                                                         #
 ################################################################################
 """
+
 import base64
 import ipaddress
 import json
@@ -1003,7 +1004,7 @@ class StixNote:
         )
         self.report_types = self._create_report_types(attr.get("topic", []))
         self.labels = [topic["name"] for topic in attr.get("topic", [])]
-        self.attachments = attr['attachments']
+        self.attachments = attr["attachments"]
         for entity in attr.get("note_entities", []):
             type_ = entity["type"]
             name = entity["name"]
@@ -1058,7 +1059,7 @@ class StixNote:
             self.objects.extend(stix_objs)
 
         for attachment in self.attachments:
-            if attachment['type'] != "pdf":
+            if attachment["type"] != "pdf":
                 rule = DetectionRule(
                     attachment["name"],
                     attachment["type"],
@@ -1136,7 +1137,9 @@ class StixNote:
                 files.append(
                     {
                         "name": attachment.get("name"),
-                        "data": base64.b64encode(attachment.get("content")).decode("utf-8"),
+                        "data": base64.b64encode(attachment.get("content")).decode(
+                            "utf-8"
+                        ),
                         "mime_type": "application/pdf",
                         "no_trigger_import": False,
                     }

@@ -4,22 +4,24 @@ from urllib import parse
 
 from .rf_to_stix2 import StixNote
 
+
 class AnalystNote(threading.Thread):
 
     def __init__(
-            self,
-            helper,
-            rfapi,
-            last_published_notes_interval,
-            rf_initial_lookback,
-            rf_pull_signatures,
-            rf_insikt_only,
-            rf_topics,
-            tlp,
-            rf_person_to_TA,
-            rf_TA_to_intrusion_set,
-            risk_as_score,
-            risk_threshold):
+        self,
+        helper,
+        rfapi,
+        last_published_notes_interval,
+        rf_initial_lookback,
+        rf_pull_signatures,
+        rf_insikt_only,
+        rf_topics,
+        tlp,
+        rf_person_to_TA,
+        rf_TA_to_intrusion_set,
+        risk_as_score,
+        risk_threshold,
+    ):
         threading.Thread.__init__(self)
         self.helper = helper
         self.rfapi = rfapi
@@ -88,8 +90,8 @@ class AnalystNote(threading.Thread):
         current_state.update({"last_analyst_notes_run": last_run_datetime})
         self.helper.set_state(state=current_state)
         message = (
-                f"{self.helper.connect_name} connector successfully run, storing last run for Analyst Notes as "
-                + str(last_run_datetime)
+            f"{self.helper.connect_name} connector successfully run, storing last run for Analyst Notes as "
+            + str(last_run_datetime)
         )
         self.helper.api.work.to_processed(work_id, message)
 

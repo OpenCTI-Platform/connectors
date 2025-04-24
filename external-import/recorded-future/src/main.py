@@ -24,7 +24,7 @@ from rflib import (
     RiskList,
     StixNote,
     ThreatMap,
-    AnalystNote
+    AnalystNote,
 )
 
 
@@ -196,6 +196,7 @@ class BaseRFConnector:
             default=False,
         )
 
+
 '''
 class RFNotes:
     """Connector object"""
@@ -342,6 +343,7 @@ class RFNotes:
                 continue
 '''
 
+
 class RFConnector:
     def __init__(self):
         self.RF = BaseRFConnector()
@@ -424,7 +426,7 @@ class RFConnector:
                 self.RF.rf_person_to_TA,
                 self.RF.rf_TA_to_intrusion_set,
                 self.RF.risk_as_score,
-                self.RF.risk_threshold
+                self.RF.risk_threshold,
             )
             self.analyst_notes.start()
         else:
