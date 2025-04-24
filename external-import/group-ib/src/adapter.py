@@ -160,6 +160,9 @@ class DataToSTIXAdapter:
                 "attack-pattern": "uses",
                 "malware": "uses",
                 "vulnerability": "targets",
+                # Common
+                "base-location": "originates-from",
+                "target-location": "targets",
                 # Threat
                 "threat-actor": "attributed-to",
             },
@@ -655,8 +658,8 @@ class DataToSTIXAdapter:
                 tlp_color="red",
                 labels=[self.collection],
                 aliases=_threat_actor_aliases,
-                first_seen=_date_first_seen,
-                last_seen=_date_last_seen,
+                # first_seen=_date_first_seen,
+                # last_seen=_date_last_seen,
                 goals=_threat_actor_goals,
                 roles=_threat_actor_roles,
             )
@@ -698,13 +701,13 @@ class DataToSTIXAdapter:
         _global_label = self.ta_global_label
         # _country_type = "country"
 
-        _threat_actor_name = obj.get("name")
-        # _threat_actor_country = obj.get("country")
-        # _threat_actor_targeted_countries = obj.get("targeted_countries")
-        _threat_actor_aliases = obj.get("aliases")
-        _threat_actor_description = obj.get("description")
-        _threat_actor_goals = obj.get("goals")
-        _threat_actor_roles = obj.get("roles")
+        _intrusion_set_name = obj.get("name")
+        _intrusion_set_country = obj.get("country")
+        _intrusion_set_targeted_countries = obj.get("targeted_countries")
+        _intrusion_set_aliases = obj.get("aliases")
+        _intrusion_set_description = obj.get("description")
+        _intrusion_set_goals = obj.get("goals")
+        _intrusion_set_roles = obj.get("roles")
 
         _date_first_seen = self._retrieve_date(json_date_obj, "first-seen")
         _date_last_seen = self._retrieve_date(json_date_obj, "last-seen")
@@ -712,49 +715,49 @@ class DataToSTIXAdapter:
         _portal_link = self._retrieve_link(obj)
 
         intrusion_set = None
-        # locations = None
+        locations = None
 
-        if _threat_actor_name:
+        if _intrusion_set_name:
             intrusion_set = ds.IntrusionSet(
-                name=_threat_actor_name,
+                name=_intrusion_set_name,
                 c_type=_type,
                 global_label=_global_label,
                 tlp_color="red",
                 labels=[self.collection],
-                aliases=_threat_actor_aliases,
-                first_seen=_date_first_seen,
-                last_seen=_date_last_seen,
-                goals=_threat_actor_goals,
-                roles=_threat_actor_roles,
+                aliases=_intrusion_set_aliases,
+                # first_seen=_date_first_seen,
+                # last_seen=_date_last_seen,
+                goals=_intrusion_set_goals,
+                roles=_intrusion_set_roles,
             )
-            intrusion_set.set_description(_threat_actor_description)
+            intrusion_set.set_description(_intrusion_set_description)
             intrusion_set.generate_external_references(_portal_link)
             intrusion_set.generate_stix_objects()
 
-            # base_locations = []
-            # if _threat_actor_country:
-            #     base_locations = self.generate_locations(
-            #         [_threat_actor_country], change_type_to="base-location"
-            #     )
-            # target_locations = []
-            # if _threat_actor_targeted_countries:
-            #     target_locations = self.generate_locations(
-            #         _threat_actor_targeted_countries, change_type_to="target-location"
-            #     )
+            base_locations = []
+            if _intrusion_set_country:
+                base_locations = self.generate_locations(
+                    [_intrusion_set_country], change_type_to="base-location"
+                )
+            target_locations = []
+            if _intrusion_set_targeted_countries:
+                target_locations = self.generate_locations(
+                    _intrusion_set_targeted_countries, change_type_to="target-location"
+                )
 
-            # locations = base_locations + target_locations
-            #
-            # if _threat_actor_name and base_locations:
-            #     self._generate_relations(intrusion_set, base_locations)
-            #
-            # if _threat_actor_name and target_locations:
-            #     self._generate_relations(intrusion_set, target_locations)
+            locations = base_locations + target_locations
+
+            if _intrusion_set_name and base_locations:
+                self._generate_relations(intrusion_set, base_locations)
+
+            if _intrusion_set_name and target_locations:
+                self._generate_relations(intrusion_set, target_locations)
 
             self._generate_relations(intrusion_set, related_objects)
 
             intrusion_set.add_relationships_to_stix_objects()
 
-        return intrusion_set  # , locations
+        return intrusion_set, locations
 
     def generate_stix_file(
         self, obj, json_date_obj=None, related_objects=None, file_is_ioc=True
