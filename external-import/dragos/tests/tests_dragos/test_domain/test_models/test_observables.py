@@ -96,47 +96,50 @@ def test_artifact_class_should_accept_valid_input(input_data):
     )
 
 
-@pytest.mark.parametrize(
-    "input_data, error_field",
-    [
-        pytest.param(
-            {
-                "author": fake_valid_organization_author(),
-                "markings": [fake_valid_tlp_marking()],
-            },
-            "payload_bin",
-            id="missing_payload_bin_and_url",
-        ),
-        pytest.param(
-            {
-                # payload_bin and url are mutually exclusive
-                "payload_bin": bytes("SGVsbG8gd29ybGQ=", encoding="utf-8"),
-                "url": "http://example.com",
-                "author": fake_valid_organization_author(),
-                "markings": [fake_valid_tlp_marking()],
-            },
-            "payload_bin",
-            id="extra_payload_bin_or_url",
-        ),
-        pytest.param(
-            {
-                "url": "http://example.com",
-                "author": fake_valid_organization_author(),
-                "markings": [fake_valid_tlp_marking()],
-            },
-            "hashes",
-            id="missing_hashes",
-        ),
-    ],
-)
-def test_artifact_class_should_not_accept_invalid_input(input_data, error_field):
-    """Test that Artifact class should not accept invalid input."""
-    # Given: Invalid input data for the Artifact class
-    # When: we try to create a Artifact instance
-    # Then: a ValidationError should be raised
-    with pytest.raises(ValidationError) as err:
-        octi.Artifact.model_validate(input_data)
-    assert str(error_field) in str(err)  # noqa S101
+# We implemented a custom stix object without these validations
+# because the OCTI platform does accept artifacts without payload_bin or url
+# @pytest.mark.parametrize(
+#     "input_data, error_field",
+#     [
+#         pytest.param(
+#             {
+#                 "author": fake_valid_organization_author(),
+#                 "markings": [fake_valid_tlp_marking()],
+#             },
+#             "payload_bin",
+#             id="missing_payload_bin_and_url",
+#         ),
+#         #
+#         # pytest.param(
+#         #     {
+#         #         # payload_bin and url are mutually exclusive
+#         #         "payload_bin": bytes("SGVsbG8gd29ybGQ=", encoding="utf-8"),
+#         #         "url": "http://example.com",
+#         #         "author": fake_valid_organization_author(),
+#         #         "markings": [fake_valid_tlp_marking()],
+#         #     },
+#         #     "payload_bin",
+#         #     id="extra_payload_bin_or_url",
+#         # ),
+#         # pytest.param(
+#         #     {
+#         #         "url": "http://example.com",
+#         #         "author": fake_valid_organization_author(),
+#         #         "markings": [fake_valid_tlp_marking()],
+#         #     },
+#         #     "hashes",
+#         #     id="missing_hashes",
+#         # ),
+#     ],
+# )
+# def test_artifact_class_should_not_accept_invalid_input(input_data, error_field):
+#     """Test that Artifact class should not accept invalid input."""
+#     # Given: Invalid input data for the Artifact class
+#     # When: we try to create a Artifact instance
+#     # Then: a ValidationError should be raised
+#     with pytest.raises(ValidationError) as err:
+#         octi.Artifact.model_validate(input_data)
+#     assert str(error_field) in str(err)  # noqa S101
 
 
 def test_artifact_to_stix2_object_returns_valid_stix_object():
