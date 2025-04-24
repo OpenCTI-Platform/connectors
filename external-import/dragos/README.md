@@ -180,6 +180,8 @@ The connector currently does not handle the following Dragos tags:
 - vendor
 - malware class
 
+They're not converted into OpenCTI entities. As a fallback, they're currently stored as is as reports labels.
+
 ## Development
 
 ### Running the Connector Locally
