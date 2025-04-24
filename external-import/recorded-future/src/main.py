@@ -15,8 +15,10 @@ from datetime import datetime, timezone
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
 from rflib import (
     APP_VERSION,
+    AnalystNote,
     RecordedFutureAlertConnector,
     RecordedFutureApiClient,
     RecordedFuturePlaybookAlertConnector,
@@ -24,7 +26,6 @@ from rflib import (
     RiskList,
     StixNote,
     ThreatMap,
-    AnalystNote,
 )
 
 
