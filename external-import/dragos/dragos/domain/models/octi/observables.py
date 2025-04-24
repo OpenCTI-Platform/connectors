@@ -80,6 +80,14 @@ class Observable(BaseEntity):
         """Make stix indicator based on current observable."""
 
 
+class OCTIArtifact(stix2.v21.Artifact):  # type: ignore[misc]
+    # considered as Any because stix2 does not provide stubs
+    """Override stix2 Artifact not to require payload_bin  xor url xor hash."""
+
+    def _check_object_constraints(self) -> None:
+        super(stix2.v21.Artifact, self)._check_object_constraints()
+
+
 class Artifact(Observable):
     """Represent an artifact observable on OpenCTI."""
 
@@ -119,12 +127,13 @@ class Artifact(Observable):
         custom_properties.update({"x_opencti_additional_names": self.additional_names})
         return custom_properties
 
-    def to_stix2_object(self) -> stix2.v21.Artifact:
+    def to_stix2_object(self) -> OCTIArtifact:
         """Make stix object."""
         if self._stix2_representation is not None:
-            return self._stix2_representation
+            return self._stix2_representation  # type: ignore[no-any-return]
+            # stix2 does not provide stubs
 
-        return stix2.Artifact(
+        content = dict(  # noqa: C408 # No literal dict for maintainability
             mime_type=self.mime_type,
             payload_bin=self.payload_bin,
             url=self.url,
@@ -137,6 +146,13 @@ class Artifact(Observable):
             granular_markings=None,
             defanged=None,
             extensions=None,
+        )
+
+        # remove all None values from the content dict
+        content = {k: v for k, v in content.items() if v is not None}
+
+        return OCTIArtifact(
+            **content,
         )
 
     def to_indicator(
