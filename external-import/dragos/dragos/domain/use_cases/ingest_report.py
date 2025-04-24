@@ -256,7 +256,7 @@ class ReportProcessor(BaseUseCase):
         )
 
     def make_report(
-        self, report: "Report", related_objetcs: list["octi.BaseEntity"]
+        self, report: "Report", related_objects: list["octi.BaseEntity"]
     ) -> octi.Report:
         """Make an OCTI Report from a Dragos report and the related entities."""
         uploaded_file = None
@@ -272,7 +272,7 @@ class ReportProcessor(BaseUseCase):
             publication_date=report.created_at,
             description=report.summary,
             # labels=report.related_tags,
-            objects=related_objetcs,
+            objects=related_objects,
             files=[uploaded_file] if uploaded_file else None,
             author=self.author,
             markings=[self.tlp_marking],
