@@ -12,7 +12,6 @@
 import io
 import json
 import string
-import time
 from urllib import parse
 
 import requests

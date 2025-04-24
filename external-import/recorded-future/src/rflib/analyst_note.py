@@ -1,6 +1,5 @@
 import threading
 from datetime import datetime, timezone
-from urllib import parse
 
 from .rf_to_stix2 import StixNote
 

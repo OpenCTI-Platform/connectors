@@ -11,7 +11,6 @@
 
 import os
 import traceback
-from datetime import datetime, timezone
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -24,7 +23,6 @@ from rflib import (
     RecordedFuturePlaybookAlertConnector,
     RFClient,
     RiskList,
-    StixNote,
     ThreatMap,
 )
 
