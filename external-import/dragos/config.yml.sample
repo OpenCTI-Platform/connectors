@@ -14,5 +14,5 @@ dragos:
   api_base_url: 'https://portal.dragos.com'
   api_token: 'ChangeMe'
   api_secret: 'ChangeMe'
-  import_start_date: 'PT30D'
+  import_start_date: 'P30D'
   tlp_level: amber # TLP level to set on imported entities (allowed values are ['white', 'green', 'amber', 'amber+strict', 'red'])
