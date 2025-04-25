@@ -329,9 +329,6 @@ class ExternalImportConnector:
                                             update=self.update_existing_data,
                                             work_id=work_id,
                                         )
-                                        self.helper.connector_logger.debug(
-                                            f"Sending {str(bundle_objects)} STIX objects to OpenCTI..."
-                                        )
 
                                 # Update seqUpdate param
                                 prepared_data[collection].update(
