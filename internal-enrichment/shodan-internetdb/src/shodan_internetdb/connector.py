@@ -63,6 +63,15 @@ class ShodanInternetDBConnector:
 
         self.extract_and_check_markings(observable)
 
+        if not self._is_entity_in_scope(observable["entity_type"]):
+            if data.get("event_type"):
+                raise ShodanInternetDbEntityNotInScopeError(
+                    f"[CONNECTOR] Failed to process observable, {observable['entity_type']} is not a supported entity type"
+                )
+            # If it is not in scope AND entity bundle passed through playbook,
+            # we should return the original bundle unchanged
+            return self._send_bundle(stix_objects)
+
         # Process the observable value
         value = stix_observable["value"]
 
@@ -70,15 +79,6 @@ class ShodanInternetDBConnector:
             raise ShodanInternetDbInvalidIPv4AddressError(
                 "[CONNECTOR] Observable value is not an IPv4 address"
             )
-
-        if not self._is_entity_in_scope(data["entity_type"]):
-            if data.get("event_type"):
-                raise ShodanInternetDbEntityNotInScopeError(
-                    f"[CONNECTOR] Failed to process observable, {data['entity_type']} is not a supported entity type"
-                )
-            # If it is not in scope AND entity bundle passed through playbook,
-            # we should return the original bundle unchanged
-            return self._send_bundle(stix_objects)
 
         result = self._client.query(value)
 
@@ -102,10 +102,6 @@ class ShodanInternetDBConnector:
         ) as e:
             self.helper.connector_logger.warning(e)
             return str(e)
-        except Exception as e:
-            message = "[CONNECTOR] Unexpected error."
-            self.helper.connector_logger.error(message, {"error": str(e)})
-            return f"{message} See connector's log for more details."
 
     def run(self) -> None:
         """
