@@ -18,3 +18,4 @@ email_intel_imap:
   username: 'ChangeMe'
   password: 'ChangeMe'
   mailbox: 'INBOX'
+  attachments_mime_types: 'application/pdf,text/csv,text/plain'

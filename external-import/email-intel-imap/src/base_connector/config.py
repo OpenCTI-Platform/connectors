@@ -1,21 +1,15 @@
 import abc
 import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from base_connector.enums import LogLevelType
 from base_connector.errors import ConfigRetrievalError
 from pycti import ConnectorType
-from pydantic import (
-    BaseModel,
-    Field,
-    HttpUrl,
-    field_serializer,
-    field_validator,
-)
+from pydantic import BaseModel, BeforeValidator, Field, HttpUrl, PlainSerializer
+from pydantic_core.core_schema import SerializationInfo
 from pydantic_settings import (
     BaseSettings,
-    NoDecode,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
     YamlConfigSettingsSource,
@@ -44,6 +38,25 @@ WARNING:
 """
 
 
+def environ_list_validator(value: str | list[str]) -> list[str]:
+    if isinstance(value, str):
+        return [string.strip() for string in value.split(",")]
+    return value
+
+
+def pycti_list_serializer(v: list[str], info: SerializationInfo) -> str | list[str]:
+    if isinstance(v, list) and info.context and info.context.get("mode") == "pycti":
+        return ",".join(v)  # [ "e1", "e2", "e3" ] -> "e1,e2,e3"
+    return v
+
+
+ListFromString = Annotated[
+    list[str],  # Final type
+    BeforeValidator(environ_list_validator),
+    PlainSerializer(pycti_list_serializer, when_used="json"),
+]
+
+
 class _OpenCTIConfig(BaseModel):
     url: HttpUrl
     token: str
@@ -55,7 +68,7 @@ class _ConnectorConfig(BaseModel):
     id: str
     name: str
     type: ConnectorType
-    scope: Annotated[list[str], NoDecode]
+    scope: ListFromString
     duration_period: datetime.timedelta
 
     log_level: LogLevelType = Field(default=LogLevelType.ERROR)
@@ -73,24 +86,15 @@ class _ConnectorConfig(BaseModel):
     send_to_directory_path: str | None = Field(default=None)
     send_to_directory_retention: int = Field(default=7)
 
-    @field_serializer("scope", when_used="json")
-    def serialize_scope(self, scope: list[str]) -> str:
-        # OpenCTIHelper expects the original format of the scope like "scope1,scope2,scope3"
-        return ",".join(scope)
-
-    @field_validator("scope", mode="before")
-    @classmethod
-    def validate_scope(cls, v: str) -> list[str]:
-        # We want to convert the scope from a string to a list of strings
-        return v.split(",")
-
 
 class BaseConnectorConfig(abc.ABC, BaseSettings):
     opencti: _OpenCTIConfig
     connector: _ConnectorConfig
 
     # files needs to be at the same level as the module
-    model_config = SettingsConfigDict(env_nested_delimiter="_", env_nested_max_split=1)
+    model_config = SettingsConfigDict(
+        env_nested_delimiter="_", env_nested_max_split=1, enable_decoding=False
+    )
 
     def __init__(self) -> None:
         try:
@@ -123,3 +127,6 @@ class BaseConnectorConfig(abc.ABC, BaseSettings):
         if Path(settings_cls.model_config["env_file"] or "").is_file():  # type: ignore
             return (dotenv_settings,)
         return (env_settings,)
+
+    def model_dump_pycti(self) -> dict[str, Any]:
+        return self.model_dump(mode="json", context={"mode": "pycti"})

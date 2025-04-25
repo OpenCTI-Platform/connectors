@@ -2,7 +2,7 @@ import datetime
 import os
 from typing import Literal
 
-from base_connector import BaseConnectorConfig
+from base_connector.config import BaseConnectorConfig, ListFromString
 from pydantic import BaseModel
 from pydantic_settings import SettingsConfigDict
 
@@ -18,6 +18,7 @@ class EmailIntelConfig(BaseModel):
     username: str
     password: str
     mailbox: str
+    attachments_mime_types: ListFromString
 
 
 class ConnectorConfig(BaseConnectorConfig):

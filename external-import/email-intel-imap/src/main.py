@@ -19,12 +19,13 @@ def main() -> None:
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     config = ConnectorConfig()
-    helper = OpenCTIConnectorHelper(config=config.model_dump(mode="json"))
+    helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
     converter = ConnectorConverter(
         helper=helper,
         author_name="Email Intel IMAP",
         author_description="Email Intel IMAP Connector",
         tlp_level=config.email_intel_imap.tlp_level,
+        attachments_mime_types=config.email_intel_imap.attachments_mime_types,
     )
     client = ConnectorClient(
         host=config.email_intel_imap.host,
@@ -38,7 +39,7 @@ def main() -> None:
         config=config, helper=helper, converter=converter, client=client
     )
 
-    connector.run()
+    connector.run(duration_period=config.connector.duration_period)
 
 
 if __name__ == "__main__":

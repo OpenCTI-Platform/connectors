@@ -1,7 +1,9 @@
 import datetime
 from unittest.mock import Mock
 
+import freezegun
 import pytest
+from base_connector import ConnectorError
 from email_intel_imap.client import ConnectorClient
 from email_intel_imap.config import ConnectorConfig
 from email_intel_imap.connector import Connector
@@ -10,43 +12,40 @@ from stix2.v21.vocab import REPORT_TYPE_THREAT_REPORT
 
 
 @pytest.fixture(name="connector")
-def fixture_connector(mocked_helper: Mock) -> Connector:
-    config = ConnectorConfig()
+def fixture_connector(mocked_helper: Mock, test_config: ConnectorConfig) -> Connector:
     return Connector(
-        config=config,
+        config=test_config,
         helper=mocked_helper,
         converter=ConnectorConverter(
             helper=mocked_helper,
             author_name="Email Intel IMAP",
             author_description="Email Intel IMAP Connector",
-            tlp_level=config.email_intel_imap.tlp_level,
+            tlp_level=test_config.email_intel_imap.tlp_level,
+            attachments_mime_types=test_config.email_intel_imap.attachments_mime_types,
         ),
         client=ConnectorClient(
-            host=config.email_intel_imap.host,
-            port=config.email_intel_imap.port,
-            username=config.email_intel_imap.username,
-            password=config.email_intel_imap.password,
-            mailbox=config.email_intel_imap.mailbox,
+            host=test_config.email_intel_imap.host,
+            port=test_config.email_intel_imap.port,
+            username=test_config.email_intel_imap.username,
+            password=test_config.email_intel_imap.password,
+            mailbox=test_config.email_intel_imap.mailbox,
         ),
     )
 
 
-@pytest.mark.usefixtures("mock_email_intel_imap_config", "mocked_mail_box")
-def test_connector_collect_intelligence_empty(connector: Connector) -> None:
-    stix_objects = connector.collect_intelligence()
+@pytest.mark.usefixtures("mocked_mail_box")
+def test_connector_process_data_empty(connector: Connector) -> None:
+    stix_objects = connector.process_data()
     assert stix_objects == []
 
 
-@pytest.mark.usefixtures("mock_email_intel_imap_config")
-def test_connector_collect_intelligence(
-    connector: Connector, mocked_mail_box: Mock
-) -> None:
-    now = datetime.datetime.now()
-    email1 = Mock(subject="email 1", date=now, text="email body 1")
-    email2 = Mock(subject="email 2", date=now, text="email body 2")
+def test_connector_process_data(connector: Connector, mocked_mail_box: Mock) -> None:
+    now = datetime.datetime.now(tz=datetime.UTC)
+    email1 = Mock(subject="email 1", date=now, text="email body 1", attachments=[])
+    email2 = Mock(subject="email 2", date=now, text="email body 2", attachments=[])
 
     mocked_mail_box.fetch.return_value = [email1, email2]
-    stix_objects = connector.collect_intelligence()
+    stix_objects = connector.process_data()
 
     assert len(stix_objects) == 2
 
@@ -67,3 +66,74 @@ def test_connector_collect_intelligence(
     assert report.created_by_ref == connector.converter.author.id
     assert report.object_refs == [connector.converter.author.id]
     assert report.object_marking_refs == [connector.converter.tlp_marking.id]
+
+
+@freezegun.freeze_time("2025-04-22T14:00:00Z")
+def test_connector_process_data_since_relative_from_date(
+    connector: Connector, mocked_mail_box: Mock
+) -> None:
+    two_months_ago = datetime.datetime.fromisoformat("2025-02-22T12:00:00Z")
+    today = datetime.datetime.fromisoformat("2025-04-22T12:00:00Z")
+
+    email1 = Mock(subject="1", text="body 1", attachments=[], date=two_months_ago)
+    email2 = Mock(subject="2", text="body 2", attachments=[], date=today)
+
+    assert (
+        connector.config.email_intel_imap.relative_import_start_date
+        == datetime.timedelta(days=30)
+    )
+
+    mocked_mail_box.fetch.return_value = [email1, email2]
+    stix_objects = connector.process_data()
+    assert len(stix_objects) == 1
+    assert stix_objects[0].name == "2"
+
+
+@freezegun.freeze_time("2025-04-22T14:00:00Z")
+def test_connector_process_data_since_last_run(
+    connector: Connector, mocked_mail_box: Mock
+) -> None:
+    two_months_ago = datetime.datetime.fromisoformat("2025-02-22T12:00:00Z")
+    two_days_ago = datetime.datetime.fromisoformat("2025-04-20T12:00:00Z")
+    today = datetime.datetime.fromisoformat("2025-04-22T12:00:00Z")
+
+    email1 = Mock(subject="1", text="body 1", attachments=[], date=two_months_ago)
+    email2 = Mock(subject="2", text="body 2", attachments=[], date=two_days_ago)
+    email3 = Mock(subject="3", text="body 3", attachments=[], date=today)
+
+    assert (
+        connector.config.email_intel_imap.relative_import_start_date
+        == datetime.timedelta(days=30)
+    )
+    connector.helper.get_state.return_value = {"last_run": two_days_ago.isoformat()}
+    mocked_mail_box.fetch.return_value = [email1, email2, email3]
+    stix_objects = connector.process_data()
+
+    assert len(stix_objects) == 1
+
+    report = stix_objects[0]
+    assert report.name == "3"
+
+
+def test_connector_known_warning(connector: Connector, mocked_mail_box: Mock) -> None:
+    today = datetime.datetime.now(tz=datetime.UTC)
+    connector.helper.get_state.return_value = {"last_run": "1970-01-01T00:00:00Z"}
+    mocked_mail_box.fetch.return_value = [Mock(date=today)]
+
+    assert (
+        connector.process()
+        == "An error occurred while creating the Report, skipping..."
+    )
+
+
+def test_connector_known_error(connector: Connector, mocked_mail_box: Mock) -> None:
+    connector.helper.get_state.return_value = {"last_run": "1970-01-01T00:00:00Z"}
+    mocked_mail_box.fetch.side_effect = ConnectorError("Known error")
+
+    assert connector.process() == "Known error"
+
+
+def test_connector_unknown_error(connector: Connector) -> None:
+    connector.helper.get_state.side_effect = ValueError("Unknown error")
+
+    assert connector.process() == "Unexpected error. See connector logs for details."
