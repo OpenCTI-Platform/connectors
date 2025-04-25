@@ -8,9 +8,8 @@ from config import ConfigConnector
 from cyberintegrations import TIAdapter
 from cyberintegrations.decorators import cache_data
 from cyberintegrations.utils import ProxyConfigurator
-from utils import ExternalImportHelper
-
 from pycti import OpenCTIConnectorHelper
+from utils import ExternalImportHelper
 
 
 @cache_data(
