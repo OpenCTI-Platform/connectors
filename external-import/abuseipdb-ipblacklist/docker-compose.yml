@@ -1,6 +1,6 @@
 services:
   connector-abuseipdb-ipblacklist:
-    image: opencti/connector-abuseipdb-ipblacklist:6.5.2
+    image: opencti/connector-abuseipdb-ipblacklist:6.6.7
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost

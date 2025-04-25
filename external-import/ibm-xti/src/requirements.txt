@@ -1,5 +1,5 @@
-pycti==6.6.4
-validators==0.33.0
+pycti==6.6.7
+validators==0.34.0
 stix2
 taxii2-client
 markdown-it-py
