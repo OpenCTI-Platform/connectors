@@ -64,15 +64,16 @@ Configuration parameters can be defined in a `.env` or `config.yml` or in enviro
 
 Below are the parameters you'll need to set for the Email Intel IMAP Connector
 
-| Parameter                  | config.yml                 | Docker environment variable                   | Recommended  | Mandatory | Description                                   |
-|----------------------------|----------------------------|-----------------------------------------------|--------------|-----------|-----------------------------------------------|
-| Relative Import Start Date | relative_import_start_date | `EMAIL_INTEL_IMAP_RELATIVE_IMPORT_START_DATE` | P30D         | ✅         | How far back the first import should go.      |
-| IMAP Host                  | email_intel_imap.host      | `EMAIL_INTEL_IMAP_HOST`                       | ❌            | ✅         | Hostname of the IMAP server.                  |
-| IMAP Port                  | email_intel_imap.port      | `EMAIL_INTEL_IMAP_PORT`                       | 993          | ✅         | IMAP port (993 typically for SSL).            |
-| IMAP Username              | email_intel_imap.username  | `EMAIL_INTEL_IMAP_USERNAME`                   | ❌            | ✅         | Mailbox username.                             |
-| IMAP Password              | email_intel_imap.password  | `EMAIL_INTEL_IMAP_PASSWORD`                   | ❌            | ✅         | Mailbox password.                             |
-| Mailbox Folder             | email_intel_imap.mailbox   | `EMAIL_INTEL_IMAP_MAILBOX`                    | INBOX        | ✅         | Folder to monitor (e.g., INBOX, ThreatIntel). |
-| TLP Level                  | email_intel_imap.tlp_level | `EMAIL_INTEL_IMAP_TLP_LEVEL`                  | amber+strict | ✅         | Default TLP marking for imported reports.     |
+| Parameter                  | config.yml                              | Docker environment variable                   | Recommended value                   | Mandatory | Description                                   |
+|----------------------------|-----------------------------------------|-----------------------------------------------|-------------------------------------|-----------|-----------------------------------------------|
+| Relative Import Start Date | relative_import_start_date              | `EMAIL_INTEL_IMAP_RELATIVE_IMPORT_START_DATE` | P30D                                | ✅         | How far back the first import should go.      |
+| IMAP Host                  | email_intel_imap.host                   | `EMAIL_INTEL_IMAP_HOST`                       | ❌                                   | ✅         | Hostname of the IMAP server.                  |
+| IMAP Port                  | email_intel_imap.port                   | `EMAIL_INTEL_IMAP_PORT`                       | 993                                 | ✅         | IMAP port (993 typically for SSL).            |
+| IMAP Username              | email_intel_imap.username               | `EMAIL_INTEL_IMAP_USERNAME`                   | ❌                                   | ✅         | Mailbox username.                             |
+| IMAP Password              | email_intel_imap.password               | `EMAIL_INTEL_IMAP_PASSWORD`                   | ❌                                   | ✅         | Mailbox password.                             |
+| Mailbox Folder             | email_intel_imap.mailbox                | `EMAIL_INTEL_IMAP_MAILBOX`                    | INBOX                               | ✅         | Folder to monitor (e.g., INBOX, ThreatIntel). |
+| TLP Level                  | email_intel_imap.tlp_level              | `EMAIL_INTEL_IMAP_TLP_LEVEL`                  | amber+strict                        | ✅         | Default TLP marking for imported reports.     |
+| Attachments Mime Types     | email_intel_imap.attachments_mime_types | `EMAIL_INTEL_IMAP_ATTACHMENTS_MIME_TYPES`     | application/pdf,text/csv,text/plain | ✅         | Accepted attachment file type                 |
 
 ---
 

@@ -5,7 +5,7 @@ from typing import Any, Generator, Literal
 import pycti
 import stix2
 from base_connector.errors import InvalidTlpLevelError
-from base_connector.models import ReportCustomProperties
+from base_connector.models import OpenCTIFile, ReportCustomProperties
 from pycti import OpenCTIConnectorHelper
 
 
@@ -73,6 +73,7 @@ class BaseConverter(abc.ABC):
         published: datetime.datetime,
         report_types: list[str],
         x_opencti_content: str,
+        x_opencti_files: list[OpenCTIFile],
     ) -> stix2.Report:
         return stix2.Report(
             id=pycti.Report.generate_id(name=name, published=published),
@@ -83,7 +84,8 @@ class BaseConverter(abc.ABC):
             object_refs=[self.author],
             object_marking_refs=[self.tlp_marking],
             custom_properties=ReportCustomProperties(
-                x_opencti_content=x_opencti_content
+                x_opencti_content=x_opencti_content,
+                x_opencti_files=x_opencti_files,
             ).model_dump(),
         )
 

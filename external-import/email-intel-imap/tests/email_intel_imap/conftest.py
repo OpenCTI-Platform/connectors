@@ -30,6 +30,7 @@ def fixture_email_intel_config_dict() -> dict[str, dict[str, Any]]:
             "username": "foo",
             "password": "bar",
             "mailbox": "INBOX",
+            "attachments_mime_types": "application/pdf,text/csv,text/plain",
         },
     }
 
@@ -52,6 +53,14 @@ def fixture_mock_email_intel_imap_config(
 
 @pytest.fixture(name="mocked_helper")
 def fixture_mocked_helper(mocker: MockerFixture) -> Mock:
+    helper = mocker.patch("pycti.OpenCTIConnectorHelper", MagicMock())
+    helper.connect_id = "test-connector-id"
+    helper.connect_name = "Test Connector"
+    helper.api.work.initiate_work.return_value = "work-id"
+    helper.get_state.return_value = {}
+    helper.stix2_create_bundle.return_value = "bundle"
+    return helper
+
     return mocker.patch("pycti.OpenCTIConnectorHelper", Mock())
 
 
@@ -63,3 +72,10 @@ def fixture_mocked_mail_box(mocker: MockerFixture) -> MagicMock:
         mocked_mail_box_instance
     )
     return mocked_mail_box_instance
+
+
+@pytest.fixture(name="test_config")
+def fixture_test_config(
+    mock_email_intel_imap_config: None,
+) -> ConnectorConfig:
+    return ConnectorConfig()

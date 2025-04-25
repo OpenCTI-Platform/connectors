@@ -1,9 +1,11 @@
+import base64
 import datetime
 from typing import Any
 from unittest.mock import Mock
 
 import pycti
 from base_connector.converter import BaseConverter
+from base_connector.models import OpenCTIFile
 from stix2 import TLPMarking
 from stix2.utils import STIXdatetime
 
@@ -56,6 +58,9 @@ def test_converter_create_report() -> None:
         published=published,
         report_types=["threat-report"],
         x_opencti_content="Test content",
+        x_opencti_files=[
+            OpenCTIFile(name="name", mime_type="text/plain", data=b"text")
+        ],
     )
 
     assert report.id == pycti.Report.generate_id(
@@ -68,3 +73,6 @@ def test_converter_create_report() -> None:
     assert report.object_refs == [converter.author.id]
     assert report.object_marking_refs == [converter.tlp_marking.id]
     assert report.x_opencti_content == "Test content"
+    assert report.x_opencti_files == [
+        {"name": "name", "mime_type": "text/plain", "data": base64.b64encode(b"text")}
+    ]

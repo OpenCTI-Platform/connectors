@@ -60,18 +60,12 @@ class BaseConnector(abc.ABC):
         self.converter = converter
         self.client = client
 
-    def get_state(self) -> dict[str, Any]:
-        state = self.helper.get_state() or {}
-        last_run = state.get("last_run", "Connector has never run...")
-        self.helper.connector_logger.info(f"Connector last run: {last_run}")
-        return state
+    @property
+    def state(self) -> dict[str, Any]:
+        return self.helper.get_state() or {}
 
-    def update_state(
-        self, current_state: dict[str, str], run_time: datetime.datetime
-    ) -> None:
-        current_state["last_run"] = run_time.isoformat(sep=" ", timespec="seconds")
-        self.helper.connector_logger.info(f"Updating state last_run to {run_time}")
-        self.helper.set_state(state=current_state)
+    def update_state(self, **kwargs: Any) -> None:
+        self.helper.set_state(state={**self.state, **kwargs})
 
     def initiate_work(self) -> str:
         return self.helper.api.work.initiate_work(
@@ -99,16 +93,10 @@ class BaseConnector(abc.ABC):
         )
 
     def process_message(self) -> None:
-        run_time = datetime.datetime.now(tz=datetime.UTC)
-        state = self.get_state()
         work_id = self.initiate_work()
-
-        stix_objects = self.collect_intelligence()
+        stix_objects = self.process_data()
         self.create_and_send_bundles(work_id, stix_objects)
-
-        self.update_state(state, run_time)
-        message = f"Connector successfully run, storing last_run as {run_time}"
-        self.finalize_work(work_id, message)
+        self.finalize_work(work_id, "Connector successfully run")
 
     def process(self) -> str | None:
         meta = {"connector_name": self.helper.connect_name}
@@ -119,26 +107,29 @@ class BaseConnector(abc.ABC):
             self.helper.connector_logger.info("Connector stopped by user.", meta=meta)
             sys.exit(0)
         except ConnectorWarning as e:
+            meta["error"] = str(e)
             self.helper.connector_logger.warning(str(e), meta=meta)
             return str(e)
         except ConnectorError as e:
+            meta["error"] = str(e)
             self.helper.connector_logger.error(str(e), meta=meta)
             return str(e)
         except Exception as e:
             traceback.print_exc()
+            meta["error"] = str(e)
             self.helper.connector_logger.error(f"Unexpected error: {e}", meta=meta)
             return "Unexpected error. See connector logs for details."
         return None
 
-    def run(self) -> None:
+    def run(self, duration_period: datetime.timedelta) -> None:
         self.helper.connector_logger.info("Starting connector...")
         self.helper.schedule_process(
             message_callback=self.process,
-            duration_period=self.config.connector.duration_period.total_seconds(),
+            duration_period=duration_period.total_seconds(),
         )
 
     @abc.abstractmethod
-    def collect_intelligence(self) -> list[stix2.v21._STIXBase21]:
+    def process_data(self) -> list[stix2.v21._STIXBase21]:
         """
         Collect and process the source of CTI.
 
