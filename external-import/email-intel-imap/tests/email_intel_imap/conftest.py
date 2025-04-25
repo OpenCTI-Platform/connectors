@@ -53,6 +53,14 @@ def fixture_mock_email_intel_imap_config(
 
 @pytest.fixture(name="mocked_helper")
 def fixture_mocked_helper(mocker: MockerFixture) -> Mock:
+    helper = mocker.patch("pycti.OpenCTIConnectorHelper", MagicMock())
+    helper.connect_id = "test-connector-id"
+    helper.connect_name = "Test Connector"
+    helper.api.work.initiate_work.return_value = "work-id"
+    helper.get_state.return_value = {}
+    helper.stix2_create_bundle.return_value = "bundle"
+    return helper
+
     return mocker.patch("pycti.OpenCTIConnectorHelper", Mock())
 
 

@@ -1,5 +1,4 @@
 import abc
-import datetime
 import sys
 import traceback
 from typing import Any
@@ -60,16 +59,12 @@ class BaseConnector(abc.ABC):
         self.converter = converter
         self.client = client
 
-    def get_last_run(self) -> datetime.datetime | None:
-        state = self.helper.get_state() or {}
-        last_run_str = state.get("last_run")
-        return datetime.datetime.fromisoformat(last_run_str) if last_run_str else None
+    @property
+    def state(self) -> dict[str, Any]:
+        return self.helper.get_state() or {}
 
-    def update_last_run(self, run_time: datetime.datetime) -> None:
-        state = self.helper.get_state() or {}
-        state["last_run"] = run_time.isoformat(timespec="seconds")
-        self.helper.connector_logger.info(f"Updating state last_run to {run_time}")
-        self.helper.set_state(state=state)
+    def update_state(self, **kwargs: Any) -> None:
+        self.helper.set_state(state={**self.state, **kwargs})
 
     def initiate_work(self) -> str:
         return self.helper.api.work.initiate_work(
@@ -97,22 +92,10 @@ class BaseConnector(abc.ABC):
         )
 
     def process_message(self) -> None:
-        run_time = datetime.datetime.now(tz=datetime.UTC)
-        last_run = self.get_last_run()
         work_id = self.initiate_work()
-
-        self.helper.connector_logger.info(
-            f"Connector last run: {last_run.isoformat() if last_run else 'Never'}"
-        )
-
-        stix_objects = self.collect_intelligence(last_run)
-
+        stix_objects = self.process_data()
         self.create_and_send_bundles(work_id, stix_objects)
-
-        self.update_last_run(run_time)
-
-        message = f"Connector successfully run, storing last_run as {run_time}"
-        self.finalize_work(work_id, message)
+        self.finalize_work(work_id, "Connector successfully run")
 
     def process(self) -> str | None:
         meta = {"connector_name": self.helper.connect_name}
@@ -148,9 +131,7 @@ class BaseConnector(abc.ABC):
         )
 
     @abc.abstractmethod
-    def collect_intelligence(
-        self, last_run: datetime.datetime | None
-    ) -> list[stix2.v21._STIXBase21]:
+    def process_data(self) -> list[stix2.v21._STIXBase21]:
         """
         Collect and process the source of CTI.
 

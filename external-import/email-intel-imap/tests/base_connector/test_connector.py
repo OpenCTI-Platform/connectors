@@ -1,4 +1,3 @@
-import datetime
 from unittest.mock import MagicMock, Mock
 
 import freezegun
@@ -10,16 +9,14 @@ from base_connector.connector import BaseConnector
 STIX_OBJECT = MagicMock()
 
 
-class TestConnector(BaseConnector):
-    def collect_intelligence(
-        self, last_run: datetime.datetime | None
-    ) -> list[stix2.v21._STIXBase21]:
+class Connector(BaseConnector):
+    def process_data(self) -> list[stix2.v21._STIXBase21]:
         return [STIX_OBJECT]
 
 
 @pytest.fixture(name="connector")
-def fixture_connector(mocked_helper: MagicMock) -> TestConnector:
-    return TestConnector(
+def fixture_connector(mocked_helper: MagicMock) -> Connector:
+    return Connector(
         helper=mocked_helper,
         config=Mock(),
         client=Mock(),
@@ -28,7 +25,7 @@ def fixture_connector(mocked_helper: MagicMock) -> TestConnector:
 
 
 @freezegun.freeze_time("2025-04-17T15:24:00Z")
-def test_process(connector: TestConnector) -> None:
+def test_process(connector: Connector) -> None:
     connector.process()
 
     # Assert the work initiation and processing
@@ -36,14 +33,7 @@ def test_process(connector: TestConnector) -> None:
         connector_id="test-connector-id", friendly_name="Test Connector"
     )
     connector.helper.api.work.to_processed.assert_called_once_with(
-        message="Connector successfully run, storing last_run as 2025-04-17 15:24:00+00:00",
-        work_id="work-id",
-    )
-
-    # Assert the state management
-    assert connector.helper.get_state.call_count == 2
-    connector.helper.set_state.assert_called_once_with(
-        state={"last_run": "2025-04-17T15:24:00+00:00"}
+        message="Connector successfully run", work_id="work-id"
     )
 
     # Assert the STIX object processing
@@ -67,7 +57,7 @@ def test_process(connector: TestConnector) -> None:
     ],
 )
 def test_process_catches_expected_errors(
-    connector: TestConnector, mocker: MagicMock, exception: Exception, expected: str
+    connector: Connector, mocker: MagicMock, exception: Exception, expected: str
 ) -> None:
     mocker.patch.object(connector, "process_message", side_effect=exception)
     assert connector.process() == expected
