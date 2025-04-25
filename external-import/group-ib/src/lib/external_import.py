@@ -221,11 +221,6 @@ class ExternalImportConnector:
                     self.helper.connector_logger.info(
                         f"{self.helper.connect_name} will run!"
                     )
-                    friendly_name = f"{self.helper.connect_name} run @ {self.get_formatted_utcfromtimestamp(date=timestamp)}"
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
-
                     try:
                         # create list of collections feeds generators
                         data = self.ti_adapter.create_generators(sleep_amount=1)
@@ -247,6 +242,10 @@ class ExternalImportConnector:
                                 f"Generator prepared data {prepared_data}"
                             )
                             collection = data_item[0][0]
+                            friendly_name = f"{self.helper.connect_name} - {collection} run @ {self.get_formatted_utcfromtimestamp(date=timestamp)}"
+                            work_id = self.helper.api.work.initiate_work(
+                                self.helper.connect_id, friendly_name
+                            )
                             generator = data_item[0][1]
                             self.helper.connector_logger.debug(
                                 f"Generator data collection:{collection} , generator: {generator}"
@@ -339,18 +338,17 @@ class ExternalImportConnector:
                                 )
                                 self.set_or_update_state(prepared_data=prepared_data)
 
+                            # Finish work
+                            message = f"{self.helper.connect_name} - {collection} successfully run, storing last_run as {timestamp}"
+                            self.helper.api.work.to_processed(work_id, message)
                     except Exception:
                         self.helper.connector_logger.error(format_exc())
 
                     # Store the current timestamp as a last run
-                    message = f"{self.helper.connect_name} connector successfully run, storing last_run as {timestamp}"
-                    self.helper.connector_logger.info(message)
-
                     self.helper.connector_logger.info(
                         f"Grabbing current state and update it with last_run: {timestamp}"
                     )
                     self.set_or_update_state(timestamp=timestamp)
-                    self.helper.api.work.to_processed(work_id, message)
                     next_run_it = ExternalImportHelper.get_next_run_it(
                         interval=self.interval,
                         helper=self.helper,
