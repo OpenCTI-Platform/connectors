@@ -19,7 +19,7 @@ def test_yaml_config(config_dict: dict[str, dict[str, Any]]) -> None:
         )
 
     config = YamlConfig()
-    assert config.model_dump(mode="json", context={"mode": "pycti"}) == config_dict
+    assert config.model_dump_pycti() == config_dict
 
 
 def test_dotenv_config(config_dict: dict[str, dict[str, Any]]) -> None:
@@ -27,19 +27,19 @@ def test_dotenv_config(config_dict: dict[str, dict[str, Any]]) -> None:
         model_config = SettingsConfigDict(env_file=f"{Path(__file__).parent}/.env.test")
 
     config = DotEnvConfig()
-    assert config.model_dump(mode="json", context={"mode": "pycti"}) == config_dict
+    assert config.model_dump_pycti() == config_dict
 
 
 @pytest.mark.usefixtures("mocked_environ")
 def test_env_config(config_dict: dict[str, dict[str, Any]]) -> None:
     config = ConnectorConfig()
-    assert config.model_dump(mode="json", context={"mode": "pycti"}) == config_dict
+    assert config.model_dump_pycti() == config_dict
 
 
 @pytest.mark.usefixtures("mocked_environ")
 def test_missing_values(config_dict: dict[str, dict[str, Any]]) -> None:
     config = ConnectorConfig()
-    assert config.model_dump(mode="json", context={"mode": "pycti"}) == config_dict
+    assert config.model_dump_pycti() == config_dict
     os.environ.pop("OPENCTI_URL")
     with pytest.raises(ConfigRetrievalError):
         ConnectorConfig()

@@ -19,9 +19,7 @@ def main() -> None:
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     config = ConnectorConfig()
-    helper = OpenCTIConnectorHelper(
-        config=config.model_dump(mode="json", context={"mode": "pycti"})
-    )
+    helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
     converter = ConnectorConverter(
         helper=helper,
         author_name="Email Intel IMAP",

@@ -1,7 +1,7 @@
 import abc
 import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from base_connector.enums import LogLevelType
 from base_connector.errors import ConfigRetrievalError
@@ -127,3 +127,6 @@ class BaseConnectorConfig(abc.ABC, BaseSettings):
         if Path(settings_cls.model_config["env_file"] or "").is_file():  # type: ignore
             return (dotenv_settings,)
         return (env_settings,)
+
+    def model_dump_pycti(self) -> dict[str, Any]:
+        return self.model_dump(mode="json", context={"mode": "pycti"})
