@@ -308,6 +308,9 @@ class ExternalImportConnector:
                                     self.helper.connector_logger.info(
                                         f"Parsing {count}/{size}"
                                     )
+                                    self.helper.connector_logger.info(
+                                        f"Parsing {str(event)}"
+                                    )
                                     bundle_objects = self._collect_intelligence(
                                         collection,
                                         self.ttl,
