@@ -309,7 +309,6 @@ class ExternalImportConnector:
                                     self.helper.connector_logger.info(
                                         f"Parsing {count}/{size}"
                                     )
-
                                     bundle_objects = self._collect_intelligence(
                                         collection,
                                         self.ttl,
@@ -317,21 +316,21 @@ class ExternalImportConnector:
                                         self.MITRE_MAPPER,
                                         flag_instrusion_set_instead_of_threat_actor=self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR,
                                     )
-                                    bundle = stix2.Bundle(
-                                        objects=bundle_objects, allow_custom=True
-                                    ).serialize()
-
-                                    self.helper.connector_logger.info(
-                                        f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
-                                    )
-                                    self.helper.send_stix2_bundle(
-                                        bundle,
-                                        update=self.update_existing_data,
-                                        work_id=work_id,
-                                    )
-                                    self.helper.connector_logger.debug(
-                                        f"Sending {str(bundle_objects)} STIX objects to OpenCTI..."
-                                    )
+                                    if len(bundle_objects) > 0:
+                                        bundle = stix2.Bundle(
+                                            objects=bundle_objects, allow_custom=True
+                                        ).serialize()
+                                        self.helper.connector_logger.info(
+                                            f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
+                                        )
+                                        self.helper.send_stix2_bundle(
+                                            bundle,
+                                            update=self.update_existing_data,
+                                            work_id=work_id,
+                                        )
+                                        self.helper.connector_logger.debug(
+                                            f"Sending {str(bundle_objects)} STIX objects to OpenCTI..."
+                                        )
 
                                 # Update seqUpdate param
                                 prepared_data[collection].update(
