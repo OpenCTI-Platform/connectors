@@ -1,4 +1,5 @@
 import abc
+import datetime
 import sys
 import traceback
 from typing import Any
@@ -120,14 +121,11 @@ class BaseConnector(abc.ABC):
             return "Unexpected error. See connector logs for details."
         return None
 
-    def get_duration_period(self) -> float:
-        return self.config.connector.duration_period.total_seconds()
-
-    def run(self) -> None:
+    def run(self, duration_period: datetime.timedelta) -> None:
         self.helper.connector_logger.info("Starting connector...")
         self.helper.schedule_process(
             message_callback=self.process,
-            duration_period=self.get_duration_period(),
+            duration_period=duration_period.total_seconds(),
         )
 
     @abc.abstractmethod

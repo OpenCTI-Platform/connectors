@@ -41,7 +41,7 @@ def main() -> None:
         config=config, helper=helper, converter=converter, client=client
     )
 
-    connector.run()
+    connector.run(duration_period=config.connector.duration_period)
 
 
 if __name__ == "__main__":
