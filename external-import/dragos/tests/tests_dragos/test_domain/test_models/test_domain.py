@@ -1196,6 +1196,7 @@ def test_organization_to_stix2_object_returns_valid_stix_object():
                     report_type.value for report_type in octi_enums.ReportType
                 ],
                 "reliability": octi_enums.Reliability.A.value,
+                "labels": ["labelA", "labelB"],
                 "objects": [fake_valid_indicator()],
                 "author": fake_valid_organization_author(),
                 "external_references": [fake_external_reference()],
@@ -1226,6 +1227,7 @@ def test_report_class_should_accept_valid_input(input_data):
         and report.publication_date == input_data.get("publication_date")
         and report.report_types == input_data.get("report_types")
         and report.reliability == input_data.get("reliability")
+        and report.labels == input_data.get("labels")
         and report.description == input_data.get("description")
         and report.author == input_data.get("author")
         and report.external_references == input_data.get("external_references")
@@ -1274,6 +1276,7 @@ def test_report_to_stix2_object_returns_valid_stix_object():
         "report_types": [report_type.value for report_type in octi_enums.ReportType],
         "reliability": octi_enums.Reliability.A.value,
         "description": "Test Report description",
+        "labels": ["labelA", "labelB"],
         "objects": [fake_valid_organization_author()],
         "author": fake_valid_organization_author(),
         "external_references": [fake_external_reference()],
@@ -1293,6 +1296,7 @@ def test_report_to_stix2_object_returns_valid_stix_object():
         and stix2_obj.published == input_data.get("publication_date")
         and stix2_obj.report_types == input_data.get("report_types")
         and stix2_obj.x_opencti_reliability == input_data.get("reliability")
+        and stix2_obj.labels == input_data.get("labels")
         and stix2_obj.object_refs == [obj.id for obj in input_data.get("objects")]
     )
 

@@ -707,6 +707,9 @@ class Report(DomainObject):
         None,
         description="Reliability of the report.",
     )
+    labels: Optional[list[str]] = Field(
+        None, description="A set of terms used to describe the report."
+    )
     files: Optional[list[UploadedFile]] = Field(
         None,
         description="Files to upload with the report, e.g. report as a PDF.",
@@ -725,6 +728,7 @@ class Report(DomainObject):
             description=self.description,
             object_refs=[obj.id for obj in self.objects],
             report_types=self.report_types,
+            labels=self.labels,
             published=self.publication_date,
             created_by_ref=self.author.id if self.author else None,
             external_references=[
@@ -743,7 +747,6 @@ class Report(DomainObject):
             modified=None,
             revoked=None,
             confidence=None,
-            labels=None,
             lang=None,
             granular_markings=None,
             extensions=None,

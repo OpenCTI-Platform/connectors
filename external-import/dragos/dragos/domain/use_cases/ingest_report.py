@@ -15,6 +15,19 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+SUPPORTED_TAG_TYPES = [
+    "industry",
+    "naics",
+    "geographiclocation",
+    "hacker group",
+    "threatgroup",
+    "externalname",
+    "government organization",
+    "malware",
+    "cve",
+]
+
+
 class ReportProcessor(BaseUseCase):
     """Process simply the data from a Dragos report.
 
@@ -259,6 +272,14 @@ class ReportProcessor(BaseUseCase):
         self, report: "Report", related_objects: list["octi.BaseEntity"]
     ) -> octi.Report:
         """Make an OCTI Report from a Dragos report and the related entities."""
+        labels = []
+        for related_tag in report.related_tags:
+            tag_type = related_tag.type.lower()
+            if tag_type not in SUPPORTED_TAG_TYPES:
+                # Supported tags are converted into OCTI entities,
+                # but unsupported tags are stored as report's labels as fallback
+                labels.append(related_tag.value)
+
         uploaded_file = None
         if report.pdf:
             uploaded_file = octi.UploadedFile(
@@ -271,7 +292,7 @@ class ReportProcessor(BaseUseCase):
             name=report.title,
             publication_date=report.created_at,
             description=report.summary,
-            # labels=report.related_tags,
+            labels=labels,
             objects=related_objects,
             files=[uploaded_file] if uploaded_file else None,
             author=self.author,
