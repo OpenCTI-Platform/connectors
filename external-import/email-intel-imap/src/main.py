@@ -27,6 +27,7 @@ def main() -> None:
         author_name="Email Intel IMAP",
         author_description="Email Intel IMAP Connector",
         tlp_level=config.email_intel_imap.tlp_level,
+        attachments_mime_types=config.email_intel_imap.attachments_mime_types,
     )
     client = ConnectorClient(
         host=config.email_intel_imap.host,

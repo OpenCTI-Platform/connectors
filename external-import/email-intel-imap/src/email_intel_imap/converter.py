@@ -1,10 +1,10 @@
-from typing import Generator
+from typing import Generator, Literal
 
 import stix2
-from base_connector import ConnectorWarning
-from base_connector.converter import BaseConverter
+from base_connector import BaseConverter, ConnectorWarning
 from base_connector.models import OpenCTIFile
 from imap_tools.message import MailMessage
+from pycti import OpenCTIConnectorHelper
 from stix2.v21.vocab import REPORT_TYPE_THREAT_REPORT
 
 
@@ -15,6 +15,22 @@ class ConnectorConverter(BaseConverter):
     REQUIREMENTS:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
+
+    def __init__(
+        self,
+        helper: OpenCTIConnectorHelper,
+        author_name: str,
+        author_description: str,
+        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+        attachments_mime_types: list[str],
+    ) -> None:
+        super().__init__(
+            helper=helper,
+            author_name=author_name,
+            author_description=author_description,
+            tlp_level=tlp_level,
+        )
+        self.attachments_mime_types = attachments_mime_types
 
     def to_stix_objects(
         self, entity: MailMessage
@@ -39,8 +55,7 @@ class ConnectorConverter(BaseConverter):
                     )
                     for attachment in entity.attachments
                     if attachment.content_disposition == "attachment"
-                    and attachment.content_type
-                    in ["application/pdf", "text/csv", "text/plain"]
+                    and attachment.content_type in self.attachments_mime_types
                 ],
             )
         except Exception as e:

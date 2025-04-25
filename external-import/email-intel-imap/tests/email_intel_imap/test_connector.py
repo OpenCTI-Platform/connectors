@@ -21,6 +21,7 @@ def fixture_connector(mocked_helper: Mock, test_config: ConnectorConfig) -> Conn
             author_name="Email Intel IMAP",
             author_description="Email Intel IMAP Connector",
             tlp_level=test_config.email_intel_imap.tlp_level,
+            attachments_mime_types=test_config.email_intel_imap.attachments_mime_types,
         ),
         client=ConnectorClient(
             host=test_config.email_intel_imap.host,

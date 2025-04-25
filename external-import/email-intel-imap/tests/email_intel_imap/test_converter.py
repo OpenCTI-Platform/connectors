@@ -17,6 +17,7 @@ def fixture_converter(mocked_helper: Mock) -> ConnectorConverter:
         author_name="Email Intel IMAP",
         author_description="Email Intel IMAP Connector",
         tlp_level="white",
+        attachments_mime_types=["application/pdf", "text/csv", "text/plain"],
     )
 
 
