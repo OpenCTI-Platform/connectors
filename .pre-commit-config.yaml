@@ -4,12 +4,12 @@ repos:
     hooks:
     -   id: black
 -   repo: https://github.com/PyCQA/flake8
-    rev: 7.1.0
+    rev: 7.2.0
     hooks:
     -   id: flake8
         args: ['--ignore=E,W']
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.4.0
+    rev: v5.0.0
     hooks:
     -   id: check-yaml
 -   repo: https://github.com/pycqa/isort
@@ -17,7 +17,11 @@ repos:
     hooks:
     - id: isort
       name: isort (python)
-      args: ['--profile black']
+      args:
+        - '--profile'
+        - 'black'
+        - '--line-length'
+        - '88'
 -   repo: local
     hooks:
     - id: gpg-signed-commit

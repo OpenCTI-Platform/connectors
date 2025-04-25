@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-ibm-xti:
-    image: opencti/connector-ibm-xti:6.5.10
+    image: opencti/connector-ibm-xti:6.6.8
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
@@ -18,7 +18,7 @@ services:
       # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
       # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
       # - CONNECTOR_SEND_TO_QUEUE=True # Default True
-      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False 
+      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False
       # - CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
@@ -27,6 +27,7 @@ services:
       - CONNECTOR_IBM_XTI_TAXII_USER=CHANGEME
       - CONNECTOR_IBM_XTI_TAXII_PASS=CHANGEME
       # - CONNECTOR_IBM_XTI_TAXII_COLLECTIONS="CHANGEME, CHANGEME"
+      # - CONNECTOR_IBM_XTI_CREATE_OBSERVABLES=True
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME
@@ -36,7 +37,7 @@ services:
     # networks:
     #   - docker_default
 
-# networks:
-#   default:
-#     external: true
-#     name: docker_default
+    # networks:
+    #   default:
+    #     external: true
+    #     name: docker_default

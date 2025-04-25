@@ -120,7 +120,12 @@ class ExternalImportConnector:
         self.MITRE_MAPPER = None
 
     def _collect_intelligence(
-        self, collection, ttl, portion, mitre_mapper, flag=False
+        self,
+        collection,
+        ttl,
+        portion,
+        mitre_mapper,
+        flag_instrusion_set_instead_of_threat_actor=False,
     ) -> list:
         """Collect intelligence from the source"""
         raise NotImplementedError
@@ -310,7 +315,7 @@ class ExternalImportConnector:
                                         self.ttl,
                                         event,
                                         self.MITRE_MAPPER,
-                                        flag=self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR,
+                                        flag_instrusion_set_instead_of_threat_actor=self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR,
                                     )
                                     bundle = stix2.Bundle(
                                         objects=bundle_objects, allow_custom=True

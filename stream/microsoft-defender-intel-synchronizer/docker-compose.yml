@@ -1,14 +1,11 @@
 version: '3'
 services:
   connector-microsoft-defender-intel-synchronizer:
-    image: opencti/connector-microsoft-defender-intel-synchronizer:6.5.10
+    image: opencti/connector-microsoft-defender-intel-synchronizer:6.6.8
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
-      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
-      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       - "CONNECTOR_NAME=Microsoft Defender Intel Synchronizer"
       - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
       - CONNECTOR_LOG_LEVEL=error

@@ -7,17 +7,11 @@ images:
     python: python3-11
   stream_splunk:
     python: python3-11
-  stream_microsoft-sentinel-intel:
-    python: python3-11
-  stream_sentinel-intel:
+  stream_splunk-intel:
     python: python3-11
   stream_harfanglab-intel:
     python: python3-11
-  stream_harfanglab:
-    python: python3-11
   stream_pan-cortex-xsoar-intel:
-    python: python3-11
-  external-import_harfanglab-incidents:
     python: python3-11
   internal-import-file_import-file-stix:
     fips: true
