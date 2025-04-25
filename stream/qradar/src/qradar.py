@@ -62,8 +62,11 @@ class QRadarConnector:
             self._initialize_reference_sets()
         except Exception as ex:
             self.helper.connector_logger.error(
-                "[RefSet Init] Failed processing data {" + str(ex) + "}"
+                "Unable to initialize collection sets, shutting down { "
+                + str(ex)
+                + " }"
             )
+            sys.exit(0)
 
     def _initialize_reference_sets(self):
         """
@@ -194,7 +197,7 @@ class QRadarConnector:
             r.raise_for_status()
         except Exception as ex:
             self.helper.connector_logger.error(
-                "[Creating] Failed processing data {" + str(ex) + "}"
+                "[Creating] Failed processing data { " + str(ex) + " }"
             )
 
     def _update_object(self, collection_set_id, data):
@@ -224,7 +227,7 @@ class QRadarConnector:
                 r.raise_for_status()
         except Exception as ex:
             self.helper.connector_logger.error(
-                "[Updating] Failed processing data {" + str(ex) + "}"
+                "[Updating] Failed processing data { " + str(ex) + " }"
             )
 
     def _delete_object(self, collection_set_id, data):
@@ -240,7 +243,7 @@ class QRadarConnector:
                 r.raise_for_status()
         except Exception as ex:
             self.helper.connector_logger.error(
-                "[Deleting] Failed processing data {" + str(ex) + "}"
+                "[Deleting] Failed processing data { " + str(ex) + " }"
             )
 
     def _process_indicator(self, data):
@@ -345,7 +348,7 @@ class QRadarConnector:
                         self.helper.connector_logger.error(
                             "[Processing] Cannot find the QRadar collection set for { "
                             + d["type"]
-                            + "}"
+                            + " }"
                         )
                     else:
                         if msg.event == "create":
@@ -356,10 +359,10 @@ class QRadarConnector:
                             self._delete_object(collection_set_id, d)
         except Exception as ex:
             self.helper.connector_logger.error(
-                "[Processing] Failed processing data {" + str(ex) + "}"
+                "[Processing] Failed processing data { " + str(ex) + " }"
             )
             self.helper.connector_logger.error(
-                "[Processing] Message data {" + str(msg) + "}"
+                "[Processing] Message data { " + str(msg) + " }"
             )
             return None
 
