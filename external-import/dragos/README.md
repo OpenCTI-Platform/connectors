@@ -76,6 +76,7 @@ graph LR
                                 OpenCTILocation[Location]
                                 OpenCTIVulnerability[Vulnerability]
                                 OpenCTIOrganization[Organization]
+                                OpenCTIReportLabels[Labels]
                                 OpenCTIUploadedFile[Uploaded File]
                         end
                         subgraph Observables
@@ -95,6 +96,9 @@ graph LR
         DragosReportsIndicators ==> OpenCTIArtifact & OpenCTIDomainName & OpenCTIIPAddress & OpenCTIFile & OpenCTIURL
         DragosReportPDF ==> OpenCTIUploadedFile
         Observables ==> |looping over each observable| Indicators
+
+        DragosReportTags ==> |"other unsupported tags"| OpenCTIReportLabels
+
         %% Relationships between entities
         Indicators -.-> |"Based on"| Observables
 ```
@@ -179,6 +183,8 @@ The connector currently does not handle the following Dragos tags:
 - operating system
 - vendor
 - malware class
+
+They're not converted into OpenCTI entities. As a fallback, they're currently stored as is as reports labels.
 
 ## Development
 
