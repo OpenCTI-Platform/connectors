@@ -694,7 +694,7 @@ class DataToSTIXAdapter:
 
     def generate_stix_intrusion_set(self, obj, related_objects, json_date_obj=None):
         if not obj:
-            return None
+            return None, None
 
         _type = "intrusion-set"
         # _label = "threat_actor"
