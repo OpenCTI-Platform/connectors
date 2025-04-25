@@ -4,13 +4,13 @@ from datetime import datetime
 from traceback import format_exc
 from typing import Any
 
-import stix2
 from config import ConfigConnector
 from cyberintegrations import TIAdapter
 from cyberintegrations.decorators import cache_data
 from cyberintegrations.utils import ProxyConfigurator
-from pycti import OpenCTIConnectorHelper
 from utils import ExternalImportHelper
+
+from pycti import OpenCTIConnectorHelper
 
 
 @cache_data(
@@ -317,9 +317,11 @@ class ExternalImportConnector:
                                         flag_instrusion_set_instead_of_threat_actor=self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR,
                                     )
                                     if len(bundle_objects) > 0:
-                                        bundle = stix2.Bundle(
-                                            objects=bundle_objects, allow_custom=True
-                                        ).serialize()
+                                        bundle = (
+                                            OpenCTIConnectorHelper.stix2_create_bundle(
+                                                bundle_objects
+                                            )
+                                        )
                                         self.helper.connector_logger.info(
                                             f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
                                         )
