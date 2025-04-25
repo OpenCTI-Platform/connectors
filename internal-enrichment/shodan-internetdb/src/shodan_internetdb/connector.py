@@ -102,10 +102,6 @@ class ShodanInternetDBConnector:
         ) as e:
             self.helper.connector_logger.warning(e)
             return str(e)
-        # except Exception as e:
-        #     message = "[CONNECTOR] Unexpected error."
-        #     self.helper.connector_logger.error(message, {"error": str(e)})
-        #     return f"{message} See connector's log for more details."
 
     def run(self) -> None:
         """
