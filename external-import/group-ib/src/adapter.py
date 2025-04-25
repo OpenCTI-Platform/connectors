@@ -10,6 +10,7 @@
 Author: Pavel Reshetnikov, Integration developer, 2024
 """
 
+import ipaddress
 from datetime import datetime, timedelta
 
 import data_to_stix2 as ds
@@ -27,6 +28,26 @@ class DataToSTIXAdapter:
         self.is_ioc = is_ioc
         self.helper = helper
         self.author = ds.BaseEntity("", "", "white").author
+
+    @staticmethod
+    def is_ipv4(ipv4):
+        # type: (str) -> bool
+        """Determine whether the provided IP string is IPv4."""
+        try:
+            ipaddress.IPv4Address(ipv4)
+            return True
+        except ipaddress.AddressValueError:
+            return False
+
+    @staticmethod
+    def is_ipv6(ipv6):
+        # type: (str) -> bool
+        """Determine whether the provided IP string is IPv6."""
+        try:
+            ipaddress.IPv6Address(ipv6)
+            return True
+        except ipaddress.AddressValueError:
+            return False
 
     @staticmethod
     def _valid_hash(hash_value, hash_type):
@@ -890,7 +911,7 @@ class DataToSTIXAdapter:
                 _ips = _e.get("ip-address")
 
                 domain = None
-                if _domain:
+                if _domain and not self.is_ipv4(_domain) and not self.is_ipv6(_domain):
                     domain = self.generate_stix_domain(_domain)
                     domain.is_ioc = domain_is_ioc
                     domain.set_valid_from(valid_from)
