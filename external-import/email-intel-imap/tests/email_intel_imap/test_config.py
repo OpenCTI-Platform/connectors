@@ -20,3 +20,11 @@ def test_config() -> None:
     assert config["connector"]["duration_period"] == datetime.timedelta(days=1)
 
     assert config["email_intel_imap"]["tlp_level"] == "white"
+    assert config["email_intel_imap"][
+        "relative_import_start_date"
+    ] == datetime.timedelta(days=30)
+    assert config["email_intel_imap"]["host"] == "imap.test.com"
+    assert config["email_intel_imap"]["port"] == 993
+    assert config["email_intel_imap"]["username"] == "foo"
+    assert config["email_intel_imap"]["password"] == "bar"
+    assert config["email_intel_imap"]["mailbox"] == "INBOX"

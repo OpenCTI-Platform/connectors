@@ -5,6 +5,7 @@ ignore=venv,tests
 
 [MESSAGES CONTROL]
 disable=
+    duplicate-code,
     missing-docstring,
     broad-exception-caught,
     wrong-import-order,

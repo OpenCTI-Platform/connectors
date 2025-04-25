@@ -1,7 +1,7 @@
 import abc
 import datetime
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated
 
 from base_connector.enums import LogLevelType
 from base_connector.errors import ConfigRetrievalError
@@ -91,13 +91,6 @@ class BaseConnectorConfig(abc.ABC, BaseSettings):
 
     # files needs to be at the same level as the module
     model_config = SettingsConfigDict(env_nested_delimiter="_", env_nested_max_split=1)
-
-    @property
-    @abc.abstractmethod
-    def tlp_level(
-        self,
-    ) -> Literal["white", "clear", "green", "amber", "amber+strict", "red"]:
-        raise NotImplementedError("TLP level must be set.")
 
     def __init__(self) -> None:
         try:

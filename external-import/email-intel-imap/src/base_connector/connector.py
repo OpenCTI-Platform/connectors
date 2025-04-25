@@ -1,20 +1,18 @@
 import abc
 import datetime
 import sys
-from typing import Any, Generic, TypeVar
+import traceback
+from typing import Any
 
+import stix2
 from base_connector.client import BaseClient
 from base_connector.config import BaseConnectorConfig
 from base_connector.converter import BaseConverter
 from base_connector.errors import ConnectorError, ConnectorWarning
 from pycti import OpenCTIConnectorHelper
 
-ConfigType = TypeVar("ConfigType", bound=BaseConnectorConfig)
-ClientType = TypeVar("ClientType", bound=BaseClient)
-ConverterType = TypeVar("ConverterType", bound=BaseConverter[Any, Any])
 
-
-class BaseConnector(abc.ABC, Generic[ConfigType, ClientType, ConverterType]):
+class BaseConnector(abc.ABC):
     """
     Specifications of the external import connector
 
@@ -53,114 +51,96 @@ class BaseConnector(abc.ABC, Generic[ConfigType, ClientType, ConverterType]):
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        config: ConfigType,
-        client: ClientType,
-        converter: ConverterType,
+        config: BaseConnectorConfig,
+        converter: BaseConverter,
+        client: BaseClient | None = None,
     ) -> None:
         self.helper = helper
         self.config = config
-        self.client = client
         self.converter = converter
+        self.client = client
 
-    @abc.abstractmethod
-    def _collect_intelligence(self) -> list[Any]:
-        """Collect intelligence from the source and return it as a list of Stix2 objects."""
+    def get_state(self) -> dict[str, Any]:
+        state = self.helper.get_state() or {}
+        last_run = state.get("last_run", "Connector has never run...")
+        self.helper.connector_logger.info(f"Connector last run: {last_run}")
+        return state
 
-    def _process_message(self) -> None:
-        """Connector main process to collect intelligence."""
-        # TODO: Implement all the steps to verify a connector here
+    def update_state(
+        self, current_state: dict[str, str], run_time: datetime.datetime
+    ) -> None:
+        current_state["last_run"] = run_time.isoformat(sep=" ", timespec="seconds")
+        self.helper.connector_logger.info(f"Updating state last_run to {run_time}")
+        self.helper.set_state(state=current_state)
 
-        # TODO: Isolate and fix the next 3 lines
-        now = datetime.datetime.now(tz=datetime.UTC)
-        current_state = self.helper.get_state()
-        if current_state is not None and "last_run" in current_state:
-            last_run = current_state["last_run"]
+    def initiate_work(self) -> str:
+        return self.helper.api.work.initiate_work(
+            connector_id=self.helper.connect_id, friendly_name=self.helper.connect_name
+        )
 
-            self.helper.connector_logger.info(
-                "Connector last run",
-                {"last_run_datetime": last_run},
-            )
-        else:
-            self.helper.connector_logger.info("Connector has never run...")
+    def finalize_work(self, work_id: str, message: str) -> None:
+        self.helper.api.work.to_processed(work_id=work_id, message=message)
 
+    def create_and_send_bundles(self, work_id: str, stix_objects: list[Any]) -> None:
+        if not stix_objects:
+            self.helper.connector_logger.info("No STIX objects to process.")
+            return
+
+        bundle = self.helper.stix2_create_bundle(
+            items=stix_objects + [self.converter.author, self.converter.tlp_marking]
+        )
+        bundles_sent = self.helper.send_stix2_bundle(
+            bundle=bundle,
+            work_id=work_id,
+            cleanup_inconsistent_bundle=True,
+        )
         self.helper.connector_logger.info(
-            "Running connector...",
-            {"connector_name": self.helper.connect_name},
+            f"Sent {len(bundles_sent)} STIX objects to OpenCTI."
         )
 
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, self.helper.connect_name
-        )
+    def process_message(self) -> None:
+        run_time = datetime.datetime.now(tz=datetime.UTC)
+        state = self.get_state()
+        work_id = self.initiate_work()
 
-        if stix_objects := self._collect_intelligence():
-            stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
-            bundles_sent = self.helper.send_stix2_bundle(
-                stix_objects_bundle,
-                work_id=work_id,
-                cleanup_inconsistent_bundle=True,
-            )
+        stix_objects = self.collect_intelligence()
+        self.create_and_send_bundles(work_id, stix_objects)
 
-            self.helper.connector_logger.info(  # TODO: Implement checks on the bundle
-                "Sending STIX objects to OpenCTI...",
-                {"bundles_sent": {str(len(bundles_sent))}},
-            )
+        self.update_state(state, run_time)
+        message = f"Connector successfully run, storing last_run as {run_time}"
+        self.finalize_work(work_id, message)
 
-        # TODO: Isolate set state
-        # Store the current timestamp as a last run of the connector
-        self.helper.connector_logger.debug(
-            "Getting current state and update it with last run of the connector",
-            {"current_timestamp": now.timestamp()},
-        )
-        current_state = self.helper.get_state()
-        if current_state:
-            current_state["last_run"] = now.isoformat(sep=" ", timespec="seconds")
-        else:
-            current_state = {"last_run": now.isoformat(sep=" ", timespec="seconds")}
-        self.helper.set_state(current_state)
-
-        message = f"Connector successfully run, storing last_run as {str(now)}"
-
-        self.helper.api.work.to_processed(work_id, message)
-        self.helper.connector_logger.info(message)
-
-    def process_message(self) -> str | None:
+    def process(self) -> str | None:
+        meta = {"connector_name": self.helper.connect_name}
         try:
-            self.helper.connector_logger.info(
-                "Starting connector...",
-                {"connector_name": self.helper.connect_name},
-            )
-
-            self._process_message()
+            self.helper.connector_logger.info("Running connector...", meta=meta)
+            self.process_message()
         except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info(
-                "Connector stopped...",
-                {"connector_name": self.helper.connect_name},
-            )
+            self.helper.connector_logger.info("Connector stopped by user.", meta=meta)
             sys.exit(0)
         except ConnectorWarning as e:
-            self.helper.connector_logger.warning(e)
+            self.helper.connector_logger.warning(str(e), meta=meta)
             return str(e)
         except ConnectorError as e:
-            self.helper.connector_logger.error(e)
+            self.helper.connector_logger.error(str(e), meta=meta)
             return str(e)
         except Exception as e:
-            self.helper.connector_logger.error("Unexpected error.", {"error": str(e)})
-            return "Unexpected error. See connector's log for more details."
+            traceback.print_exc()
+            self.helper.connector_logger.error(f"Unexpected error: {e}", meta=meta)
+            return "Unexpected error. See connector logs for details."
         return None
 
     def run(self) -> None:
-        """
-        Run the main process encapsulated in a scheduler
-        It allows you to schedule the process to run at a certain intervals
-        This specific scheduler from the pycti connector helper will also check the queue size of a connector
-        If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
-        the connector's main process will not run until the queue is ingested and reduced sufficiently,
-        allowing it to restart during the next scheduler check. (default is 500MB)
-        It requires the `duration_period` connector variable in ISO-8601 standard format
-        Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
-        :return: None
-        """
+        self.helper.connector_logger.info("Starting connector...")
         self.helper.schedule_process(
-            message_callback=self.process_message,
+            message_callback=self.process,
             duration_period=self.config.connector.duration_period.total_seconds(),
         )
+
+    @abc.abstractmethod
+    def collect_intelligence(self) -> list[stix2.v21._STIXBase21]:
+        """
+        Collect and process the source of CTI.
+
+        This method must be implemented by each connector and return  a list of STIX objects.
+        """
