@@ -76,6 +76,7 @@ graph LR
                                 OpenCTILocation[Location]
                                 OpenCTIVulnerability[Vulnerability]
                                 OpenCTIOrganization[Organization]
+                                OpenCTIReportLabels[Labels]
                                 OpenCTIUploadedFile[Uploaded File]
                         end
                         subgraph Observables
@@ -95,6 +96,9 @@ graph LR
         DragosReportsIndicators ==> OpenCTIArtifact & OpenCTIDomainName & OpenCTIIPAddress & OpenCTIFile & OpenCTIURL
         DragosReportPDF ==> OpenCTIUploadedFile
         Observables ==> |looping over each observable| Indicators
+
+        DragosReportTags ==> |"other unsupported tags"| OpenCTIReportLabels
+
         %% Relationships between entities
         Indicators -.-> |"Based on"| Observables
 ```
