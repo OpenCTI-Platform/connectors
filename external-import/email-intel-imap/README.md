@@ -1,153 +1,187 @@
-# OpenCTI External Ingestion Connector Template
+# 📬 Email Intel IMAP Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+The **Email Intel IMAP Connector** enables the ingestion of cyber threat intelligence reports received via email into
+the OpenCTI platform using the IMAP protocol. This connector allows organizations to automate the collection of
+intelligence shared through email by regularly polling a mailbox and transforming each message into an OpenCTI report.
 
-Table of Contents
+---
 
-- [OpenCTI External Ingestion Connector Template](#opencti-external-ingestion-connector-template)
-  - [Introduction](#introduction)
-  - [Installation](#installation)
-    - [Requirements](#requirements)
-  - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-  - [Deployment](#deployment)
+## 📖 Table of Contents
+
+- [🧩 Introduction](#-introduction)
+- [⚙️ Requirements](#-requirements)
+- [🔧 Configuration](#-configuration)
+    - [OpenCTI Configuration](#opencti-configuration)
+    - [Connector Configuration](#base-connector-configuration)
+- [🚀 Deployment](#-deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
-  - [Usage](#usage)
-  - [Behavior](#behavior)
-  - [Debugging](#debugging)
-  - [Additional information](#additional-information)
+    - [Dev Tools](#dev-tools)
+- [📌 Usage](#-usage)
+- [⚙️ Connector Behavior](#-connector-behavior)
+- [📝 Additional Information](#-additional-information)
 
-## Introduction
+---
 
-## Installation
+## 🧩 Introduction
 
-### Requirements
+This connector is designed to connect to an IMAP-compatible email inbox, extract email content and attachments, and
+convert the data into structured CTI reports within OpenCTI. The connector is suitable for any threat intel flow that
+relies on email as a delivery method and is compatible with standard IMAP servers.
 
-- OpenCTI Platform >= 6...
+---
 
-## Configuration variables
+## ⚙️ Requirements
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+- OpenCTI Platform >= 6.x
+- IMAP-compatible mailbox
 
-### OpenCTI environment variables
+---
 
-Below are the parameters you'll need to set for OpenCTI:
+## 🔧 Configuration
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+Configuration parameters can be defined in a `.env` or `config.yml` or in environment variables.
 
-### Base connector environment variables
+### OpenCTI Configuration
 
-Below are the parameters you'll need to set for running the connector properly:
+| Parameter     | config.yml | Environment Variable | Required | Description                                          |
+|---------------|------------|----------------------|----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`        | ✅        | The base URL of the OpenCTI platform.                |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`      | ✅        | The default admin token set in the OpenCTI platform. |
 
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+### Base Connector Configuration
 
-### Connector extra parameters environment variables
+| Parameter                 | config.yml key  | Environment Variable        | Recommended value | Required | Description                                               |
+|---------------------------|-----------------|-----------------------------|-------------------|----------|-----------------------------------------------------------|
+| Connector ID              | id              | `CONNECTOR_ID`              | ❌                 | ✅        | A unique `UUIDv4` identifier for this connector instance. |
+| Connector Type            | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT   | ✅        | Should be set to `EXTERNAL_IMPORT` for this connector.    |
+| Connector Name            | name            | `CONNECTOR_NAME`            | Email Intel IMAP  | ✅        | Name of the connector.                                    |
+| Connector Scope           | scope           | `CONNECTOR_SCOPE`           | email-intel-imap  | ✅        | The scope/type of objects the connector imports.          |
+| Connector Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | error             | ✅        | Logging level (`debug`, `info`, `warn`, `error`).         |
+| Connector Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | PT1H              | ✅        | Frequency of polling the mailbox (ISO 8601 format).       |
 
-Below are the parameters you'll need to set for the connector:
+### Email Intel IMAP Connector Configuration
 
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
+Below are the parameters you'll need to set for the Email Intel IMAP Connector
 
-## Deployment
+| Parameter                  | config.yml                 | Docker environment variable                   | Recommended  | Mandatory | Description                                   |
+|----------------------------|----------------------------|-----------------------------------------------|--------------|-----------|-----------------------------------------------|
+| Relative Import Start Date | relative_import_start_date | `EMAIL_INTEL_IMAP_RELATIVE_IMPORT_START_DATE` | P30D         | ✅         | How far back the first import should go.      |
+| IMAP Host                  | email_intel_imap.host      | `EMAIL_INTEL_IMAP_HOST`                       | ❌            | ✅         | Hostname of the IMAP server.                  |
+| IMAP Port                  | email_intel_imap.port      | `EMAIL_INTEL_IMAP_PORT`                       | 993          | ✅         | IMAP port (993 typically for SSL).            |
+| IMAP Username              | email_intel_imap.username  | `EMAIL_INTEL_IMAP_USERNAME`                   | ❌            | ✅         | Mailbox username.                             |
+| IMAP Password              | email_intel_imap.password  | `EMAIL_INTEL_IMAP_PASSWORD`                   | ❌            | ✅         | Mailbox password.                             |
+| Mailbox Folder             | email_intel_imap.mailbox   | `EMAIL_INTEL_IMAP_MAILBOX`                    | INBOX        | ✅         | Folder to monitor (e.g., INBOX, ThreatIntel). |
+| TLP Level                  | email_intel_imap.tlp_level | `EMAIL_INTEL_IMAP_TLP_LEVEL`                  | amber+strict | ✅         | Default TLP marking for imported reports.     |
+
+---
+
+## 🚀 Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+1. Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build . -t opencti/connector-email-intel-imap:latest
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+2. Run using Docker Compose:
 
-```shell
+Copy the `.env.sample` file to `.env` and set the required environment variables.
+
+```bash
 docker compose up -d
-# -d for detached
+# -d for detached mode
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create and activate the virtual environment:
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
-
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
-pip3 install -r requirements.txt
+```bash
+  python3.12 -m venv venv --prompt $(basename $PWD)
+  source venv/bin/activate
 ```
 
-Then, start the connector from recorded-future/src:
+2. Install the required dependencies:
 
-```shell
-python3 main.py
+3 types of dependencies depending on your needs:
+
+- Minimal requirements
+
+```bash
+  pip install -r src/requirements.txt 
 ```
 
-## Usage
+- Tests + minimal requirements
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+```bash
+  pip install -r tests/test-requirements.txt
+```
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+- Development + tests + minimal requirements
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
+```bash
+  pip install -r dev-requirements.txt
+```
 
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+3. Set up the configuration:
 
-## Behavior
+3 options:
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+- Create a `.env` file based on `.env.sample` and set the required environment variables.
+- Create a `config.yml` file based on `config.yml.sample` and set the required parameters.
+- Set the required environment variables directly in your shell.
 
+4. Run the connector:
 
-## Debugging
+```bash
+python3 src/main.py
+```
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+### Dev tools
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+1. pylint
 
-## Additional information
+```bash
+  pylint .
+```
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+2. mypy
+
+```bash
+  mypy .
+```
+
+## 📌 Usage
+
+After deployment, the connector:
+
+- Polls the configured mailbox at the interval defined in `CONNECTOR_DURATION_PERIOD`
+- On first run, fetches emails received within the period defined by `RELATIVE_IMPORT_START_DATE`
+- Each fetched email is transformed into an OpenCTI report:
+    - `report_name`: Email subject
+        - If the subject is empty, a default name is generated as follow `<no subject> from <sender@email.com>` where
+          `<sender@email.com>` is the email address of the sender.
+    - `report_type`: `threat-report`
+    - `report_published`: Email sent date (converted to UTC)
+    - `report_content`: Full email body (unparsed)
+
+---
+
+## ⚙️ Connector Behavior
+
+- Emails are **not modified** (not marked as read, deleted, etc.)
+- The connector maintains its own state and remembers the last processed email timestamp.
+- Emails are not parsed or enriched beyond report generation (by design).
+
+---
+
+## 📝 Additional Information
+
+- This connector does not perform enrichment or IOC extraction.
+- It is designed to be extended or chained with other connectors for parsing.
+- The connector is designed to support only IMAP-compatible mailboxes.
+
+---

@@ -1,18 +1,15 @@
 import os
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import pytest
-from base_connector import BaseConnectorConfig, ConfigRetrievalError
+from base_connector.config import BaseConnectorConfig
+from base_connector.errors import ConfigRetrievalError
 from pydantic_settings import SettingsConfigDict
 
 
 class ConnectorConfig(BaseConnectorConfig):
-    @property
-    def tlp_level(
-        self,
-    ) -> Literal["white", "clear", "green", "amber", "amber+strict", "red"]:
-        return "clear"
+    pass
 
 
 def test_yaml_config(config_dict: dict[str, dict[str, Any]]) -> None:
