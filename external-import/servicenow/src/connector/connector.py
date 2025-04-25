@@ -89,8 +89,10 @@ class ConnectorServicenow:
 
     def _send_intelligence(self, work_id: str, prepared_objects: list) -> int:
         """This method prepares and sends unique STIX objects to OpenCTI.
-        This method takes a list of objects prepared by the models, extracts their STIX representations, creates a serialized STIX bundle and It then sends this bundle to OpenCTI.
-        If prepared objects exist, the method ensures that only unique objects with an 'id' attribute are included. After sending the STIX objects, it keeps inform of the number of bundles sent.
+        This method takes a list of objects prepared by the models, extracts their STIX representations, creates a
+        serialized STIX bundle, and It then sends this bundle to OpenCTI.
+        If prepared objects exist, the method ensures that only unique objects with an 'id' attribute are included.
+        After sending the STIX objects, it keeps inform of the number of bundles sent.
 
         Args:
             work_id (str): The unique identifier for the work process associated with the STIX objects.
@@ -372,65 +374,65 @@ class ConnectorServicenow:
             for item in validated_intelligence:
                 security_incident_object = item.get("get_security_incident")
                 case_incident_object_refs = []
+                all_external_references = []
 
                 mitre_mapping = {
-                    "mitre_technique": lambda x, y: self.converter_to_stix.make_attack_pattern(
-                        mitre_name, mitre_id, external_reference_sir
+                    # MITRE Technique / MITRE Tactic
+                    # Example: ["T1110 (Brute Force)"] -> [mitre_id (mitre_name)] -> [y (x)]
+                    "mitre_technique": lambda x, y, z: self.converter_to_stix.make_attack_pattern(
+                        y, x, z
                     ),
-                    "mitre_tactic": lambda x, y: self.converter_to_stix.make_attack_pattern(
-                        mitre_name, mitre_id, external_reference_sir
+                    "mitre_tactic": lambda x, y, z: self.converter_to_stix.make_attack_pattern(
+                        y, x, z
                     ),
-                    "mitre_group": lambda x, y: self.converter_to_stix.make_intrusion_set(
-                        mitre_name, mitre_alias, external_reference_sir
+                    # MITRE Group / MITRE Malware / MITRE Tool
+                    # Example: ["G0102 (Wizard Spider)"] -> [mitre_name (mitre_alias)] -> [x (y)]
+                    "mitre_group": lambda x, y, z: self.converter_to_stix.make_intrusion_set(
+                        x, y, z
                     ),
-                    "mitre_malware": lambda x, y: self.converter_to_stix.make_malware(
-                        mitre_name, mitre_alias, external_reference_sir
+                    "mitre_malware": lambda x, y, z: self.converter_to_stix.make_malware(
+                        x, y, z
                     ),
-                    "mitre_tool": lambda x, y: self.converter_to_stix.make_tool(
-                        mitre_name, mitre_alias, external_reference_sir
+                    "mitre_tool": lambda x, y, z: self.converter_to_stix.make_tool(
+                        x, y, z
                     ),
                 }
 
-                # Make External Reference for custom case incident response and Mitre
+                # Make External Reference for custom case incident response and all entities Mitre
                 external_reference_sir = self.converter_to_stix.make_external_reference(
                     security_incident_object.number,
                     "sn_si_incident",
                     security_incident_object.sys_id,
                 )
+                all_external_references.append(external_reference_sir)
 
-                for key, make in mitre_mapping.items():
+                for key, make_mitre_object in mitre_mapping.items():
                     has_values = getattr(security_incident_object, key, None)
 
                     if isinstance(has_values, list) and has_values:
-                        if key == "mitre_technique" or key == "mitre_tactic":
-                            # MITRE Technique / MITRE Tactic
-                            # Example: ["T1110 (Brute Force)"] -> [mitre_id (mitre_name)]
-                            for attack_pattern in has_values:
-                                mitre_name = attack_pattern.split(" ")[1].strip("()")
-                                mitre_id = attack_pattern.split(" ")[0]
+                        for mitre in has_values:
+                            mitre_part_1, mitre_part_2 = mitre.split(" ", 1)
+                            # Removal of parentheses for the second part
+                            clean_mitre_part_2 = mitre_part_2.strip("()")
 
-                                attack_pattern_object = make(mitre_name, mitre_id)
-                                stix_objects.append(attack_pattern_object)
-                                case_incident_object_refs.append(attack_pattern_object)
-                        else:
-                            # MITRE Group / MITRE Malware / MITRE Tool
-                            # Example: ["G0102 (Wizard Spider)"] -> [mitre_name (mitre_alias)]
-                            for mitre in has_values:
-                                mitre_name = mitre.split(" ")[0]
-                                mitre_alias = mitre.split(" ")[1].strip("()")
-
-                                other_mitre_object = make(mitre_name, mitre_alias)
-                                stix_objects.append(other_mitre_object)
-                                case_incident_object_refs.append(other_mitre_object)
+                            mitre_object = make_mitre_object(
+                                mitre_part_1,
+                                clean_mitre_part_2,
+                                [external_reference_sir],
+                            )
+                            stix_objects.append(mitre_object)
+                            case_incident_object_refs.append(mitre_object)
 
                 # Todo Make Observables object -> Observable
 
                 # Transform comment in markdown for security_incident
                 new_description = self.utils.transform_description_to_markdown(
+                    self.config.servicenow.comment_to_exclude,
                     security_incident_object.description,
                     security_incident_object.comments_and_work_notes,
                 )
                 security_incident_object.comments_and_work_notes = new_description
+
                 # Normalises severity for OpenCTI by finding the first match among known levels
                 severity_matched = next(
                     (
@@ -454,18 +456,30 @@ class ConnectorServicenow:
                 custom_case_incident = self.converter_to_stix.make_custom_case_incident(
                     security_incident_object,
                     case_incident_object_refs,
-                    external_reference_sir,
+                    [external_reference_sir],
                 )
-                stix_objects.append(custom_case_incident)
 
                 # Make Tasks object -> CustomObjectTask
                 all_tasks_object = item.get("get_tasks")
                 if all_tasks_object:
                     for task in all_tasks_object:
+
+                        # Make External Reference Task for custom case incident parent
+                        external_reference_task = (
+                            self.converter_to_stix.make_external_reference(
+                                task.number,
+                                "task",
+                                task.sys_id,
+                            )
+                        )
+                        all_external_references.append(external_reference_task)
+
                         # Transform comment in markdown
                         new_description_task = (
                             self.utils.transform_description_to_markdown(
-                                task.description, task.comments_and_work_notes
+                                self.config.servicenow.comment_to_exclude,
+                                task.description,
+                                task.comments_and_work_notes,
                             )
                         )
                         task.comments_and_work_notes = new_description_task
@@ -475,6 +489,16 @@ class ConnectorServicenow:
                             task, custom_case_incident, all_labels
                         )
                         stix_objects.append(custom_task)
+
+                # Add all_external_references to the external ref of the parent security incident
+                final_custom_case_incident = (
+                    self.converter_to_stix.make_custom_case_incident(
+                        security_incident_object,
+                        case_incident_object_refs,
+                        all_external_references,
+                    )
+                )
+                stix_objects.append(final_custom_case_incident)
 
             if stix_objects:
                 # Make Author object
@@ -487,8 +511,10 @@ class ConnectorServicenow:
                 )
                 stix_objects.append(markings)
 
+            len_stix_objects = len(stix_objects)
             self.helper.connector_logger.info(
-                "[CONNECTOR] Finalisation of the transforming intelligence to STIX 2.1 format."
+                "[CONNECTOR] Finalisation of the transforming intelligence to STIX 2.1 format.",
+                {"len_stix_objects": len_stix_objects},
             )
             return stix_objects
 

@@ -63,23 +63,72 @@ class Utils:
             }
 
     @staticmethod
-    def transform_description_to_markdown(description, comments):
-        comments = [
-            block.strip() for block in comments.strip().split("\n\n") if block.strip()
-        ]
-        markdown = description + "\n"
-        if comments:
-            markdown += "| Date | Author | Comments and Notes |\n| --- | --- | --- |\n"
+    def transform_description_to_markdown(
+        comment_to_exclude: list[str], description: str, comments: str
+    ) -> str:
+        """This method allows you to structure the entity's description in OpenCTI, starting with a description and then
+        adding a Markdown table to list the comments written in ServiceNow. The description field can be empty, just
+        like the Markdown table.
 
-            for comment in comments:
+        The function divides comments into blocks based on a pattern that detects date and time (each comment starts
+        with a date and time). Depending on the user's configuration, comments can be filtered.
+        Removal of unwanted elements (e.g. code tags, HTML tags, line breaks and unwanted pipes).
+
+        Args:
+            comment_to_exclude (list[str]): A list of comment types to exclude (e.g., ["private", "auto"]).
+            description (str): The original description content to include at the top.
+            comments (str): The raw comment string from ServiceNow to parse and format.
+
+        Returns:
+            str: A formatted string containing the description and comments in the form of a Markdown table.
+        """
+        pattern = r"(?=\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} - )"
+        blocks = re.split(pattern, comments.strip())
+        list_comments = [block.strip() for block in blocks if block.strip()]
+
+        description_field_in_opencti = description + "\n"
+
+        if comments:
+            markdown_table = ""
+            markdown_init = (
+                "\n| Date | Author | Comments and Work Notes |\n| --- | --- | --- |\n"
+            )
+            markdown_adding_line = ""
+            for comment in list_comments:
                 match = re.match(r"^(.*?) - (.*?)\n(.*)", comment, re.DOTALL)
                 if match:
-                    date = match.group(1).strip()
-                    author = match.group(2).strip()
-                    message = match.group(3).strip()
+                    date = match.group(1).strip()  # Ex: "2025-04-22 22:58:30"
+                    author = match.group(
+                        2
+                    ).strip()  # Ex: "System (Automation activity)"
+                    message = match.group(
+                        3
+                    ).strip()  # Ex: "Risk score changed from Empty to 69 due to change..."
+
+                    # Three types of possible exclusions :
+                    comment_mapping = {
+                        "private": "work notes",
+                        "public": "additional comments",
+                        "auto": "automation activity",
+                    }
+                    # Detection and filtering comments according to configuration.
+                    if any(
+                        comment_mapping[item.lower()] in author.lower()
+                        for item in comment_to_exclude
+                    ):
+                        continue
+
+                    # Remove all unwanted elements
                     message = re.sub(r"\[/?code]", "", message)
                     message = re.sub(r"<.*?>", "", message)
-                    message = re.sub(r"\n", "", message)
-                    markdown += f"| {date} | {author} | {message} |\n"
+                    message = re.sub(r"\|", " ", message)
+                    message = re.sub(r"\n", " ", message)
 
-        return markdown
+                    markdown_adding_line += f"| {date} | {author} | {message} |\n"
+
+            if markdown_adding_line:
+                markdown_table += markdown_init
+                markdown_table += markdown_adding_line
+
+            description_field_in_opencti += markdown_table
+        return description_field_in_opencti

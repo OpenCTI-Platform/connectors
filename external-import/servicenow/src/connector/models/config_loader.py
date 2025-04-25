@@ -139,13 +139,21 @@ class _ConfigLoaderServiceNow(ConfigBaseSettings):
         default=None,
         description="List of security incident priorities to exclude from import.",
     )
+    comment_to_exclude: Optional[list[Literal["private", "public", "auto"]]] = Field(
+        default=[],
+        description="List of comment types to exclude: private, public, auto",
+    )
     tlp_level: Optional[TLPToLower] = Field(
         default="red",
         description="Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
     )
 
     @field_validator(
-        "state_to_exclude", "severity_to_exclude", "priority_to_exclude", mode="before"
+        "state_to_exclude",
+        "severity_to_exclude",
+        "priority_to_exclude",
+        "comment_to_exclude",
+        mode="before",
     )
     def parse_list(cls, value):
         if isinstance(value, str):

@@ -80,21 +80,24 @@ class ConverterToStix:
         instance_name = self.config.servicenow.instance_name
         api_version = self.config.servicenow.api_version
         return ExternalReference(
-            source_name=f"ServiceNow - {entity_number}",
+            source_name=f"SN - {entity_number}",
             url=f"https://{instance_name}.service-now.com/api/now/{api_version}/table/{table_name}/{external_id}",
             description=description,
             external_id=external_id,
         )
 
     def make_attack_pattern(
-        self, mitre_name: str, mitre_id: str, external_reference: ExternalReference
+        self,
+        mitre_name: str,
+        mitre_id: str,
+        external_references: list[ExternalReference],
     ) -> AttackPattern:
         """Make an Attack Pattern object and its representation in STIX 2.1 format.
         The attack pattern is represented by the mitre Technique/Tactic in ServiceNow.
         Args:
             mitre_name (str): Represents the name of the attack pattern.
             mitre_id (str): Represents the external id of the attack pattern.
-            external_reference (ExternalReference): An external link to the parent security incident data.
+            external_references (list[ExternalReference]): An external link to the parent security incident data. (SIR)
         Returns:
             AttackPattern: An object containing an attack pattern and its representation in STIX 2.1 format.
         """
@@ -102,19 +105,22 @@ class ConverterToStix:
             name=mitre_name,
             external_id=mitre_id,
             markings=[self._tlp_marking],
-            external_references=[external_reference],
+            external_references=external_references,
             author=self._author,
         )
 
     def make_intrusion_set(
-        self, mitre_name: str, mitre_alias: str, external_reference: ExternalReference
+        self,
+        mitre_name: str,
+        mitre_alias: str,
+        external_references: list[ExternalReference],
     ) -> IntrusionSet:
         """Make an Intrusion Set object and its representation in STIX 2.1 format.
         The intrusion set is represented by the mitre group in ServiceNow.
         Args:
             mitre_name (str): Represents the name of the intrusion set.
             mitre_alias (str): Represents the alias of the intrusion set.
-            external_reference (ExternalReference): An external link to the parent security incident data.
+            external_references (list[ExternalReference]): An external link to the parent security incident data. (SIR)
         Returns:
             IntrusionSet: An object containing an intrusion set and its representation in STIX 2.1 format.
         """
@@ -122,19 +128,22 @@ class ConverterToStix:
             name=mitre_name,
             aliases=mitre_alias,
             markings=[self._tlp_marking],
-            external_references=[external_reference],
+            external_references=external_references,
             author=self._author,
         )
 
     def make_malware(
-        self, mitre_name: str, mitre_alias: str, external_reference: ExternalReference
+        self,
+        mitre_name: str,
+        mitre_alias: str,
+        external_references: list[ExternalReference],
     ) -> Malware:
         """Make a Malware object and its representation in STIX 2.1 format.
         The malware is represented by the mitre malware in ServiceNow.
         Args:
             mitre_name (str): Represents the name of the malware.
             mitre_alias (str): Represents the alias of the malware.
-            external_reference (ExternalReference): An external link to the parent security incident data.
+            external_references (list[ExternalReference]): An external link to the parent security incident data. (SIR)
         Returns:
             Malware: An object containing a malware and its representation in STIX 2.1 format.
         """
@@ -142,19 +151,22 @@ class ConverterToStix:
             name=mitre_name,
             aliases=mitre_alias,
             markings=[self._tlp_marking],
-            external_references=[external_reference],
+            external_references=external_references,
             author=self._author,
         )
 
     def make_tool(
-        self, mitre_name: str, mitre_alias: str, external_reference: ExternalReference
+        self,
+        mitre_name: str,
+        mitre_alias: str,
+        external_references: list[ExternalReference],
     ) -> Tool:
         """Make a Tool object and its representation in STIX 2.1 format.
         The tool is represented by the mitre Tool in ServiceNow.
         Args:
             mitre_name (str): Represents the name of the tool.
             mitre_alias (str): Represents the alias of the tool.
-            external_reference (ExternalReference): An external link to the parent security incident data.
+            external_references (list[ExternalReference]): An external link to the parent security incident data. (SIR)
         Returns:
             Tool: An object containing a tool and its representation in STIX 2.1 format.
         """
@@ -162,7 +174,7 @@ class ConverterToStix:
             name=mitre_name,
             aliases=mitre_alias,
             markings=[self._tlp_marking],
-            external_references=[external_reference],
+            external_references=external_references,
             author=self._author,
         )
 
@@ -181,6 +193,7 @@ class ConverterToStix:
         Returns:
             CustomTask: An object containing a task and its representation in STIX 2.1 format.
         """
+
         return CustomTask(
             name=f"{data.number} {data.short_description}",
             description=data.comments_and_work_notes,
@@ -197,14 +210,14 @@ class ConverterToStix:
         self,
         data: SecurityIncidentResponse,
         case_incident_object_refs: list,
-        external_reference: ExternalReference,
+        external_references: list[ExternalReference],
     ) -> CustomCaseIncident:
         """Make a CustomCaseIncident object and its representation in STIX 2.1 format.
         The CustomCaseIncident is represented by the SIR in ServiceNow.
         Args:
             data (SecurityIncidentResponse): Validated security incident data from ServiceNow.
             case_incident_object_refs (list): List of security incident-related objects.
-            external_reference (ExternalReference): An external link to the security incident data.
+            external_references (list[ExternalReference]): An external link to the security incident data. (SIR)
         Returns:
             CustomCaseIncident: An object containing a security incident and its representation in STIX 2.1 format.
         """
@@ -217,7 +230,7 @@ class ConverterToStix:
             priority=data.priority,
             types=data.category,
             labels=data.subcategory,
-            external_references=[external_reference],
+            external_references=external_references,
             markings=[self._tlp_marking],
             author=self._author,
             objects=case_incident_object_refs,

@@ -39,7 +39,7 @@ https://www.servicenow.com/what-is-servicenow.html
 
 ### Requirements
 
-- pycti==6.6.4
+- pycti==6.6.7
 - validators==0.33.0
 - pydantic>=2.10, <3
 - requests~=2.32.3
@@ -92,25 +92,26 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter `ServiceNow` | config.yml            | Docker environment variable      | Default | Mandatory | Description                                                                                                                          |
-|------------------------|-----------------------|----------------------------------|---------|-----------|--------------------------------------------------------------------------------------------------------------------------------------|
-| Instance name          | `instance_name`       | `SERVICENOW_INSTANCE_NAME`       | /       | Yes       | Representing the ServiceNow server name.                                                                                             |
-| Api key                | `api_key`             | `SERVICENOW_API_KEY`             | /       | Yes       | Secure identifier used to validate access to ServiceNow APIs.                                                                        |
-| Api version            | `api_version`         | `SERVICENOW_API_VERSION`         | `v2`    | No        | ServiceNow API version used for REST requests.                                                                                       |
-| Api retry              | `api_retry`           | `SERVICENOW_API_RETRY`           | `5`     | No        | Maximum number of retry attempts in case of API failure.                                                                             |
-| Api backoff            | `api_backoff`         | `SERVICENOW_API_BACKOFF`         | `PT30S` | No        | Exponential backoff duration between API retries (ISO 8601 duration format).                                                         |
-| Import start date      | `import_start_date`   | `SERVICENOW_IMPORT_START_DATE`   | /       | Yes       | The date from which data import should start. (Format YYYY-MM-DD)                                                                    |
-| State to exclude       | `state_to_exclude`    | `SERVICENOW_STATE_TO_EXCLUDE`    | `None`  | No        | List of security incident states to exclude from import. Example: "eradicate,analysis,closed,cancelled,draft,contain,review,recover" |
-| Severity to exclude    | `severity_to_exclude` | `SERVICENOW_SEVERITY_TO_EXCLUDE` | `None`  | No        | List of security incident severities to exclude from import. Example: "high,medium,low"                                              |
-| Priority to exclude    | `priority_to_exclude` | `SERVICENOW_PRIORITY_TO_EXCLUDE` | `None`  | No        | List of security incident priorities to exclude from import. Example: "critical,high,moderate,low,planning"                          |
-| TLP level              | `tlp_level`           | `SERVICENOW_TLP_LEVEL`           | `red`   | No        | TLP markings for exported data (Available: clear, green, amber, amber+strict, red)                                                   |
+| Parameter `ServiceNow` | config.yml            | Docker environment variable      | Default        | Mandatory | Description                                                                                                                                   |
+|------------------------|-----------------------|----------------------------------|----------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| Instance name          | `instance_name`       | `SERVICENOW_INSTANCE_NAME`       | /              | Yes       | Representing the ServiceNow server name.                                                                                                      |
+| Api key                | `api_key`             | `SERVICENOW_API_KEY`             | /              | Yes       | Secure identifier used to validate access to ServiceNow APIs.                                                                                 |
+| Api version            | `api_version`         | `SERVICENOW_API_VERSION`         | `v2`           | No        | ServiceNow API version used for REST requests.                                                                                                |
+| Api retry              | `api_retry`           | `SERVICENOW_API_RETRY`           | `5`            | No        | Maximum number of retry attempts in case of API failure.                                                                                      |
+| Api backoff            | `api_backoff`         | `SERVICENOW_API_BACKOFF`         | `PT30S`        | No        | Exponential backoff duration between API retries (ISO 8601 duration format).                                                                  |
+| Import start date      | `import_start_date`   | `SERVICENOW_IMPORT_START_DATE`   | /              | Yes       | The date from which data import should start. (Format YYYY-MM-DD)                                                                             |
+| State to exclude       | `state_to_exclude`    | `SERVICENOW_STATE_TO_EXCLUDE`    | `No exclusion` | No        | List of security incident states to exclude from import. Example: "eradicate,analysis,closed,cancelled,draft,contain,review,recover"          |
+| Severity to exclude    | `severity_to_exclude` | `SERVICENOW_SEVERITY_TO_EXCLUDE` | `No exclusion` | No        | List of security incident severities to exclude from import. Example: "high,medium,low"                                                       |
+| Priority to exclude    | `priority_to_exclude` | `SERVICENOW_PRIORITY_TO_EXCLUDE` | `No exclusion` | No        | List of security incident priorities to exclude from import. Example: "critical,high,moderate,low,planning"                                   |
+| Comment to exclude     | `comment_to_exclude`  | `SERVICENOW_COMMENT_TO_EXCLUDE`  | `No exclusion` | No        | List of comment to exclude from import. Example: "private,public,auto" (Respectively: "Work notes, Additional comments, Automation activity") |
+| TLP level              | `tlp_level`           | `SERVICENOW_TLP_LEVEL`           | `red`          | No        | TLP markings for exported data (Available: clear, green, amber, amber+strict, red)                                                            |
 
 ## Deployment
 
 ### Docker Deployment
 
 Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==6.6.4`. If you don't, it will take the latest version, but
+version of OpenCTI you're running. Example, `pycti==6.6.7`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
@@ -222,7 +223,7 @@ All generated entities are associated by default with a `TLP:RED`.
 
 #### Mapping entities from ServiceNow to OpenCTI :
 
-Security Incident:
+Security Incident Response (Case incident response):
 
 | SIR in ServiceNow                     | Case incident Response in OpenCTI                                                                                                    |
 |---------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
@@ -252,7 +253,15 @@ For each `Task` related to the Security incident:
 | Tags + Security Tags                  | `Labels`                                                            |
 | Description + Comments and work notes | `Descriptions` (`comments and work notes` become a markdown table)  |
 
-For each `Observables` related to the Security incident:
+For each Security incident, an `External Reference (SIR)` will be created. In addition, for each Task associated with this Security incident, an additional `External Reference (SIT)` will be added.
+
+| SIR or SIT in ServiceNow   | External Reference in OpenCTI |
+|----------------------------|-------------------------------|
+| "SN" + number (SIR or SIT) | `Source Name`                 |
+| sys_id (SIR or SIT)        | `External_id`                 |
+| Source link                | `URL`                         |
+
+For each `Observables` related to the Security incident: (WIP)
 
 ---
 

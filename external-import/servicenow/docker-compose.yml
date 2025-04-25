@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-servicenow:
-    image: opencti/connector-servicenow:6.6.4
+    image: opencti/connector-servicenow:6.6.7
     environment:
       # OpenCTI parameters
       - OPENCTI_URL=CHANGEME # REQUIRED
@@ -35,6 +35,7 @@ services:
       #- SERVICENOW_STATE_TO_EXCLUDE=
       #- SERVICENOW_SEVERITY_TO_EXCLUDE=
       #- SERVICENOW_PRIORITY_TO_EXCLUDE=
+      #- SERVICENOW_COMMENT_TO_EXCLUDE=
       #- SERVICENOW_TLP_LEVEL=red
 
       # Add proxy parameters below if needed
