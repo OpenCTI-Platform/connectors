@@ -172,7 +172,7 @@ class ExternalImportConnector:
         self, timestamp: int | None = None, prepared_data: dict | None = None
     ):
         current_state = self.helper.get_state()
-        if current_state:
+        if current_state is not None:
             if timestamp:
                 current_state["last_run"] = timestamp
             elif prepared_data:
@@ -295,9 +295,6 @@ class ExternalImportConnector:
                                 )
                             )
 
-                            self.helper.connector_logger.info(
-                                f"Iterating on {str(len(generator))} portions"
-                            )
                             for portion in generator:
                                 # Extra pre-processing for collections
                                 parsed_portion = self.extra_pre_processing(
