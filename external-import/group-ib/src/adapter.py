@@ -450,9 +450,9 @@ class DataToSTIXAdapter:
         # _label = "malware"
         _events = obj.get("malware_report_list", [])
 
-        _date_updated = self._retrieve_date(
-            json_date_obj, "date-updated", "date-modified"
-        )
+        # _date_updated = self._retrieve_date(
+        #    json_date_obj, "date-updated", "date-modified"
+        # )
 
         _stix_objects = list()
 
@@ -470,7 +470,7 @@ class DataToSTIXAdapter:
                             malware = ds.Malware(
                                 name=n,
                                 aliases=_malware_aliases,
-                                last_seen=_date_updated,
+                                # last_seen=_date_updated,
                                 c_type=_type,
                                 malware_types=_malware_types or [],
                                 tlp_color="red",
@@ -485,7 +485,7 @@ class DataToSTIXAdapter:
                         malware = ds.Malware(
                             name=_name,
                             aliases=_malware_aliases,
-                            last_seen=_date_updated,
+                            # last_seen=_date_updated,
                             c_type=_type,
                             malware_types=_malware_types,
                             tlp_color="red",
@@ -508,7 +508,7 @@ class DataToSTIXAdapter:
                 malware = ds.Malware(
                     name=_name,
                     aliases=_malware_aliases,
-                    last_seen=_date_updated,
+                    # last_seen=_date_updated,
                     c_type=_type,
                     malware_types=_malware_types,
                     tlp_color="red",
