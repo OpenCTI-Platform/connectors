@@ -144,7 +144,7 @@ class ReportImporter:
 
     def _process_parsing_results(
         self, parsed: List[Dict], context_entity: Dict
-    ) -> (List[Dict], List[str]):
+    ) -> List[Dict] | List[str]:
         observables = []
         entities = []
         observables = []
@@ -171,6 +171,34 @@ class ReportImporter:
                         "created_by_ref": author,
                     },
                 )
+                if match[RESULT_FORMAT_CATEGORY] == "Attack-Pattern.x_mitre_id":
+                    ttp_object = self.helper.api.attack_pattern.read(
+                        filters={
+                            "mode": "and",
+                            "filters": [
+                                {
+                                    "key": "x_mitre_id",
+                                    "values": [match[RESULT_FORMAT_MATCH]],
+                                }
+                            ],
+                            "filterGroups": [],
+                        }
+                    )
+                    ttp_stix_bundle = (
+                        self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                            entity_type=ttp_object["entity_type"],
+                            entity_id=ttp_object["id"],
+                        )
+                    )
+                    stix_ttp = [
+                        object
+                        for object in ttp_stix_bundle["objects"]
+                        if "x_opencti_id" in object
+                        and object["x_opencti_id"] == ttp_object["id"]
+                    ][0]
+                    stix_object = (
+                        stix_ttp or stix_object
+                    )  # Handle the case where the Attack pattern is not in the platform
                 entities.append(stix_object)
             if match[RESULT_FORMAT_TYPE] == "observable":
                 stix_object = create_stix_object(
@@ -358,7 +386,7 @@ class ReportImporter:
             now = datetime.now(timezone.utc)
             report = stix2.Report(
                 id=Report.generate_id(file_name, now),
-                name="nlp-importdoc-" + file_name,
+                name="import-document-ai" + file_name,
                 description="Automatic import",
                 published=now,
                 report_types=["threat-report"],
