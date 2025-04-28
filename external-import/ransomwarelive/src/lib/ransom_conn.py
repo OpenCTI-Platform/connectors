@@ -115,16 +115,27 @@ class RansomwareAPIConnector:
         return description
 
     # Generates a relationship object
-    def relationship_generator(self, source_ref, target_ref, relationship_type):
+    def relationship_generator(
+        self,
+        source_ref: str,
+        target_ref: str,
+        relationship_type: str,
+        attackdate: datetime = None,
+        discovered: datetime = None,
+    ) -> Relationship:
+
         relation = Relationship(
             id=pycti.StixCoreRelationship.generate_id(
                 relationship_type,
                 source_ref,
                 target_ref,
+                attackdate,
             ),
             relationship_type=relationship_type,
             source_ref=source_ref,
             target_ref=target_ref,
+            start_time=attackdate if attackdate else None,
+            created=discovered if discovered else None,
             created_by_ref=self.author.get("id"),
         )
         return relation
@@ -392,6 +403,16 @@ class RansomwareAPIConnector:
         # RansomNote External Reference
         external_references_group = self.ransom_note_generator(item.get("group"))
 
+        # Attack Date sets the start_time of the relationship between a threat actor or intrusion set and a victim.
+        # This value (attack_date_iso) will also be used in the report. (Report : Attack Date -> Published)
+        attack_date = item.get("attackdate")
+        attack_date_iso = datetime.fromisoformat(attack_date)
+
+        # Discovered sets the created date of the relationship between a Threat Actor or Intrusion Set and a Victim.
+        # This value (discovered_iso) will also be used in the report. (Report : Discovered -> Created)
+        discovered = item.get("discovered")
+        discovered_iso = datetime.fromisoformat(discovered)
+
         # Creating Threat Actor object
         threat_actor = None
         if self.create_threat_actor:
@@ -409,7 +430,11 @@ class RansomwareAPIConnector:
             )
 
             target_relation = self.relationship_generator(
-                threat_actor.get("id"), victim.get("id"), "targets"
+                threat_actor.get("id"),
+                victim.get("id"),
+                "targets",
+                attack_date_iso,
+                discovered_iso,
             )
 
         # Creating Intrusion Set object
@@ -442,7 +467,11 @@ class RansomwareAPIConnector:
                 )
 
             relation_vi_is = self.relationship_generator(
-                intrusion_set.get("id"), victim.get("id"), "targets"
+                intrusion_set.get("id"),
+                victim.get("id"),
+                "targets",
+                attack_date_iso,
+                discovered_iso,
             )
             if self.create_threat_actor:
                 relation_is_ta = self.relationship_generator(
@@ -476,17 +505,15 @@ class RansomwareAPIConnector:
             object_refs.append(target_relation.get("id"))
             object_refs.append(relation_is_ta.get("id"))
         report_name = item.get("group") + " has published a new victim: " + post_title
-        report_created = datetime.fromisoformat(item.get("discovered"))
-        report_published = datetime.fromisoformat(item.get("attackdate"))
         report = Report(
-            id=pycti.Report.generate_id(report_name, report_published),
+            id=pycti.Report.generate_id(report_name, attack_date_iso),
             report_types=["Ransomware-report"],
             name=report_name,
             description=item.get("description"),
             created_by_ref=self.author.get("id"),
             object_refs=object_refs,
-            published=report_published,
-            created=report_created,
+            published=attack_date_iso,
+            created=discovered_iso,
             object_marking_refs=[self.marking.get("id")],
             external_references=external_references,
         )
