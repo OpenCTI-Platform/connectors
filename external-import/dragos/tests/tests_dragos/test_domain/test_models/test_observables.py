@@ -6,7 +6,6 @@ import pytest
 import stix2
 from dragos.domain.models import octi
 from dragos.domain.models.octi.enums import (
-    EncryptionAlgorithm,
     ObservableType,
     PatternType,
     TLPLevel,
