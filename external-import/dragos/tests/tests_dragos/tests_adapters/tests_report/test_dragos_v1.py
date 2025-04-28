@@ -5,6 +5,7 @@ from io import BytesIO
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from client_api.errors import DragosAPIError
 from client_api.v1 import DragosClientAPIV1
 from client_api.v1.indicator import IndicatorResponse, IndicatorsResponse
 from client_api.v1.product import ProductResponse, TagResponse
@@ -17,6 +18,8 @@ from dragos.adapters.report.dragos_v1 import (
 )
 from pydantic import SecretStr
 from yarl import URL
+
+from dragos.interfaces.report import IncompleteReportWarning
 
 
 def fake_tag_response():
@@ -92,7 +95,7 @@ def fake_indicators_response():
 
 
 @pytest.fixture
-def mock_dragos_client():
+def mock_dragos_client(scope="function"):
     """Fixture to create a mock Dragos client."""
     client = Mock(spec=DragosClientAPIV1)
 
@@ -240,3 +243,57 @@ def test_indicator_api_v1_from_indicator_response_returns_indicator():
     assert indicator.value == indicator_response.value  # noqa: S101
     assert indicator.first_seen == indicator_response.first_seen  # noqa: S101
     assert indicator.last_seen == indicator_response.last_seen  # noqa: S101
+
+
+def test_reports_api_v1_iter_raises_warning_if_pdf_cannot_be_acquired(
+    mock_dragos_client,
+):
+    """Test that ReportsAPIV1 iter() raises a warning if PDF cannot be acquired."""
+    # Given an instance of ReportsAPIV1
+    reports_api_v1 = ReportsAPIV1(
+        base_url=URL("http://example.com"),
+        token=SecretStr("<API_TOKEN>"),  # noqa: S106 # Fake token for testing
+        secret=SecretStr("<API_SECRET>"),  # noqa: S106 # Fake secret for testing
+        timeout=timedelta(seconds=10),
+        retry=3,
+        backoff=timedelta(seconds=1),
+    )
+    mock_dragos_client.product.get_product_pdf.side_effect = DragosAPIError(
+        "Failed to retrieve PDF"
+    )  # Simulate PDF retrieval failure
+    reports_api_v1._client = mock_dragos_client
+
+
+    # When calling iter()
+    start_date = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+    # Then a warning should be raised
+    with pytest.warns(IncompleteReportWarning) as records:
+        list(reports_api_v1.iter(since=start_date))
+        assert isinstance(records[0].message, IncompleteReportWarning) # noqa: S101
+
+def test_reports_api_v1_iter_raises_warning_if_indicators_cannot_be_acquired(
+    mock_dragos_client,
+):
+    """Test that ReportsAPIV1 iter() raises a warning if indicators cannot be acquired."""
+    # Given an instance of ReportsAPIV1
+    reports_api_v1 = ReportsAPIV1(
+        base_url=URL("http://example.com"),
+        token=SecretStr("<API_TOKEN>"),  # noqa: S106 # Fake token for testing
+        secret=SecretStr("<API_SECRET>"),  # noqa: S106 # Fake secret for testing
+        timeout=timedelta(seconds=10),
+        retry=3,
+        backoff=timedelta(seconds=1),
+    )
+    mock_dragos_client.indicator.get_all_indicators.side_effect = DragosAPIError(
+        "Failed to retrieve indicators"
+    )  # Simulate indicators retrieval failure
+    reports_api_v1._client = mock_dragos_client
+
+    # When calling iter()
+    start_date = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+    # Then a warning should be raised
+    with pytest.warns(IncompleteReportWarning) as records:
+        list(reports_api_v1.iter(since=start_date))
+        assert isinstance(records[0].message, IncompleteReportWarning)  # noqa: S101

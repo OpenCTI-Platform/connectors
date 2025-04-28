@@ -176,9 +176,15 @@ class ExtendedProductResponse:
     @property
     def indicators(self) -> list["IndicatorResponse"]:
         """Get all indicators related to the product."""
-        indicators_resp = asyncio.run(
-            self._client.indicator.get_all_indicators(serials=[self.product.serial])
-        )
+        try:
+            # Get all indicators related to the product
+            indicators_resp = asyncio.run(
+                self._client.indicator.get_all_indicators(serials=[self.product.serial])
+            )
+        except DragosAPIError as e:
+            raise IndicatorRetrievalError(
+                f"Failed to retrieve indicators: {str(e)}"
+            ) from e
         return indicators_resp.indicators
 
     @property
@@ -254,13 +260,15 @@ class ReportsAPIV1(Reports):
                         @property
                         def indicators(self) -> list["IndicatorResponse"]:
                             # select based on error type
-                            if isinstance(e, IndicatorRetrievalError):
+                            if isinstance(e, IndicatorRetrievalError):  # noqa: F821
+                                # flake 8 does not realize that e is an instance of
+                                # IndicatorRetrievalError
                                 return []
                             return super().indicators
 
                         @property
                         def pdf(self) -> Optional[BytesIO]:
-                            if isinstance(e, PDFRetrievalError):
+                            if isinstance(e, PDFRetrievalError):  # noqa: F821
                                 return None
                             return super().pdf
 
