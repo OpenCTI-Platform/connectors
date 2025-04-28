@@ -80,7 +80,6 @@ graph LR
                                 OpenCTIUploadedFile[Uploaded File]
                         end
                         subgraph Observables
-                                OpenCTIArtifact[Artifact]
                                 OpenCTIDomainName[Domain Name]
                                 OpenCTIIPAddress[IP Address]
                                 OpenCTIFile[File]
@@ -93,7 +92,7 @@ graph LR
         %% Dragos reports generate OpenCTI entities
         DragosReport ==> OpenCTIReport
         DragosReportTags ==> OpenCTIIntrusionSet & OpenCTISector & OpenCTIMalware & OpenCTILocation & OpenCTIVulnerability & OpenCTIOrganization
-        DragosReportsIndicators ==> OpenCTIArtifact & OpenCTIDomainName & OpenCTIIPAddress & OpenCTIFile & OpenCTIURL
+        DragosReportsIndicators ==> OpenCTIDomainName & OpenCTIIPAddress & OpenCTIFile & OpenCTIURL
         DragosReportPDF ==> OpenCTIUploadedFile
         Observables ==> |looping over each observable| Indicators
 
@@ -184,7 +183,22 @@ The connector currently does not handle the following Dragos tags:
 - vendor
 - malware class
 
-They're not converted into OpenCTI entities. As a fallback, they're currently stored as is as reports labels.
+**They are not converted into OpenCTI entities.** As a fallback, they're currently stored as is as reports labels.
+
+### Dragos indicators mapping
+
+The connector maps the following indicator types to their OpenCTI observables counterparts:
+
+- domain
+- ip
+- url
+
+⚠️ The following indicator types are all mapped to OpenCTI _File_ observables:
+
+- artifact
+- md5
+- sha1
+- sha256
 
 ## Development
 
