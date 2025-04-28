@@ -1,9 +1,10 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated, Literal, Optional
 
 from connector.models import ConfigBaseSettings
 from pydantic import (
+    AwareDatetime,
     Field,
     HttpUrl,
     PlainSerializer,
@@ -124,7 +125,8 @@ class _ConfigLoaderServiceNow(ConfigBaseSettings):
         default="PT30S",
         description="Exponential backoff duration between API retries (ISO 8601 duration format).",
     )
-    import_start_date: date = Field(
+    import_start_date: Optional[date | AwareDatetime | timedelta] = Field(
+        default="P30D",
         description="Start date of first import (ISO date format).",
     )
     state_to_exclude: Optional[list[str]] = Field(
@@ -140,7 +142,7 @@ class _ConfigLoaderServiceNow(ConfigBaseSettings):
         description="List of security incident priorities to exclude from import.",
     )
     comment_to_exclude: Optional[list[Literal["private", "public", "auto"]]] = Field(
-        default=[],
+        default=None,
         description="List of comment types to exclude: private, public, auto",
     )
     tlp_level: Optional[TLPToLower] = Field(
@@ -158,6 +160,15 @@ class _ConfigLoaderServiceNow(ConfigBaseSettings):
     def parse_list(cls, value):
         if isinstance(value, str):
             return [x.strip().lower() for x in value.split(",") if x.strip()]
+        return value
+
+    @field_validator("import_start_date", mode="after")
+    def _convert_import_start_date_relative_to_utc_datetime(
+        cls, value: date | AwareDatetime | timedelta
+    ) -> date | AwareDatetime | datetime:
+        """Allow relative import_start_date values (timedelta)."""
+        if isinstance(value, timedelta):
+            return datetime.now(tz=timezone.utc) - value
         return value
 
 

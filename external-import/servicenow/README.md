@@ -92,19 +92,19 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter `ServiceNow` | config.yml            | Docker environment variable      | Default        | Mandatory | Description                                                                                                                                   |
-|------------------------|-----------------------|----------------------------------|----------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------|
-| Instance name          | `instance_name`       | `SERVICENOW_INSTANCE_NAME`       | /              | Yes       | Representing the ServiceNow server name.                                                                                                      |
-| Api key                | `api_key`             | `SERVICENOW_API_KEY`             | /              | Yes       | Secure identifier used to validate access to ServiceNow APIs.                                                                                 |
-| Api version            | `api_version`         | `SERVICENOW_API_VERSION`         | `v2`           | No        | ServiceNow API version used for REST requests.                                                                                                |
-| Api retry              | `api_retry`           | `SERVICENOW_API_RETRY`           | `5`            | No        | Maximum number of retry attempts in case of API failure.                                                                                      |
-| Api backoff            | `api_backoff`         | `SERVICENOW_API_BACKOFF`         | `PT30S`        | No        | Exponential backoff duration between API retries (ISO 8601 duration format).                                                                  |
-| Import start date      | `import_start_date`   | `SERVICENOW_IMPORT_START_DATE`   | /              | Yes       | The date from which data import should start. (Format YYYY-MM-DD)                                                                             |
-| State to exclude       | `state_to_exclude`    | `SERVICENOW_STATE_TO_EXCLUDE`    | `No exclusion` | No        | List of security incident states to exclude from import. Example: "eradicate,analysis,closed,cancelled,draft,contain,review,recover"          |
-| Severity to exclude    | `severity_to_exclude` | `SERVICENOW_SEVERITY_TO_EXCLUDE` | `No exclusion` | No        | List of security incident severities to exclude from import. Example: "high,medium,low"                                                       |
-| Priority to exclude    | `priority_to_exclude` | `SERVICENOW_PRIORITY_TO_EXCLUDE` | `No exclusion` | No        | List of security incident priorities to exclude from import. Example: "critical,high,moderate,low,planning"                                   |
-| Comment to exclude     | `comment_to_exclude`  | `SERVICENOW_COMMENT_TO_EXCLUDE`  | `No exclusion` | No        | List of comment to exclude from import. Example: "private,public,auto" (Respectively: "Work notes, Additional comments, Automation activity") |
-| TLP level              | `tlp_level`           | `SERVICENOW_TLP_LEVEL`           | `red`          | No        | TLP markings for exported data (Available: clear, green, amber, amber+strict, red)                                                            |
+| Parameter `ServiceNow` | config.yml            | Docker environment variable      | Default        | Mandatory | Description                                                                                                                                                         |
+|------------------------|-----------------------|----------------------------------|----------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Instance name          | `instance_name`       | `SERVICENOW_INSTANCE_NAME`       | /              | Yes       | Representing the ServiceNow server name.                                                                                                                            |
+| Api key                | `api_key`             | `SERVICENOW_API_KEY`             | /              | Yes       | Secure identifier used to validate access to ServiceNow APIs.                                                                                                       |
+| Api version            | `api_version`         | `SERVICENOW_API_VERSION`         | `v2`           | No        | ServiceNow API version used for REST requests.                                                                                                                      |
+| Api retry              | `api_retry`           | `SERVICENOW_API_RETRY`           | `5`            | No        | Maximum number of retry attempts in case of API failure.                                                                                                            |
+| Api backoff            | `api_backoff`         | `SERVICENOW_API_BACKOFF`         | `PT30S`        | No        | Exponential backoff duration between API retries (ISO 8601 duration format).                                                                                        |
+| Import start date      | `import_start_date`   | `SERVICENOW_IMPORT_START_DATE`   | `P30D`         | No        | The date from which data import should start, accepts several date formats (`YYYY-MM-DD`, `YYYY-MM-DD HH:MM:SS+HH:MM`, `P30D` - 30 days before connector start-up). |
+| State to exclude       | `state_to_exclude`    | `SERVICENOW_STATE_TO_EXCLUDE`    | `No exclusion` | No        | List of security incident states to exclude from import. Example: "eradicate,analysis,closed,cancelled,draft,contain,review,recover"                                |
+| Severity to exclude    | `severity_to_exclude` | `SERVICENOW_SEVERITY_TO_EXCLUDE` | `No exclusion` | No        | List of security incident severities to exclude from import. Example: "high,medium,low"                                                                             |
+| Priority to exclude    | `priority_to_exclude` | `SERVICENOW_PRIORITY_TO_EXCLUDE` | `No exclusion` | No        | List of security incident priorities to exclude from import. Example: "critical,high,moderate,low,planning"                                                         |
+| Comment to exclude     | `comment_to_exclude`  | `SERVICENOW_COMMENT_TO_EXCLUDE`  | `No exclusion` | No        | List of comment to exclude from import. Example: "private,public,auto" (Respectively: "Work notes, Additional comments, Automation activity")                       |
+| TLP level              | `tlp_level`           | `SERVICENOW_TLP_LEVEL`           | `red`          | No        | TLP markings for exported data (Available: clear, green, amber, amber+strict, red)                                                                                  |
 
 ## Deployment
 
@@ -205,6 +205,11 @@ Additionally, a time-based filter is applied on the update date `sys_updated_on`
 
 On the first run, the reference date is defined by the `IMPORT_START_DATE` environment variable. On subsequent runs, the connector uses the `last_run_start_datetime` value to determine which security incidents to collect.
 
+The `IMPORT_START_DATE` environment variable accepts several date formats:
+  - `YYYY-MM-DD`: Date format only (e.g. 2023-04-28). 
+  - `YYYY-MM-DD HH:MM:SS`: Date and time format (e.g. 2023-04-28 14:30:00). 
+  - `P30D`: Time format specifying a period of 30 days before the connector start date. This format follows the ISO 8601 standard for durations (e.g. P30D for "30 days"). This format is used by default if no other value is specified.
+
 Once the filtered list of Security Incidents is obtained, the connector proceeds to import the following:
 
 - All `Tasks` associated with each incident
@@ -285,7 +290,7 @@ Compatible release versions (tested) for ServiceNow instances are :
 
 ---
 
-### Security incident import date management
+### Management of the import date of security incidents
 The connector imports security incidents based on their last update date (`sys_updated_on`), not their creation date (`sys_created_on`). This behaviour has both benefits and important implications that you should be aware of.
 
 Benefits :
@@ -293,7 +298,7 @@ Benefits :
   - This ensures continuous synchronisation with the current status of security incidents in ServiceNow, even after they are initially created.
 
 Please note : 
-  - On the first run, the reference date is defined by the `IMPORT_START_DATE` environment variable. On subsequent runs, the connector uses the `last_run_start_datetime` value to determine which security incidents to collect. 
+  - On the first run, the reference date is defined by the `IMPORT_START_DATE` environment variable (by default, this value is 30 days prior to the start of the connector). On subsequent runs, the connector uses the `last_run_start_datetime` value to determine which security incidents to collect. The state will contain the `last_run_end_datetime_with_ingested_data` variable (for information), which indicates the last date on which the connector sent data to OpenCTI.
   - The connector does not distinguish whether the modified field is actually used by it. So an update to an unused field (such as PIR - Post-Incident Review) can still trigger a complete re-import of the security incident without any real change in OpenCTI.
   - You can also observe the import of security incidents created before the configured `import_start_date`, but updated after this date.
   → For example, a security incident created in `2024-01-01` and updated in `2025-05-01` will be imported even if the `import_start_date` is configured as `2025-01-01`. In OpenCTI the creation date will be displayed as `2024-01-01` as this is its original value.

@@ -22,9 +22,9 @@ servicenow:
   # ServiceNow definition parameters - REQUIRED
   instance_name: 'ChangeMe'
   api_key: 'ChangeMe'
-  import_start_date: 'ChangeMe' # Format 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'
 
   # ServiceNow definition parameters - OPTIONAL
+  #import_start_date: 'ChangeMe' # Format 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS+HH:MM' or ISO 8601 duration - Default: "P30D"
   #api_version: 'ChangeMe' # Default: "v2"
   #api_retry: ChangeMe # Default: 5
   #api_backoff: 'ChangeMe' # Default: 'PT30S'

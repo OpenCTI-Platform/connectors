@@ -112,9 +112,10 @@ class Utils:
                         "auto": "automation activity",
                     }
                     # Detection and filtering comments according to configuration.
+                    list_comment_to_exclude_config = comment_to_exclude or []
                     if any(
                         comment_mapping[item.lower()] in author.lower()
-                        for item in comment_to_exclude
+                        for item in list_comment_to_exclude_config
                     ):
                         continue
 
