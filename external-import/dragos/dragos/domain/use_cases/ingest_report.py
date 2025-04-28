@@ -245,10 +245,9 @@ class ReportProcessor(BaseUseCase):
             indicator = None
             observable = make_observable(related_indicator)
             if observable:
-                indicator = observable.to_indicator(
-                    valid_from=related_indicator.first_seen,
-                    valid_until=related_indicator.last_seen,
-                )
+                # Dragos reports contains indicators with first_seen and last_seen that can be
+                # the same. We do not stipulate a validity time range.
+                indicator = observable.to_indicator()
             if observable and indicator:
                 yield (observable, indicator)
 

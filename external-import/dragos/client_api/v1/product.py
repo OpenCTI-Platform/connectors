@@ -3,7 +3,7 @@
 import asyncio
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import AsyncIterator, Literal, Optional
+from typing import AsyncIterator, Iterator, Literal, Optional
 
 from pydantic import AwareDatetime, Field, HttpUrl
 
@@ -93,7 +93,7 @@ class ProductClientAPIV1(BaseClientAPIV1):
     async def _get_1_page(
         self,
         page: int = 1,
-        page_size: int = 50,
+        page_size: int = 500,
         sort_by: Literal["release_date", "updated_at", "title"] = "release_date",
         sort_desc: bool = False,
         updated_after: Optional[AwareDatetime] = None,
@@ -377,3 +377,91 @@ class ProductClientAPIV1(BaseClientAPIV1):
         resp = await BaseClientAPIV1._get_retry(self, query_url=url)
         pdf_bytes = resp._body
         return BytesIO(pdf_bytes)  # type: ignore[arg-type]
+
+    def sync_iter_products(
+        self,
+        page_size: int = 50,
+        updated_after: Optional[AwareDatetime] = None,
+        released_after: Optional[AwareDatetime] = None,
+        serials: Optional[list[str]] = None,
+        indicator: Optional[str] = None,
+    ) -> Iterator[ProductResponse]:
+        """Make a synchronous iterator to retrieve products.
+
+        Args:
+            page_size (int): Page size (default 50, must be less than 501).
+            updated_after (Optional[AwareDatetime]): To filter to recently updated products.
+            released_after (Optional[AwareDatetime]): To filter to recently released products.
+            serials (Optional[list[str]]): Filter reports from an array of serials.
+            indicator (Optional[str]): Filter reports related to a given indicator (exact match only).
+
+        Yields:
+            ProductResponse: The response from the API.
+
+        See Also:
+            iter_products: Asynchronous version of this method.
+
+        Examples:
+        >>> from yarl import URL
+        >>> from pydantic import SecretStr
+        >>> from datetime import timedelta, datetime
+        >>> client = ProductClientAPIV1(
+        ...     base_url=URL("http://127.0.0.1:4000"),
+        ...     token=SecretStr("dev"),
+        ...     secret=SecretStr("dev"),
+        ...     timeout=timedelta(seconds=10),
+        ...     retry=1,
+        ...     backoff=timedelta(seconds=1),
+        ... )
+        >>> results = client.sync_iter_products(
+        ...     updated_after=datetime.fromisoformat("2023-03-01T00:00:00Z")
+        ... )
+        >>> print([val for val in results])
+
+        """
+
+        class _SyncIterator(Iterator[ProductResponse]):
+            def __init__(_self) -> None:  # noqa: N805 # _selt to diffrentiate from self
+                _self.current_page = 0
+                _self.items: list[ProductResponse] = []  # page cache
+                _self.index_in_items = 0
+                _self.total_pages: Optional[int] = (
+                    None  # will be updated after 1st call
+                )
+
+            def __iter__(_self) -> "_SyncIterator":  # noqa: N805
+                return _self
+
+            def __next__(_self) -> ProductResponse:  # noqa: N805
+                # Load next page if needed
+                if _self.index_in_items >= len(_self.items):
+                    if (
+                        _self.total_pages is not None
+                        and _self.current_page >= _self.total_pages
+                    ):
+                        raise StopIteration
+                    # Fetch the next page synchronously
+                    loop = asyncio.get_event_loop()
+                    page_response = loop.run_until_complete(
+                        self._get_1_page(
+                            page=_self.current_page + 1,
+                            page_size=page_size,
+                            updated_after=updated_after,
+                            released_after=released_after,
+                            serials=serials,
+                            indicator=indicator,
+                        )
+                    )
+                    _self.current_page += 1
+                    _self.index_in_items = 0
+                    _self.total_pages = page_response.total_pages
+                    _self.items = page_response.products
+
+                if len(_self.items) == 0:
+                    raise StopIteration
+
+                item = _self.items[_self.index_in_items]
+                _self.index_in_items += 1
+                return item
+
+        return _SyncIterator()

@@ -1,7 +1,7 @@
 """Offer Application containing orchestration logic for the Dragos Connector."""
 
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 from dragos.domain.models.octi.enums import TLPLevel
@@ -29,6 +29,37 @@ class Connector:
     """
 
     LAST_WORK_START_KEY = "last_work_start_datetime"
+    LAST_INGESTED_REPORT_UPDATE_KEY = "last_ingested_report_update_datetime"
+
+    def __init__(
+        self,
+        config: "ConfigLoader",
+        reports: "Reports",
+        geocoding: "Geocoding",
+        helper: OpenCTIConnectorHelper,
+    ):
+        """Initialize the Connector with necessary configurations."""
+        # Load configuration file and connection helper
+        self._config = config
+        self._helper = helper
+        self._logger = helper.connector_logger
+        self._reports = reports
+        self._geocoding = geocoding
+        self._report_processor = ReportProcessor(
+            tlp_level=TLPLevel[self._config.dragos.tlp_level.upper()],
+            geocoding=self._geocoding,
+        )
+        # To be intialized during work
+        # keep track of current work
+        self.work_id = None
+        # keep track of current work datetime to update state
+        # and last ingested report datetime
+        # when finalizing work
+        self._work_start_datetime: datetime | None = None
+        self._last_ingested_report_update: datetime | None = None
+        # keep track of acquisition datetime
+        # for ingestion driving
+        self._acquire_since: datetime | None = None
 
     # Define ETL
     def _process_report(self, report: "Report") -> None:
@@ -64,11 +95,13 @@ class Connector:
 
         try:
             successes: list[bool] = []
+            successfully_ingested_report_dates: list[datetime] = []
             while True:
                 try:
                     for report in self._reports.iter(since=self._acquire_since):
                         self._process_report(report)
                         successes.append(True)
+                        successfully_ingested_report_dates.append(report.updated_at)
                     else:
                         break
                 except DataRetrievalError as e:
@@ -89,6 +122,10 @@ class Connector:
             # update error flag if not all successes
             # do not fail if no reports were found
             error_flag = not (all(successes))
+            if successfully_ingested_report_dates:
+                self._last_ingested_report_update = max(
+                    successfully_ingested_report_dates
+                )
 
         except (KeyboardInterrupt, SystemExit):
             error_message = "Connector stopped by user or system"
@@ -104,33 +141,6 @@ class Connector:
             self._finalize_work(error_flag)
 
     # Tools
-    def __init__(
-        self,
-        config: "ConfigLoader",
-        reports: "Reports",
-        geocoding: "Geocoding",
-        helper: OpenCTIConnectorHelper,
-    ):
-        """Initialize the Connector with necessary configurations."""
-        # Load configuration file and connection helper
-        self._config = config
-        self._helper = helper
-        self._logger = helper.connector_logger
-        self._reports = reports
-        self._geocoding = geocoding
-        self._report_processor = ReportProcessor(
-            tlp_level=TLPLevel[self._config.dragos.tlp_level.upper()],
-            geocoding=self._geocoding,
-        )
-        # To be intialized during work
-        # keep track of current work
-        self.work_id = None
-        # keep track of current work datetime to update state
-        # when finalizing work
-        self._work_start_datetime: datetime | None = None
-        # keep track of last run datetime
-        # for ingestion driving
-        self._acquire_since: datetime | None = None
 
     def _log_error(self, error_message: str) -> None:
         # to connector logger
@@ -166,15 +176,21 @@ class Connector:
         self._logger.debug("[CONNECTOR] Connector current state", {"state": state})
 
         # set aquisition date
-
-        last_run_datetime_state = state.get(self.LAST_WORK_START_KEY)
-
-        if last_run_datetime_state is not None:
-
+        last_ingested_report_update_state = state.get(
+            self.LAST_INGESTED_REPORT_UPDATE_KEY
+        )
+        if last_ingested_report_update_state is not None:
             self._logger.debug(
                 "[CONNECTOR] Connector acquisition SINCE parameter overwritten"
             )
-            self._acquire_since = datetime.fromisoformat(last_run_datetime_state)
+            self._last_ingested_report_update = datetime.fromisoformat(
+                last_ingested_report_update_state
+            )
+            self._acquire_since = self._last_ingested_report_update + timedelta(
+                milliseconds=1
+            )
+            # avoid reimporting last imported report
+
         else:
             self._logger.debug("[CONNECTOR] Connector has never run successfully.")
             self._acquire_since = self._config.dragos.import_start_date  # type: ignore[assignment]
@@ -210,6 +226,11 @@ class Connector:
             key=self.LAST_WORK_START_KEY,
             value=self._work_start_datetime,  # type: ignore[arg-type] # should not be None
         )
+        if self._last_ingested_report_update is not None:
+            self._force_update_state(
+                key=self.LAST_INGESTED_REPORT_UPDATE_KEY,
+                value=self._last_ingested_report_update,
+            )
 
         self._helper.api.work.to_processed(
             work_id=self.work_id,
@@ -220,6 +241,7 @@ class Connector:
         # reset
         self.work_id = None
         self._work_start_datetime = None
+        self._last_ingested_report_update = None
         self._acquire_since = None
 
     def _send_bundle(self, bundle_json: str) -> None:

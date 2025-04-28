@@ -1,21 +1,30 @@
 """Dragos API v1 adapter for reports."""
 
 import asyncio
+import warnings
 from io import BytesIO
 from logging import getLogger
 from typing import TYPE_CHECKING, Iterator, Optional
 
+from client_api.errors import DragosAPIError
 from client_api.v1 import DragosClientAPIV1
 from client_api.v1.indicator import IndicatorResponse
 from client_api.v1.product import ProductResponse, TagResponse
 from dragos.interfaces import Indicator, Report, Reports, Tag
+from dragos.interfaces.report import (
+    IncompleteReportWarning,
+    IndicatorRetrievalError,
+    PDFRetrievalError,
+)
 from pydantic import PrivateAttr
 
 logger = getLogger(__name__)
 
+
 if TYPE_CHECKING:
     from datetime import datetime, timedelta
 
+    from limiter import Limiter  # type: ignore[import-untyped]  # Limiter is not typed
     from pydantic import SecretStr
     from yarl import URL
 
@@ -88,49 +97,49 @@ class IndicatorAPIV1(Indicator):
 class ReportAPIV1(Report):
     """Define Report from Dragos API v1."""
 
-    _product_response: "ExtendedProductResponse" = PrivateAttr()
+    _extended_product_response: "ExtendedProductResponse" = PrivateAttr()
 
     def __init__(self) -> None:
         """Initialize the Report instance."""
         Report.__init__(self)
 
     @classmethod
-    def from_product_response(
-        cls, product_response: "ExtendedProductResponse"
+    def from_extended_product_response(
+        cls, extended_product_response: "ExtendedProductResponse"
     ) -> "ReportAPIV1":
         """Convert ExtendedProductResponse instance to ReportAPIV1 instance."""
-        cls._product_response = product_response
+        cls._extended_product_response = extended_product_response
         return cls()
 
     @property
     def _serial(self) -> str:
         """Get report's serial."""
-        return self._product_response.product.serial
+        return self._extended_product_response.product.serial
 
     @property
     def _title(self) -> str:
         """Get report's title."""
-        return self._product_response.product.title
+        return self._extended_product_response.product.title
 
     @property
     def _created_at(self) -> str:
         """Get report's creation date."""
-        return self._product_response.product.release_date.isoformat()
+        return self._extended_product_response.product.release_date.isoformat()
 
     @property
     def _updated_at(self) -> str:
         """Get report's last update date."""
-        return self._product_response.product.updated_at.isoformat()
+        return self._extended_product_response.product.updated_at.isoformat()
 
     @property
     def _summary(self) -> str:
         """Get report's summary."""
-        return self._product_response.product.executive_summary
+        return self._extended_product_response.product.executive_summary
 
     @property
     def _pdf(self) -> Optional[bytes]:
         """Get report's PDF content."""
-        pdf_bytes = self._product_response.pdf
+        pdf_bytes = self._extended_product_response.pdf
         if pdf_bytes:
             return pdf_bytes.read()
         return None
@@ -139,7 +148,7 @@ class ReportAPIV1(Report):
     def _related_tags(self) -> list[Tag]:
         """Get all related tags."""
         tags = []
-        for tag in self._product_response.product.tags:
+        for tag in self._extended_product_response.product.tags:
             if not tag.tag_type or not tag.text:
                 # Skip tags without type or text
                 logger.warning("Skipping tag without type or text")
@@ -152,7 +161,7 @@ class ReportAPIV1(Report):
         """Gett all related indicators."""
         return [
             IndicatorAPIV1.from_indicator_response(indicator)
-            for indicator in self._product_response.indicators
+            for indicator in self._extended_product_response.indicators
         ]
 
 
@@ -167,17 +176,10 @@ class ExtendedProductResponse:
     @property
     def indicators(self) -> list["IndicatorResponse"]:
         """Get all indicators related to the product."""
-
-        async def iter_indicators() -> list[IndicatorResponse]:
-            """Iterate over all indicators."""
-            async_indicators = self._client.indicator.iter_indicators(
-                serials=[self.product.serial]
-            )
-
-            return [indicator async for indicator in async_indicators]
-
-        indicators = asyncio.run(iter_indicators())
-        return indicators
+        indicators_resp = asyncio.run(
+            self._client.indicator.get_all_indicators(serials=[self.product.serial])
+        )
+        return indicators_resp.indicators
 
     @property
     def pdf(self) -> Optional[BytesIO]:
@@ -189,7 +191,10 @@ class ExtendedProductResponse:
                 serial=self.product.serial
             )
 
-        pdf = asyncio.run(get_pdf())
+        try:
+            pdf = asyncio.run(get_pdf())
+        except DragosAPIError as e:
+            raise PDFRetrievalError(f"Failed to retrieve PDF: {str(e)}") from e
         return pdf
 
 
@@ -204,7 +209,8 @@ class ReportsAPIV1(Reports):
         timeout: "timedelta",
         retry: int,
         backoff: "timedelta",
-    ):
+        rate_limiter: Optional["Limiter"] = None,
+    ) -> None:
         """Initialize the adapter."""
         self._client = DragosClientAPIV1(
             base_url=base_url,
@@ -213,23 +219,55 @@ class ReportsAPIV1(Reports):
             timeout=timeout,
             retry=retry,
             backoff=backoff,
+            rate_limiter=rate_limiter,
         )
 
     def iter(self, since: "datetime") -> Iterator[Report]:
-        """List all Dragos reports."""
+        """Create an iterator for reports based on an async one."""
 
-        async def iter_products() -> list[ExtendedProductResponse]:
-            """Iterate over all products."""
-            product_responses = self._client.product.iter_products(updated_after=since)
+        class ReportIterator(Iterator[Report]):
+            def __init__(_self) -> None:  # noqa: N805 # _selt to diffrentiate from self
+                _self._it = self._client.product.sync_iter_products(updated_after=since)
 
-            return [
-                ExtendedProductResponse(product=product, client=self._client)
-                async for product in product_responses
-            ]
+            def __iter__(_self) -> "ReportIterator":  # noqa: N805
+                return _self
 
-        products = asyncio.run(iter_products())
-        reports = []
-        for product in products:
-            report = ReportAPIV1.from_product_response(product)
-            reports.append(report)
-        return iter(reports)
+            def __next__(_self) -> Report:  # noqa: N805
+                product_response = next(_self._it)
+                try:
+                    extended_product_response = ExtendedProductResponse(
+                        product=product_response, client=self._client
+                    )
+                    return ReportAPIV1.from_extended_product_response(
+                        extended_product_response
+                    )
+                except (IndicatorRetrievalError, PDFRetrievalError) as e:
+                    logger.warning(f"Failed to retrieve complete report: {e}")
+                    warnings.warn(
+                        f"Failed to retrieve complete report: {e}",
+                        category=IncompleteReportWarning,
+                        stacklevel=2,
+                    )
+
+                    # Create a partial extended product response to return the report
+                    class PartialExtendedProductResponse(ExtendedProductResponse):
+                        @property
+                        def indicators(self) -> list["IndicatorResponse"]:
+                            # select based on error type
+                            if isinstance(e, IndicatorRetrievalError):
+                                return []
+                            return super().indicators
+
+                        @property
+                        def pdf(self) -> Optional[BytesIO]:
+                            if isinstance(e, PDFRetrievalError):
+                                return None
+                            return super().pdf
+
+                    return ReportAPIV1.from_extended_product_response(
+                        extended_product_response=PartialExtendedProductResponse(
+                            product=product_response, client=self._client
+                        )
+                    )
+
+        return ReportIterator()
