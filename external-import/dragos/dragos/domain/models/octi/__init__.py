@@ -22,7 +22,6 @@ from .domain import (
     Vulnerability,
 )
 from .observables import (
-    Artifact,
     DomainName,
     File,
     IPV4Address,
@@ -33,7 +32,6 @@ from .observables import (
 from .relationships import IndicatorBasedOnObservable
 
 __all__ = [
-    "Artifact",
     "BaseEntity",  # for typing purpose
     "DomainName",
     "DomainObject",  # for typing purpose

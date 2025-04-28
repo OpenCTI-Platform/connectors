@@ -85,17 +85,6 @@ class CvssSeverity(StrEnum):
     UNKNOWN = "Unknown"
 
 
-class EncryptionAlgorithm(StrEnum):
-    """Encryption Algorithm Enum.
-
-    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_nfgle8k7nbo4
-    """
-
-    AES_256_GCM = "AES-256-GCM"
-    CHACHA20_POLY1305 = "ChaCha20-Poly1305"
-    MIME_TYPE_INDICATED = "mime-type-indicated"
-
-
 class HashAlgorithm(PermissiveEnum):
     """Hash Algorithm Open Vocabulary.
 
