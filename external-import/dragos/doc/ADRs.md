@@ -113,3 +113,12 @@
 
 - Enhances business logic organization.
 - Centralizes STIX format conversion through a unified factory method.  
+
+## ADR: Use of Bucket Limiter for V1 API Client
+
+**Context:** Rate limiting for API requests.
+**Decision:** Implement a bucket limiter for the V1 API client, the value is hardcoded to default DrgaosAPIWorldview V1 rate limit (60 req/min).
+**Rationale:**
+
+- Ensures compliance with API rate limits.
+- Bucket limiter allows first burst of request if relevant.
