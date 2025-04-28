@@ -441,7 +441,14 @@ class ProductClientAPIV1(BaseClientAPIV1):
                     ):
                         raise StopIteration
                     # Fetch the next page synchronously
-                    loop = asyncio.get_event_loop()
+                    try:
+                        loop = asyncio.get_event_loop()
+                        if loop.is_closed():  # Handle cases where the loop is closed
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                    except RuntimeError:  # No event loop in the current thread
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
                     page_response = loop.run_until_complete(
                         self._get_1_page(
                             page=_self.current_page + 1,
