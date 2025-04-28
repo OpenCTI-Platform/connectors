@@ -56,13 +56,13 @@ class ReportProcessor(BaseUseCase):
 
     def _make_file(self, indicator: "Indicator") -> octi.File:
         """Make an OCTI File from report's indicator."""
-        hash_algorithm = indicator.type
-        hash_value = indicator.value
-
         # Indicators of type "artifact" are mapped to File observables in OCTI
         # as Dragos does not provide any payload for them.
         if indicator.type == "artifact":
             hash_algorithm, hash_value = indicator.value.split(":")
+        else:
+            hash_algorithm = indicator.type
+            hash_value = indicator.value
 
         return octi.File(
             hashes={hash_algorithm: hash_value},
