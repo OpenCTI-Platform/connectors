@@ -16,10 +16,9 @@ from dragos.adapters.report.dragos_v1 import (
     ReportsAPIV1,
     TagAPIV1,
 )
+from dragos.interfaces.report import IncompleteReportWarning
 from pydantic import SecretStr
 from yarl import URL
-
-from dragos.interfaces.report import IncompleteReportWarning
 
 
 def fake_tag_response():
@@ -263,14 +262,14 @@ def test_reports_api_v1_iter_raises_warning_if_pdf_cannot_be_acquired(
     )  # Simulate PDF retrieval failure
     reports_api_v1._client = mock_dragos_client
 
-
     # When calling iter()
     start_date = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
     # Then a warning should be raised
     with pytest.warns(IncompleteReportWarning) as records:
         list(reports_api_v1.iter(since=start_date))
-        assert isinstance(records[0].message, IncompleteReportWarning) # noqa: S101
+        assert isinstance(records[0].message, IncompleteReportWarning)  # noqa: S101
+
 
 def test_reports_api_v1_iter_raises_warning_if_indicators_cannot_be_acquired(
     mock_dragos_client,

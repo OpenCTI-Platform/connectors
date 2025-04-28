@@ -122,3 +122,12 @@
 
 - Ensures compliance with API rate limits.
 - Bucket limiter allows first burst of request if relevant.
+
+## Simplify config variables to strict minimum
+
+**Context:** Configuration management and environment variable handling.
+**Decision:** Use a minimal set of mandatory environment variables for configuration.
+**Rationale:**
+
+- Reduces complexity and potential for misconfiguration.
+- Ensures that only essential variables are required for the application to run.

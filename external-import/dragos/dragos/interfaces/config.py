@@ -87,28 +87,30 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
     """Interface for loading connector dedicated configuration."""
 
     id: str = Field(
-        ...,
+        default="5147f35a-4fe8-4f43-82c2-8158f0175000",
         description="A unique UUIDv4 identifier for this connector instance.",
+        min_length=1,
     )
     type: Literal["EXTERNAL_IMPORT"] = Field(
-        ...,
+        default="EXTERNAL_IMPORT",
         description="Should always be set to EXTERNAL_IMPORT for this connector.",
     )
     name: str = Field(
-        ...,
+        default="Dragos",
         description="Name of the connector.",
+        min_length=1,
     )
     scope: list[str] = Field(
-        ...,
+        default=["report"],
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
         min_length=1,
     )
     log_level: Literal["debug", "info", "warn", "error"] = Field(
-        ...,
+        default="warn",
         description="Determines the verbosity of the logs.",
     )
     duration_period: timedelta = Field(
-        ...,
+        default=timedelta(days=1),
         description="Duration between two scheduled runs of the connector (ISO format).",
     )
     queue_threshold: Optional[int] = Field(
@@ -147,12 +149,12 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
                 scope=self._scope,
                 log_level=self._log_level,
                 duration_period=self._duration_period,
-                queue_threshold=self._queue_threshold,
-                run_and_terminate=self._run_and_terminate,
-                send_to_queue=self._send_to_queue,
-                send_to_directory=self._send_to_directory,
-                send_to_directory_path=self._send_to_directory_path,
-                send_to_directory_retention=self._send_to_directory_retention,
+                queue_threshold=self._queue_threshold,  # default to pycti value if needed
+                run_and_terminate=self._run_and_terminate,  # default to pycti value if needed
+                send_to_queue=self._send_to_queue,  # default to pycti value if needed
+                send_to_directory=self._send_to_directory,  # default to pycti value if needed
+                send_to_directory_path=self._send_to_directory_path,  # default to pycti value if needed
+                send_to_directory_retention=self._send_to_directory_retention,  # default to pycti value if needed
             )
         except ValidationError as exc:
             error_message = "Invalid connector configuration."
@@ -161,27 +163,27 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _id(self) -> str:
+    def _id(self) -> Optional[str]:
         pass
 
     @property
     @abstractmethod
-    def _name(self) -> str:
+    def _name(self) -> Optional[str]:
         pass
 
     @property
     @abstractmethod
-    def _scope(self) -> list[str]:
+    def _scope(self) -> Optional[list[str]]:
         pass
 
     @property
     @abstractmethod
-    def _log_level(self) -> Literal["debug", "info", "warn", "error"]:
+    def _log_level(self) -> Optional[Literal["debug", "info", "warn", "error"]]:
         pass
 
     @property
     @abstractmethod
-    def _duration_period(self) -> str:
+    def _duration_period(self) -> Optional[str]:
         pass
 
     @property
@@ -242,7 +244,7 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
     """Interface for loading Dragos dedicated configuration."""
 
     api_base_url: HttpUrl = Field(
-        ...,
+        default=HttpUrl("https://dragos.portal.com"),
         description="Dragos API base URL.",
     )
     api_token: SecretStr = Field(
@@ -254,11 +256,11 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
         description="Dragos API secret.",
     )
     import_start_date: AwareDatetime | timedelta = Field(
-        ...,
+        default=timedelta(days=30),
         description="Start date of first import (ISO format).",
     )
     tlp_level: Literal["white", "green", "amber", "amber+strict", "red"] = Field(
-        ...,
+        default="amber+strict",
         description="TLP level to apply on objects imported into OpenCTI.",
     )
 
@@ -280,7 +282,7 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _api_base_url(self) -> str:
+    def _api_base_url(self) -> Optional[str]:
         pass
 
     @property
@@ -295,12 +297,12 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
 
     @property
     @abstractmethod
-    def _import_start_date(self) -> str:
+    def _import_start_date(self) -> Optional[str]:
         pass
 
     @property
     @abstractmethod
-    def _tlp_level(self) -> str:
+    def _tlp_level(self) -> Optional[str]:
         pass
 
     @field_validator("import_start_date", mode="after")
