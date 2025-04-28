@@ -4,7 +4,6 @@ import sys
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
-from dragos.domain.models.octi.enums import TLPLevel
 from dragos.domain.use_cases.common import UseCaseError
 from dragos.domain.use_cases.ingest_report import ReportProcessor
 from dragos.interfaces.common import DataRetrievalError
@@ -46,7 +45,7 @@ class Connector:
         self._reports = reports
         self._geocoding = geocoding
         self._report_processor = ReportProcessor(
-            tlp_level=TLPLevel[self._config.dragos.tlp_level.upper()],
+            tlp_level=self._config.dragos.tlp_level,
             geocoding=self._geocoding,
         )
         # To be intialized during work

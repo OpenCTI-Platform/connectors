@@ -1,7 +1,7 @@
 """Offer tools to ingest Report and related entities from Dragos reports."""
 
 import logging
-from typing import TYPE_CHECKING, Any, Generator, Optional
+from typing import TYPE_CHECKING, Any, Generator, Literal, Optional
 
 from dragos.domain.models import octi
 from dragos.domain.models.octi.enums import OrganizationType
@@ -9,7 +9,6 @@ from dragos.domain.use_cases.common import BaseUseCase, UseCaseError
 from dragos.interfaces import Area, City, Country, Position, Region
 
 if TYPE_CHECKING:
-    from dragos.domain.models.octi.enums import TLPLevel
     from dragos.interfaces import Geocoding, Indicator, Report, Tag
 
 logger = logging.getLogger(__name__)
@@ -41,7 +40,11 @@ class ReportProcessor(BaseUseCase):
 
     """
 
-    def __init__(self, tlp_level: "TLPLevel", geocoding: "Geocoding"):
+    def __init__(
+        self,
+        tlp_level: Literal["white", "green", "amber", "amber+strict", "red"],
+        geocoding: "Geocoding",
+    ) -> None:
         """Initialize the reports ingestion use case."""
         BaseUseCase.__init__(self, tlp_level)
         self.geocoding = geocoding
