@@ -46,16 +46,6 @@ class ReportProcessor(BaseUseCase):
         BaseUseCase.__init__(self, tlp_level)
         self.geocoding = geocoding
 
-    def _make_artifact(self, indicator: "Indicator") -> octi.Artifact:
-        """Make an OCTI Artifact from report's indicator."""
-        hash_algorithm, hash_value = indicator.value.split(":")
-
-        return octi.Artifact(
-            hashes={hash_algorithm: hash_value},
-            author=self.author,
-            markings=[self.tlp_marking],
-        )
-
     def _make_domain_name(self, indicator: "Indicator") -> octi.DomainName:
         """Make an OCTI DomainName from report's indicator."""
         return octi.DomainName(
@@ -66,8 +56,16 @@ class ReportProcessor(BaseUseCase):
 
     def _make_file(self, indicator: "Indicator") -> octi.File:
         """Make an OCTI File from report's indicator."""
+        hash_algorithm = indicator.type
+        hash_value = indicator.value
+
+        # Indicators of type "artifact" are mapped to File observables in OCTI
+        # as Dragos does not provide any payload for them.
+        if indicator.type == "artifact":
+            hash_algorithm, hash_value = indicator.value.split(":")
+
         return octi.File(
-            hashes={indicator.type: indicator.value},
+            hashes={hash_algorithm: hash_value},
             author=self.author,
             markings=[self.tlp_marking],
         )
@@ -227,13 +225,11 @@ class ReportProcessor(BaseUseCase):
             """Make an OCTI observable from a Dragos report related indicator."""
             dragos_indicator_type = _related_indicator.type.lower()
             match dragos_indicator_type:
-                case "artifact":
-                    return self._make_artifact(_related_indicator)
                 case "domain":
                     return self._make_domain_name(_related_indicator)
                 case "ip":
                     return self._make_ip_address(_related_indicator)
-                case "md5" | "sha1" | "sha256":
+                case "artifact" | "md5" | "sha1" | "sha256":
                     return self._make_file(_related_indicator)
                 case "url":
                     return self._make_url(_related_indicator)
