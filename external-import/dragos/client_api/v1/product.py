@@ -93,7 +93,7 @@ class ProductClientAPIV1(BaseClientAPIV1):
     async def _get_1_page(
         self,
         page: int = 1,
-        page_size: int = 500,
+        page_size: int = 50,
         sort_by: Literal["release_date", "updated_at", "title"] = "release_date",
         sort_desc: bool = False,
         updated_after: Optional[AwareDatetime] = None,
