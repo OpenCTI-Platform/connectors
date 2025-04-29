@@ -101,21 +101,21 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
         min_length=1,
     )
     scope: list[str] = Field(
-        default=["report"],
+        default=["dragos"],
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
         min_length=1,
     )
     log_level: Literal["debug", "info", "warn", "error"] = Field(
-        default="warn",
+        default="error",
         description="Determines the verbosity of the logs.",
     )
     duration_period: timedelta = Field(
-        default=timedelta(days=1),
+        default=timedelta(hours=1),
         description="Duration between two scheduled runs of the connector (ISO format).",
     )
     queue_threshold: Optional[int] = Field(
         None,
-        description="Connector queue max size in Mbytes..",
+        description="Connector queue max size in Mbytes. Default to pycti value.",
     )
     run_and_terminate: Optional[bool] = Field(
         None,
@@ -123,7 +123,7 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
     )
     send_to_queue: Optional[bool] = Field(
         True,
-        description="Connector send-to-queue flag.",
+        description="Connector send-to-queue flag. Default to True.",
     )
     send_to_directory: Optional[bool] = Field(
         None,
@@ -151,7 +151,7 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
                 duration_period=self._duration_period,
                 queue_threshold=self._queue_threshold,  # default to pycti value if needed
                 run_and_terminate=self._run_and_terminate,  # default to pycti value if needed
-                send_to_queue=self._send_to_queue,  # default to pycti value if needed
+                send_to_queue=self._send_to_queue,
                 send_to_directory=self._send_to_directory,  # default to pycti value if needed
                 send_to_directory_path=self._send_to_directory_path,  # default to pycti value if needed
                 send_to_directory_retention=self._send_to_directory_retention,  # default to pycti value if needed
