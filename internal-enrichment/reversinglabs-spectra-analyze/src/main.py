@@ -1,20 +1,20 @@
+from datetime import datetime
+from functools import wraps
 import json
 import os
 import textwrap
 import time
-from datetime import datetime
 from typing import Dict
-from functools import wraps
 
 import stix2
 from lib.internal_enrichment import InternalEnrichmentConnector
 from pycti import (
-    STIX_EXT_OCTI_SCO,
     Identity,
     Indicator,
     Malware,
     Note,
     OpenCTIConnectorHelper,
+    STIX_EXT_OCTI_SCO,
     StixCoreRelationship,
 )
 from ReversingLabs.SDK.a1000 import A1000
