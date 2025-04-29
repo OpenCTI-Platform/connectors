@@ -9,8 +9,15 @@ from typing import Dict
 
 import stix2
 from lib.internal_enrichment import InternalEnrichmentConnector
-from pycti import (STIX_EXT_OCTI_SCO, Identity, Indicator, Malware, Note,
-                   OpenCTIConnectorHelper, StixCoreRelationship)
+from pycti import (
+    STIX_EXT_OCTI_SCO,
+    Identity,
+    Indicator,
+    Malware,
+    Note,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+)
 from ReversingLabs.SDK.a1000 import A1000
 from ReversingLabs.SDK.helper import NotFoundError, RequestTimeoutError
 
