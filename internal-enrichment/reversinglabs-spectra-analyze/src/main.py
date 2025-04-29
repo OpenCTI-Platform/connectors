@@ -1,28 +1,18 @@
 # Standard library imports
-from datetime import datetime
-from functools import wraps
-from typing import Dict
 import json
 import os
 import textwrap
 import time
+from datetime import datetime
+from functools import wraps
+from typing import Dict
 
-# Third-party imports
-from pycti import (
-    STIX_EXT_OCTI_SCO,
-    Identity,
-    Indicator,
-    Malware,
-    Note,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-)
+import stix2
+from lib.internal_enrichment import InternalEnrichmentConnector
+from pycti import (STIX_EXT_OCTI_SCO, Identity, Indicator, Malware, Note,
+                   OpenCTIConnectorHelper, StixCoreRelationship)
 from ReversingLabs.SDK.a1000 import A1000
 from ReversingLabs.SDK.helper import NotFoundError, RequestTimeoutError
-import stix2
-
-# Local application imports
-from lib.internal_enrichment import InternalEnrichmentConnector
 
 ZIP_MIME_TYPES = (
     "application/x-bzip",
