@@ -140,21 +140,26 @@ class ConfigLoaderConnector(ABC, FrozenBaseModel):
 
     def __init__(self) -> None:
         """Initialize connector dedicated configuration."""
+        params = {
+            "id": self._id,
+            "type": "EXTERNAL_IMPORT",
+            "name": self._name,
+            "scope": self._scope,
+            "log_level": self._log_level,
+            "duration_period": self._duration_period,
+            "queue_threshold": self._queue_threshold,  # default to pycti value if needed
+            "run_and_terminate": self._run_and_terminate,  # default to pycti value if needed
+            "send_to_queue": self._send_to_queue,
+            "send_to_directory": self._send_to_directory,  # default to pycti value if needed
+            "send_to_directory_path": self._send_to_directory_path,  # default to pycti value if needed
+            "send_to_directory_retention": self._send_to_directory_retention,  # default to pycti value if needed
+        }
+        # remove None values from params
+        params = {k: v for k, v in params.items() if v is not None}
         try:
             FrozenBaseModel.__init__(
                 self,
-                id=self._id,
-                type="EXTERNAL_IMPORT",
-                name=self._name,
-                scope=self._scope,
-                log_level=self._log_level,
-                duration_period=self._duration_period,
-                queue_threshold=self._queue_threshold,  # default to pycti value if needed
-                run_and_terminate=self._run_and_terminate,  # default to pycti value if needed
-                send_to_queue=self._send_to_queue,
-                send_to_directory=self._send_to_directory,  # default to pycti value if needed
-                send_to_directory_path=self._send_to_directory_path,  # default to pycti value if needed
-                send_to_directory_retention=self._send_to_directory_retention,  # default to pycti value if needed
+                **params,
             )
         except ValidationError as exc:
             error_message = "Invalid connector configuration."
@@ -244,7 +249,7 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
     """Interface for loading Dragos dedicated configuration."""
 
     api_base_url: HttpUrl = Field(
-        default=HttpUrl("https://dragos.portal.com"),
+        default=HttpUrl("https://portal.dragos.com"),
         description="Dragos API base URL.",
     )
     api_token: SecretStr = Field(
@@ -267,14 +272,17 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
     def __init__(self) -> None:
         """Initialize Dragos dedicated configuration."""
         try:
-            FrozenBaseModel.__init__(
-                self,
-                api_base_url=self._api_base_url,
-                api_token=self._api_token,
-                api_secret=self._api_secret,
-                import_start_date=self._import_start_date,
-                tlp_level=self._tlp_level,
-            )
+            params = {
+                "api_base_url": self._api_base_url,
+                "api_token": self._api_token,
+                "api_secret": self._api_secret,
+                "import_start_date": self._import_start_date,
+                "tlp_level": self._tlp_level,
+            }
+
+            params = {k: v for k, v in params.items() if v is not None}
+
+            FrozenBaseModel.__init__(self, **params)
         except ValidationError as exc:
             error_message = "Invalid Dragos configuration."
             logger.error(error_message)
