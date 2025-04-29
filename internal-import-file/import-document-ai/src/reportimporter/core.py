@@ -144,10 +144,9 @@ class ReportImporter:
 
     def _process_parsing_results(
         self, parsed: List[Dict], context_entity: Dict
-    ) -> List[Dict] | List[str]:
+    ) -> Tuple[List[Dict], List[str]]:
         observables = []
         entities = []
-        observables = []
         if context_entity is not None:
             object_markings = [
                 x["standard_id"] for x in context_entity.get("objectMarking", [])
@@ -184,21 +183,13 @@ class ReportImporter:
                             "filterGroups": [],
                         }
                     )
-                    ttp_stix_bundle = (
-                        self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                    if ttp_object:  # Handles the case of an existing TTP
+                        stix_ttp = self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
                             entity_type=ttp_object["entity_type"],
                             entity_id=ttp_object["id"],
+                            only_entity=True,
                         )
-                    )
-                    stix_ttp = [
-                        object
-                        for object in ttp_stix_bundle["objects"]
-                        if "x_opencti_id" in object
-                        and object["x_opencti_id"] == ttp_object["id"]
-                    ][0]
-                    stix_object = (
-                        stix_ttp or stix_object
-                    )  # Handle the case where the Attack pattern is not in the platform
+                        stix_object = stix_ttp
                 entities.append(stix_object)
             if match[RESULT_FORMAT_TYPE] == "observable":
                 stix_object = create_stix_object(
