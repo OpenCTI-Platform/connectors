@@ -1,9 +1,9 @@
-import sys
 import os
+import sys
 import uuid
-import pytest
-
 from pathlib import Path
+
+import pytest
 from pytest_mock.plugin import MockerFixture
 
 TEST_DIR = Path(__file__).parent

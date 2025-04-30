@@ -1,17 +1,17 @@
 import os
-from typing import Dict, List, Optional, Tuple
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 import tldextract
 import yaml
 from pycti import (
-    STIX_EXT_OCTI,
-    STIX_EXT_OCTI_SCO,
+    get_config_variable,
     OpenCTIConnectorHelper,
     OpenCTIStix2,
-    get_config_variable,
+    STIX_EXT_OCTI,
+    STIX_EXT_OCTI_SCO,
 )
-from pymispwarninglists import WarningLists, WarningList
+from pymispwarninglists import WarningList, WarningLists
 
 FILE_LOCATION = Path(__file__).parent
 # At the moment it is not possible to map lists to their upstream path.
