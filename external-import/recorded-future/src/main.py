@@ -59,6 +59,12 @@ class BaseRFConnector:
         self.rf_pull_risk_list = get_config_variable(
             "RECORDED_FUTURE_PULL_RISK_LIST", ["rf", "pull_risk_list"], config
         )
+        self.rf_riskrules_as_label = get_config_variable(
+            "RECORDED_FUTURE_RISKRULES_AS_LABEL",
+            ["rf", "riskrules_as_label"],
+            config,
+            default=False,
+        )
         self.rf_insikt_only = get_config_variable(
             "RECORDED_FUTURE_INSIKT_ONLY", ["rf", "insikt_only"], config
         )
@@ -388,6 +394,7 @@ class RFConnector:
                 self.RF.tlp,
                 self.RF.risk_list_threshold,
                 self.RF.risklist_related_entities,
+                self.RF.rf_riskrules_as_label,
             )
             self.risk_list.start()
         else:
