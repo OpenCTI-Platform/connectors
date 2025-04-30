@@ -1,13 +1,13 @@
 version: '3'
 services:
   connector-ctibutler:
-    image: opencti/connector-ctibutler:6.6.4
+    image: opencti/connector-dogesec-ctibutler:6.6.4
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=CTIBUTLER
-      - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,vulnerability,campaign,incident,indicator,infrastructure,location,note,threat-actor,tool,software
+      - CONNECTOR_SCOPE=ctibutler
       - CONNECTOR_LOG_LEVEL=error
       - CTIBUTLER_BASE_URL=https://api.ctibutler.com/
       - CTIBUTLER_API_KEY=CHANGEME
