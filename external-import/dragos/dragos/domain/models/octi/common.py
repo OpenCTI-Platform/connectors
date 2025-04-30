@@ -2,12 +2,11 @@
 
 import codecs
 from abc import ABC, abstractmethod
-from typing import Any, Optional, TypedDict
+from typing import Any, Literal, Optional, TypedDict
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
 import stix2.exceptions  # type: ignore[import-untyped] # stix2 does not provide stubs
-from dragos.domain.models.octi.enums import TLPLevel
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
@@ -181,7 +180,7 @@ class Author(ABC, BaseEntity):
 class TLPMarking(BaseEntity):
     """Represent a TLP marking definition."""
 
-    level: TLPLevel = Field(
+    level: Literal["white", "green", "amber", "amber+strict", "red"] = Field(
         ...,
         description="The level of the marking.",
     )
