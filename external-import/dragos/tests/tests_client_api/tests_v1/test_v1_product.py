@@ -226,6 +226,35 @@ async def test_invalid_product_response_content_leads_to_dragos_api_error(
 
 
 @pytest.mark.parametrize(
+    "method_name,parameters",
+    [
+        pytest.param("sync_iter_products", {}, id="sync_iter_products"),
+    ],  # TO BE EXTENDED
+)
+def test_synchrone_invalid_product_response_content_leads_to_dragos_api_error(
+    method_name, parameters, valid_client
+):
+    """Test that invalid response content leads to DragosAPIError."""
+    # Given
+    # A valid Client API
+    client = valid_client
+    # A mock get method returning an invalid response
+    client._get = AsyncMock()
+    client._get.return_value = Mock()
+    client._get.return_value.json = AsyncMock(
+        return_value={"invalid_key": "invalid_value"}
+    )
+
+    # When making a request
+    # Then a DragosAPIError is raised
+    with pytest.raises(DragosAPIError):
+        method = getattr(client, method_name)
+        iterator = method(**parameters)
+        for item in iterator:
+            _ = item
+
+
+@pytest.mark.parametrize(
     "error_code",
     [
         pytest.param(400, id="400"),
