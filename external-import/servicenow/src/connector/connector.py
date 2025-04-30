@@ -149,9 +149,9 @@ class ConnectorServicenow:
         new_results = (
             results[0].get("result", [])
             if results
-               and isinstance(results, list)
-               and isinstance(results[0], dict)
-               and "result" in results[0]
+            and isinstance(results, list)
+            and isinstance(results[0], dict)
+            and "result" in results[0]
             else results
         )
 
@@ -283,7 +283,9 @@ class ConnectorServicenow:
 
                 security_incidents_combined = {"get_security_incident": si_incident}
                 if result_tasks_related_to_sir:
-                    security_incidents_combined["get_tasks"] = result_tasks_related_to_sir
+                    security_incidents_combined["get_tasks"] = (
+                        result_tasks_related_to_sir
+                    )
 
                 security_incidents_results.append(security_incidents_combined)
 
@@ -311,17 +313,6 @@ class ConnectorServicenow:
                 "get_security_incident": SecurityIncidentResponse,
                 "get_tasks": TaskResponse,
             }
-
-            # Todo TEST TO DELETE
-
-            security_incident = collected_intelligence[3].get("get_security_incident")
-            security_incident.update({
-                "mitre_technique": "T1078.002 (Domain Accounts),T1110 (Brute Force),T1590.002 (DNS),T1548 (Abuse Elevation Control Mechanism),T1588.004 (Digital Certificates)",
-                "mitre_tactic": "TA0003 (Persistence),TA0006 (Credential Access),TA0004 (Privilege Escalation),TA0043 (Reconnaissance),TA0005 (Defense Evasion),TA0042 (Resource Development),TA0002 (Execution),TA0001 (Initial Access),TA0008 (Lateral Movement),TA0009 (Collection)",
-                "mitre_tool": "S0488 (CrackMapExec),S0378 (PoshC2),S0192 (Pupy),S0002 (Mimikatz),S0521 (BloodHound),S0695 (Donut),S0692 (SILENTTRINITY),S0194 (PowerSploit),S0677 (AADInternals),S0363 (Empire),S0250 (Koadic),S0591 (ConnectWise)",
-                "mitre_malware": "S0154 (Cobalt Strike),S0140 (Shamoon),S0603 (Stuxnet),S1024 (CreepySnail),S0446 (Ryuk),S0583 (Pysa),S0599 (Kinsing),S0572 (Caterpillar WebShell),S0220 (Chaos),S0650 (QakBot),S0053 (SeaDuke)",
-                "mitre_group": "G0102 (Wizard Spider),G0016 (APT29),G0028 (Threat Group-1314)",
-            })
 
             for intelligence in collected_intelligence:
                 validated_per_collection_name = {}
@@ -399,12 +390,20 @@ class ConnectorServicenow:
                 mitre_mapping = {
                     # MITRE Technique / MITRE Tactic
                     # Example: ["T1110 (Brute Force)"] -> [mitre_id (mitre_name)]
-                    "mitre_technique": lambda args: self.converter_to_stix.make_attack_pattern(*args),
-                    "mitre_tactic": lambda args: self.converter_to_stix.make_attack_pattern(*args),
+                    "mitre_technique": lambda args: self.converter_to_stix.make_attack_pattern(
+                        *args
+                    ),
+                    "mitre_tactic": lambda args: self.converter_to_stix.make_attack_pattern(
+                        *args
+                    ),
                     # MITRE Group / MITRE Malware / MITRE Tool
                     # Example: ["G0102 (Wizard Spider)"] -> [mitre_name (mitre_alias)]
-                    "mitre_group": lambda args: self.converter_to_stix.make_intrusion_set(*args),
-                    "mitre_malware": lambda args: self.converter_to_stix.make_malware(*args),
+                    "mitre_group": lambda args: self.converter_to_stix.make_intrusion_set(
+                        *args
+                    ),
+                    "mitre_malware": lambda args: self.converter_to_stix.make_malware(
+                        *args
+                    ),
                     "mitre_tool": lambda args: self.converter_to_stix.make_tool(*args),
                 }
 
@@ -425,11 +424,13 @@ class ConnectorServicenow:
                             # Removal of parentheses for the second part
                             clean_mitre_part_2 = mitre_part_2.strip("()")
 
-                            mitre_object = make_mitre_object((
-                                mitre_part_1,
-                                clean_mitre_part_2,
-                                [external_reference_sir]
-                            ))
+                            mitre_object = make_mitre_object(
+                                (
+                                    mitre_part_1,
+                                    clean_mitre_part_2,
+                                    [external_reference_sir],
+                                )
+                            )
                             stix_objects.append(mitre_object)
                             case_incident_object_refs.append(mitre_object)
 
