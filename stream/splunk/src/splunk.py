@@ -173,16 +173,6 @@ class SplunkConnector:
         # add stream name
         payload["stream_name"] = self.helper.get_stream_collection()["name"]
 
-        # Check for description in various places
-        if "x_opencti_description" in payload:
-            payload["description"] = payload["x_opencti_description"]
-        elif "extensions" in payload:
-            # Look for description in extensions
-            for ext_id, extension in payload["extensions"].items():
-                if "description" in extension:
-                    payload["description"] = extension["description"]
-                    break
-
         if "type" in payload:
             if payload["type"] == "indicator" and payload["pattern_type"].startswith(
                 "stix"
