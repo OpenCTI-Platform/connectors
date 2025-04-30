@@ -359,7 +359,8 @@ if __name__ == "__main__":
         splunk_url = get_config_variable("SPLUNK_URL", ["splunk", "url"], config)
         splunk_token = get_config_variable("SPLUNK_TOKEN", ["splunk", "token"], config)
         splunk_auth_type: str = get_config_variable(
-            "SPLUNK_AUTH_TYPE", ["splunk","auth_type"], config, default="Bearer")
+            "SPLUNK_AUTH_TYPE", ["splunk", "auth_type"], config, default="Bearer"
+        )
         splunk_owner = get_config_variable("SPLUNK_OWNER", ["splunk", "owner"], config)
         splunk_ssl_verify = get_config_variable(
             "SPLUNK_SSL_VERIFY", ["splunk", "ssl_verify"], config, False, True
