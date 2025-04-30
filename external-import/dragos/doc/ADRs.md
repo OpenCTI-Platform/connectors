@@ -117,7 +117,7 @@
 ## ADR: Use of Bucket Limiter for V1 API Client
 
 **Context:** Rate limiting for API requests.
-**Decision:** Implement a bucket limiter for the V1 API client, the value is hardcoded to default DrgaosAPIWorldview V1 rate limit (60 req/min).
+**Decision:** Implement a bucket limiter for the V1 API client, the value is hardcoded to default DragosAPIWorldview V1 rate limit (60 req/min).
 **Rationale:**
 
 - Ensures compliance with API rate limits.
