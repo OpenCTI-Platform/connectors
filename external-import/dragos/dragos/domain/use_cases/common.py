@@ -1,13 +1,10 @@
 """Offer common tools for use cases."""
 
 import ipaddress
-from typing import TYPE_CHECKING
+from typing import Literal
 
 from dragos.domain.models.octi import OrganizationAuthor, TLPMarking
 from dragos.domain.models.octi.enums import OrganizationType
-
-if TYPE_CHECKING:
-    from dragos.domain.models.octi.enums import TLPLevel
 
 
 class UseCaseError(Exception):
@@ -17,7 +14,9 @@ class UseCaseError(Exception):
 class BaseUseCase:
     """Base use case class."""
 
-    def __init__(self, tlp_level: "TLPLevel"):
+    def __init__(
+        self, tlp_level: Literal["white", "green", "amber", "amber+strict", "red"]
+    ):
         """Initialize the use case."""
         self.tlp_marking = TLPMarking(level=tlp_level)
         self.author = OrganizationAuthor(
