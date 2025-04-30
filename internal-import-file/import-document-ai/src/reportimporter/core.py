@@ -144,10 +144,9 @@ class ReportImporter:
 
     def _process_parsing_results(
         self, parsed: List[Dict], context_entity: Dict
-    ) -> (List[Dict], List[str]):
+    ) -> Tuple[List[Dict], List[str]]:
         observables = []
         entities = []
-        observables = []
         if context_entity is not None:
             object_markings = [
                 x["standard_id"] for x in context_entity.get("objectMarking", [])
@@ -171,6 +170,26 @@ class ReportImporter:
                         "created_by_ref": author,
                     },
                 )
+                if match[RESULT_FORMAT_CATEGORY] == "Attack-Pattern.x_mitre_id":
+                    ttp_object = self.helper.api.attack_pattern.read(
+                        filters={
+                            "mode": "and",
+                            "filters": [
+                                {
+                                    "key": "x_mitre_id",
+                                    "values": [match[RESULT_FORMAT_MATCH]],
+                                }
+                            ],
+                            "filterGroups": [],
+                        }
+                    )
+                    if ttp_object:  # Handles the case of an existing TTP
+                        stix_ttp = self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                            entity_type=ttp_object["entity_type"],
+                            entity_id=ttp_object["id"],
+                            only_entity=True,
+                        )
+                        stix_object = stix_ttp
                 entities.append(stix_object)
             if match[RESULT_FORMAT_TYPE] == "observable":
                 stix_object = create_stix_object(
@@ -358,7 +377,7 @@ class ReportImporter:
             now = datetime.now(timezone.utc)
             report = stix2.Report(
                 id=Report.generate_id(file_name, now),
-                name="nlp-importdoc-" + file_name,
+                name="import-document-ai" + file_name,
                 description="Automatic import",
                 published=now,
                 report_types=["threat-report"],
