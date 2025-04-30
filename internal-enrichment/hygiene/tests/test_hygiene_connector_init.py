@@ -15,6 +15,7 @@ def test_hygiene_connector_default_settings():
     assert hygiene_connector.hygiene_label_parent_name == DEFAULT_LABEL_PARENT_NAME
     assert hygiene_connector.hygiene_label_parent_color == DEFAULT_LABEL_COLOR
 
+
 @pytest.mark.usefixtures("mock_opencti")
 def test_hygiene_connector_settings_env_parsing(sample_config_path):
     hygiene_connector = HygieneConnector(sample_config_path)

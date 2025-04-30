@@ -14,7 +14,6 @@ if SRC_DIR_STR not in sys.path:
     sys.path.append(SRC_DIR_STR)
 
 
-
 @pytest.fixture(name="mock_opencti")
 def mock_opencti_env(mocker: MockerFixture):
     """
@@ -25,7 +24,14 @@ def mock_opencti_env(mocker: MockerFixture):
     mocker.patch("pycti.OpenCTIApiClient.health_check", lambda x: True)
     mocker.patch("pycti.OpenCTIApiConnector.ping")
     mocker.patch("pycti.OpenCTIApiConnector.register")
-    mocker.patch("pycti.entities.opencti_label.Label.read_or_create_unchecked", lambda *args, **kwargs: {})
+    mocker.patch(
+        "pycti.entities.opencti_label.Label.read_or_create_unchecked",
+        lambda *args, **kwargs: {"value": "hygiene-label"},
+    )
+    mocker.patch(
+        "pycti.connector.opencti_connector_helper.OpenCTIConnectorHelper.send_stix2_bundle",
+        lambda *args, **kwargs: [],
+    )
     original_env = dict(os.environ)
     try:
         # Modify the environment variables here
@@ -47,6 +53,6 @@ def sample_config_path() -> Path:
 
 
 @pytest.fixture(scope="session")
-def sample_config_path() -> Path:
+def mock_config_path() -> Path:
     """Sample Configuration file Path."""
-    return SRC_DIR / "config.yml.sample"
+    return TEST_DIR / "mock_config.yaml"
