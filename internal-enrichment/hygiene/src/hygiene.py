@@ -1,5 +1,6 @@
 import os
-from typing import Dict
+from typing import Dict, List, Optional, Tuple
+from pathlib import Path
 
 import tldextract
 import yaml
@@ -10,8 +11,9 @@ from pycti import (
     OpenCTIStix2,
     get_config_variable,
 )
-from pymispwarninglists import WarningLists
+from pymispwarninglists import WarningLists, WarningList
 
+FILE_LOCATION = Path(__file__).parent
 # At the moment it is not possible to map lists to their upstream path.
 # Thus we need to have our own mapping here.
 # Reference: https://github.com/MISP/misp-warninglists/issues/142
@@ -109,9 +111,9 @@ LIST_MAPPING = {
 
 
 class HygieneConnector:
-    def __init__(self):
+    def __init__(self, config_file_path: Optional[Path] = None):
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        config_file_path = config_file_path or Path(__file__).parent / "config.yml"
         config = (
             yaml.load(open(config_file_path), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
@@ -136,6 +138,41 @@ class HygieneConnector:
                 default=False,
             )
         )
+        self.hygiene_label_name = str(
+            get_config_variable(
+                "HYGIENE_LABEL_NAME",
+                ["hygiene", "label_name"],
+                config,
+                default="hygiene",
+            )
+        )
+
+        self.hygiene_label_parent_name = str(
+            get_config_variable(
+                "HYGIENE_LABEL_PARENT_NAME",
+                ["hygiene", "label_parent_name"],
+                config,
+                default="hygiene_parent",
+            )
+        )
+
+        self.hygiene_label_color = str(
+            get_config_variable(
+                "HYGIENE_LABEL_COLOR",
+                ["hygiene", "label_color"],
+                config,
+                default="#fc0341",
+            )
+        )
+        self.hygiene_label_parent_color = str(
+            get_config_variable(
+                "HYGIENE_LABEL_PARENT_COLOR",
+                ["hygiene", "label_parent_color"],
+                config,
+                default="#fc0341",
+            )
+        )
+
 
         self.helper.log_info(f"Warning lists slow search: {warninglists_slow_search}")
 
@@ -143,21 +180,20 @@ class HygieneConnector:
 
         # Create Hygiene Tag
         self.label_hygiene = self.helper.api.label.read_or_create_unchecked(
-            value="hygiene", color="#fc0341"
+            value=self.hygiene_label_name, color=self.hygiene_label_color
         )
         if self.label_hygiene is None:
             raise ValueError(
                 "The hygiene label could not be created. If your connector does not have the permission to create labels, please create it manually before launching"
             )
 
-        if self.enrich_subdomains:
-            self.label_hygiene_parent = self.helper.api.label.read_or_create_unchecked(
-                value="hygiene_parent", color="#fc0341"
+        self.label_hygiene_parent = self.helper.api.label.read_or_create_unchecked(
+            value=self.hygiene_label_parent_name, color=self.hygiene_label_parent_color
+        )
+        if self.label_hygiene_parent is None:
+            raise ValueError(
+                "The hygiene label could not be created. If your connector does not have the permission to create labels, please create it manually before launching"
             )
-            if self.label_hygiene_parent is None:
-                raise ValueError(
-                    "The hygiene label could not be created. If your connector does not have the permission to create labels, please create it manually before launching"
-                )
 
     def _process_entity(self, stix_objects, stix_entity, opencti_entity) -> str:
 
@@ -170,38 +206,45 @@ class HygieneConnector:
         else:
             return self._process_observable(stix_objects, stix_entity, opencti_entity)
 
-    def _process_observable(self, stix_objects, stix_entity, opencti_entity) -> str:
+    def _process_observable(self, stix_objects, stix_entity, opencti_entity) -> Optional[str]:
         # Search in warninglist
-        result = self.warninglists.search(opencti_entity["observable_value"])
+        warninglist_hits: List[WarningList] = self.warninglists.search(opencti_entity["observable_value"])
 
         # If not found and the domain is a subdomain, search with the parent.
-        use_parent, result = self.search_with_parent(result, stix_entity)
+        use_parent, warninglist_hits = self.search_with_parent(warninglist_hits, stix_entity)
 
         # Iterate over the hits
-        if result:
-            self.process_result(
-                result, stix_objects, stix_entity, opencti_entity, use_parent
+        if warninglist_hits:
+            score = self.process_result(
+                warninglist_hits, stix_objects, stix_entity, opencti_entity, use_parent
             )
-            return "Observable value found on warninglist and tagged accordingly"
+            warninglist_names = [warninglist_hit.name for warninglist_hit in warninglist_hits]
+            return f"Observable value found on warninglists {warninglist_names} and tagged accordingly. Score set to {score}."
+        return None
 
-    def _process_indicator(self, stix_objects, stix_entity, observables) -> str:
+    def _process_indicator(self, stix_objects, stix_entity, observables) -> Optional[str]:
+        result = None
         for observable in observables:
             if observable["type"] == "unsupported_type":
                 continue
             # Search in warninglist
-            result = self.warninglists.search(observable["value"])
+            warninglist_hits = self.warninglists.search(observable["value"])
 
             # If not found and the domain is a subdomain, search with the parent.
-            use_parent, result = self.search_with_parent(result, observable)
-
+            use_parent, warninglist_hits = self.search_with_parent(warninglist_hits, observable)
             # Iterate over the hits
-            if result:
-                self.process_result(
-                    result, stix_objects, stix_entity, observable, use_parent
+            if warninglist_hits:
+                score = self.process_result(
+                    warninglist_hits, stix_objects, stix_entity, observable, use_parent
                 )
-                return "Observable value found on warninglist and tagged accordingly"
+                warninglist_names = [warninglist_hit.name for warninglist_hit in warninglist_hits]
+                # For loop with a return statement? What about the other observable values? Is it always just one observable?
+                msg = f"Observable value found on warninglists {warninglist_names} and tagged. Score of {score} applied."
+                self.helper.log_info(msg)
+                result = msg
+        return result
 
-    def _convert_indicator_to_observables(self, data) -> list[dict]:
+    def _convert_indicator_to_observables(self, data) -> Optional[list[dict]]:
         """
         Convert an OpenCTI indicator to its corresponding observables.
         :param data: OpenCTI indicator data
@@ -248,8 +291,9 @@ class HygieneConnector:
             self.helper.connector_logger.warning(
                 "[CREATE] Cannot convert STIX indicator { " + indicator_opencti_id + "}"
             )
+            return None
 
-    def search_with_parent(self, result, stix_entity):
+    def search_with_parent(self, result: List[WarningList], stix_entity: dict) -> Tuple[bool,List[WarningList]]:
         use_parent = False
         if not result and self.enrich_subdomains is True:
             if stix_entity["type"] == "domain-name":
@@ -260,8 +304,10 @@ class HygieneConnector:
         return use_parent, result
 
     def process_result(
-        self, result, stix_objects, stix_entity, opencti_entity, use_parent
-    ):
+        self, warninglist_hits: List[WarningList], stix_objects: list, stix_entity: dict, opencti_entity: dict, use_parent: bool
+    ) -> int:
+        """Process warning list results. Returns the calculated score."""
+
         if opencti_entity["entity_type"] == "Indicator":
             self.helper.log_info(
                 "Hit found for %s in warninglists" % (opencti_entity["value"])
@@ -271,25 +317,25 @@ class HygieneConnector:
                 "Hit found for %s in warninglists"
                 % (opencti_entity["observable_value"])
             )
+        number_of_warninglist_hits = len(warninglist_hits)
+        score = 20
+        # We set the score based on the number of warning list entries
+        if number_of_warninglist_hits >= 5:
+            score = 5
+        elif number_of_warninglist_hits >= 3:
+            score = 10
+        elif number_of_warninglist_hits == 1:
+            score = 15
 
-        for hit in result:
+        for warninglist_hit in warninglist_hits:
             self.helper.log_info(
                 "Type: %s | Name: %s | Version: %s | Descr: %s"
-                % (hit.type, hit.name, hit.version, hit.description)
+                % (warninglist_hit.type, warninglist_hit.name, warninglist_hit.version, warninglist_hit.description)
             )
 
-            # We set the score based on the number of warning list entries
-            if len(result) >= 5:
-                score = 5
-            elif len(result) >= 3:
-                score = 10
-            elif len(result) == 1:
-                score = 15
-            else:
-                score = 20
 
             self.helper.log_info(
-                f"number of hits ({len(result)}) setting score to {score}"
+                f"number of hits ({len(warninglist_hits)}) setting score to {score}"
             )
 
             # Add labels
@@ -322,10 +368,10 @@ class HygieneConnector:
             )
 
             # External references
-            if hit.name in LIST_MAPPING:
+            if warninglist_hit.name in LIST_MAPPING:
                 url = (
                     "https://github.com/MISP/misp-warninglists/tree/main/"
-                    + LIST_MAPPING[hit.name]
+                    + LIST_MAPPING[warninglist_hit.name]
                 )
             else:
                 # reference not found in the LIST_MAPPING, define a generic URL
@@ -337,8 +383,8 @@ class HygieneConnector:
                 {
                     "source_name": "misp-warninglist",
                     "url": url,
-                    "external_id": hit.name,
-                    "description": hit.description,
+                    "external_id": warninglist_hit.name,
+                    "description": warninglist_hit.description,
                 },
                 True,
             )
@@ -381,6 +427,7 @@ class HygieneConnector:
 
             serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
             self.helper.send_stix2_bundle(serialized_bundle)
+        return score
 
     def _process_message(self, data: Dict) -> str:
         stix_objects = data["stix_objects"]
