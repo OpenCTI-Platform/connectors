@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-stixify:
+  connector-dogesec-stixify:
     image: opencti/connector-dogesec-stixify:6.6.8
     environment:
       - OPENCTI_URL=http://opencti:8080
