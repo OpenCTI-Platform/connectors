@@ -593,6 +593,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             object_marking_refs=[stix2.TLP_AMBER],
         )
 
+    @handle_spectra_errors
     def _files_from_ip(self):
         self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Getting files from IP"
@@ -1097,6 +1098,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             f"{self.helper.connect_name}: Number of stix bundles sent to workers: {str(len(bundles_sent))}"
         )
 
+    @handle_spectra_errors
     def _domain_report(self):
         self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Getting domain report"
@@ -1231,6 +1233,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             f"{self.helper.connect_name}: Number of stix bundles sent to workers: {str(len(bundles_sent))}"
         )
 
+    @handle_spectra_errors
     def _url_report(self):
         self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Getting URL report"
