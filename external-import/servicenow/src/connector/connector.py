@@ -146,7 +146,16 @@ class ConnectorServicenow:
 
         classified_results = []
 
-        for index, result in enumerate(results):
+        new_results = (
+            results[0].get("result", [])
+            if results
+               and isinstance(results, list)
+               and isinstance(results[0], dict)
+               and "result" in results[0]
+            else results
+        )
+
+        for index, result in enumerate(new_results):
             task_name = (
                 task_names[index] if isinstance(task_names, list) else task_names
             )
@@ -167,6 +176,8 @@ class ConnectorServicenow:
                             "url": inner_exception.request_info.url,
                         },
                     )
+                    if isinstance(task_names, list):
+                        classified_results.append(None)
                 elif isinstance(inner_exception, ClientConnectionError):
                     self.helper.connector_logger.warning(
                         "[CONNECTOR-API] A connection error occurred during data recovery, "
@@ -177,6 +188,8 @@ class ConnectorServicenow:
                             "error": str(inner_exception),
                         },
                     )
+                    if isinstance(task_names, list):
+                        classified_results.append(None)
                 else:
                     self.helper.connector_logger.warning(
                         "[CONNECTOR-API] An unexpected error occurred during the recovery of all data, "
@@ -187,6 +200,8 @@ class ConnectorServicenow:
                             "error": str(inner_exception),
                         },
                     )
+                    if isinstance(task_names, list):
+                        classified_results.append(None)
             else:
                 classified_results.append(result)
 
@@ -203,27 +218,27 @@ class ConnectorServicenow:
                 "[CONNECTOR] Start the collection of information from ServiceNow.",
             )
 
-            prerequisites_tasks = {
+            prerequisites_futures = {
                 "get_state_to_exclude": self.client.get_state_to_exclude(),
                 "get_severity_to_exclude": self.client.get_severity_to_exclude(),
                 "get_priority_to_exclude": self.client.get_priority_to_exclude(),
             }
-            collected_prerequisites_tasks = await asyncio.gather(
-                *prerequisites_tasks.values(), return_exceptions=True
+            collected_prerequisites_futures = await asyncio.gather(
+                *prerequisites_futures.values(), return_exceptions=True
             )
 
-            prerequisites_task_names = list(prerequisites_tasks.keys())
-            classified_result_prerequisites_tasks = self._classify_results(
-                collected_prerequisites_tasks, prerequisites_task_names
+            prerequisites_futures_names = list(prerequisites_futures.keys())
+            result_prerequisites_futures = self._classify_results(
+                collected_prerequisites_futures, prerequisites_futures_names
             )
 
             get_state_to_exclude, get_severity_to_exclude, get_priority_to_exclude = (
-                classified_result_prerequisites_tasks
-                if classified_result_prerequisites_tasks
+                result_prerequisites_futures
+                if result_prerequisites_futures
                 else (None, None, None)
             )
 
-            main_tasks = {
+            main_futures = {
                 "get_security_incidents": self.client.get_security_incidents(
                     get_state_to_exclude,
                     get_severity_to_exclude,
@@ -233,18 +248,13 @@ class ConnectorServicenow:
             }
 
             collected_security_incidents = await asyncio.gather(
-                *main_tasks.values(), return_exceptions=True
+                *main_futures.values(), return_exceptions=True
             )
-            classified_result_main_tasks = self._classify_results(
+            result_main_futures = self._classify_results(
                 collected_security_incidents, "get_security_incidents"
             )
 
-            security_incidents_list = (
-                classified_result_main_tasks[0].get("result", [])
-                if classified_result_main_tasks
-                else []
-            )
-            if not security_incidents_list:
+            if not result_main_futures:
                 self.helper.connector_logger.info(
                     "[CONNECTOR] No security incidents found.",
                 )
@@ -258,7 +268,7 @@ class ConnectorServicenow:
                     ),
                     # Todo get_observables
                 )
-                for security_incident in security_incidents_list
+                for security_incident in result_main_futures
             ]
 
             security_incidents_results = []
@@ -267,14 +277,13 @@ class ConnectorServicenow:
                 collected_tasks = await asyncio.gather(si_task, return_exceptions=True)
                 security_incident_id = si_incident.get("sys_id")
 
-                tasks = collected_tasks[0].get("result", []) if collected_tasks else []
-                classified_result_task = self._classify_results(
-                    tasks, security_incident_id
+                result_tasks_related_to_sir = self._classify_results(
+                    collected_tasks, security_incident_id
                 )
 
                 security_incidents_combined = {"get_security_incident": si_incident}
-                if tasks:
-                    security_incidents_combined["get_tasks"] = classified_result_task
+                if result_tasks_related_to_sir:
+                    security_incidents_combined["get_tasks"] = result_tasks_related_to_sir
 
                 security_incidents_results.append(security_incidents_combined)
 
@@ -302,6 +311,17 @@ class ConnectorServicenow:
                 "get_security_incident": SecurityIncidentResponse,
                 "get_tasks": TaskResponse,
             }
+
+            # Todo TEST TO DELETE
+
+            security_incident = collected_intelligence[3].get("get_security_incident")
+            security_incident.update({
+                "mitre_technique": "T1078.002 (Domain Accounts),T1110 (Brute Force),T1590.002 (DNS),T1548 (Abuse Elevation Control Mechanism),T1588.004 (Digital Certificates)",
+                "mitre_tactic": "TA0003 (Persistence),TA0006 (Credential Access),TA0004 (Privilege Escalation),TA0043 (Reconnaissance),TA0005 (Defense Evasion),TA0042 (Resource Development),TA0002 (Execution),TA0001 (Initial Access),TA0008 (Lateral Movement),TA0009 (Collection)",
+                "mitre_tool": "S0488 (CrackMapExec),S0378 (PoshC2),S0192 (Pupy),S0002 (Mimikatz),S0521 (BloodHound),S0695 (Donut),S0692 (SILENTTRINITY),S0194 (PowerSploit),S0677 (AADInternals),S0363 (Empire),S0250 (Koadic),S0591 (ConnectWise)",
+                "mitre_malware": "S0154 (Cobalt Strike),S0140 (Shamoon),S0603 (Stuxnet),S1024 (CreepySnail),S0446 (Ryuk),S0583 (Pysa),S0599 (Kinsing),S0572 (Caterpillar WebShell),S0220 (Chaos),S0650 (QakBot),S0053 (SeaDuke)",
+                "mitre_group": "G0102 (Wizard Spider),G0016 (APT29),G0028 (Threat Group-1314)",
+            })
 
             for intelligence in collected_intelligence:
                 validated_per_collection_name = {}
@@ -378,24 +398,14 @@ class ConnectorServicenow:
 
                 mitre_mapping = {
                     # MITRE Technique / MITRE Tactic
-                    # Example: ["T1110 (Brute Force)"] -> [mitre_id (mitre_name)] -> [y (x)]
-                    "mitre_technique": lambda x, y, z: self.converter_to_stix.make_attack_pattern(
-                        y, x, z
-                    ),
-                    "mitre_tactic": lambda x, y, z: self.converter_to_stix.make_attack_pattern(
-                        y, x, z
-                    ),
+                    # Example: ["T1110 (Brute Force)"] -> [mitre_id (mitre_name)]
+                    "mitre_technique": lambda args: self.converter_to_stix.make_attack_pattern(*args),
+                    "mitre_tactic": lambda args: self.converter_to_stix.make_attack_pattern(*args),
                     # MITRE Group / MITRE Malware / MITRE Tool
-                    # Example: ["G0102 (Wizard Spider)"] -> [mitre_name (mitre_alias)] -> [x (y)]
-                    "mitre_group": lambda x, y, z: self.converter_to_stix.make_intrusion_set(
-                        x, y, z
-                    ),
-                    "mitre_malware": lambda x, y, z: self.converter_to_stix.make_malware(
-                        x, y, z
-                    ),
-                    "mitre_tool": lambda x, y, z: self.converter_to_stix.make_tool(
-                        x, y, z
-                    ),
+                    # Example: ["G0102 (Wizard Spider)"] -> [mitre_name (mitre_alias)]
+                    "mitre_group": lambda args: self.converter_to_stix.make_intrusion_set(*args),
+                    "mitre_malware": lambda args: self.converter_to_stix.make_malware(*args),
+                    "mitre_tool": lambda args: self.converter_to_stix.make_tool(*args),
                 }
 
                 # Make External Reference for custom case incident response and all entities Mitre
@@ -415,11 +425,11 @@ class ConnectorServicenow:
                             # Removal of parentheses for the second part
                             clean_mitre_part_2 = mitre_part_2.strip("()")
 
-                            mitre_object = make_mitre_object(
+                            mitre_object = make_mitre_object((
                                 mitre_part_1,
                                 clean_mitre_part_2,
-                                [external_reference_sir],
-                            )
+                                [external_reference_sir]
+                            ))
                             stix_objects.append(mitre_object)
                             case_incident_object_refs.append(mitre_object)
 

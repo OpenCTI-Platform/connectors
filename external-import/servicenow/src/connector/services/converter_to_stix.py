@@ -88,15 +88,15 @@ class ConverterToStix:
 
     def make_attack_pattern(
         self,
-        mitre_name: str,
         mitre_id: str,
+        mitre_name: str,
         external_references: list[ExternalReference],
     ) -> AttackPattern:
         """Make an Attack Pattern object and its representation in STIX 2.1 format.
         The attack pattern is represented by the mitre Technique/Tactic in ServiceNow.
         Args:
-            mitre_name (str): Represents the name of the attack pattern.
             mitre_id (str): Represents the external id of the attack pattern.
+            mitre_name (str): Represents the name of the attack pattern.
             external_references (list[ExternalReference]): An external link to the parent security incident data. (SIR)
         Returns:
             AttackPattern: An object containing an attack pattern and its representation in STIX 2.1 format.
