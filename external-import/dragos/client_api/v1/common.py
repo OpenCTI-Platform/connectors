@@ -3,7 +3,7 @@
 import json
 from abc import ABC
 from logging import DEBUG, getLogger
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from aiohttp import (
     ClientConnectionError,
@@ -12,6 +12,7 @@ from aiohttp import (
     ClientTimeout,
     ContentTypeError,
 )
+from limiter import Limiter  # type: ignore[import-untyped]  # Limiter is not typed
 from pydantic import Field, SecretStr, ValidationError
 from tenacity import (
     AsyncRetrying,
@@ -57,6 +58,7 @@ class BaseClientAPIV1(ABC):  # noqa: B024
         timeout: "timedelta",
         retry: int,
         backoff: "timedelta",
+        rate_limiter: Optional[Limiter] = None,
     ) -> None:
         """Initialize the client.
 
@@ -67,6 +69,7 @@ class BaseClientAPIV1(ABC):  # noqa: B024
             timeout (timedelta): The timeout for the API requests.
             retry (int): The number of attempt to perform.
             backoff (timedelta): The backoff time between retries.
+            rate_limiter (Limiter): Bucket rate limiter instance.
 
         """
         self._base_url = base_url / "api" / "v1"
@@ -75,6 +78,7 @@ class BaseClientAPIV1(ABC):  # noqa: B024
         self._retry = retry
         self._backoff_seconds: float = backoff.total_seconds()
         self._headers = {"accept": "*/*", "API-Token": token, "API-Secret": secret}
+        self._rate_limiter: Optional[Limiter] = rate_limiter
 
     def format_get_query(
         self: "BaseClientAPIV1", path: str, params: dict[str, Any] | None = None
@@ -186,8 +190,11 @@ class BaseClientAPIV1(ABC):  # noqa: B024
             DragosAPIError: If the response is invalid.
 
         """
-        response = await self._get_retry(query_url)
-
+        if self._rate_limiter:  # rate_limiter is optional
+            async with self._rate_limiter:
+                response = await self._get_retry(query_url)
+        else:
+            response = await self._get_retry(query_url)
         data = await self._process_raw_response(response)
         try:
             return response_model.model_validate(data)

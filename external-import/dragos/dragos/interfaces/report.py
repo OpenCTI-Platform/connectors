@@ -17,6 +17,22 @@ class ReportRetrievalError(DataRetrievalError):
     """Error raised when data retrieval fails."""
 
 
+class TagRetrievalError(DataRetrievalError):
+    """Error raised when tag retrieval fails."""
+
+
+class IndicatorRetrievalError(DataRetrievalError):
+    """Error raised when indicator retrieval fails."""
+
+
+class PDFRetrievalError(DataRetrievalError):
+    """Error raised when PDF retrieval fails."""
+
+
+class IncompleteReportWarning(Warning):
+    """Warning raised when report info are partially retrieved."""
+
+
 def _validate_pdf_bytes(value: bytes, info: ValidationInfo) -> bytes:
     """Raise a ValueError if byte array is not a PDF.
 
@@ -44,7 +60,7 @@ class Tag(FrozenBaseModel):
         try:
             FrozenBaseModel.__init__(self, type=self._type, value=self._value)
         except ValidationError as e:
-            raise ReportRetrievalError("Failed to retrieve Tag") from e
+            raise TagRetrievalError("Failed to retrieve Tag") from e
 
     @property
     @abstractmethod
@@ -92,7 +108,7 @@ class Indicator(FrozenBaseModel):
                 last_seen=self._last_seen,
             )
         except ValidationError as e:
-            raise ReportRetrievalError("Failed to retrieve Indicator") from e
+            raise IndicatorRetrievalError("Failed to retrieve Indicator") from e
 
     @property
     @abstractmethod
@@ -200,4 +216,10 @@ class Reports(ABC):
 
     @abstractmethod
     def iter(self, since: AwareDatetime) -> Iterator[Report]:
-        """List all Dragos reports."""
+        """List all Dragos reports.
+
+        Raises:
+            DataRetrievalError: If the data retrieval fails.
+            IncompleteReportWarning: If the report info are partially retrieved.
+
+        """

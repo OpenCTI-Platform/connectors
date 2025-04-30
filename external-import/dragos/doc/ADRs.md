@@ -113,3 +113,21 @@
 
 - Enhances business logic organization.
 - Centralizes STIX format conversion through a unified factory method.  
+
+## ADR: Use of Bucket Limiter for V1 API Client
+
+**Context:** Rate limiting for API requests.
+**Decision:** Implement a bucket limiter for the V1 API client, the value is hardcoded to default DragosAPIWorldview V1 rate limit (60 req/min).
+**Rationale:**
+
+- Ensures compliance with API rate limits.
+- Bucket limiter allows first burst of request if relevant.
+
+## Simplify config variables to strict minimum
+
+**Context:** Configuration management and environment variable handling.
+**Decision:** Use a minimal set of mandatory environment variables for configuration.
+**Rationale:**
+
+- Reduces complexity and potential for misconfiguration.
+- Ensures that only essential variables are required for the application to run.

@@ -9,6 +9,7 @@ from dragos.adapters.config.env import ConfigLoaderEnv
 from dragos.adapters.geocoding.octi import OctiGeocoding
 from dragos.adapters.report.dragos_v1 import ReportsAPIV1
 from dragos.app import Connector
+from limiter import Limiter  # type: ignore[import-untyped]  # Limiter is not typed
 from pycti import (  # type: ignore[import-untyped]  # PyCTI is not typed
     OpenCTIConnectorHelper,
 )
@@ -40,6 +41,13 @@ if __name__ == "__main__":
             timeout=timedelta(seconds=30),
             retry=3,
             backoff=timedelta(seconds=1),
+            # bucket limiter set to 60 requests per minute
+            # burst 60 then 1 new token per second
+            rate_limiter=Limiter(
+                rate=1,
+                capacity=60,
+                bucket="dragos",
+            ),
         )
         connector = Connector(
             config=config,

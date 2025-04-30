@@ -7,10 +7,12 @@ import typing
 import pytest
 from dragos.interfaces.report import (
     Indicator,
+    IndicatorRetrievalError,
     Report,
     ReportRetrievalError,
     Reports,
     Tag,
+    TagRetrievalError,
 )
 from pydantic import ValidationError
 
@@ -159,7 +161,7 @@ def test_tag_should_raise_data_retrieval_error_with_incorrect_attribute():
 
     # When instantiating the IncorrectStubTag
     # Then a data retrieval error is raised
-    with pytest.raises(ReportRetrievalError):
+    with pytest.raises(TagRetrievalError):
         _ = IncorrectStubTag()
 
 
@@ -204,7 +206,7 @@ def test_indicator_should_raise_validation_error_with_incorrect_attribute():
 
     # When instantiating the IncorrectStubIndicator
     # Then a data retrieval error should be raised
-    with pytest.raises(ReportRetrievalError):
+    with pytest.raises(IndicatorRetrievalError):
         _ = IncorrectStubIndicator()
 
 

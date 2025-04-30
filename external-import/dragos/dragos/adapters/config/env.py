@@ -29,24 +29,24 @@ class _ConfigLoaderEnvConnector(ConfigLoaderConnector):
     """Connector configuration loader from environment variables."""
 
     @property
-    def _id(self) -> str:
+    def _id(self) -> Optional[str]:
         return os.getenv("CONNECTOR_ID")
 
     @property
-    def _name(self) -> str:
+    def _name(self) -> Optional[str]:
         return os.getenv("CONNECTOR_NAME")
 
     @property
-    def _scope(self) -> list[str]:
+    def _scope(self) -> Optional[list[str]]:
         scope = os.getenv("CONNECTOR_SCOPE")
         return scope.split(",") if scope else []
 
     @property
-    def _log_level(self) -> Literal["debug", "info", "warn", "error"]:
+    def _log_level(self) -> Optional[Literal["debug", "info", "warn", "error"]]:
         return os.getenv("CONNECTOR_LOG_LEVEL")
 
     @property
-    def _duration_period(self) -> str:
+    def _duration_period(self) -> Optional[str]:
         return os.getenv("CONNECTOR_DURATION_PERIOD")
 
     @property
@@ -83,7 +83,7 @@ class _ConfigLoaderEnvDragos(ConfigLoaderDragos):
     """Dragos configuration loader from environment variables."""
 
     @property
-    def _api_base_url(self) -> str:
+    def _api_base_url(self) -> Optional[str]:
         return os.getenv("DRAGOS_API_BASE_URL")
 
     @property
@@ -95,11 +95,11 @@ class _ConfigLoaderEnvDragos(ConfigLoaderDragos):
         return os.getenv("DRAGOS_API_SECRET")
 
     @property
-    def _import_start_date(self) -> str:
+    def _import_start_date(self) -> Optional[str]:
         return os.getenv("DRAGOS_IMPORT_START_DATE")
 
     @property
-    def _tlp_level(self) -> str:
+    def _tlp_level(self) -> Optional[str]:
         return os.getenv("DRAGOS_TLP_LEVEL")
 
 
@@ -117,8 +117,7 @@ class ConfigLoaderEnv(ConfigLoader):
 
     @property
     def _connector(self) -> ConfigLoaderConnector:
-        return _ConfigLoaderEnvConnector()  # type: ignore[call-arg]
-        # it knows how to build itself without explicit pydantic mmodel __init__
+        return _ConfigLoaderEnvConnector()
 
     @property
     def _dragos(self) -> ConfigLoaderDragos:

@@ -56,26 +56,26 @@ class _ConfigLoaderYAMLConnector(ConfigLoaderConnector):
         return cls()
 
     @property
-    def _id(self) -> str:
+    def _id(self) -> Optional[str]:
         return self._raw_config.get("id")
 
     @property
-    def _name(self) -> str:
+    def _name(self) -> Optional[str]:
         return self._raw_config.get("name")
 
     @property
-    def _scope(self) -> list[str]:
+    def _scope(self) -> Optional[list[str]]:
         scope = self._raw_config.get("scope")
         if isinstance(scope, str):
             return [string.strip() for string in scope.split(",")]
         return scope
 
     @property
-    def _log_level(self) -> Literal["debug", "info", "warn", "error"]:
+    def _log_level(self) -> Optional[Literal["debug", "info", "warn", "error"]]:
         return self._raw_config.get("log_level")
 
     @property
-    def _duration_period(self) -> str:
+    def _duration_period(self) -> Optional[str]:
         return self._raw_config.get("duration_period")
 
     @property
@@ -119,7 +119,7 @@ class _ConfigLoaderYAMLDragos(ConfigLoaderDragos):
         return cls()
 
     @property
-    def _api_base_url(self) -> str:
+    def _api_base_url(self) -> Optional[str]:
         return self._raw_config.get("api_base_url")
 
     @property
@@ -131,11 +131,11 @@ class _ConfigLoaderYAMLDragos(ConfigLoaderDragos):
         return self._raw_config.get("api_secret")
 
     @property
-    def _import_start_date(self) -> str:
+    def _import_start_date(self) -> Optional[str]:
         return self._raw_config.get("import_start_date")
 
     @property
-    def _tlp_level(self) -> str:
+    def _tlp_level(self) -> Optional[str]:
         return self._raw_config.get("tlp_level")
 
 

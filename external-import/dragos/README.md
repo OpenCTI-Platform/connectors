@@ -114,32 +114,32 @@ graph LR
 
 ### OpenCTI Environment Variables
 
-| Parameter     | config.yaml key | Docker Env Var  | Mandatory | Description                                |
-| ------------- | --------------- | --------------- | --------- | ------------------------------------------ |
-| OpenCTI URL   | `url`           | `OPENCTI_URL`   | ✅ Yes     | The URL of your OpenCTI instance.          |
-| OpenCTI Token | `token`         | `OPENCTI_TOKEN` | ✅ Yes     | The admin token from the OpenCTI platform. |
+| Parameter       | config.yaml key | Docker Env Var  | Mandatory | Description                                |
+| --------------- | --------------- | --------------- | --------- | ------------------------------------------ |
+| OpenCTI URL     | `url`           | `OPENCTI_URL`   | ✅ Yes    | The URL of your OpenCTI instance.          |
+| OpenCTI Token   | `token`         | `OPENCTI_TOKEN` | ✅ Yes    | The admin token from the OpenCTI platform. |
 
 ### Base Connector Environment Variables
 
-| Parameter       | config.yaml key   | Docker Env Var              | Default | Mandatory | Description                                                              |
-| --------------- | ----------------- | --------------------------- | ------- | --------- | ------------------------------------------------------------------------ |
-| Connector ID    | `id`              | `CONNECTOR_ID`              | —       | ✅ Yes     | A unique UUIDv4 for this connector instance.                             |
-| Connector Name  | `name`            | `CONNECTOR_NAME`            | —       | ✅ Yes     | A human-readable name for this connector.                                |
-| Connector Scope | `scope`           | `CONNECTOR_SCOPE`           | —       | ✅ Yes     | Defines what this connector imports (STIX type or MIME type).            |
-| Log Level       | `log_level`       | `CONNECTOR_LOG_LEVEL`       | -       | ✅ Yes     | Logging verbosity: `debug`, `info`, `warn`, `error`.                     |
-| Duration Period | `duration_period` | `CONNECTOR_DURATION_PERIOD` | —       | ✅ Yes     | Time interval between data pulls. ISO8601 format, e.g., `PT1H` or `P1D`. |
+| Parameter         | config.yaml key   | Docker Env Var              | Default                                | Mandatory | Description                                                              |
+| ----------------- | ----------------- | --------------------------- | -------------------------------------- | --------- | ------------------------------------------------------------------------ |
+| Connector ID      | `id`              | `CONNECTOR_ID`              | `5147f35a-4fe8-4f43-82c2-8158f0175000` | No        | A unique UUIDv4 for this connector instance.                             |
+| Connector Name    | `name`            | `CONNECTOR_NAME`            | `Dragos`                               | No        | A human-readable name for this connector.                                |
+| Connector Scope   | `scope`           | `CONNECTOR_SCOPE`           | `[dragos]`                             | No        | Defines what this connector imports (STIX type or MIME type).            |
+| Log Level         | `log_level`       | `CONNECTOR_LOG_LEVEL`       | `error`                                 | No        | Logging verbosity: `debug`, `info`, `warn`, `error`.                     |
+| Duration Period   | `duration_period` | `CONNECTOR_DURATION_PERIOD` | `PT1H`                                  | No        | Time interval between data pulls. ISO8601 format, e.g., `PT1H` or `P1D`. |
 
 ### Connector Extra Parameters
 
-| Parameter         | config.yaml key     | Docker Env Var             | Default | Mandatory | Description                                                                                                                     |
-| ----------------- | ------------------- | -------------------------- | ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| API Base URL      | `api_base_url`      | `DRAGOS_API_BASE_URL`      | —       | ✅ Yes     | The base URL for the Dragos API.                                                                                                |
-| API Key           | `api_token`         | `DRAGOS_API_TOKEN`         | —       | ✅ Yes     | The API key used to authenticate with the Dragos API.                                                                           |
-| API Secret        | `api_secret`        | `DRAGOS_API_SECRET`        | —       | ✅ Yes     | The API secret used alongside the API key.                                                                                      |
-| Import Start Date | `import_start_date` | `DRAGOS_IMPORT_START_DATE` | —       | ✅ Yes     | The start date for the first data pull (ISO8601 or duration format).                                                            |
-| TLP Level         | `tlp_level`         | `DRAGOS_TLP_LEVEL`         | —       | ✅ Yes     | The TLP (Traffic Light Protocol) level for data being ingested. Valid values: `white`, `green`, `amber`, `amber+strict`, `red`. |
+| Parameter         | config.yaml key     | Docker Env Var             | Default                     | Mandatory | Description                                                                                                                     |
+| ----------------- | ------------------- | -------------------------- | --------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| API Base URL      | `api_base_url`      | `DRAGOS_API_BASE_URL`      | `https://portal.dragos.com` | No        | The base URL for the Dragos API.                                                                                                |
+| API Key           | `api_token`         | `DRAGOS_API_TOKEN`         | —                           | ✅ Yes    | The API key used to authenticate with the Dragos API.                                                                           |
+| API Secret        | `api_secret`        | `DRAGOS_API_SECRET`        | —                           | ✅ Yes    | The API secret used alongside the API key.                                                                                      |
+| Import Start Date | `import_start_date` | `DRAGOS_IMPORT_START_DATE` | `P30D`                      | No        | The start date for the first data pull (ISO8601 or duration format).                                                            |
+| TLP Level         | `tlp_level`         | `DRAGOS_TLP_LEVEL`         | `amber+strict`              | No        | The TLP (Traffic Light Protocol) level for data being ingested. Valid values: `white`, `green`, `amber`, `amber+strict`, `red`. |
 
-> 📅 The `import_start_date` can be formatted as a date (ISO8601) or as a duration (e.g., `P3D` for 3 days ago).
+> 📅 The `import_start_date` can be formatted as a time zone aware datetime or as a duration (e.g., `1970-01-01T00:00:00+03:00` for January, 1st 1970 at 3AM in Timezon +3H or `P3D` for 3 days ago relative to NOW UTC).
 
 ## Additional Information
 

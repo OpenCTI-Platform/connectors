@@ -223,7 +223,7 @@ def test_config_loader_connector_raises_config_retrieval_error_with_incorrect_at
     class InvalidStubConfigLoaderConnector(StubConfigLoaderConnector):
         @property
         def _id(self):
-            pass  # should return a string
+            return 1234  # should return a string
 
     # When: Instantiating InvalidStubConfigLoaderConnector
     # Then: A ConfigRetrievalError is raised
@@ -316,7 +316,7 @@ def test_config_loader_dragos_raises_config_retrieval_error_with_incorrect_attri
     class InvalidStubConfigLoaderDragos(StubConfigLoaderDragos):
         @property
         def _api_base_url(self):
-            pass  # should return a string
+            return 1234  # should return a string
 
     # When: instantiating InvalidStubConfigLoaderDragos
     # Then: A ConfigRetrievalError is raised
