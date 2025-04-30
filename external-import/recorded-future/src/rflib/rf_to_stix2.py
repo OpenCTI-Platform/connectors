@@ -85,6 +85,7 @@ class Indicator(RFStixEntity):
         self.tlp = TLP_MAP.get(tlp, None)
         self.description = None
         self.first_seen = first_seen
+        self.labels = []
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -108,6 +109,7 @@ class Indicator(RFStixEntity):
             id=pycti.Indicator.generate_id(self._create_pattern()),
             name=self.name,
             description=self.description,
+            labels=self.labels,
             pattern_type="stix",
             valid_from=self.first_seen,
             pattern=self._create_pattern(),
@@ -122,6 +124,9 @@ class Indicator(RFStixEntity):
 
     def add_description(self, description):
         self.description = description
+
+    def add_labels(self, labels):
+        self.labels = labels
 
     def _add_main_observable_type_to_indicators(self):
         """Handle x_opencti_main_observable_type for filtering"""
