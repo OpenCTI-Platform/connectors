@@ -173,7 +173,6 @@ class HygieneConnector:
             )
         )
 
-
         self.helper.log_info(f"Warning lists slow search: {warninglists_slow_search}")
 
         self.warninglists = WarningLists(slow_search=warninglists_slow_search)
@@ -196,7 +195,6 @@ class HygieneConnector:
             )
 
     def _process_entity(self, stix_objects, stix_entity, opencti_entity) -> str:
-
         if opencti_entity["entity_type"] == "Indicator":
             # Extract the observable in the pattern
             observables = self._convert_indicator_to_observables(opencti_entity)
@@ -206,23 +204,33 @@ class HygieneConnector:
         else:
             return self._process_observable(stix_objects, stix_entity, opencti_entity)
 
-    def _process_observable(self, stix_objects, stix_entity, opencti_entity) -> Optional[str]:
+    def _process_observable(
+        self, stix_objects, stix_entity, opencti_entity
+    ) -> Optional[str]:
         # Search in warninglist
-        warninglist_hits: List[WarningList] = self.warninglists.search(opencti_entity["observable_value"])
+        warninglist_hits: List[WarningList] = self.warninglists.search(
+            opencti_entity["observable_value"]
+        )
 
         # If not found and the domain is a subdomain, search with the parent.
-        use_parent, warninglist_hits = self.search_with_parent(warninglist_hits, stix_entity)
+        use_parent, warninglist_hits = self.search_with_parent(
+            warninglist_hits, stix_entity
+        )
 
         # Iterate over the hits
         if warninglist_hits:
             score = self.process_result(
                 warninglist_hits, stix_objects, stix_entity, opencti_entity, use_parent
             )
-            warninglist_names = [warninglist_hit.name for warninglist_hit in warninglist_hits]
+            warninglist_names = [
+                warninglist_hit.name for warninglist_hit in warninglist_hits
+            ]
             return f"Observable value found on warninglists {warninglist_names} and tagged accordingly. Score set to {score}."
         return None
 
-    def _process_indicator(self, stix_objects, stix_entity, observables) -> Optional[str]:
+    def _process_indicator(
+        self, stix_objects, stix_entity, observables
+    ) -> Optional[str]:
         result = None
         for observable in observables:
             if observable["type"] == "unsupported_type":
@@ -231,13 +239,17 @@ class HygieneConnector:
             warninglist_hits = self.warninglists.search(observable["value"])
 
             # If not found and the domain is a subdomain, search with the parent.
-            use_parent, warninglist_hits = self.search_with_parent(warninglist_hits, observable)
+            use_parent, warninglist_hits = self.search_with_parent(
+                warninglist_hits, observable
+            )
             # Iterate over the hits
             if warninglist_hits:
                 score = self.process_result(
                     warninglist_hits, stix_objects, stix_entity, observable, use_parent
                 )
-                warninglist_names = [warninglist_hit.name for warninglist_hit in warninglist_hits]
+                warninglist_names = [
+                    warninglist_hit.name for warninglist_hit in warninglist_hits
+                ]
                 # For loop with a return statement? What about the other observable values? Is it always just one observable?
                 msg = f"Observable value found on warninglists {warninglist_names} and tagged. Score of {score} applied."
                 self.helper.log_info(msg)
@@ -293,7 +305,9 @@ class HygieneConnector:
             )
             return None
 
-    def search_with_parent(self, result: List[WarningList], stix_entity: dict) -> Tuple[bool,List[WarningList]]:
+    def search_with_parent(
+        self, result: List[WarningList], stix_entity: dict
+    ) -> Tuple[bool, List[WarningList]]:
         use_parent = False
         if not result and self.enrich_subdomains is True:
             if stix_entity["type"] == "domain-name":
@@ -304,7 +318,12 @@ class HygieneConnector:
         return use_parent, result
 
     def process_result(
-        self, warninglist_hits: List[WarningList], stix_objects: list, stix_entity: dict, opencti_entity: dict, use_parent: bool
+        self,
+        warninglist_hits: List[WarningList],
+        stix_objects: list,
+        stix_entity: dict,
+        opencti_entity: dict,
+        use_parent: bool,
     ) -> int:
         """Process warning list results. Returns the calculated score."""
 
@@ -330,9 +349,13 @@ class HygieneConnector:
         for warninglist_hit in warninglist_hits:
             self.helper.log_info(
                 "Type: %s | Name: %s | Version: %s | Descr: %s"
-                % (warninglist_hit.type, warninglist_hit.name, warninglist_hit.version, warninglist_hit.description)
+                % (
+                    warninglist_hit.type,
+                    warninglist_hit.name,
+                    warninglist_hit.version,
+                    warninglist_hit.description,
+                )
             )
-
 
             self.helper.log_info(
                 f"number of hits ({len(warninglist_hits)}) setting score to {score}"
