@@ -9,6 +9,7 @@ import requests
 import tldextract
 import validators
 from pycti import OpenCTIConnectorHelper
+from pydantic import TypeAdapter, ValidationError
 from stix2 import (
     TLP_WHITE,
     Bundle,
@@ -379,6 +380,34 @@ class RansomwareAPIConnector:
         )
         return domain
 
+    def safe_datetime(self, value: str | None, check_field: str) -> datetime | None:
+        """Safely parses a string into a naive datetime object (without timezone).
+        Returns None if the input is None or not a valid ISO 8601 datetime string.
+        Can avoid errors where fields are missing or incorrectly formed.
+        Args:
+            value (str | None): The input string to validate and convert to datetime.
+            check_field (str): The name of the field being validated (used for logging).
+        Returns:
+            datetime | None : A naive datetime object if the input is valid, otherwise None.
+        Examples:
+            self.safe_datetime("2025-01-01 07:20:50.000000", "attack_date")
+            > datetime.datetime(2025, 1, 1, 7, 20, 50, 0)
+
+            self.safe_datetime(None, "attack_date")
+            > None
+
+            self.safe_datetime("invalid-date", "attack_date")
+            > None
+        """
+        try:
+            return TypeAdapter(datetime).validate_python(value)
+        except ValidationError:
+            self.helper.connector_log.debug(
+                "The expected value is not a valid datetime.",
+                {"field": check_field, "value": value},
+            )
+            return None
+
     # Generates STIX objects from the ransomware.live API data
     # pylint:disable=too-many-branches,too-many-statements
     def stix_object_generator(self, item, group_data):
@@ -406,12 +435,12 @@ class RansomwareAPIConnector:
         # Attack Date sets the start_time of the relationship between a threat actor or intrusion set and a victim.
         # This value (attack_date_iso) will also be used in the report. (Report : Attack Date -> Published)
         attack_date = item.get("attackdate")
-        attack_date_iso = datetime.fromisoformat(attack_date)
+        attack_date_iso = self.safe_datetime(attack_date, "attack_date")
 
         # Discovered sets the created date of the relationship between a Threat Actor or Intrusion Set and a Victim.
         # This value (discovered_iso) will also be used in the report. (Report : Discovered -> Created)
         discovered = item.get("discovered")
-        discovered_iso = datetime.fromisoformat(discovered)
+        discovered_iso = self.safe_datetime(discovered, "discovered")
 
         # Creating Threat Actor object
         threat_actor = None
