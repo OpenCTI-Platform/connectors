@@ -1,13 +1,13 @@
 version: '3'
 services:
   connector-vulmatch:
-    image: opencti/connector-vulmatch:6.6.4
+    image: opencti/connector-dogesec-vulmatch:6.6.8
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=VULMATCH
-      - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report,vulnerability,campaign,incident,indicator,infrastructure,location,note,threat-actor,tool,software
+      - CONNECTOR_SCOPE=vulmatch
       - CONNECTOR_LOG_LEVEL=error
       - VULMATCH_BASE_URL=https://api.vulmatch.com/
       - VULMATCH_API_KEY=CHANGEME

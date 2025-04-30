@@ -1,7 +1,7 @@
 """Offer tools to ingest Report and related entities from Dragos reports."""
 
 import logging
-from typing import TYPE_CHECKING, Any, Generator, Optional
+from typing import TYPE_CHECKING, Any, Generator, Literal, Optional
 
 from dragos.domain.models import octi
 from dragos.domain.models.octi.enums import OrganizationType
@@ -9,7 +9,6 @@ from dragos.domain.use_cases.common import BaseUseCase, UseCaseError
 from dragos.interfaces import Area, City, Country, Position, Region
 
 if TYPE_CHECKING:
-    from dragos.domain.models.octi.enums import TLPLevel
     from dragos.interfaces import Geocoding, Indicator, Report, Tag
 
 logger = logging.getLogger(__name__)
@@ -41,20 +40,14 @@ class ReportProcessor(BaseUseCase):
 
     """
 
-    def __init__(self, tlp_level: "TLPLevel", geocoding: "Geocoding"):
+    def __init__(
+        self,
+        tlp_level: Literal["white", "green", "amber", "amber+strict", "red"],
+        geocoding: "Geocoding",
+    ) -> None:
         """Initialize the reports ingestion use case."""
         BaseUseCase.__init__(self, tlp_level)
         self.geocoding = geocoding
-
-    def _make_artifact(self, indicator: "Indicator") -> octi.Artifact:
-        """Make an OCTI Artifact from report's indicator."""
-        hash_algorithm, hash_value = indicator.value.split(":")
-
-        return octi.Artifact(
-            hashes={hash_algorithm: hash_value},
-            author=self.author,
-            markings=[self.tlp_marking],
-        )
 
     def _make_domain_name(self, indicator: "Indicator") -> octi.DomainName:
         """Make an OCTI DomainName from report's indicator."""
@@ -66,8 +59,16 @@ class ReportProcessor(BaseUseCase):
 
     def _make_file(self, indicator: "Indicator") -> octi.File:
         """Make an OCTI File from report's indicator."""
+        # Indicators of type "artifact" are mapped to File observables in OCTI
+        # as Dragos does not provide any payload for them.
+        if indicator.type == "artifact":
+            hash_algorithm, hash_value = indicator.value.split(":")
+        else:
+            hash_algorithm = indicator.type
+            hash_value = indicator.value
+
         return octi.File(
-            hashes={indicator.type: indicator.value},
+            hashes={hash_algorithm: hash_value},
             author=self.author,
             markings=[self.tlp_marking],
         )
@@ -227,13 +228,11 @@ class ReportProcessor(BaseUseCase):
             """Make an OCTI observable from a Dragos report related indicator."""
             dragos_indicator_type = _related_indicator.type.lower()
             match dragos_indicator_type:
-                case "artifact":
-                    return self._make_artifact(_related_indicator)
                 case "domain":
                     return self._make_domain_name(_related_indicator)
                 case "ip":
                     return self._make_ip_address(_related_indicator)
-                case "md5" | "sha1" | "sha256":
+                case "artifact" | "md5" | "sha1" | "sha256":
                     return self._make_file(_related_indicator)
                 case "url":
                     return self._make_url(_related_indicator)
@@ -245,10 +244,9 @@ class ReportProcessor(BaseUseCase):
             indicator = None
             observable = make_observable(related_indicator)
             if observable:
-                indicator = observable.to_indicator(
-                    valid_from=related_indicator.first_seen,
-                    valid_until=related_indicator.last_seen,
-                )
+                # Dragos reports contains indicators with first_seen and last_seen that can be
+                # the same. We do not stipulate a validity time range.
+                indicator = observable.to_indicator()
             if observable and indicator:
                 yield (observable, indicator)
 

@@ -31,7 +31,6 @@ The connector can be configured with the following variables:
 | `create_indicators`        | `IRONNET_CREATE_INDICATORS`        | `true`                                           | If true then indicators will be created from the data.         |
 | `create_ip_indicators`     | `IRONNET_CREATE_IP_INDICATORS`     | `false`                                          | If true then IP based indicators will also be created.         |
 | `ip_indicator_valid_until` | `IRONNET_IP_INDICATOR_VALID_UNTIL` | `P90D`                                           | ISO8601 time-delta for how long IP indicators should be valid. |
-| `update_existing_data`     | `CONNECTOR_UPDATE_EXISTING_DATA`   | `true`                                           | Update existing data bundle flag.                              |
 | `interval`                 | `CONNECTOR_INTERVAL`               | `86400`                                          | Interval in minutes between runs.                              |
 | `loop_interval`            | `CONNECTOR_LOOP_INTERVAL`          | `600`                                            | Interval in minutes between loops.                             |
 
