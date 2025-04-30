@@ -4,7 +4,7 @@ from typing import Any
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from email_intel_imap.config import ConnectorConfig
+from email_intel_imap.config import ConnectorSettings
 from pytest_mock import MockerFixture
 
 
@@ -40,8 +40,8 @@ def fixture_mock_email_intel_imap_config(
     mocker: MockerFixture, email_intel_config_dict: dict[str, dict[str, Any]]
 ) -> None:
     # Make sure the local config is not loaded in the tests
-    ConnectorConfig.model_config["yaml_file"] = ""
-    ConnectorConfig.model_config["env_file"] = ""
+    ConnectorSettings.model_config["yaml_file"] = ""
+    ConnectorSettings.model_config["env_file"] = ""
 
     environ = deepcopy(os.environ)
     for key, value in email_intel_config_dict.items():
@@ -61,8 +61,6 @@ def fixture_mocked_helper(mocker: MockerFixture) -> Mock:
     helper.stix2_create_bundle.return_value = "bundle"
     return helper
 
-    return mocker.patch("pycti.OpenCTIConnectorHelper", Mock())
-
 
 @pytest.fixture(name="mocked_mail_box")
 def fixture_mocked_mail_box(mocker: MockerFixture) -> MagicMock:
@@ -77,5 +75,5 @@ def fixture_mocked_mail_box(mocker: MockerFixture) -> MagicMock:
 @pytest.fixture(name="test_config")
 def fixture_test_config(
     mock_email_intel_imap_config: None,
-) -> ConnectorConfig:
-    return ConnectorConfig()
+) -> ConnectorSettings:
+    return ConnectorSettings()

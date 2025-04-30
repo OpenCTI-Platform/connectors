@@ -6,7 +6,7 @@ from typing import Any
 
 import stix2
 from base_connector.client import BaseClient
-from base_connector.config import BaseConnectorConfig
+from base_connector.config import BaseConnectorSettings
 from base_connector.converter import BaseConverter
 from base_connector.errors import ConnectorError, ConnectorWarning
 from pycti import OpenCTIConnectorHelper
@@ -51,7 +51,7 @@ class BaseConnector(abc.ABC):
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        config: BaseConnectorConfig,
+        config: BaseConnectorSettings,
         converter: BaseConverter,
         client: BaseClient | None = None,
     ) -> None:
@@ -75,7 +75,9 @@ class BaseConnector(abc.ABC):
     def finalize_work(self, work_id: str, message: str) -> None:
         self.helper.api.work.to_processed(work_id=work_id, message=message)
 
-    def create_and_send_bundles(self, work_id: str, stix_objects: list[Any]) -> None:
+    def create_and_send_bundles(
+        self, work_id: str, stix_objects: list[stix2.v21._STIXBase21]
+    ) -> None:
         if not stix_objects:
             self.helper.connector_logger.info("No STIX objects to process.")
             return

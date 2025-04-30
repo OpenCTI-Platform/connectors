@@ -5,14 +5,14 @@ import freezegun
 import pytest
 from base_connector import ConnectorError
 from email_intel_imap.client import ConnectorClient
-from email_intel_imap.config import ConnectorConfig
+from email_intel_imap.config import ConnectorSettings
 from email_intel_imap.connector import Connector
 from email_intel_imap.converter import ConnectorConverter
 from stix2.v21.vocab import REPORT_TYPE_THREAT_REPORT
 
 
 @pytest.fixture(name="connector")
-def fixture_connector(mocked_helper: Mock, test_config: ConnectorConfig) -> Connector:
+def fixture_connector(mocked_helper: Mock, test_config: ConnectorSettings) -> Connector:
     return Connector(
         config=test_config,
         helper=mocked_helper,

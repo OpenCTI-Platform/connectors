@@ -18,17 +18,21 @@ class ConnectorClient(BaseClient):
         self, since_date: datetime.date
     ) -> Generator[MailMessage, None, None]:
         """
-        Fetch emails received since a given date.
+        Retrieve email messages received since a given date.
+
+        To understand the AND argument of the fetch method, refer to the imap-tools documentation:
+        https://pypi.org/project/imap-tools/#search-criteria
 
         Args:
-            since_date (datetime.date): The date to fetch emails since.
+            since_date (datetime.date): The date from which to begin retrieving emails.
+                Only messages received on or after this date will be yielded.
 
         Yields:
-            EmailMessage: Each parsed email message one by one.
+            MailMessage: A parsed email message object representing one received email.
         """
         with MailBox(host=self.host, port=self.port).login(  # type: ignore
             username=self.username,
             password=self.password,
             initial_folder=self.mailbox,
         ) as mailbox:
-            yield from mailbox.fetch(AND(date_gte=since_date))
+            yield from mailbox.fetch(criteria=AND(date_gte=since_date))

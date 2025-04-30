@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: "test-connector-id"
-  type: "EXTERNAL_IMPORT"
   name: "External Import Connector Template"
   scope: "ChangeMe"
   log_level: "info"

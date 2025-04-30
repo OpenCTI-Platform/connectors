@@ -3,12 +3,12 @@ import datetime
 import stix2
 from base_connector.connector import BaseConnector
 from email_intel_imap.client import ConnectorClient
-from email_intel_imap.config import ConnectorConfig
+from email_intel_imap.config import ConnectorSettings
 from email_intel_imap.converter import ConnectorConverter
 
 
 class Connector(BaseConnector):
-    config: ConnectorConfig
+    config: ConnectorSettings
     converter: ConnectorConverter
     client: ConnectorClient
 
@@ -32,6 +32,7 @@ class Connector(BaseConnector):
             for email in self.client.fetch_from_relative_import_start_date(
                 since_date.date()
             )
+            # As the IMAP library filters by date, we need to add this to filter also by time
             if email.date > since_date
             for stix_object in self.converter.to_stix_objects(email)
         ]
