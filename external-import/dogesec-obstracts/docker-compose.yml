@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-obstracts:
+  connector-dogesec-obstracts:
     image: opencti/connector-dogesec-obstracts:6.6.4
     environment:
       - OPENCTI_URL=http://opencti:8080
