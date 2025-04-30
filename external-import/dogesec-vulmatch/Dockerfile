@@ -4,6 +4,8 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 # Copy the connector
 COPY src /opt/opencti-connector-dogesec-vulmatch
 
+COPY requirements.txt /opt/opencti-connector-dogesec-vulmatch/requirements.txt
+
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk update && apk upgrade && \
