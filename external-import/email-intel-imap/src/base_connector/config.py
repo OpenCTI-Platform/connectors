@@ -1,11 +1,10 @@
 import abc
 import datetime
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from base_connector.enums import LogLevelType
 from base_connector.errors import ConfigRetrievalError
-from pycti import ConnectorType
 from pydantic import BaseModel, BeforeValidator, Field, HttpUrl, PlainSerializer
 from pydantic_core.core_schema import SerializationInfo
 from pydantic_settings import (
@@ -64,14 +63,14 @@ class _OpenCTIConfig(BaseModel):
     ssl_verify: bool = Field(default=False)
 
 
-class _ConnectorConfig(BaseModel):
+class ConnectorConfig(BaseModel):
     id: str
     name: str
-    type: ConnectorType
+    type: Literal["EXTERNAL_IMPORT"] = Field(default="EXTERNAL_IMPORT")
     scope: ListFromString
     duration_period: datetime.timedelta
+    log_level: LogLevelType
 
-    log_level: LogLevelType = Field(default=LogLevelType.ERROR)
     auto: bool = Field(default=False)
     expose_metrics: bool = Field(default=False)
     metrics_port: int = Field(default=9095)
@@ -87,9 +86,9 @@ class _ConnectorConfig(BaseModel):
     send_to_directory_retention: int = Field(default=7)
 
 
-class BaseConnectorConfig(abc.ABC, BaseSettings):
+class BaseConnectorSettings(abc.ABC, BaseSettings):
     opencti: _OpenCTIConfig
-    connector: _ConnectorConfig
+    connector: ConnectorConfig
 
     # files needs to be at the same level as the module
     model_config = SettingsConfigDict(

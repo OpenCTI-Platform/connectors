@@ -40,7 +40,7 @@ relies on email as a delivery method and is compatible with standard IMAP server
 
 ## 🔧 Configuration
 
-Configuration parameters can be defined in a `.env` or `config.yml` or in environment variables.
+Configuration parameters can be either defined in a `config.yml`, `.env` or in environment variables.
 
 ### OpenCTI Configuration
 
@@ -51,14 +51,13 @@ Configuration parameters can be defined in a `.env` or `config.yml` or in enviro
 
 ### Base Connector Configuration
 
-| Parameter                 | config.yml key  | Environment Variable        | Recommended value | Required | Description                                               |
-|---------------------------|-----------------|-----------------------------|-------------------|----------|-----------------------------------------------------------|
-| Connector ID              | id              | `CONNECTOR_ID`              | ❌                 | ✅        | A unique `UUIDv4` identifier for this connector instance. |
-| Connector Type            | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT   | ✅        | Should be set to `EXTERNAL_IMPORT` for this connector.    |
-| Connector Name            | name            | `CONNECTOR_NAME`            | Email Intel IMAP  | ✅        | Name of the connector.                                    |
-| Connector Scope           | scope           | `CONNECTOR_SCOPE`           | email-intel-imap  | ✅        | The scope/type of objects the connector imports.          |
-| Connector Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | error             | ✅        | Logging level (`debug`, `info`, `warn`, `error`).         |
-| Connector Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | PT1H              | ✅        | Frequency of polling the mailbox (ISO 8601 format).       |
+| Parameter                 | config.yml      | Environment Variable        | Required | Default value    | Description                                               |
+|---------------------------|-----------------|-----------------------------|----------|------------------|-----------------------------------------------------------|
+| Connector ID              | id              | `CONNECTOR_ID`              | ✅        | ❌                | A unique `UUIDv4` identifier for this connector instance. |
+| Connector Name            | name            | `CONNECTOR_NAME`            | ❌        | Email Intel IMAP | Name of the connector.                                    |
+| Connector Scope           | scope           | `CONNECTOR_SCOPE`           | ❌        | email-intel-imap | The scope/type of objects the connector imports.          |
+| Connector Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | ❌        | error            | Logging level (`debug`, `info`, `warn`, `error`).         |
+| Connector Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | ❌        | PT1H             | Frequency of polling the mailbox (ISO 8601 format).       |
 
 ### Email Intel IMAP Connector Configuration
 
@@ -129,11 +128,18 @@ docker compose up -d
 
 3. Set up the configuration:
 
-3 options:
+3 options
 
-- Create a `.env` file based on `.env.sample` and set the required environment variables.
 - Create a `config.yml` file based on `config.yml.sample` and set the required parameters.
+- Create a `.env` file based on `.env.sample` and set the required environment variables.
 - Set the required environment variables directly in your shell.
+
+The configuration will come in this order either from:
+
+1. YAML file
+2. .env file
+3. Environment variables
+4. Default values
 
 4. Run the connector:
 
@@ -162,12 +168,13 @@ After deployment, the connector:
 - Polls the configured mailbox at the interval defined in `CONNECTOR_DURATION_PERIOD`
 - On first run, fetches emails received within the period defined by `RELATIVE_IMPORT_START_DATE`
 - Each fetched email is transformed into an OpenCTI report:
-    - `report_name`: Email subject
+    - `name`: Email subject
         - If the subject is empty, a default name is generated as follow `<no subject> from <sender@email.com>` where
           `<sender@email.com>` is the email address of the sender.
-    - `report_type`: `threat-report`
-    - `report_published`: Email sent date (converted to UTC)
-    - `report_content`: Full email body (unparsed)
+    - `type`: `threat-report`
+    - `published`: Email date (converted to UTC)
+    - `x_opencti_content`: Full email body (unparsed)
+    - `x_opencti_files` : List of attachments (if any) depending on the `attachments_mime_types` parameter.
 
 ---
 

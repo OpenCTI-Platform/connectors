@@ -3,17 +3,17 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from base_connector.config import BaseConnectorConfig
+from base_connector.config import BaseConnectorSettings
 from base_connector.errors import ConfigRetrievalError
 from pydantic_settings import SettingsConfigDict
 
 
-class ConnectorConfig(BaseConnectorConfig):
+class ConnectorSettings(BaseConnectorSettings):
     pass
 
 
 def test_yaml_config(config_dict: dict[str, dict[str, Any]]) -> None:
-    class YamlConfig(ConnectorConfig):
+    class YamlConfig(ConnectorSettings):
         model_config = SettingsConfigDict(
             yaml_file=f"{Path(__file__).parent}/config.test.yml"
         )
@@ -23,7 +23,7 @@ def test_yaml_config(config_dict: dict[str, dict[str, Any]]) -> None:
 
 
 def test_dotenv_config(config_dict: dict[str, dict[str, Any]]) -> None:
-    class DotEnvConfig(ConnectorConfig):
+    class DotEnvConfig(ConnectorSettings):
         model_config = SettingsConfigDict(env_file=f"{Path(__file__).parent}/.env.test")
 
     config = DotEnvConfig()
@@ -32,22 +32,22 @@ def test_dotenv_config(config_dict: dict[str, dict[str, Any]]) -> None:
 
 @pytest.mark.usefixtures("mocked_environ")
 def test_env_config(config_dict: dict[str, dict[str, Any]]) -> None:
-    config = ConnectorConfig()
+    config = ConnectorSettings()
     assert config.model_dump_pycti() == config_dict
 
 
 @pytest.mark.usefixtures("mocked_environ")
 def test_missing_values(config_dict: dict[str, dict[str, Any]]) -> None:
-    config = ConnectorConfig()
+    config = ConnectorSettings()
     assert config.model_dump_pycti() == config_dict
     os.environ.pop("OPENCTI_URL")
     with pytest.raises(ConfigRetrievalError):
-        ConnectorConfig()
+        ConnectorSettings()
 
 
 def test_fail_config() -> None:
     with pytest.raises(ConfigRetrievalError) as exc_info:
-        ConnectorConfig()
+        ConnectorSettings()
 
     errors = exc_info.value.args[1].errors()
 

@@ -25,4 +25,4 @@ def test_client_fetch_from_relative_import_start_date(
     mocked_mail_box.fetch.assert_not_called()  # Make sure we have a Generator
     list(result)  # Consume the generator
 
-    mocked_mail_box.fetch.assert_called_once_with("(SINCE 1-Oct-2023)")
+    mocked_mail_box.fetch.assert_called_once_with(criteria="(SINCE 1-Oct-2023)")

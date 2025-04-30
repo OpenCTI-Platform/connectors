@@ -2,7 +2,7 @@ import sys
 import traceback
 
 from email_intel_imap.client import ConnectorClient
-from email_intel_imap.config import ConnectorConfig
+from email_intel_imap.config import ConnectorSettings
 from email_intel_imap.connector import Connector
 from email_intel_imap.converter import ConnectorConverter
 from pycti import OpenCTIConnectorHelper
@@ -18,7 +18,7 @@ def main() -> None:
     - exit(1): effective way to terminate a Python program when an error is encountered.
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
-    config = ConnectorConfig()
+    config = ConnectorSettings()
     helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
     converter = ConnectorConverter(
         helper=helper,
