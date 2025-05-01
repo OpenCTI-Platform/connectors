@@ -1,4 +1,4 @@
-pycti==6.6.8
+pycti==6.6.9
 validators==0.34.0
 stix2
 taxii2-client
