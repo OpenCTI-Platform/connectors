@@ -5,11 +5,11 @@ from typing import Dict, List, Optional, Tuple
 import tldextract
 import yaml
 from pycti import (
-    STIX_EXT_OCTI,
-    STIX_EXT_OCTI_SCO,
+    get_config_variable,
     OpenCTIConnectorHelper,
     OpenCTIStix2,
-    get_config_variable,
+    STIX_EXT_OCTI,
+    STIX_EXT_OCTI_SCO,
 )
 from pymispwarninglists import WarningList, WarningLists
 
@@ -362,28 +362,12 @@ class HygieneConnector:
             )
 
             # Add labels
+            label_value = self.label_hygiene["value"]
             if use_parent:
-                if opencti_entity["entity_type"] == "Indicator":
-                    stix_entity["labels"].append(self.label_hygiene_parent["value"])
-                else:
-                    OpenCTIStix2.put_attribute_in_extension(
-                        stix_entity,
-                        STIX_EXT_OCTI_SCO,
-                        "labels",
-                        self.label_hygiene_parent["value"],
-                        True,
-                    )
-            else:
-                if opencti_entity["entity_type"] == "Indicator":
-                    stix_entity["labels"].append(self.label_hygiene["value"])
-                else:
-                    OpenCTIStix2.put_attribute_in_extension(
-                        stix_entity,
-                        STIX_EXT_OCTI_SCO,
-                        "labels",
-                        self.label_hygiene["value"],
-                        True,
-                    )
+                label_value = self.label_hygiene_parent["value"]
+            self._add_label_to_entity(
+                opencti_entity, stix_entity, label_value=label_value
+            )
 
             # Update score
             OpenCTIStix2.put_attribute_in_extension(
@@ -451,6 +435,25 @@ class HygieneConnector:
             serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
             self.helper.send_stix2_bundle(serialized_bundle)
         return score
+
+    def _add_label_to_entity(
+        self, opencti_entity: dict, stix_entity: dict, label_value: str
+    ):
+        if opencti_entity["entity_type"] == "Indicator":
+            if label_value not in stix_entity["labels"]:
+                stix_entity["labels"].append(label_value)
+            else:
+                self.helper.log_debug(
+                    f"Label {label_value} already present in {stix_entity}."
+                )
+        else:
+            OpenCTIStix2.put_attribute_in_extension(
+                stix_entity,
+                STIX_EXT_OCTI_SCO,
+                "labels",
+                label_value,
+                True,
+            )
 
     def _process_message(self, data: Dict) -> str:
         stix_objects = data["stix_objects"]
