@@ -5,11 +5,11 @@ from typing import Dict, List, Optional, Tuple
 import tldextract
 import yaml
 from pycti import (
-    get_config_variable,
-    OpenCTIConnectorHelper,
-    OpenCTIStix2,
     STIX_EXT_OCTI,
     STIX_EXT_OCTI_SCO,
+    OpenCTIConnectorHelper,
+    OpenCTIStix2,
+    get_config_variable,
 )
 from pymispwarninglists import WarningList, WarningLists
 
