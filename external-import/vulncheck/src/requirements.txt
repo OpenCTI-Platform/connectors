@@ -1,5 +1,5 @@
 vulncheck-sdk==0.0.11
-pycti==6.6.8
+pycti==6.6.9
 pydantic==2.11.3
 validators==0.34.0
 psutil==7.0.0
