@@ -2,7 +2,7 @@ FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=STREAM
 
 # Copy the connector
-COPY src /opt/opencti-connector-microsoft-graph-securit-intel
+COPY src /opt/opencti-connector-microsoft-defender-intel
 
 # Install Python modules
 # hadolint ignore=DL3003
