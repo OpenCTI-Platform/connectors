@@ -34,7 +34,9 @@ if __name__ == "__main__":
             created_after = get_last_run(helper, HISTORICAL_POLLING_DAYS)
 
             API_URL = DOPPEL_API_BASE_URL + DOPPEL_ALERTS_ENDPOINT
-            alerts = fetch_alerts(helper, API_URL, API_KEY, created_after, MAX_RETRIES, RETRY_DELAY)
+            alerts = fetch_alerts(
+                helper, API_URL, API_KEY, created_after, MAX_RETRIES, RETRY_DELAY
+            )
             helper.log_info(f"Fetched {len(alerts)} alerts from Doppel")
 
             if alerts:

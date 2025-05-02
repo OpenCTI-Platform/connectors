@@ -9,8 +9,10 @@ def parse_iso_datetime(timestamp_str, field_name, alert_id, helper):
         return ""
     try:
         return (
-            datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S.%f")
-            .isoformat(timespec="seconds") + "Z"
+            datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S.%f").isoformat(
+                timespec="seconds"
+            )
+            + "Z"
         )
     except ValueError as e:
         helper.log_error(f"[{alert_id}] Failed to parse '{field_name}': {e}")
@@ -26,7 +28,9 @@ def get_last_run(helper, historical_days):
     else:
         default_start = datetime.now(timezone.utc) - timedelta(days=historical_days)
         formatted = default_start.strftime("%Y-%m-%dT%H:%M:%S")
-        helper.log_info(f"No previous state found. Using historical polling window: {formatted}")
+        helper.log_info(
+            f"No previous state found. Using historical polling window: {formatted}"
+        )
         return formatted
 
 
