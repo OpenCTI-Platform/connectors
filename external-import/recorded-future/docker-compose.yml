@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-recorded-future:
-    image: opencti/connector-recorded-future:6.5.10
+    image: opencti/connector-recorded-future:6.6.9
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
@@ -24,6 +24,7 @@ services:
       - RECORDED_FUTURE_RISK_AS_SCORE=True #optional, can remove
       - RECORDED_FUTURE_RISK_THRESHOLD=60 #optional, can remove
       - RECORDED_FUTURE_PULL_RISK_LIST=False #optional, can remove
+      - RECORDED_FUTURE_RISKRULES_AS_LABEL=False #optional, can remove
       - RECORDED_FUTURE_RISK_LIST_THRESHOLD=70 #optional, can remove
       - RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES='Malware,Hash,URL,Threat Actor,MitreAttackIdentifier' #required if RECORDED_FUTURE_PULL_RISK_LIST is True, possible values: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier
       - RECORDED_FUTURE_PULL_THREAT_MAPS=False #optional, can remove

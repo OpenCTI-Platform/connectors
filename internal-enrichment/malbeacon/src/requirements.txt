@@ -1,4 +1,4 @@
-pycti==6.5.10
+pycti==6.6.9
 pydantic>=2.8.2,<3.0.0
-urllib3==2.2.2
-validators==0.33.0
+urllib3==2.4.0
+validators==0.34.0

@@ -4,7 +4,6 @@ from datetime import datetime
 from traceback import format_exc
 from typing import Any
 
-import stix2
 from config import ConfigConnector
 from cyberintegrations import TIAdapter
 from cyberintegrations.decorators import cache_data
@@ -120,7 +119,12 @@ class ExternalImportConnector:
         self.MITRE_MAPPER = None
 
     def _collect_intelligence(
-        self, collection, ttl, portion, mitre_mapper, flag=False
+        self,
+        collection,
+        ttl,
+        portion,
+        mitre_mapper,
+        flag_instrusion_set_instead_of_threat_actor=False,
     ) -> list:
         """Collect intelligence from the source"""
         raise NotImplementedError
@@ -168,7 +172,7 @@ class ExternalImportConnector:
         self, timestamp: int | None = None, prepared_data: dict | None = None
     ):
         current_state = self.helper.get_state()
-        if current_state:
+        if current_state is not None:
             if timestamp:
                 current_state["last_run"] = timestamp
             elif prepared_data:
@@ -217,11 +221,6 @@ class ExternalImportConnector:
                     self.helper.connector_logger.info(
                         f"{self.helper.connect_name} will run!"
                     )
-                    friendly_name = f"{self.helper.connect_name} run @ {self.get_formatted_utcfromtimestamp(date=timestamp)}"
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
-
                     try:
                         # create list of collections feeds generators
                         data = self.ti_adapter.create_generators(sleep_amount=1)
@@ -243,6 +242,10 @@ class ExternalImportConnector:
                                 f"Generator prepared data {prepared_data}"
                             )
                             collection = data_item[0][0]
+                            friendly_name = f"{self.helper.connect_name} - {collection} run @ {self.get_formatted_utcfromtimestamp(date=timestamp)}"
+                            work_id = self.helper.api.work.initiate_work(
+                                self.helper.connect_id, friendly_name
+                            )
                             generator = data_item[0][1]
                             self.helper.connector_logger.debug(
                                 f"Generator data collection:{collection} , generator: {generator}"
@@ -304,29 +307,27 @@ class ExternalImportConnector:
                                     self.helper.connector_logger.info(
                                         f"Parsing {count}/{size}"
                                     )
-
                                     bundle_objects = self._collect_intelligence(
                                         collection,
                                         self.ttl,
                                         event,
                                         self.MITRE_MAPPER,
-                                        flag=self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR,
+                                        flag_instrusion_set_instead_of_threat_actor=self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR,
                                     )
-                                    bundle = stix2.Bundle(
-                                        objects=bundle_objects, allow_custom=True
-                                    ).serialize()
-
-                                    self.helper.connector_logger.info(
-                                        f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
-                                    )
-                                    self.helper.send_stix2_bundle(
-                                        bundle,
-                                        update=self.update_existing_data,
-                                        work_id=work_id,
-                                    )
-                                    self.helper.connector_logger.debug(
-                                        f"Sending {str(bundle_objects)} STIX objects to OpenCTI..."
-                                    )
+                                    if len(bundle_objects) > 0:
+                                        bundle = (
+                                            OpenCTIConnectorHelper.stix2_create_bundle(
+                                                bundle_objects
+                                            )
+                                        )
+                                        self.helper.connector_logger.info(
+                                            f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
+                                        )
+                                        self.helper.send_stix2_bundle(
+                                            bundle,
+                                            update=self.update_existing_data,
+                                            work_id=work_id,
+                                        )
 
                                 # Update seqUpdate param
                                 prepared_data[collection].update(
@@ -334,18 +335,17 @@ class ExternalImportConnector:
                                 )
                                 self.set_or_update_state(prepared_data=prepared_data)
 
+                            # Finish work
+                            message = f"{self.helper.connect_name} - {collection} successfully run, storing last_run as {timestamp}"
+                            self.helper.api.work.to_processed(work_id, message)
                     except Exception:
                         self.helper.connector_logger.error(format_exc())
 
                     # Store the current timestamp as a last run
-                    message = f"{self.helper.connect_name} connector successfully run, storing last_run as {timestamp}"
-                    self.helper.connector_logger.info(message)
-
                     self.helper.connector_logger.info(
                         f"Grabbing current state and update it with last_run: {timestamp}"
                     )
                     self.set_or_update_state(timestamp=timestamp)
-                    self.helper.api.work.to_processed(work_id, message)
                     next_run_it = ExternalImportHelper.get_next_run_it(
                         interval=self.interval,
                         helper=self.helper,
