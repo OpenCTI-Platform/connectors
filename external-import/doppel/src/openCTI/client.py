@@ -11,7 +11,9 @@ def send_to_opencti(stix_bundle, helper, update_existing):
             return
 
         bundle_dict = json.loads(stix_bundle)
-        helper.log_info(f"Sending STIX bundle with {len(bundle_dict.get('objects', []))} objects to OpenCTI.")
+        helper.log_info(
+            f"Sending STIX bundle with {len(bundle_dict.get('objects', []))} objects to OpenCTI."
+        )
         helper.send_stix2_bundle(stix_bundle, update=update_existing)
         helper.log_info("STIX bundle sent successfully")
 

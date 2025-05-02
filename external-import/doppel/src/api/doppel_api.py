@@ -16,7 +16,9 @@ def fetch_alerts(helper, api_url, api_key, created_after, max_retries, retry_del
     page = 0
     all_alerts = []
 
-    helper.log_info(f"Fetching alerts from Doppel API with created_after={created_after}...")
+    helper.log_info(
+        f"Fetching alerts from Doppel API with created_after={created_after}..."
+    )
 
     while True:
         params = {"created_after": created_after, "page": page}
@@ -33,20 +35,28 @@ def fetch_alerts(helper, api_url, api_key, created_after, max_retries, retry_del
                 response = requests.get(api_url, headers=headers, params=params)
 
                 if response.status_code == 400:
-                    helper.log_error("The request sent to the Doppel API is invalid. Check query parameters and payload format.")
+                    helper.log_error(
+                        "The request sent to the Doppel API is invalid. Check query parameters and payload format."
+                    )
                     return []
                 elif response.status_code == 401:
-                    helper.log_error("Authentication failed! Check your Doppel API key.")
+                    helper.log_error(
+                        "Authentication failed! Check your Doppel API key."
+                    )
                     return []
                 elif response.status_code == 403:
-                    helper.log_error("Access denied! Your Doppel API key does not have the required permissions.")
+                    helper.log_error(
+                        "Access denied! Your Doppel API key does not have the required permissions."
+                    )
                     return []
 
                 response.raise_for_status()
                 alerts = response.json().get("alerts", [])
 
                 if not alerts:
-                    helper.log_info(f"No more alerts found. Total fetched: {len(all_alerts)}")
+                    helper.log_info(
+                        f"No more alerts found. Total fetched: {len(all_alerts)}"
+                    )
                     return all_alerts
 
                 all_alerts.extend(alerts)
