@@ -40,7 +40,6 @@ class ReportImporter:
             config,
             default=False,
         )
-        self.file = None
         self.web_service_url = get_config_variable(
             "CONNECTOR_WEB_SERVICE_URL",
             ["connector", "web_service_url"],
@@ -83,6 +82,16 @@ class ReportImporter:
         if self.helper.get_only_contextual() and entity is None:
             return "Connector is only contextual and entity is not defined. Nothing was imported"
 
+        # Handles file attachment in the stix bundle
+        if data["file_id"].startswith("import/global"):
+            file_data_encoded = base64.b64encode(file_content_buffered.read())
+            self.file = {
+                "name": data["file_id"].replace("import/global/", ""),
+                "data": file_data_encoded,
+                "mime_type": data["file_mime"],
+            }
+            # Reset file offset
+            file_content_buffered.seek(0)
         # Parse report from web service
         try:
             response = requests.post(
@@ -132,7 +141,7 @@ class ReportImporter:
         file_uri = self.helper.opencti_url + file_fetch
 
         # Downloading and saving file to buffer
-        self.helper.connector_logger.info("Importing the file {file_uri}")
+        self.helper.connector_logger.info(f"Importing the file {file_uri}")
         file_name = os.path.basename(file_fetch)
         file_content = self.helper.api.fetch_opencti_file(file_uri, True)
 
