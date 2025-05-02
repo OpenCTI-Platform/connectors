@@ -182,10 +182,17 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 f"{self.helper.connect_name}: There was issue with getting report from Spectra Analyze. "
                 f"HTTP Status code {response.status_code}"
             )
+        try:
             os.remove(sample_name)
+        except FileNotFoundError:
+            self.helper.connector_logger.warning(
+                f"{self.helper.connect_name}: Temp sample file not found when deleting."
+            )
+        except Exception as err:
+            self.helper.connector_logger.error(
+                f"{self.helper.connect_name}: Failed deleting temp sample file : {err}"
+            )
 
-        # Remove File from Os
-        os.remove(sample_name)
         return report
 
     @handle_spectra_errors
