@@ -74,6 +74,8 @@ def _transform_threat_actors_to_intrusion_sets(bundle: dict) -> None:
             o["target_ref"] = o.get("target_ref").replace(
                 "threat-actor", "intrusion-set"
             )
+        for i, object_ref in enumerate(o.get("object_refs", [])):
+            o["object_refs"][i] = object_ref.replace("threat-actor", "intrusion-set")
 
 
 def _add_source_name_as_author_to_all_reports(bundle: dict) -> None:
