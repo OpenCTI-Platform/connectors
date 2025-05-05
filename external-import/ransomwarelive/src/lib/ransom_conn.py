@@ -9,6 +9,7 @@ import requests
 import tldextract
 import validators
 from pycti import OpenCTIConnectorHelper
+from pydantic import TypeAdapter, ValidationError
 from stix2 import (
     TLP_WHITE,
     Bundle,
@@ -115,16 +116,27 @@ class RansomwareAPIConnector:
         return description
 
     # Generates a relationship object
-    def relationship_generator(self, source_ref, target_ref, relationship_type):
+    def relationship_generator(
+        self,
+        source_ref: str,
+        target_ref: str,
+        relationship_type: str,
+        attackdate: datetime = None,
+        discovered: datetime = None,
+    ) -> Relationship:
+
         relation = Relationship(
             id=pycti.StixCoreRelationship.generate_id(
                 relationship_type,
                 source_ref,
                 target_ref,
+                attackdate,
             ),
             relationship_type=relationship_type,
             source_ref=source_ref,
             target_ref=target_ref,
+            start_time=attackdate if attackdate else None,
+            created=discovered if discovered else None,
             created_by_ref=self.author.get("id"),
         )
         return relation
@@ -368,6 +380,34 @@ class RansomwareAPIConnector:
         )
         return domain
 
+    def safe_datetime(self, value: str | None, check_field: str) -> datetime | None:
+        """Safely parses a string into a naive datetime object (without timezone).
+        Returns None if the input is None or not a valid ISO 8601 datetime string.
+        Can avoid errors where fields are missing or incorrectly formed.
+        Args:
+            value (str | None): The input string to validate and convert to datetime.
+            check_field (str): The name of the field being validated (used for logging).
+        Returns:
+            datetime | None : A naive datetime object if the input is valid, otherwise None.
+        Examples:
+            self.safe_datetime("2025-01-01 07:20:50.000000", "attack_date")
+            > datetime.datetime(2025, 1, 1, 7, 20, 50, 0)
+
+            self.safe_datetime(None, "attack_date")
+            > None
+
+            self.safe_datetime("invalid-date", "attack_date")
+            > None
+        """
+        try:
+            return TypeAdapter(datetime).validate_python(value)
+        except ValidationError:
+            self.helper.connector_log.debug(
+                "The expected value is not a valid datetime.",
+                {"field": check_field, "value": value},
+            )
+            return None
+
     # Generates STIX objects from the ransomware.live API data
     # pylint:disable=too-many-branches,too-many-statements
     def stix_object_generator(self, item, group_data):
@@ -392,6 +432,16 @@ class RansomwareAPIConnector:
         # RansomNote External Reference
         external_references_group = self.ransom_note_generator(item.get("group"))
 
+        # Attack Date sets the start_time of the relationship between a threat actor or intrusion set and a victim.
+        # This value (attack_date_iso) will also be used in the report. (Report : Attack Date -> Published)
+        attack_date = item.get("attackdate")
+        attack_date_iso = self.safe_datetime(attack_date, "attack_date")
+
+        # Discovered sets the created date of the relationship between a Threat Actor or Intrusion Set and a Victim.
+        # This value (discovered_iso) will also be used in the report. (Report : Discovered -> Created)
+        discovered = item.get("discovered")
+        discovered_iso = self.safe_datetime(discovered, "discovered")
+
         # Creating Threat Actor object
         threat_actor = None
         if self.create_threat_actor:
@@ -409,7 +459,11 @@ class RansomwareAPIConnector:
             )
 
             target_relation = self.relationship_generator(
-                threat_actor.get("id"), victim.get("id"), "targets"
+                threat_actor.get("id"),
+                victim.get("id"),
+                "targets",
+                attack_date_iso,
+                discovered_iso,
             )
 
         # Creating Intrusion Set object
@@ -442,7 +496,11 @@ class RansomwareAPIConnector:
                 )
 
             relation_vi_is = self.relationship_generator(
-                intrusion_set.get("id"), victim.get("id"), "targets"
+                intrusion_set.get("id"),
+                victim.get("id"),
+                "targets",
+                attack_date_iso,
+                discovered_iso,
             )
             if self.create_threat_actor:
                 relation_is_ta = self.relationship_generator(
@@ -476,17 +534,15 @@ class RansomwareAPIConnector:
             object_refs.append(target_relation.get("id"))
             object_refs.append(relation_is_ta.get("id"))
         report_name = item.get("group") + " has published a new victim: " + post_title
-        report_created = datetime.fromisoformat(item.get("discovered"))
-        report_published = datetime.fromisoformat(item.get("attackdate"))
         report = Report(
-            id=pycti.Report.generate_id(report_name, report_published),
+            id=pycti.Report.generate_id(report_name, attack_date_iso),
             report_types=["Ransomware-report"],
             name=report_name,
             description=item.get("description"),
             created_by_ref=self.author.get("id"),
             object_refs=object_refs,
-            published=report_published,
-            created=report_created,
+            published=attack_date_iso,
+            created=discovered_iso,
             object_marking_refs=[self.marking.get("id")],
             external_references=external_references,
         )
