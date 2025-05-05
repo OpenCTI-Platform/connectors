@@ -1,6 +1,8 @@
 # OpenCTI Microsoft Sentinel Intelligence Connector
 
-This OpenCTI connector allows the ability to create and update data from your OpenCTI platform to Microsoft Sentinel
+This OpenCTI connector allows the ability to create or delete data from your OpenCTI platform to either the Microsoft
+Sentinel or Microsoft Defender for Endpoint platform utilizing
+the [Microsoft Graph API Threat Intelligence Indicator](https://learn.microsoft.com/en-us/graph/api/resources/tiindicator?view=graph-rest-beta).
 Microsoft has a detailed guide on how to get started with connecting your threat intelligence platform to Sentinel
 found [here](https://learn.microsoft.com/en-us/azure/sentinel/connect-threat-intelligence-upload-api).
 
@@ -44,15 +46,14 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter `connector`       | config.yml                    | Docker environment variable             | Default | Mandatory | Example                                | Description                                                                            |
-|-----------------------------|-------------------------------|-----------------------------------------|---------|-----------|----------------------------------------|----------------------------------------------------------------------------------------|
-| ID                          | `id`                          | `CONNECTOR_ID`                          | /       | Yes       | `fe418972-1b42-42c9-a665-91544c1a9939` | A unique `UUIDv4` identifier for this connector instance.                              |
-| Name                        | `name`                        | `CONNECTOR_NAME`                        | /       | Yes       | `Microsoft Sentinel`                   | Full name of the connector : `Microsoft Sentinel`.                                     |
-| Scope                       | `scope`                       | `CONNECTOR_SCOPE`                       | /       | Yes       | `sentinel`                             | Must be `sentinel`, not used in this connector.                                        |
-| Log Level                   | `log_level`                   | `CONNECTOR_LOG_LEVEL`                   | /       | Yes       | `error`                                | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
-| Live stream id              | `live_stream_id`              | `CONNECTOR_LIVE_STREAM_ID`              | /       | Yes       | `9f204482-47a4-4fa4-b88b-ff4f390f31dd` | The Live Stream ID of the stream created in the OpenCTI interface. A unique `UUIDv4`.  |
-| Live stream listen delete   | `live_stream_listen_delete`   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | /       | Yes       | `true`                                 | The Live Stream listen delete must be `true`.                                          |
-| Live stream no dependencies | `live_stream_no_dependencies` | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | /       | Yes       | `true`                                 | The Live Stream no dependencies must be `true`.                                        |
+| Parameter `connector`       | config.yml                    | Docker environment variable             | Default  | Mandatory | Example                                | Description                                                                            |
+|-----------------------------|-------------------------------|-----------------------------------------|----------|-----------|----------------------------------------|----------------------------------------------------------------------------------------|
+| ID                          | `id`                          | `CONNECTOR_ID`                          | /        | Yes       | `fe418972-1b42-42c9-a665-91544c1a9939` | A unique `UUIDv4` identifier for this connector instance.                              |
+| Name                        | `name`                        | `CONNECTOR_NAME`                        | /        | Yes       | `Microsoft Sentinel`                   | Full name of the connector : `Microsoft Sentinel`.                                     |
+| Log Level                   | `log_level`                   | `CONNECTOR_LOG_LEVEL`                   | `error`  | No        | `error`                                | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
+| Live stream id              | `live_stream_id`              | `CONNECTOR_LIVE_STREAM_ID`              | /        | Yes       | `9f204482-47a4-4fa4-b88b-ff4f390f31dd` | The Live Stream ID of the stream created in the OpenCTI interface. A unique `UUIDv4`.  |
+| Live stream listen delete   | `live_stream_listen_delete`   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | `true`   | No        | `true`                                 | The Live Stream listen delete must be `true`.                                          |
+| Live stream no dependencies | `live_stream_no_dependencies` | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | `true`   | No        | `true`                                 | The Live Stream no dependencies must be `true`.                                        |
 
 Below are the parameters you'll need to set for Sentinel Connector:
 
