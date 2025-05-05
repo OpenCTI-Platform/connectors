@@ -3,4 +3,4 @@
 cd /opt/opencti-connector-dogesec-obstracts
 
 # Start the connector
-python src/obstracts.py
+python obstracts.py
