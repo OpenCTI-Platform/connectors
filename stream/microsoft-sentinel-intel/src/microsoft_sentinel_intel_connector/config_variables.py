@@ -53,49 +53,61 @@ class ConfigConnector:
             ["microsoft_sentinel_intel", "client_secret"],
             self.load,
         )
-        self.login_url = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_LOGIN_URL",
-            ["microsoft_sentinel_intel", "login_url"],
-            self.load,
-            default="https://login.microsoft.com",
-        )
-        self.base_url = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_BASE_URL",
-            ["microsoft_sentinel_intel", "base_url"],
-            self.load,
-            default="https://graph.microsoft.com",
-        )
-        self.resource_path = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_RESOURCE_PATH",
-            ["microsoft_sentinel_intel", "resource_path"],
-            self.load,
-            default="/beta/security/tiIndicators",
-        )
-        self.expire_time = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_EXPIRE_TIME",
-            ["microsoft_sentinel_intel", "expire_time"],
-            self.load,
-            isNumber=True,
-            default=30,
-        )
-        self.target_product = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_TARGET_PRODUCT",
-            ["microsoft_sentinel_intel", "target_product"],
+
+        self.workspace_id = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID",
+            ["sentinel_intel", "workspace_id"],
             self.load,
         )
-        self.action = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_ACTION",
-            ["microsoft_sentinel_intel", "action"],
+
+        self.source_system = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM",
+            ["microsoft_sentinel_intel", "source_system"],
             self.load,
+            False,
+            "Opencti Stream Connector",
         )
-        self.tlp_level = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_TLP_LEVEL",
-            ["microsoft_sentinel_intel", "tlp_level"],
+
+        self.login_type = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_LOGIN_TYPE",
+            ["microsoft_sentinel_intel", "login_type"],
             self.load,
+            False,
+            "client_secret",
         )
-        self.passive_only = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_PASSIVE_ONLY",
-            ["microsoft_sentinel_intel", "passive_only"],
+
+        self.resource_group = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP",
+            ["microsoft_sentinel_intel", "resource_group"],
             self.load,
-            default=False,
+            False,
+        )
+
+        self.subscription_id = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID",
+            ["microsoft_sentinel_intel", "subscription_id"],
+            self.load,
+            False,
+        )
+
+        self.workspace_name = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME",
+            ["microsoft_sentinel_intel", "workspace_name"],
+            self.load,
+            False,
+        )
+
+        self.delete_extensions = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_DELETE_EXTENSIONS",
+            ["microsoft_sentinel_intel", "delete_extensions"],
+            self.load,
+            False,
+            True,
+        )
+
+        self.extra_labels = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_EXTRA_LABELS",
+            ["microsoft_sentinel_intel", "extra_labels"],
+            self.load,
+            False,
         )
