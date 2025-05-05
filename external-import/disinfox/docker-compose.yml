@@ -23,7 +23,7 @@ services:
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
       # Connector's custom execution parameters
-      - DISINFOX_BASE_URL=${DISINFOX_URL}
+      - DISINFOX_URL=${DISINFOX_URL}
       - DISINFOX_API_KEY=${DISINFOX_API_KEY}
 
       # Add proxy parameters below if needed
