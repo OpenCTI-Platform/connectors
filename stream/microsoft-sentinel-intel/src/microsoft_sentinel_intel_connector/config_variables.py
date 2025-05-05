@@ -82,16 +82,19 @@ class ConfigConnector:
             "MICROSOFT_SENTINEL_INTEL_TARGET_PRODUCT",
             ["microsoft_sentinel_intel", "target_product"],
             self.load,
+            default="Azure Sentinel",
         )
         self.action = get_config_variable(
             "MICROSOFT_SENTINEL_INTEL_ACTION",
             ["microsoft_sentinel_intel", "action"],
             self.load,
+            default=None,
         )
         self.tlp_level = get_config_variable(
             "MICROSOFT_SENTINEL_INTEL_TLP_LEVEL",
             ["microsoft_sentinel_intel", "tlp_level"],
             self.load,
+            default=None,
         )
         self.passive_only = get_config_variable(
             "MICROSOFT_SENTINEL_INTEL_PASSIVE_ONLY",
