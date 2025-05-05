@@ -44,8 +44,8 @@ class ConfigConnector:
 
         # Connector extra parameters
         self.api_base_url = get_config_variable(
-            "DISINFOX_BASE_URL",
-            ["disinfox", "api_base_url"],
+            "DISINFOX_URL",
+            ["disinfox", "url"],
             self.load,
         )
 
