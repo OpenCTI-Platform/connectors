@@ -1,3 +1,7 @@
+# v2.1.1
+
+  + Decrease page number in Reports stream for better performance 
+
 # v2.1.0  
 
   + Add support for authenticated proxies (header-based proxy authentication)
