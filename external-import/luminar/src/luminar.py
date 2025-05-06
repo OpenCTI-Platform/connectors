@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import requests
 import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper, StixCoreRelationship, get_config_variable
 from stix2 import (
     URL,
     AttackPattern,
@@ -100,9 +100,7 @@ class LuminarManager:
     def __init__(self) -> None:
         # pylint: disable=too-many-positional-arguments
 
-        config_file_path = (
-            os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        )
+        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config = (
             yaml.load(open(config_file_path, encoding="utf-8"), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
@@ -480,6 +478,9 @@ class LuminarManager:
                             **c,
                         )
                         mal_rel = Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", malware_stix_obj.id, parent_stix_obj.id
+                            ),
                             source_ref=malware_stix_obj.id,
                             target_ref=parent_stix_obj.id,
                             relationship_type="related-to",
@@ -517,6 +518,9 @@ class LuminarManager:
                         )
                         user_stix_obj = UserAccount(custom_properties=custom_prop, **c)
                         user_rel = Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "related-to", user_stix_obj.id, parent_stix_obj.id
+                            ),
                             source_ref=user_stix_obj.id,
                             target_ref=parent_stix_obj.id,
                             relationship_type="related-to",
@@ -577,6 +581,9 @@ class LuminarManager:
             bundle.append(open_cti_indicator)
         else:
             ind_rel = Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "indicates", open_cti_indicator.id, parent_obj.id
+                ),
                 source_ref=open_cti_indicator.id,
                 target_ref=parent_obj.id,
                 relationship_type="indicates",
@@ -649,6 +656,11 @@ class LuminarManager:
                         )
                     if open_cti_observable:
                         obs_rel = Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "based-on",
+                                open_cti_indicator.id,
+                                open_cti_observable.id,
+                            ),
                             source_ref=open_cti_indicator.id,
                             target_ref=open_cti_observable.id,
                             relationship_type="based-on",
@@ -718,6 +730,11 @@ class LuminarManager:
                     )
 
                     rel = Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            obj.get("relationship_type", "related-to"),
+                            source_stix.id,
+                            target_stix.id,
+                        ),
                         source_ref=source_stix.id,
                         target_ref=target_stix.id,
                         relationship_type=obj.get("relationship_type", ""),
