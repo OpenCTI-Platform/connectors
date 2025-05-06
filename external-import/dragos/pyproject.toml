@@ -23,7 +23,7 @@ dependencies = [
 "pycti >=6.4, <7",
 "pydantic >= 2.8.10, <3",
 "aiohttp >=3.7.4, <4",
-"limiter==0.3.1",
+"limiter==0.5.0",
 "yarl >=1.10.1, <2",
 "PyYAML >=6.0.2, <7",
 "tenacity >=9, <10",
