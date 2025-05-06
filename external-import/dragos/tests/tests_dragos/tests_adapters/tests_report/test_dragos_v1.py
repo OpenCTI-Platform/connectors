@@ -5,8 +5,9 @@ from io import BytesIO
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from client_api.errors import DragosAPIError
 from client_api.v1 import DragosClientAPIV1
-from client_api.v1.indicator import IndicatorResponse
+from client_api.v1.indicator import IndicatorResponse, IndicatorsResponse
 from client_api.v1.product import ProductResponse, TagResponse
 from dragos.adapters.report.dragos_v1 import (
     ExtendedProductResponse,
@@ -15,6 +16,8 @@ from dragos.adapters.report.dragos_v1 import (
     ReportsAPIV1,
     TagAPIV1,
 )
+from dragos.interfaces.report import IncompleteReportWarning
+from pydantic import SecretStr
 from yarl import URL
 
 
@@ -77,15 +80,28 @@ def fake_indicator_response():
     )
 
 
+def fake_indicators_response():
+    """Return a fake IndicatorsResponse."""
+    return IndicatorsResponse.model_validate(
+        {
+            "indicators": [fake_indicator_response()] * 3,
+            "page": 1,
+            "page_size": 1,
+            "total": 3,
+            "total_pages": 1,
+        }
+    )
+
+
 @pytest.fixture
-def mock_dragos_client():
+def mock_dragos_client(scope="function"):
     """Fixture to create a mock Dragos client."""
     client = Mock(spec=DragosClientAPIV1)
 
     # Mock Dragos Product client
     client.product = Mock()
 
-    # Mock iter_products async generator
+    # Mock sync_iter_products sync generator
     def mock_iter_products_return_value():
         mock_async_iter_products = AsyncMock()
         mock_async_iter_products.__aiter__.return_value = [fake_product_response()] * 3
@@ -94,6 +110,11 @@ def mock_dragos_client():
     # Return a new AsyncMock instance on every call
     client.product.iter_products.side_effect = (
         lambda updated_after: mock_iter_products_return_value()
+    )
+
+    # mock sync_iter_products iterator
+    client.product.sync_iter_products.side_effect = lambda updated_after: iter(
+        [fake_product_response()] * 3
     )
 
     # Mock get_product_pdf async method
@@ -123,23 +144,30 @@ def mock_dragos_client():
         lambda serials: mock_iter_indicators_return_value()
     )
 
+    # Mock get_all_indicators async method
+    async def mock_get_all_indicators(*args, **kwargs):
+        """Mock get_all_indicators method."""
+        return fake_indicators_response()
+
+    client.indicator.get_all_indicators = AsyncMock(side_effect=mock_get_all_indicators)
     return client
 
 
+# @pytest.mark.skip
 def test_reports_api_v1_lists_all_reports(mock_dragos_client):
     """Test that the ReportsAPIV1 generates reports."""
     # Given an instance of ReportsAPIV1
     reports_api_v1 = ReportsAPIV1(
         base_url=URL("http://example.com"),
-        token="<API_TOKEN>",  # noqa: S106 # Fake token for testing
-        secret="<API_SECRET>",  # noqa: S106 # Fake secret for testing
+        token=SecretStr("<API_TOKEN>"),  # noqa: S106 # Fake token for testing
+        secret=SecretStr("<API_SECRET>"),  # noqa: S106 # Fake secret for testing
         timeout=timedelta(seconds=10),
         retry=3,
         backoff=timedelta(seconds=1),
     )
     reports_api_v1._client = mock_dragos_client
 
-    # When calling iter() generator
+    # When calling iter()
     start_date = datetime(1970, 1, 1, tzinfo=timezone.utc)
     reports = list(reports_api_v1.iter(since=start_date))
 
@@ -161,7 +189,7 @@ def test_report_api_v1_from_product_response_returns_report(
     )
 
     # When calling from_product_response() factory
-    report = ReportAPIV1.from_product_response(extended_product_response)
+    report = ReportAPIV1.from_extended_product_response(extended_product_response)
 
     # Then a ReportAPIV1 instance should be created
     assert isinstance(report, ReportAPIV1)  # noqa: S101
@@ -214,3 +242,57 @@ def test_indicator_api_v1_from_indicator_response_returns_indicator():
     assert indicator.value == indicator_response.value  # noqa: S101
     assert indicator.first_seen == indicator_response.first_seen  # noqa: S101
     assert indicator.last_seen == indicator_response.last_seen  # noqa: S101
+
+
+def test_reports_api_v1_iter_raises_warning_if_pdf_cannot_be_acquired(
+    mock_dragos_client,
+):
+    """Test that ReportsAPIV1 iter() raises a warning if PDF cannot be acquired."""
+    # Given an instance of ReportsAPIV1
+    reports_api_v1 = ReportsAPIV1(
+        base_url=URL("http://example.com"),
+        token=SecretStr("<API_TOKEN>"),  # noqa: S106 # Fake token for testing
+        secret=SecretStr("<API_SECRET>"),  # noqa: S106 # Fake secret for testing
+        timeout=timedelta(seconds=10),
+        retry=3,
+        backoff=timedelta(seconds=1),
+    )
+    mock_dragos_client.product.get_product_pdf.side_effect = DragosAPIError(
+        "Failed to retrieve PDF"
+    )  # Simulate PDF retrieval failure
+    reports_api_v1._client = mock_dragos_client
+
+    # When calling iter()
+    start_date = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+    # Then a warning should be raised
+    with pytest.warns(IncompleteReportWarning) as records:
+        list(reports_api_v1.iter(since=start_date))
+        assert isinstance(records[0].message, IncompleteReportWarning)  # noqa: S101
+
+
+def test_reports_api_v1_iter_raises_warning_if_indicators_cannot_be_acquired(
+    mock_dragos_client,
+):
+    """Test that ReportsAPIV1 iter() raises a warning if indicators cannot be acquired."""
+    # Given an instance of ReportsAPIV1
+    reports_api_v1 = ReportsAPIV1(
+        base_url=URL("http://example.com"),
+        token=SecretStr("<API_TOKEN>"),  # noqa: S106 # Fake token for testing
+        secret=SecretStr("<API_SECRET>"),  # noqa: S106 # Fake secret for testing
+        timeout=timedelta(seconds=10),
+        retry=3,
+        backoff=timedelta(seconds=1),
+    )
+    mock_dragos_client.indicator.get_all_indicators.side_effect = DragosAPIError(
+        "Failed to retrieve indicators"
+    )  # Simulate indicators retrieval failure
+    reports_api_v1._client = mock_dragos_client
+
+    # When calling iter()
+    start_date = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+    # Then a warning should be raised
+    with pytest.warns(IncompleteReportWarning) as records:
+        list(reports_api_v1.iter(since=start_date))
+        assert isinstance(records[0].message, IncompleteReportWarning)  # noqa: S101

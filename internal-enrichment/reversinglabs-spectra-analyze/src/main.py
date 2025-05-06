@@ -1,8 +1,10 @@
+# Standard library imports
 import json
 import os
 import textwrap
 import time
 from datetime import datetime
+from functools import wraps
 from typing import Dict
 
 import stix2
@@ -17,6 +19,7 @@ from pycti import (
     StixCoreRelationship,
 )
 from ReversingLabs.SDK.a1000 import A1000
+from ReversingLabs.SDK.helper import NotFoundError, RequestTimeoutError
 
 ZIP_MIME_TYPES = (
     "application/x-bzip",
@@ -30,6 +33,35 @@ TRUE_LIST = ("true", "True", "yes", "Yes")
 FALSE_LIST = ("false", "False", "no", "No")
 PLATFORM_LIST = ("windows7", "windows10", "windows11", "macos11", "linux")
 FILE_SAMPLE = ("Artifact", "StixFile", "File")
+
+
+# decorator wrapper
+def handle_spectra_errors(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except NotFoundError:
+            self.helper.connector_logger.warning(
+                f"{self.helper.connect_name}: Detailed analysis report not found. Falling back to classification result."
+            )
+            return None
+        except RequestTimeoutError as err:
+            self.helper.connector_logger.error(
+                f"{self.helper.connect_name}: Timeout error occurred while communicating with Spectra Analyze: {err}"
+            )
+            raise TimeoutError(
+                f"{self.helper.connect_name}: Request timed out. The endpoint might be down. Please try again later."
+            ) from err
+        except Exception as err:
+            self.helper.connector_logger.error(
+                f"{self.helper.connect_name}: Unexpected error during Spectra Analyze call: {err}"
+            )
+            raise RuntimeError(
+                f"{self.helper.connect_name}: Looks like the sample you are trying to access may not be available on your Spectra Analyze instance. On Spectra Analyze run fetch and analyze on the sample."
+            ) from err
+
+    return wrapper
 
 
 class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
@@ -46,7 +78,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
     def _get_config_variables(self):
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Reading configuration env variables!"
         )
 
@@ -98,7 +130,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         uniq_bundles_objects = list(
             {obj["id"]: obj for obj in self.stix_objects}.values()
         )
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Number of Stix bundles to be enriched: {len(uniq_bundles_objects)}"
         )
         return self.helper.stix2_create_bundle(uniq_bundles_objects)
@@ -115,6 +147,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         )
         self.stix_objects.append(stix_organization)
 
+    @handle_spectra_errors
     def _upload_file_to_spectra_analyze(self, file_uri, is_archive, sample_name):
         file_content = self.helper.api.fetch_opencti_file(file_uri, binary=True)
         report = {}
@@ -124,7 +157,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         file.close()
 
         # Submit File for Analysis
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Submitting artifact {str(sample_name)} to ReversingLabs Spectra Analyze."
         )
 
@@ -133,33 +166,36 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         else:
             cloud_analysis = False
 
+        response = self.a1000client.upload_sample_and_get_detailed_report_v2(
+            file_path=sample_name,
+            custom_filename=sample_name,
+            cloud_analysis=cloud_analysis,
+            rl_cloud_sandbox_platform=self.reversinglabs_sandbox_platform,
+            comment="Uploaded from OpenCTI Platform",
+            tags="opencti",
+        )
+
+        if response.status_code == 200:
+            report = response.text
+        else:
+            self.helper.connector_logger.info(
+                f"{self.helper.connect_name}: There was issue with getting report from Spectra Analyze. "
+                f"HTTP Status code {response.status_code}"
+            )
         try:
-            response = self.a1000client.upload_sample_and_get_detailed_report_v2(
-                file_path=sample_name,
-                custom_filename=sample_name,
-                cloud_analysis=cloud_analysis,
-                rl_cloud_sandbox_platform=self.reversinglabs_sandbox_platform,
-                comment="Uploaded from OpenCTI Platform",
-                tags="opencti",
+            os.remove(sample_name)
+        except FileNotFoundError:
+            self.helper.connector_logger.warning(
+                f"{self.helper.connect_name}: Temp sample file not found when deleting."
+            )
+        except Exception as err:
+            self.helper.connector_logger.error(
+                f"{self.helper.connect_name}: Failed deleting temp sample file : {err}"
             )
 
-            if response.status_code == 200:
-                report = response.text
-            else:
-                self.helper.log_info(
-                    f"{self.helper.connect_name}: There was issue with getting report from Spectra Analyze. HTTP Status code {str(response.status_code)}"
-                )
-                os.remove(sample_name)
-
-        except Exception as err:
-            raise ValueError(
-                f"{self.helper.connect_name}: Looks like the sample you are trying to access may not be available on your Spectra Analyze instance. On Spectra Analyze run fetch and analyze on the sample."
-            ) from err
-
-        # Remove File from Os
-        os.remove(sample_name)
         return report
 
+    @handle_spectra_errors
     def _submit_file_for_analysis(self, stix_entity, opencti_entity, hash, hash_type):
         self.stix_entity = stix_entity
         self.opencti_entity = opencti_entity
@@ -173,48 +209,21 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             file_mime_type = self.opencti_entity["mime_type"]
             file_uri = f"{self.helper.opencti_url}/storage/get/{file_id}"
 
-            if file_mime_type in ZIP_MIME_TYPES:
-                is_archive = True
-            else:
-                is_archive = False
-
+            is_archive = file_mime_type in ZIP_MIME_TYPES
             analysis_response = self._upload_file_to_spectra_analyze(
                 file_uri, is_archive, sample_name
             )
-            analysis_report = json.loads(analysis_response)
+            analysis_report = json.loads(analysis_response) if analysis_response else {}
 
-            if bool(analysis_report):
-                self.helper.log_info(
-                    f"{self.helper.connect_name}: File is successfully submitted to RL Spectra Analyze."
-                )
-            else:
-                self.helper.log_info(
-                    f"{self.helper.connect_name}: There was an issue with a file submit to RL Spectra Analyze."
-                )
-                raise ValueError(
-                    f"{self.helper.connect_name}: Skipping Analysis processing due to issue with file upload!"
-                )
         elif stix_entity["x_opencti_type"] == "StixFile":
             sample_name = self.opencti_entity["observable_value"]
-            file_mime_type = "None"
-            is_archive = False
+            response = self.a1000client.get_detailed_report_v2(
+                sample_hashes=self.hash, retry=False
+            )
+            if response.status_code == 404:
+                raise NotFoundError(f"Sample with hash {self.hash} not found.")
+            analysis_report = json.loads(response.text)
 
-            try:
-                response = self.a1000client.get_detailed_report_v2(
-                    sample_hashes=self.hash,
-                    retry=False,
-                )
-            except Exception as err:
-                raise ValueError(
-                    f"{self.helper.connect_name}: Looks like the sample you are trying to access may not be available on your Spectra Analyze instance. On Spectra Analyze run fetch and analyze on the sample."
-                ) from err
-
-            if response.status_code == 200:
-                analysis_report = json.loads(response.text)
-            else:
-                raise Exception(
-                    f"{self.helper.connect_name}: There was issue with getting report from Spectra Analyze. HTTP Status code {str(response.status_code)}"
-                )
         else:
             raise ValueError(
                 f"{self.helper.connect_name}: Unsupported type provided for analysis result retrieval!"
@@ -222,16 +231,17 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
         return analysis_report
 
+    @handle_spectra_errors
     def _submit_file_for_classification(self, stix_entity, opencti_entity, hash):
-
+        """
+        Submit the file for classification, with error handling.
+        """
         response = self.a1000client.get_classification_v3(
             sample_hash=hash, local_only=False, av_scanners=False
         )
+        return json.loads(response.text)
 
-        analysis_report = json.loads(response.text)
-
-        return analysis_report
-
+    @handle_spectra_errors
     def _submit_url_for_analysis(self, stix_entity, opencti_entity, url_sample):
         self.stix_entity = stix_entity
         self.opencti_entity = opencti_entity
@@ -253,13 +263,13 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         response_json = json.loads(response.text)
         task_id = response_json["detail"]["id"]
         self.helper.log_info(
-            f"{self.helper.connect_name}: Successfully submitted for analysis. Received task_id is {str(task_id)}"
+            f"{self.helper.connect_name}: Successfully submitted for analysis. Received task_id is {task_id}"
         )
 
         self.helper.log_info(
             f"{self.helper.connect_name}: Fetching submitted url status from Spectra Analyze."
         )
-        for retry in range(0, 5):
+        for retry in range(5):
             # Check Submitted url status
             url_processing_status = self.a1000client.check_submitted_url_status(
                 task_id=str(task_id),
@@ -270,7 +280,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
             if processing_status != "complete":
                 self.helper.log_info(
-                    f"{self.helper.connect_name}: Processing status is {str(processing_status)}. Wait for 2min and retry..."
+                    f"{self.helper.connect_name}: Processing status is {processing_status}. Wait for 2min and retry..."
                 )
                 time.sleep(120)
             else:
@@ -278,6 +288,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                     f"{self.helper.connect_name}: Report is successfully obtained!"
                 )
                 analysis_report = analysis_status
+                # we can break here since we got the report
                 continue
 
         return analysis_report
@@ -479,7 +490,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         return score
 
     def _create_indicators(self, results):
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Generating indicators based on the classification"
         )
 
@@ -589,8 +600,11 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             object_marking_refs=[stix2.TLP_AMBER],
         )
 
+    @handle_spectra_errors
     def _files_from_ip(self):
-        self.helper.log_info(f"{self.helper.connect_name}: Getting files from IP")
+        self.helper.connector_logger.info(
+            f"{self.helper.connect_name}: Getting files from IP"
+        )
 
         file_list = self.a1000client.network_files_from_ip_aggregated(
             ip_addr=self.ip_sample, classification="MALICIOUS", max_results=20
@@ -705,8 +719,11 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 )
                 self.stix_objects.append(download_url_to_malware)
 
+    @handle_spectra_errors
     def _ip_report(self):
-        self.helper.log_info(f"{self.helper.connect_name}: Getting IP report")
+        self.helper.connector_logger.info(
+            f"{self.helper.connect_name}: Getting IP report"
+        )
 
         response = self.a1000client.network_ip_addr_report(ip_addr=self.ip_sample)
 
@@ -765,8 +782,11 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
     def is_ip(address):
         return address.replace(".", "").isnumeric()
 
+    @handle_spectra_errors
     def _domain_reports(self, domain_list):
-        self.helper.log_info(f"{self.helper.connect_name}: Getting domain reports")
+        self.helper.connector_logger.info(
+            f"{self.helper.connect_name}: Getting domain reports"
+        )
 
         malicious_domains = []
         benign_domains = []
@@ -912,8 +932,11 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             )
             self.stix_objects.append(note)
 
+    @handle_spectra_errors
     def _url_reports(self, url_list):
-        self.helper.log_info(f"{self.helper.connect_name}: Getting URL reports")
+        self.helper.connector_logger.info(
+            f"{self.helper.connect_name}: Getting URL reports"
+        )
 
         malicious_urls = []
         benign_urls = []
@@ -1047,6 +1070,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             )
             self.stix_objects.append(note)
 
+    @handle_spectra_errors
     def _ip_report_flow(self, stix_entity, opencti_entity, ip_sample):
         self.stix_entity = stix_entity
         self.opencti_entity = opencti_entity
@@ -1068,19 +1092,24 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
         self._url_reports(url_list=url_list)
 
-        self.helper.log_info(f"{self.helper.connect_name}: Creating bundle for IP")
+        self.helper.connector_logger.info(
+            f"{self.helper.connect_name}: Creating bundle for IP"
+        )
 
         bundle = self._generate_stix_bundle(
             stix_objects=self.stix_objects, stix_entity=self.stix_entity
         )
         bundles_sent = self.helper.send_stix2_bundle(bundle)
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Number of stix bundles sent to workers: {str(len(bundles_sent))}"
         )
 
+    @handle_spectra_errors
     def _domain_report(self):
-        self.helper.log_info(f"{self.helper.connect_name}: Getting domain report")
+        self.helper.connector_logger.info(
+            f"{self.helper.connect_name}: Getting domain report"
+        )
 
         response = self.a1000client.network_domain_report(domain=self.domain_sample)
         resp_json = response.json()
@@ -1192,25 +1221,30 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         self.opencti_entity = opencti_entity
         self.domain_sample = domain_sample
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Starting Domain report for {self.domain_sample}"
         )
 
         self._domain_report()
 
-        self.helper.log_info(f"{self.helper.connect_name}: Creating bundle for domain")
+        self.helper.connector_logger.info(
+            f"{self.helper.connect_name}: Creating bundle for domain"
+        )
 
         bundle = self._generate_stix_bundle(
             stix_objects=self.stix_objects, stix_entity=self.stix_entity
         )
         bundles_sent = self.helper.send_stix2_bundle(bundle)
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Number of stix bundles sent to workers: {str(len(bundles_sent))}"
         )
 
+    @handle_spectra_errors
     def _url_report(self):
-        self.helper.log_info(f"{self.helper.connect_name}: Getting URL report")
+        self.helper.connector_logger.info(
+            f"{self.helper.connect_name}: Getting URL report"
+        )
 
         response = self.a1000client.network_url_report(requested_url=self.url_sample)
         resp_json = response.json()
@@ -1313,20 +1347,22 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         self.opencti_entity = opencti_entity
         self.url_sample = url_sample
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Starting URL report for {self.url_sample}"
         )
 
         self._url_report()
 
-        self.helper.log_info(f"{self.helper.connect_name}: Creating bundle for URL")
+        self.helper.connector_logger.info(
+            f"{self.helper.connect_name}: Creating bundle for URL"
+        )
 
         bundle = self._generate_stix_bundle(
             stix_objects=self.stix_objects, stix_entity=self.stix_entity
         )
         bundles_sent = self.helper.send_stix2_bundle(bundle)
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Number of stix bundles sent to workers round 1: {str(len(bundles_sent))}"
         )
 
@@ -1335,7 +1371,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             results["classification"] == "suspicious"
         ):
 
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"{self.helper.connect_name}: Create STIX objects for malicious sample results!"
             )
 
@@ -1349,7 +1385,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
             bundle = self._generate_stix_bundle(stix_objects, stix_entity)
             bundles_sent = self.helper.send_stix2_bundle(bundle)
 
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"{self.helper.connect_name}: Number of stix bundles sent for workers: {str(len(bundles_sent))}"
             )
 
@@ -1358,7 +1394,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
         stix_entity = data["stix_entity"]
         opencti_entity = data["enrichment_entity"]
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name}: Checking TLP marking on object."
         )
 
@@ -1387,25 +1423,6 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                     hash = ent_hash["hash"]
                     hash_type = ent_hash["algorithm"]
 
-            # Get file classification
-            analysis_result = self._submit_file_for_classification(
-                stix_entity, opencti_entity, hash
-            )
-
-            if not analysis_result:
-                self.helper.log_info(
-                    f"{self.helper.connect_name}: There is no analysis result for provided sample!"
-                )
-
-            # Integrate classification analysis results with OpenCTI
-            if "results" not in analysis_result:
-
-                results = self._process_file_classification_results(
-                    stix_objects, stix_entity, opencti_entity, analysis_result
-                )
-
-                self._process_malicious(stix_objects, stix_entity, results)
-
             # Submit File sample for analysis
             analysis_result = self._submit_file_for_analysis(
                 stix_entity, opencti_entity, hash, hash_type
@@ -1420,7 +1437,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
         elif opencti_type == "Url":
             url_sample = stix_entity["value"]
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"{self.helper.connect_name}: Submit URL sample for analysis on Spectra Analyze!"
             )
 
@@ -1437,6 +1454,25 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
                 url_sample,
             )
 
+            # Get file classification
+            analysis_result = self._submit_file_for_classification(
+                stix_entity, opencti_entity, hash
+            )
+
+            if not analysis_result:
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name}: There is no analysis result for provided sample!"
+                )
+
+            # Integrate classification analysis results with OpenCTI
+            if "results" not in analysis_result:
+
+                results = self._process_file_classification_results(
+                    stix_objects, stix_entity, opencti_entity, analysis_result
+                )
+
+                self._process_malicious(stix_objects, stix_entity, results)
+
             if not analysis_result:
                 raise ValueError(
                     f"{self.helper.connect_name}: Provided sample does not exist on the appliance. Try to upload it first and re-run!"
@@ -1451,7 +1487,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
         elif opencti_type == "IPv4-Addr":
             ip_sample = stix_entity["value"]
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"{self.helper.connect_name}: Starting IPv4 sample analysis on Spectra Analyze! Sample value: {str(ip_sample)}"
             )
 
@@ -1463,7 +1499,7 @@ class ReversingLabsSpectraAnalyzeConnector(InternalEnrichmentConnector):
 
         elif opencti_type == "Domain-Name":
             domain_sample = stix_entity["value"]
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"{self.helper.connect_name}: Starting Domain sample analysis on Spectra Analyze! Sample value: {str(domain_sample)}"
             )
 

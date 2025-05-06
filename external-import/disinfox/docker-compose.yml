@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-disinfox:
-    image: opencti/connector-disinfox:6.4.2
+    image: opencti/connector-disinfox:6.6.9
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=${OPENCTI_URL}
@@ -23,7 +23,7 @@ services:
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
       # Connector's custom execution parameters
-      - DISINFOX_BASE_URL=${DISINFOX_URL}
+      - DISINFOX_URL=${DISINFOX_URL}
       - DISINFOX_API_KEY=${DISINFOX_API_KEY}
 
       # Add proxy parameters below if needed

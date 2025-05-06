@@ -1,26 +1,14 @@
 version: '3'
 services:
   connector-microsoft-graph-security-intel:
-    image: opencti/connector-microsoft-graph-security-intel:6.6.8
+    image: opencti/connector-microsoft-graph-security-intel:6.6.9
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
-      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
-      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       - "CONNECTOR_NAME=Microsoft Graph Security Intel"
-      - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
-      - CONNECTOR_LOG_LEVEL=error
       - MICROSOFT_GRAPH_SECURITY_INTEL_TENANT_ID=ChangeMe # Azure Tentant ID
       - MICROSOFT_GRAPH_SECURITY_INTEL_CLIENT_ID=ChangeMe # Azure App Client ID
       - MICROSOFT_GRAPH_SECURITY_INTEL_CLIENT_SECRET=ChangeMe # Azure App Client Secret
-      - "MICROSOFT_GRAPH_SECURITY_INTEL_TARGET_PRODUCT=Azure Sentinel" # "Azure Sentinel" or "Microsoft Defender ATP"
-      - MICROSOFT_GRAPH_SECURITY_INTEL_LOGIN_URL=https://login.microsoft.com
-      - MICROSOFT_GRAPH_SECURITY_INTEL_BASE_URL=https://graph.microsoft.com
-      - MICROSOFT_GRAPH_SECURITY_INTEL_RESOURCE_PATH=/beta/security/tiIndicators
-      - MICROSOFT_GRAPH_SECURITY_INTEL_EXPIRE_TIME=30 # Number of days for IOC to expire in Sentinel
-      - MICROSOFT_GRAPH_SECURITY_INTEL_ACTION=alert # Optional: Setting this will override all alerts to be this action (unknown, allow, block, alert)
-      - MICROSOFT_GRAPH_SECURITY_INTEL_TLP_LEVEL=amber # Optional: This will override all TLP submitted to Sentinel. (unknown, white, green, amber, red)
-      - MICROSOFT_GRAPH_SECURITY_INTEL_PASSIVE_ONLY=false # Optional: Defaults to false.
     restart: unless-stopped

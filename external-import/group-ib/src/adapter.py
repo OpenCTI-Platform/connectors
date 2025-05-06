@@ -450,9 +450,9 @@ class DataToSTIXAdapter:
         # _label = "malware"
         _events = obj.get("malware_report_list", [])
 
-        _date_updated = self._retrieve_date(
-            json_date_obj, "date-updated", "date-modified"
-        )
+        # _date_updated = self._retrieve_date(
+        #    json_date_obj, "date-updated", "date-modified"
+        # )
 
         _stix_objects = list()
 
@@ -470,7 +470,7 @@ class DataToSTIXAdapter:
                             malware = ds.Malware(
                                 name=n,
                                 aliases=_malware_aliases,
-                                last_seen=_date_updated,
+                                # last_seen=_date_updated,
                                 c_type=_type,
                                 malware_types=_malware_types or [],
                                 tlp_color="red",
@@ -485,7 +485,7 @@ class DataToSTIXAdapter:
                         malware = ds.Malware(
                             name=_name,
                             aliases=_malware_aliases,
-                            last_seen=_date_updated,
+                            # last_seen=_date_updated,
                             c_type=_type,
                             malware_types=_malware_types,
                             tlp_color="red",
@@ -508,7 +508,7 @@ class DataToSTIXAdapter:
                 malware = ds.Malware(
                     name=_name,
                     aliases=_malware_aliases,
-                    last_seen=_date_updated,
+                    # last_seen=_date_updated,
                     c_type=_type,
                     malware_types=_malware_types,
                     tlp_color="red",
@@ -909,22 +909,32 @@ class DataToSTIXAdapter:
                 _domain = _e.get("domain")
                 _url = _e.get("url")
                 _ips = _e.get("ip-address")
-
                 domain = None
-                if _domain and not self.is_ipv4(_domain) and not self.is_ipv6(_domain):
-                    domain = self.generate_stix_domain(_domain)
-                    domain.is_ioc = domain_is_ioc
-                    domain.set_valid_from(valid_from)
-                    domain.set_valid_until(valid_until)
-                    domain.generate_stix_objects()
 
-                    self._generate_relations(
-                        domain, related_objects, is_ioc=domain_is_ioc
-                    )
-
-                    domain.add_relationships_to_stix_objects()
-
-                    _domain_stix_objects.append(domain)
+                if _domain:
+                    if self.is_ipv4(_domain):
+                        ip = self.generate_stix_ipv4(_domain)
+                        ip.set_description(_description)
+                        ip.is_ioc = domain_is_ioc
+                        ip.set_valid_from(valid_from)
+                        ip.set_valid_until(valid_until)
+                        ip.generate_stix_objects()
+                        self._generate_relations(
+                            ip, related_objects, is_ioc=domain_is_ioc
+                        )
+                        ip.add_relationships_to_stix_objects()
+                        _ip_stix_objects.append(ip)
+                    else:
+                        domain = self.generate_stix_domain(_domain)
+                        domain.is_ioc = domain_is_ioc
+                        domain.set_valid_from(valid_from)
+                        domain.set_valid_until(valid_until)
+                        domain.generate_stix_objects()
+                        self._generate_relations(
+                            domain, related_objects, is_ioc=domain_is_ioc
+                        )
+                        domain.add_relationships_to_stix_objects()
+                        _domain_stix_objects.append(domain)
 
                 url = None
                 if _url:
@@ -939,52 +949,54 @@ class DataToSTIXAdapter:
                         [(link_id, link_url, link_description)]
                     )
                     url.generate_stix_objects()
-
                     self._generate_relations(url, related_objects, is_ioc=url_is_ioc)
-
                     url.add_relationships_to_stix_objects()
-
                     _url_stix_objects.append(url)
 
                 if _ips:
                     for _ip in _ips:
                         ip = self.generate_stix_ipv4(_ip)
-
                         ip.set_description(_description)
                         ip.is_ioc = ip_is_ioc
                         ip.set_valid_from(valid_from)
                         ip.set_valid_until(valid_until)
                         ip.generate_stix_objects()
-
                         self._generate_relations(ip, related_objects, is_ioc=ip_is_ioc)
-
                         if domain:
                             self._generate_relations(ip, [domain])
                         if url:
                             self._generate_relations(ip, [url])
-
                         ip.add_relationships_to_stix_objects()
-
                         _ip_stix_objects.append(ip)
 
         else:
             _domain = obj.get("domain")
             _url = obj.get("url")
             _ip = obj.get("ip-address")
-
             domain = None
+
             if _domain:
-                domain = self.generate_stix_domain(_domain)
-                domain.is_ioc = domain_is_ioc
-                domain.set_valid_from(valid_from)
-                domain.set_valid_until(valid_until)
-                domain.generate_stix_objects()
-
-                self._generate_relations(domain, related_objects, is_ioc=domain_is_ioc)
-
-                domain.add_relationships_to_stix_objects()
-
-                _domain_stix_objects.append(domain)
+                if self.is_ipv4(_domain):
+                    ip = self.generate_stix_ipv4(_domain)
+                    ip.set_description(_description)
+                    ip.is_ioc = domain_is_ioc
+                    ip.set_valid_from(valid_from)
+                    ip.set_valid_until(valid_until)
+                    ip.generate_stix_objects()
+                    self._generate_relations(ip, related_objects, is_ioc=domain_is_ioc)
+                    ip.add_relationships_to_stix_objects()
+                    _ip_stix_objects.append(ip)
+                else:
+                    domain = self.generate_stix_domain(_domain)
+                    domain.is_ioc = domain_is_ioc
+                    domain.set_valid_from(valid_from)
+                    domain.set_valid_until(valid_until)
+                    domain.generate_stix_objects()
+                    self._generate_relations(
+                        domain, related_objects, is_ioc=domain_is_ioc
+                    )
+                    domain.add_relationships_to_stix_objects()
+                    _domain_stix_objects.append(domain)
 
             url = None
             if _url:
@@ -999,31 +1011,23 @@ class DataToSTIXAdapter:
                     [(link_id, link_url, link_description)]
                 )
                 url.generate_stix_objects()
-
                 self._generate_relations(url, related_objects, is_ioc=url_is_ioc)
-
                 url.add_relationships_to_stix_objects()
-
                 _url_stix_objects.append(url)
 
             if _ip:
                 ip = self.generate_stix_ipv4(_ip)
-
                 ip.set_description(_description)
                 ip.is_ioc = ip_is_ioc
                 ip.set_valid_from(valid_from)
                 ip.set_valid_until(valid_until)
                 ip.generate_stix_objects()
-
                 self._generate_relations(ip, related_objects, is_ioc=ip_is_ioc)
-
                 if domain:
                     self._generate_relations(ip, [domain])
                 if url:
                     self._generate_relations(ip, [url])
-
                 ip.add_relationships_to_stix_objects()
-
                 _ip_stix_objects.append(ip)
 
         return _domain_stix_objects, _url_stix_objects, _ip_stix_objects
