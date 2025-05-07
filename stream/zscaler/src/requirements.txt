@@ -1,5 +1,5 @@
 #all the dependencies
-pycti==6.6.9
+pycti==6.6.10
 requests~=2.32.2
 python-dotenv==1.1.0
 pyyaml==6.0.2

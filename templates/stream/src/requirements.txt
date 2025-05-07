@@ -1,2 +1,2 @@
-pycti==6.6.9
+pycti==6.6.10
 pyyaml~=6.0.2
