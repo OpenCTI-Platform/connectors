@@ -1,11 +1,46 @@
 import sys
 import traceback
 
-from email_intel_imap.client import ConnectorClient
+from email_intel_imap.client import (
+    BaseConnectorClient,
+    ConnectorClient,
+    GoogleOAuthClient,
+)
 from email_intel_imap.config import ConnectorSettings
 from email_intel_imap.connector import Connector
 from email_intel_imap.converter import ConnectorConverter
 from pycti import OpenCTIConnectorHelper
+
+
+def client_factory(config: ConnectorSettings) -> BaseConnectorClient:
+    """
+    Factory function to create a connector client based on the provided configuration.
+
+    Args:
+        config (ConnectorSettings): The configuration settings for the connector.
+
+    Returns:
+        ConnectorClient: An instance of the appropriate connector client.
+    """
+    if config.email_intel_imap.google_token_json is not None:
+        return GoogleOAuthClient(
+            host=config.email_intel_imap.host,
+            port=config.email_intel_imap.port,
+            username=config.email_intel_imap.username,
+            token_json=config.email_intel_imap.google_token_json,
+            mailbox=config.email_intel_imap.mailbox,
+        )
+
+    # elif TODO: Add other authentication methods here
+    #     return OtherAuthClient(...)
+
+    return ConnectorClient(
+        host=config.email_intel_imap.host,
+        port=config.email_intel_imap.port,
+        username=config.email_intel_imap.username,
+        password=config.email_intel_imap.password,
+        mailbox=config.email_intel_imap.mailbox,
+    )
 
 
 def main() -> None:
@@ -27,13 +62,8 @@ def main() -> None:
         tlp_level=config.email_intel_imap.tlp_level,
         attachments_mime_types=config.email_intel_imap.attachments_mime_types,
     )
-    client = ConnectorClient(
-        host=config.email_intel_imap.host,
-        port=config.email_intel_imap.port,
-        username=config.email_intel_imap.username,
-        password=config.email_intel_imap.password,
-        mailbox=config.email_intel_imap.mailbox,
-    )
+
+    client = client_factory(config=config)
 
     connector = Connector(
         config=config, helper=helper, converter=converter, client=client

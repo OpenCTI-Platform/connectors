@@ -21,3 +21,4 @@ services:
       EMAIL_INTEL_IMAP_PASSWORD: ChangeMe
       EMAIL_INTEL_IMAP_MAILBOX: INBOX
       EMAIL_INTEL_IMAP_ATTACHMENTS_MIME_TYPES: application/pdf,text/csv,text/plain
+      EMAIL_INTEL_IMAP_GOOGLE_TOKEN_JSON: '{"token": ChangeMe, "refresh_token": "ChangeMe", ...}'

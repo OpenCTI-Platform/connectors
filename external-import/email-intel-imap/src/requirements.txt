@@ -2,4 +2,9 @@
 imap-tools==1.10.0
 pycti==6.5.10
 pydantic==2.10.6
+google-api-python-client>=2.169.0
+google-api-core==2.24.2
+google-auth==2.40.1
+google-auth-oauthlib==1.2.2
+google-auth-httplib2==0.2.0
 stix2~=3.0.1

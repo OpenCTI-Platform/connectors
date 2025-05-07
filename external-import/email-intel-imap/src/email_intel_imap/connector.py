@@ -2,7 +2,7 @@ import datetime
 
 import stix2
 from base_connector.connector import BaseConnector
-from email_intel_imap.client import ConnectorClient
+from email_intel_imap.client import BaseConnectorClient
 from email_intel_imap.config import ConnectorSettings
 from email_intel_imap.converter import ConnectorConverter
 
@@ -10,7 +10,7 @@ from email_intel_imap.converter import ConnectorConverter
 class Connector(BaseConnector):
     config: ConnectorSettings
     converter: ConnectorConverter
-    client: ConnectorClient
+    client: BaseConnectorClient
 
     def get_last_run(self) -> datetime.datetime | None:
         if last_run_str := self.state.get("last_run"):

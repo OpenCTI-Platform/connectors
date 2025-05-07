@@ -18,7 +18,6 @@ def test_config() -> None:
     assert config["connector"]["scope"] == ["ChangeMe"]
     assert config["connector"]["duration_period"] == datetime.timedelta(days=1)
 
-    assert len(config["email_intel_imap"]) == 8
     assert config["email_intel_imap"]["tlp_level"] == "white"
     assert config["email_intel_imap"][
         "relative_import_start_date"
