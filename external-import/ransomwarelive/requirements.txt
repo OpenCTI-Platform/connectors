@@ -1,5 +1,5 @@
 pycti==6.6.10
 stix2==3.0.1
-validators==0.34.0
+validators==0.35.0
 pydantic>=2.10, <3
 tldextract
