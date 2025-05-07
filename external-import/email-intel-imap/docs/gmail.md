@@ -1,6 +1,7 @@
 # Google workspace Email
 
 * Last updated: May 7th, 2025
+* See: <https://developers.google.com/identity/protocols/oauth2>
 
 ## Google Workspace Credentials Retrieval
 
@@ -20,14 +21,16 @@
 
 ## Google Workspace Credentials Validation
 
-You need to validate the `credentials.json` file manually. You can use the [pyioga](https://github.com/mbroton/pyioga/blob/main/README.md) tool for this:
+You need to validate the `credentials.json` file manually to get a token. This must be done once. You can use the [pyioga](https://github.com/mbroton/pyioga/blob/main/README.md) tool for this:
 
 ```bash
 python3 -m pip install pyioga
 python3 -m pyioga init --client-secret-file {downloaded_credentials.json} --output-file {verified_token.json}
 ```
 
-This will open your browser, prompt you to log in to your Google account, and request access for the application. Once completed, save the token in the file `verified_token.json`.
+This will open your browser, prompt you to log in to your Google account, and request access for the application. Once completed, use the token present in the file `verified_token.json`.
+
+![pyioga example](pyioga.png)
 
 > **Note**: This procedure may not work with the Firefox web browser. It works fine with Chrome and Microsoft Edge.
 
