@@ -326,3 +326,26 @@ class VirusTotalClient:
             Base64 encoded string without padding
         """
         return base64.b64encode(contents.encode()).decode().replace("=", "")
+
+    def get_url_related_objects(self, url, relationship):
+        """
+        Retrieve URL report based on the given URL.
+
+        Parameters
+        ----------
+        url : str
+            Url.
+        relationship : str
+            Relationship to Url
+
+        Returns
+        -------
+        dict
+            URL Object, see https://developers.virustotal.com/reference/url-object
+        """
+        base64_url = f"{self.url}/urls/{VirusTotalClient.base64_encode_no_padding(url)}/{relationship}"
+        results = self._query(base64_url)
+        if "error" in results:
+            sha256_url = f"{self.url}/urls/{hashlib.sha256(url.encode()).hexdigest()}/{relationship}"
+            results = self._query(sha256_url)
+        return results
