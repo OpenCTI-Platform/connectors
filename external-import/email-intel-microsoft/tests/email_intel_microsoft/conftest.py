@@ -136,3 +136,21 @@ def fixture_message(attachment: Callable[..., FileAttachment]) -> Callable[..., 
         return msg
 
     return _factory
+
+
+@pytest.fixture(name="mocked_helper")
+def fixture_mocked_helper(mocker: MockerFixture) -> Mock:
+    helper = mocker.patch("pycti.OpenCTIConnectorHelper", MagicMock())
+    helper.connect_id = "test-connector-id"
+    helper.connect_name = "Test Connector"
+    helper.api.work.initiate_work.return_value = "work-id"
+    helper.get_state.return_value = {}
+    helper.stix2_create_bundle.return_value = "bundle"
+    return helper
+
+
+@pytest.fixture(name="test_config")
+def fixture_test_config(
+    mock_email_intel_microsoft_config: None,
+) -> ConnectorSettings:
+    return ConnectorSettings()
