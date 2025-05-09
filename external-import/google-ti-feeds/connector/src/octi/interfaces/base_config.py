@@ -1,0 +1,71 @@
+"""Base configuration class for all connector configs."""
+
+import os
+from abc import ABC
+from pathlib import Path
+from typing import ClassVar, Tuple, Type
+
+import yaml
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
+
+# Alias the Pydantic source type so our overrides line up
+SettingsSource = PydanticBaseSettingsSource
+SettingsSources = Tuple[SettingsSource, ...]
+
+# When we want “defaults only” (no env, no dotenv, no file‐secrets)
+EMPTY_SOURCES: (  # type: ignore
+    lambda: {},
+    lambda: {},
+    lambda: {},
+    lambda: {},
+)
+
+
+class BaseConfig(ABC, BaseSettings):
+    """Base configuration class for all connector configs."""
+
+    yaml_section: ClassVar[str]
+
+    @classmethod
+    def settings_customise_sources(
+        cls: Type["BaseConfig"],
+        settings_cls: Type[BaseSettings],
+        init_settings: SettingsSource,
+        env_settings: SettingsSource,
+        dotenv_settings: SettingsSource,
+        file_secret_settings: SettingsSource,
+    ) -> SettingsSources:
+        """Customise the settings sources so that in dev mode we only load from config.yml.
+
+        Parameters
+        ----------
+        settings_cls
+            The Pydantic settings class being initialized.
+        init_settings
+            The default initializer source (usually the class defaults).
+        env_settings
+            The environment‐variable source.
+        dotenv_settings
+            The `.env`‐file source.
+        file_secret_settings
+            Secrets from mounted files.
+
+        Returns
+        -------
+        A tuple of callables producing dicts for Pydantic to merge.
+
+        """
+        if os.getenv("CONNECTOR_DEV_MODE", "").lower() == "true":
+            path = Path("config.yml")
+            if not path.exists():
+                raise FileNotFoundError("[ŌTSUMI]: config.yml not found.")
+
+            raw = yaml.safe_load(path.read_text())
+            data = raw.get(cls.yaml_section)
+
+            if not data:
+                return EMPTY_SOURCES  # type: ignore
+
+            return (lambda: data,)  # type: ignore
+
+        return init_settings, env_settings, dotenv_settings, file_secret_settings
