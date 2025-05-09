@@ -1,153 +1,291 @@
-# OpenCTI External Ingestion Connector Template
+# 📬 Email Intel Microsoft Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+| Status            | Date       | Comment |
+|-------------------|------------|---------|
+| Filigran Verified | 2025-05-09 | -       |
 
-Table of Contents
+The **Email Intel Microsoft Connector** ingests cyber‑threat‑intelligence (CTI) reports received by **e‑mail** into
+the OpenCTI platform.  
+Using the Microsoft Graph API, it polls a dedicated Microsoft 365 / Exchange Online mailbox, transforms every message (
+plus accepted attachments) into an OpenCTI **Report**, and tags it with the chosen TLP.
 
-- [OpenCTI External Ingestion Connector Template](#opencti-external-ingestion-connector-template)
-  - [Introduction](#introduction)
-  - [Installation](#installation)
-    - [Requirements](#requirements)
-  - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-  - [Deployment](#deployment)
+---
+
+## 📖 Table of Contents
+
+- [🧩 Introduction](#-introduction)
+- [⚙️ Requirements](#-requirements)
+- [🔧 Configuration](#-configuration)
+    - [OpenCTI Configuration](#opencti-configuration)
+    - [Base Connector Configuration](#base-connector-configuration)
+    - [Email Intel Microsoft Configuration](#email-intel-microsoft-configuration)
+- [🚀 Deployment](#-deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
-  - [Usage](#usage)
-  - [Behavior](#behavior)
-  - [Debugging](#debugging)
-  - [Additional information](#additional-information)
+    - [Dev Tools](#dev-tools)
+- [📌 Usage](#-usage)
+- [⚙️ Connector Behavior](#-connector-behavior)
+- [🐞 Debugging](#-debugging)
+- [📝 Additional Information](#-additional-information)
 
-## Introduction
+---
 
-## Installation
+## 🧩 Introduction
 
-### Requirements
+This connector is designed for organisations that receive CTI intelligence via e‑mail.
+It performs **read‑only** operations—messages stay untouched in the mailbox.
 
-- OpenCTI Platform >= 6...
+| Capability          | Notes                                                                                     |
+|---------------------|-------------------------------------------------------------------------------------------|
+| Microsoft Graph API | Client‑credential flow (`tenant_id`, `client_id`, `client_secret`).                       |
+| Report creation     | `name` = subject, `type` = `threat‑report`, `published` = message date, `content` = body. |
+| Attachment handling | Uploads files whose MIME type is in an allow‑list.                                        |
+| TLP marking         | Applies configurable default (e.g. `amber+strict`).                                       |
+| Stateful            | Persists `last_run`; supports relative look‑back for first import.                        |
 
-## Configuration variables
+---
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+## ⚙️ Requirements
 
-### OpenCTI environment variables
+- OpenCTI Platform ≥ 6.7 |
+- Azure tenant - Microsoft 365 with Exchange Online |
+- Azure AD app - Registered app with **`Mail.Read` (Application)** permission,
+  *admin‑consented*                                                |
+- Mailbox restriction [Application Access Policy](https://learn.microsoft.com/graph/auth-limit-mailbox-access) limiting
+  access to the target mailbox |
 
-Below are the parameters you'll need to set for OpenCTI:
+---
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+## 🔧 Configuration
 
-### Base connector environment variables
+Configuration parameters can be provided in either **`.env`** file, **`config.yml`** file, or directly as **environment
+variables**.
 
-Below are the parameters you'll need to set for running the connector properly:
+Priority: **YAML → .env → environment → defaults**.
 
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+### Microsoft Graph API
 
-### Connector extra parameters environment variables
+Microsoft Graph is the gateway to data and intelligence in Microsoft cloud services like Microsoft Entra and Microsoft
 
-Below are the parameters you'll need to set for the connector:
+365. Use the wealth of data accessible through Microsoft Graph to build apps for organizations and consumers that
+     interact with millions of users.
 
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
+In order to fetch emails with the Graph API, we need to **set up** the environment as follows:
 
-## Deployment
+#### Register the Application & save `tenant_id`, `client_id` & `client_secret`
+
+1. Open a browser and navigate to the [Azure Active Directory admin center](https://aad.portal.azure.com/) and log in
+   with a **personal account** (Microsoft Account) or **Work or School Account**.
+2. In the left-hand navigation choose **Applications**, then **App registrations** under **Manage**.  
+   ![image.png](doc/1.2.png)
+3. Click **New registration**.  
+   ![image.png](doc/1.3.png)
+    1. Enter a name for your application, e.g. **`OpenCTI Email Intel`**.
+    2. Set **Supported account types** to **Accounts in this organizational directory only**.
+    3. Leave **Redirect URI** empty.
+    4. Click **Register**.
+4. On the application **Overview** page:  
+   ![image.png](doc/1.4.png)
+    1. Copy and save the **Application (client) ID** and **Directory (tenant) ID**.
+5. Select **Certificates & secrets** under **Manage**.  
+   ![image.png](doc/1.5.png)
+6. Click **New client secret**.  
+   ![image.png](doc/1.6.png)
+7. Fill in **Description**, pick an **Expires** value, and click **Add**.  
+   ![image.png](doc/1.7.png)
+8. In **Certificates & secrets** copy and save the secret **Value**.  
+   ![image.png](doc/1.8.png)
+
+#### Set Up API Permission
+
+1. Select **API permissions** under **Manage**.  
+   ![image.png](doc/2.1.png)
+2. Remove the default **User.Read** permission under **Configured permissions** by clicking the ellipsis **…** and
+   choosing **Remove permission**.  
+   ![image.png](doc/2.2.png)
+3. Click **Add a permission**.  
+   ![image.png](doc/2.3.png)
+4. Choose **Microsoft Graph**.  
+   ![image.png](doc/2.4.png)
+5. Select **Application permissions**.  
+   ![image.png](doc/2.5.png)
+6. Search for and select **Mail.Read**, then click **Add permissions**.  
+   ![image.png](doc/2.6.png)
+7. Click **Grant admin consent for `<organization>`** (or ask an admin to do it).  
+   ![image.png](doc/2.7.png)
+8. Confirm the consent by selecting **Yes**.  
+   ![image.png](doc/2.8.png)
+9. Ensure the status shows **Granted for `<organization>`**.  
+   ![image.png](doc/2.9.png)
+
+> ⚠️ **Warning**  
+> Once application permissions are granted, the application has access to **all** mailboxes in the organization by
+> default.  
+> You must configure **application access policies** to restrict access to specific mailboxes.  
+> ![image.png](doc/warning1.png)
+
+#### Limit mailbox access
+
+*Source: <https://learn.microsoft.com/en-us/graph/auth-limit-mailbox-access>*
+
+To restrict the app’s access to specific mailboxes, configure **Application Access Policies** using PowerShell.
+
+1. **Install PowerShell 7+** and open a PowerShell window.  
+   <https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.5>
+2. **Connect to Exchange Online PowerShell**  
+   <https://learn.microsoft.com/en-us/powershell/exchange/connect-to-exchange-online-powershell?view=exchange-ps&preserve-view=true>
+
+    ```powershell
+    Import-Module ExchangeOnlineManagement
+    Connect-ExchangeOnline
+    ```
+
+3. **Create an ApplicationAccessPolicy (replace <client_id> and <email>):**
+
+    ```powershell
+    New-ApplicationAccessPolicy `
+      -AppId <client_id> `
+      -PolicyScopeGroupId <email> `
+      -AccessRight RestrictAccess `
+      -Description "Restrict this app to members of distribution group EvenUsers."
+    ```
+
+   Response:
+
+   ![image.png](doc/3.3.png)
+
+4. **Test the newly created application access policy**
+
+   __Test with another email (replace placeholders):__:
+
+   ```powershell
+   Test-ApplicationAccessPolicy `
+     -Identity <existing_email> `
+     -AppId <client_id>
+   ```
+   ![image.png](doc/3.4.a.png)
+
+   __Test with the correct email:__
+
+   ```powershell
+   Test-ApplicationAccessPolicy `
+     -Identity <email> `
+     -AppId <client_id>
+   ```
+   ![image.png](doc/3.4.b.png)
+
+> ⚠️ **Warning**
+>
+> ![image.png](doc/warning2.png)
+
+### OpenCTI Configuration
+
+| Parameter     | `config.yml` key | Env var         | Required | Description                      |
+|---------------|------------------|-----------------|----------|----------------------------------|
+| OpenCTI URL   | `url`            | `OPENCTI_URL`   | ✅        | Base URL of the OpenCTI platform |
+| OpenCTI Token | `token`          | `OPENCTI_TOKEN` | ✅        | API token (user or connector)    |
+
+### Base Connector Configuration
+
+| Parameter        | `config.yml` key  | Env var                     | Default               | Required | Description                                   |
+|------------------|-------------------|-----------------------------|-----------------------|----------|-----------------------------------------------|
+| Connector ID     | `id`              | `CONNECTOR_ID`              | —                     | ✅        | Unique **UUIDv4** for this connector instance |
+| Connector Name   | `name`            | `CONNECTOR_NAME`            | Email Intel Microsoft | ❌        | Display name                                  |
+| Connector Scope  | `scope`           | `CONNECTOR_SCOPE`           | email‑intel‑microsoft | ❌        | Import label shown in jobs                    |
+| Log Level        | `log_level`       | `CONNECTOR_LOG_LEVEL`       | error                 | ❌        | `debug` \| `info` \| `warn` \| `error`        |
+| Polling Interval | `duration_period` | `CONNECTOR_DURATION_PERIOD` | PT1H                  | ❌        | ISO‑8601 duration                             |
+
+### Email Intel Microsoft Configuration
+
+| Parameter          | `config.yml` key             | Env var                                            | Default                             | Required | Description                      |
+|--------------------|------------------------------|----------------------------------------------------|-------------------------------------|----------|----------------------------------|
+| Tenant ID          | `tenant_id`                  | `EMAIL_INTEL_MICROSOFT_TENANT_ID`                  | —                                   | ✅        | Azure AD **Directory ID**        |
+| Client ID          | `client_id`                  | `EMAIL_INTEL_MICROSOFT_CLIENT_ID`                  | —                                   | ✅        | App **Application ID**           |
+| Client Secret      | `client_secret`              | `EMAIL_INTEL_MICROSOFT_CLIENT_SECRET`              | —                                   | ✅        | App **Client Secret**            |
+| Mailbox address    | `email`                      | `EMAIL_INTEL_MICROSOFT_EMAIL`                      | —                                   | ✅        | Email address                    |
+| Folder             | `inbox`                      | `EMAIL_INTEL_MICROSOFT_INBOX`                      | Inbox                               | ❌        | Mail folder to poll              |
+| TLP Level          | `tlp_level`                  | `EMAIL_INTEL_MICROSOFT_TLP_LEVEL`                  | amber+strict                        | ❌        | Default TLP marking              |
+| Look‑back window   | `relative_import_start_date` | `EMAIL_INTEL_MICROSOFT_RELATIVE_IMPORT_START_DATE` | P30D                                | ❌        | How far back the first run looks |
+| Allowed MIME types | `attachments_mime_types`     | `EMAIL_INTEL_MICROSOFT_ATTACHMENTS_MIME_TYPES`     | application/pdf,text/csv,text/plain | ❌        | Accepted attachment file type    |
+
+---
+
+## 🚀 Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+1. Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-email-intel-microsoft:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+2. Run using Docker Compose:
 
-```shell
+Copy the `.env.sample` file to `.env` and set the required environment variables.
+
+```bash
 docker compose up -d
-# -d for detached
+# -d for detached mode
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
-
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
-
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
-pip3 install -r requirements.txt
+```bash
+python3.12 -m venv venv && source venv/bin/activate
+pip install -r src/requirements.txt   # or dev-requirements.txt
+cp config.yml.sample config.yml       # edit values
+# or .env.sample .env
+python3 src/main.py
 ```
 
-Then, start the connector from recorded-future/src:
+### Dev Tools
 
-```shell
-python3 main.py
+```bash
+pylint .
+mypy .
 ```
 
-## Usage
+---
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+## 📌 Usage
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+After deployment, the connector:
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
+- Polls the configured mailbox at the interval defined in `CONNECTOR_DURATION_PERIOD`
+- On first run, fetches emails received within the period defined by `RELATIVE_IMPORT_START_DATE`
+- Each fetched email is transformed into an OpenCTI report:
+    - `name`: Email subject
+        - If the subject is empty, a default name is generated as follow `<no subject> from <sender@email.com>` where
+          `<sender@email.com>` is the email address of the sender.
+    - `type`: `threat-report`
+    - `published`: Email date
+    - `x_opencti_content`: Full email body (unparsed)
+    - `x_opencti_files` : List of attachments (if any) depending on the `attachments_mime_types` parameter.
 
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+---
 
-## Behavior
+## ⚙️ Connector Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+| Step | Action                                                                                                                                                                                                                                                                                             |
+|------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1    | **Authenticate** to Microsoft Graph with client credentials.                                                                                                                                                                                                                                       |
+| 2    | **Fetch messages** newer than the stored cursor, or within the look‑back window on first run.                                                                                                                                                                                                      |
+| 3    | **Transform** each e‑mail into an OpenCTI report:<br>• `name` = subject (or `"<no subject> from sender@domain"`)<br>• `type` = `threat‑report`<br>• `published` = `sentDateTime` (UTC)<br>• `x_opencti_content` = text body; HTML stripped<br>• Attachments matching MIME allow‑list are uploaded. |
+| 4    | **Persist state** (`last_run`) so duplicates are prevented.                                                                                                                                                                                                                                        |
 
+Design principles:
 
-## Debugging
+* **Read‑only** – messages are not marked as read, moved, or deleted.
+* **One mailbox per instance** – spin up multiple containers for multiple inboxes.
+* **IOC extraction** is left to downstream enrichment/parsing connectors.
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+---
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+## 📝 Additional Information
 
-## Additional information
+* **Graph Mail API docs:** <https://learn.microsoft.com/graph/api/resources/mail-api-overview>
+* **Restricting mailbox scope:** <https://learn.microsoft.com/graph/auth-limit-mailbox-access>
+* Contribution guide: <https://github.com/OpenCTI-Platform/connectors>
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+Released under the **Apache 2.0** license — contributions & issues welcome!
