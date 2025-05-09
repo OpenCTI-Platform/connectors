@@ -1,9 +1,13 @@
+import datetime
 import os
 from copy import deepcopy
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, Callable
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from email_intel_microsoft.config import ConnectorSettings
+from msgraph.generated.models.file_attachment import FileAttachment
 from pytest_mock import MockerFixture
 
 
@@ -48,3 +52,87 @@ def fixture_mock_email_intel_microsoft_config(
             if sub_value is not None:
                 environ[f"{key.upper()}_{sub_key.upper()}"] = str(sub_value)
     mocker.patch("os.environ", environ)
+
+
+@pytest.fixture(name="messages_builder")
+def fixture_messages_builder(
+    attachment: Callable[..., FileAttachment],
+) -> Callable[[list[SimpleNamespace]], MagicMock]:
+    """
+    Factory fixture to create a fake `.messages` request builder.
+    Pages and downloads attachments in parallel.
+    """
+
+    def _factory(pages: list[SimpleNamespace]) -> MagicMock:
+        builder: MagicMock = MagicMock()
+        builder.get = AsyncMock(return_value=pages[0])
+        if len(pages) > 1:
+            remaining = pages[1:]
+
+            async def _next() -> SimpleNamespace:
+                return remaining.pop(0)
+
+            builder.with_url.return_value.get = AsyncMock(side_effect=_next)
+
+        attachment_builder: MagicMock = MagicMock()
+        attachment_builder.get = AsyncMock(
+            side_effect=lambda: attachment(with_bytes=True)
+        )
+        builder.by_message_id.return_value.attachments.by_attachment_id.return_value = (
+            attachment_builder
+        )
+        return builder
+
+    return _factory
+
+
+@pytest.fixture(name="patch_graph_and_identity")
+def fixture_patch_graph_and_identity(
+    messages_builder: Callable[[list[SimpleNamespace]], MagicMock],
+) -> tuple[MagicMock, MagicMock]:
+    """Fixture to patch GraphServiceClient and ClientSecretCredential"""
+    with patch("email_intel_microsoft.client.GraphServiceClient") as graph_mock, patch(
+        "email_intel_microsoft.client.ClientSecretCredential"
+    ) as cred_cls:
+        cred_mock: MagicMock = MagicMock()
+        cred_mock.close = AsyncMock()
+        cred_cls.return_value = cred_mock
+        yield graph_mock, cred_mock
+
+
+@pytest.fixture(name="attachment")
+def fixture_attachment() -> Callable[..., FileAttachment]:
+    """Factory fixture to create a FileAttachment-spec mock."""
+
+    def _factory(
+        att_id: str = "att-1", mime: str = "image/png", *, with_bytes: bool = False
+    ) -> FileAttachment:
+        att: FileAttachment = MagicMock(spec=FileAttachment)
+        att.id = att_id
+        att.name = f"att f{att_id}"
+        att.content_type = mime
+        att.content_bytes = b"PRE" if with_bytes else None
+        return att
+
+    return _factory
+
+
+@pytest.fixture(name="message")
+def fixture_message(attachment: Callable[..., FileAttachment]) -> Callable[..., Any]:
+    """Factory fixture to create a Message-like mock with attachments."""
+
+    def _factory(
+        msg_id: str = "msg-1",
+        attachments: list[Any] | None = None,
+        received_date_time=datetime.datetime.fromisoformat("2025-05-09T00:00:00Z"),
+    ) -> Any:
+        msg: Any = MagicMock()
+        msg.id = msg_id
+        msg.subject = f"subject {msg_id}"
+        msg.from_ = Mock(email_address=Mock(address="email@test.com"))
+        msg.received_date_time = received_date_time
+        msg.body = Mock(content=f"body {msg_id}")
+        msg.attachments = attachments if attachments is not None else [attachment()]
+        return msg
+
+    return _factory
