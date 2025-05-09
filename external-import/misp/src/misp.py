@@ -365,14 +365,13 @@ class Misp:
                     and "last_event" in current_state
                 ):
                     last_run = datetime.fromisoformat(current_state["last_run"])
-                    last_event =datetime.fromisoformat(current_state["last_event"])
+                    last_event = datetime.fromisoformat(current_state["last_event"])
                     last_event_timestamp = current_state["last_event_timestamp"]
                     self.helper.log_info(
                         "Connector last run: " + current_state["last_run"]
                     )
                     self.helper.log_info(
-                        "Connector latest event: "
-                        + current_state["last_event"]
+                        "Connector latest event: " + current_state["last_event"]
                     )
                 elif current_state is not None and "last_run" in current_state:
                     last_run = datetime.fromisoformat(current_state["last_run"])
@@ -383,7 +382,7 @@ class Misp:
                     )
                     self.helper.log_info(
                         "Connector latest event: "
-                        + current_state["last_run"] # last_event == last_run
+                        + current_state["last_run"]  # last_event == last_run
                     )
                 else:
                     if self.misp_import_from_date is not None:
@@ -411,7 +410,9 @@ class Misp:
 
                     complex_query_tag = self.misp.build_complex_query(
                         or_parameters=or_parameters if len(or_parameters) > 0 else None,
-                        not_parameters=not_parameters if len(not_parameters) > 0 else None,
+                        not_parameters=(
+                            not_parameters if len(not_parameters) > 0 else None
+                        ),
                     )
 
                 # Prepare the query
@@ -463,11 +464,15 @@ class Misp:
                                 if "errors" in events:
                                     raise ValueError(events["message"])
                         except Exception as e:
-                            self.helper.log_error(f"Error fetching misp event again: {e}")
+                            self.helper.log_error(
+                                f"Error fetching misp event again: {e}"
+                            )
                             self.helper.metric.inc("client_error_count")
                             break
 
-                    self.helper.log_info("MISP returned " + str(len(events)) + " events.")
+                    self.helper.log_info(
+                        "MISP returned " + str(len(events)) + " events."
+                    )
                     number_events = number_events + len(events)
 
                     # Break if no more result
@@ -475,7 +480,9 @@ class Misp:
                         break
 
                     # Process the event
-                    processed_events_last_timestamp = self.process_events(work_id, events)
+                    processed_events_last_timestamp = self.process_events(
+                        work_id, events
+                    )
                     if (
                         processed_events_last_timestamp is not None
                         and processed_events_last_timestamp > last_event_timestamp
@@ -498,7 +505,9 @@ class Misp:
                     + " events have been processed), storing state (last_run="
                     + now.isoformat()
                     + ", last_event="
-                    + datetime.fromtimestamp(last_event_timestamp, tz=timezone.utc).isoformat()
+                    + datetime.fromtimestamp(
+                        last_event_timestamp, tz=timezone.utc
+                    ).isoformat()
                     + ", last_event_timestamp="
                     + str(last_event_timestamp)
                     + ", current_page=1)"
@@ -506,7 +515,9 @@ class Misp:
                 self.helper.set_state(
                     {
                         "last_run": now.isoformat(),
-                        "last_event": datetime.fromtimestamp(last_event_timestamp, tz=timezone.utc).isoformat(),
+                        "last_event": datetime.fromtimestamp(
+                            last_event_timestamp, tz=timezone.utc
+                        ).isoformat(),
                         "last_event_timestamp": last_event_timestamp,
                         "current_page": 1,
                     }
@@ -526,13 +537,16 @@ class Misp:
                 sys.exit(0)
 
             except Exception as err:
-                self.helper.log_error("[CONNECTOR] Unexpected error.", {"error": str(err)})
-                self.helper.log_error("Unexpected error. See connector's log for more details.")
+                self.helper.log_error(
+                    "[CONNECTOR] Unexpected error.", {"error": str(err)}
+                )
+                self.helper.log_error(
+                    "Unexpected error. See connector's log for more details."
+                )
 
             finally:
                 self.helper.metric.state("idle")
                 time.sleep(self.get_interval())
-
 
     def process_events(self, work_id, events):
         # Prepare filters
@@ -990,13 +1004,21 @@ class Misp:
                 report = stix2.Report(
                     id=Report.generate_id(
                         event["Event"]["info"],
-                        datetime.fromisoformat(event["Event"]["date"]).astimezone(tz=timezone.utc),
+                        datetime.fromisoformat(event["Event"]["date"]).astimezone(
+                            tz=timezone.utc
+                        ),
                     ),
                     name=event["Event"]["info"],
                     description=description,
-                    published=datetime.fromisoformat(event["Event"]["date"]).astimezone(tz=timezone.utc),
-                    created=datetime.fromisoformat(event["Event"]["date"]).astimezone(tz=timezone.utc),
-                    modified=datetime.fromtimestamp(int(event["Event"]["timestamp"]), tz=timezone.utc),
+                    published=datetime.fromisoformat(event["Event"]["date"]).astimezone(
+                        tz=timezone.utc
+                    ),
+                    created=datetime.fromisoformat(event["Event"]["date"]).astimezone(
+                        tz=timezone.utc
+                    ),
+                    modified=datetime.fromtimestamp(
+                        int(event["Event"]["timestamp"]), tz=timezone.utc
+                    ),
                     report_types=[self.misp_report_type],
                     created_by_ref=author["id"],
                     object_marking_refs=event_markings,
@@ -1012,13 +1034,17 @@ class Misp:
                 for note in event["Event"].get("EventReport", []):
                     note = stix2.Note(
                         id=Note.generate_id(
-                            datetime.fromtimestamp(int(note["timestamp"]), tz=timezone.utc).strftime(
-                                "%Y-%m-%dT%H:%M:%SZ"
-                            ),
+                            datetime.fromtimestamp(
+                                int(note["timestamp"]), tz=timezone.utc
+                            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                             self.process_note(note["content"], bundle_objects),
                         ),
-                        created=datetime.fromtimestamp(int(note["timestamp"]), tz=timezone.utc),
-                        modified=datetime.fromtimestamp(int(note["timestamp"]), tz=timezone.utc),
+                        created=datetime.fromtimestamp(
+                            int(note["timestamp"]), tz=timezone.utc
+                        ),
+                        modified=datetime.fromtimestamp(
+                            int(note["timestamp"]), tz=timezone.utc
+                        ),
                         created_by_ref=author["id"],
                         object_marking_refs=event_markings,
                         abstract=note["name"],
@@ -1186,13 +1212,19 @@ class Misp:
                         description=attribute["comment"],
                         pattern_type=pattern_type,
                         pattern=pattern,
-                        valid_from=datetime.fromtimestamp(int(attribute["timestamp"]), tz=timezone.utc),
+                        valid_from=datetime.fromtimestamp(
+                            int(attribute["timestamp"]), tz=timezone.utc
+                        ),
                         labels=attribute_tags,
                         created_by_ref=author["id"],
                         object_marking_refs=attribute_markings,
                         external_references=attribute_external_references,
-                        created=datetime.fromtimestamp(int(attribute["timestamp"]), tz=timezone.utc),
-                        modified=datetime.fromtimestamp(int(attribute["timestamp"]), tz=timezone.utc),
+                        created=datetime.fromtimestamp(
+                            int(attribute["timestamp"]), tz=timezone.utc
+                        ),
+                        modified=datetime.fromtimestamp(
+                            int(attribute["timestamp"]), tz=timezone.utc
+                        ),
                         custom_properties={
                             "x_opencti_main_observable_type": observable_type,
                             "x_opencti_detection": to_ids,
@@ -1403,12 +1435,18 @@ class Misp:
                                     int(misp_sighting["date_sighting"]), tz=timezone.utc
                                 ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                                 datetime.fromtimestamp(
-                                    int(misp_sighting["date_sighting"]) + 3600, tz=timezone.utc
+                                    int(misp_sighting["date_sighting"]) + 3600,
+                                    tz=timezone.utc,
                                 ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                             ),
                             sighting_of_ref=indicator["id"],
-                            first_seen=datetime.fromtimestamp(int(misp_sighting["date_sighting"]), tz=timezone.utc),
-                            last_seen=datetime.fromtimestamp(int(misp_sighting["date_sighting"]) + 3600, tz=timezone.utc),
+                            first_seen=datetime.fromtimestamp(
+                                int(misp_sighting["date_sighting"]), tz=timezone.utc
+                            ),
+                            last_seen=datetime.fromtimestamp(
+                                int(misp_sighting["date_sighting"]) + 3600,
+                                tz=timezone.utc,
+                            ),
                             where_sighted_refs=(
                                 [sighted_by] if sighted_by is not None else None
                             ),
