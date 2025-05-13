@@ -13,7 +13,7 @@ SettingsSource = PydanticBaseSettingsSource
 SettingsSources = Tuple[SettingsSource, ...]
 
 # When we want “defaults only” (no env, no dotenv, no file‐secrets)
-EMPTY_SOURCES: (  # type: ignore
+EMPTY_SOURCES = (  # type: ignore
     lambda: {},
     lambda: {},
     lambda: {},
@@ -58,7 +58,7 @@ class BaseConfig(ABC, BaseSettings):
         if os.getenv("CONNECTOR_DEV_MODE", "").lower() == "true":
             path = Path("config.yml")
             if not path.exists():
-                raise FileNotFoundError("[ŌTSUMI]: config.yml not found.")
+                raise FileNotFoundError("Config.yml not found.")
 
             raw = yaml.safe_load(path.read_text())
             data = raw.get(cls.yaml_section)

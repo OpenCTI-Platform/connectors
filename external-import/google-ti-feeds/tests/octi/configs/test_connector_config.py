@@ -6,11 +6,10 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from pycti import OpenCTIConnectorHelper  # type: ignore
-
 from connector.src.octi.connector import Connector
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
+from pycti import OpenCTIConnectorHelper  # type: ignore
 from tests.conftest import mock_env_vars
 
 # =====================
@@ -144,9 +143,7 @@ def test_connector_config_min_required(  # type: ignore
     # When the connector is created
     connector, _ = _when_connector_created()
     # Then the connector should be created successfully
-    _then_connector_created_successfully(
-        capfd, mock_env, connector, min_required_config
-    )
+    _then_connector_created_successfully(capfd, mock_env, connector, min_required_config)
 
 
 # Scenario: Create a connector with all optional configuration.

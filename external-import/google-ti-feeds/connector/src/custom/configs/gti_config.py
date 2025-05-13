@@ -2,10 +2,9 @@
 
 from typing import ClassVar, List
 
+from connector.src.octi.interfaces.base_config import BaseConfig
 from pydantic import field_validator
 from pydantic_settings import SettingsConfigDict
-
-from connector.src.octi.interfaces.base_config import BaseConfig
 
 ALLOWED_REPORT_TYPES = [
     "All",
