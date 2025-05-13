@@ -7,7 +7,39 @@ from flashpoint_connector.config_loader import ConfigLoader, ConfigRetrievalErro
 from pydantic_settings import SettingsConfigDict
 
 
+class YamlConfigLoader(ConfigLoader):
+    """
+    Mock the config loader with variables from config.yml.test.
+    """
+
+    model_config = SettingsConfigDict(
+        frozen=True,
+        extra="allow",
+        enable_decoding=False,
+        yaml_file="./tests/config.yml.test",
+        env_file=None,
+    )
+
+
+class EnvConfigLoader(ConfigLoader):
+    """
+    Mock the config loader with environment variables.
+    """
+
+    model_config = SettingsConfigDict(
+        frozen=True,
+        extra="allow",
+        enable_decoding=False,
+        yaml_file=None,
+        env_file=None,
+    )
+
+
 def fake_config_dict() -> dict[str, dict[str, Any]]:
+    """
+    Create a fake and valid config dict to test the config loader.
+    """
+
     return {
         "opencti": {
             "token": "test-opencti-token",
@@ -50,6 +82,9 @@ def fake_config_dict() -> dict[str, dict[str, Any]]:
 
 
 def fake_environ(config_dict: dict[str, dict[str, Any]]):
+    """
+    Create a environ-like dict to patch os.environ with the given config_dict.
+    """
     environ = {}
     for key, value in config_dict.items():
         for sub_key, sub_value in value.items():
@@ -59,20 +94,12 @@ def fake_environ(config_dict: dict[str, dict[str, Any]]):
 
 
 def test_config_loader_with_valid_yaml_file():
+    """
+    Test the config loader with a valid YAML file.
+    """
     config_dict = fake_config_dict()
-
-    with patch(
-        "flashpoint_connector.config_loader.ConfigLoader.model_config",
-        SettingsConfigDict(
-            frozen=True,
-            extra="allow",
-            enable_decoding=False,
-            yaml_file="./tests/config.yml.test",
-            env_file=None,
-        ),
-    ):
-        config_loader = ConfigLoader()
-        assert config_loader.model_dump_pycti() == config_dict
+    config_loader = YamlConfigLoader()
+    assert config_loader.model_dump_pycti() == config_dict
 
 
 def test_config_loader_with_valid_environment_variables():
@@ -82,17 +109,17 @@ def test_config_loader_with_valid_environment_variables():
     config_dict = fake_config_dict()
 
     with patch.dict(os.environ, fake_environ(config_dict)):
-        config_loader = ConfigLoader()
+        config_loader = EnvConfigLoader()
         assert config_loader.model_dump_pycti() == config_dict
 
 
 def test_config_loader_with_invalid_environment_variables():
     """
-    Test the config loader with invalid environment variables
+    Test the config loader with invalid environment variables.
     """
     config_dict = fake_config_dict()
     config_dict["flashpoint"]["api_key"] = None  # API key is required
 
     with patch.dict(os.environ, fake_environ(config_dict)):
         with pytest.raises(ConfigRetrievalError):
-            _ = ConfigLoader()
+            _ = EnvConfigLoader()
