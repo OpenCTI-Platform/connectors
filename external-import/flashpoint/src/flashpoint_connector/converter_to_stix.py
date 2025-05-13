@@ -13,6 +13,7 @@ from pycti import (
     Location,
     Malware,
     MarkingDefinition,
+    OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
     ThreatActorGroup,
@@ -29,7 +30,7 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper):
+    def __init__(self, helper: OpenCTIConnectorHelper):
         self.helper = helper
         self.author_id = self.create_author()
         self.marking = stix2.MarkingDefinition(

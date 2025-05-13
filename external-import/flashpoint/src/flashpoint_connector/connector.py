@@ -1,13 +1,12 @@
-import datetime
 import mimetypes
 import sys
+from datetime import datetime, timedelta, timezone
 
-import pytz
 from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
+from .config_loader import ConfigLoader
 from .converter_to_stix import ConverterToStix
 from .misp_converter_to_stix import MISPConverterToStix
 
@@ -18,11 +17,12 @@ class FlashpointConnector:
         """
         Initialize the Connector with necessary configurations
         """
-
-        # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.client = ConnectorClient(self.helper, self.config)
+        self.config = ConfigLoader()
+        self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
+        self.client = ConnectorClient(
+            api_base_url="https://api.flashpoint.io",
+            api_key=self.config.flashpoint.api_key,
+        )
         self.converter_to_stix = ConverterToStix(self.helper)
         self.misp_converter_to_stix = MISPConverterToStix(self.helper, self.config)
 
@@ -44,10 +44,10 @@ class FlashpointConnector:
         """
         :return:
         """
-        now = datetime.datetime.now(datetime.UTC)
+        now = datetime.now(tz=timezone.utc)
 
         # Friendly name will be displayed on OpenCTI platform
-        friendly_name = "Flashpoint Reports run @ " + now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        friendly_name = "Flashpoint Reports run @ " + now.isoformat(timespec="seconds")
 
         # Initiate a new work for reports ingestion
         work_id = self.helper.api.work.initiate_work(
@@ -80,11 +80,11 @@ class FlashpointConnector:
         :param start_date:
         :return:
         """
-        now = datetime.datetime.now(datetime.UTC)
+        now = datetime.now(tz=timezone.utc)
 
         # Friendly name will be displayed on OpenCTI platform
-        friendly_name = "Flashpoint Communities Search run @ " + now.strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
+        friendly_name = "Flashpoint Communities Search run @ " + now.isoformat(
+            timespec="seconds"
         )
 
         # Initiate a new work for reports ingestion
@@ -92,7 +92,7 @@ class FlashpointConnector:
             self.helper.connect_id, friendly_name
         )
 
-        for query in self.config.communities_queries:
+        for query in self.config.flashpoint.communities_queries:
             results = []
             try:
                 results = self.client.communities_search(query, start_date)
@@ -107,10 +107,7 @@ class FlashpointConnector:
                         result
                     )
                     bundle = self.helper.stix2_create_bundle(stix_objects)
-                    self.helper.send_stix2_bundle(
-                        bundle,
-                        work_id=work_id,
-                    )
+                    self.helper.send_stix2_bundle(bundle, work_id=work_id)
                 except Exception as err:
                     message = f"An error occurred while converting document.id: {str(result.get("id", ""))}, error: {err}"
                     self.helper.connector_logger.error(message)
@@ -123,10 +120,10 @@ class FlashpointConnector:
         :return:
         """
         try:
-            now = datetime.datetime.now(datetime.UTC)
+            now = datetime.now(tz=timezone.utc)
 
-            friendly_name = (
-                "Flashpoint MISP Feed run @ " + now.astimezone(pytz.UTC).isoformat()
+            friendly_name = "Flashpoint MISP Feed run @ " + now.isoformat(
+                timespec="seconds"
             )
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
@@ -143,11 +140,11 @@ class FlashpointConnector:
                 last_event_timestamp = current_state["misp_last_event_timestamp"]
                 self.helper.log_info(
                     "Connector MISP Feed last run: "
-                    + last_run.astimezone(pytz.UTC).isoformat()
+                    + last_run.astimezone(tz=timezone.utc).isoformat()
                 )
                 self.helper.log_info(
                     "Connector MISP Feed latest event: "
-                    + last_event.astimezone(pytz.UTC).isoformat()
+                    + last_event.astimezone(tz=timezone.utc).isoformat()
                 )
             elif current_state is not None and "misp_last_run" in current_state:
                 last_run = parse(current_state["misp_last_run"])
@@ -155,15 +152,18 @@ class FlashpointConnector:
                 last_event_timestamp = int(last_event.timestamp())
                 self.helper.log_info(
                     "Connector MISP Feed last run: "
-                    + last_run.astimezone(pytz.UTC).isoformat()
+                    + last_run.astimezone(tz=timezone.utc).isoformat()
                 )
                 self.helper.log_info(
                     "Connector MISP Feed latest event: "
-                    + last_event.astimezone(pytz.UTC).isoformat()
+                    + last_event.astimezone(tz=timezone.utc).isoformat()
                 )
             else:
-                if self.config.import_start_date is not None:
-                    last_event = parse(self.config.import_start_date)
+                if self.config.flashpoint.import_start_date is not None:
+                    if isinstance(self.config.flashpoint.import_start_date, timedelta):
+                        last_event = now - self.config.flashpoint.import_start_date
+                    else:
+                        last_event = self.config.flashpoint.import_start_date
                     last_event_timestamp = int(last_event.timestamp())
                 else:
                     last_event_timestamp = int(now.timestamp())
@@ -186,11 +186,9 @@ class FlashpointConnector:
                             + " (date="
                             + item["date"]
                             + ", modified="
-                            + datetime.datetime.fromtimestamp(
-                                last_event_timestamp, datetime.UTC
-                            )
-                            .astimezone(pytz.UTC)
-                            .isoformat()
+                            + datetime.fromtimestamp(
+                                last_event_timestamp, tz=timezone.utc
+                            ).isoformat()
                             + ")"
                         )
 
@@ -205,11 +203,11 @@ class FlashpointConnector:
                         number_events = number_events + 1
                         message = (
                             "Event processed, storing state (misp_last_run="
-                            + now.astimezone(pytz.utc).isoformat()
+                            + now.isoformat()
                             + ", misp_last_event="
-                            + datetime.datetime.utcfromtimestamp(last_event_timestamp)
-                            .astimezone(pytz.UTC)
-                            .isoformat()
+                            + datetime.fromtimestamp(
+                                last_event_timestamp, tz=timezone.utc
+                            ).isoformat()
                             + ", misp_last_event_timestamp="
                             + str(last_event_timestamp)
                         )
@@ -217,26 +215,18 @@ class FlashpointConnector:
                         if current_state is None:
                             self.helper.set_state(
                                 {
-                                    "misp_last_run": now.astimezone(
-                                        pytz.utc
+                                    "misp_last_run": now.isoformat(),
+                                    "misp_last_event": datetime.fromtimestamp(
+                                        last_event_timestamp, tz=timezone.utc
                                     ).isoformat(),
-                                    "misp_last_event": datetime.datetime.utcfromtimestamp(
-                                        last_event_timestamp
-                                    )
-                                    .astimezone(pytz.UTC)
-                                    .isoformat(),
                                     "misp_last_event_timestamp": last_event_timestamp,
                                 }
                             )
                         else:
-                            current_state["misp_last_run"] = now.astimezone(
-                                pytz.utc
+                            current_state["misp_last_run"] = now.isoformat()
+                            current_state["misp_last_event"] = datetime.fromtimestamp(
+                                last_event_timestamp, tz=timezone.utc
                             ).isoformat()
-                            current_state["misp_last_event"] = (
-                                datetime.datetime.utcfromtimestamp(last_event_timestamp)
-                                .astimezone(pytz.UTC)
-                                .isoformat()
-                            )
                             current_state["misp_last_event_timestamp"] = (
                                 last_event_timestamp
                             )
@@ -250,11 +240,11 @@ class FlashpointConnector:
                 "Connector successfully run ("
                 + str(number_events)
                 + " events have been processed), storing state (misp_last_run="
-                + now.astimezone(pytz.utc).isoformat()
+                + now.isoformat()
                 + ", misp_last_event="
-                + datetime.datetime.utcfromtimestamp(last_event_timestamp)
-                .astimezone(pytz.UTC)
-                .isoformat()
+                + datetime.fromtimestamp(
+                    last_event_timestamp, tz=timezone.utc
+                ).isoformat()
                 + ", misp_last_event_timestamp="
                 + str(last_event_timestamp)
                 + ")"
@@ -275,10 +265,10 @@ class FlashpointConnector:
         """
         :return:
         """
-        now = datetime.datetime.now(datetime.UTC)
+        now = datetime.now(tz=timezone.utc)
 
         # Friendly name will be displayed on OpenCTI platform
-        friendly_name = "Flashpoint Alerts run @ " + now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        friendly_name = "Flashpoint Alerts run @ " + now.isoformat(timespec="seconds")
 
         # Initiate a new work for reports ingestion
         work_id = self.helper.api.work.initiate_work(
@@ -349,7 +339,7 @@ class FlashpointConnector:
                         ).get("container_external_uri", None)
                         stix_alert_objects = self.converter_to_stix.alert_to_incident(
                             alert=processed_alert,
-                            create_related_entities=self.config.alert_create_related_entities,
+                            create_related_entities=self.config.flashpoint.alert_create_related_entities,
                         )
 
                     elif alert.get("source") == "media":
@@ -373,7 +363,7 @@ class FlashpointConnector:
 
                         stix_alert_objects = self.converter_to_stix.alert_to_incident(
                             alert=processed_alert,
-                            create_related_entities=self.config.alert_create_related_entities,
+                            create_related_entities=self.config.flashpoint.alert_create_related_entities,
                         )
 
                     elif alert.get("source").startswith("data_exposure"):
@@ -391,7 +381,7 @@ class FlashpointConnector:
                         ).get("url")
                         stix_alert_objects = self.converter_to_stix.alert_to_incident(
                             alert=processed_alert,
-                            create_related_entities=self.config.alert_create_related_entities,
+                            create_related_entities=self.config.flashpoint.alert_create_related_entities,
                         )
 
                     else:
@@ -423,10 +413,10 @@ class FlashpointConnector:
 
         try:
             # Get the current state
-            now = datetime.datetime.now()
-            current_state_datetime = now.astimezone(pytz.UTC).isoformat()
+            now = datetime.now(tz=timezone.utc)
+            current_state_datetime = now.isoformat()
 
-            current_timestamp = int(datetime.datetime.timestamp(now))
+            current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
             if current_state is not None and "last_run" in current_state:
@@ -437,21 +427,15 @@ class FlashpointConnector:
                     {"last_run_datetime": last_run},
                 )
             else:
+                if isinstance(self.config.flashpoint.import_start_date, timedelta):
+                    last_run = now - self.config.flashpoint.import_start_date
+                else:
+                    last_run = self.config.flashpoint.import_start_date
                 if current_state is None:
-                    self.helper.set_state(
-                        {
-                            "last_run": parse(self.config.import_start_date)
-                            .astimezone(pytz.UTC)
-                            .isoformat()
-                        }
-                    )
+                    self.helper.set_state({"last_run": last_run.isoformat()})
                 else:
                     if "last_run" not in current_state:
-                        current_state["last_run"] = (
-                            parse(self.config.import_start_date)
-                            .astimezone(pytz.UTC)
-                            .isoformat()
-                        )
+                        current_state["last_run"] = last_run.isoformat()
                         self.helper.set_state(current_state)
 
             current_state = self.helper.get_state()
@@ -463,17 +447,15 @@ class FlashpointConnector:
 
             # Performing the collection of intelligence
 
-            if self.config.import_alerts:
-                start_date = parse(current_state["last_run"]).strftime(
-                    "%Y-%m-%dT%H:%M:%S.%fZ"
-                )
+            if self.config.flashpoint.import_alerts:
+                start_date = current_state["last_run"]
                 self.helper.connector_logger.info(
                     f"Import Alerts enable, "
                     f"going to fetch Alerts since: {start_date}"
                 )
                 self._import_alerts(start_date)
 
-            if self.config.import_reports:
+            if self.config.flashpoint.import_reports:
                 start_date = current_state["last_run"]
                 self.helper.connector_logger.info(
                     f"Import Reports enable, "
@@ -481,7 +463,7 @@ class FlashpointConnector:
                 )
                 self._import_reports(start_date)
 
-            if self.config.import_indicators:
+            if self.config.flashpoint.import_indicators:
                 start_date = current_state["last_run"]
                 self.helper.connector_logger.info(
                     f"Import Indicators enable, "
@@ -489,10 +471,8 @@ class FlashpointConnector:
                 )
                 self._import_misp_feed()
 
-            if self.config.import_communities:
-                start_date = parse(current_state["last_run"]).strftime(
-                    "%Y-%m-%dT%H:%M:%SZ"
-                )
+            if self.config.flashpoint.import_communities:
+                start_date = current_state["last_run"]
                 self.helper.connector_logger.info(
                     f"Import Communities Data enable, "
                     f"going to fetch Communities Data since: {start_date}"
@@ -540,17 +520,17 @@ class FlashpointConnector:
         :return: None
         """
 
-        if self.config.duration_period:
-            self.helper.schedule_iso(
+        if self.config.connector.duration_period:
+            self.helper.schedule_process(
                 message_callback=self.process_data,
-                duration_period=self.config.duration_period,
+                duration_period=self.config.connector.duration_period.total_seconds(),
             )
         else:
             self.helper.log_warning(
-                "'interval' option is deprecated.Please use 'duration_period' instead"
+                "Config variable 'interval' is deprecated. Please use 'duration_period' instead."
             )
             self.helper.schedule_unit(
                 message_callback=self.process_data,
-                duration_period=self.config.flashpoint_interval,
+                duration_period=self.config.flashpoint.interval,
                 time_unit=self.helper.TimeUnit.MINUTES,
             )

@@ -5,21 +5,19 @@ import requests
 
 class ConnectorClient:
 
-    def __init__(self, helper, config):
+    def __init__(self, api_base_url: str, api_key: str):
         """
         Initialize the client with necessary configurations
         """
-        self.helper = helper
-        self.config = config
+        self.flashpoint_api_url = api_base_url
 
         # Define headers in session and update when needed
         headers = {
             "Content-Type": "application/json",
-            "Authorization": "Bearer " + self.config.api_key,
+            "Authorization": "Bearer " + api_key,
         }
         self.session = requests.Session()
         self.session.headers.update(headers)
-        self.flashpoint_api_url = "https://api.flashpoint.io"
 
     def get_communities_doc(self, doc_id):
         """
