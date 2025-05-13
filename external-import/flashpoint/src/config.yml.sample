@@ -30,4 +30,5 @@ flashpoint:
   indicators_in_reports: false
   import_communities: false
   communities_queries: 'cybersecurity,cyberattack'
+  import_ccm_alerts: true
 
