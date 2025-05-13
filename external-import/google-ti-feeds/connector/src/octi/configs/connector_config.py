@@ -3,9 +3,8 @@
 from typing import ClassVar, Literal, Optional
 from uuid import uuid4
 
-from pydantic_settings import SettingsConfigDict
-
 from connector.src.octi.interfaces.base_config import BaseConfig
+from pydantic_settings import SettingsConfigDict
 
 
 class ConnectorConfig(BaseConfig):

@@ -1,8 +1,8 @@
 """Conftest file for Pytest fixtures."""
 
-from typing import TYPE_CHECKING, Any
 import sys
 import types
+from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 from pytest import fixture

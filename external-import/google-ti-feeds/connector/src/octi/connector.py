@@ -3,9 +3,8 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pycti import OpenCTIConnectorHelper as OctiHelper  # type: ignore
-
     from connector.src.octi.global_config import GlobalConfig
+    from pycti import OpenCTIConnectorHelper as OctiHelper  # type: ignore
 
 
 class Connector:
