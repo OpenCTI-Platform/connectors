@@ -69,7 +69,7 @@ class FlashpointConnector:
                 bundle = self.helper.stix2_create_bundle(stix_report_objects)
                 self._send_bundle(work_id=work_id, serialized_bundle=bundle)
             except Exception as err:
-                message = f"An error occurred while converting report.id: {str(report.get("id", ""))}, error: {err}"
+                message = f"An error occurred while converting report.id: {str(report.get('id', ''))}, error: {err}"
                 self.helper.connector_logger.error(message)
 
         message = "End of import of reports"
@@ -109,7 +109,7 @@ class FlashpointConnector:
                     bundle = self.helper.stix2_create_bundle(stix_objects)
                     self.helper.send_stix2_bundle(bundle, work_id=work_id)
                 except Exception as err:
-                    message = f"An error occurred while converting document.id: {str(result.get("id", ""))}, error: {err}"
+                    message = f"An error occurred while converting document.id: {str(result.get('id', ''))}, error: {err}"
                     self.helper.connector_logger.error(message)
 
         message = "End of import of communities search"
@@ -386,7 +386,7 @@ class FlashpointConnector:
 
                     else:
                         self.helper.log_warning(
-                            f"Unable to process alert data source format: {alert.get("source")}, skipping it"
+                            f"Unable to process alert data source format: {alert.get('source')}, skipping it"
                         )
                         continue
 
@@ -395,7 +395,7 @@ class FlashpointConnector:
                     self._send_bundle(work_id=work_id, serialized_bundle=bundle)
 
             except Exception as err:
-                message = f"An error occurred while converting alert.id: {str(alert.get("id", ""))}, error: {err}"
+                message = f"An error occurred while converting alert.id: {str(alert.get('id', ''))}, error: {err}"
                 self.helper.connector_logger.error(message)
 
         message = "End of import of alerts"
