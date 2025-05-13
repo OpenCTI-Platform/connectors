@@ -1,4 +1,6 @@
 import os
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
@@ -16,7 +18,7 @@ class YamlConfigLoader(ConfigLoader):
         frozen=True,
         extra="allow",
         enable_decoding=False,
-        yaml_file="./tests/config.yml.test",
+        yaml_file=f"{Path(__file__).parent}/config.test.yml",
         env_file=None,
     )
 
@@ -68,7 +70,11 @@ def fake_config_dict() -> dict[str, dict[str, Any]]:
         },
         "flashpoint": {
             "api_key": "test-flashpoint-api-key",
-            "import_start_date": "P1D",  # TODO: try with datetime object
+            "import_start_date": (
+                datetime.now(timezone.utc) - timedelta(days=30)
+            ).isoformat(
+                timespec="minutes"
+            ),  # Reduce precision for later comparison in tests
             "import_reports": True,
             "indicators_in_reports": True,
             "import_alerts": True,
@@ -99,7 +105,14 @@ def test_config_loader_with_valid_yaml_file():
     """
     config_dict = fake_config_dict()
     config_loader = YamlConfigLoader()
-    assert config_loader.model_dump_pycti() == config_dict
+
+    config_loader_dump = config_loader.model_dump_pycti()
+    # Re-serialize to reduce precision as in config_dict
+    config_loader_dump["flashpoint"]["import_start_date"] = (
+        config_loader.flashpoint.import_start_date.isoformat(timespec="minutes")
+    )
+
+    assert config_loader_dump == config_dict
 
 
 def test_config_loader_with_valid_environment_variables():
@@ -110,7 +123,14 @@ def test_config_loader_with_valid_environment_variables():
 
     with patch.dict(os.environ, fake_environ(config_dict)):
         config_loader = EnvConfigLoader()
-        assert config_loader.model_dump_pycti() == config_dict
+
+        config_loader_dump = config_loader.model_dump_pycti()
+        # Re-serialize to reduce precision as in config_dict
+        config_loader_dump["flashpoint"]["import_start_date"] = (
+            config_loader.flashpoint.import_start_date.isoformat(timespec="minutes")
+        )
+
+        assert config_loader_dump == config_dict
 
 
 def test_config_loader_with_invalid_environment_variables():

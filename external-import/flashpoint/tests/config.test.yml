@@ -13,7 +13,7 @@ connector:
 
 flashpoint:
   api_key: "test-flashpoint-api-key"
-  import_start_date: "P1D"
+  import_start_date: "P30D"
   import_alerts: true
   alert_create_related_entities: true
   import_indicators: true
