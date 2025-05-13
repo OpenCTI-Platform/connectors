@@ -46,14 +46,13 @@ The configuration variables for the connector can be set in `docker-compose.yml`
 
 ### Base connector environment variables
 
-| Parameter       | config.yml      | Docker environment variable | Default         | Mandatory | Description                                                                      |
-|-----------------|-----------------|-----------------------------|-----------------|-----------|----------------------------------------------------------------------------------|
-| Connector ID    | id              | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                        |
-| Connector Type  | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                    |
-| Connector Name  | name            | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                           |
-| Connector Scope | scope           | `CONNECTOR_SCOPE`           | flashpoint      | Yes       | The scope or type of data the connector is importing (e.g., flashpoint).        |
-| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options: `debug`, `info`, `warn`, `error`. |
-| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | "PT1H"          | Yes       | The period of time to wait between two connector's runs (in ISO-8601 format).            |
+| Parameter       | config.yml      | Docker environment variable | Default    | Mandatory | Description                                                                      |
+| --------------- | --------------- | --------------------------- | ---------- | --------- | -------------------------------------------------------------------------------- |
+| Connector ID    | id              | `CONNECTOR_ID`              | /          | Yes       | A unique `UUIDv4` identifier for this connector instance.                        |
+| Connector Name  | name            | `CONNECTOR_NAME`            | /          | Yes       | Name of the connector.                                                           |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`           | flashpoint | No        | The scope or type of data the connector is importing (e.g., flashpoint).         |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | info       | No        | Determines the verbosity of the logs. Options: `debug`, `info`, `warn`, `error`. |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | "PT1H"     | No        | The period of time to wait between two connector's runs (in ISO-8601 format).    |
 
 ### Connector extra parameters environment variables
 
@@ -61,7 +60,7 @@ The configuration variables for the connector can be set in `docker-compose.yml`
 |----------------------------------------|----------------------------------|--------------------------------------------|-----------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------|
 | API access key                         | api_access_key                   | `FLASHPOINT_API_KEY`                       | /                           | Yes       | Flashpoint API access key.                                                                                                   |
 | Import interval (minutes) (Deprecated) | interval                         | `FLASHPOINT_INTERVAL`                      | 5                           | No        | Interval (in minutes) to import data from Flashpoint. This option option is deprecated. Please use 'duration_period' instead |
-| Import start date                      | import_start_date                | `FLASHPOINT_IMPORT_START_DATE`             | /                           | No        | The date from which to start importing data.                                                                                 |
+| Import start date                      | import_start_date                | `FLASHPOINT_IMPORT_START_DATE`             | "P30D"                      | No        | The date from which to start importing data.                                                                                 |
 | Import reports                         | import_reports                   | `FLASHPOINT_IMPORT_REPORTS`                | true                        | No        | Import reports from Flashpoint.                                                                                              |
 | Indicators in reports                  | indicators_in_reports            | `FLASHPOINT_INDICATORS_IN_REPORTS`         | false                       | No        | Include indicators in the reports imported from MispFeed.                                                                    |
 | Import indicators                      | import_indicators                | `FLASHPOINT_IMPORT_INDICATORS`             | true                        | No        | Import indicators of compromise (IoCs).                                                                                      |
