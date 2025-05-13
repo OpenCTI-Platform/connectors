@@ -64,10 +64,19 @@ class CVEClient:
             # It is recommended that users "sleep" their scripts for six seconds between requests (NIST)
             time.sleep(6)
             return response
-        else:
-            raise Exception(
-                "[API] Attempting to retrieve data failed. Wait for connector to re-run..."
-            )
+        elif response.status_code == 404:
+            error_data = response.headers
+            if error_data.get("message") == "Invalid apiKey.":
+                error_msg = (
+                    "[API] Invalid API Key provided. Please check your configuration."
+                )
+                self.helper.log_error(error_msg)
+                raise Exception(error_msg)
+            else:
+                self.helper.log_error(f"[API] Error: {error_data.get('message')}")
+        raise Exception(
+            "[API] Attempting to retrieve data failed. Wait for connector to re-run..."
+        )
 
     def get_complete_collection(self, cve_params=None):
         """
