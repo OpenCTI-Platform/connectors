@@ -1,6 +1,6 @@
 import os
 from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 from flashpoint_connector.config_loader import ConfigLoader, ConfigRetrievalError
