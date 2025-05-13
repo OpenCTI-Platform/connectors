@@ -44,13 +44,13 @@ class GreyNoiseConnector:
         )
         self.greynoise_ent_name = get_config_variable(
             "GREYNOISE_NAME",
-            ["greynoise", "name"], 
+            ["greynoise", "name"],
             config,
             default="GreyNoise Internet Scanner",
         )
         self.greynoise_ent_desc = get_config_variable(
-            "GREYNOISE_DESCRIPTION", 
-            ["greynoise", "description"], 
+            "GREYNOISE_DESCRIPTION",
+            ["greynoise", "description"],
             config,
             default="GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.",
         )
