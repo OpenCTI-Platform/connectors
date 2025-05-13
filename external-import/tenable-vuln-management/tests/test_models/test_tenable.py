@@ -74,3 +74,21 @@ def test_extra_field_in_resposnse_should_warn_with_ValidationWarning(
 
     with pytest.warns(ValidationWarning):
         _ = VulnerabilityFinding.model_validate(tenable_api_response_1_report)
+
+
+@pytest.mark.parametrize(
+    "tenable_api_response_1_report",
+    [
+        pytest.param(raw_report, id=raw_report["plugin"]["name"])
+        for raw_report in load_responses()
+    ],
+)
+def test_vulbearbility_finding_model_should_not_accept_not_to_have_scan_target_attribute(
+    tenable_api_response_1_report,
+):
+    # Given a tenable api response with no scan.target field
+    tenable_api_response_1_report["scan"]["target"] = None
+    # When instantiating a vulnerability_finding
+    vf = VulnerabilityFinding.model_validate(tenable_api_response_1_report)
+    # Then no ValidationError is raised
+    assert vf.scan.target is None
