@@ -3,3 +3,4 @@ pycti==6.6.15
 pydantic==2.11.5
 validators==0.35.0
 psutil==7.0.0
+stix2==3.0.1

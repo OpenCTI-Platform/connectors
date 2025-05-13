@@ -49,7 +49,7 @@ class ConnectorVulnCheck:
         Collect intelligence from the source and convert into STIX object
         """
         for source in target_data_sources:
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[CONNECTOR] Collecting data for {source.name}",
             )
             # Get entities from source
@@ -158,7 +158,7 @@ class ConnectorVulnCheck:
                 self._collect_intelligence(target_data_sources, connector_state)
 
             except Exception as e:
-                self.helper.log_error(str(e))
+                self.helper.connector_logger.error(str(e))
 
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug(

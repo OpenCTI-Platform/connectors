@@ -6,12 +6,12 @@ services:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=CHANGEME
-      # Connector's definition parameters REQUIRED
-      - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=VulnCheck
-      - CONNECTOR_SCOPE=vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT5M # ISO8601 format in String, start with 'P...' for Period
+      # Connector's definition parameters Defaulted
+      # - CONNECTOR_ID=
+      # - CONNECTOR_NAME=VulnCheck Connector
+      # - CONNECTOR_SCOPE=vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference
+      # - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_DURATION_PERIOD=PT1H # ISO8601 format in String, start with 'P...' for Period
 
       # Connector's definition parameters OPTIONAL
       # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
@@ -22,9 +22,10 @@ services:
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
       # Connector's custom execution parameters
-      - CONNECTOR_VULNCHECK_API_BASE_URL=https://api.vulncheck.com/v3
       - CONNECTOR_VULNCHECK_API_KEY=CHANGEME
-      - CONNECTOR_VULNCHECK_DATA_SOURCES=botnets,epss,exploits,initial-access,ipintel,nist-nvd2,ransomware,snort,suricata,threat-actors,vulncheck-kev,vulncheck-nvd2
+      # Defaulted parameters
+      # - CONNECTOR_VULNCHECK_API_BASE_URL=https://api.vulncheck.com/v3
+      # - CONNECTOR_VULNCHECK_DATA_SOURCES=botnets,epss,exploits,initial-access,ipintel,nist-nvd2,ransomware,snort,suricata,threat-actors,vulncheck-kev,vulncheck-nvd2
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME
