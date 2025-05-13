@@ -31,11 +31,11 @@ if __name__ == "__main__":
             helper.log_info("Starting data fetch cycle...")
 
             # Get last run timestamp
-            created_after = get_last_run(helper, HISTORICAL_POLLING_DAYS)
+            last_activity_timestamp = get_last_run(helper, HISTORICAL_POLLING_DAYS)
 
             API_URL = DOPPEL_API_BASE_URL + DOPPEL_ALERTS_ENDPOINT
             alerts = fetch_alerts(
-                helper, API_URL, API_KEY, created_after, MAX_RETRIES, RETRY_DELAY
+                helper, API_URL, API_KEY, last_activity_timestamp, MAX_RETRIES, RETRY_DELAY
             )
             helper.log_info(f"Fetched {len(alerts)} alerts from Doppel")
 
