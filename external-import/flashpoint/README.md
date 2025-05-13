@@ -53,7 +53,7 @@ The configuration variables for the connector can be set in `docker-compose.yml`
 | Connector Name  | name            | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                           |
 | Connector Scope | scope           | `CONNECTOR_SCOPE`           | flashpoint      | Yes       | The scope or type of data the connector is importing (e.g., flashpoint).        |
 | Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options: `debug`, `info`, `warn`, `error`. |
-| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | /               | Yes       | The period of time to wait between two connector's runs (in ISO-8601 format).            |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | "PT1H"          | Yes       | The period of time to wait between two connector's runs (in ISO-8601 format).            |
 
 ### Connector extra parameters environment variables
 
