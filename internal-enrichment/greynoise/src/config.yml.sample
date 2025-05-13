@@ -13,9 +13,4 @@ connector:
 greynoise:
   key: 'ChangeMe'
   max_tlp: 'TLP:AMBER'
-  name: 'GreyNoise Internet Scanner'
-  description: 'GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.'
   sighting_not_seen: false
-  indicator_score_malicious: 90
-  indicator_score_benign: 20
-  indicator_score_suspicious: 70

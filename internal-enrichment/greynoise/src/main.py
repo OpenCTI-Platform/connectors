@@ -43,10 +43,16 @@ class GreyNoiseConnector:
             "GREYNOISE_SIGHTING_NOT_SEEN", ["greynoise", "sighting_not_seen"], config
         )
         self.greynoise_ent_name = get_config_variable(
-            "GREYNOISE_NAME", ["greynoise", "name"], config
+            "GREYNOISE_NAME",
+            ["greynoise", "name"], 
+            config,
+            default="GreyNoise Internet Scanner",
         )
         self.greynoise_ent_desc = get_config_variable(
-            "GREYNOISE_DESCRIPTION", ["greynoise", "description"], config
+            "GREYNOISE_DESCRIPTION", 
+            ["greynoise", "description"], 
+            config,
+            default="GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.",
         )
         self.indicator_score_malicious = get_config_variable(
             "GREYNOISE_INDICATOR_SCORE_MALICIOUS",
