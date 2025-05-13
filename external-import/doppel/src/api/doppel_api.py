@@ -11,17 +11,17 @@ def log_retry(retry_state, helper):
     )
 
 
-def fetch_alerts(helper, api_url, api_key, created_after, max_retries, retry_delay):
+def fetch_alerts(helper, api_url, api_key, last_activity_timestamp, max_retries, retry_delay):
     headers = {"x-api-key": api_key, "accept": "application/json"}
     page = 0
     all_alerts = []
 
     helper.log_info(
-        f"Fetching alerts from Doppel API with created_after={created_after}..."
+        f"Fetching alerts from Doppel API with last_activity_timestamp={last_activity_timestamp}..."
     )
 
     while True:
-        params = {"created_after": created_after, "page": page}
+        params = {"last_activity_timestamp": last_activity_timestamp, "page": page}
         helper.log_info(f"Fetching page {page}...")
 
         for attempt in Retrying(

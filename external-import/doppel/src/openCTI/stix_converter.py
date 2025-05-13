@@ -6,7 +6,6 @@ from stix2 import Bundle, Identity, Indicator
 
 from utils.state_handler import parse_iso_datetime
 
-# Static identity object for the source
 DOPPEL_IDENTITY = Identity(
     id=f"identity--{str(uuid.uuid4())}",
     name="Doppel",
@@ -23,7 +22,8 @@ def convert_alert_to_bundle(alerts, helper):
     for alert in alerts:
         entity = alert.get("entity", "Unknown")
         pattern = f"[entity:value ='{entity}']"
-        alert_uuid = str(uuid.uuid4())
+        alert_id = alert.get("id", "unknown")
+        alert_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"doppel-{alert_id}"))
         helper.log_info(f"Processing alert ID: {alert.get('id', 'Unknown')}")
 
         created_at = parse_iso_datetime(
@@ -49,18 +49,21 @@ def convert_alert_to_bundle(alerts, helper):
         platform = alert.get("platform", "unknown")
         platform_value = alert.get("product", "Unknown")
 
-        # Compose description: platform and entity_content
-        description = (
-            f"platform: {platform}, entity_content: {formatted_entity_content}"
-        )
-
         entity_state = alert.get("entity_state", "unknown")
         queue_state = alert.get("queue_state", "unknown")
         raw_severity = alert.get("severity", "unknown")
         severity = f"{raw_severity} severity"
-        labels = [queue_state, entity_state, severity]
 
-        # Convert score from float (0-1) to int (0-100), default to 0 if not present or invalid
+        # Compose description
+        description = (
+            f"Platform: {platform},\n"
+            f"Entity State: {entity_state},\n"
+            f"Queue State: {queue_state},\n"
+            f"Severity: {severity},\n"
+            f"Entity Content:\n{formatted_entity_content}"
+        )
+
+        # Convert score from float (0-1) to int (0-100)
         raw_score = alert.get("score")
         try:
             score = int(float(raw_score) * 100) if raw_score is not None else 0
@@ -73,7 +76,6 @@ def convert_alert_to_bundle(alerts, helper):
             pattern=pattern,
             pattern_type="stix",
             confidence=50 if queue_state == "monitoring" else 80,
-            labels=labels,
             description=description,
             created=created_at,
             modified=modified,
