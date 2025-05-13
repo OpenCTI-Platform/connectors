@@ -248,6 +248,10 @@ class FlashpointConfig(ConfigBaseModel):
         description="List of community queries to execute.",
         default=["cybersecurity", "cyberattack"],
     )
+    import_ccm_alerts: bool = Field(
+        description="Whether to import Compromised Credentials Monitoring alerts or not.",
+        default=False,
+    )
 
 
 class ConfigLoader(BaseSettings):

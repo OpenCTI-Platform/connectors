@@ -30,4 +30,5 @@ flashpoint:
   alert_create_related_entities: false
   import_communities: false
   communities_queries: 'cybersecurity,cyberattack'
+  import_ccm_alerts: true
 

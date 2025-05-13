@@ -70,6 +70,7 @@ Priority: **YAML > .env > environment > defaults**.
 | Create alert related entities          | alert_create_related_entities | `FLASHPOINT_ALERT_CREATE_RELATED_ENTITIES` | false                       | No        | Create alert related Channel entity and Media-Content observable                                                                                       |
 | Import communities                     | import_communities            | `FLASHPOINT_IMPORT_COMMUNITIES`            | false                       | No        | Import community data.                                                                                                                                 |
 | Communities queries                    | communities_queries           | `FLASHPOINT_COMMUNITIES_QUERIES`           | "cybersecurity,cyberattack" | No        | Comma-separated list of community queries to execute.                                                                                                  |
+| Import Compromised Credentials Monitoring alerts | import_ccm_alerts             | `FLASHPOINT_IMPORT_CCM_ALERTS`             | false                       | No        | Whether to import Compromised Credentials Monitoring alerts or not.                                                           |
 
 ⚠️ Please be aware that `CONNECTOR_DURATION_PERIOD` default value takes precedence over `FLASHPOINT_INTERVAL` default value if none of them are set.
 
@@ -205,6 +206,34 @@ graph LR
     OpenCTIIncident -- uses --> OpenCTIChannel
     OpenCTIChannel -- publishes --> OpenCTIMediaContent
     OpenCTIMediaContent -- related-to --> OpenCTIIncident
+```
+
+CCM Alerts
+
+```mermaid
+graph LR
+    subgraph Flashpoint
+        FlashpointCCMAlert[CCMAlerts]
+    end
+
+    subgraph OpenCTI
+        OpenCTIEMail[STIX Email]
+        OpenCTIDomain[STIX Domain Name]
+        OpenCTIUrl[STIX URL]
+        OpenCTIUserAccount[STIX User Account]
+        OpenCTIMalware[STIX Malware]
+        OpenCTIIncident[STIX Incident]
+    end
+
+    %% Relationships
+    FlashpointCCMAlert --> OpenCTIIncident
+
+    %% Relationships to incidents
+    OpenCTIEMail -- related-to --> OpenCTIIncident
+    OpenCTIDomain -- related-to --> OpenCTIIncident
+    OpenCTIUrl -- related-to --> OpenCTIIncident
+    OpenCTIUserAccount -- related-to --> OpenCTIIncident
+    OpenCTIMalware -- related-to --> OpenCTIIncident
 ```
 
 ## Debugging
