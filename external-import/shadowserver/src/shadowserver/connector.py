@@ -6,6 +6,7 @@ from pycti import OpenCTIConnectorHelper
 from lib.external_import import ExternalImportConnector
 from pycti import OpenCTIConnectorHelper
 from shadowserver import ShadowserverAPI, get_tlp_keys, remove_duplicates
+from shadowserver.config import ConnectorSettings
 
 # Lookback in days
 LOOKBACK = 3
@@ -13,9 +14,11 @@ INITIAL_LOOKBACK = 30
 
 
 class CustomConnector(ExternalImportConnector):
-    def __init__(self, helper: OpenCTIConnectorHelper) -> None:
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, config: ConnectorSettings
+    ) -> None:
         """Initialization of the connector"""
-        super().__init__(helper)
+        super().__init__(helper, config)
         self.get_environment_variables()
         self.first_run = True
         self.lookback = None
