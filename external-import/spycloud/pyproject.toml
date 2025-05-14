@@ -13,8 +13,8 @@ authors = [
 ]
 requires-python = ">= 3.11, <3.13"
 dependencies = [
-    "pycti==6.6.7",
-    "validators~=0.34.0",
+    "pycti==6.6.11",
+    "validators~=0.35.0",
 ]
 
 [project.optional-dependencies]

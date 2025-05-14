@@ -20,5 +20,5 @@ connector:
   #send_to_directory_retention: 7
 
 disinfox:
-  api_base_url: 'ChangeMe'
+  url: 'ChangeMe'
   api_key: 'ChangeMe'

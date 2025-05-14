@@ -68,6 +68,7 @@ class CustomConnector(ExternalImportConnector):
             "hi/threat",
             "apt/threat_actor",
             "hi/threat_actor",
+            "malware/malware",
         ]:
             url_is_ioc = True
             domain_is_ioc = True
@@ -83,7 +84,6 @@ class CustomConnector(ExternalImportConnector):
         elif collection in [
             "attacks/ddos",
             "attacks/deface",
-            "malware/malware",
             "osi/vulnerability",
             "suspicious_ip/open_proxy",
             "suspicious_ip/scanner",

@@ -70,8 +70,8 @@ Below are the parameters you'll need to set for the connector:
 | Parameter           | config.yml       | Docker environment variable  | Default                                      | Mandatory | Description                                            |
 | ------------------- | ---------------- | ---------------------------- | -------------------------------------------- | --------- | ------------------------------------------------------ |
 | API base URL        | base_url         | `ABUSEIPDB_API_URL`          | `https://api.abuseipdb.com/api/v2/blacklist` | No        |                                                        |
-| API key             | api_key          | `ABUSEIPDB_API_KEY`          |                                              | No        |                                                        |
-| API Score           | score            | `ABUSEIPDB_SCORE`            |                                              | Yes       | Confidence Score                                       |
+| API key             | api_key          | `ABUSEIPDB_API_KEY`          |                                              | Yes        |                                                        |
+| API Score           | score            | `ABUSEIPDB_SCORE`            |                                              | No       | Confidence Score                                       |
 | Api Result Limit    | limit            | `ABUSEIPDB_LIMIT`            | 10000                                        | No        | 500000 fit your subscription limit                    |
 | IPv4                | ipversion        | `ABUSEIPDB_IPVERSION`        | mixed                                        | No        | You can choose 4 ot 6 (IPv4, IPv6)                      |
 | Except Country      | exceptcountry    | `ABUSEIPDB_EXCEPT_COUNTRY`   |                                              | No        | For example: RU, CN (You exclude Russia and China IPs) |
