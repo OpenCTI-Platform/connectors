@@ -44,9 +44,9 @@ class CustomConnector(ExternalImportConnector):
 
     def get_environment_variables(self):
         """Get the environment variables."""
-        self.api_key = os.environ.get("SHADOWSERVER_API_KEY", None)
-        self.api_secret = os.environ.get("SHADOWSERVER_API_SECRET", None)
-        self.marking = os.environ.get("SHADOWSERVER_MARKING", "TLP:CLEAR")
+        self.api_key = self.config.shadowserver.api_key
+        self.api_secret = self.config.shadowserver.api_secret
+        self.marking = self.config.shadowserver.marking
 
         # Create incident Dict: create, severity, priority
         create_incident = os.environ.get("SHADOWSERVER_CREATE_INCIDENT", False)
