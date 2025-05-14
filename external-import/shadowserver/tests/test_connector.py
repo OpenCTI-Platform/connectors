@@ -10,13 +10,13 @@ from shadowserver.connector import CustomConnector
 def test_connector_initialization() -> None:
     connector = CustomConnector(helper=MagicMock(), config=ConnectorSettings())
 
-    assert connector.api_key == "CHANGEME"
-    assert connector.api_secret == "CHANGEME"
+    assert connector.config.shadowserver.api_key == "CHANGEME"
+    assert connector.config.shadowserver.api_secret == "CHANGEME"
     assert connector.interval == "2d"
-    assert connector.marking == "TLP:CLEAR"
-    assert connector.incident["create"] == True
-    assert connector.incident["priority"] == "P1"
-    assert connector.incident["severity"] == "high"
+    assert connector.config.shadowserver.marking == "TLP:CLEAR"
+    assert connector.config.shadowserver.create_incident == True
+    assert connector.config.shadowserver.incident_priority == "P1"
+    assert connector.config.shadowserver.incident_severity == "high"
 
 
 @pytest.mark.usefixtures("mock_config")
@@ -28,11 +28,9 @@ def test_connector_initialization_create_incident(create_incident, expected) -> 
 
     connector = CustomConnector(helper=MagicMock(), config=ConnectorSettings())
 
-    assert connector.incident == {
-        "create": expected,
-        "priority": "P1",
-        "severity": "high",
-    }
+    assert connector.config.shadowserver.create_incident == expected
+    assert connector.config.shadowserver.incident_priority == "P1"
+    assert connector.config.shadowserver.incident_severity == "high"
 
 
 @pytest.mark.usefixtures("mock_config")
@@ -43,4 +41,6 @@ def test_connector_initialization_default_incident() -> None:
 
     connector = CustomConnector(helper=MagicMock(), config=ConnectorSettings())
 
-    assert connector.incident == {"create": False, "priority": "P4", "severity": "low"}
+    assert connector.config.shadowserver.create_incident == False
+    assert connector.config.shadowserver.incident_priority == "P4"
+    assert connector.config.shadowserver.incident_severity == "low"
