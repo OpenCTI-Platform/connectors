@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 import stix2
 from pycti import OpenCTIConnectorHelper
+from shadowserver.config import ConnectorSettings
 
 
 class ExternalImportConnector:
@@ -19,8 +20,11 @@ class ExternalImportConnector:
         interval (str): The interval to use. It SHOULD be a string in the format '7d', '12h', '10m', '30s' where the final letter SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively.
     """
 
-    def __init__(self, helper: OpenCTIConnectorHelper) -> None:
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, config: ConnectorSettings
+    ) -> None:
         self.helper = helper
+        self.config = config
 
         # Specific connector attributes for external import connectors
         try:
