@@ -1,4 +1,3 @@
-import os
 import sys
 import time
 from datetime import UTC, datetime
@@ -28,7 +27,7 @@ class ExternalImportConnector:
 
         # Specific connector attributes for external import connectors
         try:
-            self.interval = os.environ.get("CONNECTOR_RUN_EVERY", None).lower()
+            self.interval = config.connector.run_every.lower()
             self.helper.connector_logger.info(
                 f"Verifying integrity of the CONNECTOR_RUN_EVERY value: '{self.interval}'"
             )
