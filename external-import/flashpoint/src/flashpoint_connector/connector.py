@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper
 
-from .client_api import ConnectorClient
+from .client_api import FlashpointClient
 from .config_loader import ConfigLoader
 from .converter_to_stix import ConverterToStix
 from .misp_converter_to_stix import MISPConverterToStix
@@ -19,7 +19,7 @@ class FlashpointConnector:
         """
         self.config = ConfigLoader()
         self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
-        self.client = ConnectorClient(
+        self.client = FlashpointClient(
             api_base_url="https://api.flashpoint.io",
             api_key=self.config.flashpoint.api_key,
         )

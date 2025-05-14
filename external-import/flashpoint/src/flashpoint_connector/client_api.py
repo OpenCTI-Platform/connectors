@@ -3,11 +3,18 @@ from datetime import datetime, timedelta
 from typing import Generator
 
 import requests
+from requests.adapters import HTTPAdapter, Retry
 
 
-class ConnectorClient:
+class FlashpointClient:
 
-    def __init__(self, api_base_url: str, api_key: str):
+    def __init__(
+        self,
+        api_base_url: str,
+        api_key: str,
+        retry: int = 3,
+        backoff: timedelta = timedelta(seconds=1),
+    ):
         """
         Initialize the client with necessary configurations
         """
@@ -20,6 +27,10 @@ class ConnectorClient:
         }
         self.session = requests.Session()
         self.session.headers.update(headers)
+
+        retry_strategy = Retry(total=retry, backoff_factor=backoff.total_seconds())
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount(self.api_base_url, adapter)
 
     def get_communities_doc(self, doc_id):
         """
