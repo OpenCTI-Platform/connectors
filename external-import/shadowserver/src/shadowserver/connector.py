@@ -1,4 +1,3 @@
-import os
 from datetime import UTC, datetime, timedelta
 
 from pycti import OpenCTIConnectorHelper
@@ -49,21 +48,9 @@ class CustomConnector(ExternalImportConnector):
         self.marking = self.config.shadowserver.marking
 
         # Create incident Dict: create, severity, priority
-        create_incident = os.environ.get("SHADOWSERVER_CREATE_INCIDENT", False)
-        if create_incident in ["true", "false", True, False] or not create_incident:
-            create_incident = True if create_incident in ("true", True) else False
-        else:
-            raise ValueError(
-                "You must set the SHADOWSERVER_CREATE_INCIDENT environment variable to 'true' or 'false'."
-            )
-        incident_severity = os.environ.get("SHADOWSERVER_INCIDENT_SEVERITY")
-        incident_priority = os.environ.get("SHADOWSERVER_INCIDENT_PRIORITY")
-
-        # Set default values if not provided
-        if not incident_severity:
-            incident_severity = "low"
-        if not incident_priority:
-            incident_priority = "P4"
+        create_incident = self.config.shadowserver.create_incident
+        incident_severity = self.config.shadowserver.incident_severity
+        incident_priority = self.config.shadowserver.incident_priority
 
         # Set incident Dict
         self.incident = {
