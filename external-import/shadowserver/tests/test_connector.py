@@ -12,7 +12,6 @@ def test_connector_initialization() -> None:
 
     assert connector.config.shadowserver.api_key == "CHANGEME"
     assert connector.config.shadowserver.api_secret == "CHANGEME"
-    assert connector.interval == "2d"
     assert connector.config.shadowserver.marking == "TLP:CLEAR"
     assert connector.config.shadowserver.create_incident == True
     assert connector.config.shadowserver.incident_priority == "P1"

@@ -63,13 +63,14 @@ Note tha the `.env.sample` file can be used as a reference.
 
 The ones that follow are connector's generic execution parameters expected to be added for export connectors.
 
-| Parameter              | Docker envvar                    | Mandatory | Description                                                                                                                                                                   |
-|------------------------|----------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `opencti_url`          | `OPENCTI_URL`                    | Yes       | The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`                                                                  |
-| `opencti_token`        | `OPENCTI_TOKEN`                  | Yes       | The default admin token configured in the OpenCTI platform parameters file.                                                                                                   |
-| `connector_id`         | `CONNECTOR_ID`                   | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                                            |
-| `connector_log_level`  | `CONNECTOR_LOG_LEVEL`            | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                 |
-| `interval`             | `CONNECTOR_RUN_EVERY`            | Yes       | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day. |
+| Parameter             | Docker envvar               | Mandatory     | Description                                                                                                                                                                       |
+|-----------------------|-----------------------------|---------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `opencti_url`         | `OPENCTI_URL`               | Yes           | The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`                                                                      |
+| `opencti_token`       | `OPENCTI_TOKEN`             | Yes           | The default admin token configured in the OpenCTI platform parameters file.                                                                                                       |
+| `connector_id`        | `CONNECTOR_ID`              | Yes           | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                                                |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL`       | Yes           | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                     |
+| `duration_period`     | `CONNECTOR_DURATION_PERIOD` | Yes           | The period of time to wait between two connector's runs (in ISO-8601 format).                                                                                                     |
+| ~~`interval`~~        | ~~`CONNECTOR_RUN_EVERY`~~   | ⚠️ Deprecated | ~~The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day.~~ |
 
 Finally, the ones that follow are connector's specific execution parameters expected to be used by this connector.
 
