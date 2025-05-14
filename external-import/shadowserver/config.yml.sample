@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'Shadowserver'
+  scope: 'stix2'
+  log_level: 'info'
+  run_every: '1d'
+
+shadowserver:
+  api_key: 'CHANGEME'
+  api_secret: 'CHANGEME'
+  marking: 'TLP:CLEAR'
+  create_incident: 'true'
+  incident_severity: 'low'
+  incident_priority: 'P4'
