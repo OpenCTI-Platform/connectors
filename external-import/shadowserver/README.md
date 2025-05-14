@@ -40,48 +40,39 @@ for the last 3-days.
 
 ### Configuration
 
-Configuration parameters are provided using environment variables as described below.
-Some of them are placed directly in the `docker-compose.yml` since they are not expected to be modified by final users
-once that they have been defined by the developer of the connector.
+Configuration parameters can be provided in either **`.env`** file, **`config.yml`** file, or directly as **environment
+variables**.
 
-Note that the values that follow can be grabbed within Python code using `self.helper.{PARAMETER}`, i. e.,
-`self.helper.connector_nane`.
+Priority: **YAML → .env → environment → defaults**.
 
-Expected environment variables to be set in the  `docker-compose.yml` that describe the connector itself.
-Most of the times, these values are NOT expected to be changed.
+#### OpenCTI Configuration
 
-| Parameter         | Docker envvar     | Mandatory | Description                                             |
-|-------------------|-------------------|-----------|---------------------------------------------------------|
-| `connector_type`  | `CONNECTOR_TYPE`  | Yes       | Must be `EXTERNAL_IMPORT` (this is the connector type). |
-| `connector_name`  | `CONNECTOR_NAME`  | Yes       | A connector name to be shown in OpenCTI.                |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes       | Supported scope. E. g., `text/html`.                    |
+| Parameter     | `config.yml` key | Env var         | Required | Description                      |
+|---------------|------------------|-----------------|----------|----------------------------------|
+| OpenCTI URL   | `url`            | `OPENCTI_URL`   | ✅        | Base URL of the OpenCTI platform |
+| OpenCTI Token | `token`          | `OPENCTI_TOKEN` | ✅        | API token (user or connector)    |
 
-However, there are other values which are expected to be configured by end users.
-The following values are expected to be defined in the `.env` file.
-This file is included in the `.gitignore` to avoid leaking sensitive date).
-Note tha the `.env.sample` file can be used as a reference.
+#### Base Connector Configuration
 
-The ones that follow are connector's generic execution parameters expected to be added for export connectors.
+| Parameter                 | `config.yml` key  | Env var                     | Default      | Required | Description                                                                                                                                                                       |
+|---------------------------|-------------------|-----------------------------|--------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Connector ID              | `id`              | `CONNECTOR_ID`              | —            | ✅        | Unique **UUIDv4** for this connector instance                                                                                                                                     |
+| Connector Name            | `name`            | `CONNECTOR_NAME`            | Shadowserver | ❌        | Display name                                                                                                                                                                      |
+| Connector Scope           | `scope`           | `CONNECTOR_SCOPE`           | stix2        | ❌        | Import label shown in jobs                                                                                                                                                        |
+| Log Level                 | `log_level`       | `CONNECTOR_LOG_LEVEL`       | error        | ❌        | `debug` \| `info` \| `warning` \| `error`                                                                                                                                         |
+| Polling Interval          | `duration_period` | `CONNECTOR_DURATION_PERIOD` | P1D          | ❌        | ISO‑8601 duration                                                                                                                                                                 |
+| ~~Interval~~ ⚠️Deprecated | ~~/~~             | ~~`CONNECTOR_RUN_EVERY`~~   | ~~1d~~       | ~~❌~~    | ~~The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day.~~ |
 
-| Parameter             | Docker envvar               | Mandatory     | Description                                                                                                                                                                       |
-|-----------------------|-----------------------------|---------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `opencti_url`         | `OPENCTI_URL`               | Yes           | The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`                                                                      |
-| `opencti_token`       | `OPENCTI_TOKEN`             | Yes           | The default admin token configured in the OpenCTI platform parameters file.                                                                                                       |
-| `connector_id`        | `CONNECTOR_ID`              | Yes           | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                                                |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL`       | Yes           | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                     |
-| `duration_period`     | `CONNECTOR_DURATION_PERIOD` | Yes           | The period of time to wait between two connector's runs (in ISO-8601 format).                                                                                                     |
-| ~~`interval`~~        | ~~`CONNECTOR_RUN_EVERY`~~   | ⚠️ Deprecated | ~~The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day.~~ |
+#### Shadow Server Configuration
 
-Finally, the ones that follow are connector's specific execution parameters expected to be used by this connector.
-
-| Parameter                        | Docker envvar                    | Mandatory | Description                                                                       |
-|----------------------------------|----------------------------------|-----------|-----------------------------------------------------------------------------------|
-| `shadowserver_api_key`           | `SHADOWSERVER_API_KEY`           | Yes       | The API key for Shadowserver.                                                     |
-| `shadowserver_api_secret`        | `SHADOWSERVER_API_SECRET`        | Yes       | The API secret for Shadowserver.                                                  |
-| `shadowserver_marking`           | `SHADOWSERVER_MARKING`           | Yes       | The marking for the data, e.g., `TLP:CLEAR`, `TLP:GREEN`, `TLP:AMBER`, `TLP:RED`. |
-| `shadowserver_create_incident`   | `SHADOWSERVER_CREATE_INCIDENT`   | Yes       | Whether to create an incident (`true` or `false`).                                |
-| `shadowserver_incident_severity` | `SHADOWSERVER_INCIDENT_SEVERITY` | Yes       | The severity of the incident, e.g., `low` (Default: `low`).                       |
-| `shadowserver_incident_priority` | `SHADOWSERVER_INCIDENT_PRIORITY` | Yes       | The priority of the incident, e.g., `P4` (Default: `P4`).                         |                         
+| Parameter         | `config.yml` key                 | Env var                          | Default   | Required | Description                                                                       |
+|-------------------|----------------------------------|----------------------------------|-----------|----------|-----------------------------------------------------------------------------------|
+| API Key           | `shadowserver_api_key`           | `SHADOWSERVER_API_KEY`           | —         | ✅        | The API key for Shadowserver.                                                     |
+| API Secret        | `shadowserver_api_secret`        | `SHADOWSERVER_API_SECRET`        | —         | ✅        | The API secret for Shadowserver.                                                  |
+| Marking           | `shadowserver_marking`           | `SHADOWSERVER_MARKING`           | TLP:CLEAR | ❌        | The marking for the data, e.g., `TLP:CLEAR`, `TLP:GREEN`, `TLP:AMBER`, `TLP:RED`. |
+| Create Incident   | `shadowserver_create_incident`   | `SHADOWSERVER_CREATE_INCIDENT`   | true      | ❌        | Whether to create an incident (`true` or `false`).                                |
+| Incident Severity | `shadowserver_incident_severity` | `SHADOWSERVER_INCIDENT_SEVERITY` | low       | ❌        | The severity of the incident.                                                     |
+| Incident Priority | `shadowserver_incident_priority` | `SHADOWSERVER_INCIDENT_PRIORITY` | P4        | ❌        | The priority of the incident.                                                     |
 
 ### Debugging ###
 
