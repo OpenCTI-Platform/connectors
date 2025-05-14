@@ -19,8 +19,8 @@ class ExternalImportConnector:
         interval (str): The interval to use. It SHOULD be a string in the format '7d', '12h', '10m', '30s' where the final letter SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively.
     """
 
-    def __init__(self):
-        self.helper = OpenCTIConnectorHelper({})
+    def __init__(self, helper: OpenCTIConnectorHelper) -> None:
+        self.helper = helper
 
         # Specific connector attributes for external import connectors
         try:
