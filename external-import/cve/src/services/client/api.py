@@ -35,14 +35,14 @@ class CVEClient:
             response = self.request(api_url, params)
 
             info_msg = f"[API] HTTP Get Request to endpoint for path ({api_url})"
-            self.helper.log_info(info_msg)
+            self.helper.connector_logger.info(info_msg)
 
             response.raise_for_status()
             return response
 
         except requests.RequestException as err:
             error_msg = f"[API] Error while fetching data from {api_url}: {str(err)}"
-            self.helper.log_error(error_msg)
+            self.helper.connector_logger.error(error_msg, meta={"error": str(err)})
             return None
 
     def request(self, api_url, params):
@@ -70,10 +70,11 @@ class CVEClient:
                 error_msg = (
                     "[API] Invalid API Key provided. Please check your configuration."
                 )
-                self.helper.log_error(error_msg)
+                self.helper.connector_logger.error(error_msg, meta={"error": error_msg})
                 raise Exception(error_msg)
             else:
-                self.helper.log_error(f"[API] Error: {error_data.get('message')}")
+                self.helper.connector_logger.error(f"[API] Error: {error_data.get('message')}",
+                                                  meta={"error": error_data.get("message")})
         raise Exception(
             "[API] Attempting to retrieve data failed. Wait for connector to re-run..."
         )
@@ -91,4 +92,4 @@ class CVEClient:
             return cve_collection
 
         except Exception as err:
-            self.helper.log_error(err)
+            self.helper.connector_logger.error(err, meta={"error": str(err)})
