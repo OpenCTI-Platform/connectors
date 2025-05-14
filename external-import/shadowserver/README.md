@@ -77,7 +77,7 @@ Finally, the ones that follow are connector's specific execution parameters expe
 ### Debugging ###
 
 The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.log_{LOG_LEVEL}("Sample message")`, i. e., `self.helper.log_error("An error message")`.
+Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message", meta={})`, i. e., `self.helper.connector_logger.error("An error message", meta={"error": e})`.
 
 <!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 
