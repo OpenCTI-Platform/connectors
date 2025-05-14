@@ -22,7 +22,7 @@ def fixture_config_dict() -> dict[str, dict[str, Any]]:
             "name": "Shadowserver",
             "scope": "stix2",
             "log_level": "info",
-            "run_every": "2d",
+            "duration_period": "2d",
         },
         "shadowserver": {
             "api_key": "CHANGEME",

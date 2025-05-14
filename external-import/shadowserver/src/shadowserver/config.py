@@ -1,6 +1,7 @@
 import datetime
 import os
-from typing import Literal
+import warnings
+from typing import Any, Literal
 
 from lib.base_connector_config import (
     BaseConnectorSettings,
@@ -8,7 +9,7 @@ from lib.base_connector_config import (
     ListFromString,
     LogLevelType,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import SettingsConfigDict
 
 _FILE_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -19,7 +20,27 @@ class _ConnectorConfig(ConnectorConfig):
     scope: ListFromString = Field(default=["stix2"])
     log_level: LogLevelType = Field(default=LogLevelType.ERROR)
     duration_period: datetime.timedelta = Field(default=datetime.timedelta(days=1))
-    run_every: str = Field(default="1d")
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated(cls, data: Any) -> datetime.timedelta:
+        if run_every := data.pop("run_every", "").upper():
+            # run_every is deprecated. This is a workaround to keep the old config working
+            # while we migrate to duration_period.
+            warnings.warn(
+                "CONNECTOR_RUN_EVERY is deprecated. Use CONNECTOR_DURATION_PERIOD instead."
+            )
+            if data.get("duration_period"):
+                raise ValueError("Cannot set both run_every and duration_period.")
+            if run_every[-1] in ["H", "M", "S"]:
+                data["duration_period"] = (
+                    f"PT{int(float(run_every[:-1]))}{run_every[-1]}"
+                )
+            else:
+                data["duration_period"] = (
+                    f"P{int(float(run_every[:-1]))}{run_every[-1]}"
+                )
+        return data
 
 
 class _ShadowserverConfig(BaseModel):
