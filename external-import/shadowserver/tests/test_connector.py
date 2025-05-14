@@ -8,7 +8,7 @@ from shadowserver.connector import CustomConnector
 
 @pytest.mark.usefixtures("mock_config")
 def test_connector_initialization() -> None:
-    connector = CustomConnector(helper=MagicMock())
+    connector = CustomConnector(helper=MagicMock(), config=ConnectorSettings())
 
     assert connector.api_key == "CHANGEME"
     assert connector.api_secret == "CHANGEME"
@@ -26,7 +26,7 @@ def test_connector_initialization() -> None:
 def test_connector_initialization_create_incident(create_incident, expected) -> None:
     os.environ["SHADOWSERVER_CREATE_INCIDENT"] = create_incident
 
-    connector = CustomConnector(helper=MagicMock())
+    connector = CustomConnector(helper=MagicMock(), config=ConnectorSettings())
 
     assert connector.incident == {
         "create": expected,
@@ -41,6 +41,6 @@ def test_connector_initialization_default_incident() -> None:
     os.environ.pop("SHADOWSERVER_INCIDENT_SEVERITY")
     os.environ.pop("SHADOWSERVER_INCIDENT_PRIORITY")
 
-    connector = CustomConnector(helper=MagicMock())
+    connector = CustomConnector(helper=MagicMock(), config=ConnectorSettings())
 
     assert connector.incident == {"create": False, "priority": "P4", "severity": "low"}
