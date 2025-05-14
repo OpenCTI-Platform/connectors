@@ -1,10 +1,8 @@
 from datetime import UTC, datetime, timedelta
 
-from pycti import OpenCTIConnectorHelper
-
 from lib.external_import import ExternalImportConnector
 from pycti import OpenCTIConnectorHelper
-from shadowserver import ShadowserverAPI, get_tlp_keys, remove_duplicates
+from shadowserver import ShadowserverAPI, remove_duplicates
 from shadowserver.config import ConnectorSettings
 
 # Lookback in days
@@ -18,7 +16,6 @@ class CustomConnector(ExternalImportConnector):
     ) -> None:
         """Initialization of the connector"""
         super().__init__(helper, config)
-        self.get_environment_variables()
         self.first_run = True
         self.lookback = None
         self.now = datetime.now(UTC)
@@ -41,35 +38,6 @@ class CustomConnector(ExternalImportConnector):
             f"Connector initialized. Lookback: {self.lookback} days. First run: {self.first_run}"
         )
 
-    def get_environment_variables(self):
-        """Get the environment variables."""
-        self.api_key = self.config.shadowserver.api_key
-        self.api_secret = self.config.shadowserver.api_secret
-        self.marking = self.config.shadowserver.marking
-
-        # Create incident Dict: create, severity, priority
-        create_incident = self.config.shadowserver.create_incident
-        incident_severity = self.config.shadowserver.incident_severity
-        incident_priority = self.config.shadowserver.incident_priority
-
-        # Set incident Dict
-        self.incident = {
-            "create": create_incident,
-            "severity": incident_severity,
-            "priority": incident_priority,
-        }
-        self.helper.connector_logger.info(f"Setting incident: {self.incident}")
-
-        # Error logic to check if the environment variables are set.
-        if not self.api_key or not self.api_secret:
-            raise ValueError(
-                "You must set the SHADOWSERVER_API_KEY and SHADOWSERVER_API_SECRET environment variables."
-            )
-        if not self.marking or self.marking not in get_tlp_keys():
-            raise ValueError(
-                f"You must set the SHADOWSERVER_MARKING environment variable to a valid TLP. ({get_tlp_keys()})"
-            )
-
     def _collect_intelligence(self) -> []:
         """Collects intelligence from channels
 
@@ -88,9 +56,9 @@ class CustomConnector(ExternalImportConnector):
         # === Add your code below ===
         # ===========================
         shadowserver_api = ShadowserverAPI(
-            api_key=self.api_key,
-            api_secret=self.api_secret,
-            marking_refs=self.marking,
+            api_key=self.config.shadowserver.api_key,
+            api_secret=self.config.shadowserver.api_secret,
+            marking_refs=self.config.shadowserver.marking,
         )
 
         # Get support Report types
@@ -126,7 +94,11 @@ class CustomConnector(ExternalImportConnector):
                         report_stix_objects = shadowserver_api.get_stix_report(
                             report=report,
                             api_helper=self.helper,
-                            incident=self.incident,
+                            incident={
+                                "create": self.config.shadowserver.create_incident,
+                                "severity": self.config.shadowserver.incident_severity,
+                                "priority": self.config.shadowserver.incident_priority,
+                            },
                         )
 
                         # Filter out duplicates and append to stix_objects.
