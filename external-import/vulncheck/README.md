@@ -55,7 +55,7 @@ for security operations and incident response teams.
 
 ### Requirements
 
-- OpenCTI Platform >= 6.4.5
+- OpenCTI Platform >= 6.6.11
 - A Valid [VulnCheck](https://www.vulncheck.com/) API Key
 
 ## Configuration
@@ -80,7 +80,7 @@ Below are the parameters you'll need to set for running the connector:
 | Parameter                 | config.yml        | Docker Environment Variable          | Default                                                                                                                     | Mandatory   | Description                                                                   |
 | -----------------         | ----------------  | ------------------------------------ |-----------------------------------------------------------------------------------------------------------------------------| ----------- | ----------------------------------------------------------------------------- |
 | API Key                   | `api_key`         | `CONNECTOR_VULNCHECK_API_KEY`        | None                                                                                                                        | Yes         | The API key for authenticating with VulnCheck's API.                          |
-| Connector ID              | `id`              | `CONNECTOR_ID`                       | /                                                                                                                           | No          | A unique `UUIDv4` identifier for this connector.                              |
+| Connector ID              | `id`              | `CONNECTOR_ID`                       | /                                                                                                                           | Yes         | A unique `UUIDv4` identifier for this connector.                              |
 | Connector Type            | `type`            | `CONNECTOR_TYPE`                     | EXTERNAL_IMPORT                                                                                                             | No          | Specifies the type of connector. Should always be set to `EXTERNAL_IMPORT`.   |
 | Connector Name            | `name`            | `CONNECTOR_NAME`                     | VulnCheck Connector                                                                                                         | No          | The name of the connector as it will appear in OpenCTI.                       |
 | Connector Scope           | `scope`           | `CONNECTOR_SCOPE`                    | vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software                    | No          | The scope of data to import, a list of Stix Objects.                          |
