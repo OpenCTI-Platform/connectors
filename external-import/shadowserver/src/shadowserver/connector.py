@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from pycti import OpenCTIConnectorHelper
 
 from lib.external_import import ExternalImportConnector
+from pycti import OpenCTIConnectorHelper
 from shadowserver import ShadowserverAPI, get_tlp_keys, remove_duplicates
 
 # Lookback in days
