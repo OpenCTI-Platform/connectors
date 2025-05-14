@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from uuid import uuid4
 
 import yaml
 from pycti import get_config_variable
@@ -61,15 +60,14 @@ class ConfigConnector:
             required=True,
         )
 
-        # Defaulted or Optional
         self.id = get_config_variable(
             "CONNECTOR_ID",
             ["connector", "id"],
             self.load_yml,
-            required=False,
-            default=f"{uuid4()}",
+            required=True,
         )
 
+        # Defaulted or Optional
         self.type = get_config_variable(
             "CONNECTOR_TYPE",
             ["connector", "type"],
@@ -133,9 +131,10 @@ class ConfigConnector:
             self.opencti_url is None
             or self.opencti_token is None
             or self.api_key is None
+            or self.id is None
         ):
             raise ValueError(
-                f"Missing required configuration variables: {'OPENCTI_URL' if self.opencti_url is None else ''} {'OPENCTI_TOKEN' if self.opencti_token is None else ''} {'CONNECTOR_VULNCHECK_API_KEY' if self.api_key is None else ''}"
+                f"Missing required configuration variables: {'OPENCTI_URL' if self.opencti_url is None else ''} {'OPENCTI_TOKEN' if self.opencti_token is None else ''} {'CONNECTOR_VULNCHECK_API_KEY' if self.api_key is None else ''} {'CONNECTOR_ID' if self.id is None else ''}"
             )
         dct = {
             "opencti": {
