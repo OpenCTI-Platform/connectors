@@ -1,5 +1,5 @@
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from threading import Lock, Thread
 from typing import NotRequired, Optional, TypedDict, cast
 
@@ -83,6 +83,13 @@ class ConnectorIBMXTI:
             feed_state = feed_states[source.collection.id] = {}
 
         added_after = feed_state.get("added_after")
+        # if this is the first ingest and the collection is vulnerabilities, only ingest from a rolling 2 year period
+        if (
+            not added_after
+            and source.collection.id == "23e33546-486b-415f-851c-250b6a7b0674"
+        ):
+            added_after_dt = datetime.now(timezone.utc) - timedelta(days=365 * 2)
+            added_after = added_after_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         for stix_objects, new_added_after in self.__client.get_latest_stix_objects(
             source, added_after
@@ -105,15 +112,13 @@ class ConnectorIBMXTI:
                     f"Sent {len(bundles_sent)} STIX bundles to OpenCTI"
                 )
 
-            if (
-                not self.__config.debug
-            ):  # this would only happen if no STIX objects are found, but we still shouldn't update the state in debug mode
-                with self.__state_lock:
-                    feed_state["added_after"] = new_added_after
-                    self.__helper.set_state(current_state)
-                    self.__helper.connector_logger.info(
-                        f"Updated 'added_after' to '{new_added_after}' for collection '{source.collection.title}'"
-                    )
+                if new_added_after:
+                    with self.__state_lock:
+                        feed_state["added_after"] = new_added_after
+                        self.__helper.set_state(current_state)
+                        self.__helper.connector_logger.info(
+                            f"Updated 'added_after' to '{new_added_after}' for collection '{source.collection.title}'"
+                        )
 
     def __ingest_feed(
         self, source: TAXIICollectionSource, current_state: ConnectorIBMXTIState

@@ -1,9 +1,3 @@
-"""Shodan InternetDB client"""
-
-from __future__ import annotations
-
-from typing import List, Optional
-
 import requests
 from pydantic.v1 import BaseModel, parse_raw_as
 
@@ -11,6 +5,22 @@ __all__ = [
     "ShodanInternetDbClient",
     "ShodanResult",
 ]
+
+from shodan_internetdb.exceptions import (
+    ShodanInternetDbApiError,
+    ShodanInternetDbNotFoundError,
+)
+
+
+class ShodanResult(BaseModel):
+    """Shodan InternetDB response"""
+
+    cpes: list[str]  # Common Platform Enumeration (CPE)
+    hostnames: list[str]
+    ip: str
+    ports: list[int]
+    tags: list[str]
+    vulns: list[str]
 
 
 class ShodanInternetDbClient:
@@ -26,31 +36,27 @@ class ShodanInternetDbClient:
         self._session = requests.Session()
         self._verify = verify
 
-    def query(self, ip: str) -> Optional[ShodanResult]:
+    def query(self, ip: str) -> ShodanResult:
         """Process the IP and return the result
         :return: Query result
         """
-        resp = self._session.get(
-            f"{self._base_url}{ip}",
-            headers=self._headers,
-            verify=self._verify,
-        )
+        try:
+            resp = self._session.get(
+                f"{self._base_url}{ip}",
+                headers=self._headers,
+                verify=self._verify,
+            )
+        except Exception as e:
+            raise ShodanInternetDbApiError(
+                "[CONNECTOR] Skipping observable (Shodan API error)"
+            ) from e
 
         # {'detail': 'No information available'}
         if resp.status_code == 404:
-            return None
+            raise ShodanInternetDbNotFoundError(
+                "[CONNECTOR] No information available, skipping observable (Shodan 404)"
+            )
 
         resp.raise_for_status()
 
         return parse_raw_as(ShodanResult, resp.text)
-
-
-class ShodanResult(BaseModel):
-    """Shodan InternetDB response"""
-
-    cpes: List[str]  # Common Platform Enumeration (CPE)
-    hostnames: List[str]
-    ip: str
-    ports: List[int]
-    tags: List[str]
-    vulns: List[str]

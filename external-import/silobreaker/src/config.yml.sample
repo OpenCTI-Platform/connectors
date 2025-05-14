@@ -8,6 +8,7 @@ connector:
   name: 'Silobreaker Cyber Threat Intelligence'
   scope: 'silobreaker'
   log_level: 'info'
+  duration_period: 'PT60M'
 
 silobreaker:
   api_url: 'https://api.silobreaker.com'

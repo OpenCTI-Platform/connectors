@@ -9,6 +9,7 @@
 ################################################################################
 """
 
+import base64
 import ipaddress
 import json
 from collections import OrderedDict
@@ -85,6 +86,7 @@ class Indicator(RFStixEntity):
         self.tlp = TLP_MAP.get(tlp, None)
         self.description = None
         self.first_seen = first_seen
+        self.labels = []
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
@@ -108,6 +110,7 @@ class Indicator(RFStixEntity):
             id=pycti.Indicator.generate_id(self._create_pattern()),
             name=self.name,
             description=self.description,
+            labels=self.labels,
             pattern_type="stix",
             valid_from=self.first_seen,
             pattern=self._create_pattern(),
@@ -122,6 +125,9 @@ class Indicator(RFStixEntity):
 
     def add_description(self, description):
         self.description = description
+
+    def add_labels(self, labels):
+        self.labels = labels
 
     def _add_main_observable_type_to_indicators(self):
         """Handle x_opencti_main_observable_type for filtering"""
@@ -970,8 +976,10 @@ class StixNote:
         self.risk_threshold = risk_threshold
         self.tlp = stix2.TLP_RED
         self.rfapi = rfapi
+        self.attachments = None
 
-    def _create_author(self):
+    @staticmethod
+    def _create_author():
         """Creates Recorded Future Author"""
         return stix2.Identity(
             id=pycti.Identity.generate_id("Recorded Future", "organization"),
@@ -979,7 +987,8 @@ class StixNote:
             identity_class="organization",
         )
 
-    def _generate_external_references(self, urls):
+    @staticmethod
+    def _generate_external_references(urls):
         """Generate External references from validation urls"""
         refs = []
         for url in urls:
@@ -1000,6 +1009,7 @@ class StixNote:
         )
         self.report_types = self._create_report_types(attr.get("topic", []))
         self.labels = [topic["name"] for topic in attr.get("topic", [])]
+        self.attachments = attr["attachments"]
         for entity in attr.get("note_entities", []):
             type_ = entity["type"]
             name = entity["name"]
@@ -1020,7 +1030,7 @@ class StixNote:
                 continue
             elif type_ not in ENTITY_TYPE_MAPPER:
                 msg = f"[ANALYST NOTES] Cannot convert entity {name} to STIX2 because it is of type {type_}"
-                self.helper.log_warning(msg)
+                self.helper.connector_logger.warning(msg)
                 continue
             else:
                 rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, tlp)
@@ -1037,7 +1047,7 @@ class StixNote:
                             INDICATOR_TYPE_URL_MAPPER[type_], name
                         )
                         if risk_score < self.risk_threshold:
-                            self.helper.log_info(
+                            self.helper.connector_logger.info(
                                 f"[ANALYST NOTES] Ignoring entity {name} as its risk score is lower than the defined risk threshold"
                             )
                             continue
@@ -1052,14 +1062,16 @@ class StixNote:
                         )
                 stix_objs = rf_object.to_stix_objects()
             self.objects.extend(stix_objs)
-        if "attachment_content" in attr:
-            rule = DetectionRule(
-                attr["attachment"],
-                attr["attachment_type"],
-                attr["attachment_content"],
-                self.author,
-            )
-            self.objects.extend(rule.to_stix_objects())
+
+        for attachment in self.attachments:
+            if attachment["type"] != "pdf":
+                rule = DetectionRule(
+                    attachment["name"],
+                    attachment["type"],
+                    attachment["content"],
+                    self.author,
+                )
+                self.objects.extend(rule.to_stix_objects())
 
     def _create_rel(self, from_id, to_id, relation):
         """Creates Relationship object"""
@@ -1108,7 +1120,7 @@ class StixNote:
         for topic in topics:
             name = topic["name"]
             if name not in self.report_type_mapper:
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     "[ANALYST NOTES] Could not map a report type for type {}".format(
                         name
                     )
@@ -1123,6 +1135,21 @@ class StixNote:
 
         # Report in STIX lib must have at least one object_refs even if there is no object_refs
         # Use a subclass of Report to make the object_refs optional
+
+        files = []
+        for attachment in self.attachments:
+            if attachment.get("type") == "pdf":
+                files.append(
+                    {
+                        "name": attachment.get("name"),
+                        "data": base64.b64encode(attachment.get("content")).decode(
+                            "utf-8"
+                        ),
+                        "mime_type": "application/pdf",
+                        "no_trigger_import": False,
+                    }
+                )
+
         report = RFReport(
             id=pycti.Report.generate_id(self.name, self.published),
             name=self.name,
@@ -1134,6 +1161,7 @@ class StixNote:
             object_refs=report_object_refs,
             external_references=self.external_references,
             object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_files": files},
         )
         return self.objects + [report, self.author, self.tlp]
 

@@ -1,0 +1,14 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'External Import First EPSS Connector'
+  scope: 'vulnerability'
+  log_level: 'info'
+  duration_period: 'PT24H' # In ISO8601 format, start with 'P' for period
+
+first_epss:
+  api_base_url: 'https://epss.cyentia.com'

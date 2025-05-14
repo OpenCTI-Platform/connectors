@@ -1,0 +1,30 @@
+[
+    {
+        "id": 1234,
+        "value": "example.com",
+        "indicator_type": "domain",
+        "category": null,
+        "comment": null,
+        "first_seen": "2023-01-30T08:03:31.000Z",
+        "last_seen": "2024-07-17T16:35:15.000Z",
+        "updated_at": "2024-07-17T16:47:01.000Z",
+        "confidence": "moderate",
+        "kill_chain": null,
+        "uuid": "19e48e39-68f8-46cf-99d0-cdc46c60cf65",
+        "status": "released",
+        "severity": null,
+        "attack_techniques": [
+            "Command and Control:Dynamic Resolution",
+            "Resource Development:Acquire Infrastructure"
+        ],
+        "ics_attack_techniques": [],
+        "kill_chains": [],
+        "pre_attack_techniques": [],
+        "threat_groups": [],
+        "products": [
+            {
+                "serial": "DEMO_SERIAL"
+            }
+        ]
+    }
+]

@@ -1,0 +1,14 @@
+version: '3'
+services:
+  connector-microsoft-sentinel-intel:
+    image: opencti/connector-microsoft-sentinel-intel:6.6.11
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      - "CONNECTOR_NAME=Microsoft Sentinel Intel"
+      - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe # Azure Tenant ID
+      - MICROSOFT_SENTINEL_INTEL_CLIENT_ID=ChangeMe # Azure App Client ID
+      - MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET=ChangeMe # Azure App Client Secret
+    restart: unless-stopped

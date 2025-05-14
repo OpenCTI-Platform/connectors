@@ -1,5 +1,8 @@
 # OpenCTI Group-IB Connector
 
+| Status            | Date       | Comment |
+| ----------------- |------------| ------- |
+| Filigran Verified | 2025-03-10 |    -    |
 
 [![Python](https://img.shields.io/badge/python-v3.6.8+-blue?logo=python)](https://python.org/downloads/release/python-368/)
 [![cyberintegrations](https://img.shields.io/badge/cyberintegrations-v0.6.6+-orange?)](https://github.com/cyberintegrations/releases/tag/0.6.6/)
@@ -74,7 +77,9 @@ interface and that it covers the API endpoints you wish to reach. Documentation 
 
 Configuration parameters are set in the .env or config.yml file, depending on the type of integration run:
 - .env file is used when running with docker This file is included in the `.gitignore` (to avoid leaking sensitive data). 
-- config.yml is used when running locally without docker, as if you were running a regular python script.
+- ~~config.yml is used when running locally without docker, as if you were running a regular python script.~~
+/!\ Currently the connector cannot run with config.yml file, only with .env file because of ConnectorHelper instantiation and proxy settings code. /!\
+
 All integration values are duplicated between .env and config.yml
 
 Note that the values that follow can be grabbed within Python code using `self.helper.{PARAMETER}`, i. e., `self.helper.connector_name`.
@@ -82,11 +87,11 @@ Note that the values that follow can be grabbed within Python code using `self.h
 Expected environment variables to be set in the  `docker-compose.yml` that describe the connector itself.
 Most of the time, these values are NOT expected to be changed.
 
-| Parameter                | Mandatory | Description                                                       |
-|--------------------------|-----------|-------------------------------------------------------------------|
-| `CONNECTOR_NAME`         | Yes       | A connector name to be shown in OpenCTI.                          |
-| `CONNECTOR_SCOPE`        |  Yes       | Supported scope. E. g., `text/html`.                              |
-| `CONNECTOR_ID`           | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector. |
+| Parameter                  | Mandatory  | Description                                                        |
+|----------------------------|------------|--------------------------------------------------------------------|
+| `CONNECTOR_NAME`           | Yes        | A connector name to be shown in OpenCTI.                           |
+| `CONNECTOR_SCOPE`          | Yes        | Supported scope. E. g., `text/html`.                               |
+| `CONNECTOR_ID`             | Yes        | A valid arbitrary `UUIDv4` that must be unique for this connector. |
 
 However, there are other values which are expected to be configured by end users.
 The following values are expected to be defined in the `.env` file.
@@ -94,11 +99,10 @@ Note that the `.env.sample` file can be used as a reference.
 
 The ones that follow are connector's generic execution parameters expected to be added for export connectors.
 
-| Parameter                    | Mandatory | Description                                                                                                                                                                   |
-|------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `CONNECTOR_LOG_LEVEL`        | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                 |
-| `CONNECTOR__DURATION_PERIOD`            | Yes       | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day. |
-| `CONNECTOR_UPDATE_EXISTING_DATA`       | Yes       | Whether to update known existing data.                                                                                                                                        |
+| Parameter                      | Mandatory | Description                                                                                                                                                                   |
+|--------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `CONNECTOR_LOG_LEVEL`          | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                 |
+| `CONNECTOR__DURATION_PERIOD`   | Yes       | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day. |
 
 
 ### OpenCTI environment variables
@@ -221,11 +225,8 @@ TI_API__COLLECTIONS__APT_THREAT__DEFAULT_DATE='2021-08-01'
 TI_API__COLLECTIONS__APT_THREAT__ENABLE=false
 TI_API__COLLECTIONS__APT_THREAT__LOCAL_CUSTOM_TAG=null
 TI_API__COLLECTIONS__APT_THREAT__TTL=90
-
 ...
 ```
-
-
 
 ### Date format
 
@@ -425,11 +426,12 @@ If the **log** folder doesn't exist, please collect logs from console output or 
 2. If you have problems with proxy configuration, attach the proxy environment by executing this command: 
 ```printenv | grep proxy```
 
+3. If you encounter any problem when activate a collection and 403 status response is raised:
+```ConnectionException: Status code: 403. Message: Something is wrong with your account, please, contact us. The issue can be related to Access list, Wrong API key or Wrong username.", "taskName": null}```
 
-
-<br/>
-
-
+Please ensure that:
+- **IP is in Access List**: Provide your public IP addresses, for GroupIB to add them to the API access list.
+- **Generate API Key if expired**: Log in to your account, navigate to your profile, and generate an API_KEY. Be sure to save this key, as it will be required for API access. For API authorization, use your email and the generated API key instead of your portal password. 
 
 ## FAQ
 

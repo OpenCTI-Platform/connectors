@@ -397,6 +397,10 @@ class SIEMClient(BaseClient):
             raise ProofPointAPIRequestParamsError(
                 "The time range must be less than 1 hour."
             )
+        if (end_time - start_time) < timedelta(seconds=30):
+            raise ProofPointAPIRequestParamsError(
+                "The time range must be at least 30 seconds."
+            )
 
         return f"{start_time.isoformat()}/{end_time.isoformat()}"
 

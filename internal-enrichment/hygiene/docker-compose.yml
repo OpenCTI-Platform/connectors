@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-hygiene:
-    image: opencti/connector-hygiene:6.5.4
+    image: opencti/connector-hygiene:6.6.11
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -9,7 +9,6 @@ services:
       - CONNECTOR_NAME=Hygiene
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name,StixFile,Artifact
       - CONNECTOR_AUTO=true
-      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - HYGIENE_WARNINGLISTS_SLOW_SEARCH=false # Enable warning lists slow search mode
       - HYGIENE_ENRICH_SUBDOMAINS=false # Enrich subdomains with hygiene_parent label if the parents are found in warninglists
