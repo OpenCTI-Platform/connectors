@@ -250,16 +250,6 @@ def find_stix_object_by_id(
     return None
 
 
-def get_tlp_keys():
-    """
-    Get the TLP keys from the TLP_MAP dictionary.
-
-    Returns:
-        list: A list of TLP keys.
-    """
-    return list(TLP_MAP.keys())
-
-
 def compare_severity(severity1, severity2):
     """
     Compare two severity values and return the higher severity..
