@@ -7,7 +7,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   name: 'AbuseIPDB IP Blacklist'
   scope: 'abuseipdb' # MIME type or SCO
-  log_level: 'info'
+  log_level: 'error'
 
 abuseipdb:
   api_url: 'https://api.abuseipdb.com/api/v2/blacklist'
@@ -15,4 +15,4 @@ abuseipdb:
   score: 100
   limit: 10000
   create_indicator: false
-  tlp_level: 'white'
+  tlp_level: 'clear'

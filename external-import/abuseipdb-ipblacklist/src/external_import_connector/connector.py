@@ -68,13 +68,12 @@ class ConnectorAbuseIPDB:
         if self.config.ipversion and self.config.ipversion != "mixed":
             ipversion = int(self.config.ipversion)
             if ipversion in [4, 6]:
-                params["ipVersion"] = ipversion
+                params["ipVersion"] = self.config.ipversion
 
-        if self.config.api_key:
-            if self.config.except_country_list:
-                params["exceptCountries"] = self.config.except_country_list
-            if self.config.only_country_list:
-                params["onlyCountries"] = self.config.only_country_list
+        if self.config.except_country_list:
+            params["exceptCountries"] = self.config.except_country_list
+        if self.config.only_country_list:
+            params["onlyCountries"] = self.config.only_country_list
 
         entities = self.client.get_entities(params)
         if not entities:

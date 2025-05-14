@@ -24,7 +24,7 @@ services:
       # - ABUSEIPDB_API_KEY=CHANGEME
       # - ABUSEIPDB_IPVERSION=4 # Value possible: mixed, 4, 6
       # - ABUSEIPDB_CREATE_INDICATOR=true
-      - ABUSEIPDB_TLP_LEVEL=white
+      - ABUSEIPDB_TLP_LEVEL=clear
       - ABUSEIPDB_SCORE=75
       # - ABUSEIPDB_LIMIT=10000
       # When you provide API key, you can use the following parameters

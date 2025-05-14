@@ -40,7 +40,7 @@ class ConfigConnector:
         )
 
         self.api_key = get_config_variable(
-            "ABUSEIPDB_API_KEY", ["abuseipdb", "api_key"], self.load
+            "ABUSEIPDB_API_KEY", ["abuseipdb", "api_key"], self.load, required=True
         )
 
         self.score = get_config_variable(
@@ -51,11 +51,8 @@ class ConfigConnector:
             "ABUSEIPDB_LIMIT",
             ["abuseipdb", "limit"],
             self.load,
-            default="10000",
+            default="500000",
         )
-
-        if self.api_key and not self.limit:
-            self.limit = "500000"
 
         self.ipversion = get_config_variable(
             "ABUSEIPDB_IPVERSION",
@@ -85,7 +82,7 @@ class ConfigConnector:
             "ABUSEIPDB_TLP_LEVEL",
             ["abuseipdb", "tlp_level"],
             self.load,
-            default="white",
+            default="clear",
         )
 
         self.duration_period = get_config_variable(
