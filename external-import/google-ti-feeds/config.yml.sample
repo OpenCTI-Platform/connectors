@@ -2,27 +2,8 @@ opencti:
   url: 'http://localhost:PORT'
   token: 'ChangeMe'
 
-#============================================#
-# Optional connector's definition parameters #
-#============================================#
-#connector:
-#  id: ''
-#  name: 'Google Threat Intel Feeds'
-#  scope: 'report,location,identity'
-#  log_level: 'info'
-#  duration_period: 'PT1H'
-#  tlp_level: 'AMBER+STRICT'
-#  queue_threshold: 500
-#  split_work: False
+connector:
+  id: 'ChangeMe'
 
 gti:
   api_key: 'ChangeMe'
-  #============================================#
-  # Optional definition parameters
-  #============================================#
-  # import_start_date: 'P30D'
-  # api_url: 'https://www.virustotal.com/api/v3'
-  # import_reports: True
-  # report_types: 'All'
-  # origins: 'All'
-

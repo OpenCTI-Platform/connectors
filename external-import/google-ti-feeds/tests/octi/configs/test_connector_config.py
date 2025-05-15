@@ -19,7 +19,7 @@ from tests.conftest import mock_env_vars
 
 @pytest.fixture(
     params=[
-        {"opencti_url": "http://localhost:8080", "opencti_token": f"{uuid4()}"},
+        {"opencti_url": "http://localhost:8080", "opencti_token": f"{uuid4()}", "connector_id": f"{uuid4()}"}
     ]
 )
 def min_required_config(request) -> dict[str, str]:  # type: ignore
@@ -27,6 +27,7 @@ def min_required_config(request) -> dict[str, str]:  # type: ignore
     return {
         "OPENCTI_URL": request.param["opencti_url"],
         "OPENCTI_TOKEN": request.param["opencti_token"],
+        "CONNECTOR_ID": request.param["connector_id"],
     }
 
 

@@ -3,7 +3,7 @@
 from typing import Protocol
 
 
-class FetcherBase(Protocol):
+class BaseFetcher(Protocol):
     """Base fetcher interface for fetching data asynchronously."""
 
     async def fetch(self) -> None:

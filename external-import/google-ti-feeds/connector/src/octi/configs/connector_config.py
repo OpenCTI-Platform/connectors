@@ -1,7 +1,6 @@
 """Connector-specific configuration definitions for OpenCTI external imports."""
 
 from typing import ClassVar, Literal, Optional
-from uuid import uuid4
 
 from connector.src.octi.interfaces.base_config import BaseConfig
 from pydantic_settings import SettingsConfigDict
@@ -13,7 +12,7 @@ class ConnectorConfig(BaseConfig):
     yaml_section: ClassVar[str] = "connector"
     model_config = SettingsConfigDict(env_prefix="connector_")
 
-    id: str = f"{uuid4()}"
+    id: str
     type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
     name: str = "Google Threat Intel Feeds"
     scope: str = "report,location,identity"

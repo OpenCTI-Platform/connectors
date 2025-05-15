@@ -1,11 +1,11 @@
 # Google Threat Intelligence Connector
 
---- 
+---
 
 ## Introduction
 
-Google Threat Intelligence Feeds Connector ingests threat intelligence from the Google Threat Intel API and feeds it into the OpenCTI solution, focusing -for now- on STIX entities tied to report objects.  
-It extracts and transforms relevant data types report, location, sector, malware, intrusion-set, attack-pattern, vulnerability, and raw IOCs delivering structured, and ingest that in an intelligible way into OpenCTI.  
+Google Threat Intelligence Feeds Connector ingests threat intelligence from the Google Threat Intel API and feeds it into the OpenCTI solution, focusing -for now- on STIX entities tied to report objects.
+It extracts and transforms relevant data types report, location, sector, malware, intrusion-set, attack-pattern, vulnerability, and raw IOCs delivering structured, and ingest that in an intelligible way into OpenCTI.
 
 Most of the data is extracted from the reports, but some entities are extracted from the report's relationships.
 More informations can be found in the [Google Threat Intel API documentation](https://gtidocs.virustotal.com/reference/reports).
@@ -124,11 +124,16 @@ Below are the required parameters you'll need to set for OpenCTI:
 
 ### Connector Configuration
 
+Below are the required parameters you can set for running the connector:
+
+| Parameter                 | config.yml        | Docker Environment Variable | Default                   | Mandatory | Description                                                                 |
+| ---                       | ---               | ---                         | ---                       | ---       | ---                                                                         |
+| Connector ID              | `id`              | `CONNECTOR_ID`              | /                         | Yes       | A unique `UUIDv4` identifier for this connector.                            |
+
 Below are the optional parameters you can set for running the connector:
 
 | Parameter                 | config.yml        | Docker Environment Variable | Default                   | Mandatory | Description                                                                 |
 | ---                       | ---               | ---                         | ---                       | ---       | ---                                                                         |
-| Connector ID              | `id`              | `CONNECTOR_ID`              | /                         | No        | A unique `UUIDv4` identifier for this connector.                            |
 | Connector Name            | `name`            | `CONNECTOR_NAME`            | Google Threat Intel Feeds | No        | The name of the connector as it will appear in OpenCTI.                     |
 | Connector Scope           | `scope`           | `CONNECTOR_SCOPE`           | report,location,identity  | No        | The scope of data to import, a list of Stix Objects.                        |
 | Connector Log Level       | `log_level`       | `CONNECTOR_LOG_LEVEL`       | info                      | No        | Sets the verbosity of logs. Options: `debug`, `info`, `warn`, `error`.      |
@@ -213,6 +218,14 @@ The connector is designed to be run in a Docker container. However, if you want 
     ```bash
        CONNECTOR_DEV_MODE=true GoogleTIFeeds
     ```
+  or by launching the main.py:
+    ```bash
+       CONNECTOR_DEV_MODE=true python connector/__main__.py
+    ```
+  or by launching the module:
+    ```bash
+       CONNECTOR_DEV_MODE=true python -m connector
+    ```
 
 ### Commit
 
@@ -225,10 +238,10 @@ The dedicated configurations are set in the `pyproject.toml` file.
 You can run the following commands to check the code:
 
 ```bash
-   python -m isort . 
-   python -m black . --check 
-   python -m ruff check . 
-   python -m mypy . 
+   python -m isort .
+   python -m black . --check
+   python -m ruff check .
+   python -m mypy .
    python -m pip_audit .
 ```
 

@@ -1,5 +1,6 @@
 """Conftest file for Pytest fixtures."""
 
+import logging
 import sys
 import types
 from typing import TYPE_CHECKING, Any
@@ -48,3 +49,14 @@ def mock_opencti_api_client() -> Any:
     mock_api.stop()
     mock_healthcheck.stop()
     mock_query.stop()
+
+@fixture(autouse=True)
+def patch_logger_error(monkeypatch):
+    """Patch to drop the meta for testing purposes."""
+    orig_error = logging.Logger.error
+
+    def fake_error(self, msg, *args, **kwargs):
+        kwargs.pop("meta", None)
+        return orig_error(self, msg, *args, **kwargs)
+
+    monkeypatch.setattr(logging.Logger, "error", fake_error)
