@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'changeme'
+
+connector:
+  id: 'silentpush'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'Silent Push - Enrichment'
+  scope: 'Indicator,IPv4-Addr,IPv6-Addr,Domain-Name,Hostname,URL'
+  log_level: 'info'
+  auto: false # Enable/disable auto-enrichment of observables
+
+silentpush:
+  CONNECTOR_SILENTPUSH_API_BASE_URL: 'https://app.silentpush.com/api/v1/'
+  CONNECTOR_SILENTPUSH_API_KEY: 'YOUR-SILENT-PUSH-API-KEY'
+  CONNECTOR_SILENTPUSH_VERIFY_CERT: true
+  CONNECTOR_MAX_TLP: "TLP:AMBER" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
