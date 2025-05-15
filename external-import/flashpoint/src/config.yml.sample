@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Flashpoint'
   scope: 'flashpoint'
   log_level: 'info'
