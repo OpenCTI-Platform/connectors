@@ -9,39 +9,10 @@ from flashpoint_connector.config_loader import ConfigLoader, ConfigRetrievalErro
 from pydantic_settings import SettingsConfigDict
 
 
-class YamlConfigLoader(ConfigLoader):
-    """
-    Mock the config loader with variables from config.yml.test.
-    """
-
-    model_config = SettingsConfigDict(
-        frozen=True,
-        extra="allow",
-        enable_decoding=False,
-        yaml_file=f"{Path(__file__).parent}/config.test.yml",
-        env_file=None,
-    )
-
-
-class EnvConfigLoader(ConfigLoader):
-    """
-    Mock the config loader with environment variables.
-    """
-
-    model_config = SettingsConfigDict(
-        frozen=True,
-        extra="allow",
-        enable_decoding=False,
-        yaml_file=None,
-        env_file=None,
-    )
-
-
 def fake_config_dict() -> dict[str, dict[str, Any]]:
     """
     Create a fake and valid config dict to test the config loader.
     """
-
     return {
         "opencti": {
             "token": "test-opencti-token",
@@ -103,15 +74,25 @@ def test_config_loader_with_valid_yaml_file():
     Test the config loader with a valid YAML file.
     """
     config_dict = fake_config_dict()
-    config_loader = YamlConfigLoader()
 
-    config_loader_dump = config_loader.model_dump_pycti()
-    # Re-serialize to reduce precision as in config_dict
-    config_loader_dump["flashpoint"]["import_start_date"] = (
-        config_loader.flashpoint.import_start_date.isoformat(timespec="minutes")
-    )
+    with patch(
+        "flashpoint_connector.config_loader.ConfigLoader.model_config",
+        SettingsConfigDict(
+            frozen=True,
+            extra="allow",
+            enable_decoding=False,
+            yaml_file="./tests/config.test.yml",
+            env_file=None,
+        ),
+    ):
+        config_loader = ConfigLoader()
+        config_loader_dump = config_loader.model_dump_pycti()
+        # Re-serialize to reduce precision as in config_dict
+        config_loader_dump["flashpoint"]["import_start_date"] = (
+            config_loader.flashpoint.import_start_date.isoformat(timespec="minutes")
+        )
 
-    assert config_loader_dump == config_dict
+        assert config_loader_dump == config_dict
 
 
 def test_config_loader_with_valid_environment_variables():
@@ -121,8 +102,7 @@ def test_config_loader_with_valid_environment_variables():
     config_dict = fake_config_dict()
 
     with patch.dict(os.environ, fake_environ(config_dict)):
-        config_loader = EnvConfigLoader()
-
+        config_loader = ConfigLoader()
         config_loader_dump = config_loader.model_dump_pycti()
         # Re-serialize to reduce precision as in config_dict
         config_loader_dump["flashpoint"]["import_start_date"] = (
@@ -141,4 +121,4 @@ def test_config_loader_with_invalid_environment_variables():
 
     with patch.dict(os.environ, fake_environ(config_dict)):
         with pytest.raises(ConfigRetrievalError):
-            _ = EnvConfigLoader()
+            _ = ConfigLoader()

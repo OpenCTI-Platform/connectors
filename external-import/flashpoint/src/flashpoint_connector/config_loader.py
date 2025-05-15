@@ -1,8 +1,10 @@
+import os
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated, Literal
 
+import __main__
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -20,6 +22,9 @@ from pydantic_settings import (
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
+
+# Get the path of the __main__ module file (the entry point of the connector)
+_FILE_PATH = os.path.dirname(os.path.abspath(__main__.__file__))
 
 """
 All the variables that have default values will override configuration from the OpenCTI helper.
@@ -153,6 +158,7 @@ class ConnectorConfig(ConfigBaseModel):
         description="The period of time to await between two runs of the connector.",
         default=timedelta(hours=1),
     )
+
     log_level: Literal[
         "debug",
         "info",
@@ -210,10 +216,6 @@ class ConnectorConfig(ConfigBaseModel):
 
 
 class FlashpointConfig(ConfigBaseModel):
-    """
-    Define config specific to Flashpoint.
-    """
-
     api_key: str = Field(description="The API key to connect to Flashpoint.")
     import_start_date: DatetimeFromIsoString = Field(
         description="The date from which to start importing data.",
@@ -267,8 +269,8 @@ class ConfigLoader(BaseSettings):
         env_nested_delimiter="_",
         env_nested_max_split=1,
         enable_decoding=False,
-        yaml_file="./src/config.yml",
-        env_file="./.env",
+        yaml_file=f"{_FILE_PATH}/config.yml",
+        env_file=f"{_FILE_PATH}/../.env",
     )
 
     def __init__(self) -> None:
