@@ -82,7 +82,6 @@ def fake_config_dict() -> dict[str, dict[str, Any]]:
             "import_indicators": True,
             "import_communities": True,
             "communities_queries": "cybersecurity,cyberattack",
-            "interval": 5,
         },
     }
 

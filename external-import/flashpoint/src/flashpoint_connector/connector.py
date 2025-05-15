@@ -519,18 +519,7 @@ class FlashpointConnector:
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
         :return: None
         """
-
-        if self.config.connector.duration_period:
-            self.helper.schedule_process(
-                message_callback=self.process_data,
-                duration_period=self.config.connector.duration_period.total_seconds(),
-            )
-        else:
-            self.helper.log_warning(
-                "Config variable 'interval' is deprecated. Please use 'duration_period' instead."
-            )
-            self.helper.schedule_unit(
-                message_callback=self.process_data,
-                duration_period=self.config.flashpoint.interval,
-                time_unit=self.helper.TimeUnit.MINUTES,
-            )
+        self.helper.schedule_process(
+            message_callback=self.process_data,
+            duration_period=self.config.connector.duration_period.total_seconds(),
+        )

@@ -69,6 +69,8 @@ The configuration variables for the connector can be set in `docker-compose.yml`
 | Import communities                     | import_communities            | `FLASHPOINT_IMPORT_COMMUNITIES`            | false                       | No        | Import community data.                                                                                                                                 |
 | Communities queries                    | communities_queries           | `FLASHPOINT_COMMUNITIES_QUERIES`           | "cybersecurity,cyberattack" | No        | Comma-separated list of community queries to execute.                                                                                                  |
 
+⚠️ Please be aware that `CONNECTOR_DURATION_PERIOD` default value takes precedence over `FLASHPOINT_INTERVAL` default value if none of them are set.
+
 ## Deployment
 
 ### Docker Deployment

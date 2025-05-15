@@ -1,3 +1,4 @@
+import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated, Literal
@@ -10,6 +11,7 @@ from pydantic import (
     HttpUrl,
     PlainSerializer,
     TypeAdapter,
+    model_validator,
 )
 from pydantic_core.core_schema import SerializationInfo
 from pydantic_settings import (
@@ -245,11 +247,6 @@ class FlashpointConfig(ConfigBaseModel):
         description="List of community queries to execute.",
         default=["cybersecurity", "cyberattack"],
     )
-    interval: int = Field(
-        description="The number of seconds to await between two runs of the conector.",
-        deprecated="Config variable 'interval' is deprecated, please use 'duration_period' instead.",
-        default=5,
-    )
 
 
 class ConfigLoader(BaseSettings):
@@ -314,3 +311,26 @@ class ConfigLoader(BaseSettings):
         if Path(settings_cls.model_config["env_file"] or "").is_file():  # type: ignore
             return (dotenv_settings,)
         return (env_settings,)
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_interval(cls, data: dict) -> dict:
+        """
+        Env var `FLASHPOINT_INTERVAL` is deprecated.
+        This is a workaround to keep the old config working while we migrate to `CONNECTOR_DURATION_PERIOD`.
+        """
+        connector_data: dict = data.get("connector", {})
+        flashpoint_data: dict = data.get("flashpoint", {})
+
+        if interval := flashpoint_data.pop("interval", None):
+            warnings.warn(
+                "Env var 'FLASHPOINT_INTERVAL' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
+            )
+            if connector_data.get("duration_period"):
+                raise ValueError(
+                    "Cannot set both `FLASHPOINT_INTERVAL` and `CONNECTOR_DURATION_PERIOD`."
+                )
+
+            connector_data["duration_period"] = timedelta(minutes=int(interval))
+
+        return data
