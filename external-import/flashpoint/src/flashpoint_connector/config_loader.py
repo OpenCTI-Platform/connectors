@@ -159,7 +159,7 @@ class ConnectorConfig(ConfigBaseModel):
         "critical",
     ] = Field(
         description="The minimum level of logs to display.",
-        default="error",
+        default="info",
     )
     expose_metrics: bool = Field(
         description="Whether to expose metrics or not.",
