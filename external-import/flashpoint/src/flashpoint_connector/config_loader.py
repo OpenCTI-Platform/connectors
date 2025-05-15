@@ -267,7 +267,6 @@ class ConfigLoader(BaseSettings):
     # Setup model config and env vars parsing
     model_config = SettingsConfigDict(
         frozen=True,
-        extra="allow",
         env_nested_delimiter="_",
         env_nested_max_split=1,
         enable_decoding=False,
