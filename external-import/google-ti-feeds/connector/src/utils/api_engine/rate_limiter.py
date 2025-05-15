@@ -50,10 +50,6 @@ class RateLimiterRegistry:
         Returns:
             The rate limiter instance.
 
-        Raises:
-            ValueError: If max_requests is less than 1.
-            ValueError: If period is less than 1.
-
         """
         async with cls._lock:
             if key not in cls._store:

@@ -1,0 +1,35 @@
+"""The module defines the IndustrySectorOV enumeration for various industry sectors."""
+
+from enum import Enum
+
+
+class IndustrySectorOV(str, Enum):
+    """Industry Sector Enumeration."""
+
+    AGRICULTURE = "agriculture"
+    AEROSPACE = "aerospace"
+    AUTOMOTIVE = "automotive"
+    COMMUNICATIONS = "communications"
+    CONSTRUCTION = "construction"
+    DEFENCE = "defence"
+    EDUCATION = "education"
+    ENERGY = "energy"
+    ENTERTAINMENT = "entertainment"
+    FINANCIAL_SERVICES = "financial-services"
+    GOVERNMENT_NATIONAL = "government-national"
+    GOVERNMENT_REGIONAL = "government-regional"
+    GOVERNMENT_LOCAL = "government-local"
+    GOVERNMENT_PUBLIC_SERVICES = "government-public-services"
+    HEALTHCARE = "healthcare"
+    HOSPITALITY_LEISURE = "hospitality-leisure"
+    INFRASTRUCTURE = "infrastructure"
+    INSURANCE = "insurance"
+    MANUFACTURING = "manufacturing"
+    MINING = "mining"
+    NON_PROFIT = "non-profit"
+    PHARMACEUTICALS = "pharmaceuticals"
+    RETAIL = "retail"
+    TECHNOLOGY = "technology"
+    TELECOMMUNICATIONS = "telecommunications"
+    TRANSPORTATION = "transportation"
+    UTILITIES = "utilities"

@@ -23,6 +23,7 @@ from tests.conftest import mock_env_vars
         {
             "opencti_url": "http://localhost:8080",
             "opencti_token": f"{uuid4()}",
+            "connector_id": f"{uuid4()}",
             "gti_api_key": f"{uuid4()}",
         },
     ]
@@ -32,6 +33,7 @@ def min_required_config(request) -> dict[str, str]:  # type: ignore
     return {
         "OPENCTI_URL": request.param["opencti_url"],
         "OPENCTI_TOKEN": request.param["opencti_token"],
+        "CONNECTOR_ID": request.param["connector_id"],
         "GTI_API_KEY": request.param["gti_api_key"],
     }
 

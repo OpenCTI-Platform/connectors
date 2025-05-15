@@ -1,23 +1,11 @@
 services:
   connector-google-ti-feeds:
-    image: opencti/connector-google-ti-feeds:6.6.10
+    image: opencti/connector-google-ti-feeds:6.6.11
     environment:
       - OPENCTI_URL=
       - OPENCTI_TOKEN=
-      # - CONNECTOR_ID=
-      # - CONNECTOR_NAME='Google TI Feeds Connector'
-      # - CONNECTOR_SCOPE='report,location,identity'
-      # - CONNECTOR_LOG_LEVEL=info
-      # - CONNECTOR_DURATION_PERIOD='PT1H'
-      # - CONNECTOR_TLP_LEVEL='AMBER+STRICT'
-      # - CONNECTOR_QUEUE_THRESHOLD=500
-      # - CONNECTOR_SPLIT_WORK=False
+      - CONNECTOR_ID=
       - GTI_API_KEY=
-      # - GTI_API_URL='https://www.virustotal.com/api/v3'
-      # - GTI_IMPORT_START_DATE=P30D
-      # - GTI_IMPORT_REPORTS=True
-      # - GTI_REPORT_TYPES='All'
-      # - GTI_ORIGINS='All'
     restart: unless-stopped
     networks:
       - docker_default

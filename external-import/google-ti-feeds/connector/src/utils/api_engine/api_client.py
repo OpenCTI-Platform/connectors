@@ -1,6 +1,7 @@
 """API Client will orchestrate API calls."""
 
-from typing import Any, Dict, Optional, Type
+import logging
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from pydantic import BaseModel
 
@@ -12,13 +13,17 @@ from .exceptions.api_timeout_error import ApiTimeoutError
 from .exceptions.api_validation_error import ApiValidationError
 from .interfaces.base_request_strategy import BaseRequestStrategy
 
+if TYPE_CHECKING:
+    from logging import Logger
+
 
 class ApiClient:
     """Orchestrates API calls."""
 
-    def __init__(self, strategy: BaseRequestStrategy) -> None:
+    def __init__(self, strategy: BaseRequestStrategy, logger: Optional["Logger"] = None) -> None:
         """Initialize the API client with a request strategy."""
         self.strategy = strategy
+        self._logger = logger or logging.getLogger(__name__)
 
     async def call_api(
         self,
@@ -52,6 +57,10 @@ class ApiClient:
             ApiError: If the API call fails.
 
         """
+        self._logger.debug(
+            f"[API Client] Preparing to call API: {method} {url} (Model: {model.__name__ if model else 'No'}, "
+            f"ResponseKey: {response_key}, Timeout: {timeout})"
+        )
         try:
             api_request = ApiRequestModel(
                 url=url,
@@ -65,7 +74,7 @@ class ApiClient:
                 timeout=timeout,
             )
             response = await self.strategy.execute(api_request)
-
+            self._logger.debug(f"[API Client] API call to {method} {url} successful.")
             return response
         except (
             ApiTimeoutError,
@@ -73,6 +82,20 @@ class ApiClient:
             ApiHttpError,
             ApiValidationError,
         ) as known_api_err:
+            self._logger.error(  # type: ignore[call-arg]
+                f"[API Client] Known API error during call_api for {method} {url}: {type(known_api_err).__name__} - {known_api_err}",
+                meta={"error": str(known_api_err)},
+            )
             raise known_api_err
+        except ApiError as api_err:
+            self._logger.error(  # type: ignore[call-arg]
+                f"[API Client] API error during call_api for {method} {url}: {api_err}",
+                meta={"error": str(api_err)},
+            )
+            raise api_err
         except Exception as e:
-            raise ApiError(f"Failed to call API: {e}") from e
+            self._logger.error(  # type: ignore[call-arg]
+                f"[API Client] Unexpected failure in call_api for {method} {url}: {e}",
+                meta={"error": str(e)},
+            )
+            raise ApiError(f"Failed to call API {method} {url}: {e}") from e

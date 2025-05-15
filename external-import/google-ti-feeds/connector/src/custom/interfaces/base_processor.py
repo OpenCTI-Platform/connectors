@@ -3,7 +3,7 @@
 from typing import Protocol
 
 
-class ProcessorBase(Protocol):
+class BaseProcessor(Protocol):
     """Base interface for processors."""
 
     async def process(self) -> None:

@@ -1,25 +1,25 @@
 """The pubsub module provides a simple publish/subscribe mechanism using asyncio queues."""
 
 import asyncio
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 class PubSubBroker:
     """A singleton class that manages a publish/subscribe mechanism using asyncio queues."""
 
-    _instance: "PubSubBroker | None" = None
+    _instance: Optional["PubSubBroker"] = None
 
     def __init__(self) -> None:
         """Initialize the PubSubBroker instance."""
-        if self._instance is not None:
-            raise RuntimeError("This class is a singleton! Use the instance method.")
+        if hasattr(self, "_initialized"):
+            return
         self._names: Dict[str, List[asyncio.Queue[Any]]] = {}
+        self._initialized = True
 
     def __new__(cls) -> "PubSubBroker":
         """Create a singleton instance of the PubSubBroker class."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._names = {}
         return cls._instance
 
     def subscribe(self, name: str) -> asyncio.Queue[Any]:

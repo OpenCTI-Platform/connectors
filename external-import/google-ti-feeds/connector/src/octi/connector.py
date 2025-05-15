@@ -1,6 +1,14 @@
 """Core connector as defined in the OpenCTI connector template."""
 
+import asyncio
+import sys
 from typing import TYPE_CHECKING
+
+from connector.src.custom.configs.gti_config import GTIConfig
+from connector.src.custom.pipeline_reports_orchestrator import (
+    PipelineReportsOrchestrator,
+)
+from connector.src.octi.work_manager import WorkManager
 
 if TYPE_CHECKING:
     from connector.src.octi.global_config import GlobalConfig
@@ -58,10 +66,27 @@ class Connector:
         self._config = config
         self._helper = helper
         self._logger = self._helper.connector_logger
+        self.work_manager = WorkManager(self._config, self._helper, self._logger)
 
     def _process_callback(self) -> None:
-        """Connector main process to collect intelligence."""
-        ...
+        """Connector main process to collect intelligence.
+
+        For now, it only imports reports from Google Threat Intelligence.
+        But it can be extended to import other types of intelligence in the future.
+        """
+        try:
+            gti_config = self._config.get_config_class(GTIConfig)
+            if gti_config.get("import_reports"):
+                orchestrator = PipelineReportsOrchestrator(gti_config=gti_config, work_manager=self.work_manager, http_timeout=60, max_failures=5, cooldown_time=60, max_requests=10, period=60, max_retries=5, backoff=2, logger=self._logger)
+                asyncio.run(orchestrator.run())
+        except (KeyboardInterrupt, SystemExit):
+            self._logger.info(
+                "[CONNECTOR] Connector stopped...",
+                {"connector_name": self._helper.connect_name},
+            )
+            sys.exit(0)
+        except Exception as err:
+            self._logger.error(str(err))
 
     def run(self) -> None:
         """Run the main process encapsulated in a scheduler.

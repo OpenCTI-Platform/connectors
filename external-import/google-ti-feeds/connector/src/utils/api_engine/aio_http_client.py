@@ -1,7 +1,8 @@
 """AioHttpClient class for making HTTP requests using aiohttp."""
 
+import logging
 from asyncio import TimeoutError
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from aiohttp import ClientError, ClientSession, ClientTimeout
 
@@ -9,6 +10,9 @@ from .exceptions.api_error import ApiError
 from .exceptions.api_http_error import ApiHttpError
 from .exceptions.api_timeout_error import ApiTimeoutError
 from .interfaces.base_http_client import BaseHttpClient
+
+if TYPE_CHECKING:
+    from logging import Logger
 
 
 class AioHttpClient(BaseHttpClient):
@@ -19,9 +23,10 @@ class AioHttpClient(BaseHttpClient):
     The client supports setting a default timeout for requests and handles exceptions like API errors, HTTP errors, and timeouts.
     """
 
-    def __init__(self, default_timeout: int = 60) -> None:
-        """Initialize the AioHttpClient with a default timeout."""
+    def __init__(self, default_timeout: int = 60, logger: Optional["Logger"] = None) -> None:
+        """Initialize the AioHttpClient with a default timeout  and an optional logger."""
         self.default_timeout = default_timeout
+        self._logger = logger or logging.getLogger(__name__)
 
     async def request(
         self,
@@ -54,7 +59,10 @@ class AioHttpClient(BaseHttpClient):
 
         """
         actual_timeout = ClientTimeout(total=timeout or self.default_timeout)
-
+        self._logger.debug(
+            f"[API Client] Making {method} request to {url} with timeout {actual_timeout.total}s. "
+            f"Params: {params is not None}, JSON: {json_payload is not None}"
+        )
         try:
             async with ClientSession(timeout=actual_timeout) as session:
                 async with session.request(
@@ -65,12 +73,25 @@ class AioHttpClient(BaseHttpClient):
                     data=data,
                     json=json_payload,
                 ) as response:
+                    self._logger.debug(
+                        f"[API Client] Received response with status {response.status} for {method} {url}"
+                    )
                     if response.status >= 400:
-                        raise ApiHttpError(response.status, await response.text())
+                        response_text = await response.text()
+                        self._logger.error(  # type: ignore[call-arg]
+                            f"[API Client] HTTP Error {response.status} for {method} {url}: {response_text}",
+                            meta={"error": response_text}
+                        )
+                        raise ApiHttpError(response.status, response_text)
                     return await response.json()
         except TimeoutError as e:
+            self._logger.error(f"[API Client] Request to {url} timed out after {actual_timeout.total}s: {e}", meta={"error": str(e)})  # type: ignore[call-arg]
             raise ApiTimeoutError("Request timed out") from e
         except ClientError as e:
+            self._logger.error(f"[API Client] ClientError for {url}: {e}", meta={"error": str(e)})  # type: ignore[call-arg]
             raise ApiHttpError(0, str(e)) from e
+        except ApiHttpError:
+            raise
         except Exception as e:
+            self._logger.error(f"[API Client] Unexpected error during request to {url}: {e}", meta={"error": str(e)})  # type: ignore[call-arg]
             raise ApiError(f"Unexpected error: {str(e)}") from e
