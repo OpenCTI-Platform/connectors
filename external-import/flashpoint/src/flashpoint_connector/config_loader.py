@@ -144,7 +144,8 @@ class ConnectorConfig(ConfigBaseModel):
     name: str = Field(description="The name of the connector.")
     type: str = "EXTERNAL_IMPORT"
     scope: ListFromString = Field(
-        description="The scope of the connector, e.g. 'flashpoint'."
+        description="The scope of the connector, e.g. 'flashpoint'.",
+        default=["flashpoint"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
