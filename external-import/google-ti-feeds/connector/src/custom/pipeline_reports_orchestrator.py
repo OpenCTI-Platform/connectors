@@ -9,13 +9,12 @@ from connector.src.custom.fetchers.fetch_reports import FetchReports
 from connector.src.custom.interfaces.base_fetcher import BaseFetcher
 from connector.src.custom.interfaces.base_processor import BaseProcessor
 from connector.src.custom.pubsub import broker
-from connector.src.custom.reports_constants import SENTINEL
+from connector.src.custom.reports_constants import SENTINEL, PREFIX_BROKER
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.api_engine.circuit_breaker import CircuitBreaker
 from connector.src.utils.api_engine.retry_request_strategy import RetryRequestStrategy
-
-# from connector.src.utils.processors.process_reports import ProcessReports
+from connector.src.custom.processors.process_reports import ProcessReports
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -71,7 +70,7 @@ class PipelineReportsOrchestrator:
         self.fetchers: List[BaseFetcher] = [FetchReports(self._gti_config, self.api_client, state, self._logger)]
 
         self.processors: List[BaseProcessor] = [
-            # ProcessReports(),
+            ProcessReports(self.organization, self.tlp_marking, self._logger),
             # ProcessMalwareFamilies(),
             # ProcessAttackTechniques(),
             # ProcessThreatActors(),
@@ -80,12 +79,24 @@ class PipelineReportsOrchestrator:
         ]
 
         self.batch_collector = BatchCollector(
-            topic="final",
+            topic=f"{PREFIX_BROKER}/final",
             batch_size=500,
-            flush_interval=5.0,
+            flush_interval=300.0,
             send_func=self.send_batch,
             sentinel_obj=SENTINEL
         )
+
+    def _create_tlp_marking(self):
+        # Create TLPMarking based on the connector configuration and publish it to PREFIX_BROKER/final
+        # tlp_marking = TLPMarking(self._gti_config.tlp_marking)
+        # await broker.publish(f"{PREFIX_BROKER}/final", tlp_marking)
+        ...
+
+    def _create_organization(self):
+        # Create Organization based on the connector configuration and publish it to PREFIX_BROKER/final
+        # organization = Organization("Google TI Feeds")
+        # await broker.publish(f"{PREFIX_BROKER}/final", organization)
+        ...
 
     async def send_batch(self, batch: List[Any]) -> None:
         """Send a batch of entities for ingestion.
@@ -103,7 +114,7 @@ class PipelineReportsOrchestrator:
         fetch_tasks = [asyncio.create_task(f.fetch()) for f in self.fetchers]
 
         await asyncio.gather(*fetch_tasks)
-        await broker.publish("final", SENTINEL)
+        await broker.publish(f"{PREFIX_BROKER}/final", SENTINEL)
         await batch_task
         await asyncio.gather(*proc_tasks)
 
@@ -111,6 +122,9 @@ class PipelineReportsOrchestrator:
 # TODO:    Main loop for the connector `_process_callback` function
 # TODO:    Manage the pipeline for fetching and processing reports and related entities
 # TODO:    Retrieve all entities to convert them into bundles and ingest them into the system
+
+# Create Organization/identity based on the connector and publish it to PREFIX_BROKER/final
+# Create TLPMarking based on the connector configuration and publish it to PREFIX_BROKER/final
 
 # TODO:    Handle the work management of the pipeline
 
