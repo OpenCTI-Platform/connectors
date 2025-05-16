@@ -138,7 +138,7 @@ class FetchReports(BaseFetcher):
 
     async def _publish_sentinels(self) -> None:
         """Publish the fetched sentinels into the pubsub broker to signal the end of the fetch."""
-        await broker.publish(f"{PREFIX_BROKER}/reports", SENTINEL)
+        await broker.publish(f"{PREFIX_BROKER}/reports", (None, SENTINEL))
         self._logger.info("[Fetcher Reports] Ends of data fetched, Sentinels published to broker.")
 
     async def _orchestrate_subfetches(self, reports: List[GTIReportData]) -> None:
