@@ -13,9 +13,7 @@ from stix2.v21 import AttackPattern, _STIXBase21  # type: ignore
 class AttackPatternModel(BaseSDOModel):
     """Model representing an Attack Pattern in STIX 2.1 format."""
 
-    name: str = Field(
-        ..., description="A name used to identify the Attack Pattern."
-    )
+    name: str = Field(..., description="A name used to identify the Attack Pattern.")
     description: Optional[str] = Field(
         default=None,
         description="A description that provides more details and context about the Attack Pattern, potentially including its purpose and its key characteristics.",
@@ -80,9 +78,7 @@ def test() -> None:
             )
         ],
         kill_chain_phases=[
-            KillChainPhaseModel(
-                kill_chain_name="mitre-attack", phase_name="execution"
-            ),
+            KillChainPhaseModel(kill_chain_name="mitre-attack", phase_name="execution"),
             KillChainPhaseModel(
                 kill_chain_name="mitre-attack", phase_name="persistence"
             ),

@@ -16,7 +16,7 @@ class KillChainPhaseModel(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_formatting(self, values):   # type: ignore
+    def validate_formatting(self, values):  # type: ignore
         """Ensure that kill_chain_name and phase_name are lowercase and use hyphens."""
         for field in ["kill_chain_name", "phase_name"]:
             val = getattr(values, field)

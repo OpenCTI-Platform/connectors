@@ -26,9 +26,7 @@ class WindowsRegistryValueModel(BaseModel):
         description="The data type of the registry value (e.g., REG_SZ, REG_DWORD).",
     )
 
-    model_config = {
-        "use_enum_values": True  # Serialize enums with their .value
-    }
+    model_config = {"use_enum_values": True}  # Serialize enums with their .value
 
     @model_validator(mode="after")
     def at_least_one_field_required(self) -> "WindowsRegistryValueModel":

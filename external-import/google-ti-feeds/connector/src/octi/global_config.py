@@ -1,6 +1,6 @@
 """Handles the global configuration for the connector."""
 
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Any, Dict, Type
 
 from connector.src.octi.configs.connector_config import ConnectorConfig
 from connector.src.octi.configs.octi_config import OctiConfig
@@ -18,7 +18,7 @@ class GlobalConfig:
         """Initialize the global configuration."""
         #    self.load_config()
 
-        self.instanciate_configs: dict[str, Any] = {}
+        self.instanciate_configs: Dict[str, Any] = {}
         try:
             self.octi_config = OctiConfig()
         except ValidationError as e:
@@ -33,10 +33,20 @@ class GlobalConfig:
             ) from e
 
         self.instanciate_configs.update(
-            {"opencti": self.octi_config.model_dump(exclude_none=True)}
+            {
+                "opencti": (
+                    self.octi_config.model_dump(exclude_none=True),
+                    self.octi_config,
+                )
+            }
         )
         self.instanciate_configs.update(
-            {"connector": self.connector_config.model_dump(exclude_none=True)}
+            {
+                "connector": (
+                    self.connector_config.model_dump(exclude_none=True),
+                    self.connector_config,
+                )
+            }
         )
 
         self.to_dict()
@@ -52,8 +62,9 @@ class GlobalConfig:
             ) from e
         self.instanciate_configs.update(
             {
-                config_class.__name__.lower(): config_instance.model_dump(
-                    exclude_none=True
+                config_class.yaml_section.lower(): (
+                    config_instance.model_dump(exclude_none=True),
+                    config_instance,
                 )
             }
         )
@@ -62,18 +73,20 @@ class GlobalConfig:
 
     def get_config_class(self, config_class: Type["BaseConfig"]) -> Any:
         """Get a configuration class from the global configuration."""
-        config_name = config_class.__name__.lower()
+        config_name = config_class.yaml_section.lower()
         if config_name in self.instanciate_configs:
-            return self.instanciate_configs[config_name]
+            return self.instanciate_configs[config_name][1]
         else:
             raise ConfigurationError(
                 f"Configuration class {config_name} not found in global configuration."
             )
 
-    def to_dict(self) -> dict[str, dict[str, Any]]:
+    def to_dict(self) -> Dict[str, Dict[str, Any]]:
         """Convert the configuration to a dictionary."""
-        dicc: dict[str, dict[str, Any]] = {}
-        for key, value in self.instanciate_configs.items():
-            dicc.update({key: value})
+        dicc: Dict[str, Dict[str, Any]] = {}
+        for config_name, tuples in self.instanciate_configs.items():
+            dicc[config_name] = {}
+            for key, value in tuples[0].items():
+                dicc[config_name].update({key: value})
 
         return dicc

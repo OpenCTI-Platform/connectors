@@ -23,7 +23,9 @@ class AioHttpClient(BaseHttpClient):
     The client supports setting a default timeout for requests and handles exceptions like API errors, HTTP errors, and timeouts.
     """
 
-    def __init__(self, default_timeout: int = 60, logger: Optional["Logger"] = None) -> None:
+    def __init__(
+        self, default_timeout: int = 60, logger: Optional["Logger"] = None
+    ) -> None:
         """Initialize the AioHttpClient with a default timeout  and an optional logger."""
         self.default_timeout = default_timeout
         self._logger = logger or logging.getLogger(__name__)
@@ -80,7 +82,7 @@ class AioHttpClient(BaseHttpClient):
                         response_text = await response.text()
                         self._logger.error(  # type: ignore[call-arg]
                             f"[API Client] HTTP Error {response.status} for {method} {url}: {response_text}",
-                            meta={"error": response_text}
+                            meta={"error": response_text},
                         )
                         raise ApiHttpError(response.status, response_text)
                     return await response.json()

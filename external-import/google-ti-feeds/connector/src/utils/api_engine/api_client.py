@@ -20,7 +20,9 @@ if TYPE_CHECKING:
 class ApiClient:
     """Orchestrates API calls."""
 
-    def __init__(self, strategy: BaseRequestStrategy, logger: Optional["Logger"] = None) -> None:
+    def __init__(
+        self, strategy: BaseRequestStrategy, logger: Optional["Logger"] = None
+    ) -> None:
         """Initialize the API client with a request strategy."""
         self.strategy = strategy
         self._logger = logger or logging.getLogger(__name__)

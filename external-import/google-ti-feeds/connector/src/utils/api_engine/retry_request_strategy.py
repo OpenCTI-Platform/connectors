@@ -80,17 +80,25 @@ class RetryRequestStrategy(BaseRequestStrategy):
         if self._limiter_config and not self.limiter:
             required_keys = ["key", "max_requests", "period"]
             if not all(key in self._limiter_config for key in required_keys):
-                missing_keys = [key for key in required_keys if key not in self._limiter_config]
-                self._logger.warning(f"Missing required keys in limiter config: {missing_keys}")
-                raise ValueError(f"Missing required keys in limiter config: {missing_keys}")
+                missing_keys = [
+                    key for key in required_keys if key not in self._limiter_config
+                ]
+                self._logger.warning(
+                    f"Missing required keys in limiter config: {missing_keys}"
+                )
+                raise ValueError(
+                    f"Missing required keys in limiter config: {missing_keys}"
+                )
 
             self.limiter = await RateLimiterRegistry.get(
                 key=self._limiter_config["key"],
                 max_requests=self._limiter_config["max_requests"],
-                period=self._limiter_config["period"]
+                period=self._limiter_config["period"],
             )
-            self._logger.debug(f"Rate limiter initialized with key {self._limiter_config['key']}",
-            f"max_requests={self._limiter_config['max_requests']}, period={self._limiter_config['period']}")
+            self._logger.debug(
+                f"Rate limiter initialized with key {self._limiter_config['key']}",
+                f"max_requests={self._limiter_config['max_requests']}, period={self._limiter_config['period']}",
+            )
 
         self._initialized = True
 
@@ -101,7 +109,9 @@ class RetryRequestStrategy(BaseRequestStrategy):
 
             if self.limiter:
                 await self.limiter.acquire()
-                self._logger.debug(f"Rate limiter token acquired for {self.api_req.url}")
+                self._logger.debug(
+                    f"Rate limiter token acquired for {self.api_req.url}"
+                )
 
             for hook in self.hooks:
                 await hook.before(self.api_req)
@@ -119,14 +129,14 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 json_payload=self.api_req.json_payload,
                 timeout=self.api_req.timeout,
             )
-            self._logger.debug(
-                f"Raw response received from {self.api_req.url}"
-            )
+            self._logger.debug(f"Raw response received from {self.api_req.url}")
 
             for hook in self.hooks:
                 await hook.after(self.api_req, raw)
 
-            data = raw.get(self.api_req.response_key) if self.api_req.response_key else raw
+            data = (
+                raw.get(self.api_req.response_key) if self.api_req.response_key else raw
+            )
 
             if self.api_req.model:
                 try:
@@ -134,7 +144,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 except Exception as validation_err:
                     self._logger.error(  # type: ignore[call-arg]
                         f"Response validation failed: {validation_err}",
-                        meta={"error": str(validation_err)}
+                        meta={"error": str(validation_err)},
                     )
                     raise ApiValidationError(
                         f"Response validation failed: {str(validation_err)}"
@@ -146,7 +156,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
             ApiRateLimitError,
             ApiHttpError,
             ApiValidationError,
-            ApiCircuitOpenError
+            ApiCircuitOpenError,
         ) as known_api_err:
             self._logger.warning(
                 f"Known API error during attempt for {self.api_req.url}: {type(known_api_err).__name__} - {known_api_err}"
@@ -160,7 +170,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
         except Exception as generic_err:
             self._logger.error(  # type: ignore[call-arg]
                 f"Unexpected error during single attempt for {self.api_req.url}",
-                meta={"error": str(generic_err)}
+                meta={"error": str(generic_err)},
             )
             raise ApiError(
                 f"An unexpected error occurred during request processing: {str(generic_err)}"
@@ -182,14 +192,18 @@ class RetryRequestStrategy(BaseRequestStrategy):
 
         """
         if not isinstance(request, ApiRequestModel):
-            self._logger.error("RetryRequestStrategy only supports ApiRequestModel",  # type: ignore[call-arg]
-                               meta={"error": "RetryRequestStrategy only supports ApiRequestModel"})
+            self._logger.error(
+                "RetryRequestStrategy only supports ApiRequestModel",  # type: ignore[call-arg]
+                meta={"error": "RetryRequestStrategy only supports ApiRequestModel"},
+            )
             raise TypeError("RetryRequestStrategy only supports ApiRequestModel")
 
         self.api_req: ApiRequestModel = request
 
         if self.breaker.is_open():
-            self._logger.warning(f"[API Client] Circuit breaker is open. Request to {self.api_req.url} blocked.")
+            self._logger.warning(
+                f"[API Client] Circuit breaker is open. Request to {self.api_req.url} blocked."
+            )
             raise ApiCircuitOpenError("Circuit breaker is open")
 
         current_backoff_delay = self.backoff
@@ -208,20 +222,20 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 self.breaker.record_failure()
                 self._logger.error(  # type: ignore[call-arg]
                     f"[API Client] Failure recorded for circuit breaker due to error on {self.api_req.url}.",
-                    meta={"error": str(e)}
+                    meta={"error": str(e)},
                 )
                 last_exception = e
                 if isinstance(e, ApiHttpError) and e.status_code < 500:
                     self._logger.error(  # type: ignore[call-arg]
                         f"[API Client] Non-retryable HTTP error {e.status_code} for {self.api_req.url}. Not retrying.",
-                        meta={"error": str(e)}
+                        meta={"error": str(e)},
                     )
                     raise
 
                 if attempt == self.max_retries:
                     self._logger.error(  # type: ignore[call-arg]
                         f"[API Client] Request to {self.api_req.url} failed after {self.max_retries + 1} attempts. Last error: {type(last_exception).__name__} - {last_exception}",
-                        meta={"error": str(last_exception)}
+                        meta={"error": str(last_exception)},
                     )
                     raise
 
@@ -233,7 +247,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
             except ApiError as e:
                 self._logger.error(  # type: ignore[call-arg]
                     f"[API Client] Unrecoverable API error for {self.api_req.url}: {type(e).__name__} - {e}",
-                    meta={"error": str(e)}
+                    meta={"error": str(e)},
                 )
                 raise e
 

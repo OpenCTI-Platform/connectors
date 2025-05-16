@@ -69,9 +69,8 @@ class FileModel(BaseSCOModel):
     @model_validator(mode="after")
     def validate_cross_refs(self) -> "FileModel":
         """Validate the cross-references in the FileModel instance."""
-        if (
-            self.parent_directory_ref
-            and not self.parent_directory_ref.startswith("directory--")
+        if self.parent_directory_ref and not self.parent_directory_ref.startswith(
+            "directory--"
         ):
             raise ValueError(
                 "'parent_directory_ref' must reference an object of type 'directory'."

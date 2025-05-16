@@ -9,10 +9,16 @@ if TYPE_CHECKING:
     from connector.src.octi.global_config import GlobalConfig
     from pycti import OpenCTIConnectorHelper as OctiHelper  # type: ignore
 
+
 class WorkManager:
     """The class will contains method to manage OpenCTI Works related tasks."""
 
-    def __init__(self, config: "GlobalConfig", helper: "OctiHelper", logger: Optional["Logger"] = None) -> None:
+    def __init__(
+        self,
+        config: "GlobalConfig",
+        helper: "OctiHelper",
+        logger: Optional["Logger"] = None,
+    ) -> None:
         """Initialize the WorkManager class.
 
         Args:
@@ -35,23 +41,16 @@ class WorkManager:
         self._helper.force_ping()
         return self._helper.get_state() or {}
 
-    def set_state(self) -> None:
-        ...
+    def set_state(self) -> None: ...
 
-    def update_state(self) -> None:
-        ...
+    def update_state(self) -> None: ...
 
-    def initiate_work(self) -> None:
-        ...
+    def initiate_work(self) -> None: ...
 
-    def _mark_work_processed(self) -> None:
-        ...
+    def _mark_work_processed(self) -> None: ...
 
-    def finalize_work(self) -> None:
-        ...
+    def finalize_work(self) -> None: ...
 
-    def finalize_all_remaining_works(self):
-        ...
+    def finalize_all_remaining_works(self): ...
 
-    def wait_for_ingestion_completion(self) -> None:
-        ...
+    def wait_for_ingestion_completion(self) -> None: ...

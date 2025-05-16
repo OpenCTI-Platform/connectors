@@ -22,9 +22,7 @@ class SoftwareModel(BaseSCOModel):
     vendor: Optional[str] = Field(
         default=None, description="The name of the software vendor."
     )
-    version: Optional[str] = Field(
-        default=None, description="Version of the software."
-    )
+    version: Optional[str] = Field(default=None, description="Version of the software.")
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""

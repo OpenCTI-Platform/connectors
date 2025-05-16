@@ -86,11 +86,7 @@ class ThreatActorModel(BaseSDOModel):
     @model_validator(mode="after")
     def validate_seen_window(self) -> "ThreatActorModel":
         """Ensure 'last_seen' is greater than or equal to 'first_seen'."""
-        if (
-            self.first_seen
-            and self.last_seen
-            and self.last_seen < self.first_seen
-        ):
+        if self.first_seen and self.last_seen and self.last_seen < self.first_seen:
             raise ValueError(
                 "'last_seen' must be greater than or equal to 'first_seen'."
             )

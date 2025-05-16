@@ -1,8 +1,9 @@
 """Collects final queue items into batches and sends them via a provided sender."""
+
 import asyncio
 from typing import Any, Callable, Coroutine, List
 
-from connector.src.custom.pubsub import broker
+from connector.src.octi.pubsub import broker
 
 
 class BatchCollector:
@@ -14,7 +15,7 @@ class BatchCollector:
         batch_size: int,
         flush_interval: float,
         send_func: Callable[[list[Any]], Coroutine[Any, Any, None]],
-        sentinel_obj: Any
+        sentinel_obj: Any,
     ) -> None:
         """Initialize the BatchCollector.
 

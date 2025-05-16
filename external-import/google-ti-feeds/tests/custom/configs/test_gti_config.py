@@ -294,7 +294,7 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
         elif key.startswith("GTI_"):
             config_key = key[len("GTI_") :].lower()
             gti_config = connector._config.get_config_class(GTIConfig)
-            val = gti_config.get(config_key)
+            val = getattr(gti_config, config_key)
             if type(val) is list:
                 val = ",".join(val)
             assert str(val) == value  # noqa: S101
