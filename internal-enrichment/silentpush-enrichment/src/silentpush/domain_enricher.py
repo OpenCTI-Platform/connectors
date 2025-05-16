@@ -3,9 +3,8 @@ import uuid
 
 import requests
 from pycti import CustomObservableHostname, StixCoreRelationship
-from stix2 import AutonomousSystem, DomainName, Identity, IPv4Address, Relationship
-
 from settings import API_KEY, API_VERIFY_CERT
+from stix2 import AutonomousSystem, DomainName, Identity, IPv4Address, Relationship
 
 from .enricher import Enricher
 
@@ -163,7 +162,8 @@ class DomainEnricher(Enricher):
 
     def _build_ns_reputations(self):
         """
-        Adds Nameserver within their reputations enriched data to the stix bundle
+        Adds Nameserver within their reputations enriched data to
+        the stix bundle
         """
 
         for ns in self._ns_reputation.get("ns_srv_reputation", []):
