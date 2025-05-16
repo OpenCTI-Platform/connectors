@@ -1,9 +1,9 @@
 import copy
-import requests
 
+import requests
 from pycti import OpenCTIConnectorHelper  # , get_config_variable
 
-from settings import config, API_URI, API_KEY, API_VERIFY_CERT
+from settings import API_KEY, API_URI, API_VERIFY_CERT, config
 from silentpush.domain_enricher import DomainEnricher
 from silentpush.indicator_enricher import IndicatorEnricher
 from silentpush.ipv4_enricher import IPv4Enricher

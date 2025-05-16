@@ -23,10 +23,14 @@ API_VERIFY_CERT = get_config_variable(
     False,
     True,
 )
-API_KEY = get_config_variable("API_KEY", ["silentpush", "CONNECTOR_SILENTPUSH_API_KEY"], config)
+API_KEY = get_config_variable(
+    "API_KEY", ["silentpush", "CONNECTOR_SILENTPUSH_API_KEY"], config
+)
 SILENTPUSH_SIGNATURE = "Silent Push"
 ip_diversity_uri = (
     API_URI
     + "merge-api/explore/padns/lookup/ipdiversity/a/{domain}/?format=json&timeline=1&window=1"
 )
-enrich_uri = API_URI + "merge-api/explore/enrich/{type}/{ioc}/?format=json&scan_data=1&explain=1"
+enrich_uri = (
+        API_URI + "merge-api/explore/enrich/{type}/{ioc}/?format=json&scan_data=1&explain=1"
+)
