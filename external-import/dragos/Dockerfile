@@ -1,5 +1,5 @@
 # syntax=docker.io/docker/dockerfile:1.7-labs
-FROM python:3.12-alpine AS base
+FROM python:3.13-alpine AS base
 
 # Install Python modules
 # hadolint ignore=DL3003
