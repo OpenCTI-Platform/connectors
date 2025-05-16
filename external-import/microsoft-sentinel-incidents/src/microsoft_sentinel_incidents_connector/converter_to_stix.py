@@ -117,14 +117,20 @@ class ConverterToStix:
         """
         case_incident_name = incident.get("Title")
         case_incident_created_at = format_datetime(incident.get("CreatedTime"))
-        case_incident_description = (
-            incident.get("Description", "")
-            if len(incident.get("Description", "")) > 0
-            else (
-                "Incident from Microsoft Sentinel | classification: "
-                + incident.get("Classification", "unknown")
-            )
-        )
+        case_incident_description = f"""
+            Title: {incident.get('Title')}
+            Incident Number: {incident.get('IncidentNumber')}
+            Status: {incident.get('Status')}
+            Severity: {incident.get('Severity')}
+            Classification: {incident.get('Classification')}
+            First Activity Time (UTC): {incident.get('FirstActivityTime')}
+            Last Activity Time (UTC): {incident.get('LastActivityTime')}
+            Creation Time (UTC): {incident.get('CreatedTime')}
+            Last Modified Time (UTC): {incident.get('LastModifiedTime')}
+            Alerts Count: {json.loads(incident.get('AdditionalData', '{}')).get('AlertsCount')}
+            Description: {incident.get('Description', 'Incident from Microsoft Sentinel | classification:' + incident.get('Classification', 'unknown'))}
+        """
+
         case_incident_labels = (
             json.loads(incident.get("Labels", "[]"))
             if len(incident.get("Labels", "[]")) > 0
