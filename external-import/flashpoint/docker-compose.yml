@@ -1,7 +1,8 @@
-version: '3'
+version: "3"
 services:
   connector-flashpoint:
-    image: opencti/connector-flashpoint:6.6.11
+    # image: opencti/connector-flashpoint:6.6.11
+    build: .
     environment:
       - OPENCTI_URL=http://localhost:PORT
       - OPENCTI_TOKEN=ChangeMe

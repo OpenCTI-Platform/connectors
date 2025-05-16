@@ -401,6 +401,59 @@ class FlashpointConnector:
         message = "End of import of alerts"
         self.helper.api.work.to_processed(work_id, message)
 
+    def _import_ccm_alerts(self, start_date: datetime) -> datetime:
+        """
+        :return:
+        """
+        now = datetime.now(timezone.utc)
+
+        # Friendly name will be displayed on OpenCTI platform
+        friendly_name = "Flashpoint CCM Alerts run @ " + now.isoformat()
+
+        # Initiate a new work for reports ingestion
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
+
+        alerts = []
+        try:
+            alerts = self.client.get_compromised_credentials_sightings(since=start_date)
+
+            # self.helper.connector_logger.info(
+            #     f"Going to ingest: {len(alerts)} CCM alerts"
+            # )
+            alerts_count = 0
+            most_recent_alert_timestamp = None
+            for alert in alerts:
+                print(alert)
+                alerts_count += 1
+                # stix_alert_objects = self.converter_to_stix.alert_to_ccm_incident(
+                #     alert=alert.get("_source"),
+                #     create_related_entities=self.config.alert_create_related_entities,
+                # )
+                # most_recent_alert_timestamp = (
+                #     alert.get("_source").get("header_").get("indexed_at")
+                # )
+                # # pushing STIX alert
+                # bundle = self.helper.stix2_create_bundle(stix_alert_objects)
+                # self._send_bundle(work_id=work_id, serialized_bundle=bundle)
+
+                # self.helper.connector_logger.info(
+                #     f"CCM alerts STIX bundle sent to OpenCTI.",
+                #     {"bundles_count": len(bundles_sent)},
+                # )
+
+            message = "End of import of CCM alerts"
+            self.helper.api.work.to_processed(work_id, message)
+            if most_recent_alert_timestamp:
+                indexed_at_date = datetime.fromtimestamp(
+                    most_recent_alert_timestamp, tz=timezone.utc
+                )
+                return indexed_at_date
+        except Exception as err:
+            message = f"An error occurred while fetching CCM alerts, error: {err}"
+            self.helper.connector_logger.error(message)
+
     def process_data(self) -> None:
         """
         Connector main process to collect intelligence
@@ -478,6 +531,26 @@ class FlashpointConnector:
                     f"going to fetch Communities Data since: {start_date}"
                 )
                 self._import_communities(datetime.fromisoformat(start_date))
+
+            if self.config.flashpoint.import_ccm_alerts:
+                if "last_ccm_alert" not in current_state:
+                    current_state["last_ccm_alert"] = (
+                        self.config.flashpoint.import_start_date.isoformat()
+                    )
+                    self.helper.set_state(current_state)
+
+                start_date = datetime.fromisoformat(current_state["last_ccm_alert"])
+                self.helper.connector_logger.info(
+                    f"Import CCM Alerts enable, "
+                    f"going to fetch CCM Alerts since: {start_date.isoformat(timespec='seconds')}"
+                )
+
+                most_recent_indexed_alert = self._import_ccm_alerts(start_date)
+                if most_recent_indexed_alert:
+                    current_state["last_ccm_alert"] = (
+                        most_recent_indexed_alert.isoformat()
+                    )
+                    self.helper.set_state(current_state)
 
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug(
