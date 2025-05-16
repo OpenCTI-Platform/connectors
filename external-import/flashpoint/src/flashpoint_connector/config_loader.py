@@ -249,6 +249,10 @@ class FlashpointConfig(ConfigBaseModel):
         description="List of community queries to execute.",
         default=["cybersecurity", "cyberattack"],
     )
+    guess_relationships: bool = Field(
+        description="Whether to guess relationships between entities or not.",
+        default=True,
+    )
 
 
 class ConfigLoader(BaseSettings):

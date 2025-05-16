@@ -68,6 +68,7 @@ The configuration variables for the connector can be set in `docker-compose.yml`
 | Create alert related entities          | alert_create_related_entities | `FLASHPOINT_ALERT_CREATE_RELATED_ENTITIES` | false                       | No        | Create alert related Channel entity and Media-Content observable                                                                                       |
 | Import communities                     | import_communities            | `FLASHPOINT_IMPORT_COMMUNITIES`            | false                       | No        | Import community data.                                                                                                                                 |
 | Communities queries                    | communities_queries           | `FLASHPOINT_COMMUNITIES_QUERIES`           | "cybersecurity,cyberattack" | No        | Comma-separated list of community queries to execute.                                                                                                  |
+| Guess relationships                    | guess_relationships           | `FLASHPOINT_GUESS_RELATIONSHIPS`           | true                        | No        | Enable or disable the guessing of relationships between entities.                                                                                      |
 
 ## Deployment
 

@@ -30,4 +30,4 @@ flashpoint:
   indicators_in_reports: false
   import_communities: false
   communities_queries: 'cybersecurity,cyberattack'
-
+  guess_relationships: true

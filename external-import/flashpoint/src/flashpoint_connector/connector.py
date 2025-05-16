@@ -23,7 +23,9 @@ class FlashpointConnector:
             api_base_url="https://api.flashpoint.io",
             api_key=self.config.flashpoint.api_key,
         )
-        self.converter_to_stix = ConverterToStix(self.helper)
+        self.converter_to_stix = ConverterToStix(
+            self.helper, self.config.flashpoint.guess_relationships
+        )
         self.misp_converter_to_stix = MISPConverterToStix(self.helper, self.config)
 
     def _send_bundle(self, work_id: str, serialized_bundle: str) -> None:
