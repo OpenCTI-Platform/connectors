@@ -19,7 +19,11 @@ from tests.conftest import mock_env_vars
 
 @pytest.fixture(
     params=[
-        {"opencti_url": "http://localhost:8080", "opencti_token": f"{uuid4()}", "connector_id": f"{uuid4()}"}
+        {
+            "opencti_url": "http://localhost:8080",
+            "opencti_token": f"{uuid4()}",
+            "connector_id": f"{uuid4()}",
+        }
     ]
 )
 def min_required_config(request) -> dict[str, str]:  # type: ignore
@@ -144,7 +148,9 @@ def test_connector_config_min_required(  # type: ignore
     # When the connector is created
     connector, _ = _when_connector_created()
     # Then the connector should be created successfully
-    _then_connector_created_successfully(capfd, mock_env, connector, min_required_config)
+    _then_connector_created_successfully(
+        capfd, mock_env, connector, min_required_config
+    )
 
 
 # Scenario: Create a connector with all optional configuration.

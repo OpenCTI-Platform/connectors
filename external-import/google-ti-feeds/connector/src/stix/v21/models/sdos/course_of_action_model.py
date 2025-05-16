@@ -16,9 +16,7 @@ from stix2.v21 import CourseOfAction, _STIXBase21  # type: ignore
 class CourseOfActionModel(BaseSDOModel):
     """Model representing a Course of Action in STIX 2.1 format."""
 
-    name: str = Field(
-        ..., description="A name used to identify the Course of Action."
-    )
+    name: str = Field(..., description="A name used to identify the Course of Action.")
     description: Optional[str] = Field(
         default=None,
         description="Context for the Course of Action, possibly including intent and characteristics. May contain prose.",

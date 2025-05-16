@@ -8,9 +8,7 @@ from stix2.v21 import Mutex, _STIXBase21  # type: ignore
 class MutexModel(BaseSCOModel):
     """Model representing a Mutex in STIX 2.1 format."""
 
-    name: str = Field(
-        ..., description="The name of the mutex object as observed."
-    )
+    name: str = Field(..., description="The name of the mutex object as observed.")
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""

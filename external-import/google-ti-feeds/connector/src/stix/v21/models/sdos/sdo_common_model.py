@@ -13,15 +13,11 @@ from stix2.v21 import _STIXBase21  # type: ignore
 class SDORequiredModel(BaseModel):
     """Required fields for all STIX Domain Objects (SDOs)."""
 
-    type: str = Field(
-        ..., description="The object type, must match the SDO type."
-    )
+    type: str = Field(..., description="The object type, must match the SDO type.")
     spec_version: str = Field(
         ..., description="The STIX specification version, e.g., '2.1'."
     )
-    id: str = Field(
-        ..., description="The unique STIX identifier for this object."
-    )
+    id: str = Field(..., description="The unique STIX identifier for this object.")
     created: datetime = Field(
         ..., description="Timestamp when this object was created."
     )

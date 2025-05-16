@@ -126,7 +126,11 @@ class GitHubInfo(BaseModel):
         },
         {
             "url": "https://api.github.com",
-            "response_data": {"current_user_url": "url1", "user_url": "url2", "emails_url": "url3"},
+            "response_data": {
+                "current_user_url": "url1",
+                "user_url": "url2",
+                "emails_url": "url3",
+            },
             "model": GitHubInfo,
         },
     ]
@@ -138,7 +142,11 @@ def successful_get_scenario(request):
 
 @pytest.fixture(
     params=[
-        {"url": "https://api.test.com/notfound", "status_code": 404, "error_message": "Not Found"},
+        {
+            "url": "https://api.test.com/notfound",
+            "status_code": 404,
+            "error_message": "Not Found",
+        },
     ]
 )
 def failed_get_scenario(request):
@@ -206,7 +214,9 @@ async def test_api_client_get_http_error(
     url = failed_get_scenario["url"]
     status_code = failed_get_scenario["status_code"]
     underlying_exception = Exception(f"Simulated HTTP {status_code} error")
-    _given_mock_response(mock_aiohttp_client, method="get", raise_exception=underlying_exception)
+    _given_mock_response(
+        mock_aiohttp_client, method="get", raise_exception=underlying_exception
+    )
 
     # When
     response, exception = await _when_api_get_called(api_client, url)
@@ -231,7 +241,9 @@ async def test_retry_strategy_exhausts_retries(
     response, exception = await _when_api_get_called(api_client, url)
 
     # Then
-    _then_api_exception_is_raised(exception, expected_message_part="simulated persistent error")
+    _then_api_exception_is_raised(
+        exception, expected_message_part="simulated persistent error"
+    )
     assert mock_aiohttp_client.request.await_count == max_retries + 1  # noqa: S101
 
 
@@ -244,7 +256,10 @@ async def test_circuit_breaker_opens_after_failures(
     """Test that the circuit breaker opens after consecutive failures."""
     # Given
     strategy = RetryRequestStrategy(
-        http=mock_aiohttp_client, breaker=circuit_breaker, limiter=rate_limiter, max_retries=0
+        http=mock_aiohttp_client,
+        breaker=circuit_breaker,
+        limiter=rate_limiter,
+        max_retries=0,
     )
     client = ApiClient(strategy)
 
@@ -262,7 +277,9 @@ async def test_circuit_breaker_opens_after_failures(
     with pytest.raises(ApiError):
         await client.call_api(url)
 
-    assert mock_aiohttp_client.get.await_count == circuit_breaker.max_failures  # noqa: S101
+    assert (
+        mock_aiohttp_client.get.await_count == circuit_breaker.max_failures
+    )  # noqa: S101
 
 
 # =====================
@@ -299,7 +316,9 @@ def _given_mock_response(
 
 
 # --- WHEN ---
-async def _when_api_get_called(client: ApiClient, url: str, model: BaseModel | None = None):
+async def _when_api_get_called(
+    client: ApiClient, url: str, model: BaseModel | None = None
+):
     """Call the get method of the ApiClient."""
     try:
         return await client.call_api(url, model=model), None
@@ -341,6 +360,8 @@ def _then_circuit_breaker_is_open(breaker: CircuitBreaker):
     assert breaker.is_open() is True  # noqa: S101
 
 
-def _then_rate_limiter_called(limiter_mock: AsyncMock):  # If you decide to mock RateLimiter
+def _then_rate_limiter_called(
+    limiter_mock: AsyncMock,
+):  # If you decide to mock RateLimiter
     """Assert that the rate limiter was called."""
     limiter_mock.acquire.assert_called()

@@ -50,6 +50,7 @@ def mock_opencti_api_client() -> Any:
     mock_healthcheck.stop()
     mock_query.stop()
 
+
 @fixture(autouse=True)
 def patch_logger_error(monkeypatch):
     """Patch to drop the meta for testing purposes."""

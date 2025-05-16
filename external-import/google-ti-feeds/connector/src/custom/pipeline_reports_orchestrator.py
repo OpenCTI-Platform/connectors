@@ -1,31 +1,48 @@
 """Pipeline orchestration to fetch, process and ingest reports and related entities from Google Threat Intelligence."""
+
 import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import uuid4
 
-from connector.src.custom.batch_collector import BatchCollector
-from connector.src.custom.fetchers.fetch_reports import FetchReports
+from connector.src.custom.constants.gti_reports.reports_constants import (
+    FINAL_BROKER,
+    SENTINEL,
+)
+from connector.src.custom.fetchers.gti_reports.fetch_reports import FetchReports
 from connector.src.custom.interfaces.base_fetcher import BaseFetcher
 from connector.src.custom.interfaces.base_processor import BaseProcessor
-from connector.src.custom.pubsub import broker
-from connector.src.custom.reports_constants import SENTINEL, PREFIX_BROKER
+from connector.src.custom.processors.gti_reports.process_reports import ProcessReports
+from connector.src.octi.batch_collector import BatchCollector
+from connector.src.octi.pubsub import broker
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.api_engine.circuit_breaker import CircuitBreaker
 from connector.src.utils.api_engine.retry_request_strategy import RetryRequestStrategy
-from connector.src.custom.processors.process_reports import ProcessReports
 
 if TYPE_CHECKING:
     from logging import Logger
 
+    from connector.src.custom.configs.gti_config import GTIConfig
     from connector.src.octi.work_manager import WorkManager
 
 
 class PipelineReportsOrchestrator:
     """Pipeline orchestration to fetch, process and ingest reports and related entities from Google Threat Intelligence."""
 
-    def __init__(self, gti_config: Dict[str, Any], work_manager: "WorkManager", http_timeout: int = 60, max_failures: int = 5, cooldown_time: int = 60, max_requests: int = 10, period: int = 60, max_retries: int = 5, backoff: int = 2, logger: Optional["Logger"] = None) -> None:
+    def __init__(
+        self,
+        gti_config: "GTIConfig",
+        work_manager: "WorkManager",
+        http_timeout: int = 60,
+        max_failures: int = 5,
+        cooldown_time: int = 60,
+        max_requests: int = 10,
+        period: int = 60,
+        max_retries: int = 5,
+        backoff: int = 2,
+        logger: Optional["Logger"] = None,
+    ) -> None:
         """Initialize the pipeline orchestration.
 
         Args:
@@ -52,25 +69,41 @@ class PipelineReportsOrchestrator:
         self.backoff = backoff
         self._logger = logger or logging.getLogger(__name__)
 
-        http_client = AioHttpClient(default_timeout=self.http_timeout, logger=self._logger)
-        breaker = CircuitBreaker(max_failures=self.max_failures, cooldown_time=self.cooldown_time)
+        http_client = AioHttpClient(
+            default_timeout=self.http_timeout, logger=self._logger
+        )
+        breaker = CircuitBreaker(
+            max_failures=self.max_failures, cooldown_time=self.cooldown_time
+        )
         limiter_config = {
             "key": f"gti-api-{uuid4()}",
             "max_requests": self.max_requests,
-            "period": self.period
+            "period": self.period,
         }
-        retry_request_strategy = RetryRequestStrategy(http=http_client, breaker=breaker, limiter=limiter_config, hooks= None, max_retries=self.max_retries, backoff=self.backoff, logger=self._logger)
-        self.api_client = ApiClient(strategy=retry_request_strategy, logger=self._logger)
+        retry_request_strategy = RetryRequestStrategy(
+            http=http_client,
+            breaker=breaker,
+            limiter=limiter_config,
+            hooks=None,
+            max_retries=self.max_retries,
+            backoff=self.backoff,
+            logger=self._logger,
+        )
+        self.api_client = ApiClient(
+            strategy=retry_request_strategy, logger=self._logger
+        )
 
         self._orchestration()
 
     def _orchestration(self) -> None:
         """Manage the orchestration pipeline."""
         state = self._work_manager.get_state()
-        self.fetchers: List[BaseFetcher] = [FetchReports(self._gti_config, self.api_client, state, self._logger)]
+        self.fetchers: List[BaseFetcher] = [
+            FetchReports(self._gti_config, self.api_client, state, self._logger)
+        ]
 
         self.processors: List[BaseProcessor] = [
-            ProcessReports(self.organization, self.tlp_marking, self._logger),
+            # ProcessReports(self.organization, self.tlp_marking, self._logger),
             # ProcessMalwareFamilies(),
             # ProcessAttackTechniques(),
             # ProcessThreatActors(),
@@ -79,11 +112,11 @@ class PipelineReportsOrchestrator:
         ]
 
         self.batch_collector = BatchCollector(
-            topic=f"{PREFIX_BROKER}/final",
+            topic=f"{FINAL_BROKER}",
             batch_size=500,
             flush_interval=300.0,
             send_func=self.send_batch,
-            sentinel_obj=SENTINEL
+            sentinel_obj=SENTINEL,
         )
 
     def _create_tlp_marking(self):
@@ -114,7 +147,7 @@ class PipelineReportsOrchestrator:
         fetch_tasks = [asyncio.create_task(f.fetch()) for f in self.fetchers]
 
         await asyncio.gather(*fetch_tasks)
-        await broker.publish(f"{PREFIX_BROKER}/final", SENTINEL)
+        await broker.publish(f"{FINAL_BROKER}", SENTINEL)
         await batch_task
         await asyncio.gather(*proc_tasks)
 

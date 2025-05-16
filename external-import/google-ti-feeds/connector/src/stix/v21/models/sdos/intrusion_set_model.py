@@ -17,9 +17,7 @@ from stix2.v21 import IntrusionSet, _STIXBase21  # type: ignore
 class IntrusionSetModel(BaseSDOModel):
     """Model representing an Intrusion Set in STIX 2.1 format."""
 
-    name: str = Field(
-        ..., description="A name used to identify this Intrusion Set."
-    )
+    name: str = Field(..., description="A name used to identify this Intrusion Set.")
     description: Optional[str] = Field(
         default=None,
         description="Details and context about the Intrusion Set, including its purpose and key characteristics.",

@@ -76,8 +76,19 @@ class Connector:
         """
         try:
             gti_config = self._config.get_config_class(GTIConfig)
-            if gti_config.get("import_reports"):
-                orchestrator = PipelineReportsOrchestrator(gti_config=gti_config, work_manager=self.work_manager, http_timeout=60, max_failures=5, cooldown_time=60, max_requests=10, period=60, max_retries=5, backoff=2, logger=self._logger)
+            if gti_config.import_reports:
+                orchestrator = PipelineReportsOrchestrator(
+                    gti_config=gti_config,
+                    work_manager=self.work_manager,
+                    http_timeout=60,
+                    max_failures=5,
+                    cooldown_time=60,
+                    max_requests=10,
+                    period=60,
+                    max_retries=5,
+                    backoff=2,
+                    logger=self._logger,
+                )
                 asyncio.run(orchestrator.run())
         except (KeyboardInterrupt, SystemExit):
             self._logger.info(

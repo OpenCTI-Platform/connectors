@@ -42,9 +42,7 @@ class ArtifactModel(BaseSCOModel):
     def validate_artifact_logic(self) -> "ArtifactModel":
         """Validate the ArtifactModel instance."""
         if self.payload_bin and self.url:
-            raise ValueError(
-                "Only one of 'payload_bin' or 'url' may be set—not both."
-            )
+            raise ValueError("Only one of 'payload_bin' or 'url' may be set—not both.")
         if self.url and not self.hashes:
             raise ValueError("'hashes' MUST be provided when 'url' is set.")
         if self.decryption_key and not self.encryption_algorithm:

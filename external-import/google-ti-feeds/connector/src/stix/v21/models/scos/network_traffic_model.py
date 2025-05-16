@@ -105,9 +105,7 @@ class NetworkTrafficModel(BaseSCOModel):
         if self.start and self.end and self.end < self.start:
             raise ValueError("'end' must be later than 'start'.")
         if self.is_active and self.end is not None:
-            raise ValueError(
-                "'end' must not be present if 'is_active' is True."
-            )
+            raise ValueError("'end' must not be present if 'is_active' is True.")
         return self
 
     def to_stix2_object(self) -> _STIXBase21:

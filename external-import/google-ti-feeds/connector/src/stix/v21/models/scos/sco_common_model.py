@@ -13,9 +13,7 @@ class SCORequiredModel(BaseModel):
         ...,
         description="The object type. MUST match the specific SCO type being defined.",
     )
-    id: str = Field(
-        ..., description="The unique STIX identifier for this SCO object."
-    )
+    id: str = Field(..., description="The unique STIX identifier for this SCO object.")
 
 
 class SCOOptionalModel(BaseModel):

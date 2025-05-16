@@ -45,9 +45,7 @@ class ObservedDataModel(BaseSDOModel):
                 "Only one of 'objects' or 'object_refs' may be set—not both."
             )
         if not self.objects and not self.object_refs:
-            raise ValueError(
-                "At least one of 'objects' or 'object_refs' must be set."
-            )
+            raise ValueError("At least one of 'objects' or 'object_refs' must be set.")
         return self
 
     def to_stix2_object(self) -> _STIXBase21:
