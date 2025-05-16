@@ -4,12 +4,11 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'Flashpoint'
   scope: 'flashpoint'
   log_level: 'info'
   run_and_terminate: false
-  duration_period: 'PT1H' # Interval given for scheduler process in ISO-8601 format
+  duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
 
   #============================================#
   # Optional connector's definition parameters #
