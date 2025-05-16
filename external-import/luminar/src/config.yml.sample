@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: ChangeMe(UUIDv4 token)
+
+connector:
+  id: ChangeMe(UUIDv4 token)
+  type: 'EXTERNAL_IMPORT'
+  name: 'Luminar Threat Intelligence'
+  scope: 'identity,attack-pattern,malware,tool,report,vulnerability,campaign,incident,indicator,location,threat-actor,tool,software,useraccount'
+  create_indicator: True
+  update_existing_data: True
+  log_level: 'info'
+
+luminar:
+  base_url: 'https://www.cyberluminar.com'
+  account_id: ''
+  client_id: ''
+  client_secret: ''
+  create_observable: True
+  initial_fetch_date: 'YYYY-MM-DD'
