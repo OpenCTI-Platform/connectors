@@ -24,7 +24,7 @@ from pydantic_settings import (
 )
 
 # Get the path of the __main__ module file (the entry point of the connector)
-_FILE_PATH = os.path.dirname(os.path.abspath(__main__.__file__))
+_MAIN_PATH = os.path.dirname(os.path.abspath(__main__.__file__))
 
 """
 All the variables that have default values will override configuration from the OpenCTI helper.
@@ -269,8 +269,8 @@ class ConfigLoader(BaseSettings):
         env_nested_delimiter="_",
         env_nested_max_split=1,
         enable_decoding=False,
-        yaml_file=f"{_FILE_PATH}/config.yml",
-        env_file=f"{_FILE_PATH}/../.env",
+        yaml_file=f"{_MAIN_PATH}/config.yml",
+        env_file=f"{_MAIN_PATH}/../.env",
     )
 
     def __init__(self) -> None:
