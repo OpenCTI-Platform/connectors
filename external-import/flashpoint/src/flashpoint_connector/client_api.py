@@ -4,6 +4,7 @@ from typing import Generator
 
 import requests
 from requests.adapters import HTTPAdapter, Retry
+from .flashpoint_client.models import CompromisedCredentialSighting
 
 
 class FlashpointClient:
@@ -192,7 +193,7 @@ class FlashpointClient:
             "scroll": "2m",
         }
 
-        alerts_count = 0
+        sightings_count = 0
         while True:
             response = self.session.post(url, json=body)
             response.raise_for_status()
@@ -206,10 +207,16 @@ class FlashpointClient:
 
             results: list[dict] = data["hits"]["hits"]
             for result in results:
-                yield result
+                try:
+                    sighting = CompromisedCredentialSighting.model_validate(
+                        result["_source"]
+                    )
+                    yield sighting
+                except Exception as e:
+                    print(e)
 
-            alerts_count += len(results)
-            if alerts_count == total_hits:
+            sightings_count += len(results)
+            if sightings_count == total_hits:
                 break
 
             url = self.api_base_url + "/sources/v1/noncommunities/scroll?scroll=2m"
