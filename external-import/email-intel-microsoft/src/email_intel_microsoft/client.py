@@ -133,10 +133,26 @@ class ConnectorClient(BaseClient):
     def fetch_from_relative_import_start_date(
         self, since_datetime: datetime.datetime, page_size: int = 50
     ) -> list[Message]:
+        """
+        This method wraps an asynchronous call to the Microsoft Graph API to fetch messages
+        from a user's mailbox starting from a specific datetime.
+
+        Due to limitations in `asyncio.run()` when used in environments where an event loop
+        may already be running (e.g., in web servers, background tasks, or notebooks),
+        this implementation uses a safer event loop retrieval strategy. For more details, see:
+        https://github.com/microsoftgraph/msgraph-sdk-python/issues/366
+        """
+
         async def _run() -> list[Message]:
             async with self:  # Ensure the client is closed after use
                 return await self._fetch_from_relative_import_start_date(
                     since_datetime, page_size=page_size
                 )
 
-        return asyncio.run(_run())
+        try:
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(_run())
+        except RuntimeError as e:
+            if "There is no current event loop in thread" in str(e):
+                return asyncio.run(_run())
+            raise
