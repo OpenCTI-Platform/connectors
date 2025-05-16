@@ -75,7 +75,7 @@ class FlashpointConnector:
         message = "End of import of reports"
         self.helper.api.work.to_processed(work_id, message)
 
-    def _import_communities(self, start_date):
+    def _import_communities(self, start_date: datetime):
         """
         :param start_date:
         :return:
@@ -261,7 +261,7 @@ class FlashpointConnector:
         except Exception as err:
             self.helper.connector_logger.error(err)
 
-    def _import_alerts(self, start_date):
+    def _import_alerts(self, start_date: datetime):
         """
         :return:
         """
@@ -453,7 +453,7 @@ class FlashpointConnector:
                     f"Import Alerts enable, "
                     f"going to fetch Alerts since: {start_date}"
                 )
-                self._import_alerts(start_date)
+                self._import_alerts(datetime.fromisoformat(start_date))
 
             if self.config.flashpoint.import_reports:
                 start_date = current_state["last_run"]
@@ -477,7 +477,7 @@ class FlashpointConnector:
                     f"Import Communities Data enable, "
                     f"going to fetch Communities Data since: {start_date}"
                 )
-                self._import_communities(start_date)
+                self._import_communities(datetime.fromisoformat(start_date))
 
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug(

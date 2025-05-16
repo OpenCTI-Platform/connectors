@@ -40,7 +40,14 @@ class ConnectorClient:
         page = 0
         body_params = {
             "query": query,
-            "include": {"date": {"start": start_date, "end": ""}},
+            "include": {
+                "date": {
+                    "start": start_date.strftime(
+                        "%Y-%m-%dT%H:%M:%SZ"
+                    ),  # UTC as +00:00 offset leads to 400 Bad Request
+                    "end": "",
+                }
+            },
             "size": "1000",
             "sort": {"date": "asc"},
             "page": page,
@@ -85,7 +92,11 @@ class ConnectorClient:
         """
         alerts = []
         url = self.flashpoint_api_url + "/alert-management/v1/notifications"
-        params = {"created_after": start_date}
+        params = {
+            "created_after": start_date.strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )  # UTC as +00:00 offset leads to 400 Bad Request
+        }
         has_more = True
         while has_more:
             response = self.session.get(url, params=params)
