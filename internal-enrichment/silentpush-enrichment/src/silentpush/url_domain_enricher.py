@@ -6,7 +6,7 @@ from .domain_enricher import DomainEnricher
 
 class URLDomainEnricher(DomainEnricher):
     """
-    The IPv6 based URL Enrichment class
+    The Domain based URL Enrichment class
 
     :param helper: the OpenCTIConnectorHelper instance
     :param stix_entity: the dictionary stix entity data
