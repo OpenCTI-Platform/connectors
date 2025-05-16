@@ -35,12 +35,14 @@ The Flashpoint Connector for OpenCTI imports threat intelligence data from Flash
 
 ## Configuration variables
 
-The configuration variables for the connector can be set in `docker-compose.yml` for Docker deployments or `config.yml` for manual deployments.
+Configuration parameters can be provided in either **`config.yml`** file, **`.env`** file or directly as **environment variables** (e.g. from **`docker-compose.yml`** for Docker deployments).
+
+Priority: **YAML > .env > environment > defaults**.
 
 ### OpenCTI environment variables
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
 | OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
 | OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
