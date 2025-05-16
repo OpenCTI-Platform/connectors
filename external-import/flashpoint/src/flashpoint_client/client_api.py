@@ -4,7 +4,7 @@ from typing import Generator
 
 import requests
 from requests.adapters import HTTPAdapter, Retry
-from .flashpoint_client.models import CompromisedCredentialSighting
+from .models import CompromisedCredentialSighting
 
 
 class FlashpointClient:
@@ -105,7 +105,7 @@ class FlashpointClient:
         :return:
         """
         alerts = []
-        url = self.flashpoint_api_url + "/alert-management/v1/notifications"
+        url = self.api_url + "/alert-management/v1/notifications"
         params = {
             "created_after": start_date.strftime(
                 "%Y-%m-%dT%H:%M:%SZ"

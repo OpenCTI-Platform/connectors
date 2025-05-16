@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper
 
-from .client_api import FlashpointClient
+from flashpoint_client import FlashpointClient
 from .config_loader import ConfigLoader
 from .converter_to_stix import ConverterToStix
 from .misp_converter_to_stix import MISPConverterToStix
