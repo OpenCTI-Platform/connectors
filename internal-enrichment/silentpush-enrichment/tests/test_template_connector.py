@@ -4,6 +4,7 @@
 
 # @TODO: elaborate proper tests
 
+
 # @pytest.mark.usefixtures("setup_config")
 class TestTemplateConnector(object):
     def test_to_do(self) -> None:
