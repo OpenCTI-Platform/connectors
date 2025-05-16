@@ -26,7 +26,7 @@ def fake_config_dict() -> dict[str, dict[str, Any]]:
             "name": "External Import Connector",
             "scope": "test",
             "log_level": "info",
-            "duration_period": "PT1H",
+            "duration_period": "PT5M",
             "expose_metrics": False,
             "metrics_port": 9095,
             "only_contextual": False,
@@ -81,7 +81,7 @@ def test_config_loader_with_valid_yaml_file():
             frozen=True,
             extra="allow",
             enable_decoding=False,
-            yaml_file="./tests/config.test.yml",
+            yaml_file=f"{Path(__file__).parent}/config.test.yml",
             env_file=None,
         ),
     ):

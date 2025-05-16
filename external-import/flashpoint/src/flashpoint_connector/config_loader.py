@@ -156,7 +156,7 @@ class ConnectorConfig(ConfigBaseModel):
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
-        default=timedelta(hours=1),
+        default=timedelta(minutes=5),
     )
 
     log_level: Literal[

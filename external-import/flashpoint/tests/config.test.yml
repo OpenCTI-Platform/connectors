@@ -9,7 +9,7 @@ connector:
   scope: "test"
   log_level: "info"
   run_and_terminate: false
-  duration_period: "PT1H" # Interval given for scheduler process in ISO-8601 format
+  duration_period: "PT5M" # Interval given for scheduler process in ISO-8601 format
 
 flashpoint:
   api_key: "test-flashpoint-api-key"
