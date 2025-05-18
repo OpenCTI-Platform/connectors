@@ -26,7 +26,11 @@ class ConnectorClient:
         :return:
         """
         try:
-            u = Cognito(self.config.acti_user_pool_id, self.config.acti_client_id, username=self.config.acti_username)
+            u = Cognito(
+                user_pool_id=self.config.acti_user_pool_id,
+                client_id=self.config.acti_client_id,
+                username=self.config.acti_username
+            )
             u.authenticate(self.config.acti_password)
             id_token = u.id_token
             return id_token
