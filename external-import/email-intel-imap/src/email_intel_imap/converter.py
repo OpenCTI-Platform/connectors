@@ -1,12 +1,16 @@
 import base64
+import logging
 from typing import Generator, Literal
 
 import stix2
+
 from base_connector import BaseConverter, ConnectorWarning
 from base_connector.models import OpenCTIFile
-from imap_tools.message import MailMessage
+from imap_tools.message import MailAttachment, MailMessage
 from pycti import OpenCTIConnectorHelper
 from stix2.v21.vocab import REPORT_TYPE_THREAT_REPORT
+
+logger = logging.getLogger(__name__)
 
 
 class ConnectorConverter(BaseConverter):
@@ -40,9 +44,23 @@ class ConnectorConverter(BaseConverter):
         Convert the data into STIX 2.1 objects by using default parent class object definition.
         """
 
+        def _is_supported(attachment: MailAttachment) -> bool:
+            if attachment.content_disposition == "attachment":
+                if attachment.content_type in self.attachments_mime_types:
+                    return True
+                logger.info(
+                    f"{attachment.content_type} not in EMAIL_INTEL_ATTACHMENTS_MIME_TYPES{self.attachments_mime_types}, skipping..."
+                )
+            return False
+
         try:
             if not (name := entity.subject):
                 name = f"<no subject> from {entity.from_}"
+            attachments = [
+                attachment
+                for attachment in entity.attachments
+                if _is_supported(attachment)
+            ]
             yield self._create_report(
                 name=name,
                 published=entity.date,
@@ -55,9 +73,7 @@ class ConnectorConverter(BaseConverter):
                         data=base64.b64encode(attachment.payload),
                         object_marking_refs=[self.tlp_marking.id],
                     )
-                    for attachment in entity.attachments
-                    if attachment.content_disposition == "attachment"
-                    and attachment.content_type in self.attachments_mime_types
+                    for attachment in attachments
                 ],
             )
         except Exception as e:
