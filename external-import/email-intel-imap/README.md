@@ -8,18 +8,23 @@ intelligence shared through email by regularly polling a mailbox and transformin
 
 ## 📖 Table of Contents
 
-- [🧩 Introduction](#-introduction)
-- [⚙️ Requirements](#-requirements)
-- [🔧 Configuration](#-configuration)
+- [📬 Email Intel IMAP Connector](#-email-intel-imap-connector)
+  - [📖 Table of Contents](#-table-of-contents)
+  - [🧩 Introduction](#-introduction)
+  - [⚙️ Requirements](#️-requirements)
+  - [🔧 Configuration](#-configuration)
     - [OpenCTI Configuration](#opencti-configuration)
-    - [Connector Configuration](#base-connector-configuration)
-- [🚀 Deployment](#-deployment)
+    - [Base Connector Configuration](#base-connector-configuration)
+    - [Email Intel IMAP Connector Configuration](#email-intel-imap-connector-configuration)
+  - [🚀 Deployment](#-deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
-    - [Dev Tools](#dev-tools)
-- [📌 Usage](#-usage)
-- [⚙️ Connector Behavior](#-connector-behavior)
-- [📝 Additional Information](#-additional-information)
+    - [Dev tools](#dev-tools)
+  - [📌 Usage](#-usage)
+  - [⚙️ Connector Behavior](#️-connector-behavior)
+  - [📝 Additional Information](#-additional-information)
+  - [Development](#development)
+    - [Adding a new email provider](#adding-a-new-email-provider)
 
 ---
 
@@ -69,10 +74,11 @@ Below are the parameters you'll need to set for the Email Intel IMAP Connector
 | IMAP Host                  | email_intel_imap.host                   | `EMAIL_INTEL_IMAP_HOST`                       | ❌                                   | ✅         | Hostname of the IMAP server.                  |
 | IMAP Port                  | email_intel_imap.port                   | `EMAIL_INTEL_IMAP_PORT`                       | 993                                 | ✅         | IMAP port (993 typically for SSL).            |
 | IMAP Username              | email_intel_imap.username               | `EMAIL_INTEL_IMAP_USERNAME`                   | ❌                                   | ✅         | Mailbox username.                             |
-| IMAP Password              | email_intel_imap.password               | `EMAIL_INTEL_IMAP_PASSWORD`                   | ❌                                   | ✅         | Mailbox password.                             |
+| IMAP Password              | email_intel_imap.password               | `EMAIL_INTEL_IMAP_PASSWORD`                   | ❌                                   | ❌         | Mailbox password.                             |
 | Mailbox Folder             | email_intel_imap.mailbox                | `EMAIL_INTEL_IMAP_MAILBOX`                    | INBOX                               | ✅         | Folder to monitor (e.g., INBOX, ThreatIntel). |
 | TLP Level                  | email_intel_imap.tlp_level              | `EMAIL_INTEL_IMAP_TLP_LEVEL`                  | amber+strict                        | ✅         | Default TLP marking for imported reports.     |
 | Attachments Mime Types     | email_intel_imap.attachments_mime_types | `EMAIL_INTEL_IMAP_ATTACHMENTS_MIME_TYPES`     | application/pdf,text/csv,text/plain | ✅         | Accepted attachment file type                 |
+`EMAIL_INTEL_IMAP_GOOGLE_TOKEN_JSON` | email_intel_imap.google_token_json | `EMAIL_INTEL_IMAP_GOOGLE_TOKEN_JSON` | ❌ | ❌ | Google token JSON file content. See docs/gmail.md |
 
 ---
 
@@ -168,13 +174,13 @@ After deployment, the connector:
 - Polls the configured mailbox at the interval defined in `CONNECTOR_DURATION_PERIOD`
 - On first run, fetches emails received within the period defined by `RELATIVE_IMPORT_START_DATE`
 - Each fetched email is transformed into an OpenCTI report:
-    - `name`: Email subject
-        - If the subject is empty, a default name is generated as follow `<no subject> from <sender@email.com>` where
+  - `name`: Email subject
+    - If the subject is empty, a default name is generated as follow `<no subject> from <sender@email.com>` where
           `<sender@email.com>` is the email address of the sender.
-    - `type`: `threat-report`
-    - `published`: Email date (converted to UTC)
-    - `x_opencti_content`: Full email body (unparsed)
-    - `x_opencti_files` : List of attachments (if any) depending on the `attachments_mime_types` parameter.
+  - `type`: `threat-report`
+  - `published`: Email date (converted to UTC)
+  - `x_opencti_content`: Full email body (unparsed)
+  - `x_opencti_files` : List of attachments (if any) depending on the `attachments_mime_types` parameter.
 
 ---
 
@@ -193,3 +199,15 @@ After deployment, the connector:
 - The connector is designed to support only IMAP-compatible mailboxes.
 
 ---
+
+## Development
+
+### Adding a new email provider
+
+To add a new email provider, you need to :
+
+1. Implement the `BaseConnectorClient` interface in the `email_imap.client.py` moduke.
+2. Update the `email_imap.config.py` module with needed variables.
+3. Update the `email_imap.main.py` module, especially the `client_factory` method.
+4. Update the documentation in the `README.md`, `config.yml` and `docker_compose.yml` files.
+5. Add a page in the `docs` folder to describe the new provider.
