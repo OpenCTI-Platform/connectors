@@ -121,16 +121,16 @@ class ConnectorAccenture:
                                 stix_object["object_refs"].append(item.get("target_ref"))
                                 stix_objects.remove(item)
 
-                        bundles_sent = self.helper.send_stix2_bundle(
-                            json.dumps(stix_bundle),
-                            work_id=work_id,
-                            cleanup_inconsistent_bundle=True,
-                        )
+                bundles_sent = self.helper.send_stix2_bundle(
+                    json.dumps(stix_bundle),
+                    work_id=work_id,
+                    cleanup_inconsistent_bundle=True,
+                )
 
-                        self.helper.connector_logger.info(
-                            "Sending STIX objects to OpenCTI...",
-                            {"bundles_sent": {str(len(bundles_sent))}},
-                        )
+                self.helper.connector_logger.info(
+                    "Sending STIX objects to OpenCTI...",
+                    {"bundles_sent": {str(len(bundles_sent))}},
+                )
 
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug(

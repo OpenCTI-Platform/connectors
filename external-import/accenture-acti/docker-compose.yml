@@ -18,7 +18,7 @@ services:
       - ACCENTURE_ACTI_PASSWORD=CHANGEME
       - ACCENTURE_ACTI_USER_POOL_ID=CHANGEME
       - ACCENTURE_ACTI_CLIENT_ID=CHANGEME
-      - ACCENTURE_ACTI_CLIENT_TLP_LEVEL=amber+strict # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
+      - ACCENTURE_ACTI_CLIENT_TLP_LEVEL=amber # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
       - ACCENTURE_ACTI_RELATIVE_IMPORT_START_DATE=P30D
 
       # Add proxy parameters below if needed

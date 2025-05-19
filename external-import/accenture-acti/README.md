@@ -68,14 +68,14 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter                  | config.yml                 | Docker environment variable                 | Default      | Mandatory | Description                                                                                                   |
-|----------------------------|----------------------------|---------------------------------------------|--------------|-----------|---------------------------------------------------------------------------------------------------------------|
-| Accenture ACTI username    | username                   | `ACCENTURE_ACTI_USERNAME`                   | /            | Yes       | Accenture ACTI Username                                                                                       |
-| Accenture ACTI password    | password                   | `ACCENTURE_ACTI_PASSWORD`                   | /            | Yes       | Accenture ACTI Password                                                                                       |
-| Accenture User Pool ID     | password                   | `ACCENTURE_ACTI_USER_POOL_ID`               | /            | Yes       | Accenture AWS Cognito User Pool Id                                                                            |
-| Accenture Client Id        | password                   | `ACCENTURE_ACTI_CLIENT_ID`                  | /            | Yes       | Accenture AWS Cognito Client Id                                                                               |
-| TLP Level                  | tlp_level                  | `ACCENTURE_ACTI_CLIENT_TLP_LEVEL`           | amber+strict | Yes       | TLP level to set on imported entities (allowed values are ['white', 'green', 'amber', 'amber+strict', 'red']) |
-| Relative Import start date | relative_import_start_date | `ACCENTURE_ACTI_RELATIVE_IMPORT_START_DATE` | P30D         | Yes       | Relative sate to start import from (in ISO-8601 format). Example: P30D for last 30 days                       |
+| Parameter                  | config.yml                 | Docker environment variable                 | Default | Mandatory | Description                                                                                                   |
+|----------------------------|----------------------------|---------------------------------------------|---------|-----------|---------------------------------------------------------------------------------------------------------------|
+| Accenture ACTI username    | username                   | `ACCENTURE_ACTI_USERNAME`                   | /       | Yes       | Accenture ACTI Username                                                                                       |
+| Accenture ACTI password    | password                   | `ACCENTURE_ACTI_PASSWORD`                   | /       | Yes       | Accenture ACTI Password                                                                                       |
+| Accenture User Pool ID     | password                   | `ACCENTURE_ACTI_USER_POOL_ID`               | /       | Yes       | Accenture AWS Cognito User Pool Id                                                                            |
+| Accenture Client Id        | password                   | `ACCENTURE_ACTI_CLIENT_ID`                  | /       | Yes       | Accenture AWS Cognito Client Id                                                                               |
+| TLP Level                  | tlp_level                  | `ACCENTURE_ACTI_CLIENT_TLP_LEVEL`           | amber   | Yes       | TLP level to set on imported entities (allowed values are ['white', 'green', 'amber', 'amber+strict', 'red']) |
+| Relative Import start date | relative_import_start_date | `ACCENTURE_ACTI_RELATIVE_IMPORT_START_DATE` | P30D    | Yes       | Relative sate to start import from (in ISO-8601 format). Example: P30D for last 30 days                       |
 
 ## Deployment
 
