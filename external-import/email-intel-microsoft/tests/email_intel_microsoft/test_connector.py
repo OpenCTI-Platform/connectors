@@ -56,7 +56,6 @@ def test_connector_process_data(
     assert str(report.published) == "2025-05-09 00:00:00+00:00"
     assert report.x_opencti_content == "body message1"
     assert report.report_types == [REPORT_TYPE_THREAT_REPORT]
-    assert report.created_by_ref == connector.converter.author.id
     assert report.object_marking_refs == [connector.converter.tlp_marking.id]
 
     report = stix_objects[1]
@@ -64,7 +63,6 @@ def test_connector_process_data(
     assert str(report.published) == "2025-05-09 00:00:00+00:00"
     assert report.x_opencti_content == "body message2"
     assert report.report_types == [REPORT_TYPE_THREAT_REPORT]
-    assert report.created_by_ref == connector.converter.author.id
     assert report.object_marking_refs == [connector.converter.tlp_marking.id]
 
 

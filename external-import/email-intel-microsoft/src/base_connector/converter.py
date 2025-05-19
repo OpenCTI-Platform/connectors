@@ -94,7 +94,6 @@ class BaseConverter(abc.ABC):
             name=name,
             report_types=report_types,
             published=published,
-            created_by_ref=self.author,
             object_marking_refs=[self.tlp_marking],
             custom_properties=ReportCustomProperties(
                 x_opencti_content=x_opencti_content,
