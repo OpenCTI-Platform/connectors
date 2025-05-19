@@ -53,6 +53,7 @@ class ConnectorConverter(BaseConverter):
                         name=attachment.filename,
                         mime_type=attachment.content_type,
                         data=base64.b64encode(attachment.payload),
+                        object_marking_refs=[self.tlp_marking.id],
                     )
                     for attachment in entity.attachments
                     if attachment.content_disposition == "attachment"
