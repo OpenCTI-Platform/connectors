@@ -1,3 +1,4 @@
+import base64
 from typing import Generator, Literal
 
 import stix2
@@ -51,7 +52,7 @@ class ConnectorConverter(BaseConverter):
                     OpenCTIFile(
                         name=attachment.filename,
                         mime_type=attachment.content_type,
-                        data=attachment.payload,
+                        data=base64.b64encode(attachment.payload),
                     )
                     for attachment in entity.attachments
                     if attachment.content_disposition == "attachment"
