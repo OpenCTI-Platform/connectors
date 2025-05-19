@@ -4,18 +4,18 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  name: 'Email Intel IMAP'
-  scope: 'email-intel-imap'
-  log_level: 'error'
-  duration_period: 'PT1H'
+#  name: 'Email Intel IMAP'
+#  scope: 'email-intel-imap'
+#  log_level: 'error'
+#  duration_period: 'PT1H'
 
 email_intel_imap:
-  tlp_level: 'amber+strict'
-  relative_import_start_date: 'P30D'
+#  tlp_level: 'amber+strict'
+#  relative_import_start_date: 'P30D'
   host: 'ChangeMe'
   port: 'ChangeMe'
   username: 'ChangeMe'
   password: 'ChangeMe'
-  mailbox: 'INBOX'
-  attachments_mime_types: 'application/pdf,text/csv,text/plain'
+#  mailbox: 'INBOX'
+#  attachments_mime_types: 'application/pdf,text/csv,text/plain'
   google_token_json: '{"token": "ChangeMe", ...}'
