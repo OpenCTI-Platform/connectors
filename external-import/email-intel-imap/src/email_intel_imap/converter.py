@@ -46,7 +46,7 @@ class ConnectorConverter(BaseConverter):
                 name=name,
                 published=entity.date,
                 report_types=[REPORT_TYPE_THREAT_REPORT],
-                x_opencti_content=entity.text,
+                x_opencti_content=entity.html,
                 x_opencti_files=[
                     OpenCTIFile(
                         name=attachment.filename,

@@ -38,7 +38,7 @@ def test_converter_tlp_marking(converter: ConnectorConverter) -> None:
 def test_converter_to_stix(converter: ConnectorConverter) -> None:
     published = datetime.datetime(2025, 4, 16, 10, 10, 10)
     mocked_email = Mock(
-        subject="Test Report", date=published, text="Test Content", attachments=[]
+        subject="Test Report", date=published, html="Test Content", attachments=[]
     )
 
     report = list(converter.to_stix_objects(entity=mocked_email))
@@ -61,7 +61,7 @@ def test_converter_to_stix_no_subject(converter: ConnectorConverter) -> None:
     mocked_email = Mock(
         subject="",
         date=published,
-        text="Test Content",
+        html="Test Content",
         from_="from_@email.com",
         attachments=[],
     )
@@ -108,7 +108,7 @@ def test_converter_to_stix_with_attachment(converter: ConnectorConverter) -> Non
     mocked_email = Mock(
         subject="",
         date=published,
-        text="Test Content",
+        html="Test Content",
         from_="from_@email.com",
         attachments=[],
     )
@@ -153,7 +153,7 @@ def test_converter_to_stix_with_attachment__mime_type_not_in_config(
     mocked_email = Mock(
         subject="",
         date=published,
-        text="Test Content",
+        html="Test Content",
         from_="from_@email.com",
         attachments=[
             Mock(

@@ -41,8 +41,8 @@ def test_connector_process_data_empty(connector: Connector) -> None:
 
 def test_connector_process_data(connector: Connector, mocked_mail_box: Mock) -> None:
     now = datetime.datetime.now(tz=datetime.UTC)
-    email1 = Mock(subject="email 1", date=now, text="email body 1", attachments=[])
-    email2 = Mock(subject="email 2", date=now, text="email body 2", attachments=[])
+    email1 = Mock(subject="email 1", date=now, html="email body 1", attachments=[])
+    email2 = Mock(subject="email 2", date=now, html="email body 2", attachments=[])
 
     mocked_mail_box.fetch.return_value = [email1, email2]
     stix_objects = connector.process_data()
@@ -75,8 +75,8 @@ def test_connector_process_data_since_relative_from_date(
     two_months_ago = datetime.datetime.fromisoformat("2025-02-22T12:00:00Z")
     today = datetime.datetime.fromisoformat("2025-04-22T12:00:00Z")
 
-    email1 = Mock(subject="1", text="body 1", attachments=[], date=two_months_ago)
-    email2 = Mock(subject="2", text="body 2", attachments=[], date=today)
+    email1 = Mock(subject="1", html="body 1", attachments=[], date=two_months_ago)
+    email2 = Mock(subject="2", html="body 2", attachments=[], date=today)
 
     assert (
         connector.config.email_intel_imap.relative_import_start_date
@@ -97,9 +97,9 @@ def test_connector_process_data_since_last_run(
     two_days_ago = datetime.datetime.fromisoformat("2025-04-20T12:00:00Z")
     today = datetime.datetime.fromisoformat("2025-04-22T12:00:00Z")
 
-    email1 = Mock(subject="1", text="body 1", attachments=[], date=two_months_ago)
-    email2 = Mock(subject="2", text="body 2", attachments=[], date=two_days_ago)
-    email3 = Mock(subject="3", text="body 3", attachments=[], date=today)
+    email1 = Mock(subject="1", html="body 1", attachments=[], date=two_months_ago)
+    email2 = Mock(subject="2", html="body 2", attachments=[], date=two_days_ago)
+    email3 = Mock(subject="3", html="body 3", attachments=[], date=today)
 
     assert (
         connector.config.email_intel_imap.relative_import_start_date
