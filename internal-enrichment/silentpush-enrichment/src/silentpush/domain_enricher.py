@@ -220,6 +220,7 @@ class DomainEnricher(Enricher):
         if not domain_info.get("registrar"):
             return
         registrar = Identity(
+            id=f"registrar--{uuid.uuid4()}",
             type="identity",
             name=domain_info.get("registrar"),
             description="Registrar",

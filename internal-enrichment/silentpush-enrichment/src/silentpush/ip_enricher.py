@@ -1,4 +1,5 @@
 import json
+import uuid
 from abc import abstractmethod
 
 from pycti import (
@@ -173,6 +174,7 @@ class IPEnricher(Enricher):
         )
         try:
             location = Location(
+                id=f"location--{uuid.uuid4()}",
                 country=_location.get("country_name"),
                 region=_location.get("continent_name"),
                 created_by_ref=self._author["id"],
