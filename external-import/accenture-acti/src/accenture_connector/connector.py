@@ -1,13 +1,13 @@
+import datetime
 import json
 import sys
-import datetime
 
+from html_to_markdown import convert_to_markdown
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
 from .config_loader import ConfigConnector
 from .converter_to_stix import ConverterToStix
-from html_to_markdown import convert_to_markdown
 
 
 class ConnectorAccenture:

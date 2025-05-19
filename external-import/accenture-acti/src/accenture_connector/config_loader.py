@@ -1,6 +1,7 @@
+import datetime
 import os
 from pathlib import Path
-import datetime
+
 import isodate
 import yaml
 from pycti import get_config_variable

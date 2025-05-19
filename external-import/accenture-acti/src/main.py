@@ -1,8 +1,9 @@
 import traceback
 
+from pycti import OpenCTIConnectorHelper
+
 from accenture_connector import ConnectorAccenture
 from accenture_connector.config_loader import ConfigConnector
-from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     """
