@@ -5,6 +5,6 @@ pydantic==2.10.6
 google-api-python-client>=2.169.0
 google-api-core==2.24.2
 google-auth==2.40.1
-google-auth-oauthlib==1.2.2
-google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.2  # prefered to default one by google-auth 
+google-auth-httplib2==0.2.0  # prefered to default one by google-auth see https://github.com/googleapis/google-auth-library-python-httplib2?tab=readme-ov-file#introduction
 stix2~=3.0.1
