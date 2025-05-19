@@ -66,7 +66,7 @@ def test_artifact_model() -> None:
         spec_version="2.1",
         id=f"artifact--{uuid4()}",
         mime_type="application/x-dosexec",
-        payload_bin=b"FakeMZHeaderData==",  # Base64-safe binary
+        payload_bin=b"FakeMZHeaderData==",
     )
 
     print("=== MINIMAL ARTIFACT (payload_bin) ===")  # noqa: T201

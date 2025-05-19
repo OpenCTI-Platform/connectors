@@ -2,6 +2,9 @@
 
 from typing import ClassVar, List
 
+from connector.src.custom.exceptions.gti_configuration_error import (
+    GTIConfigurationError,
+)
 from connector.src.octi.interfaces.base_config import BaseConfig
 from pydantic import field_validator
 from pydantic_settings import SettingsConfigDict
@@ -56,11 +59,11 @@ class GTIConfig(BaseConfig):
             parts = [item.strip() for item in v.split(",") if item.strip()]
 
         if not parts:
-            raise ValueError("At least one report type must be specified.")
+            raise GTIConfigurationError("At least one report type must be specified.")
 
         invalid = set(parts) - set(ALLOWED_REPORT_TYPES)
         if invalid:
-            raise ValueError(
+            raise GTIConfigurationError(
                 f"Invalid report types: {', '.join(invalid)}. "
                 f"Allowed values: {', '.join(ALLOWED_REPORT_TYPES)}."
             )
@@ -74,11 +77,11 @@ class GTIConfig(BaseConfig):
             parts = [item.strip() for item in v.split(",") if item.strip()]
 
         if not parts:
-            raise ValueError("At least one origin must be specified.")
+            raise GTIConfigurationError("At least one origin must be specified.")
 
         invalid = set(parts) - set(ALLOWED_ORIGINS)
         if invalid:
-            raise ValueError(
+            raise GTIConfigurationError(
                 f"Invalid origins: {', '.join(invalid)}. "
                 f"Allowed values: {', '.join(ALLOWED_ORIGINS)}."
             )

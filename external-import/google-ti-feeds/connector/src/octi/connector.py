@@ -15,6 +15,9 @@ if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper as OctiHelper  # type: ignore
 
 
+LOG_PREFIX = "[Connector]"
+
+
 class Connector:
     """Specifications of the external import connector.
 
@@ -74,30 +77,70 @@ class Connector:
         For now, it only imports reports from Google Threat Intelligence.
         But it can be extended to import other types of intelligence in the future.
         """
+        error_flag = True
+        split_work = self._config.connector_config.split_work
         try:
             gti_config = self._config.get_config_class(GTIConfig)
             if gti_config.import_reports:
                 orchestrator = PipelineReportsOrchestrator(
                     gti_config=gti_config,
                     work_manager=self.work_manager,
+                    tlp_level=self._config.connector_config.tlp_level.lower(),
+                    batch_size=40,
+                    flush_interval=300,
                     http_timeout=60,
                     max_failures=5,
                     cooldown_time=60,
-                    max_requests=10,
+                    max_requests=60,
                     period=60,
                     max_retries=5,
                     backoff=2,
                     logger=self._logger,
+                    split_work=split_work,
                 )
-                asyncio.run(orchestrator.run())
+                loop = asyncio.new_event_loop()
+                try:
+                    asyncio.set_event_loop(loop)
+                    error_flag = loop.run_until_complete(orchestrator.run())
+                except asyncio.CancelledError:
+                    self._logger.info(
+                        f"{LOG_PREFIX} Pipeline execution was cancelled.",
+                        meta={"operation": "cancelled"},
+                    )
+                    error_flag = True
+                finally:
+                    try:
+                        loop.run_until_complete(
+                            asyncio.wait_for(orchestrator.shutdown(), timeout=120)
+                        )
+                    except (asyncio.TimeoutError, Exception) as e:
+                        self._logger.error(
+                            f"{LOG_PREFIX} Error during shutdown: {str(e)}",
+                            meta={"error": str(e)},
+                        )
+                    loop.close()
         except (KeyboardInterrupt, SystemExit):
             self._logger.info(
-                "[CONNECTOR] Connector stopped...",
+                f"{LOG_PREFIX} Connector stopped...",
                 {"connector_name": self._helper.connect_name},
             )
             sys.exit(0)
+        except asyncio.CancelledError:
+            self._logger.info(
+                f"{LOG_PREFIX} Operation was cancelled.",
+                {"connector_name": self._helper.connect_name},
+            )
         except Exception as err:
-            self._logger.error(str(err))
+            self._logger.error(
+                f"{LOG_PREFIX} An unexpected error occurred.", meta={"error": str(err)}
+            )
+        finally:
+            self._logger.info(
+                f"{LOG_PREFIX} Connector stopped...",
+                {"connector_name": self._helper.connect_name},
+            )
+            self.work_manager.process_all_remaining_works(error_flag=error_flag)
+            self._logger.info(f"{LOG_PREFIX} All remaining works marked to process.")
 
     def run(self) -> None:
         """Run the main process encapsulated in a scheduler.

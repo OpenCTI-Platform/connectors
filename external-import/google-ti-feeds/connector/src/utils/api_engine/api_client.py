@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from .api_request_model import ApiRequestModel
 from .exceptions.api_error import ApiError
 from .exceptions.api_http_error import ApiHttpError
+from .exceptions.api_network_error import ApiNetworkError
 from .exceptions.api_ratelimit_error import ApiRateLimitError
 from .exceptions.api_timeout_error import ApiTimeoutError
 from .exceptions.api_validation_error import ApiValidationError
@@ -15,6 +16,8 @@ from .interfaces.base_request_strategy import BaseRequestStrategy
 
 if TYPE_CHECKING:
     from logging import Logger
+
+LOG_PREFIX = "[API Client]"
 
 
 class ApiClient:
@@ -60,7 +63,7 @@ class ApiClient:
 
         """
         self._logger.debug(
-            f"[API Client] Preparing to call API: {method} {url} (Model: {model.__name__ if model else 'No'}, "
+            f"{LOG_PREFIX} Preparing to call API: {method} {url} (Model: {model.__name__ if model else 'No'}, "
             f"ResponseKey: {response_key}, Timeout: {timeout})"
         )
         try:
@@ -76,28 +79,36 @@ class ApiClient:
                 timeout=timeout,
             )
             response = await self.strategy.execute(api_request)
-            self._logger.debug(f"[API Client] API call to {method} {url} successful.")
+            self._logger.debug(f"{LOG_PREFIX} API call to {method} {url} successful.")
             return response
         except (
             ApiTimeoutError,
             ApiRateLimitError,
             ApiHttpError,
+            ApiNetworkError,
             ApiValidationError,
         ) as known_api_err:
+            error_type = type(known_api_err).__name__
+            error_prefix = (
+                "Network connectivity issue"
+                if isinstance(known_api_err, ApiNetworkError)
+                else "Known API error"
+            )
+
             self._logger.error(  # type: ignore[call-arg]
-                f"[API Client] Known API error during call_api for {method} {url}: {type(known_api_err).__name__} - {known_api_err}",
-                meta={"error": str(known_api_err)},
+                f"{LOG_PREFIX} {error_prefix} during call_api for {method} {url}: {error_type} - {known_api_err}",
+                meta={"error": str(known_api_err), "error_type": error_type},
             )
             raise known_api_err
         except ApiError as api_err:
             self._logger.error(  # type: ignore[call-arg]
-                f"[API Client] API error during call_api for {method} {url}: {api_err}",
+                f"{LOG_PREFIX} API error during call_api for {method} {url}: {api_err}",
                 meta={"error": str(api_err)},
             )
             raise api_err
         except Exception as e:
             self._logger.error(  # type: ignore[call-arg]
-                f"[API Client] Unexpected failure in call_api for {method} {url}: {e}",
+                f"{LOG_PREFIX} Unexpected failure in call_api for {method} {url}: {e}",
                 meta={"error": str(e)},
             )
             raise ApiError(f"Failed to call API {method} {url}: {e}") from e

@@ -4,7 +4,7 @@ from typing import Optional
 
 from connector.src.stix.v21.models.ovs.region_ov_enums import RegionOV
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
-from pydantic import Field, model_validator
+from pydantic import Field
 from stix2.v21 import Location, _STIXBase21  # type: ignore
 
 
@@ -53,24 +53,6 @@ class LocationModel(BaseSDOModel):
     postal_code: Optional[str] = Field(
         default=None, description="Postal code for the Location."
     )
-
-    @model_validator(mode="after")
-    def validate_coordinates(self, model):  # type: ignore
-        """Ensure that latitude and longitude are provided together."""
-        lat = model.latitude
-        lon = model.longitude
-        prec = model.precision
-
-        if (lat is None) ^ (lon is None):
-            raise ValueError(
-                "Both 'latitude' and 'longitude' must be provided together."
-            )
-        if prec is not None and (lat is None or lon is None):
-            raise ValueError(
-                "'precision' requires both 'latitude' and 'longitude' to be set."
-            )
-
-        return model
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""

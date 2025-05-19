@@ -86,7 +86,7 @@ def test_observed_data_model() -> None:
         first_observed=now - timedelta(hours=3),
         last_observed=now - timedelta(hours=1),
         number_observed=5,
-        objects={  # Deprecated but still technically allowed
+        objects={
             "0": {
                 "type": "file",
                 "name": "payload.exe",

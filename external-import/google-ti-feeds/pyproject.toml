@@ -28,6 +28,7 @@ dependencies = [
     "stix2 >=3.0.1, <4",
     "aiohttp >=3.11.13, <4",
     "isodate >=0.7.2, <0.8",
+    "pycountry >=24.6.1, <25",
 ]
 
 [project.optional-dependencies]
@@ -59,13 +60,15 @@ where = ["."]
 [tool.pytest.ini_options]
 testpaths = ["./tests"]
 asyncio_default_fixture_loop_scope = "function"
-
+asyncio_mode = "auto"
 
 [tool.isort]
 profile = "black"
+line_length = 88
 
 [tool.black]
 target-version = ['py312']
+line_length = 88
 
 [tool.ruff]
 exclude = [

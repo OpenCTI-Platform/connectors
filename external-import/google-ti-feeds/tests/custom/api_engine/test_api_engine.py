@@ -277,9 +277,9 @@ async def test_circuit_breaker_opens_after_failures(
     with pytest.raises(ApiError):
         await client.call_api(url)
 
-    assert (
+    assert (  # noqa: S101
         mock_aiohttp_client.get.await_count == circuit_breaker.max_failures
-    )  # noqa: S101
+    )
 
 
 # =====================

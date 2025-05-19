@@ -63,6 +63,10 @@ class SDOOptionalModel(BaseModel):
         default=None,
         description="Custom STIX extensions applied to this object.",
     )
+    custom_properties: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Custom properties that are not part of the STIX specification.",
+    )
 
 
 class BaseSDOModel(SDORequiredModel, SDOOptionalModel):

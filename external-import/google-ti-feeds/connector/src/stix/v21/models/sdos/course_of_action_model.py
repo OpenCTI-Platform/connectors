@@ -49,9 +49,7 @@ class CourseOfActionModel(BaseSDOModel):
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""
-        return CourseOfAction(
-            allow_custom=True, **self.model_dump(exclude_none=True)
-        )  # allow_custom=True because stix2 doesn't support action_type, os_execution_envs, action_bin, action_reference.
+        return CourseOfAction(allow_custom=True, **self.model_dump(exclude_none=True))
 
 
 def test_course_of_action_model() -> None:
@@ -77,7 +75,7 @@ def test_course_of_action_model() -> None:
     print(minimal.to_stix2_object().serialize(pretty=True))  # noqa: T201
 
     # === Full Course of Action ===
-    # Simulated binary content
+
     encoded_bin = b"#!/bin/bash\necho 'defense'"
 
     full = CourseOfActionModel(

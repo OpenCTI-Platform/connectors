@@ -16,8 +16,6 @@ class GlobalConfig:
 
     def __init__(self) -> None:
         """Initialize the global configuration."""
-        #    self.load_config()
-
         self.instanciate_configs: Dict[str, Any] = {}
         try:
             self.octi_config = OctiConfig()
