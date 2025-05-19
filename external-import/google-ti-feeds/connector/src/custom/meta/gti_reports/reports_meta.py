@@ -15,3 +15,4 @@ EVENT_MAP: Dict[str, asyncio.Event] = {}
 
 
 MALWARE_FAMILIES_BROKER = f"{PREFIX_BROKER}/malware_families"
+THREAT_ACTORS_BROKER = f"{PREFIX_BROKER}/threat_actors"

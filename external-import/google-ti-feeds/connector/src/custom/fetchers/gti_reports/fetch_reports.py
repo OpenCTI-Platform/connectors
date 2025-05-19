@@ -15,6 +15,9 @@ import isodate  # type: ignore[import-untyped]
 from connector.src.custom.fetchers.gti_reports.fetch_malware_families import (
     FetchMalwareFamilies,
 )
+from connector.src.custom.fetchers.gti_reports.fetch_threat_actors import (
+    FetchThreatActors,
+)
 from connector.src.custom.interfaces.base_fetcher import BaseFetcher
 from connector.src.custom.meta.gti_reports.reports_meta import (
     LAST_INGESTED_REPORT_MODIFICATION_DATE_STATE_KEY,
@@ -187,13 +190,22 @@ class FetchReports(BaseFetcher):
 
     async def _orchestrate_subfetches(self, reports: List[GTIReportData]) -> None:
         """Orchestrate the subfetches of the reports."""
-        tasks = [
-            FetchMalwareFamilies(
-                gti_config=self._gti_config,
-                api_client=self._api_client,
-                report=report,
-                logger=self._logger,
-            ).fetch()
-            for report in reports
-        ]
+        tasks = []
+        for report in reports:
+            tasks.append(
+                FetchMalwareFamilies(
+                    gti_config=self._gti_config,
+                    api_client=self._api_client,
+                    report=report,
+                    logger=self._logger,
+                ).fetch()
+            )
+            tasks.append(
+                FetchThreatActors(
+                    gti_config=self._gti_config,
+                    api_client=self._api_client,
+                    report=report,
+                    logger=self._logger,
+                ).fetch()
+            )
         await asyncio.gather(*tasks)
