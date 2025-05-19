@@ -88,14 +88,12 @@ class BaseConverter(abc.ABC):
         report_types: list[str],
         x_opencti_content: str,
         x_opencti_files: list[OpenCTIFile],
-        created_by_ref: stix2.Identity | None = None,
     ) -> stix2.Report:
         return RFReport(
             id=pycti.Report.generate_id(name=name, published=published),
             name=name,
             report_types=report_types,
             published=published,
-            created_by_ref=created_by_ref,
             object_marking_refs=[self.tlp_marking],
             custom_properties=ReportCustomProperties(
                 x_opencti_content=x_opencti_content,
