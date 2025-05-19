@@ -14,13 +14,14 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
+from requests.exceptions import ConnectionError, HTTPError
+
 from reportimporter.constants import (
     RESULT_FORMAT_CATEGORY,
     RESULT_FORMAT_MATCH,
     RESULT_FORMAT_TYPE,
 )
 from reportimporter.util import create_stix_object
-from requests.exceptions import ConnectionError, HTTPError
 
 
 class ReportImporter:
@@ -92,10 +93,12 @@ class ReportImporter:
             }
             # Reset file offset
             file_content_buffered.seek(0)
-        # Parse report from web service
+
+        # Send to extract_entities_relations endpoint that also returns relationships by default
         try:
             response = requests.post(
-                url=self.web_service_url + "/extract_entities",
+                url=self.web_service_url + "/extract_entities_relations",
+                params={"with_relations": "true"},
                 files={
                     "file": (data["file_id"], file_content_buffered, data["file_mime"])
                 },
@@ -116,12 +119,22 @@ class ReportImporter:
         parsed = response.json()
         if not parsed:
             return "No information extracted from report"
-        # Process parsing results
-        self.helper.connector_logger.debug(f"Results: {parsed}")
-        observables, entities = self._process_parsing_results(parsed, entity)
-        # Send results to OpenCTI
+
+        # Parse and build STIX entities / observables, and map text to STIX id (for relationship linking)
+        observables, entities, text_to_id = self._process_parsing_results(
+            parsed, entity
+        )
+        predicted_rels = parsed.get("relationships", [])
+
+        # Build and send STIX bundle to OpenCTI, including predicted relationships with relations handling fallback
         observable_cnt = self._process_parsed_objects(
-            entity, observables, entities, bypass_validation, file_name
+            entity,
+            observables,
+            entities,
+            predicted_rels,
+            bypass_validation,
+            file_name,
+            text_to_id,
         )
         entity_cnt = len(entities)
 
@@ -152,10 +165,13 @@ class ReportImporter:
         return file_name, buffer
 
     def _process_parsing_results(
-        self, parsed: List[Dict], context_entity: Dict
-    ) -> Tuple[List[Dict], List[str]]:
+        self, parsed: Dict, context_entity: Dict
+    ) -> Tuple[List[Dict], List[Dict], Dict[str, str]]:
         observables = []
         entities = []
+        text_to_id = {}  # text value -> STIX id
+
+        # Collect markings and author from the context entity, if any
         if context_entity is not None:
             object_markings = [
                 x["standard_id"] for x in context_entity.get("objectMarking", [])
@@ -166,27 +182,31 @@ class ReportImporter:
         else:
             object_markings = []
             author = None
-        if author is not None:
-            author = author.get("standard_id", None)
+        author = author.get("standard_id") if author else None
 
-        for match in parsed:
+        # Iterate over entities/observables extracted by the ML model
+        for match in parsed.get("entities", []):
+            category = match[RESULT_FORMAT_CATEGORY]
+            txt = match[RESULT_FORMAT_MATCH]
+
             if match[RESULT_FORMAT_TYPE] == "entity":
                 stix_object = create_stix_object(
-                    match[RESULT_FORMAT_CATEGORY],
-                    match[RESULT_FORMAT_MATCH],
+                    category,
+                    txt,
                     object_markings,
                     custom_properties={
                         "created_by_ref": author,
                     },
                 )
-                if match[RESULT_FORMAT_CATEGORY] == "Attack-Pattern.x_mitre_id":
+                # Fallback for MITRE ATT&CK IDs already existing in the database
+                if category == "Attack-Pattern.x_mitre_id":
                     ttp_object = self.helper.api.attack_pattern.read(
                         filters={
                             "mode": "and",
                             "filters": [
                                 {
                                     "key": "x_mitre_id",
-                                    "values": [match[RESULT_FORMAT_MATCH]],
+                                    "values": [txt],
                                 }
                             ],
                             "filterGroups": [],
@@ -199,19 +219,35 @@ class ReportImporter:
                             only_entity=True,
                         )
                         stix_object = stix_ttp
-                entities.append(stix_object)
+                if stix_object:
+                    entities.append(stix_object)
+                    if txt not in text_to_id:
+                        text_to_id[txt] = stix_object["id"]
+                else:
+                    self.helper.connector_logger.debug(
+                        f"Unsupported entity category: {match}"
+                    )
+
             if match[RESULT_FORMAT_TYPE] == "observable":
                 stix_object = create_stix_object(
-                    match[RESULT_FORMAT_CATEGORY],
-                    match[RESULT_FORMAT_MATCH],
+                    category,
+                    txt,
                     object_markings,
                     custom_properties={
                         "x_opencti_create_indicator": self.create_indicator,
                         "created_by_ref": author,
                     },
                 )
-                observables.append(stix_object)
-        return observables, entities
+                if stix_object:
+                    observables.append(stix_object)
+                    if txt not in text_to_id:
+                        text_to_id[txt] = stix_object["id"]
+                else:
+                    self.helper.connector_logger.debug(
+                        f"Unsupported observable category: {match}"
+                    )
+
+        return observables, entities, text_to_id
 
     def _convert_id(self, type, standard_id):
         if type == "Case-Incident":
@@ -235,14 +271,35 @@ class ReportImporter:
         entity: Dict,
         observables: List,
         entities: List,
+        predicted_rels: List,
         bypass_validation: bool,
         file_name: str,
+        text_to_id: dict,
     ) -> int:
+        """Build STIX bundle: includes observables, entities, and predicted relationships.
+
+        Args:
+            entity (Dict): _description_
+            observables (List): _description_
+            entities (List): _description_
+            predicted_rels (List): _description_
+            bypass_validation (bool): _description_
+            file_name (str): _description_
+            text_to_id (dict): _description_
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            int: _description_
+        """
         if len(observables) == 0 and len(entities) == 0:
             return 0
-        ids = []
-        observables_ids = []
-        entities_ids = []
+
+        ids: List[str] = []
+        observables_ids: List[str] = []
+        entities_ids: List[str] = []
+
         for o in observables:
             if o["id"] not in ids:
                 observables_ids.append(o["id"])
@@ -251,6 +308,10 @@ class ReportImporter:
             if e["id"] not in ids:
                 entities_ids.append(e["id"])
                 ids.append(e["id"])
+
+        relationships: List[stix2.Relationship] = []  # accumulate all relationships
+
+        # Build relationships defined by the connector's own rules
         if entity is not None:
             entity_stix_bundle = (
                 self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
@@ -259,40 +320,37 @@ class ReportImporter:
             )
             if len(entity_stix_bundle["objects"]) == 0:
                 raise ValueError("Entity cannot be found or exported")
+
             entity_stix = [
-                object
-                for object in entity_stix_bundle["objects"]
-                if object["id"]
+                obj
+                for obj in entity_stix_bundle["objects"]
+                if obj["id"]
                 == self._convert_id(entity["entity_type"], entity["standard_id"])
             ][0]
-            relationships = []
-            # For containers, just insert everything in it
-            if (
-                entity_stix["type"] == "report"
-                or entity_stix["type"] == "grouping"
-                or entity_stix["type"] == "x-opencti-case-incident"
-                or entity_stix["type"] == "x-opencti-case-rfi"
-                or entity_stix["type"] == "x-opencti-case-rft"
-                or entity_stix["type"] == "note"
-                or entity_stix["type"] == "opinion"
-            ):
+
+            # Containers: put everything inside
+            if entity_stix["type"] in {
+                "report",
+                "grouping",
+                "x-opencti-case-incident",
+                "x-opencti-case-rfi",
+                "x-opencti-case-rft",
+                "note",
+                "opinion",
+            }:
                 entity_stix["object_refs"] = (
-                    entity_stix["object_refs"] + observables_ids + entities_ids
-                    if "object_refs" in entity_stix
-                    else observables_ids + entities_ids
+                    entity_stix.get("object_refs", []) + observables_ids + entities_ids
                 )
-                entity_stix["x_opencti_files"] = (
-                    [self.file] if self.file is not None else []
-                )
-            # For observed data, just insert all observables in it
+                entity_stix["x_opencti_files"] = [self.file] if self.file else []
+
+            # Observed-data: only observables
             elif entity_stix["type"] == "observed-data":
                 entity_stix["object_refs"] = (
-                    entity_stix["object_refs"] + observables_ids
-                    if "object_refs" in entity_stix
-                    else observables_ids
+                    entity_stix.get("object_refs", []) + observables_ids
                 )
+
+            # Other entities: create “related-to” relationships
             else:
-                # For all other entities, relate all observables
                 for observable in observables:
                     relationships.append(
                         stix2.Relationship(
@@ -305,114 +363,119 @@ class ReportImporter:
                             allow_custom=True,
                         )
                     )
+
+                # Additional hard-coded logic (incident/threat-actor) unchanged
                 if entity_stix["type"] == "incident":
-                    for entity_id in entities_ids:
-                        # Incident attributed-to Threats
-                        if entity_id.startswith("intrusion-set"):
+                    for eid in entities_ids:
+                        if eid.startswith("intrusion-set"):
+                            rel_type = "attributed-to"
+                        elif eid.startswith("vulnerability"):
+                            rel_type = "targets"
+                        elif eid.startswith("attack-pattern"):
+                            rel_type = "uses"
+                        else:
+                            rel_type = None
+
+                        if rel_type:
                             relationships.append(
                                 stix2.Relationship(
                                     id=StixCoreRelationship.generate_id(
-                                        "attributed-to",
-                                        entity_stix["id"],
-                                        entity_id,
+                                        rel_type, entity_stix["id"], eid
                                     ),
-                                    relationship_type="attributed-to",
+                                    relationship_type=rel_type,
                                     source_ref=entity_stix["id"],
-                                    target_ref=entity_id,
+                                    target_ref=eid,
                                     allow_custom=True,
                                 )
                             )
-                        # Incident targets Vulnerabilities
-                        elif entity_id.startswith("vulnerability"):
-                            relationships.append(
-                                stix2.Relationship(
-                                    id=StixCoreRelationship.generate_id(
-                                        "targets",
-                                        entity_stix["id"],
-                                        entity_id,
-                                    ),
-                                    relationship_type="targets",
-                                    source_ref=entity_stix["id"],
-                                    target_ref=entity_id,
-                                    allow_custom=True,
-                                )
-                            )
-                        # Incident uses Attack Patterns
-                        elif entity_id.startswith("attack-pattern"):
-                            relationships.append(
-                                stix2.Relationship(
-                                    id=StixCoreRelationship.generate_id(
-                                        "uses", entity_stix["id"], entity_id
-                                    ),
-                                    relationship_type="uses",
-                                    source_ref=entity_stix["id"],
-                                    target_ref=entity_id,
-                                    allow_custom=True,
-                                )
-                            )
+
                 if entity_stix["type"] == "threat-actor":
                     for entity_id in entities_ids:
-                        # Threat actor targets Vulnerabilities
                         if entity_id.startswith("vulnerability"):
-                            relationships.append(
-                                stix2.Relationship(
-                                    id=StixCoreRelationship.generate_id(
-                                        "targets",
-                                        entity_stix["id"],
-                                        entity_id,
-                                    ),
-                                    relationship_type="targets",
-                                    source_ref=entity_stix["id"],
-                                    target_ref=entity_id,
-                                    allow_custom=True,
-                                )
-                            )
-                        # Threat Actor uses Attack Patterns
+                            rel_type = "targets"
                         elif entity_id.startswith("attack-pattern"):
+                            rel_type = "uses"
+                        else:
+                            rel_type = None
+
+                        if rel_type:
                             relationships.append(
                                 stix2.Relationship(
                                     id=StixCoreRelationship.generate_id(
-                                        "uses", entity_stix["id"], entity_id
+                                        rel_type, entity_stix["id"], entity_id
                                     ),
-                                    relationship_type="uses",
+                                    relationship_type=rel_type,
                                     source_ref=entity_stix["id"],
                                     target_ref=entity_id,
                                     allow_custom=True,
                                 )
                             )
-            observables = observables + relationships
-            observables.append(entity_stix)
+
+            observables = observables + relationships + [entity_stix]
+
         else:
+
+            # ------------------------------------------------------------
+            # Create relationships predicted by the ML model
+            for rel in predicted_rels:
+                src_txt = rel.get("source_text") or rel.get("from")
+                dst_txt = rel.get("target_text") or rel.get("to")
+                rel_type = rel.get("relation_type")
+
+                src_id = text_to_id.get(src_txt)
+                dst_id = text_to_id.get(dst_txt)
+
+                if not src_id or not dst_id or not rel_type:
+                    self.helper.connector_logger.warning(
+                        f"Skipped relation (missing data): {rel}"
+                    )
+                    continue
+
+                relationships.append(
+                    stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(rel_type, src_id, dst_id),
+                        relationship_type=rel_type,
+                        source_ref=src_id,
+                        target_ref=dst_id,
+                        allow_custom=True,
+                    )
+                )
+
+            observables = observables + entities + relationships
+
+            relationship_ids = [rel["id"] for rel in relationships]
+
+            # No context entity: wrap everything in a freshly created Report
             now = datetime.now(timezone.utc)
             report = stix2.Report(
                 id=Report.generate_id(file_name, now),
-                name="import-document-ai" + file_name,
+                name="import-document-ai_" + file_name,
                 description="Automatic import",
                 published=now,
                 report_types=["threat-report"],
-                object_refs=observables_ids + entities_ids,
+                object_refs=observables_ids + entities_ids + relationship_ids,
                 allow_custom=True,
-                custom_properties={
-                    "x_opencti_files": [self.file] if self.file is not None else []
-                },
+                custom_properties={"x_opencti_files": [self.file] if self.file else []},
             )
-            observables.append(report)
-        observables = observables + entities
-        bundles_sent = []
-        if len(observables) > 0:
-            ids = []
-            final_objects = []
-            for object in observables:
-                if object["id"] not in ids:
-                    ids.append(object["id"])
-                    final_objects.append(object)
-            bundle = stix2.Bundle(objects=final_objects, allow_custom=True).serialize()
-            bundles_sent = self.helper.send_stix2_bundle(
-                bundle=bundle,
-                bypass_validation=bypass_validation,
-                file_name="import-document-ai-" + Path(file_name).stem + ".json",
-                entity_id=entity["id"] if entity is not None else None,
-            )
+            observables = observables + [report] + relationships
 
-        # len() - 1 because the report update increases the count by one
+        # ------------------------------------------------------------
+        # (3) Deduplicate objects and send bundle
+        # ------------------------------------------------------------
+        final_ids: List[str] = []
+        final_objects: List[Dict] = []
+        for obj in observables:
+            if obj["id"] not in final_ids:
+                final_ids.append(obj["id"])
+                final_objects.append(obj)
+
+        bundle = stix2.Bundle(objects=final_objects, allow_custom=True).serialize()
+        bundles_sent = self.helper.send_stix2_bundle(
+            bundle=bundle,
+            bypass_validation=bypass_validation,
+            file_name="import-document-ai-" + Path(file_name).stem + ".json",
+            entity_id=entity["id"] if entity else None,
+        )
+
+        # len() - 1 because a report update is counted as an observable by OpenCTI
         return len(bundles_sent) - 1
