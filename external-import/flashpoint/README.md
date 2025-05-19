@@ -53,7 +53,7 @@ Priority: **YAML > .env > environment > defaults**.
 | Connector ID    | id              | `CONNECTOR_ID`              | /          | Yes       | A unique `UUIDv4` identifier for this connector instance.                        |
 | Connector Name  | name            | `CONNECTOR_NAME`            | /          | Yes       | Name of the connector.                                                           |
 | Connector Scope | scope           | `CONNECTOR_SCOPE`           | flashpoint | No        | The scope or type of data the connector is importing (e.g., flashpoint).         |
-| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | info       | No        | Determines the verbosity of the logs. Options: `debug`, `info`, `warn`, `error`. |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | error      | No        | Determines the verbosity of the logs. Options: `debug`, `info`, `warn`, `error`. |
 | Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | "PT1H"     | No        | The period of time to wait between two connector's runs (in ISO-8601 format).    |
 
 ### Connector extra parameters environment variables
