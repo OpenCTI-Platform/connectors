@@ -11,7 +11,7 @@ authors = [
   {name = "Filigran"},
   {name = "Pauline Eustachy", email = "pauline.eustachy@filigran.io"},
 ]
-requires-python = ">= 3.11, <3.13"
+requires-python = ">=3.13, <3.14"
 dependencies = [
     "pycti==6.6.11",
     "validators~=0.35.0",
