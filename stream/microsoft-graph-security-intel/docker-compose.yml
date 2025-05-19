@@ -8,7 +8,7 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
       - "CONNECTOR_NAME=Microsoft Graph Security Intel"
-      - MICROSOFT_GRAPH_SECURITY_INTEL_TENANT_ID=ChangeMe # Azure Tentant ID
+      - MICROSOFT_GRAPH_SECURITY_INTEL_TENANT_ID=ChangeMe # Azure Tenant ID
       - MICROSOFT_GRAPH_SECURITY_INTEL_CLIENT_ID=ChangeMe # Azure App Client ID
       - MICROSOFT_GRAPH_SECURITY_INTEL_CLIENT_SECRET=ChangeMe # Azure App Client Secret
     restart: unless-stopped
