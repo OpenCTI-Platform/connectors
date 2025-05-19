@@ -60,7 +60,10 @@ def test_converter_create_report() -> None:
         x_opencti_content="Test content",
         x_opencti_files=[
             OpenCTIFile(
-                name="name", mime_type="text/plain", data=base64.b64encode(b"text")
+                name="name",
+                mime_type="text/plain",
+                data=base64.b64encode(b"text"),
+                object_marking_refs=[converter.tlp_marking.id],
             )
         ],
     )
@@ -76,5 +79,10 @@ def test_converter_create_report() -> None:
     assert report.object_marking_refs == [converter.tlp_marking.id]
     assert report.x_opencti_content == "Test content"
     assert report.x_opencti_files == [
-        {"name": "name", "mime_type": "text/plain", "data": base64.b64encode(b"text")}
+        {
+            "name": "name",
+            "mime_type": "text/plain",
+            "data": base64.b64encode(b"text"),
+            "object_marking_refs": [converter.tlp_marking.id],
+        }
     ]

@@ -9,6 +9,7 @@ class OpenCTIFile(BaseModel):
     name: str
     mime_type: str
     data: Base64Bytes
+    object_marking_refs: list[str]
 
 
 class ReportCustomProperties(CustomProperties):

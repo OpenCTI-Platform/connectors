@@ -125,6 +125,7 @@ def test_converter_to_stix_with_attachment(converter: ConnectorConverter) -> Non
             "name": "test.pdf",
             "mime_type": "application/pdf",
             "data": base64.b64encode(b"%PDF-1.4\nTest PDF Content"),
+            "object_marking_refs": [converter.tlp_marking.id],
         }
     ]
 
@@ -136,10 +137,12 @@ def test_converter_to_stix_with_attachment(converter: ConnectorConverter) -> Non
             "name": "test.pdf",
             "mime_type": "application/pdf",
             "data": base64.b64encode(b"%PDF-1.4\nTest PDF Content"),
+            "object_marking_refs": [converter.tlp_marking.id],
         },
         {
             "name": "test.csv",
             "mime_type": "text/csv",
             "data": base64.b64encode(b"Test CSV Content"),
+            "object_marking_refs": [converter.tlp_marking.id],
         },
     ]

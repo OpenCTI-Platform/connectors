@@ -50,6 +50,7 @@ class ConnectorConverter(BaseConverter):
                         name=attachment.name,
                         mime_type=attachment.content_type,
                         data=attachment.content_bytes,
+                        object_marking_refs=[self.tlp_marking.id],
                     )
                     for attachment in entity.attachments or []
                 ],
