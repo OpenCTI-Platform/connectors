@@ -2,8 +2,12 @@ import json
 import uuid
 from abc import abstractmethod
 
-from pycti import (STIX_EXT_OCTI, CustomObservableHostname, OpenCTIStix2,
-                   StixCoreRelationship)
+from pycti import (
+    STIX_EXT_OCTI,
+    CustomObservableHostname,
+    OpenCTIStix2,
+    StixCoreRelationship,
+)
 from stix2 import AutonomousSystem, Location, Relationship
 from stix2.exceptions import PropertyPresenceError
 
