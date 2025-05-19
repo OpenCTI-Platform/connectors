@@ -1,24 +1,12 @@
 from abc import ABC, abstractmethod
 
 import stix2
-from pycti import (
-    STIX_EXT_OCTI_SCO,
-    Identity,
-    OpenCTIConnectorHelper,
-    OpenCTIStix2,
-    StixCoreRelationship,
-)
-from stix2 import (
-    Artifact,
-    ExternalReference,
-    File,
-    HTTPRequestExt,
-    Relationship,
-    X509Certificate,
-)
-from stix2.v20.vocab import INDUSTRY_SECTOR_TECHNOLOGY
-
+from pycti import (STIX_EXT_OCTI_SCO, Identity, OpenCTIConnectorHelper,
+                   OpenCTIStix2, StixCoreRelationship)
 from settings import SILENTPUSH_SIGNATURE
+from stix2 import (Artifact, ExternalReference, File, HTTPRequestExt,
+                   Relationship, X509Certificate)
+from stix2.v20.vocab import INDUSTRY_SECTOR_TECHNOLOGY
 
 
 class Enricher(ABC):
