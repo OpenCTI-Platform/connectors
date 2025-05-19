@@ -327,10 +327,6 @@ class ConfigLoader(BaseSettings):
             warnings.warn(
                 "Env var 'FLASHPOINT_INTERVAL' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
             )
-            if connector_data.get("duration_period"):
-                raise ValueError(
-                    "Cannot set both `FLASHPOINT_INTERVAL` and `CONNECTOR_DURATION_PERIOD`."
-                )
 
             connector_data["duration_period"] = timedelta(minutes=int(interval))
 
