@@ -1,6 +1,4 @@
-import base64
-
-from pydantic import BaseModel, field_validator
+from pydantic import Base64Bytes, BaseModel
 
 
 class CustomProperties(BaseModel):
@@ -10,12 +8,7 @@ class CustomProperties(BaseModel):
 class OpenCTIFile(BaseModel):
     name: str
     mime_type: str
-    data: bytes
-
-    @field_validator("data")
-    @classmethod
-    def validate_data(cls, value: bytes) -> bytes:
-        return base64.b64encode(value)
+    data: Base64Bytes
 
 
 class ReportCustomProperties(CustomProperties):

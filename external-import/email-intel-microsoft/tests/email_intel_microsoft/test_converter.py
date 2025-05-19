@@ -98,12 +98,12 @@ def test_converter_to_stix_with_attachment(converter: ConnectorConverter) -> Non
     pdf_file = Mock()
     pdf_file.name = "test.pdf"
     pdf_file.content_type = "application/pdf"
-    pdf_file.content_bytes = b"%PDF-1.4\nTest PDF Content"
+    pdf_file.content_bytes = base64.b64encode(b"%PDF-1.4\nTest PDF Content")
 
     csv_file = Mock()
     csv_file.name = "test.csv"
     csv_file.content_type = "text/csv"
-    csv_file.content_bytes = b"Test CSV Content"
+    csv_file.content_bytes = base64.b64encode(b"Test CSV Content")
 
     mocked_email = Mock(
         subject="",

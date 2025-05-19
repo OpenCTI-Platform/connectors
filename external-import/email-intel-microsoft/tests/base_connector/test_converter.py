@@ -59,7 +59,9 @@ def test_converter_create_report() -> None:
         report_types=["threat-report"],
         x_opencti_content="Test content",
         x_opencti_files=[
-            OpenCTIFile(name="name", mime_type="text/plain", data=b"text")
+            OpenCTIFile(
+                name="name", mime_type="text/plain", data=base64.b64encode(b"text")
+            )
         ],
     )
 
