@@ -12,7 +12,6 @@ from .converter_to_stix import ConverterToStix
 
 class ConnectorAccenture:
 
-
     def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
@@ -61,7 +60,10 @@ class ConnectorAccenture:
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Connector has never run..."
                 )
-                last_run = (datetime.datetime.now(tz=datetime.UTC) - self.config.relative_import_start_date).strftime("%Y-%m-%dT%H:%M:%SZ")
+                last_run = (
+                    datetime.datetime.now(tz=datetime.UTC)
+                    - self.config.relative_import_start_date
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
 
             # Friendly name will be displayed on OpenCTI platform
             friendly_name = self.helper.connect_name
@@ -84,7 +86,9 @@ class ConnectorAccenture:
                 stix_objects = stix_bundle.get("objects")
                 author = self.converter_to_stix.create_author()
                 stix_objects.append(json.loads(author.serialize()))
-                marking = self.converter_to_stix.create_tlp_marking(self.config.tlp_level)
+                marking = self.converter_to_stix.create_tlp_marking(
+                    self.config.tlp_level
+                )
                 stix_objects.append(json.loads(marking.serialize()))
                 for stix_object in stix_objects:
 
@@ -97,15 +101,23 @@ class ConnectorAccenture:
                     if stix_object.get("type") == "report":
 
                         # report description HTML to markdown
-                        stix_object["description"] = convert_to_markdown(stix_object.get("description"))
+                        stix_object["description"] = convert_to_markdown(
+                            stix_object.get("description")
+                        )
 
                         # add custom extension 'x_severity' and 'x_threat_type' as report label
                         custom_extension_labels = []
-                        if "x_severity" in stix_object and stix_object.get("x_severity"):
-                            custom_extension_labels.append(stix_object.get("x_severity"))
+                        if "x_severity" in stix_object and stix_object.get(
+                            "x_severity"
+                        ):
+                            custom_extension_labels.append(
+                                stix_object.get("x_severity")
+                            )
                             del stix_object["x_severity"]
 
-                        if "x_threat_type" in stix_object and stix_object.get("x_threat_type"):
+                        if "x_threat_type" in stix_object and stix_object.get(
+                            "x_threat_type"
+                        ):
                             for value in stix_object.get("x_threat_type"):
                                 custom_extension_labels.append(value)
                             del stix_object["x_threat_type"]
@@ -117,8 +129,14 @@ class ConnectorAccenture:
 
                         # search for related-to relation for the report and convert them as object_refs
                         for item in stix_objects[:]:
-                            if item.get("type") == "relationship" and item.get("relationship_type") == "related-to" and item.get("source_ref") == stix_object.get("id"):
-                                stix_object["object_refs"].append(item.get("target_ref"))
+                            if (
+                                item.get("type") == "relationship"
+                                and item.get("relationship_type") == "related-to"
+                                and item.get("source_ref") == stix_object.get("id")
+                            ):
+                                stix_object["object_refs"].append(
+                                    item.get("target_ref")
+                                )
                                 stix_objects.remove(item)
 
                 bundles_sent = self.helper.send_stix2_bundle(

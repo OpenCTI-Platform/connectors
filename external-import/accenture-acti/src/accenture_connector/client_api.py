@@ -15,9 +15,9 @@ class ConnectorClient:
         id_token = self.get_token()
 
         headers = {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': "*/*",
-            'Authorization' : 'Bearer ' + id_token
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "*/*",
+            "Authorization": "Bearer " + id_token,
         }
         self.session = requests.Session()
         self.session.headers.update(headers)
@@ -30,16 +30,14 @@ class ConnectorClient:
             u = Cognito(
                 user_pool_id=self.config.acti_user_pool_id,
                 client_id=self.config.acti_client_id,
-                username=self.config.acti_username
+                username=self.config.acti_username,
             )
             u.authenticate(self.config.acti_password)
             id_token = u.id_token
             return id_token
         except Exception as err:
             error_msg = f"[API] Error while retrieving token: {err}"
-            self.helper.connector_logger.error(
-                error_msg, {"error": {str(err)}}
-            )
+            self.helper.connector_logger.error(error_msg, {"error": {str(err)}})
             raise Exception(error_msg)
 
     def get_reports(self, since: str) -> any:
@@ -48,14 +46,16 @@ class ConnectorClient:
         :return:
         """
         try:
-            api_url = self.base_api_url+"/collections/acti/collections"
-            params = {'start_date': since}
+            api_url = self.base_api_url + "/collections/acti/collections"
+            params = {"start_date": since}
             r = self.session.get(api_url, params=params)
             r.raise_for_status()
             response = r.json()
             return response
 
         except Exception as err:
-            error_msg = f"[API] Error while retrieving reports since: {str(since)}: {err}"
+            error_msg = (
+                f"[API] Error while retrieving reports since: {str(since)}: {err}"
+            )
             self.helper.connector_logger.error(error_msg)
             raise Exception(error_msg)

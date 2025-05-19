@@ -42,31 +42,31 @@ class ConfigConnector:
             "CONNECTOR_DURATION_PERIOD",
             ["connector", "duration_period"],
             self.load,
-            default="PT1H"
+            default="PT1H",
         )
         self.acti_username = get_config_variable(
             "ACCENTURE_ACTI_USERNAME",
             ["accenture_acti", "username"],
             self.load,
-            required=True
+            required=True,
         )
         self.acti_password = get_config_variable(
             "ACCENTURE_ACTI_PASSWORD",
             ["accenture_acti", "password"],
             self.load,
-            required=True
+            required=True,
         )
         self.acti_user_pool_id = get_config_variable(
             "ACCENTURE_ACTI_USER_POOL_ID",
             ["accenture_acti", "user_pool_id"],
             self.load,
-            required=True
+            required=True,
         )
         self.acti_client_id = get_config_variable(
             "ACCENTURE_ACTI_CLIENT_ID",
             ["accenture_acti", "client_id"],
             self.load,
-            required=True
+            required=True,
         )
         self.tlp_level = get_config_variable(
             "ACCENTURE_ACTI_CLIENT_TLP_LEVEL",
@@ -78,7 +78,9 @@ class ConfigConnector:
             "ACCENTURE_ACTI_RELATIVE_IMPORT_START_DATE",
             ["accenture_acti", "relative_import_start_date"],
             self.load,
-            default=datetime.timedelta(days=30)
+            default=datetime.timedelta(days=30),
         )
         if type(self.relative_import_start_date) == str:
-            self.relative_import_start_date = isodate.parse_duration(self.relative_import_start_date)
+            self.relative_import_start_date = isodate.parse_duration(
+                self.relative_import_start_date
+            )

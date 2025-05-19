@@ -24,7 +24,7 @@ class ConverterToStix:
         author = stix2.Identity(
             id=Identity.generate_id(name="Accenture", identity_class="organization"),
             name="Accenture",
-            identity_class="organization"
+            identity_class="organization",
         )
         return author
 
