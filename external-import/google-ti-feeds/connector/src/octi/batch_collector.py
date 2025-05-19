@@ -1,9 +1,18 @@
 """Collects final queue items into batches and sends them via a provided sender."""
 
 import asyncio
-from typing import Any, Callable, Coroutine, List
+from typing import Any, Callable, Coroutine, List, NamedTuple, Optional
 
 from connector.src.octi.pubsub import broker
+from stix2.v21 import _STIXBase21  # type: ignore
+
+
+class BatchCollectorResult(NamedTuple):
+    """Result of a batch collection operation."""
+
+    success: bool
+    items_processed: int
+    error: Optional[str] = None
 
 
 class BatchCollector:
@@ -35,27 +44,51 @@ class BatchCollector:
         self._stop = asyncio.Event()
         self._sentinel_obj = sentinel_obj
 
-    async def run(self) -> None:
+    async def run(self) -> BatchCollectorResult:
         """Run the BatchCollector.
 
         This method subscribes to the topic, flushes the buffer periodically,
         and processes the batch when it reaches the maximum size.
+
+        Returns:
+            BatchCollectorResult: Result of the collector run.
+
         """
-        queue = broker.subscribe(self.topic)
-        flush_task = asyncio.create_task(self._flush_periodically())
+        try:
+            processed_count = 0
+            queue = broker.subscribe(self.topic)
+            self.flush_task = asyncio.create_task(self._flush_periodically())
 
-        while True:
-            item = await queue.get()
-            queue.task_done()
-            if item is self._sentinel_obj:
-                break
-            self._buffer.append(item.dict())
-            if len(self._buffer) >= self.batch_size:
-                await self._flush()
+            while True:
+                item = await queue.get()
+                queue.task_done()
+                if item is self._sentinel_obj:
+                    break
+                if isinstance(item, list):
+                    stix_objects = [x for x in item if isinstance(x, _STIXBase21)]
+                    if stix_objects:
+                        self._buffer.extend(stix_objects)
+                        processed_count += len(stix_objects)
+                if isinstance(item, _STIXBase21):
+                    self._buffer.append(item)
+                    processed_count += 1
+                if len(self._buffer) >= self.batch_size:
+                    await self._flush()
 
-        await self._flush()
-        self._stop.set()
-        await flush_task
+            await self._flush()
+            self._stop.set()
+
+            self.flush_task.cancel()
+            try:
+                await self.flush_task
+            except asyncio.CancelledError:
+                pass
+
+            return BatchCollectorResult(success=True, items_processed=processed_count)
+        except Exception as e:
+            return BatchCollectorResult(
+                success=False, items_processed=processed_count, error=str(e)
+            )
 
     async def _flush_periodically(self) -> None:
         """Flush the buffer periodically."""
@@ -69,3 +102,13 @@ class BatchCollector:
         batch = self._buffer.copy()
         self._buffer.clear()
         await self._send_func(batch)
+
+    async def shutdown(self) -> None:
+        """Shutdown the collector."""
+        if self.flush_task:
+            self.flush_task.cancel()
+            try:
+                await self.flush_task
+            except asyncio.CancelledError:
+                pass
+        await self._flush()

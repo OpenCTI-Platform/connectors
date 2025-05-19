@@ -11,4 +11,4 @@ class IdentityClassOV(str, Enum):
     SYSTEM = "system"
     ORGANIZATION = "organization"
     CLASS_ = "class"
-    UNSPECIFIED = "unspecified"
+    UNKNOWN = "unknown"

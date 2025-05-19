@@ -7,6 +7,9 @@ from uuid import uuid4
 
 import pytest
 from connector.src.custom.configs.gti_config import GTIConfig
+from connector.src.custom.exceptions.gti_configuration_error import (
+    GTIConfigurationError,
+)
 from connector.src.octi.connector import Connector
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
@@ -268,7 +271,7 @@ def _when_connector_created() -> tuple[Any, Any]:
     try:
         global_config = GlobalConfig()
         global_config.add_config_class(GTIConfig)
-    except ConfigurationError as config_ex:
+    except (ConfigurationError, GTIConfigurationError) as config_ex:
         return None, config_ex
 
     octi_helper = OpenCTIConnectorHelper(config=global_config.to_dict())
@@ -313,6 +316,8 @@ def _then_connector_configuration_exception(  # type: ignore
 ) -> None:
     """Check if the connector config raises a custom ConfigurationException."""
     assert connector is None  # noqa: S101
-    assert isinstance(config_ex, ConfigurationError)  # noqa: S101
+    assert isinstance(config_ex, ConfigurationError) or isinstance(  # noqa: S101
+        config_ex, GTIConfigurationError
+    )
 
     mock_env.stop()

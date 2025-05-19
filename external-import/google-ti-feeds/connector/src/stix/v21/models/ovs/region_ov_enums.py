@@ -24,6 +24,7 @@ class RegionOV(str, Enum):
     CENTRAL_ASIA = "central-asia"
     EASTERN_ASIA = "eastern-asia"
     SOUTHERN_ASIA = "southern-asia"
+    SOUTH_EASTERN_ASIA = "south-eastern-asia"
     WESTERN_ASIA = "western-asia"
 
     EUROPE = "europe"
@@ -33,9 +34,8 @@ class RegionOV(str, Enum):
     WESTERN_EUROPE = "western-europe"
 
     OCEANIA = "oceania"
+    ANTARCTICA = "antarctica"
     AUSTRALIA_NEW_ZEALAND = "australia-new-zealand"
     MELANESIA = "melanesia"
     MICRONESIA = "micronesia"
     POLYNESIA = "polynesia"
-
-    ANTARCTICA = "antarctica"

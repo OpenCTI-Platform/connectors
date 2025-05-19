@@ -6,6 +6,6 @@ from typing import Protocol
 class BaseProcessor(Protocol):
     """Base interface for processors."""
 
-    async def process(self) -> None:
+    async def process(self) -> bool:
         """Process the task asynchronously."""
         ...

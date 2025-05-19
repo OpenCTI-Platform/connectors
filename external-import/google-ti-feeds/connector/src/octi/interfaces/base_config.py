@@ -8,11 +8,9 @@ from typing import ClassVar, Tuple, Type
 import yaml
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 
-# Alias the Pydantic source type so our overrides line up
 SettingsSource = PydanticBaseSettingsSource
 SettingsSources = Tuple[SettingsSource, ...]
 
-# When we want “defaults only” (no env, no dotenv, no file‐secrets)
 EMPTY_SOURCES = (  # type: ignore
     lambda: {},
     lambda: {},

@@ -137,7 +137,7 @@ Below are the optional parameters you can set for running the connector:
 | Connector Name            | `name`            | `CONNECTOR_NAME`            | Google Threat Intel Feeds | No        | The name of the connector as it will appear in OpenCTI.                     |
 | Connector Scope           | `scope`           | `CONNECTOR_SCOPE`           | report,location,identity  | No        | The scope of data to import, a list of Stix Objects.                        |
 | Connector Log Level       | `log_level`       | `CONNECTOR_LOG_LEVEL`       | info                      | No        | Sets the verbosity of logs. Options: `debug`, `info`, `warn`, `error`.      |
-| Connector Duration Period | `duration_period` | `CONNECTOR_DURATION_PERIOD` | PT1H                      | No        | The duration period between two schedule for the connector.                 |
+| Connector Duration Period | `duration_period` | `CONNECTOR_DURATION_PERIOD` | PT2H                      | No        | The duration period between two schedule for the connector.                 |
 | Connector TLP Level       | `tlp_level`       | `CONNECTOR_TLP_LEVEL`       | AMBER+STRICT              | No        | The TLP level for the connector. Options: `WHITE`, `GREEN`, `AMBER`, `RED`. |
 | Connector Queue Threshold | `queue_threshold` | `CONNECTOR_QUEUE_THRESHOLD` | 500                       | No        | The threshold for the queue size before processing.                         |
 | Connector Split Work      | `split_work`      | `CONNECTOR_SPLIT_WORK`      | False                     | No        | If set to `True`, the connector will split the work into smaller chunks.    |
@@ -165,6 +165,10 @@ Below are the optional parameters you can set for Google Threat Intel:
 ---
 
 ## Development
+
+## Contributing
+
+Please refer to [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Running the Connector Locally
 

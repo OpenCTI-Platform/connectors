@@ -4,22 +4,38 @@ This module will also handle the conversion of embedded entities from the report
 The processed entities will be send into a broker queue for further ingestion.
 """
 
-import asyncio
 import logging
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
-from connector.src.custom.constants.gti_reports.reports_constants import (
+from connector.src.custom.interfaces.base_processor import BaseProcessor
+from connector.src.custom.mappers.gti_reports.gti_report_relationship import (
+    GTIReportRelationship,
+)
+from connector.src.custom.mappers.gti_reports.gti_report_to_stix_identity import (
+    GTIReportToSTIXIdentity,
+)
+from connector.src.custom.mappers.gti_reports.gti_report_to_stix_location import (
+    GTIReportToSTIXLocation,
+)
+from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import (
+    GTIReportToSTIXReport,
+)
+from connector.src.custom.mappers.gti_reports.gti_report_to_stix_sector import (
+    GTIReportToSTIXSector,
+)
+from connector.src.custom.meta.gti_reports.reports_meta import (
     FINAL_BROKER,
     REPORTS_BROKER,
     SENTINEL,
 )
-from connector.src.custom.interfaces.base_processor import BaseProcessor
 from connector.src.octi.pubsub import broker
 
 if TYPE_CHECKING:
-    from stix2.v21 import Identity, Location, MarkingDefinition, Report
+    from logger import Logger  # type: ignore
+    from stix2.v21 import Identity, Location, MarkingDefinition, Report  # type: ignore
 
-event_map: Dict[str, asyncio.Event] = {}
+
+LOG_PREFIX = "[Process Reports]"
 
 
 class ProcessReports(BaseProcessor):
@@ -46,54 +62,163 @@ class ProcessReports(BaseProcessor):
         self.tlp_marking = tlp_marking
         self._logger = logger or logging.getLogger(__name__)
 
-    async def process(self) -> None:
-        """Process the reports received from the broker queue."""
+    async def process(self) -> bool:
+        """Process the reports received from the broker queue.
+
+        Returns:
+            bool: True if the processing was successful, False otherwise.
+
+        """
         while True:
-            last_modification_timestamp, reports = await self.queue.get()
+            reports = await self.queue.get()
             try:
                 if reports is SENTINEL:
                     break
-                self._convert_reports_to_stix21(last_modification_timestamp, reports)
+
+                await self._convert_reports_to_stix21(reports)
+            except Exception as e:
+                self._logger.error(
+                    f"{LOG_PREFIX} Error processing reports.", meta={"error": str(e)}
+                )  # type: ignore[call-arg]
+                return False
             finally:
                 self.queue.task_done()
+        return True
 
-    async def _convert_reports_to_stix21(
-        self, last_modification_timestamp: int, reports: List["Report"]
-    ) -> None:
+    async def _convert_reports_to_stix21(self, reports: List["Report"]) -> None:
         """Convert the reports into STIX2.1 SDO report pydantic model."""
-        # for report in reports:
-        # stix21_identity: Identity = GtiReportToStixIdentity(report, self.organization)
-        # stix21_location: Location = GtiReportToOctiLocation(report, self.organization)
-        # stix21_report: Report = GtiReportToStixReport(report, stix21_identity, self.tlp_marking)
+        self._logger.info(
+            f"{LOG_PREFIX} Converting {len(reports)} reports to STIX2.1 entities with associated identity, locations, and sectors."
+        )
+        total_entities = 0
+        for report in reports:
+            stix21_identity = await self._process_identity(report)
+            stix21_locations = await self._process_locations(report)
+            stix21_sectors = await self._process_sectors(report)
+            stix21_report = await self._process_report(
+                report, stix21_identity, stix21_sectors, stix21_locations
+            )
+            await self._process_relationships(report, stix21_report)
+            total_entities += (
+                len(stix21_report)
+                + len(stix21_locations)
+                + len(stix21_sectors)
+                + len(stix21_identity)
+            )
 
-        # origin_id = report.id
-        # event = asyncio.Event()
-        # event_map[origin_id] = event
-        # event.set()
-        # await broker.publish(f"{PREFIX_BROKER}/final", (last_modification_timestamp, stix21_identity))
-        # await broker.publish(f"{PREFIX_BROKER}/final", (last_modification_timestamp, stix21_location))
-        # await broker.publish(f"{PREFIX_BROKER}/final", (last_modification_timestamp, stix21_report))
-        ...
+        self._logger.info(
+            f"{LOG_PREFIX} Total entities processed in this batch: {total_entities}"
+        )
 
+    async def _process_identity(self, report: "Report") -> "Identity":
+        """Process report into STIX identity."""
+        try:
+            self._logger.debug(
+                f"{LOG_PREFIX} Processing to extract identity from report."
+            )
+            stix21_identity: "Identity" = GTIReportToSTIXIdentity(
+                report, self.organization
+            ).to_stix()
+            await broker.publish(FINAL_BROKER, stix21_identity)
+            self._logger.debug(
+                f"{LOG_PREFIX} Identity extracted from report and pushed into broker for further ingestion."
+            )
+            return stix21_identity
+        except Exception as ex:
+            self._logger.error(
+                f"{LOG_PREFIX} Error processing reports into identity.",
+                meta={"error": str(ex)},
+            )  # type: ignore[call-arg]
+            raise
 
-# TODO:    Scenario Outline: Should map STIX2.1 SDO report into a pydantic model for ease of use.
-# TODO:    Scenario Outline: Should convert gti report response model into STIX2.1 SDO report pydantic model.
-# TODO:    Scenario Outline: Some values are required for STIX2.1 SDO report.
-# TODO:    Scenario Outline: Some values are optionals for STIX2.1 SDO report.
-# TODO:    Scenario Outline: Need to raise an error if the convert to pydantic model failed.
-# TODO:    Scenario Outline: Should convert STIX2.1 SDO report pydantic model into valid STIX2.1 SDO report object.
-# TODO:    Scenario Outline: Should create a STIX2.1 bundle with those entities.
-# TODO:    Scenario Outline: Should add the gti report id into a queue for later sub-api call.
+    async def _process_locations(self, report: "Report") -> List["Location"]:
+        """Process report into STIX locations."""
+        try:
+            self._logger.debug(
+                f"{LOG_PREFIX} Processing to extract locations from report."
+            )
+            stix21_locations: List["Location"] = GTIReportToSTIXLocation(
+                report, self.organization, self.tlp_marking
+            ).to_stix()
+            await broker.publish(FINAL_BROKER, stix21_locations)
+            self._logger.debug(
+                f"{LOG_PREFIX} Locations extracted from report and pushed into broker for further ingestion."
+            )
+            return stix21_locations
+        except Exception as ex:
+            self._logger.error(
+                f"{LOG_PREFIX} Error processing reports into location.",
+                meta={"error": str(ex)},
+            )  # type: ignore[call-arg]
+            raise
 
-# TODO:    Scenario Outline: Should map STIX2.1 SDO Location as a pydantic model for ease of use.
-# TODO:    Scenario Outline: Should map STIX2.1 SDO Identity/Industry Sector as a pydantic model for ease of use.
-# TODO:    Scenario Outline: Should convert gti report response model into STIX2.1 SDO Location pydantic model.
-# TODO:    Scenario Outline: Should convert gti report response model into STIX2.1 SDO Identity/Industry Sector pydantic model.
-# TODO:    Scenario Outline: Some values are required for STIX2.1 SDO Location.
-# TODO:    Scenario Outline: Some values are optionals for STIX2.1 SDO Location.
-# TODO:    Scenario Outline: Some values are required for STIX2.1 SDO Identity/Industry Sector.
-# TODO:    Scenario Outline: Some values are optionals for STIX2.1 SDO Identity/Industry Sector.
-# TODO:    Scenario Outline: Need to raise an error if the convert to pydantic models failed.
-# TODO:    Scenario Outline: Should convert STIX2.1 SDO Location pydantic model into valid STIX2.1 SDO Location object.
-# TODO:    Scenario Outline: Should convert STIX2.1 SDO Identity/Industry Sector pydantic model into valid STIX2.1 SDO Identity/Industry Sector object.
-# TODO:    Scenario Outline: Should use the same STIX2.1 bundle for those entities.
+    async def _process_sectors(self, report: "Report") -> List["Identity"]:
+        """Process report into STIX sectors."""
+        try:
+            self._logger.debug(
+                f"{LOG_PREFIX} Processing to extract sectors from report."
+            )
+            stix21_sectors: List["Identity"] = GTIReportToSTIXSector(
+                report, self.organization, self.tlp_marking
+            ).to_stix()
+            await broker.publish(FINAL_BROKER, stix21_sectors)
+            self._logger.debug(
+                f"{LOG_PREFIX} Sectors extracted from report and pushed into broker for further ingestion."
+            )
+            return stix21_sectors
+        except Exception as ex:
+            self._logger.error(
+                f"{LOG_PREFIX} Error processing reports into sector.",
+                meta={"error": str(ex)},
+            )  # type: ignore[call-arg]
+            raise
+
+    async def _process_report(
+        self,
+        report: "Report",
+        stix21_identity: "Identity",
+        stix21_sectors: List["Identity"],
+        stix21_locations: List["Location"],
+    ) -> "Report":
+        """Process GTI report into STIX report."""
+        try:
+            self._logger.debug(f"{LOG_PREFIX} Processing report into STIX report.")
+            stix21_report: "Report" = GTIReportToSTIXReport(
+                report,
+                self.organization,
+                self.tlp_marking,
+                stix21_identity,
+                stix21_sectors,
+                stix21_locations,
+            ).to_stix()
+            await broker.publish(FINAL_BROKER, stix21_report)
+            self._logger.debug(
+                f"{LOG_PREFIX} Report processed into STIX report and pushed into broker for further ingestion."
+            )
+            return stix21_report
+        except Exception as ex:
+            self._logger.error(
+                f"{LOG_PREFIX} Error processing GTI report into STIX report.",
+                meta={"error": str(ex)},
+            )  # type: ignore[call-arg]
+            raise
+
+    async def _process_relationships(
+        self, report: "Report", stix21_report: "Report"
+    ) -> None:
+        """Process report relationships."""
+        try:
+            self._logger.debug(f"{LOG_PREFIX} Processing report relationships.")
+            stix21_relationships = GTIReportRelationship(
+                report, self.organization, self.tlp_marking, stix21_report.id
+            ).to_stix()
+            await broker.publish(FINAL_BROKER, stix21_relationships)
+            self._logger.debug(
+                f"{LOG_PREFIX} Report relationships processed and pushed into broker for further ingestion."
+            )
+        except Exception as ex:
+            self._logger.error(
+                f"{LOG_PREFIX} Error processing report relationships.",
+                meta={"error": str(ex)},
+            )  # type: ignore[call-arg]
+            raise

@@ -30,4 +30,4 @@ class ExternalReferenceModel(BaseModel):
         description="An external identifier for the referenced content.",
     )
 
-    model_config = {"use_enum_values": True}  # ensures enums serialize with .value
+    model_config = {"use_enum_values": True}

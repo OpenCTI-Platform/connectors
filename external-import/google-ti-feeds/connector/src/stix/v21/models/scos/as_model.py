@@ -36,7 +36,7 @@ def test_autonomous_system_model() -> None:
         type="autonomous-system",
         spec_version="2.1",
         id=f"autonomous-system--{uuid4()}",
-        number=64512,  # Reserved private ASN range
+        number=64512,
     )
 
     print("=== MINIMAL AUTONOMOUS SYSTEM ===")  # noqa: T201
@@ -47,7 +47,7 @@ def test_autonomous_system_model() -> None:
         type="autonomous-system",
         spec_version="2.1",
         id=f"autonomous-system--{uuid4()}",
-        number=13335,  # Cloudflare's ASN
+        number=13335,
         name="CLOUDFLARENET",
         rir="ARIN",
         object_marking_refs=[f"marking-definition--{uuid4()}"],

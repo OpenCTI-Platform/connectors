@@ -6,6 +6,6 @@ from typing import Protocol
 class BaseFetcher(Protocol):
     """Base fetcher interface for fetching data asynchronously."""
 
-    async def fetch(self) -> None:
+    async def fetch(self) -> bool:
         """Fetch data asynchronously."""
         ...

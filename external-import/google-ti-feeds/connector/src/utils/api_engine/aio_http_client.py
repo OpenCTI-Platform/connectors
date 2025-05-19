@@ -4,15 +4,48 @@ import logging
 from asyncio import TimeoutError
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
-from aiohttp import ClientError, ClientSession, ClientTimeout
+from aiohttp import (
+    ClientConnectorError,
+    ClientError,
+    ClientSession,
+    ClientTimeout,
+    ServerConnectionError,
+    ServerDisconnectedError,
+)
 
 from .exceptions.api_error import ApiError
 from .exceptions.api_http_error import ApiHttpError
+from .exceptions.api_network_error import ApiNetworkError
 from .exceptions.api_timeout_error import ApiTimeoutError
 from .interfaces.base_http_client import BaseHttpClient
 
 if TYPE_CHECKING:
     from logging import Logger
+
+LOG_PREFIX = "[API AioHttp]"
+
+NETWORK_ERROR_TYPES = (
+    ClientConnectorError,
+    ServerDisconnectedError,
+    ServerConnectionError,
+    ConnectionError,
+    ConnectionRefusedError,
+    ConnectionAbortedError,
+    ConnectionResetError,
+)
+
+NETWORK_ERROR_INDICATORS = [
+    "network location cannot be reached",
+    "connection refused",
+    "cannot connect to host",
+    "eof",
+    "connection reset",
+    "connection timeout",
+    "network is unreachable",
+    "no route to host",
+    "socket.gaierror",
+    "dns lookup failed",
+]
 
 
 class AioHttpClient(BaseHttpClient):
@@ -29,6 +62,22 @@ class AioHttpClient(BaseHttpClient):
         """Initialize the AioHttpClient with a default timeout  and an optional logger."""
         self.default_timeout = default_timeout
         self._logger = logger or logging.getLogger(__name__)
+
+    def _is_network_error(self, error: Exception) -> bool:
+        """Check if an exception represents a network connectivity issue.
+
+        Args:
+            error: The exception to check
+
+        Returns:
+            bool: True if the exception indicates a network issue, False otherwise
+
+        """
+        if isinstance(error, NETWORK_ERROR_TYPES):
+            return True
+
+        error_message = str(error).lower()
+        return any(indicator in error_message for indicator in NETWORK_ERROR_INDICATORS)
 
     async def request(
         self,
@@ -62,7 +111,7 @@ class AioHttpClient(BaseHttpClient):
         """
         actual_timeout = ClientTimeout(total=timeout or self.default_timeout)
         self._logger.debug(
-            f"[API Client] Making {method} request to {url} with timeout {actual_timeout.total}s. "
+            f"{LOG_PREFIX} Making {method} request to {url} with timeout {actual_timeout.total}s. "
             f"Params: {params is not None}, JSON: {json_payload is not None}"
         )
         try:
@@ -76,24 +125,47 @@ class AioHttpClient(BaseHttpClient):
                     json=json_payload,
                 ) as response:
                     self._logger.debug(
-                        f"[API Client] Received response with status {response.status} for {method} {url}"
+                        f"{LOG_PREFIX} Received response with status {response.status} for {method} {url}"
                     )
                     if response.status >= 400:
                         response_text = await response.text()
                         self._logger.error(  # type: ignore[call-arg]
-                            f"[API Client] HTTP Error {response.status} for {method} {url}: {response_text}",
+                            f"{LOG_PREFIX} HTTP Error {response.status} for {method} {url}: {response_text}",
                             meta={"error": response_text},
                         )
                         raise ApiHttpError(response.status, response_text)
                     return await response.json()
         except TimeoutError as e:
-            self._logger.error(f"[API Client] Request to {url} timed out after {actual_timeout.total}s: {e}", meta={"error": str(e)})  # type: ignore[call-arg]
+            self._logger.error(  # type: ignore[call-arg]
+                f"{LOG_PREFIX} Request to {url} timed out after {actual_timeout.total}s: {e}",
+                meta={"error": str(e)},
+            )
             raise ApiTimeoutError("Request timed out") from e
         except ClientError as e:
-            self._logger.error(f"[API Client] ClientError for {url}: {e}", meta={"error": str(e)})  # type: ignore[call-arg]
-            raise ApiHttpError(0, str(e)) from e
+            if self._is_network_error(e):
+                self._logger.error(  # type: ignore[call-arg]
+                    f"{LOG_PREFIX} Network connectivity issue for {method} {url}: {str(e)}",
+                    meta={"error": str(e), "is_network_error": True},
+                )
+                raise ApiNetworkError(f"Network connectivity issue: {str(e)}") from e
+            else:
+                self._logger.error(  # type: ignore[call-arg]
+                    f"{LOG_PREFIX} ClientError for {url}: {e}",
+                    meta={"error": str(e)},
+                )
+                raise ApiHttpError(0, str(e)) from e
         except ApiHttpError:
             raise
         except Exception as e:
-            self._logger.error(f"[API Client] Unexpected error during request to {url}: {e}", meta={"error": str(e)})  # type: ignore[call-arg]
+            if self._is_network_error(e):
+                self._logger.error(  # type: ignore[call-arg]
+                    f"{LOG_PREFIX} Network connectivity issue for {method} {url}: {str(e)}",
+                    meta={"error": str(e), "is_network_error": True},
+                )
+                raise ApiNetworkError(f"Network connectivity issue: {str(e)}") from e
+
+            self._logger.error(  # type: ignore[call-arg]
+                f"{LOG_PREFIX} Unexpected error during request to {url}: {e}",
+                meta={"error": str(e)},
+            )
             raise ApiError(f"Unexpected error: {str(e)}") from e
