@@ -22,6 +22,9 @@ from connector.src.custom.processors.gti_reports.process_malware_families import
     ProcessMalwareFamilies,
 )
 from connector.src.custom.processors.gti_reports.process_reports import ProcessReports
+from connector.src.custom.processors.gti_reports.process_threat_actors import (
+    ProcessThreatActors,
+)
 from connector.src.octi.batch_collector import BatchCollector
 from connector.src.octi.pubsub import broker
 from connector.src.stix.octi.models.identity_organization_model import (
@@ -141,8 +144,8 @@ class PipelineReportsOrchestrator:
         self.processors: List[BaseProcessor] = [
             ProcessReports(self.organization, self.tlp_marking, self._logger),
             ProcessMalwareFamilies(self.organization, self.tlp_marking, self._logger),
+            ProcessThreatActors(self.organization, self.tlp_marking, self._logger),
             # ProcessAttackTechniques(),
-            # ProcessThreatActors(),
             # ProcessVulnerabilities(),
             # ProcessIOCs(),
         ]
