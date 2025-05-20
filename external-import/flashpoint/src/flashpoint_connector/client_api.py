@@ -5,21 +5,19 @@ import requests
 
 class ConnectorClient:
 
-    def __init__(self, helper, config):
+    def __init__(self, api_base_url: str, api_key: str):
         """
         Initialize the client with necessary configurations
         """
-        self.helper = helper
-        self.config = config
+        self.flashpoint_api_url = api_base_url
 
         # Define headers in session and update when needed
         headers = {
             "Content-Type": "application/json",
-            "Authorization": "Bearer " + self.config.api_key,
+            "Authorization": "Bearer " + api_key,
         }
         self.session = requests.Session()
         self.session.headers.update(headers)
-        self.flashpoint_api_url = "https://api.flashpoint.io"
 
     def get_communities_doc(self, doc_id):
         """
@@ -42,7 +40,14 @@ class ConnectorClient:
         page = 0
         body_params = {
             "query": query,
-            "include": {"date": {"start": start_date, "end": ""}},
+            "include": {
+                "date": {
+                    "start": start_date.strftime(
+                        "%Y-%m-%dT%H:%M:%SZ"
+                    ),  # UTC as +00:00 offset leads to 400 Bad Request
+                    "end": "",
+                }
+            },
             "size": "1000",
             "sort": {"date": "asc"},
             "page": page,
@@ -87,7 +92,11 @@ class ConnectorClient:
         """
         alerts = []
         url = self.flashpoint_api_url + "/alert-management/v1/notifications"
-        params = {"created_after": start_date}
+        params = {
+            "created_after": start_date.strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )  # UTC as +00:00 offset leads to 400 Bad Request
+        }
         has_more = True
         while has_more:
             response = self.session.get(url, params=params)

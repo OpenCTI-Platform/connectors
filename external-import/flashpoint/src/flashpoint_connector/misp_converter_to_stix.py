@@ -15,11 +15,14 @@ from pycti import (
     Malware,
     MarkingDefinition,
     Note,
+    OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
     StixSightingRelationship,
     Tool,
 )
+
+from .config_loader import ConfigLoader
 
 PATTERN_TYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
 OPENCTI_STIX2 = {
@@ -74,7 +77,7 @@ class MISPConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper, config):
+    def __init__(self, helper: OpenCTIConnectorHelper, config: ConfigLoader):
         """
         :param helper:
         """
@@ -91,7 +94,7 @@ class MISPConverterToStix:
         self.misp_feed_import_with_attachments = True
         self.misp_feed_create_object_observables = False
         self.misp_feed_create_reports = True
-        self.misp_indicators_in_reports = config.indicators_in_reports
+        self.misp_indicators_in_reports = config.flashpoint.indicators_in_reports
         self.misp_feed_report_type = "misp-event"
 
     def _resolve_markings(self, tags, with_default=True):

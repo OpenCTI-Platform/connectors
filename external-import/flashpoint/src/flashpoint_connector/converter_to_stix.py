@@ -13,6 +13,7 @@ from pycti import (
     Location,
     Malware,
     MarkingDefinition,
+    OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
     ThreatActorGroup,
@@ -29,7 +30,7 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper):
+    def __init__(self, helper: OpenCTIConnectorHelper):
         self.helper = helper
         self.author_id = self.create_author()
         self.marking = stix2.MarkingDefinition(
@@ -51,7 +52,8 @@ class ConverterToStix:
         identity = self.helper.api.identity.create(
             type="Organization",
             name="Flashpoint",
-            description="Flashpoint is a data and intelligence company that empowers our customers to take rapid, decisive action to stop threats and reduce risk.",
+            description="Flashpoint is a data and intelligence company that empowers our customers to take rapid, "
+            "decisive action to stop threats and reduce risk.",
         )
         return identity["standard_id"]
 
@@ -387,10 +389,10 @@ A media attachment ({alert.get("media_name")}) is available in Data section
         :return:
         """
         description = (
-            f"A potential data exposure has been detected in **{alert.get("channel_type")}**. "
+            f"A potential data exposure has been detected in **{alert.get('channel_type')}**. "
             f"The alert was triggered on "
-            f"**{parse(alert.get("created_at")).strftime('%B %d, %Y, at %I:%M %p UTC')}** "
-            f"by the rule **{alert.get("alert_reason").strip()}**. "
+            f"**{parse(alert.get('created_at')).strftime('%B %d, %Y, at %I:%M %p UTC')}** "
+            f"by the rule **{alert.get('alert_reason').strip()}**. "
             f"For more details about this alert, please consult the Content tab."
         )
         return description
