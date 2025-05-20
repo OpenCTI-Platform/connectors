@@ -1,4 +1,4 @@
-pycti==6.6.6
+pycti==6.6.12
 python-dateutil==2.8.2
 PyYAML==6.0.2
 requests~=2.32.2
