@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-greynoise-vuln:
-    image: opencti/connector-greynoise-vuln:6.6.11
+    image: opencti/connector-greynoise-vuln:6.6.12
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
