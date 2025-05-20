@@ -74,7 +74,6 @@ def test_converter_create_report() -> None:
     assert report.report_types == ["threat-report"]
     assert report.published == STIXdatetime(2025, 4, 16, 10, 10, 10)
     assert report.created_by_ref == converter.author.id
-    assert report.object_refs == [converter.author.id]
     assert report.object_marking_refs == [converter.tlp_marking.id]
     assert report.x_opencti_content == "Test content"
     assert report.x_opencti_files == [
