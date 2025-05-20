@@ -3,12 +3,16 @@
 from datetime import datetime
 from typing import List, Optional
 
+from stix2.v21 import Identity, IntrusionSet, MarkingDefinition  # type: ignore
+
 from connector.src.custom.models.gti_reports.gti_threat_actor_model import (
     GTIThreatActorData,
     ThreatActorModel,
 )
 from connector.src.stix.octi.models.intrusion_set_model import OctiIntrusionSetModel
-from stix2.v21 import Identity, IntrusionSet, MarkingDefinition  # type: ignore
+from connector.src.stix.v21.models.ovs.attack_motivation_ov_enums import (
+    AttackMotivationOV,
+)
 
 
 class GTIThreatActorToSTIXIntrusionSet:
@@ -52,9 +56,7 @@ class GTIThreatActorToSTIXIntrusionSet:
 
         goals = self._extract_goals(attributes)
 
-        primary_motivation, secondary_motivations = self._extract_motivations(
-            attributes
-        )
+        primary_motivation, secondary_motivations = self._extract_motivations(attributes)
 
         resource_level = self._extract_resource_level(attributes)
 
@@ -87,10 +89,7 @@ class GTIThreatActorToSTIXIntrusionSet:
             Optional[List[str]]: Extracted aliases or None if no aliases exist
 
         """
-        if (
-            not hasattr(attributes, "alt_names_details")
-            or not attributes.alt_names_details
-        ):
+        if not hasattr(attributes, "alt_names_details") or not attributes.alt_names_details:
             return None
 
         aliases = []
@@ -204,7 +203,11 @@ class GTIThreatActorToSTIXIntrusionSet:
         motivations = []
         for motivation in attributes.motivations:
             if hasattr(motivation, "value") and motivation.value:
-                motivations.append(motivation.value)
+                mapped_motivation = self._map_gti_motivation_to_stix_motivation(motivation.value)
+                if mapped_motivation:
+                    motivations.append(mapped_motivation)
+                else:
+                    motivations.append(AttackMotivationOV.UNPREDICTABLE)
 
         if not motivations:
             return None, None
@@ -213,6 +216,39 @@ class GTIThreatActorToSTIXIntrusionSet:
         secondary_motivations = motivations[1:] if len(motivations) > 1 else None
 
         return primary_motivation, secondary_motivations
+
+    def _map_gti_motivation_to_stix_motivation(self, motivation: str) -> Optional[str]:
+        """Map GTI motivation to STIX attack motivation.
+
+        Args:
+            motivation: The GTI motivation
+
+        Returns:
+            Optional[str]: Mapped STIX attack motivation or None if no mapping exists
+
+        """
+        motivation_map = {
+            "Accidental": AttackMotivationOV.ACCIDENTAL,
+            "Coercion": AttackMotivationOV.COERCION,
+            "Control": AttackMotivationOV.DOMINANCE,
+            "Dominance": AttackMotivationOV.DOMINANCE,
+            "Ideology": AttackMotivationOV.IDEOLOGY,
+            "Political": AttackMotivationOV.IDEOLOGY,
+            "Religious": AttackMotivationOV.IDEOLOGY,
+            "Notoriety": AttackMotivationOV.NOTORIETY,
+            "Fame": AttackMotivationOV.NOTORIETY,
+            "Corporate Espionage": AttackMotivationOV.ORGANIZATIONAL_GAIN,
+            "Economic": AttackMotivationOV.ORGANIZATIONAL_GAIN,
+            "Organizational Gain": AttackMotivationOV.ORGANIZATIONAL_GAIN,
+            "Financial": AttackMotivationOV.PERSONAL_GAIN,
+            "Personal Gain": AttackMotivationOV.PERSONAL_GAIN,
+            "Entertainment": AttackMotivationOV.PERSONAL_SATISFACTION,
+            "Personal Satisfaction": AttackMotivationOV.PERSONAL_SATISFACTION,
+            "Revenge": AttackMotivationOV.REVENGE,
+            "Unpredictable": AttackMotivationOV.UNPREDICTABLE,
+        }
+
+        return motivation_map.get(motivation)
 
     def _extract_resource_level(self, attributes: ThreatActorModel) -> Optional[str]:
         """Extract resource level from threat actor attributes.

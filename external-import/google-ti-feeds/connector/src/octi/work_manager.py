@@ -103,26 +103,32 @@ class WorkManager:
         self._logger.info(f"{LOG_PREFIX} Initiated work {work_id} for {name}")
         return work_id
 
-    def work_to_process(self, work_id: str, error_flag: bool = False) -> None:
+    def work_to_process(self, work_id: str, error_flag: bool = False, error_message: Optional[str] = None) -> None:
         """Work to process.
 
         Args:
             work_id (str): The ID of the work.
             error_flag (bool): Whether the work finished in error.
+            error_message (Optional[str]): Specific error message to report. Defaults to None.
 
         """
+        message = "Connector's work finished gracefully"
+        if error_flag and error_message:
+            message = f"Error: {error_message}"
+
         self._helper.api.work.to_processed(
             work_id=work_id,
-            message="Connector's work finished gracefully",
+            message=message,
             in_error=error_flag,
         )
         self._logger.info(f"{LOG_PREFIX} Work {work_id} marked to be processed")
 
-    def process_all_remaining_works(self, error_flag: bool = False) -> None:
+    def process_all_remaining_works(self, error_flag: bool = False, error_message: Optional[str] = None) -> None:
         """Process all remaining works and update the state.
 
         Args:
             error_flag (bool): Whether the work finished in error.
+            error_message (Optional[str]): Specific error message to report. Defaults to None.
 
         """
         works = self._helper.api.work.get_connector_works(
@@ -130,7 +136,7 @@ class WorkManager:
         )
         for work in works:
             if work["status"] != "complete":
-                self.work_to_process(work_id=work["id"], error_flag=error_flag)
+                self.work_to_process(work_id=work["id"], error_flag=error_flag, error_message=error_message)
         self._logger.info(f"{LOG_PREFIX} All remaining works marked to be process.")
 
     def send_bundle(self, work_id: str, bundle: Any) -> None:

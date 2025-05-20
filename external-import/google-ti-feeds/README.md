@@ -26,78 +26,209 @@ Here’s a high-level overview to get the connector up and running:
         docker compose up -d
         ```
 ## Behavior
+### **Operational Flow**
 
 ```mermaid
 graph TD
-    subgraph Connector
-        Docker[Env Vars Docker/Python]
+    subgraph Configuration
+        DockerEnv[Environment Variables]
+        ConfigYml[config.yml]
+        GTIConfig[GTI Configuration]
     end
 
-    subgraph Connector Workflow
-        Main(main.py)
-        WM(WorkflowManager)
-        Fetcher(GtiDataFetcher)
-        Normalizer(StixNormalizer)
+    subgraph Connector Flow
+        Main("__main__.py")
+        Connector("Connector")
+        WorkManager("WorkManager")
+        FetchAll("FetchAll")
+        ConvertToSTIX("ConvertToSTIX")
+        ApiClient("ApiClient")
     end
 
-    subgraph Data Models in Connector
-        GTIModels[GTI Pydantic Models]
-        STIXModels[STIX Pydantic Models]
+    subgraph Error Handling
+        ExceptionHandling["Exception Hierarchy"]
+        CircuitBreaker["Circuit Breaker"]
+        RetryStrategy["Retry Strategy"]
+        RateLimiter["Rate Limiter"]
     end
 
-    subgraph Ingest OpenCTI
-        StateFile([.last_modification_date])
-        JSONBundles[stix_bundles]
+    subgraph Data Models
+        GTIModels["GTI Pydantic Models"]
+        MapperClasses["STIX Mapper Classes"]
+        STIXModels["STIX Pydantic Models"]
     end
 
-    Connector --> Main
-    Main -- Configures & Runs --> WM
-    WM -- Call --> Fetcher
-    WM -- Uses --> Normalizer
-    WM -- Manages --> StateFile
-    STIXModels -- Inject --> JSONBundles
+    subgraph OpenCTI Integration
+        StateManagement["State Management"]
+        StixBundle["STIX Bundle"]
+        OpenCTIQueue["OpenCTI Queue"]
+    end
 
-    Fetcher -- Generate --> GTIModels
-    GTIModels -- Used by --> Normalizer
+    DockerEnv --> Main
+    ConfigYml --> Main
+    Main --> GTIConfig
+    Main --> Connector
 
-    Normalizer -- Produces --> STIXModels
-    StateFile -- Used by --> Fetcher
+    Connector -- "1 - Initiates Work" --> WorkManager
+    WorkManager -- "2 - Starts Fetching" --> FetchAll
+    FetchAll -- "3 - Fetches Reports" --> ApiClient
+    FetchAll -- "4 - Fetches Related Entities" --> ApiClient
+    ApiClient -- "Uses" --> RetryStrategy
+    RetryStrategy -- "Uses" --> CircuitBreaker
+    RetryStrategy -- "Uses" --> RateLimiter
+
+    FetchAll -- "5 - Returns Structured Data" --> GTIModels
+    WorkManager -- "6 - Passes Data to" --> ConvertToSTIX
+    GTIModels -- "Processed by" --> ConvertToSTIX
+    ConvertToSTIX -- "7 - Transforms using" --> MapperClasses
+    MapperClasses -- "8 - Produces" --> STIXModels
+
+    ConvertToSTIX -- "9 - Bundles into" --> StixBundle
+    WorkManager -- "10 - Updates" --> StateManagement
+    WorkManager -- "11 - Sends to" --> OpenCTIQueue
+
+    Connector -- "Handles" --> ExceptionHandling
 ```
+
+### **Execution Flow**
+
+1. **Initialization**: The connector loads configurations and initializes components
+2. **Scheduling**: The main process runs at configured intervals (via `CONNECTOR_DURATION_PERIOD`)
+3. **Work Creation**: A new work object is created in OpenCTI for tracking
+4. **Data Fetching**:
+   - Reports are fetched from GTI API with pagination
+   - For each report, related entities (malware, actors, techniques, etc.) are fetched
+   - All data is structured into validated Pydantic models
+5. **STIX Conversion**:
+   - Each entity is converted to appropriate STIX format using specialized mappers
+   - References between objects are established and maintained
+   - A cohesive STIX bundle is created containing all objects
+6. **State Management**:
+   - The timestamp of the latest processed report is saved
+   - This enables incremental processing in future runs
+7. **Bundle Submission**:
+   - The STIX bundle is submitted to OpenCTI's processing queue
+   - The work object is marked as completed with appropriate status
+8. **Error Handling**:
+   - Errors are caught and classified at various levels
+   - Partial processing results are returned when possible
+   - Appropriate error status is reported to OpenCTI
 
 ---
 
 ##  Connector Architecture Overview
 
-This connector is a modular pipeline built to fetch, normalize, and ingest threat intel data into **OpenCTI**. The system is organized into distinct components, each with a specific role:
+This connector is a robust pipeline designed to fetch, normalize, and ingest threat intelligence data from Google Threat Intel (GTI) into **OpenCTI**. The architecture follows a modular, type-safe approach with specialized components for each step of the process:
 
-### **Connector Configuration**
+### **Configuration Management**
 
-* **Docker Environment** and **Python Runtime** provide environment variables used to configure the entire connector system.
+* The connector uses a **tiered configuration system** with support for:
+  * Environment variables (Docker or local)
+  * YAML configuration file (`config.yml`)
+  * Default values when neither is provided
+* **GlobalConfig** centralizes configuration using Pydantic models with validation
+* **GTIConfig** provides specialized settings for the Google Threat Intel API
 
-### **Workflow Orchestration**
+### **Core Components**
 
-* **main.py** serves as the entrypoint, bootstrapping the connector and initializing the core logic.
-* It wires up the **WorkflowManager**, which orchestrates the data lifecycle—from fetching to ingestion.
+* **__main__.py** serves as the entrypoint, initializing the connector and its dependencies
+* **Connector** class orchestrates the overall connector lifecycle and scheduling:
+  * Initializes the API client and component dependencies
+  * Manages periodic execution via OpenCTI scheduler
+  * Handles work states and error conditions
+* **WorkManager** handles OpenCTI work creation, state management, and bundle submission:
+  * Creates and tracks work objects in OpenCTI
+  * Maintains incremental processing state (last processed date)
+  * Submits STIX bundles to the OpenCTI queue
+* **FetchAll** performs asynchronous data retrieval from the GTI API:
+  * Fetches reports and related entities (malware, threat actors, etc.)
+  * Handles pagination and relationship traversal
+  * Supports partial data processing on interruptions
+* **ConvertToSTIX** transforms GTI data into STIX format using specialized mappers
 
-### **Data Fetching & Normalization**
+### **Data Fetching Infrastructure**
 
-* **WorkflowManager**:
+* **ApiClient** provides a unified interface for API interactions:
+  * Manages API request configuration and execution
+  * Provides response validation and model mapping
+  * Abstracts HTTP implementation details
+* **RetryRequestStrategy** implements intelligent retry with exponential backoff:
+  * Handles transient failures with progressive delays
+  * Distinguishes between retryable and non-retryable errors
+  * Preserves API context between retry attempts
+* **CircuitBreaker** prevents overwhelming failing APIs:
+  * Tracks consecutive failures and opens circuit when threshold is reached
+  * Implements cooldown period before allowing new requests
+  * Helps prevent cascading failures during API outages
+* **RateLimiter** ensures compliance with API rate limits:
+  * Implements token bucket algorithm for request throttling
+  * Supports multiple limiter instances for different API endpoints
+  * Prevents API quota exhaustion and 429 errors
+* **AioHttpClient** performs the actual HTTP requests asynchronously:
+  * Uses Python's asyncio for efficient concurrent requests
+  * Handles connection pooling and timeouts
+  * Provides specialized error handling for network conditions
 
-  * Calls the **GtiDataFetcher** to retrieve raw GTI threat data from the API  and map them into structured models.
-  * Hands the response models and the **StixNormalizer** to transform them into STIX format.
-  * Maintains the **.last\_modification\_date** state to avoid redundant fetches.
-  * Handles the **stix\_bundles** for ingestion into OpenCTI.
+### **Data Modeling & Transformation**
 
-### **Data Models**
+* **GTI Pydantic Models** provide validated structures for raw Google Threat Intel data:
+  * Enforce type safety and data validation
+  * Model GTI API responses with proper relationships
+  * Support complex nested data structures
+* **Mapper Classes** convert specific entity types with specialized handling:
+  * `GTIReportToSTIXReport` for report conversion
+  * `GTIMalwareFamilyToSTIXMalware` for malware conversion
+  * `GTIThreatActorToSTIXIntrusionSet` for threat actors
+  * `GTIAttackTechniqueToSTIXAttackPattern` for techniques
+  * `GTIVulnerabilityToSTIXVulnerability` for vulnerabilities
+* **STIX Models** define the standardized format for OpenCTI ingestion:
+  * Implement STIX 2.1 specification objects
+  * Include OpenCTI-specific extensions and properties
+  * Support proper object references and relationships
+* **STIX Bundle Generation** combines all objects into a standardized package:
+  * Creates self-contained STIX bundles with all related objects
+  * Handles reference resolution between objects
+  * Ensures proper ordering of objects for ingestion
 
-* **GTI Pydantic Models** represent the structure of raw threat data pulled by the fetcher.
-* **STIX Pydantic Models** define the standardized structure used for ingestion.
-* The **Normalizer** uses GTI models as input and produces STIX models as output.
+### **Error Handling**
 
-### **STIX Bundle Generation & Ingestion**
+* **Specialized Exception Hierarchy** with custom exception types:
+  * `GTIBaseError` as the foundation for all connector exceptions
+  * `GTIFetchingError` for data retrieval issues (API, network, parsing)
+  * `GTIConvertingError` for STIX transformation problems
+  * `GTIConfigurationError` for setup and configuration issues
+  * Granular subtypes for specific error conditions
+* **Graceful Partial Processing** to handle interruptions and API failures:
+  * Tracks successfully processed entities
+  * Returns partial results when possible rather than failing completely
+  * Preserves state to avoid reprocessing already handled data
+* **Comprehensive Logging** for operational visibility:
+  * Structured logging with metadata and context
+  * Progressive status updates during long-running operations
+  * Clear error information for troubleshooting
+* **Recovery Mechanisms**:
+  * Automatic retries for transient errors
+  * Circuit breaking to prevent cascading failures
+  * State preservation across connector restarts
 
-* **STIX Pydantic Models** are injected into **stix\_bundles**, which are ready for ingestion into OpenCTI.
-* These bundles represent fully normalized, deduplicated, and enriched intel objects.
+### **OpenCTI Integration**
+
+* **State Management** to track processing progress:
+  * Stores last processed modification date
+  * Supports incremental processing across connector runs
+  * Prevents duplicate data ingestion
+* **Work-based Processing** for better integration with OpenCTI:
+  * Creates and tracks OpenCTI work objects
+  * Supports the OpenCTI processing model
+  * Provides progress and error visibility in the OpenCTI UI
+* **Standardized STIX Bundle Submission**:
+  * Creates properly formatted STIX 2.1 bundles
+  * Handles bundle size limits and pagination
+  * Manages serialization and submission to OpenCTI queue
+* **Runtime Integration**:
+  * Respects OpenCTI connector settings (TLP, scope, etc.)
+  * Honors queue thresholds to prevent overwhelming the system
+  * Properly handles cancellation and shutdown scenarios
 
 ---
 
@@ -140,7 +271,6 @@ Below are the optional parameters you can set for running the connector:
 | Connector Duration Period | `duration_period` | `CONNECTOR_DURATION_PERIOD` | PT2H                      | No        | The duration period between two schedule for the connector.                 |
 | Connector TLP Level       | `tlp_level`       | `CONNECTOR_TLP_LEVEL`       | AMBER+STRICT              | No        | The TLP level for the connector. Options: `WHITE`, `GREEN`, `AMBER`, `RED`. |
 | Connector Queue Threshold | `queue_threshold` | `CONNECTOR_QUEUE_THRESHOLD` | 500                       | No        | The threshold for the queue size before processing.                         |
-| Connector Split Work      | `split_work`      | `CONNECTOR_SPLIT_WORK`      | False                     | No        | If set to `True`, the connector will split the work into smaller chunks.    |
 
 ### GTI Configuration
 
@@ -209,26 +339,17 @@ The connector is designed to be run in a Docker container. However, if you want 
         ...
     ```
 
-5b/ If you want to run it from `config.yml` instead of the environment variables, you need to set that environment variable:
-    ```bash
-      export CONNECTOR_DEV_MODE=true
-    ```
-
 6/ Run the connector:
     ```bash
         GoogleTIFeeds
     ```
-   or ignore 5b and run it with the environment variable:
-    ```bash
-       CONNECTOR_DEV_MODE=true GoogleTIFeeds
-    ```
   or by launching the main.py:
     ```bash
-       CONNECTOR_DEV_MODE=true python connector/__main__.py
+        python connector/__main__.py
     ```
   or by launching the module:
     ```bash
-       CONNECTOR_DEV_MODE=true python -m connector
+        python -m connector
     ```
 
 ### Commit

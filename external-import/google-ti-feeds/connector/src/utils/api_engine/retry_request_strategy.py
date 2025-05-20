@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 
 from .api_request_model import ApiRequestModel
@@ -83,15 +84,11 @@ class RetryRequestStrategy(BaseRequestStrategy):
         if self._limiter_config and not self.limiter:
             required_keys = ["key", "max_requests", "period"]
             if not all(key in self._limiter_config for key in required_keys):
-                missing_keys = [
-                    key for key in required_keys if key not in self._limiter_config
-                ]
+                missing_keys = [key for key in required_keys if key not in self._limiter_config]
                 self._logger.warning(
                     f"{LOG_PREFIX} Missing required keys in limiter config: {missing_keys}"
                 )
-                raise ValueError(
-                    f"Missing required keys in limiter config: {missing_keys}"
-                )
+                raise ValueError(f"Missing required keys in limiter config: {missing_keys}")
 
             self.limiter = await RateLimiterRegistry.get(
                 key=self._limiter_config["key"],
@@ -132,16 +129,12 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 json_payload=self.api_req.json_payload,
                 timeout=self.api_req.timeout,
             )
-            self._logger.debug(
-                f"{LOG_PREFIX} Raw response received from {self.api_req.url}"
-            )
+            self._logger.debug(f"{LOG_PREFIX} Raw response received from {self.api_req.url}")
 
             for hook in self.hooks:
                 await hook.after(self.api_req, raw)
 
-            data = (
-                raw.get(self.api_req.response_key) if self.api_req.response_key else raw
-            )
+            data = raw.get(self.api_req.response_key) if self.api_req.response_key else raw
 
             if self.api_req.model:
                 try:
@@ -154,9 +147,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
                     raise ApiValidationError(
                         f"Response validation failed: {str(validation_err)}"
                     ) from validation_err
-            self._logger.debug(
-                f"{LOG_PREFIX} Successfully processed request to {self.api_req.url}"
-            )
+            self._logger.debug(f"{LOG_PREFIX} Successfully processed request to {self.api_req.url}")
             return data
         except (
             ApiTimeoutError,
@@ -227,6 +218,10 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 network_error_count = 0
                 await self._handle_api_error(e, attempt, current_backoff_delay)
                 current_backoff_delay *= 2
+            except ApiCircuitOpenError:
+                self._logger.info(f"{LOG_PREFIX} Circuit breaker open, waiting before retry...")
+                await self._wait_for_circuit_to_close()
+                attempt -= 1
             except ApiError as e:
                 await self._handle_unrecoverable_error(e)
                 raise e
@@ -257,7 +252,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
             self._logger.warning(
                 f"{LOG_PREFIX} Circuit breaker is open. Request to {self.api_req.url} blocked."
             )
-            raise ApiCircuitOpenError("Circuit breaker is open")
+            await self._wait_for_circuit_to_close()
 
     async def _handle_network_error(
         self,
@@ -293,9 +288,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 f"{LOG_PREFIX} Persistent network connectivity issues detected after {network_error_count} consecutive failures for {self.api_req.url}.",
                 meta={"error": str(error)},
             )
-            raise ApiNetworkError(
-                f"Persistent network connectivity issues: {error}"
-            ) from error
+            raise ApiNetworkError(f"Persistent network connectivity issues: {error}") from error
 
         if attempt < self.max_retries:
             backoff_time = current_backoff_delay * (1.5 ** (network_error_count - 1))
@@ -328,11 +321,16 @@ class RetryRequestStrategy(BaseRequestStrategy):
         self._logger.warning(
             f"{LOG_PREFIX} Attempt {attempt + 1}/{self.max_retries + 1} for {self.api_req.url} failed with {type(error).__name__}: {error}."
         )
-        self.breaker.record_failure()
-        self._logger.error(  # type: ignore[call-arg]
-            f"{LOG_PREFIX} Failure recorded for circuit breaker due to error on {self.api_req.url}.",
-            meta={"error": str(error)},
-        )
+        if not (isinstance(error, ApiHttpError) and error.status_code == 404):
+            self.breaker.record_failure()
+            self._logger.error(  # type: ignore[call-arg]
+                f"{LOG_PREFIX} Failure recorded for circuit breaker due to error on {self.api_req.url}.",
+                meta={"error": str(error)},
+            )
+        else:
+            self._logger.info(
+                f"{LOG_PREFIX} 404 error detected for {self.api_req.url} - Not counting toward circuit breaker failures."
+            )
 
         if isinstance(error, ApiHttpError) and error.status_code < 500:
             self._logger.error(  # type: ignore[call-arg]
@@ -341,17 +339,32 @@ class RetryRequestStrategy(BaseRequestStrategy):
             )
             raise
 
-        if attempt == self.max_retries:
-            self._logger.error(  # type: ignore[call-arg]
-                f"{LOG_PREFIX} Request to {self.api_req.url} failed after {self.max_retries + 1} attempts. Last error: {type(error).__name__} - {error}",
-                meta={"error": str(error)},
-            )
-            raise
-
         self._logger.info(
             f"{LOG_PREFIX} Retrying request to {self.api_req.url} in {current_backoff_delay:.2f} seconds..."
         )
         await asyncio.sleep(current_backoff_delay)
+
+    async def _wait_for_circuit_to_close(self) -> None:
+        """Wait until the circuit breaker is closed.
+
+        This method waits for the cooldown period and then resets the circuit breaker.
+        """
+        if not self.breaker.is_open():
+            return
+
+        cooldown_time = self.breaker.cooldown_time
+        self._logger.info(
+            f"{LOG_PREFIX} Circuit breaker is open. Waiting {cooldown_time} seconds before retry..."
+        )
+        await asyncio.sleep(cooldown_time)
+
+        if hasattr(self.breaker, "last_failure_time"):
+            now = time.time()
+            if now - self.breaker.last_failure_time >= cooldown_time:
+                self._logger.info(
+                    f"{LOG_PREFIX} Cooldown period completed, resetting circuit breaker."
+                )
+                self.breaker.reset()
 
     async def _handle_unrecoverable_error(self, error: ApiError) -> None:
         """Handle unrecoverable API errors.
@@ -365,9 +378,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
             meta={"error": str(error)},
         )
 
-    async def _handle_max_retries_exceeded(
-        self, last_exception: Optional[Exception]
-    ) -> None:
+    async def _handle_max_retries_exceeded(self, last_exception: Optional[Exception]) -> None:
         """Handle the case when maximum retries are exceeded.
 
         Args:

@@ -29,7 +29,6 @@ class ConnectorConfig(BaseConfig):
         "AMBER+STRICT",
         "RED+STRICT",
     ] = "AMBER+STRICT"
-    split_work: bool = False
     run_and_terminate: Optional[bool] = None
     send_to_queue: Optional[bool] = None
     send_to_directory: Optional[bool] = None
