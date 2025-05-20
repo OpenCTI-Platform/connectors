@@ -92,19 +92,20 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter `ServiceNow` | config.yml            | Docker environment variable      | Default        | Mandatory | Description                                                                                                                                                         |
-|------------------------|-----------------------|----------------------------------|----------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Instance name          | `instance_name`       | `SERVICENOW_INSTANCE_NAME`       | /              | Yes       | Representing the ServiceNow server name.                                                                                                                            |
-| Api key                | `api_key`             | `SERVICENOW_API_KEY`             | /              | Yes       | Secure identifier used to validate access to ServiceNow APIs.                                                                                                       |
-| Api version            | `api_version`         | `SERVICENOW_API_VERSION`         | `v2`           | No        | ServiceNow API version used for REST requests.                                                                                                                      |
-| Api retry              | `api_retry`           | `SERVICENOW_API_RETRY`           | `5`            | No        | Maximum number of retry attempts in case of API failure.                                                                                                            |
-| Api backoff            | `api_backoff`         | `SERVICENOW_API_BACKOFF`         | `PT30S`        | No        | Exponential backoff duration between API retries (ISO 8601 duration format).                                                                                        |
-| Import start date      | `import_start_date`   | `SERVICENOW_IMPORT_START_DATE`   | `P30D`         | No        | The date from which data import should start, accepts several date formats (`YYYY-MM-DD`, `YYYY-MM-DD HH:MM:SS+HH:MM`, `P30D` - 30 days before connector start-up). |
-| State to exclude       | `state_to_exclude`    | `SERVICENOW_STATE_TO_EXCLUDE`    | `No exclusion` | No        | List of security incident states to exclude from import. Example: "eradicate,analysis,closed,cancelled,draft,contain,review,recover"                                |
-| Severity to exclude    | `severity_to_exclude` | `SERVICENOW_SEVERITY_TO_EXCLUDE` | `No exclusion` | No        | List of security incident severities to exclude from import. Example: "high,medium,low"                                                                             |
-| Priority to exclude    | `priority_to_exclude` | `SERVICENOW_PRIORITY_TO_EXCLUDE` | `No exclusion` | No        | List of security incident priorities to exclude from import. Example: "critical,high,moderate,low,planning"                                                         |
-| Comment to exclude     | `comment_to_exclude`  | `SERVICENOW_COMMENT_TO_EXCLUDE`  | `No exclusion` | No        | List of comment to exclude from import. Example: "private,public,auto" (Respectively: "Work notes, Additional comments, Automation activity")                       |
-| TLP level              | `tlp_level`           | `SERVICENOW_TLP_LEVEL`           | `red`          | No        | TLP markings for exported data (Available: clear, green, amber, amber+strict, red)                                                                                  |
+| Parameter `ServiceNow`            | config.yml                          | Docker environment variable                    | Default        | Mandatory | Description                                                                                                                                                         |
+|-----------------------------------|-------------------------------------|------------------------------------------------|----------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Instance name                     | `instance_name`                     | `SERVICENOW_INSTANCE_NAME`                     | /              | Yes       | Representing the ServiceNow server name.                                                                                                                            |
+| Api key                           | `api_key`                           | `SERVICENOW_API_KEY`                           | /              | Yes       | Secure identifier used to validate access to ServiceNow APIs.                                                                                                       |
+| Api version                       | `api_version`                       | `SERVICENOW_API_VERSION`                       | `v2`           | No        | ServiceNow API version used for REST requests.                                                                                                                      |
+| Api retry                         | `api_retry`                         | `SERVICENOW_API_RETRY`                         | `5`            | No        | Maximum number of retry attempts in case of API failure.                                                                                                            |
+| Api backoff                       | `api_backoff`                       | `SERVICENOW_API_BACKOFF`                       | `PT30S`        | No        | Exponential backoff duration between API retries (ISO 8601 duration format).                                                                                        |
+| Import start date                 | `import_start_date`                 | `SERVICENOW_IMPORT_START_DATE`                 | `P30D`         | No        | The date from which data import should start, accepts several date formats (`YYYY-MM-DD`, `YYYY-MM-DD HH:MM:SS+HH:MM`, `P30D` - 30 days before connector start-up). |
+| State to exclude                  | `state_to_exclude`                  | `SERVICENOW_STATE_TO_EXCLUDE`                  | `No exclusion` | No        | List of security incident states to exclude from import. Example: "eradicate,analysis,closed,cancelled,draft,contain,review,recover"                                |
+| Severity to exclude               | `severity_to_exclude`               | `SERVICENOW_SEVERITY_TO_EXCLUDE`               | `No exclusion` | No        | List of security incident severities to exclude from import. Example: "high,medium,low"                                                                             |
+| Priority to exclude               | `priority_to_exclude`               | `SERVICENOW_PRIORITY_TO_EXCLUDE`               | `No exclusion` | No        | List of security incident priorities to exclude from import. Example: "critical,high,moderate,low,planning"                                                         |
+| Comment to exclude                | `comment_to_exclude`                | `SERVICENOW_COMMENT_TO_EXCLUDE`                | `No exclusion` | No        | List of comment to exclude from import. Example: "private,public,auto" (Respectively: "Work notes, Additional comments, Automation activity")                       |
+| TLP level                         | `tlp_level`                         | `SERVICENOW_TLP_LEVEL`                         | `red`          | No        | TLP markings for exported data (Available: clear, green, amber, amber+strict, red)                                                                                  |
+| Promote observables as indicators | `promote_observables_as_indicators` | `SERVICENOW_PROMOTE_OBSERVABLES_AS_INDICATORS` | `True`         | No        | This variable is used to create indicators based on observables from ServiceNow.                                                                                    |
 
 ## Deployment
 
@@ -266,7 +267,49 @@ For each Security incident, an `External Reference (SIR)` will be created. In ad
 | sys_id (SIR or SIT)        | `External_id`                 |
 | Source link                | `URL`                         |
 
-For each `Observables` related to the Security incident: (WIP)
+For each `Observables` related to the `Security incident` and `Task`: 
+
+- Here are the observables currently accepted by the connector, note that the types in ServiceNow must have the same names as in this list. In ServiceNow you will find the list available in `All / Threat Intelligence / Administration / Observables Types`.
+- On ServiceNow, observables can be added specifically to a security incident, but also to tasks. The connector implements the same process, but adds all task-related observables to the parent security incident.
+
+| Observable Type name (ServiceNow) | Observable Type name (OpenCTI)         |
+|-----------------------------------|----------------------------------------|
+| `Domain name`                     | `Domain-Name`                          |
+| `Top-level domain name`           | `Domain-Name`                          |
+| `Host name`                       | `Hostname`                             |
+| `URL`                             | `Url`                                  |     
+| `URI`                             | `Url`                                  |
+| `Email address`                   | `Email-Addr`                           |
+| `Email body`                      | `Email-Message` (body)                 |
+| `Email Message ID`                | `Email-Message` (message_id & subject) |
+| `Email subject`                   | `Email-Message` (subject)              |
+| `IP address (V4)`                 | `IPv4-Addr`                            |
+| `IP address (V6)`                 | `IPv6-Addr`                            |
+| `IPV4 network`                    | `IPv4-Addr` with network               |
+| `IPV6 network`                    | `IPv6-Addr` with network               |
+| `MD5 hash`                        | `MD5`                                  |
+| `SHA1 hash`                       | `SHA-1`                                |
+| `SHA256 hash`                     | `SHA-256`                              |
+| `SHA512 hash`                     | `SHA-512`                              |
+| `File`                            | `StixFile`                             |
+| `File Name`                       | `StixFile`                             |
+| `File path`                       | `Directory`                            |
+| `MUTEX name`                      | `Mutex`                                |
+| `Autonomous System Number`        | `Autonomous-System`                    |
+| `Phone number`                    | `Phone-Number`                         |
+| `Registry Key`                    | `Windows-Registry-Key`                 |
+| `Username`                        | `User-Account` (user_id)               |
+
+- There are a few peculiarities in ServiceNow. `CVE numbers` and `Organization names` are not considered observables in OpenCTI, but `Vulnerabilities` and `Organizations` respectively.
+
+| Observable Type name (ServiceNow) | Not Observable (OpenCTI)  |
+|-----------------------------------|---------------------------|
+| `CVE number`                      | `Vulnerability`           |
+| `Organization Name`               | `Organization`            |
+
+- All observable notes will be retrieved and added to the observable description in opencti.
+- All observables that don't have the correct type name (be careful, they are case-sensitive) or that don't have the scopes taken into account will be ignored.
+- The labels added to opencti for observables come from `sys_tags` + `security_tags` + `finding` (but `Unknown` will be ignored).
 
 ---
 

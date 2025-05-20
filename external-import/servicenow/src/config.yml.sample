@@ -33,3 +33,4 @@ servicenow:
   #priority_to_exclude: 'ChangeMe' # Example: "critical,high,moderate,low,planning"
   #comment_to_exclude: 'ChangeMe' # Example: "private,public,auto"
   #tlp_level: 'ChangeMe' # Default: 'red' (available: clear, green, amber, amber+strict, red)
+  #promote_observables_as_indicators: 'ChangeMe' # Default: True

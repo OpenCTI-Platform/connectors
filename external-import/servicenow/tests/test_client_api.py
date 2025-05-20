@@ -38,6 +38,6 @@ def test_build_url(mock_client):
 async def test_list_matched(mock_client):
     # Given a mocked client with a mock request_data
     # When calling list_matched
-    # Then the results should be in the values mmatching the labels
+    # Then the results should be in the values matching the labels
     # and requests_data is called once.
-    pass
+    assert False
