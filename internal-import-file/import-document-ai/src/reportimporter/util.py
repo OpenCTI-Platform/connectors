@@ -3,17 +3,14 @@ from typing import Dict, List
 import stix2
 from pycti import (
     AttackPattern,
-    Identity,  # For Sector, Organization, Individual
+    Identity,
     IntrusionSet,
     Location,
     Malware,
     ThreatActorGroup,
     Vulnerability,
 )
-from pycti.utils.constants import (
-    CustomObjectChannel,  # custom-object « Channel » déjà fourni par pycti
-    IdentityTypes,  # classes d’identité STIX valides
-)
+from pycti.utils.constants import CustomObjectChannel, IdentityTypes
 
 
 def create_stix_object(
