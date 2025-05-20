@@ -14,14 +14,13 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-from requests.exceptions import ConnectionError, HTTPError
-
 from reportimporter.constants import (
     RESULT_FORMAT_CATEGORY,
     RESULT_FORMAT_MATCH,
     RESULT_FORMAT_TYPE,
 )
 from reportimporter.util import create_stix_object
+from requests.exceptions import ConnectionError, HTTPError
 
 
 class ReportImporter:
