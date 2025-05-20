@@ -1,4 +1,3 @@
-import uuid
 from datetime import datetime
 
 from pycti import StixCoreRelationship
@@ -58,7 +57,7 @@ class IndicatorEnricher(Enricher):
         )
         self.enrich()
         observed_data = ObservedData(
-            id=f"observed-data--{uuid.uuid4()}",
+            id=ObservedData.generate_id(list(set(self._observed_data_refs))),
             type="observed-data",
             first_observed=datetime.now(),
             last_observed=datetime.now(),
