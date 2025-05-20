@@ -1,5 +1,6 @@
 import abc
 import datetime
+from collections import OrderedDict
 from typing import Any, Generator, Literal
 
 import pycti
@@ -7,6 +8,19 @@ import stix2
 from base_connector.errors import InvalidTlpLevelError
 from base_connector.models import OpenCTIFile, ReportCustomProperties
 from pycti import OpenCTIConnectorHelper
+from stix2.properties import ListProperty, ReferenceProperty
+
+
+class RFReport(stix2.Report):
+    """Subclass of Report with 'object_refs' property set to required=False."""
+
+    _properties = OrderedDict(
+        stix2.Report._properties  # pylint: disable=protected-access
+    )  # Copy the parent class properties
+    _properties["object_refs"] = ListProperty(
+        ReferenceProperty(valid_types=["SCO", "SDO", "SRO"], spec_version="2.1"),
+        required=False,
+    )
 
 
 class BaseConverter(abc.ABC):
@@ -75,13 +89,12 @@ class BaseConverter(abc.ABC):
         x_opencti_content: str,
         x_opencti_files: list[OpenCTIFile],
     ) -> stix2.Report:
-        return stix2.Report(
+        return RFReport(
             id=pycti.Report.generate_id(name=name, published=published),
             name=name,
             report_types=report_types,
             published=published,
             created_by_ref=self.author,
-            object_refs=[self.author],
             object_marking_refs=[self.tlp_marking],
             custom_properties=ReportCustomProperties(
                 x_opencti_content=x_opencti_content,

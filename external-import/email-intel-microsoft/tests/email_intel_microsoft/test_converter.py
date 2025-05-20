@@ -53,7 +53,6 @@ def test_converter_to_stix(converter: ConnectorConverter) -> None:
     assert report[0].report_types == ["threat-report"]
     assert report[0].published == STIXdatetime(2025, 4, 16, 10, 10, 10)
     assert report[0].created_by_ref == converter.author.id
-    assert report[0].object_refs == [converter.author.id]
     assert report[0].object_marking_refs == [converter.tlp_marking.id]
     assert report[0].x_opencti_content == "Test Content"
 
@@ -78,7 +77,6 @@ def test_converter_to_stix_no_subject(converter: ConnectorConverter) -> None:
     assert report[0].report_types == ["threat-report"]
     assert report[0].published == STIXdatetime(2025, 4, 16, 10, 10, 10)
     assert report[0].created_by_ref == converter.author.id
-    assert report[0].object_refs == [converter.author.id]
     assert report[0].object_marking_refs == [converter.tlp_marking.id]
     assert report[0].x_opencti_content == "Test Content"
 
