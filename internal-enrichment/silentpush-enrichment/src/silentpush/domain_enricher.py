@@ -220,10 +220,12 @@ class DomainEnricher(Enricher):
         if not domain_info.get("registrar"):
             return
         registrar = Identity(
-            id=f"registrar--{uuid.uuid4()}",
+            id=Identity.generate_id(domain_info.get("registrar"), "organization"),
             type="identity",
             name=domain_info.get("registrar"),
             description="Registrar",
+            identity_class="organization",
+            # no custom extensions, leaving it here for future implementations
             custom_properties={
                 "x-whois_age": domain_info.get("whois_age"),
                 "x-whois_created_date": domain_info.get("whois_created_date"),
