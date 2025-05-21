@@ -20,3 +20,4 @@ flashpoint:
   indicators_in_reports: true
   import_communities: true
   communities_queries: "cybersecurity,cyberattack"
+  guess_relationships_from_reports: false
