@@ -434,6 +434,12 @@ class ExternalImportConnector:
                 self.helper.metric.state("stopped")
                 self.helper.connector_logger.error(format_exc())
                 self.helper.connector_logger.error("Unexpected error occurred in main loop")
+                
+            if self.helper.connect_run_and_terminate:
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name} connector ended"
+                )
+                sys.exit(0)
 
             self.helper.connector_logger.debug("Sleeping for 60 seconds")
             time.sleep(60)
