@@ -29,34 +29,3 @@ class MACAddressModel(BaseSCOModel):
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""
         return MACAddress(**self.model_dump(exclude_none=True))
-
-
-def test_mac_address_model() -> None:
-    """Test function to demonstrate the usage of MACAddressModel."""
-    from uuid import uuid4
-
-    # === Minimal MAC Address ===
-    minimal = MACAddressModel(
-        type="mac-addr",
-        spec_version="2.1",
-        id=f"mac-addr--{uuid4()}",
-        value="00:0a:95:9d:68:16",
-    )
-
-    print("=== MINIMAL MAC ADDRESS ===")  # noqa: T201
-    print(minimal.to_stix2_object().serialize(pretty=True))  # noqa: T201
-
-    # === Full MAC Address ===
-    full = MACAddressModel(
-        type="mac-addr",
-        spec_version="2.1",
-        id=f"mac-addr--{uuid4()}",
-        value="de:ad:be:ef:00:01",
-    )
-
-    print("\n=== FULL MAC ADDRESS ===")  # noqa: T201
-    print(full.to_stix2_object().serialize(pretty=True))  # noqa: T201
-
-
-if __name__ == "__main__":
-    test_mac_address_model()
