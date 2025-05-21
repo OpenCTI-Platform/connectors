@@ -11,6 +11,7 @@ class Connector(BaseConnector):
     config: ConnectorSettings
     converter: ConnectorConverter
     client: BaseConnectorClient
+    start_time = datetime.datetime.now(tz=datetime.UTC)
 
     def get_last_run(self) -> datetime.datetime | None:
         if last_run_str := self.state.get("last_run"):
@@ -22,7 +23,7 @@ class Connector(BaseConnector):
         self.helper.connector_logger.info("Connector last run: Never")
         return None
 
-    def get_stix_objects(self) -> list[stix2.Report]:
+    def process_data(self) -> list[stix2.Report]:
         since_date = self.get_last_run() or (
             datetime.datetime.now(tz=datetime.UTC)
             - self.config.email_intel_imap.relative_import_start_date
@@ -37,10 +38,10 @@ class Connector(BaseConnector):
             for stix_object in self.converter.to_stix_objects(email)
         ]
 
-    def process_data(self) -> list[stix2.Report]:
-        run_time = datetime.datetime.now(tz=datetime.UTC)
+    def initiate_work(self) -> str:
+        self.start_time = datetime.datetime.now(tz=datetime.UTC)
+        return super().initiate_work()
 
-        stix_objects = self.get_stix_objects()
-
-        self.update_state(last_run=run_time.isoformat(timespec="seconds"))
-        return stix_objects
+    def finalize_work(self, work_id: str, message: str) -> None:
+        super().finalize_work(work_id=work_id, message=message)
+        self.update_state(last_run=self.start_time.isoformat(timespec="seconds"))
