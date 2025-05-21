@@ -11,11 +11,4 @@ connector:
 
 greynoisefeed:
   api_key: 'ChangeMe'
-  feed_type: 'malicious' # set to benign, malicious, benign+malicious, or all
-  indicator_score_malicious: 75
-  indicator_score_benign: 20
-  name: 'GreyNoise Feed'
-  description: 'GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.'
-  limit: 10000
-  import_metadata: false
-  interval: 24 # In hours (the connector will always pull last 2 days each run)
+  feed_type: 'malicious' # set to benign, malicious, suspicious, benign+malicious, malicious+suspicious, benign+suspicious+malicious, or all
