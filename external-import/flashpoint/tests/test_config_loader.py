@@ -53,6 +53,7 @@ def fake_config_dict() -> dict[str, dict[str, Any]]:
             "import_indicators": True,
             "import_communities": True,
             "communities_queries": "cybersecurity,cyberattack",
+            "guess_relationships_from_reports": False,
         },
     }
 
@@ -64,7 +65,7 @@ def fake_environ(config_dict: dict[str, dict[str, Any]]):
     environ = {}
     for key, value in config_dict.items():
         for sub_key, sub_value in value.items():
-            if sub_value:
+            if sub_value is not None:
                 environ[f"{key.upper()}_{sub_key.upper()}"] = str(sub_value)
     return environ
 

@@ -64,7 +64,7 @@ class FlashpointConnector:
         for report in reports:
             try:
                 stix_report_objects = self.converter_to_stix.convert_flashpoint_report(
-                    report
+                    report, self.config.flashpoint.guess_relationships_from_reports
                 )
                 bundle = self.helper.stix2_create_bundle(stix_report_objects)
                 self._send_bundle(work_id=work_id, serialized_bundle=bundle)
