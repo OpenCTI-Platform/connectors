@@ -6,7 +6,7 @@ import os
 import re
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import requests
@@ -100,7 +100,9 @@ class LuminarManager:
     def __init__(self) -> None:
         # pylint: disable=too-many-positional-arguments
 
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        config_file_path = (
+            os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        )
         config = (
             yaml.load(open(config_file_path, encoding="utf-8"), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
@@ -137,6 +139,12 @@ class LuminarManager:
             type="Organization",
             name="Cognyte Luminar",
             description="Cognyte Luminar Threat Intelligence feeds for IOC, Leaked Records and Cyberfeeds",
+        )
+        self.duration_interval = get_config_variable(
+            "CONNECTOR_DURATION_INTERVAL",
+            ["luminar", "duration_interval"],
+            config,
+            default=1,
         )
         self.x_opencti_score = 80
         self.confidence = 80
@@ -769,78 +777,113 @@ class LuminarManager:
                 )
         return cyberfeeds_bundle
 
+    def can_run_now(self, next_run: str, days: int = 1) -> bool:
+        """
+        Returns True if current UTC time is greater than next_run + days.
+        Otherwise, returns False.
+
+        :param next_run: A string in format "%Y-%m-%dT%H:%M:%S.%fZ"
+        :param days: Number of days to add to next_run
+        :return: Boolean
+        """
+        try:
+            # Parse the next_run time string into a datetime object
+            next_run_dt = datetime.strptime(next_run, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+                tzinfo=timezone.utc
+            )
+
+            # Add the specified number of days
+            threshold_time = next_run_dt + timedelta(days=days)
+            # Get the current UTC time
+            current_time = datetime.now(timezone.utc)
+            # Compare times
+            if threshold_time > current_time:
+                self.helper.log_info(
+                    f"The connector is scheduled to run after {threshold_time} (UTC)"
+                )
+            return current_time > threshold_time
+        except ValueError as e:
+            print(f"Error parsing datetime: {e}")
+            return False
+
     def run(self):
         """Runs the main process."""
-        self.helper.log_info("Connecting to Cognyte Luminar...")
         try:
-            access_token, message = self.access_token()
-            if not access_token:
-                self.helper.log_error(f"Failed to get access token: {message}")
-                return
-
-            headers = {"Authorization": f"Bearer {access_token}"}
-            taxii_collection = self.get_taxi_collections(headers)
-            if not taxii_collection:
-                return
-
             current_state = self.helper.get_state()
             last_run = None
             if current_state is not None and "last_run" in current_state:
                 last_run = current_state["last_run"]
 
-            next_checkpoint = self.get_timestamp()
-            from_date = last_run or self.initial_fetch_date + "T00:00:00.000000Z"
+            if not last_run or self.can_run_now(last_run, self.duration_interval):
 
-            params = {"limit": 9999}
-            params["added_after"] = from_date
-            self.helper.log_info(f"Fetching Luminar data from {from_date}")
+                self.helper.log_info("Connecting to Cognyte Luminar...")
+                access_token, message = self.access_token()
+                if not access_token:
+                    self.helper.log_error(f"Failed to get access token: {message}")
+                    return
 
-            ioc_records = self.get_collection_objects(
-                headers, taxii_collection["iocs"], params
-            )
-            self.helper.log_info(f"IOC records fetched: {len(ioc_records)}")
+                headers = {"Authorization": f"Bearer {access_token}"}
+                taxii_collection = self.get_taxi_collections(headers)
+                if not taxii_collection:
+                    return
 
-            leaked_records = self.get_collection_objects(
-                headers, taxii_collection["leakedrecords"], params
-            )
-            self.helper.log_info(f"Leaked records fetched: {len(leaked_records)}")
+                next_checkpoint = self.get_timestamp()
+                from_date = last_run or self.initial_fetch_date + "T00:00:00.000000Z"
 
-            cyberfeeds_records = self.get_collection_objects(
-                headers, taxii_collection["cyberfeeds"], params
-            )
-            self.helper.log_info(
-                f"cyberfeeds records fetched: {len(cyberfeeds_records)}"
-            )
+                params = {"limit": 9999}
+                params["added_after"] = from_date
+                self.helper.log_info(f"Fetching Luminar data from {from_date}")
 
-            ioc_processed_records = self.process_iocs(from_date, ioc_records)
-            leaked_processed_records = self.process_leaked(from_date, leaked_records)
-            cyberfeeds_processed_records = self.process_cyberfeeds(
-                from_date, cyberfeeds_records
-            )
-            if (
-                len(
-                    ioc_processed_records
-                    + leaked_processed_records
-                    + cyberfeeds_processed_records
+                ioc_records = self.get_collection_objects(
+                    headers, taxii_collection["iocs"], params
                 )
-                > 0
-            ):
-                all_bundle = self.helper.stix2_create_bundle(
-                    ioc_processed_records
-                    + leaked_processed_records
-                    + cyberfeeds_processed_records
-                )
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, "luminar"
-                )
-                self.helper.send_stix2_bundle(
-                    bundle=all_bundle, update=True, work_id=work_id
-                )
-            else:
-                self.helper.log_info("No new data to import!")
+                self.helper.log_info(f"IOC records fetched: {len(ioc_records)}")
 
-            self.helper.set_state({"last_run": next_checkpoint})
-            self.helper.log_info(f"Saving checkpoint for next run: {next_checkpoint}")
+                leaked_records = self.get_collection_objects(
+                    headers, taxii_collection["leakedrecords"], params
+                )
+                self.helper.log_info(f"Leaked records fetched: {len(leaked_records)}")
+
+                cyberfeeds_records = self.get_collection_objects(
+                    headers, taxii_collection["cyberfeeds"], params
+                )
+                self.helper.log_info(
+                    f"cyberfeeds records fetched: {len(cyberfeeds_records)}"
+                )
+
+                ioc_processed_records = self.process_iocs(from_date, ioc_records)
+                leaked_processed_records = self.process_leaked(
+                    from_date, leaked_records
+                )
+                cyberfeeds_processed_records = self.process_cyberfeeds(
+                    from_date, cyberfeeds_records
+                )
+                if (
+                    len(
+                        ioc_processed_records
+                        + leaked_processed_records
+                        + cyberfeeds_processed_records
+                    )
+                    > 0
+                ):
+                    all_bundle = self.helper.stix2_create_bundle(
+                        ioc_processed_records
+                        + leaked_processed_records
+                        + cyberfeeds_processed_records
+                    )
+                    work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, "luminar"
+                    )
+                    self.helper.send_stix2_bundle(
+                        bundle=all_bundle, update=True, work_id=work_id
+                    )
+                else:
+                    self.helper.log_info("No new data to import!")
+
+                self.helper.set_state({"last_run": next_checkpoint})
+                self.helper.log_info(
+                    f"Saving checkpoint for next run: {next_checkpoint}"
+                )
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.log_info("Connector stop")
