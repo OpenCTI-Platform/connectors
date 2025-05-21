@@ -169,8 +169,8 @@ class FlashpointClient:
         data = response.json()
         return data
 
-    def get_compromised_credentials_sightings(
-        self, since: datetime
+    def get_compromised_credential_sightings(
+        self, since: datetime = None
     ) -> Generator[dict, None, None]:
         """
         Get Compromised Credentials Sightings from Flashpoint API.
@@ -182,11 +182,11 @@ class FlashpointClient:
         """
         url = self.api_base_url + "/sources/v1/noncommunities/search"
 
-        since_timestamp = int(datetime.timestamp(since))
+        since_timestamp = int(datetime.timestamp(since)) if since else None
         body = {
             "query": (
-                "+basetypes:(credential-sighting) "
-                f"+header_.indexed_at: [{since_timestamp} TO now]"
+                "+basetypes:(credential-sighting)"
+                + (f" +header_.indexed_at: [{since_timestamp} TO now]" if since else "")
             ),
             "sort": ["header_.indexed_at:asc"],
             "size": 25,
