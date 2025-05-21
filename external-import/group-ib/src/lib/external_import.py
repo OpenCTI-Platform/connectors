@@ -19,13 +19,17 @@ from utils import ExternalImportHelper
 )
 def get_mitre_mapper(adapter, endpoint, params, decode=True, **kwargs):
     # type: (TIAdapter, str, dict, bool, dict) -> dict
-    adapter.helper.connector_logger.info(f"Starting get_mitre_mapper with endpoint: {endpoint}")
+    adapter.helper.connector_logger.info(
+        f"Starting get_mitre_mapper with endpoint: {endpoint}"
+    )
     mitre_mapper = {}
 
     response = adapter.send_request(
         endpoint=endpoint, params=params, decode=decode, **kwargs
     )
-    adapter.helper.connector_logger.debug(f"Received response from endpoint: {endpoint}")
+    adapter.helper.connector_logger.debug(
+        f"Received response from endpoint: {endpoint}"
+    )
 
     for pattern_dictionary in response.get("AttackPattern").values():
         name = pattern_dictionary.get("name", "")
@@ -33,9 +37,13 @@ def get_mitre_mapper(adapter, endpoint, params, decode=True, **kwargs):
             name = name[1:-1:]
             name = name.split("->")[-1]
         mitre_mapper[pattern_dictionary.get("mitreId")] = name
-        adapter.helper.connector_logger.debug(f"Mapped MITRE ID {pattern_dictionary.get('mitreId')} to name: {name}")
+        adapter.helper.connector_logger.debug(
+            f"Mapped MITRE ID {pattern_dictionary.get('mitreId')} to name: {name}"
+        )
 
-    adapter.helper.connector_logger.info(f"Completed get_mitre_mapper, mapped {len(mitre_mapper)} attack patterns")
+    adapter.helper.connector_logger.info(
+        f"Completed get_mitre_mapper, mapped {len(mitre_mapper)} attack patterns"
+    )
     return mitre_mapper
 
 
@@ -67,7 +75,9 @@ class ExternalImportConnector:
         self.cfg = ConfigConnector()
         self.helper = OpenCTIConnectorHelper({})
         self.pc = ProxyConfigurator()
-        self.helper.connector_logger.debug("Initialized ConfigConnector, OpenCTIConnectorHelper, and ProxyConfigurator")
+        self.helper.connector_logger.debug(
+            "Initialized ConfigConnector, OpenCTIConnectorHelper, and ProxyConfigurator"
+        )
 
         current_state = self.helper.get_state()
         self.helper.connector_logger.debug(f"Current state retrieved: {current_state}")
@@ -82,7 +92,9 @@ class ExternalImportConnector:
                 cfg=self.cfg, helper=self.helper
             )
         )
-        self.helper.connector_logger.debug(f"Update existing data set to: {self.update_existing_data}")
+        self.helper.connector_logger.debug(
+            f"Update existing data set to: {self.update_existing_data}"
+        )
         self.ttl = None
         self.helper.connector_logger.debug("TTL initialized as None")
 
@@ -111,7 +123,9 @@ class ExternalImportConnector:
             enable = self.cfg.get_collection_settings(collection_name, "enable")
             if enable == True:
                 self.enabled_collections.append(slached_collection_name)
-            self.helper.connector_logger.debug(f"Checked collection {collection_name}, enable: {enable}")
+            self.helper.connector_logger.debug(
+                f"Checked collection {collection_name}, enable: {enable}"
+            )
         self.helper.connector_logger.info(
             f"Enabled Collections: {self.enabled_collections}"
         )
@@ -134,7 +148,9 @@ class ExternalImportConnector:
         # create list of collections feeds generators
         self.MITRE_MAPPER = None
         self.helper.connector_logger.debug("MITRE_MAPPER initialized as None")
-        self.helper.connector_logger.info("Completed initialization of ExternalImportConnector")
+        self.helper.connector_logger.info(
+            "Completed initialization of ExternalImportConnector"
+        )
 
     def _collect_intelligence(
         self,
@@ -145,21 +161,29 @@ class ExternalImportConnector:
         flag_instrusion_set_instead_of_threat_actor=False,
     ) -> list:
         """Collect intelligence from the source"""
-        self.helper.connector_logger.info(f"Starting intelligence collection for collection: {collection}, TTL: {ttl}")
+        self.helper.connector_logger.info(
+            f"Starting intelligence collection for collection: {collection}, TTL: {ttl}"
+        )
         raise NotImplementedError
 
     def check_generator(self, generator, collection):
-        self.helper.connector_logger.debug(f"Checking generator for collection: {collection}")
+        self.helper.connector_logger.debug(
+            f"Checking generator for collection: {collection}"
+        )
         if not generator:
             self.helper.connector_logger.warning(
                 "No generator for collection: {}".format(collection)
             )
             return False
-        self.helper.connector_logger.debug(f"Generator valid for collection: {collection}")
+        self.helper.connector_logger.debug(
+            f"Generator valid for collection: {collection}"
+        )
         return True
 
     def check_enable(self, enable, collection):
-        self.helper.connector_logger.debug(f"Checking enable status for collection: {collection}, enable: {enable}")
+        self.helper.connector_logger.debug(
+            f"Checking enable status for collection: {collection}, enable: {enable}"
+        )
         if not enable:
             self.helper.connector_logger.warning(
                 "User disable collection: {}. Aborting!".format(collection)
@@ -169,7 +193,9 @@ class ExternalImportConnector:
         return True
 
     def extra_pre_processing(self, collection, portion) -> None | Any:
-        self.helper.connector_logger.info(f"Starting extra pre-processing for collection: {collection}")
+        self.helper.connector_logger.info(
+            f"Starting extra pre-processing for collection: {collection}"
+        )
         parsed_portion = None
         if collection == "attacks/ddos" and self.IGNORE_NON_MALWARE_DDOS:
             self.helper.connector_logger.debug("Applying filter for non-malware DDoS")
@@ -181,15 +207,21 @@ class ExternalImportConnector:
             collection in ["apt/threat", "hi/threat"]
             and self.IGNORE_NON_INDICATOR_THREATS
         ):
-            self.helper.connector_logger.debug("Applying filter for non-indicator threats")
+            self.helper.connector_logger.debug(
+                "Applying filter for non-indicator threats"
+            )
             parsed_portion = portion.parse_portion(
                 filter_map=[("indicators", [])],
                 check_existence=True,
             )
         else:
-            self.helper.connector_logger.debug("No specific filters applied, parsing portion")
+            self.helper.connector_logger.debug(
+                "No specific filters applied, parsing portion"
+            )
             parsed_portion = portion.parse_portion()
-        self.helper.connector_logger.info(f"Completed extra pre-processing for collection: {collection}, parsed portion size: {len(parsed_portion) if parsed_portion else 0}")
+        self.helper.connector_logger.info(
+            f"Completed extra pre-processing for collection: {collection}, parsed portion size: {len(parsed_portion) if parsed_portion else 0}"
+        )
         return parsed_portion
 
     def get_formatted_utcfromtimestamp(self, date) -> str:
@@ -207,17 +239,25 @@ class ExternalImportConnector:
         if current_state is not None:
             if timestamp:
                 current_state["last_run"] = timestamp
-                self.helper.connector_logger.debug(f"Updated state with last_run: {timestamp}")
+                self.helper.connector_logger.debug(
+                    f"Updated state with last_run: {timestamp}"
+                )
             elif prepared_data:
                 current_state.update(prepared_data)
-                self.helper.connector_logger.debug(f"Updated state with prepared_data: {prepared_data}")
+                self.helper.connector_logger.debug(
+                    f"Updated state with prepared_data: {prepared_data}"
+                )
         else:
             if timestamp:
                 current_state = {"last_run": timestamp}
-                self.helper.connector_logger.debug(f"Created new state with last_run: {timestamp}")
+                self.helper.connector_logger.debug(
+                    f"Created new state with last_run: {timestamp}"
+                )
             elif prepared_data:
                 current_state = prepared_data
-                self.helper.connector_logger.debug(f"Created new state with prepared_data: {prepared_data}")
+                self.helper.connector_logger.debug(
+                    f"Created new state with prepared_data: {prepared_data}"
+                )
 
         self.helper.set_state(current_state)
         self.helper.connector_logger.info("Completed set_or_update_state")
@@ -256,7 +296,9 @@ class ExternalImportConnector:
                 interval_seconds = ExternalImportHelper.get_interval(
                     interval=self.interval, helper=self.helper
                 )
-                self.helper.connector_logger.debug(f"Interval in seconds: {interval_seconds}")
+                self.helper.connector_logger.debug(
+                    f"Interval in seconds: {interval_seconds}"
+                )
                 if last_run is None or (timestamp - last_run >= interval_seconds):
                     self.helper.metric.inc("run_count")
                     self.helper.metric.state("running")
@@ -289,7 +331,9 @@ class ExternalImportConnector:
                             work_id = self.helper.api.work.initiate_work(
                                 self.helper.connect_id, friendly_name
                             )
-                            self.helper.connector_logger.info(f"Initiated work ID: {work_id} for collection: {collection}")
+                            self.helper.connector_logger.info(
+                                f"Initiated work ID: {work_id} for collection: {collection}"
+                            )
                             generator = data_item[0][1]
                             self.helper.connector_logger.debug(
                                 f"Generator data collection:{collection} , generator: {generator}"
@@ -307,7 +351,9 @@ class ExternalImportConnector:
                             enable = self.cfg.get_collection_settings(
                                 collection_name_for_config_map, "enable"
                             )
-                            self.helper.connector_logger.debug(f"Collection {collection_name_for_config_map} enable status: {enable}")
+                            self.helper.connector_logger.debug(
+                                f"Collection {collection_name_for_config_map} enable status: {enable}"
+                            )
 
                             if not self.check_enable(
                                 enable=enable, collection=collection
@@ -319,7 +365,9 @@ class ExternalImportConnector:
                                 collection_name_for_config_map, "ttl"
                             )
                             self.ttl = int(ttl)
-                            self.helper.connector_logger.debug(f"TTL set to: {self.ttl}")
+                            self.helper.connector_logger.debug(
+                                f"TTL set to: {self.ttl}"
+                            )
 
                             # Global collections filters
 
@@ -328,31 +376,41 @@ class ExternalImportConnector:
                                     "intrusion_set_instead_of_threat_actor"
                                 )
                             )
-                            self.helper.connector_logger.debug(f"INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR: {self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR}")
+                            self.helper.connector_logger.debug(
+                                f"INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR: {self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR}"
+                            )
 
                             self.IGNORE_NON_MALWARE_DDOS = (
                                 self.cfg.get_extra_settings_by_name(
                                     "ignore_non_malware_ddos"
                                 )
                             )
-                            self.helper.connector_logger.debug(f"IGNORE_NON_MALWARE_DDOS: {self.IGNORE_NON_MALWARE_DDOS}")
+                            self.helper.connector_logger.debug(
+                                f"IGNORE_NON_MALWARE_DDOS: {self.IGNORE_NON_MALWARE_DDOS}"
+                            )
 
                             self.IGNORE_NON_INDICATOR_THREATS = (
                                 self.cfg.get_extra_settings_by_name(
                                     "ignore_non_indicator_threats"
                                 )
                             )
-                            self.helper.connector_logger.debug(f"IGNORE_NON_INDICATOR_THREATS: {self.IGNORE_NON_INDICATOR_THREATS}")
+                            self.helper.connector_logger.debug(
+                                f"IGNORE_NON_INDICATOR_THREATS: {self.IGNORE_NON_INDICATOR_THREATS}"
+                            )
 
                             for portion in generator:
-                                self.helper.connector_logger.info(f"Processing portion for collection: {collection}")
+                                self.helper.connector_logger.info(
+                                    f"Processing portion for collection: {collection}"
+                                )
                                 # Extra pre-processing for collections
                                 parsed_portion = self.extra_pre_processing(
                                     collection=collection, portion=portion
                                 )
                                 size = len(parsed_portion)
                                 count = 0
-                                self.helper.connector_logger.debug(f"Parsed portion size: {size}")
+                                self.helper.connector_logger.debug(
+                                    f"Parsed portion size: {size}"
+                                )
                                 for event in parsed_portion:
                                     count += 1
                                     self.helper.connector_logger.info(
@@ -365,7 +423,9 @@ class ExternalImportConnector:
                                         self.MITRE_MAPPER,
                                         flag_instrusion_set_instead_of_threat_actor=self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR,
                                     )
-                                    self.helper.connector_logger.debug(f"Collected {len(bundle_objects)} intelligence objects for event {count}")
+                                    self.helper.connector_logger.debug(
+                                        f"Collected {len(bundle_objects)} intelligence objects for event {count}"
+                                    )
                                     if len(bundle_objects) > 0:
                                         bundle = (
                                             OpenCTIConnectorHelper.stix2_create_bundle(
@@ -380,22 +440,30 @@ class ExternalImportConnector:
                                             update=self.update_existing_data,
                                             work_id=work_id,
                                         )
-                                        self.helper.connector_logger.debug(f"Sent STIX bundle for work ID: {work_id}")
+                                        self.helper.connector_logger.debug(
+                                            f"Sent STIX bundle for work ID: {work_id}"
+                                        )
 
                                 # Update seqUpdate param
                                 prepared_data[collection].update(
                                     {"sequpdate": portion.sequpdate}
                                 )
-                                self.helper.connector_logger.debug(f"Updated seqUpdate for collection {collection}: {portion.sequpdate}")
+                                self.helper.connector_logger.debug(
+                                    f"Updated seqUpdate for collection {collection}: {portion.sequpdate}"
+                                )
                                 self.set_or_update_state(prepared_data=prepared_data)
 
                             # Finish work
                             message = f"{self.helper.connect_name} - {collection} successfully run, storing last_run as {timestamp}"
                             self.helper.api.work.to_processed(work_id, message)
-                            self.helper.connector_logger.info(f"Work completed for collection: {collection}, work ID: {work_id}")
+                            self.helper.connector_logger.info(
+                                f"Work completed for collection: {collection}, work ID: {work_id}"
+                            )
                     except Exception:
                         self.helper.connector_logger.error(format_exc())
-                        self.helper.connector_logger.error("Error occurred during collection processing")
+                        self.helper.connector_logger.error(
+                            "Error occurred during collection processing"
+                        )
 
                     # Store the current timestamp as a last run
                     self.helper.connector_logger.info(
@@ -433,8 +501,10 @@ class ExternalImportConnector:
                 self.helper.metric.inc("error_count")
                 self.helper.metric.state("stopped")
                 self.helper.connector_logger.error(format_exc())
-                self.helper.connector_logger.error("Unexpected error occurred in main loop")
-                
+                self.helper.connector_logger.error(
+                    "Unexpected error occurred in main loop"
+                )
+
             if self.helper.connect_run_and_terminate:
                 self.helper.connector_logger.info(
                     f"{self.helper.connect_name} connector ended"
