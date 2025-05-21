@@ -1031,7 +1031,7 @@ class DataToSTIXAdapter:
                         self.helper.connector_logger.debug(f"Generated relations for IPv4: {_domain}")
                         ip.add_relationships_to_stix_objects()
                         _ip_stix_objects.append(ip)
-                        self.helper.connector_logger.debug(f"Added IPv4 object to IP list")
+                        self.helper.connector_logger.debug("Added IPv4 object to IP list")
                     else:
                         domain = self.generate_stix_domain(_domain)
                         domain.is_ioc = domain_is_ioc
@@ -1045,7 +1045,7 @@ class DataToSTIXAdapter:
                         self.helper.connector_logger.debug(f"Generated relations for domain: {_domain}")
                         domain.add_relationships_to_stix_objects()
                         _domain_stix_objects.append(domain)
-                        self.helper.connector_logger.debug(f"Added domain object to domain list")
+                        self.helper.connector_logger.debug("Added domain object to domain list")
 
                 url = None
                 if _url:
@@ -1066,7 +1066,7 @@ class DataToSTIXAdapter:
                     self.helper.connector_logger.debug(f"Generated relations for URL: {_url}")
                     url.add_relationships_to_stix_objects()
                     _url_stix_objects.append(url)
-                    self.helper.connector_logger.debug(f"Added URL object to URL list")
+                    self.helper.connector_logger.debug("Added URL object to URL list")
 
                 if _ips:
                     self.helper.connector_logger.debug(f"Processing IPs: {_ips}")
@@ -1088,7 +1088,7 @@ class DataToSTIXAdapter:
                             self.helper.connector_logger.debug(f"Generated relations between IP: {_ip} and URL: {_url}")
                         ip.add_relationships_to_stix_objects()
                         _ip_stix_objects.append(ip)
-                        self.helper.connector_logger.debug(f"Added IP object to IP list")
+                        self.helper.connector_logger.debug("Added IP object to IP list")
 
         else:
             _domain = obj.get("domain")
@@ -1112,7 +1112,7 @@ class DataToSTIXAdapter:
                     self.helper.connector_logger.debug(f"Generated relations for IPv4: {_domain}")
                     ip.add_relationships_to_stix_objects()
                     _ip_stix_objects.append(ip)
-                    self.helper.connector_logger.debug(f"Added IPv4 object to IP list")
+                    self.helper.connector_logger.debug("Added IPv4 object to IP list")
                 else:
                     domain = self.generate_stix_domain(_domain)
                     domain.is_ioc = domain_is_ioc
@@ -1126,7 +1126,7 @@ class DataToSTIXAdapter:
                     self.helper.connector_logger.debug(f"Generated relations for domain: {_domain}")
                     domain.add_relationships_to_stix_objects()
                     _domain_stix_objects.append(domain)
-                    self.helper.connector_logger.debug(f"Added domain object to domain list")
+                    self.helper.connector_logger.debug("Added domain object to domain list")
 
             url = None
             if _url:
@@ -1147,7 +1147,7 @@ class DataToSTIXAdapter:
                 self.helper.connector_logger.debug(f"Generated relations for URL: {_url}")
                 url.add_relationships_to_stix_objects()
                 _url_stix_objects.append(url)
-                self.helper.connector_logger.debug(f"Added URL object to URL list")
+                self.helper.connector_logger.debug("Added URL object to URL list")
 
             if _ip:
                 self.helper.connector_logger.debug(f"Processing IP: {_ip}")
@@ -1168,7 +1168,7 @@ class DataToSTIXAdapter:
                     self.helper.connector_logger.debug(f"Generated relations between IP: {_ip} and URL: {_url}")
                 ip.add_relationships_to_stix_objects()
                 _ip_stix_objects.append(ip)
-                self.helper.connector_logger.debug(f"Added IP object to IP list")
+                self.helper.connector_logger.debug("Added IP object to IP list")
 
         self.helper.connector_logger.info(f"Generated STIX network objects: {len(_domain_stix_objects)} domains, {len(_url_stix_objects)} URLs, {len(_ip_stix_objects)} IPs")
         return _domain_stix_objects, _url_stix_objects, _ip_stix_objects
