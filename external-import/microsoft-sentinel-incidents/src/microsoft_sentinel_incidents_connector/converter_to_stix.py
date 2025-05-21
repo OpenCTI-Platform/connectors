@@ -78,7 +78,19 @@ class ConverterToStix:
         incident_created_at = format_datetime(alert.get("TimeGenerated"))
         incident_modified_at = format_datetime(alert.get("EndTime"))
         incident_labels = [alert.get("AlertType")] if alert.get("AlertType") else None
-        incident_description = alert.get("Description", "")
+        incident_description = (
+            f"**Display Name**: {alert.get('DisplayName')}  \n"
+            f"**Alert ID**: {alert.get('SystemAlertId')}  \n"
+            f"**Status**: {alert.get('Status')}  \n"
+            f"**Severity**: {alert.get('AlertSeverity')}  \n"
+            f"**Alert Type**: {alert.get('AlertType')}  \n"
+            f"**Start Time (UTC)**: {alert.get('StartTime')}  \n"
+            f"**End Time (UTC)**: {alert.get('EndTime')}  \n"
+            f"**Time Generated (UTC)**: {alert.get('TimeGenerated')}  \n"
+            f"**Tactics**: {alert.get('Tactics')}  \n"
+            f"**Description**: {alert.get('Description')}  \n"
+            f"**Remediation**:  \n{''.join([f"{step}  \n" for step in json.loads(alert.get('RemediationSteps', "[]"))])}  \n"
+        )
         stix_incident = stix2.Incident(
             id=Incident.generate_id(incident_name, incident_created_at),
             created=incident_created_at,
