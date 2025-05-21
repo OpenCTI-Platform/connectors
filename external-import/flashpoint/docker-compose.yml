@@ -20,4 +20,5 @@ services:
       - FLASHPOINT_ALERT_CREATE_RELATED_ENTITIES=false
       - FLASHPOINT_IMPORT_COMMUNITIES=false
       - FLASHPOINT_COMMUNITIES_QUERIES=cybersecurity,cyberattack
+      - FLASHPOINT_GUESS_RELATIONSHIPS_FROM_REPORTS=false
     restart: always
