@@ -3,6 +3,8 @@
 from datetime import datetime
 from typing import List, Tuple
 
+from stix2.v21 import Identity, Location, MarkingDefinition, Report  # type: ignore
+
 from connector.src.custom.models.gti_reports.gti_report_model import (
     GTIReportData,
     ReportModel,
@@ -12,7 +14,6 @@ from connector.src.stix.v21.models.cdts.external_reference_model import (
     ExternalReferenceModel,
 )
 from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
-from stix2.v21 import Identity, Location, MarkingDefinition, Report  # type: ignore
 
 
 class GTIReportToSTIXReport:
@@ -75,9 +76,7 @@ class GTIReportToSTIXReport:
             organization_id=self.organization.id,
             marking_ids=[self.tlp_marking.id],
             labels=labels,
-            external_references=[
-                ref.model_dump(exclude_none=True) for ref in external_references
-            ],
+            external_references=[ref.model_dump(exclude_none=True) for ref in external_references],
             content=attributes.content,
         )
 
@@ -118,9 +117,7 @@ class GTIReportToSTIXReport:
                     labels.append(motivation.value)
         return labels
 
-    def _build_external_references(
-        self, attributes: ReportModel
-    ) -> List[ExternalReferenceModel]:
+    def _build_external_references(self, attributes: ReportModel) -> List[ExternalReferenceModel]:
         """Build external references from report attributes.
 
         Args:
@@ -186,33 +183,52 @@ class GTIReportToSTIXReport:
         return object_refs
 
     @staticmethod
-    def add_object_refs(
-        report_data: GTIReportData, objects_to_add: List[str]
-    ) -> Report:
-        """Add object references to an existing STIX report.
+    def add_object_refs(objects_to_add: List[str], existing_report: Report) -> Report:
+        """Add object references to an existing STIX report while preserving all report data.
 
         Args:
-            report_data: The report data to update.
             objects_to_add: Object ID(s) to add to the report's object_refs.
+            existing_report: The existing STIX report object to update.
 
         Returns:
-            Report: The updated STIX report.
+            Report: The updated STIX report with all original data preserved.
 
         """
-        attributes = report_data.attributes
-        name = attributes.name
-        if len(name) < 2:
-            raise ValueError("Report name must be at least 2 characters long")
+        name = existing_report.name
+        created = existing_report.created
+        modified = existing_report.modified
 
-        created = datetime.fromtimestamp(attributes.creation_date)
-        modified = datetime.fromtimestamp(attributes.last_modification_date)
+        updated_refs = list(existing_report.object_refs)
+        for obj_id in objects_to_add:
+            if obj_id not in updated_refs:
+                updated_refs.append(obj_id)
 
-        minimal_report = OctiReportModel.create_minimal(
+        report_types = getattr(existing_report, "report_types", [ReportTypeOV.THREAT_REPORT])
+        description = getattr(existing_report, "description", None)
+        organization_id = getattr(existing_report, "created_by_ref", None)
+        marking_ids = getattr(existing_report, "object_marking_refs", [])
+        labels = getattr(existing_report, "labels", [])
+        external_references = getattr(existing_report, "external_references", [])
+        published = getattr(existing_report, "published", created)
+
+        custom_properties = {}
+        for key, value in vars(existing_report).items():
+            if key.startswith("x_"):
+                custom_properties[key] = value
+
+        report = OctiReportModel.create(
             name=name,
             created=created,
             modified=modified,
-            published=created,
-            object_refs=objects_to_add,
+            description=description,
+            report_types=report_types,
+            published=published,
+            object_refs=updated_refs,
+            organization_id=organization_id,
+            marking_ids=marking_ids,
+            labels=labels,
+            external_references=external_references,
+            custom_properties=custom_properties,
         )
 
-        return minimal_report.to_stix2_object()
+        return report.to_stix2_object()

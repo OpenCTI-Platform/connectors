@@ -49,7 +49,7 @@ def disable_config_yml() -> Any:
         return (yml_settings, env_settings, dotenv_settings, file_secret_settings)
 
     patcher = patch(
-        "connector.src.octi.config.base_config.BaseConfig.settings_customise_sources",
+        "connector.src.octi.interfaces.base_config.BaseConfig.settings_customise_sources",
         new=classmethod(fake_settings_customise_sources),
     )
     patcher.start()

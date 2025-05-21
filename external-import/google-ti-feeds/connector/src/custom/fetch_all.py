@@ -160,6 +160,7 @@ class FetchAll:
         """
         try:
             self.logger.info("Starting to fetch GTI data")
+            start_time = datetime.now()
 
             self.reports = []
             self.report_related_entities = {}
@@ -200,8 +201,9 @@ class FetchAll:
                 )
 
                 if i % 10 == 9 or i == total_reports - 1:
+                    elapsed = datetime.now() - start_time
                     self.logger.info(
-                        f"Progress checkpoint: {len(self.reports_with_complete_entities)} complete reports out of {len(self.reports)} total fetched"
+                        f"Progress checkpoint: {len(self.reports_with_complete_entities)} complete reports out of {len(self.reports)} total fetched (elapsed: {elapsed})"
                     )
                     self.logger.info(
                         f"Overall progress: {i + 1}/{total_reports} reports processed ({(i + 1) / total_reports * 100:.1f}%)"
