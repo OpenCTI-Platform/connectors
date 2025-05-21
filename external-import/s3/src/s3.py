@@ -342,7 +342,7 @@ class S3Connector:
     def process(self):
         now = datetime.now(pytz.UTC)
         objects = self.s3_client.list_objects(Bucket=self.s3_bucket_name)
-        if len(objects.get("Contents")) > 0:
+        if objects.get("Contents") is not None and len(objects.get("Contents")) > 0:
             friendly_name = "S3 run @ " + now.astimezone(pytz.UTC).isoformat()
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
