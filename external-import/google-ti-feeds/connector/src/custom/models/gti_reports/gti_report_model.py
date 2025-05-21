@@ -33,8 +33,12 @@ class Counters(BaseModel):
         ...,
         description="Number of IoCs related to the report (files + URLs + domains + IP addresses).",
     )
-    ip_addresses: int = Field(..., description="Number of IP addresses related to the report.")
-    subscribers: int = Field(..., description="Number of users subscribed to the report.")
+    ip_addresses: int = Field(
+        ..., description="Number of IP addresses related to the report."
+    )
+    subscribers: int = Field(
+        ..., description="Number of users subscribed to the report."
+    )
     urls: int = Field(..., description="Number of URLs related to the report.")
 
 
@@ -67,7 +71,9 @@ class SourceRegion(BaseModel):
         description="Confidence level in the attribution of this region as a threat source.",
     )
     country: Optional[str] = Field(None, description="Country of threat origin.")
-    country_iso2: Optional[str] = Field(None, description="ISO 3166 Alpha2 country code.")
+    country_iso2: Optional[str] = Field(
+        None, description="ISO 3166 Alpha2 country code."
+    )
     description: Optional[str] = Field(
         None, description="Additional context about the source region."
     )
@@ -78,17 +84,27 @@ class SourceRegion(BaseModel):
         ..., description="UTC timestamp when the source region was last seen."
     )
     region: Optional[str] = Field(None, description="Region of threat origin.")
-    source: Optional[str] = Field(None, description="Supplier of this source region information.")
+    source: Optional[str] = Field(
+        None, description="Supplier of this source region information."
+    )
     sub_region: Optional[str] = Field(None, description="Sub-region of threat origin.")
 
 
 class TagDetail(BaseModel):
     """Tags associated with the report with some additional context."""
 
-    confidence: str = Field(..., description="Confidence in the tag's association with the report.")
-    description: Optional[str] = Field(None, description="Additional context about the tag.")
-    first_seen: Optional[str] = Field(..., description="UTC timestamp when the tag was first seen.")
-    last_seen: Optional[str] = Field(..., description="UTC timestamp when the tag was last seen.")
+    confidence: str = Field(
+        ..., description="Confidence in the tag's association with the report."
+    )
+    description: Optional[str] = Field(
+        None, description="Additional context about the tag."
+    )
+    first_seen: Optional[str] = Field(
+        ..., description="UTC timestamp when the tag was first seen."
+    )
+    last_seen: Optional[str] = Field(
+        ..., description="UTC timestamp when the tag was last seen."
+    )
     value: str = Field(..., description="Tag value.")
 
 
@@ -107,8 +123,12 @@ class TargetedIndustry(BaseModel):
     last_seen: Optional[str] = Field(
         ..., description="UTC timestamp when the industry was last seen targeted."
     )
-    industry: Optional[str] = Field(..., description="Sub-industry targeted by the threat.")
-    industry_group: str = Field(..., description="Industry group targeted by the threat.")
+    industry: Optional[str] = Field(
+        ..., description="Sub-industry targeted by the threat."
+    )
+    industry_group: str = Field(
+        ..., description="Industry group targeted by the threat."
+    )
     source: Optional[str] = Field(
         None, description="Supplier of this industry targeting information."
     )
@@ -121,7 +141,9 @@ class TargetedRegion(BaseModel):
         ..., description="Confidence in the attribution of the targeted region."
     )
     country: Optional[str] = Field(None, description="Country targeted by the threat.")
-    country_iso2: Optional[str] = Field(None, description="ISO 3166 Alpha2 code for the country.")
+    country_iso2: Optional[str] = Field(
+        None, description="ISO 3166 Alpha2 code for the country."
+    )
     description: Optional[str] = Field(
         None, description="Additional context on the targeted region."
     )
@@ -135,18 +157,24 @@ class TargetedRegion(BaseModel):
     source: Optional[str] = Field(
         None, description="Supplier of this region targeting information."
     )
-    sub_region: Optional[str] = Field(None, description="Sub-region targeted by the threat.")
+    sub_region: Optional[str] = Field(
+        None, description="Sub-region targeted by the threat."
+    )
 
 
 class Technology(BaseModel):
     """Common Platform Enumeration (CPE) objects referring to the vulnerability described by the report."""
 
     cpe: Optional[str] = Field(None, description="CPE standardized product identifier.")
-    cpe_title: Optional[str] = Field(None, description="Human-readable vendor and technology name.")
+    cpe_title: Optional[str] = Field(
+        None, description="Human-readable vendor and technology name."
+    )
     technology_name: Optional[str] = Field(
         None, description="Technology affected by the vulnerability."
     )
-    vendor: Optional[str] = Field(None, description="Vendor affected by the vulnerability.")
+    vendor: Optional[str] = Field(
+        None, description="Vendor affected by the vulnerability."
+    )
 
 
 class ReportModel(BaseModel):
@@ -155,15 +183,23 @@ class ReportModel(BaseModel):
     report_id: Optional[str] = Field(None, description="Identifier of the report.")
     name: str = Field(..., description="Title of the report.")
     author: Optional[str] = Field(None, description="Author of the report.")
-    collection_type: str = Field(..., description="Type of object; always 'report' here.")
+    collection_type: str = Field(
+        ..., description="Type of object; always 'report' here."
+    )
     creation_date: int = Field(..., description="UTC timestamp of report creation.")
-    last_modification_date: int = Field(..., description="UTC timestamp of last report update.")
+    last_modification_date: int = Field(
+        ..., description="UTC timestamp of last report update."
+    )
     content: Optional[str] = Field(None, description="Full report content.")
-    executive_summary: Optional[str] = Field(None, description="Summary of the report's content.")
+    executive_summary: Optional[str] = Field(
+        None, description="Summary of the report's content."
+    )
     autogenerated_summary: Optional[str] = Field(
         None, description="ML-generated summary of the report."
     )
-    analyst_comment: Optional[str] = Field(None, description="Comments made by GTI analysts.")
+    analyst_comment: Optional[str] = Field(
+        None, description="Comments made by GTI analysts."
+    )
     report_type: Optional[str] = Field(
         None, description="Type of report: News, Actor Profile, OSINT, etc."
     )

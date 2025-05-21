@@ -7,16 +7,6 @@ by using specialized mapper classes.
 import logging
 from typing import Any, Dict, List, Literal, Optional, Union, cast
 
-from stix2.v21 import (  # type: ignore
-    AttackPattern,
-    Identity,
-    IntrusionSet,
-    Malware,
-    MarkingDefinition,
-    Report,
-    Vulnerability,
-)
-
 from connector.src.custom.exceptions import (
     GTIActorConversionError,
     GTIEntityConversionError,
@@ -34,15 +24,21 @@ from connector.src.custom.mappers.gti_reports.gti_attack_technique_to_stix_attac
 from connector.src.custom.mappers.gti_reports.gti_malware_family_to_stix_malware import (
     GTIMalwareFamilyToSTIXMalware,
 )
-from connector.src.custom.mappers.gti_reports.gti_report_relationship import GTIReportRelationship
+from connector.src.custom.mappers.gti_reports.gti_report_relationship import (
+    GTIReportRelationship,
+)
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_identity import (
     GTIReportToSTIXIdentity,
 )
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_location import (
     GTIReportToSTIXLocation,
 )
-from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import GTIReportToSTIXReport
-from connector.src.custom.mappers.gti_reports.gti_report_to_stix_sector import GTIReportToSTIXSector
+from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import (
+    GTIReportToSTIXReport,
+)
+from connector.src.custom.mappers.gti_reports.gti_report_to_stix_sector import (
+    GTIReportToSTIXSector,
+)
 from connector.src.custom.mappers.gti_reports.gti_threat_actor_to_stix_intrusion_set import (
     GTIThreatActorToSTIXIntrusionSet,
 )
@@ -52,12 +48,29 @@ from connector.src.custom.mappers.gti_reports.gti_vulnerability_to_stix_vulnerab
 from connector.src.custom.models.gti_reports.gti_attack_technique_model import (
     GTIAttackTechniqueData,
 )
-from connector.src.custom.models.gti_reports.gti_malware_family_model import GTIMalwareFamilyData
+from connector.src.custom.models.gti_reports.gti_malware_family_model import (
+    GTIMalwareFamilyData,
+)
 from connector.src.custom.models.gti_reports.gti_report_model import GTIReportData
-from connector.src.custom.models.gti_reports.gti_threat_actor_model import GTIThreatActorData
-from connector.src.custom.models.gti_reports.gti_vulnerability_model import GTIVulnerabilityData
-from connector.src.stix.octi.models.identity_organization_model import OctiOrganizationModel
+from connector.src.custom.models.gti_reports.gti_threat_actor_model import (
+    GTIThreatActorData,
+)
+from connector.src.custom.models.gti_reports.gti_vulnerability_model import (
+    GTIVulnerabilityData,
+)
+from connector.src.stix.octi.models.identity_organization_model import (
+    OctiOrganizationModel,
+)
 from connector.src.stix.octi.models.tlp_marking_model import TLPMarkingModel
+from stix2.v21 import (  # type: ignore
+    AttackPattern,
+    Identity,
+    IntrusionSet,
+    Malware,
+    MarkingDefinition,
+    Report,
+    Vulnerability,
+)
 
 
 class ConvertToSTIX:
@@ -89,7 +102,9 @@ class ConvertToSTIX:
         self.latest_report_date: Optional[str] = None
 
     def convert_all_data(
-        self, reports: List[GTIReportData], related_entities: Dict[str, Dict[str, List[Any]]]
+        self,
+        reports: List[GTIReportData],
+        related_entities: Dict[str, Dict[str, List[Any]]],
     ) -> List[Dict]:
         """Convert all GTI data to STIX format.
 
@@ -114,19 +129,31 @@ class ConvertToSTIX:
             total_reports = len(reports)
             for i, report in enumerate(reports):
                 report_id = report.id
-                progress_info = f"({i + 1}/{total_reports} reports) " if total_reports > 0 else ""
-                self.logger.info(f"{progress_info}Converting report {report_id} to STIX format")
+                progress_info = (
+                    f"({i + 1}/{total_reports} reports) " if total_reports > 0 else ""
+                )
+                self.logger.info(
+                    f"{progress_info}Converting report {report_id} to STIX format"
+                )
 
-                if hasattr(report, "last_modification_date") and report.last_modification_date:
+                if (
+                    hasattr(report, "last_modification_date")
+                    and report.last_modification_date
+                ):
                     report_date = report.last_modification_date
-                    if not self.latest_report_date or report_date > self.latest_report_date:
+                    if (
+                        not self.latest_report_date
+                        or report_date > self.latest_report_date
+                    ):
                         self.latest_report_date = report_date
 
                 try:
                     report_entities = self._convert_report(report)
                     self.stix_objects.extend(report_entities)
                 except GTIReportConversionError as report_err:
-                    self.logger.error(f"Error converting report {report_id}: {str(report_err)}")
+                    self.logger.error(
+                        f"Error converting report {report_id}: {str(report_err)}"
+                    )
 
                     continue
 
@@ -138,7 +165,10 @@ class ConvertToSTIX:
                             stix_malware = self._convert_malware_family(malware)
                             self.stix_objects.append(stix_malware)
                             self._add_reference_to_report(stix_malware.id, report_id)
-                        except (GTIMalwareConversionError, GTIReferenceError) as malware_err:
+                        except (
+                            GTIMalwareConversionError,
+                            GTIReferenceError,
+                        ) as malware_err:
                             self.logger.error(
                                 f"Error processing malware family {malware.id}: {str(malware_err)}"
                             )
@@ -150,7 +180,10 @@ class ConvertToSTIX:
                             stix_actor = self._convert_threat_actor(actor)
                             self.stix_objects.append(stix_actor)
                             self._add_reference_to_report(stix_actor.id, report_id)
-                        except (GTIActorConversionError, GTIReferenceError) as actor_err:
+                        except (
+                            GTIActorConversionError,
+                            GTIReferenceError,
+                        ) as actor_err:
                             self.logger.error(
                                 f"Error processing threat actor {actor.id}: {str(actor_err)}"
                             )
@@ -162,7 +195,10 @@ class ConvertToSTIX:
                             stix_technique = self._convert_attack_technique(technique)
                             self.stix_objects.append(stix_technique)
                             self._add_reference_to_report(stix_technique.id, report_id)
-                        except (GTITechniqueConversionError, GTIReferenceError) as technique_err:
+                        except (
+                            GTITechniqueConversionError,
+                            GTIReferenceError,
+                        ) as technique_err:
                             self.logger.error(
                                 f"Error processing attack technique {technique.id}: {str(technique_err)}"
                             )
@@ -174,7 +210,10 @@ class ConvertToSTIX:
                             stix_vuln = self._convert_vulnerability(vulnerability)
                             self.stix_objects.append(stix_vuln)
                             self._add_reference_to_report(stix_vuln.id, report_id)
-                        except (GTIVulnerabilityConversionError, GTIReferenceError) as vuln_err:
+                        except (
+                            GTIVulnerabilityConversionError,
+                            GTIReferenceError,
+                        ) as vuln_err:
                             self.logger.error(
                                 f"Error processing vulnerability {vulnerability.id}: {str(vuln_err)}"
                             )
@@ -188,7 +227,8 @@ class ConvertToSTIX:
             raise
         except Exception as e:
             self.logger.error(
-                f"Error converting GTI data to STIX format: {str(e)}", meta={"error": str(e)}
+                f"Error converting GTI data to STIX format: {str(e)}",
+                meta={"error": str(e)},
             )
 
             if self.stix_objects:
@@ -237,11 +277,18 @@ class ConvertToSTIX:
         try:
             normalized_level = tlp_level.lower()
 
-            if normalized_level not in ("white", "green", "amber", "amber+strict", "red"):
+            if normalized_level not in (
+                "white",
+                "green",
+                "amber",
+                "amber+strict",
+                "red",
+            ):
                 normalized_level = "amber"
 
             tlp_literal = cast(
-                Literal["white", "green", "amber", "amber+strict", "red"], normalized_level
+                Literal["white", "green", "amber", "amber+strict", "red"],
+                normalized_level,
             )
 
             return TLPMarkingModel(level=tlp_literal).to_stix2_object()
@@ -290,7 +337,9 @@ class ConvertToSTIX:
                 ) from location_err
 
             try:
-                sector_mapper = GTIReportToSTIXSector(report, self.organization, self.tlp_marking)
+                sector_mapper = GTIReportToSTIXSector(
+                    report, self.organization, self.tlp_marking
+                )
                 sectors = sector_mapper.to_stix()
                 result.extend(sectors)
             except Exception as sector_err:
@@ -302,7 +351,12 @@ class ConvertToSTIX:
 
             try:
                 report_mapper = GTIReportToSTIXReport(
-                    report, self.organization, self.tlp_marking, author_identity, sectors, locations
+                    report,
+                    self.organization,
+                    self.tlp_marking,
+                    author_identity,
+                    sectors,
+                    locations,
                 )
                 report_obj = report_mapper.to_stix()
                 result.append(report_obj)
@@ -338,7 +392,9 @@ class ConvertToSTIX:
             )
             raise GTIReportConversionError(str(e), report.id) from e
 
-    def _convert_malware_family(self, malware: GTIMalwareFamilyData) -> Optional[Malware]:
+    def _convert_malware_family(
+        self, malware: GTIMalwareFamilyData
+    ) -> Optional[Malware]:
         """Convert a GTI malware family to STIX format.
 
         Args:
@@ -354,7 +410,9 @@ class ConvertToSTIX:
         try:
             self.logger.debug(f"Converting malware family {malware.id} to STIX format")
 
-            mapper = GTIMalwareFamilyToSTIXMalware(malware, self.organization, self.tlp_marking)
+            mapper = GTIMalwareFamilyToSTIXMalware(
+                malware, self.organization, self.tlp_marking
+            )
             stix_malware = mapper.to_stix()
 
             self.object_id_map[malware.id] = stix_malware.id
@@ -363,12 +421,15 @@ class ConvertToSTIX:
 
         except Exception as e:
             self.logger.error(
-                f"Error converting malware family {malware.id}: {str(e)}", meta={"error": str(e)}
+                f"Error converting malware family {malware.id}: {str(e)}",
+                meta={"error": str(e)},
             )
             malware_name = getattr(malware, "name", None)
             raise GTIMalwareConversionError(str(e), malware.id, malware_name) from e
 
-    def _convert_threat_actor(self, actor: GTIThreatActorData) -> Optional[IntrusionSet]:
+    def _convert_threat_actor(
+        self, actor: GTIThreatActorData
+    ) -> Optional[IntrusionSet]:
         """Convert a GTI threat actor to STIX format.
 
         Args:
@@ -384,7 +445,9 @@ class ConvertToSTIX:
         try:
             self.logger.debug(f"Converting threat actor {actor.id} to STIX format")
 
-            mapper = GTIThreatActorToSTIXIntrusionSet(actor, self.organization, self.tlp_marking)
+            mapper = GTIThreatActorToSTIXIntrusionSet(
+                actor, self.organization, self.tlp_marking
+            )
             stix_actor = mapper.to_stix()
 
             self.object_id_map[actor.id] = stix_actor.id
@@ -393,7 +456,8 @@ class ConvertToSTIX:
 
         except Exception as e:
             self.logger.error(
-                f"Error converting threat actor {actor.id}: {str(e)}", meta={"error": str(e)}
+                f"Error converting threat actor {actor.id}: {str(e)}",
+                meta={"error": str(e)},
             )
             actor_name = getattr(actor, "name", None)
             raise GTIActorConversionError(str(e), actor.id, actor_name) from e
@@ -414,7 +478,9 @@ class ConvertToSTIX:
 
         """
         try:
-            self.logger.debug(f"Converting attack technique {technique.id} to STIX format")
+            self.logger.debug(
+                f"Converting attack technique {technique.id} to STIX format"
+            )
 
             mapper = GTIAttackTechniqueToSTIXAttackPattern(
                 technique, self.organization, self.tlp_marking
@@ -432,7 +498,9 @@ class ConvertToSTIX:
             )
             technique_name = getattr(technique, "name", None)
             mitre_id = getattr(technique, "mitre_attack_id", None)
-            raise GTITechniqueConversionError(str(e), technique.id, technique_name, mitre_id) from e
+            raise GTITechniqueConversionError(
+                str(e), technique.id, technique_name, mitre_id
+            ) from e
 
     def _convert_vulnerability(
         self, vulnerability: GTIVulnerabilityData
@@ -450,7 +518,9 @@ class ConvertToSTIX:
 
         """
         try:
-            self.logger.debug(f"Converting vulnerability {vulnerability.id} to STIX format")
+            self.logger.debug(
+                f"Converting vulnerability {vulnerability.id} to STIX format"
+            )
 
             mapper = GTIVulnerabilityToSTIXVulnerability(
                 vulnerability, self.organization, self.tlp_marking
@@ -467,9 +537,13 @@ class ConvertToSTIX:
                 meta={"error": str(e)},
             )
             cve_id = getattr(vulnerability, "cve_id", None)
-            raise GTIVulnerabilityConversionError(str(e), vulnerability.id, cve_id) from e
+            raise GTIVulnerabilityConversionError(
+                str(e), vulnerability.id, cve_id
+            ) from e
 
-    def _add_reference_to_report(self, object_id: Union[str, List[str]], report_id: str) -> None:
+    def _add_reference_to_report(
+        self, object_id: Union[str, List[str]], report_id: str
+    ) -> None:
         """Add reference to one or more objects in a report.
 
         Args:
@@ -487,7 +561,8 @@ class ConvertToSTIX:
             if not stix_report_id:
                 self.logger.warning(f"Report {report_id} not found in object_id_map")
                 raise GTIReferenceError(
-                    f"Report {report_id} not found in object_id_map", target_id=report_id
+                    f"Report {report_id} not found in object_id_map",
+                    target_id=report_id,
                 )
 
             latest_report_index: Optional[int] = None
@@ -499,14 +574,18 @@ class ConvertToSTIX:
                     latest_report = obj
 
             if latest_report is None:
-                self.logger.warning(f"Report with ID {stix_report_id} not found in STIX objects")
+                self.logger.warning(
+                    f"Report with ID {stix_report_id} not found in STIX objects"
+                )
                 raise GTIReferenceError(
                     f"Report with ID {stix_report_id} not found in STIX objects",
                     source_id=stix_report_id,
                 )
 
             new_object_ids = [
-                obj_id for obj_id in object_ids if obj_id not in latest_report.object_refs
+                obj_id
+                for obj_id in object_ids
+                if obj_id not in latest_report.object_refs
             ]
 
             if new_object_ids:
@@ -527,7 +606,9 @@ class ConvertToSTIX:
         except GTIReferenceError:
             raise
         except Exception as e:
-            self.logger.error(f"Error adding reference to report: {str(e)}", meta={"error": str(e)})
+            self.logger.error(
+                f"Error adding reference to report: {str(e)}", meta={"error": str(e)}
+            )
             raise GTIReferenceError(
                 str(e),
                 source_id=stix_report_id if "stix_report_id" in locals() else None,

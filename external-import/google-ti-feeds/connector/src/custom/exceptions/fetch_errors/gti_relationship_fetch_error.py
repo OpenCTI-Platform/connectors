@@ -16,7 +16,7 @@ class GTIRelationshipFetchError(GTIApiError):
         details: dict = None,
     ):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             source_id: ID of the source entity for the relationships
@@ -34,7 +34,7 @@ class GTIRelationshipFetchError(GTIApiError):
             error_msg = f"Error fetching {relationship_type} relationships: {message}"
         else:
             error_msg = f"Error fetching relationships: {message}"
-            
+
         super().__init__(error_msg, status_code, endpoint, details)
         self.source_id = source_id
         self.relationship_type = relationship_type

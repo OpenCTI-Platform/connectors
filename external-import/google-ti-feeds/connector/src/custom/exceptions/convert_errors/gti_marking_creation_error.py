@@ -8,7 +8,7 @@ class GTIMarkingCreationError(GTIConvertingError):
 
     def __init__(self, message: str, tlp_level: str = None):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             tlp_level: The TLP level that failed to be created
@@ -16,6 +16,6 @@ class GTIMarkingCreationError(GTIConvertingError):
         error_msg = f"Failed to create TLP marking: {message}"
         if tlp_level:
             error_msg = f"Failed to create TLP '{tlp_level}' marking: {message}"
-            
+
         super().__init__(error_msg)
         self.tlp_level = tlp_level

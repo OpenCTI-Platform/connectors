@@ -6,9 +6,15 @@ from connector.src.custom.exceptions.gti_fetching_error import GTIFetchingError
 class GTIParsingError(GTIFetchingError):
     """Exception raised when there's an error parsing API responses."""
 
-    def __init__(self, message: str, endpoint: str = None, entity_type: str = None, data_sample: str = None):
+    def __init__(
+        self,
+        message: str,
+        endpoint: str = None,
+        entity_type: str = None,
+        data_sample: str = None,
+    ):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             endpoint: API endpoint where the response was received
@@ -22,12 +28,11 @@ class GTIParsingError(GTIFetchingError):
             error_msg = f"Error parsing {entity_type} data: {message}"
         elif endpoint:
             error_msg = f"Error parsing response from {endpoint}: {message}"
-            
+
         super().__init__(error_msg)
         self.endpoint = endpoint
         self.entity_type = entity_type
-        
-        
+
         if data_sample and isinstance(data_sample, str):
             if len(data_sample) > 200:
                 self.data_sample = data_sample[:200] + "..."

@@ -15,7 +15,7 @@ class GTIActorFetchError(GTIApiError):
         details: dict = None,
     ):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             actor_id: ID of the threat actor that failed to fetch, if applicable
@@ -28,6 +28,6 @@ class GTIActorFetchError(GTIApiError):
             error_msg = f"Error fetching threat actor {actor_id}: {message}"
         else:
             error_msg = f"Error fetching threat actors: {message}"
-            
+
         super().__init__(error_msg, status_code, endpoint, details)
         self.actor_id = actor_id

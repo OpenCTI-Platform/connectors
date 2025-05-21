@@ -3,8 +3,6 @@
 from datetime import datetime
 from typing import List, Tuple
 
-from stix2.v21 import Identity, Location, MarkingDefinition, Report  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_report_model import (
     GTIReportData,
     ReportModel,
@@ -14,6 +12,7 @@ from connector.src.stix.v21.models.cdts.external_reference_model import (
     ExternalReferenceModel,
 )
 from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
+from stix2.v21 import Identity, Location, MarkingDefinition, Report  # type: ignore
 
 
 class GTIReportToSTIXReport:
@@ -76,7 +75,9 @@ class GTIReportToSTIXReport:
             organization_id=self.organization.id,
             marking_ids=[self.tlp_marking.id],
             labels=labels,
-            external_references=[ref.model_dump(exclude_none=True) for ref in external_references],
+            external_references=[
+                ref.model_dump(exclude_none=True) for ref in external_references
+            ],
             content=attributes.content,
         )
 
@@ -117,7 +118,9 @@ class GTIReportToSTIXReport:
                     labels.append(motivation.value)
         return labels
 
-    def _build_external_references(self, attributes: ReportModel) -> List[ExternalReferenceModel]:
+    def _build_external_references(
+        self, attributes: ReportModel
+    ) -> List[ExternalReferenceModel]:
         """Build external references from report attributes.
 
         Args:
@@ -203,7 +206,9 @@ class GTIReportToSTIXReport:
             if obj_id not in updated_refs:
                 updated_refs.append(obj_id)
 
-        report_types = getattr(existing_report, "report_types", [ReportTypeOV.THREAT_REPORT])
+        report_types = getattr(
+            existing_report, "report_types", [ReportTypeOV.THREAT_REPORT]
+        )
         description = getattr(existing_report, "description", None)
         organization_id = getattr(existing_report, "created_by_ref", None)
         marking_ids = getattr(existing_report, "object_marking_refs", [])

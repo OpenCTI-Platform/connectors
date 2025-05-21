@@ -3,13 +3,14 @@
 from datetime import datetime
 from typing import List, Optional
 
-from stix2.v21 import AttackPattern, Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_attack_technique_model import (
     GTIAttackTechniqueData,
 )
 from connector.src.stix.octi.models.attack_pattern_model import OctiAttackPatternModel
-from connector.src.stix.v21.models.cdts.kill_chain_phase_model import KillChainPhaseModel
+from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
+    KillChainPhaseModel,
+)
+from stix2.v21 import AttackPattern, Identity, MarkingDefinition  # type: ignore
 
 
 class GTIAttackTechniqueToSTIXAttackPattern:
@@ -86,7 +87,9 @@ class GTIAttackTechniqueToSTIXAttackPattern:
             return None
         return None
 
-    def _extract_kill_chain_phases(self, attributes) -> Optional[List[KillChainPhaseModel]]:
+    def _extract_kill_chain_phases(
+        self, attributes
+    ) -> Optional[List[KillChainPhaseModel]]:
         """Extract kill chain phases from attack technique attributes.
 
         Args:
@@ -178,7 +181,9 @@ class GTIAttackTechniqueToSTIXAttackPattern:
                 "source_name": "mitre-attack",
                 "url": attributes.link,
             }
-            if not any(ref.get("url") == attributes.link for ref in external_references):
+            if not any(
+                ref.get("url") == attributes.link for ref in external_references
+            ):
                 external_references.append(link_reference)
 
         if hasattr(attributes, "stix_id") and attributes.stix_id:

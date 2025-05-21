@@ -8,7 +8,7 @@ class GTIOrganizationCreationError(GTIConvertingError):
 
     def __init__(self, message: str, details: dict = None):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             details: Additional details about the error

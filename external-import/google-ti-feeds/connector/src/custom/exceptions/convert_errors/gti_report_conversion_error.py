@@ -1,14 +1,18 @@
 """Exception for errors when converting GTI reports to STIX reports."""
 
-from connector.src.custom.exceptions.convert_errors.gti_entity_conversion_error import GTIEntityConversionError
+from connector.src.custom.exceptions.convert_errors.gti_entity_conversion_error import (
+    GTIEntityConversionError,
+)
 
 
 class GTIReportConversionError(GTIEntityConversionError):
     """Exception raised when there's an error converting a GTI report to STIX format."""
 
-    def __init__(self, message: str, report_id: str = None, processing_stage: str = None):
+    def __init__(
+        self, message: str, report_id: str = None, processing_stage: str = None
+    ):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             report_id: ID of the report that failed to convert
@@ -16,7 +20,6 @@ class GTIReportConversionError(GTIEntityConversionError):
         """
         super().__init__(message, report_id, "Report")
         self.processing_stage = processing_stage
-        
-        
+
         if processing_stage:
             self.args = (f"{self.args[0]} (stage: {processing_stage})",)
