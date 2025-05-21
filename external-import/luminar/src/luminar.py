@@ -168,15 +168,15 @@ class LuminarManager:
                 return access_token, "Luminar API Connected successfully"
             return False, "Access token not found in response"
         except requests.HTTPError as http_err:
-            self.helper.log_error("HTTP error occurred: %s", http_err)
+            self.helper.log_error(f"HTTP error occurred: {http_err}")
             return False, self.STATUS_MESSAGES.get(
                 response.status_code, "HTTP error occurred"
             )
         except requests.RequestException as req_err:
-            self.helper.log_error("Request exception: %s", req_err)
+            self.helper.log_error(f"Request exception: {req_err}")
             return False, "An error occurred while making HTTP request"
         except Exception as err:
-            self.helper.log_error("Unexpected error: %s", err)
+            self.helper.log_error(f"Unexpected error: {err}")
             return False, f"Failed to connect to Luminar API... Error is {err}"
 
     def get_taxi_collections(self, headers: Dict[str, str]) -> Dict[str, str]:
@@ -553,12 +553,10 @@ class LuminarManager:
             if "'valid_until' must be greater than 'valid_from'" in str(ve):
                 obj.pop("valid_until")
             else:
-                self.helper.log_error("Skipping Invalid indicator: %s", str(obj))
+                self.helper.log_error(f"Skipping Invalid indicator: {str(obj)}")
                 return
         except Exception as e:
-            self.helper.log_error(
-                "Skipping Invalid indicator: %s as %s", str(obj), str(e)
-            )
+            self.helper.log_error(f"Skipping Invalid indicator: {str(obj)} as {str(e)}")
             return
         obj["created_by_ref"] = self.identity["standard_id"]
         open_cti_indicator = Indicator(
@@ -610,7 +608,7 @@ class LuminarManager:
                 try:
                     matches = STIX_PARSER.findall(pattern)
                 except TypeError as err:
-                    self.helper.log_error("Error on pattern: %s and %s", pattern, err)
+                    self.helper.log_error(f"Error on pattern: {pattern} and {err}")
                     return
 
                 for match in matches:
@@ -672,9 +670,7 @@ class LuminarManager:
 
             else:
                 self.helper.log_error(
-                    "Unexpected pattern type: %s in children: %s",
-                    type(pattern),
-                    str(obj),
+                    f"Unexpected pattern type: {pattern} in children: {str(obj)}"
                 )
 
     def get_description(self, obj):
