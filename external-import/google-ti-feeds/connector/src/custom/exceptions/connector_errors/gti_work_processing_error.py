@@ -8,7 +8,7 @@ class GTIWorkProcessingError(GTIBaseError):
 
     def __init__(self, message: str, work_id: str = None, details: dict = None):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             work_id: ID of the work that failed to process
@@ -17,7 +17,7 @@ class GTIWorkProcessingError(GTIBaseError):
         error_msg = message
         if work_id:
             error_msg = f"Error processing work {work_id}: {message}"
-            
+
         super().__init__(error_msg)
         self.work_id = work_id
         self.details = details or {}

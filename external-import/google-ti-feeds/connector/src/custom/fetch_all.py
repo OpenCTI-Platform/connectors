@@ -10,7 +10,6 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 import isodate
-
 from connector.src.custom.configs.gti_config import GTIConfig
 from connector.src.custom.exceptions import (
     GTIActorFetchError,
@@ -34,8 +33,12 @@ from connector.src.custom.models.gti_reports.gti_report_model import (
     GTIReportData,
     GTIReportResponse,
 )
-from connector.src.custom.models.gti_reports.gti_threat_actor_model import GTIThreatActorResponse
-from connector.src.custom.models.gti_reports.gti_vulnerability_model import GTIVulnerabilityResponse
+from connector.src.custom.models.gti_reports.gti_threat_actor_model import (
+    GTIThreatActorResponse,
+)
+from connector.src.custom.models.gti_reports.gti_vulnerability_model import (
+    GTIVulnerabilityResponse,
+)
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.api_engine.exceptions.api_network_error import ApiNetworkError
 
@@ -112,7 +115,9 @@ class FetchAll:
 
         """
         complete_reports = [
-            report for report in self.reports if report.id in self.reports_with_complete_entities
+            report
+            for report in self.reports
+            if report.id in self.reports_with_complete_entities
         ]
         self.logger.info(
             f"[{source}] Returning {len(complete_reports)} complete reports out of {len(self.reports)} total fetched"
@@ -127,9 +132,12 @@ class FetchAll:
         if complete_reports:
             try:
                 complete_reports.sort(
-                    key=lambda x: x.last_modification_date
-                    if hasattr(x, "last_modification_date") and x.last_modification_date
-                    else "",
+                    key=lambda x: (
+                        x.last_modification_date
+                        if hasattr(x, "last_modification_date")
+                        and x.last_modification_date
+                        else ""
+                    ),
                     reverse=True,
                 )
             except Exception as sort_err:
@@ -171,9 +179,11 @@ class FetchAll:
             total_reports = len(self.reports)
 
             self.reports.sort(
-                key=lambda x: x.last_modification_date
-                if hasattr(x, "last_modification_date") and x.last_modification_date
-                else "",
+                key=lambda x: (
+                    x.last_modification_date
+                    if hasattr(x, "last_modification_date") and x.last_modification_date
+                    else ""
+                ),
                 reverse=True,
             )
 
@@ -215,7 +225,9 @@ class FetchAll:
             self.logger.info("Fetch operation was cancelled")
             return self._prepare_partial_results("Cancelled")
         except ApiNetworkError as e:
-            self.logger.error(f"Network connectivity issue: {str(e)}", meta={"error": str(e)})
+            self.logger.error(
+                f"Network connectivity issue: {str(e)}", meta={"error": str(e)}
+            )
 
             GTIApiError(f"Network connectivity issue: {str(e)}", endpoint="multiple")
             return self._prepare_partial_results("Network error")
@@ -223,7 +235,9 @@ class FetchAll:
             self.logger.error(f"GTI fetch error: {str(e)}", meta={"error": str(e)})
             return self._prepare_partial_results("Fetch error")
         except Exception as e:
-            self.logger.error(f"Error fetching GTI data: {str(e)}", meta={"error": str(e)})
+            self.logger.error(
+                f"Error fetching GTI data: {str(e)}", meta={"error": str(e)}
+            )
 
             GTIFetchingError(f"Unexpected error fetching GTI data: {str(e)}")
             return self._prepare_partial_results("Exception")
@@ -243,7 +257,9 @@ class FetchAll:
 
             last_mod_date = self.state.get("last_work_date")
             if last_mod_date:
-                start_date = datetime.fromisoformat(last_mod_date).strftime("%Y-%m-%dT%H:%M:%S")
+                start_date = datetime.fromisoformat(last_mod_date).strftime(
+                    "%Y-%m-%dT%H:%M:%S"
+                )
 
             filters = f"collection_type:report last_modification_date:{start_date}+"
 
@@ -270,7 +286,9 @@ class FetchAll:
                 process_func=self._process_report_page,
             )
 
-            self.logger.info(f"Fetched {len(self.reports)} reports (from {start_date}).")
+            self.logger.info(
+                f"Fetched {len(self.reports)} reports (from {start_date})."
+            )
         except ApiNetworkError as e:
             raise GTIReportFetchError(
                 f"Network error fetching reports: {str(e)}",
@@ -280,7 +298,8 @@ class FetchAll:
             raise
         except Exception as e:
             raise GTIReportFetchError(
-                f"Failed to fetch reports: {str(e)}", endpoint=f"{self.config.api_url}/collections"
+                f"Failed to fetch reports: {str(e)}",
+                endpoint=f"{self.config.api_url}/collections",
             ) from e
 
     async def _process_report_page(self, response: GTIReportResponse) -> None:
@@ -302,14 +321,21 @@ class FetchAll:
             self.reports.extend(response.data)
 
             for report in response.data:
-                if hasattr(report, "last_modification_date") and report.last_modification_date:
+                if (
+                    hasattr(report, "last_modification_date")
+                    and report.last_modification_date
+                ):
                     try:
                         report_date = datetime.fromisoformat(
                             report.last_modification_date.replace("Z", "+00:00")
                         )
 
-                        if not self.latest_modified_date or report_date > datetime.fromisoformat(
-                            self.latest_modified_date.replace("Z", "+00:00")
+                        if (
+                            not self.latest_modified_date
+                            or report_date
+                            > datetime.fromisoformat(
+                                self.latest_modified_date.replace("Z", "+00:00")
+                            )
                         ):
                             self.latest_modified_date = report_date.astimezone(
                                 timezone.utc
@@ -348,8 +374,12 @@ class FetchAll:
 
         """
         report_id = report.id
-        progress_info = f"({report_index}/{total_reports} reports) " if total_reports > 0 else ""
-        self.logger.info(f"{progress_info}Fetching related entities for report {report_id}...")
+        progress_info = (
+            f"({report_index}/{total_reports} reports) " if total_reports > 0 else ""
+        )
+        self.logger.info(
+            f"{progress_info}Fetching related entities for report {report_id}..."
+        )
 
         try:
             await asyncio.sleep(0)
@@ -364,7 +394,9 @@ class FetchAll:
             await asyncio.sleep(0)
             await self._fetch_vulnerabilities(report)
 
-            self.logger.info(f"Successfully fetched all related entities for report {report_id}...")
+            self.logger.info(
+                f"Successfully fetched all related entities for report {report_id}..."
+            )
 
         except asyncio.CancelledError:
             self.logger.info(f"Entity fetch cancelled for report {report_id}...")
@@ -390,7 +422,9 @@ class FetchAll:
 
             raise
         except Exception as e:
-            self.logger.error(f"Entity fetch failed for report {report_id}...: {str(e)}")
+            self.logger.error(
+                f"Entity fetch failed for report {report_id}...: {str(e)}"
+            )
 
             raise
 
@@ -423,12 +457,14 @@ class FetchAll:
                     )
 
                     if response and hasattr(response, "data"):
-                        self.report_related_entities[report_id]["malware_families"].append(
-                            response.data
-                        )
+                        self.report_related_entities[report_id][
+                            "malware_families"
+                        ].append(response.data)
                 except ApiNetworkError as net_err:
                     raise GTIMalwareFetchError(
-                        f"Network error: {str(net_err)}", malware_id=malware_id, endpoint=endpoint
+                        f"Network error: {str(net_err)}",
+                        malware_id=malware_id,
+                        endpoint=endpoint,
                     ) from net_err
                 except Exception as e:
                     self.logger.error(
@@ -436,7 +472,9 @@ class FetchAll:
                         meta={"error": str(e)},
                     )
 
-            malware_count = len(self.report_related_entities[report_id]["malware_families"])
+            malware_count = len(
+                self.report_related_entities[report_id]["malware_families"]
+            )
             if malware_count > 0:
                 self.logger.info(f"Fetched {malware_count} malware families")
             else:
@@ -488,11 +526,14 @@ class FetchAll:
                         )
                 except ApiNetworkError as net_err:
                     raise GTIActorFetchError(
-                        f"Network error: {str(net_err)}", actor_id=actor_id, endpoint=endpoint
+                        f"Network error: {str(net_err)}",
+                        actor_id=actor_id,
+                        endpoint=endpoint,
                     ) from net_err
                 except Exception as e:
                     self.logger.error(
-                        f"Error fetching threat actor {actor_id}: {str(e)}", meta={"error": str(e)}
+                        f"Error fetching threat actor {actor_id}: {str(e)}",
+                        meta={"error": str(e)},
                     )
 
             actor_count = len(self.report_related_entities[report_id]["threat_actors"])
@@ -542,9 +583,9 @@ class FetchAll:
                     )
 
                     if response and hasattr(response, "data"):
-                        self.report_related_entities[report_id]["attack_techniques"].append(
-                            response.data
-                        )
+                        self.report_related_entities[report_id][
+                            "attack_techniques"
+                        ].append(response.data)
                 except ApiNetworkError as net_err:
                     raise GTITechniqueFetchError(
                         f"Network error: {str(net_err)}",
@@ -557,7 +598,9 @@ class FetchAll:
                         meta={"error": str(e)},
                     )
 
-            technique_count = len(self.report_related_entities[report_id]["attack_techniques"])
+            technique_count = len(
+                self.report_related_entities[report_id]["attack_techniques"]
+            )
             if technique_count > 0:
                 self.logger.info(f"Fetched {technique_count} attack techniques")
             else:
@@ -604,9 +647,9 @@ class FetchAll:
                     )
 
                     if response and hasattr(response, "data"):
-                        self.report_related_entities[report_id]["vulnerabilities"].append(
-                            response.data
-                        )
+                        self.report_related_entities[report_id][
+                            "vulnerabilities"
+                        ].append(response.data)
                 except ApiNetworkError as net_err:
                     raise GTIVulnerabilityFetchError(
                         f"Network error: {str(net_err)}",
@@ -615,10 +658,13 @@ class FetchAll:
                     ) from net_err
                 except Exception as e:
                     self.logger.error(
-                        f"Error fetching vulnerability {vuln_id}: {str(e)}", meta={"error": str(e)}
+                        f"Error fetching vulnerability {vuln_id}: {str(e)}",
+                        meta={"error": str(e)},
                     )
 
-            vulnerability_count = len(self.report_related_entities[report_id]["vulnerabilities"])
+            vulnerability_count = len(
+                self.report_related_entities[report_id]["vulnerabilities"]
+            )
             if vulnerability_count > 0:
                 self.logger.info(f"Fetched {vulnerability_count} vulnerabilities")
             else:
@@ -636,7 +682,9 @@ class FetchAll:
                 endpoint=f"{self.config.api_url}/collections/{report_id}/vulnerabilities",
             ) from e
 
-    async def _fetch_relationship_ids(self, report_id: str, relationship_type: str) -> List[str]:
+    async def _fetch_relationship_ids(
+        self, report_id: str, relationship_type: str
+    ) -> List[str]:
         """Fetch IDs of entities related to a report through a specific relationship.
 
         Args:
@@ -651,9 +699,7 @@ class FetchAll:
 
         """
         entity_ids = []
-        endpoint = (
-            f"{self.config.api_url}/collections/{report_id}/relationships/{relationship_type}"
-        )
+        endpoint = f"{self.config.api_url}/collections/{report_id}/relationships/{relationship_type}"
 
         try:
             response = await self.api_client.call_api(
@@ -799,12 +845,21 @@ class FetchAll:
                 raise
             except Exception as e:
                 self.logger.error(
-                    f"Error fetching data from {current_url}: {str(e)}", meta={"error": str(e)}
+                    f"Error fetching data from {current_url}: {str(e)}",
+                    meta={"error": str(e)},
                 )
 
-                if "page" in str(e).lower() or "next" in str(e).lower() or "link" in str(e).lower():
+                if (
+                    "page" in str(e).lower()
+                    or "next" in str(e).lower()
+                    or "link" in str(e).lower()
+                ):
                     raise GTIPaginationError(
-                        f"Pagination error: {str(e)}", endpoint=current_url, page=page_count
+                        f"Pagination error: {str(e)}",
+                        endpoint=current_url,
+                        page=page_count,
                     ) from e
                 else:
-                    raise GTIApiError(f"API error: {str(e)}", endpoint=current_url) from e
+                    raise GTIApiError(
+                        f"API error: {str(e)}", endpoint=current_url
+                    ) from e

@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import Any, List, Optional
 
 import pycti  # type: ignore
-
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
     KillChainPhaseModel,
 )

@@ -1,6 +1,8 @@
 """Exception for errors when processing partial data after interruption."""
 
-from connector.src.custom.exceptions.connector_errors.gti_work_processing_error import GTIWorkProcessingError
+from connector.src.custom.exceptions.connector_errors.gti_work_processing_error import (
+    GTIWorkProcessingError,
+)
 
 
 class GTIPartialDataProcessingError(GTIWorkProcessingError):
@@ -15,7 +17,7 @@ class GTIPartialDataProcessingError(GTIWorkProcessingError):
         details: dict = None,
     ):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             work_id: ID of the work that was interrupted
@@ -25,12 +27,13 @@ class GTIPartialDataProcessingError(GTIWorkProcessingError):
         """
         error_msg = f"Error processing partial data: {message}"
         if interruption_type:
-            error_msg = f"Error processing partial data after {interruption_type}: {message}"
-        
-        
+            error_msg = (
+                f"Error processing partial data after {interruption_type}: {message}"
+            )
+
         if reports_count is not None:
             error_msg += f" ({reports_count} reports were fetched)"
-            
+
         super().__init__(error_msg, work_id, details)
         self.interruption_type = interruption_type
         self.reports_count = reports_count

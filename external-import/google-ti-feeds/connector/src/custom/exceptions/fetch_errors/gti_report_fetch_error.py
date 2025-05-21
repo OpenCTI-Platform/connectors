@@ -15,7 +15,7 @@ class GTIReportFetchError(GTIApiError):
         details: dict = None,
     ):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             report_id: ID of the report that failed to fetch, if applicable
@@ -28,6 +28,6 @@ class GTIReportFetchError(GTIApiError):
             error_msg = f"Error fetching report {report_id}: {message}"
         else:
             error_msg = f"Error fetching reports: {message}"
-            
+
         super().__init__(error_msg, status_code, endpoint, details)
         self.report_id = report_id

@@ -15,7 +15,7 @@ class GTITechniqueFetchError(GTIApiError):
         details: dict = None,
     ):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             technique_id: ID of the attack technique that failed to fetch, if applicable
@@ -28,6 +28,6 @@ class GTITechniqueFetchError(GTIApiError):
             error_msg = f"Error fetching attack technique {technique_id}: {message}"
         else:
             error_msg = f"Error fetching attack techniques: {message}"
-            
+
         super().__init__(error_msg, status_code, endpoint, details)
         self.technique_id = technique_id

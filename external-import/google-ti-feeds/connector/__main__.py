@@ -2,10 +2,9 @@
 
 import traceback
 
+from connector.src.octi.connector import Connector
 from dotenv import load_dotenv
 from pycti import OpenCTIConnectorHelper  # type: ignore
-
-from connector.src.octi.connector import Connector
 
 
 def main() -> None:

@@ -8,7 +8,7 @@ class GTIReferenceError(GTIConvertingError):
 
     def __init__(self, message: str, source_id: str = None, target_id: str = None):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             source_id: ID of the source object where the reference should be added
@@ -16,12 +16,14 @@ class GTIReferenceError(GTIConvertingError):
         """
         error_msg = f"Failed to add reference: {message}"
         if source_id and target_id:
-            error_msg = f"Failed to add reference from {source_id} to {target_id}: {message}"
+            error_msg = (
+                f"Failed to add reference from {source_id} to {target_id}: {message}"
+            )
         elif source_id:
             error_msg = f"Failed to add reference from {source_id}: {message}"
         elif target_id:
             error_msg = f"Failed to add reference to {target_id}: {message}"
-            
+
         super().__init__(error_msg)
         self.source_id = source_id
         self.target_id = target_id

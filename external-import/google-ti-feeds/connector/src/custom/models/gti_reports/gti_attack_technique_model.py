@@ -18,13 +18,15 @@ class Info(BaseModel):
         None, description="If true, this technique has sub-techniques."
     )
     x_mitre_permissions_required: Optional[List[str]] = Field(
-        None, description="The lowest level of permissions required to perform the technique."
+        None,
+        description="The lowest level of permissions required to perform the technique.",
     )
     x_mitre_version: Optional[str] = Field(
         None, description="The version of the object in format major.minor."
     )
     x_mitre_data_sources: Optional[List[str]] = Field(
-        None, description="Sources of information that may be used to identify the action."
+        None,
+        description="Sources of information that may be used to identify the action.",
     )
     x_mitre_detection: Optional[str] = Field(
         None, description="Strategies for identifying if a technique has been used."
@@ -45,9 +47,12 @@ class Info(BaseModel):
         description="Denotes if the technique can be used for integrity or availability attacks.",
     )
     x_mitre_system_requirements: Optional[str] = Field(
-        None, description="Additional information on requirements needed for the technique."
+        None,
+        description="Additional information on requirements needed for the technique.",
     )
-    x_mitre_tactic_type: Optional[str] = Field(None, description="Tactic type of the technique.")
+    x_mitre_tactic_type: Optional[str] = Field(
+        None, description="Tactic type of the technique."
+    )
     x_mitre_deprecated: Optional[bool] = Field(
         None,
         description="Marked as deprecated. There is not a revoking technique replacing this one.",
@@ -62,18 +67,24 @@ class AttackTechniqueModel(BaseModel):
     """Model representing a Google Threat Intelligence Attack Technique."""
 
     info: Optional[Info] = Field(None, description="Technique's additional info.")
-    revoked: bool = Field(False, description="Indicates if the technique has been revoked.")
+    revoked: bool = Field(
+        False, description="Indicates if the technique has been revoked."
+    )
     name: str = Field(..., description="Technique's name.")
     creation_date: int = Field(
         ..., description="Creation date of the attack technique (UTC timestamp)."
     )
-    link: Optional[str] = Field(None, description="URL of the technique on MITRE's website.")
+    link: Optional[str] = Field(
+        None, description="URL of the technique on MITRE's website."
+    )
     stix_id: Optional[str] = Field(None, description="Technique's STIX ID.")
     last_modification_date: int = Field(
         ..., description="Date when the technique was last updated (UTC timestamp)."
     )
     description: Optional[str] = Field(None, description="Technique's description.")
-    private: bool = Field(False, description="Whether the attack technique object is private.")
+    private: bool = Field(
+        False, description="Whether the attack technique object is private."
+    )
 
 
 class GTIAttackTechniqueData(BaseModel):
@@ -96,5 +107,6 @@ class GTIAttackTechniqueResponse(BaseModel):
     """Model representing a response containing GTI attack technique data."""
 
     data: Union[
-        GTIAttackTechniqueData, List[Union[GTIAttackTechniqueData, GTIAttackTechniqueReference]]
+        GTIAttackTechniqueData,
+        List[Union[GTIAttackTechniqueData, GTIAttackTechniqueReference]],
     ]

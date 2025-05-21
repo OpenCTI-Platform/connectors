@@ -6,9 +6,11 @@ from connector.src.custom.exceptions.gti_base_error import GTIBaseError
 class GTIApiClientError(GTIBaseError):
     """Exception raised when there's an error setting up or using the API client."""
 
-    def __init__(self, message: str, client_component: str = None, details: dict = None):
+    def __init__(
+        self, message: str, client_component: str = None, details: dict = None
+    ):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             client_component: Component of the API client that failed (e.g., "retry_strategy", "http_client")
@@ -17,7 +19,7 @@ class GTIApiClientError(GTIBaseError):
         error_msg = message
         if client_component:
             error_msg = f"API client error in {client_component}: {message}"
-            
+
         super().__init__(error_msg)
         self.client_component = client_component
         self.details = details or {}

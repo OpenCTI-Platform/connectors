@@ -8,7 +8,7 @@ class GTIAsyncError(GTIBaseError):
 
     def __init__(self, message: str, operation: str = None, details: dict = None):
         """Initialize the exception.
-        
+
         Args:
             message: Error message
             operation: Name of the async operation that failed
@@ -17,7 +17,7 @@ class GTIAsyncError(GTIBaseError):
         error_msg = message
         if operation:
             error_msg = f"Async error during '{operation}' operation: {message}"
-            
+
         super().__init__(error_msg)
         self.operation = operation
         self.details = details or {}

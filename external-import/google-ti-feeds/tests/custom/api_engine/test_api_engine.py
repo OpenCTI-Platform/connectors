@@ -5,8 +5,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
-from pydantic import BaseModel
-
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.api_engine.circuit_breaker import CircuitBreaker
@@ -14,6 +12,7 @@ from connector.src.utils.api_engine.exceptions.api_error import ApiError
 from connector.src.utils.api_engine.exceptions.api_timeout_error import ApiTimeoutError
 from connector.src.utils.api_engine.rate_limiter import RateLimiterRegistry
 from connector.src.utils.api_engine.retry_request_strategy import RetryRequestStrategy
+from pydantic import BaseModel
 
 # =====================
 # Fixtures
@@ -214,7 +213,9 @@ async def test_api_client_get_http_error(
     url = failed_get_scenario["url"]
     status_code = failed_get_scenario["status_code"]
     underlying_exception = Exception(f"Simulated HTTP {status_code} error")
-    _given_mock_response(mock_aiohttp_client, method="get", raise_exception=underlying_exception)
+    _given_mock_response(
+        mock_aiohttp_client, method="get", raise_exception=underlying_exception
+    )
 
     # When
     response, exception = await _when_api_get_called(api_client, url)
@@ -239,7 +240,9 @@ async def test_retry_strategy_exhausts_retries(
     response, exception = await _when_api_get_called(api_client, url)
 
     # Then
-    _then_api_exception_is_raised(exception, expected_message_part="simulated persistent error")
+    _then_api_exception_is_raised(
+        exception, expected_message_part="simulated persistent error"
+    )
     assert mock_aiohttp_client.request.await_count == max_retries + 1  # noqa: S101
 
 
@@ -314,7 +317,9 @@ def _given_mock_response(
 
 
 # --- WHEN ---
-async def _when_api_get_called(client: ApiClient, url: str, model: BaseModel | None = None):
+async def _when_api_get_called(
+    client: ApiClient, url: str, model: BaseModel | None = None
+):
     """Call the get method of the ApiClient."""
     try:
         return await client.call_api(url, model=model), None

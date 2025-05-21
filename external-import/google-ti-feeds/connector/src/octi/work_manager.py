@@ -103,7 +103,12 @@ class WorkManager:
         self._logger.info(f"{LOG_PREFIX} Initiated work {work_id} for {name}")
         return work_id
 
-    def work_to_process(self, work_id: str, error_flag: bool = False, error_message: Optional[str] = None) -> None:
+    def work_to_process(
+        self,
+        work_id: str,
+        error_flag: bool = False,
+        error_message: Optional[str] = None,
+    ) -> None:
         """Work to process.
 
         Args:
@@ -123,7 +128,9 @@ class WorkManager:
         )
         self._logger.info(f"{LOG_PREFIX} Work {work_id} marked to be processed")
 
-    def process_all_remaining_works(self, error_flag: bool = False, error_message: Optional[str] = None) -> None:
+    def process_all_remaining_works(
+        self, error_flag: bool = False, error_message: Optional[str] = None
+    ) -> None:
         """Process all remaining works and update the state.
 
         Args:
@@ -136,7 +143,11 @@ class WorkManager:
         )
         for work in works:
             if work["status"] != "complete":
-                self.work_to_process(work_id=work["id"], error_flag=error_flag, error_message=error_message)
+                self.work_to_process(
+                    work_id=work["id"],
+                    error_flag=error_flag,
+                    error_message=error_message,
+                )
         self._logger.info(f"{LOG_PREFIX} All remaining works marked to be process.")
 
     def send_bundle(self, work_id: str, bundle: Any) -> None:

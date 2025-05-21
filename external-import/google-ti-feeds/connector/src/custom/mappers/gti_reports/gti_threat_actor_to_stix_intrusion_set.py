@@ -3,8 +3,6 @@
 from datetime import datetime
 from typing import List, Optional
 
-from stix2.v21 import Identity, IntrusionSet, MarkingDefinition  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_threat_actor_model import (
     GTIThreatActorData,
     ThreatActorModel,
@@ -13,6 +11,7 @@ from connector.src.stix.octi.models.intrusion_set_model import OctiIntrusionSetM
 from connector.src.stix.v21.models.ovs.attack_motivation_ov_enums import (
     AttackMotivationOV,
 )
+from stix2.v21 import Identity, IntrusionSet, MarkingDefinition  # type: ignore
 
 
 class GTIThreatActorToSTIXIntrusionSet:
@@ -56,7 +55,9 @@ class GTIThreatActorToSTIXIntrusionSet:
 
         goals = self._extract_goals(attributes)
 
-        primary_motivation, secondary_motivations = self._extract_motivations(attributes)
+        primary_motivation, secondary_motivations = self._extract_motivations(
+            attributes
+        )
 
         resource_level = self._extract_resource_level(attributes)
 
@@ -89,7 +90,10 @@ class GTIThreatActorToSTIXIntrusionSet:
             Optional[List[str]]: Extracted aliases or None if no aliases exist
 
         """
-        if not hasattr(attributes, "alt_names_details") or not attributes.alt_names_details:
+        if (
+            not hasattr(attributes, "alt_names_details")
+            or not attributes.alt_names_details
+        ):
             return None
 
         aliases = []
@@ -203,7 +207,9 @@ class GTIThreatActorToSTIXIntrusionSet:
         motivations = []
         for motivation in attributes.motivations:
             if hasattr(motivation, "value") and motivation.value:
-                mapped_motivation = self._map_gti_motivation_to_stix_motivation(motivation.value)
+                mapped_motivation = self._map_gti_motivation_to_stix_motivation(
+                    motivation.value
+                )
                 if mapped_motivation:
                     motivations.append(mapped_motivation)
                 else:
