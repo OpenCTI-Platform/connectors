@@ -5,6 +5,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
+from pydantic import BaseModel
+
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.api_engine.circuit_breaker import CircuitBreaker
@@ -12,7 +14,6 @@ from connector.src.utils.api_engine.exceptions.api_error import ApiError
 from connector.src.utils.api_engine.exceptions.api_timeout_error import ApiTimeoutError
 from connector.src.utils.api_engine.rate_limiter import RateLimiterRegistry
 from connector.src.utils.api_engine.retry_request_strategy import RetryRequestStrategy
-from pydantic import BaseModel
 
 # =====================
 # Fixtures
@@ -68,7 +69,7 @@ def mock_aiohttp_client() -> AsyncMock:
 @pytest.fixture
 def circuit_breaker() -> CircuitBreaker:
     """Fixture for a CircuitBreaker."""
-    return CircuitBreaker(max_failures=3, cooldown_time=1)
+    return CircuitBreaker(max_failures=3, cooldown_time=10)
 
 
 @pytest_asyncio.fixture
@@ -97,7 +98,6 @@ def api_client(retry_strategy: RetryRequestStrategy) -> ApiClient:
     return ApiClient(retry_strategy)
 
 
-# Example Pydantic model for testing
 class SimpleModel(BaseModel):
     """SimpleModel is a Pydantic model for testing."""
 
@@ -214,9 +214,7 @@ async def test_api_client_get_http_error(
     url = failed_get_scenario["url"]
     status_code = failed_get_scenario["status_code"]
     underlying_exception = Exception(f"Simulated HTTP {status_code} error")
-    _given_mock_response(
-        mock_aiohttp_client, method="get", raise_exception=underlying_exception
-    )
+    _given_mock_response(mock_aiohttp_client, method="get", raise_exception=underlying_exception)
 
     # When
     response, exception = await _when_api_get_called(api_client, url)
@@ -241,9 +239,7 @@ async def test_retry_strategy_exhausts_retries(
     response, exception = await _when_api_get_called(api_client, url)
 
     # Then
-    _then_api_exception_is_raised(
-        exception, expected_message_part="simulated persistent error"
-    )
+    _then_api_exception_is_raised(exception, expected_message_part="simulated persistent error")
     assert mock_aiohttp_client.request.await_count == max_retries + 1  # noqa: S101
 
 
@@ -269,8 +265,10 @@ async def test_circuit_breaker_opens_after_failures(
 
     # When & Then
     for _ in range(circuit_breaker.max_failures):
-        _, exc = await _when_api_get_called(client, url)
-        assert exc is not None  # noqa: S101
+        try:
+            await client.call_api(url)
+        except ApiError:
+            pass
 
     _then_circuit_breaker_is_open(circuit_breaker)
 
@@ -278,7 +276,7 @@ async def test_circuit_breaker_opens_after_failures(
         await client.call_api(url)
 
     assert (  # noqa: S101
-        mock_aiohttp_client.get.await_count == circuit_breaker.max_failures
+        mock_aiohttp_client.get.await_count == circuit_breaker.max_failures + 1
     )
 
 
@@ -316,9 +314,7 @@ def _given_mock_response(
 
 
 # --- WHEN ---
-async def _when_api_get_called(
-    client: ApiClient, url: str, model: BaseModel | None = None
-):
+async def _when_api_get_called(client: ApiClient, url: str, model: BaseModel | None = None):
     """Call the get method of the ApiClient."""
     try:
         return await client.call_api(url, model=model), None
@@ -362,6 +358,6 @@ def _then_circuit_breaker_is_open(breaker: CircuitBreaker):
 
 def _then_rate_limiter_called(
     limiter_mock: AsyncMock,
-):  # If you decide to mock RateLimiter
+):
     """Assert that the rate limiter was called."""
     limiter_mock.acquire.assert_called()

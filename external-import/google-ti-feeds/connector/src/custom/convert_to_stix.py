@@ -5,20 +5,8 @@ by using specialized mapper classes.
 """
 
 import logging
-from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Tuple, cast
+from typing import Any, Dict, List, Literal, Optional, Union, cast
 
-from connector.src.custom.exceptions import (
-    GTIEntityConversionError,
-    GTIOrganizationCreationError,
-    GTIMarkingCreationError,
-    GTIReferenceError,
-    GTIReportConversionError,
-    GTIMalwareConversionError,
-    GTIActorConversionError,
-    GTITechniqueConversionError,
-    GTIVulnerabilityConversionError,
-)
 from stix2.v21 import (  # type: ignore
     AttackPattern,
     Identity,
@@ -29,6 +17,17 @@ from stix2.v21 import (  # type: ignore
     Vulnerability,
 )
 
+from connector.src.custom.exceptions import (
+    GTIActorConversionError,
+    GTIEntityConversionError,
+    GTIMalwareConversionError,
+    GTIMarkingCreationError,
+    GTIOrganizationCreationError,
+    GTIReferenceError,
+    GTIReportConversionError,
+    GTITechniqueConversionError,
+    GTIVulnerabilityConversionError,
+)
 from connector.src.custom.mappers.gti_reports.gti_attack_technique_to_stix_attack_pattern import (
     GTIAttackTechniqueToSTIXAttackPattern,
 )
@@ -103,6 +102,7 @@ class ConvertToSTIX:
 
         Raises:
             GTIEntityConversionError: If there's an error converting an entity
+
         """
         try:
             self.logger.info("Starting to convert GTI data to STIX format")
@@ -117,8 +117,7 @@ class ConvertToSTIX:
                 progress_info = f"({i + 1}/{total_reports} reports) " if total_reports > 0 else ""
                 self.logger.info(f"{progress_info}Converting report {report_id} to STIX format")
 
-
-                if hasattr(report, 'last_modification_date') and report.last_modification_date:
+                if hasattr(report, "last_modification_date") and report.last_modification_date:
                     report_date = report.last_modification_date
                     if not self.latest_report_date or report_date > self.latest_report_date:
                         self.latest_report_date = report_date
@@ -186,7 +185,6 @@ class ConvertToSTIX:
             return self.stix_objects
 
         except GTIEntityConversionError:
-
             raise
         except Exception as e:
             self.logger.error(
@@ -194,7 +192,9 @@ class ConvertToSTIX:
             )
 
             if self.stix_objects:
-                self.logger.info(f"Returning {len(self.stix_objects)} partially converted STIX objects")
+                self.logger.info(
+                    f"Returning {len(self.stix_objects)} partially converted STIX objects"
+                )
                 return self.stix_objects
             raise GTIEntityConversionError(f"Failed to convert GTI data: {str(e)}")
 
@@ -206,6 +206,7 @@ class ConvertToSTIX:
 
         Raises:
             GTIOrganizationCreationError: If there's an error creating the organization
+
         """
         try:
             organization_model = OctiOrganizationModel.create(
@@ -231,6 +232,7 @@ class ConvertToSTIX:
 
         Raises:
             GTIMarkingCreationError: If there's an error creating the TLP marking
+
         """
         try:
             normalized_level = tlp_level.lower()
@@ -257,6 +259,7 @@ class ConvertToSTIX:
 
         Raises:
             GTIReportConversionError: If there's an error converting the report
+
         """
         try:
             self.logger.debug(f"Converting report {report.id} to STIX format")
@@ -270,18 +273,20 @@ class ConvertToSTIX:
                 raise GTIReportConversionError(
                     f"Failed to convert report author: {str(author_err)}",
                     report.id,
-                    "author_conversion"
+                    "author_conversion",
                 ) from author_err
 
             try:
-                location_mapper = GTIReportToSTIXLocation(report, self.organization, self.tlp_marking)
+                location_mapper = GTIReportToSTIXLocation(
+                    report, self.organization, self.tlp_marking
+                )
                 locations = location_mapper.to_stix()
                 result.extend(locations)
             except Exception as location_err:
                 raise GTIReportConversionError(
                     f"Failed to convert report locations: {str(location_err)}",
                     report.id,
-                    "location_conversion"
+                    "location_conversion",
                 ) from location_err
 
             try:
@@ -292,7 +297,7 @@ class ConvertToSTIX:
                 raise GTIReportConversionError(
                     f"Failed to convert report sectors: {str(sector_err)}",
                     report.id,
-                    "sector_conversion"
+                    "sector_conversion",
                 ) from sector_err
 
             try:
@@ -305,7 +310,7 @@ class ConvertToSTIX:
                 raise GTIReportConversionError(
                     f"Failed to convert report object: {str(report_err)}",
                     report.id,
-                    "report_object_conversion"
+                    "report_object_conversion",
                 ) from report_err
 
             self.object_id_map[report.id] = report_obj.id
@@ -320,13 +325,12 @@ class ConvertToSTIX:
                 raise GTIReportConversionError(
                     f"Failed to convert report relationships: {str(rel_err)}",
                     report.id,
-                    "relationship_conversion"
+                    "relationship_conversion",
                 ) from rel_err
 
             return result
 
         except GTIReportConversionError:
-
             raise
         except Exception as e:
             self.logger.error(
@@ -345,6 +349,7 @@ class ConvertToSTIX:
 
         Raises:
             GTIMalwareConversionError: If there's an error converting the malware family
+
         """
         try:
             self.logger.debug(f"Converting malware family {malware.id} to STIX format")
@@ -374,6 +379,7 @@ class ConvertToSTIX:
 
         Raises:
             GTIActorConversionError: If there's an error converting the threat actor
+
         """
         try:
             self.logger.debug(f"Converting threat actor {actor.id} to STIX format")
@@ -405,6 +411,7 @@ class ConvertToSTIX:
 
         Raises:
             GTITechniqueConversionError: If there's an error converting the attack technique
+
         """
         try:
             self.logger.debug(f"Converting attack technique {technique.id} to STIX format")
@@ -440,6 +447,7 @@ class ConvertToSTIX:
 
         Raises:
             GTIVulnerabilityConversionError: If there's an error converting the vulnerability
+
         """
         try:
             self.logger.debug(f"Converting vulnerability {vulnerability.id} to STIX format")
@@ -461,64 +469,69 @@ class ConvertToSTIX:
             cve_id = getattr(vulnerability, "cve_id", None)
             raise GTIVulnerabilityConversionError(str(e), vulnerability.id, cve_id) from e
 
-    def _add_reference_to_report(self, object_id: str, report_id: str) -> None:
-        """Add reference to an object in a report.
+    def _add_reference_to_report(self, object_id: Union[str, List[str]], report_id: str) -> None:
+        """Add reference to one or more objects in a report.
 
         Args:
-            object_id: ID of the object to reference
+            object_id: ID of the object to reference, or a list of object IDs
             report_id: ID of the report
 
         Raises:
             GTIReferenceError: If there's an error adding the reference
+
         """
         try:
+            object_ids = [object_id] if isinstance(object_id, str) else object_id
+
             stix_report_id = self.object_id_map.get(report_id)
             if not stix_report_id:
                 self.logger.warning(f"Report {report_id} not found in object_id_map")
                 raise GTIReferenceError(
-                    f"Report {report_id} not found in object_id_map",
-                    target_id=report_id
+                    f"Report {report_id} not found in object_id_map", target_id=report_id
                 )
+
+            latest_report_index: Optional[int] = None
+            latest_report: Optional[Report] = None
 
             for i, obj in enumerate(self.stix_objects):
                 if isinstance(obj, Report) and obj.id == stix_report_id:
-                    if object_id not in obj.object_refs:
-                        try:
-                            updated_refs = list(obj.object_refs) + [object_id]
-                            updated_report = Report(
-                                id=obj.id,
-                                created=obj.created,
-                                modified=obj.modified,
-                                name=obj.name,
-                                description=obj.description,
-                                report_types=obj.report_types,
-                                published=obj.published,
-                                object_refs=updated_refs,
-                            )
-                            self.stix_objects[i] = updated_report
-                        except Exception as update_err:
-                            raise GTIReferenceError(
-                                f"Failed to update report references: {str(update_err)}",
-                                source_id=stix_report_id,
-                                target_id=object_id
-                            ) from update_err
-                    break
-            else:
+                    latest_report_index = i
+                    latest_report = obj
+
+            if latest_report is None:
                 self.logger.warning(f"Report with ID {stix_report_id} not found in STIX objects")
                 raise GTIReferenceError(
                     f"Report with ID {stix_report_id} not found in STIX objects",
-                    source_id=stix_report_id
+                    source_id=stix_report_id,
                 )
 
-        except GTIReferenceError:
+            new_object_ids = [
+                obj_id for obj_id in object_ids if obj_id not in latest_report.object_refs
+            ]
 
+            if new_object_ids:
+                try:
+                    updated_report = GTIReportToSTIXReport.add_object_refs(
+                        objects_to_add=new_object_ids, existing_report=latest_report
+                    )
+
+                    if latest_report_index is not None:
+                        self.stix_objects[latest_report_index] = updated_report
+                except Exception as update_err:
+                    raise GTIReferenceError(
+                        f"Failed to update report references: {str(update_err)}",
+                        source_id=stix_report_id,
+                        target_id=str(new_object_ids),
+                    ) from update_err
+
+        except GTIReferenceError:
             raise
         except Exception as e:
             self.logger.error(f"Error adding reference to report: {str(e)}", meta={"error": str(e)})
             raise GTIReferenceError(
                 str(e),
-                source_id=stix_report_id if 'stix_report_id' in locals() else None,
-                target_id=object_id
+                source_id=stix_report_id if "stix_report_id" in locals() else None,
+                target_id=str(object_id),
             ) from e
 
     def get_latest_report_date(self) -> Optional[str]:
@@ -526,5 +539,6 @@ class ConvertToSTIX:
 
         Returns:
             ISO format string of the latest report date, or None if no reports were processed
+
         """
         return self.latest_report_date

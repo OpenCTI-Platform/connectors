@@ -6,10 +6,11 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from pycti import OpenCTIConnectorHelper  # type: ignore
+
 from connector.src.octi.connector import Connector
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
-from pycti import OpenCTIConnectorHelper  # type: ignore
 from tests.conftest import mock_env_vars
 
 # =====================
@@ -39,7 +40,6 @@ def min_required_config(request) -> dict[str, str]:  # type: ignore
     params=[
         {
             "connector_duration_period": "PT1H",
-            "connector_split_work": "False",
             "connector_log_level": "info",
             "connector_name": "Connector Test",
             "connector_scope": "identity",
@@ -48,7 +48,6 @@ def min_required_config(request) -> dict[str, str]:  # type: ignore
         },
         {
             "connector_duration_period": "PT5H",
-            "connector_split_work": "True",
             "connector_log_level": "debug",
             "connector_name": "Connector Test2",
             "connector_scope": "vulnerability",
@@ -61,7 +60,6 @@ def all_optional_config(request) -> dict[str, str]:  # type: ignore
     """Fixture for all optional configuration."""
     return {
         "CONNECTOR_DURATION_PERIOD": request.param["connector_duration_period"],
-        "CONNECTOR_SPLIT_WORK": request.param["connector_split_work"],
         "CONNECTOR_LOG_LEVEL": request.param["connector_log_level"],
         "CONNECTOR_NAME": request.param["connector_name"],
         "CONNECTOR_SCOPE": request.param["connector_scope"],
@@ -73,7 +71,6 @@ def all_optional_config(request) -> dict[str, str]:  # type: ignore
 @pytest.fixture(
     params=[
         {"connector_duration_period": "PT2H"},
-        {"connector_split_work": "False"},
         {"connector_log_level": "info"},
         {"connector_name": "Google Threat Intel Feeds"},
         {"connector_scope": "report,location,identity"},
@@ -148,9 +145,7 @@ def test_connector_config_min_required(  # type: ignore
     # When the connector is created
     connector, _ = _when_connector_created()
     # Then the connector should be created successfully
-    _then_connector_created_successfully(
-        capfd, mock_env, connector, min_required_config
-    )
+    _then_connector_created_successfully(capfd, mock_env, connector, min_required_config)
 
 
 # Scenario: Create a connector with all optional configuration.
