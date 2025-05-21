@@ -18,3 +18,4 @@ luminar:
   client_secret: ''
   create_observable: True
   initial_fetch_date: 'YYYY-MM-DD'
+  duration_interval: 1 # Interval to run in days; Default=1.
