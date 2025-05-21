@@ -27,38 +27,3 @@ class SoftwareModel(BaseSCOModel):
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""
         return Software(**self.model_dump(exclude_none=True))
-
-
-def test_software_model() -> None:
-    """Test function to demonstrate the usage of SoftwareModel."""
-    from uuid import uuid4
-
-    # === Minimal Software ===
-    minimal = SoftwareModel(
-        type="software",
-        spec_version="2.1",
-        id=f"software--{uuid4()}",
-        name="OpenSSH",
-    )
-
-    print("=== MINIMAL SOFTWARE ===")  # noqa: T201
-    print(minimal.to_stix2_object().serialize(pretty=True))  # noqa: T201
-
-    # === Full Software ===
-    full = SoftwareModel(
-        type="software",
-        spec_version="2.1",
-        id=f"software--{uuid4()}",
-        name="Apache HTTP Server",
-        vendor="Apache Software Foundation",
-        version="2.4.57",
-        cpe="cpe:2.3:a:apache:http_server:2.4.57:*:*:*:*:*:*:*",
-        languages=["eng", "jpn"],
-    )
-
-    print("\n=== FULL SOFTWARE ===")  # noqa: T201
-    print(full.to_stix2_object().serialize(pretty=True))  # noqa: T201
-
-
-if __name__ == "__main__":
-    test_software_model()

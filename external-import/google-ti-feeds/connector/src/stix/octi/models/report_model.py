@@ -63,7 +63,7 @@ class OctiReportModel:
             labels = []
 
         custom_properties = kwargs.pop("custom_properties", {})
-        if content and custom_properties:
+        if content:
             custom_properties["x_opencti_content"] = content
 
         data = {

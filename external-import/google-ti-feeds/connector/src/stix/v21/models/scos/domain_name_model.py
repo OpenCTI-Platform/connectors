@@ -22,35 +22,3 @@ class DomainNameModel(BaseSCOModel):
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""
         return DomainName(**self.model_dump(exclude_none=True))
-
-
-def test_domain_name_model() -> None:
-    """Test function to demonstrate the usage of DomainNameModel."""
-    from uuid import uuid4
-
-    # === Minimal Domain Name ===
-    minimal = DomainNameModel(
-        type="domain-name",
-        spec_version="2.1",
-        id=f"domain-name--{uuid4()}",
-        value="command.hydra-net.org",
-    )
-
-    print("=== MINIMAL DOMAIN NAME ===")  # noqa: T201
-    print(minimal.to_stix2_object().serialize(pretty=True))  # noqa: T201
-
-    # === Full Domain Name ===
-    full = DomainNameModel(
-        type="domain-name",
-        spec_version="2.1",
-        id=f"domain-name--{uuid4()}",
-        value="update.shadow-dropper.net",
-        resolves_to_refs=[f"ipv4-addr--{uuid4()}", f"ipv6-addr--{uuid4()}"],
-    )
-
-    print("\n=== FULL DOMAIN NAME ===")  # noqa: T201
-    print(full.to_stix2_object().serialize(pretty=True))  # noqa: T201
-
-
-if __name__ == "__main__":
-    test_domain_name_model()
