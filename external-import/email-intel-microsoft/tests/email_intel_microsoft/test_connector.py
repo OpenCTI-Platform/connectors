@@ -57,6 +57,14 @@ def test_connector_process_data(
     assert report.x_opencti_content == "body message1"
     assert report.report_types == [REPORT_TYPE_THREAT_REPORT]
     assert report.object_marking_refs == [connector.converter.tlp_marking.id]
+    assert report.description == (
+        "**Email Received From**: email@test.com  \n"
+        "**Email Received At**: 2025-05-09 00:00:00+00:00  \n"
+        "**Email Subject**: subject message1  \n"
+        "**Email Attachment Count**: 0  \n"
+        "  \n"
+        "Please consult the content section to view the email content."
+    )
 
     report = stix_objects[1]
     assert report.name == "subject message2"
@@ -64,6 +72,14 @@ def test_connector_process_data(
     assert report.x_opencti_content == "body message2"
     assert report.report_types == [REPORT_TYPE_THREAT_REPORT]
     assert report.object_marking_refs == [connector.converter.tlp_marking.id]
+    assert report.description == (
+        "**Email Received From**: email@test.com  \n"
+        "**Email Received At**: 2025-05-09 00:00:00+00:00  \n"
+        "**Email Subject**: subject message2  \n"
+        "**Email Attachment Count**: 0  \n"
+        "  \n"
+        "Please consult the content section to view the email content."
+    )
 
 
 @freezegun.freeze_time("2025-04-22T14:00:00Z")

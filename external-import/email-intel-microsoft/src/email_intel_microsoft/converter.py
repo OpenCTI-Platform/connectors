@@ -40,6 +40,11 @@ class ConnectorConverter(BaseConverter):
         try:
             if not (name := entity.subject):
                 name = f"<no subject> from {entity.from_.email_address.address}"
+            attachments = [
+                attachment
+                for attachment in (entity.attachments or [])
+                if attachment.content_bytes
+            ]
             yield self._create_report(
                 name=name,
                 published=entity.received_date_time,
@@ -52,9 +57,16 @@ class ConnectorConverter(BaseConverter):
                         data=attachment.content_bytes,
                         object_marking_refs=[self.tlp_marking.id],
                     )
-                    for attachment in entity.attachments or []
-                    if attachment.content_bytes
+                    for attachment in attachments
                 ],
+                description=(
+                    f"**Email Received From**: {entity.from_.email_address.address}  \n"
+                    f"**Email Received At**: {entity.received_date_time}  \n"
+                    f"**Email Subject**: {name}  \n"
+                    f"**Email Attachment Count**: {len(attachments)}  \n"
+                    "  \n"
+                    "Please consult the content section to view the email content."
+                ),
             )
         except Exception as e:
             raise ConnectorWarning(
