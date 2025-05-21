@@ -356,7 +356,9 @@ class S3Connector:
                 fixed_bundle = self.fix_bundle(content)
                 self.helper.send_stix2_bundle(bundle=fixed_bundle, work_id=work_id)
                 self.helper.log_info("Deleting file " + o.get("Key"))
-                self.s3_client.Object(o.get("Key")).delete()
+                self.s3_client.delete_object(
+                    Bucket=self.s3_bucket_name, Key=o.get("Key")
+                )
 
             message = (
                 "Connector successfully run ("
