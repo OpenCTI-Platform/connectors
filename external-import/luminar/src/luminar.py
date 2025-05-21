@@ -6,7 +6,7 @@ import os
 import re
 import sys
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import requests
@@ -100,9 +100,7 @@ class LuminarManager:
     def __init__(self) -> None:
         # pylint: disable=too-many-positional-arguments
 
-        config_file_path = (
-            os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        )
+        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config = (
             yaml.load(open(config_file_path, encoding="utf-8"), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
