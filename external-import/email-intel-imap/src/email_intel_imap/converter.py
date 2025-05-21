@@ -3,7 +3,6 @@ import logging
 from typing import Generator, Literal
 
 import stix2
-
 from base_connector import BaseConverter, ConnectorWarning
 from base_connector.models import OpenCTIFile
 from imap_tools.message import MailAttachment, MailMessage
@@ -75,6 +74,14 @@ class ConnectorConverter(BaseConverter):
                     )
                     for attachment in attachments
                 ],
+                description=(
+                    f"**Email Received From**: {entity.from_}  \n"
+                    f"**Email Received At**: {entity.date}  \n"
+                    f"**Email Subject**: {name}  \n"
+                    f"**Email Attachment Count**: {len(attachments)}  \n"
+                    "  \n"
+                    "Please consult the content section to view the email content."
+                ),
             )
         except Exception as e:
             raise ConnectorWarning(

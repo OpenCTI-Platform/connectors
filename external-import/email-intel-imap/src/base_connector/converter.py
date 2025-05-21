@@ -88,6 +88,7 @@ class BaseConverter(abc.ABC):
         report_types: list[str],
         x_opencti_content: str,
         x_opencti_files: list[OpenCTIFile],
+        description: str,
     ) -> stix2.Report:
         return RFReport(
             id=pycti.Report.generate_id(name=name, published=published),
@@ -99,6 +100,7 @@ class BaseConverter(abc.ABC):
                 x_opencti_content=x_opencti_content,
                 x_opencti_files=x_opencti_files,
             ).model_dump(),
+            description=description,
         )
 
     @abc.abstractmethod

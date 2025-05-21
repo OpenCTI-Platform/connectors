@@ -38,7 +38,11 @@ def test_converter_tlp_marking(converter: ConnectorConverter) -> None:
 def test_converter_to_stix(converter: ConnectorConverter) -> None:
     published = datetime.datetime(2025, 4, 16, 10, 10, 10)
     mocked_email = Mock(
-        subject="Test Report", date=published, html="Test Content", attachments=[]
+        subject="Test Report",
+        date=published,
+        html="Test Content",
+        attachments=[],
+        from_="em@il.com",
     )
 
     report = list(converter.to_stix_objects(entity=mocked_email))
@@ -52,6 +56,14 @@ def test_converter_to_stix(converter: ConnectorConverter) -> None:
     assert report[0].published == STIXdatetime(2025, 4, 16, 10, 10, 10)
     assert report[0].object_marking_refs == [converter.tlp_marking.id]
     assert report[0].x_opencti_content == "Test Content"
+    assert report[0].description == (
+        "**Email Received From**: em@il.com  \n"
+        "**Email Received At**: 2025-04-16 10:10:10  \n"
+        "**Email Subject**: Test Report  \n"
+        "**Email Attachment Count**: 0  \n"
+        "  \n"
+        "Please consult the content section to view the email content."
+    )
 
 
 def test_converter_to_stix_no_subject(converter: ConnectorConverter) -> None:
@@ -75,6 +87,14 @@ def test_converter_to_stix_no_subject(converter: ConnectorConverter) -> None:
     assert report[0].published == STIXdatetime(2025, 4, 16, 10, 10, 10)
     assert report[0].object_marking_refs == [converter.tlp_marking.id]
     assert report[0].x_opencti_content == "Test Content"
+    assert report[0].description == (
+        "**Email Received From**: from_@email.com  \n"
+        "**Email Received At**: 2025-04-16 10:10:10  \n"
+        "**Email Subject**: <no subject> from from_@email.com  \n"
+        "**Email Attachment Count**: 0  \n"
+        "  \n"
+        "Please consult the content section to view the email content."
+    )
 
 
 def test_converter_to_stix_with_error(converter: ConnectorConverter) -> None:
@@ -112,7 +132,14 @@ def test_converter_to_stix_with_attachment(converter: ConnectorConverter) -> Non
     # No file
     report = list(converter.to_stix_objects(entity=mocked_email))[0]
     assert "x_opencti_files" not in report
-
+    assert report.description == (
+        "**Email Received From**: from_@email.com  \n"
+        "**Email Received At**: 2025-04-16 10:10:10  \n"
+        "**Email Subject**: <no subject> from from_@email.com  \n"
+        "**Email Attachment Count**: 0  \n"
+        "  \n"
+        "Please consult the content section to view the email content."
+    )
     # 1 file
     mocked_email.attachments = [pdf_file]
     report = list(converter.to_stix_objects(entity=mocked_email))[0]
@@ -124,7 +151,14 @@ def test_converter_to_stix_with_attachment(converter: ConnectorConverter) -> Non
             "object_marking_refs": [converter.tlp_marking.id],
         }
     ]
-
+    assert report.description == (
+        "**Email Received From**: from_@email.com  \n"
+        "**Email Received At**: 2025-04-16 10:10:10  \n"
+        "**Email Subject**: <no subject> from from_@email.com  \n"
+        "**Email Attachment Count**: 1  \n"
+        "  \n"
+        "Please consult the content section to view the email content."
+    )
     # 2 files
     mocked_email.attachments = [pdf_file, csv_file]
     report = list(converter.to_stix_objects(entity=mocked_email))[0]
@@ -142,6 +176,14 @@ def test_converter_to_stix_with_attachment(converter: ConnectorConverter) -> Non
             "object_marking_refs": [converter.tlp_marking.id],
         },
     ]
+    assert report.description == (
+        "**Email Received From**: from_@email.com  \n"
+        "**Email Received At**: 2025-04-16 10:10:10  \n"
+        "**Email Subject**: <no subject> from from_@email.com  \n"
+        "**Email Attachment Count**: 2  \n"
+        "  \n"
+        "Please consult the content section to view the email content."
+    )
 
 
 @pytest.mark.usefixtures("mock_email_intel_imap_config")

@@ -65,6 +65,7 @@ def test_converter_create_report() -> None:
                 object_marking_refs=[converter.tlp_marking.id],
             )
         ],
+        description="Test description",
     )
 
     assert report.id == pycti.Report.generate_id(
@@ -83,3 +84,4 @@ def test_converter_create_report() -> None:
             "object_marking_refs": [converter.tlp_marking.id],
         }
     ]
+    assert report.description == "Test description"

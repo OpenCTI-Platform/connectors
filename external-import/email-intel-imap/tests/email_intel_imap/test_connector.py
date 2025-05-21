@@ -39,10 +39,23 @@ def test_connector_process_data_empty(connector: Connector) -> None:
     assert stix_objects == []
 
 
+@freezegun.freeze_time("2025-05-21T14:00:00Z")
 def test_connector_process_data(connector: Connector, mocked_mail_box: Mock) -> None:
     now = datetime.datetime.now(tz=datetime.UTC)
-    email1 = Mock(subject="email 1", date=now, html="email body 1", attachments=[])
-    email2 = Mock(subject="email 2", date=now, html="email body 2", attachments=[])
+    email1 = Mock(
+        subject="email 1",
+        date=now,
+        html="email body 1",
+        attachments=[],
+        from_="em1@il.com",
+    )
+    email2 = Mock(
+        subject="email 2",
+        date=now,
+        html="email body 2",
+        attachments=[],
+        from_="em2@il.com",
+    )
 
     mocked_mail_box.fetch.return_value = [email1, email2]
     stix_objects = connector.process_data()
@@ -55,6 +68,14 @@ def test_connector_process_data(connector: Connector, mocked_mail_box: Mock) -> 
     assert report.x_opencti_content == "email body 1"
     assert report.report_types == [REPORT_TYPE_THREAT_REPORT]
     assert report.object_marking_refs == [connector.converter.tlp_marking.id]
+    assert report.description == (
+        "**Email Received From**: em1@il.com  \n"
+        "**Email Received At**: 2025-05-21 14:00:00+00:00  \n"
+        "**Email Subject**: email 1  \n"
+        "**Email Attachment Count**: 0  \n"
+        "  \n"
+        "Please consult the content section to view the email content."
+    )
 
     report = stix_objects[1]
     assert report.name == "email 2"
@@ -62,6 +83,14 @@ def test_connector_process_data(connector: Connector, mocked_mail_box: Mock) -> 
     assert report.x_opencti_content == "email body 2"
     assert report.report_types == [REPORT_TYPE_THREAT_REPORT]
     assert report.object_marking_refs == [connector.converter.tlp_marking.id]
+    assert report.description == (
+        "**Email Received From**: em2@il.com  \n"
+        "**Email Received At**: 2025-05-21 14:00:00+00:00  \n"
+        "**Email Subject**: email 2  \n"
+        "**Email Attachment Count**: 0  \n"
+        "  \n"
+        "Please consult the content section to view the email content."
+    )
 
 
 @freezegun.freeze_time("2025-04-22T14:00:00Z")
