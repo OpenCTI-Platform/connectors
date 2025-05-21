@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Go to the right directory
-cd /opt/opencti-connector-accenture
+cd /opt/opencti-connector-accenture-acti
 
 # Launch the worker
 python3 main.py
