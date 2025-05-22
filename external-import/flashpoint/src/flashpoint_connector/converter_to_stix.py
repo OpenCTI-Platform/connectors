@@ -1,7 +1,9 @@
 import base64
+from datetime import datetime
 
 import stix2
 from dateparser import parse
+from flashpoint_client.models import CompromisedCredentialSighting
 from pycti import (
     AttackPattern,
     Channel,
@@ -20,6 +22,8 @@ from pycti import (
     ThreatActorIndividual,
     Tool,
 )
+
+from .utils import is_domain, is_ipv4, is_ipv6
 
 
 class ConverterToStix:
@@ -362,6 +366,47 @@ class ConverterToStix:
 A media attachment ({alert.get("media_name")}) is available in Data section
 """
             markdown_content += media_part
+
+    @staticmethod
+    def _convert_ccm_alert_to_markdown_content(
+        alert: CompromisedCredentialSighting,
+    ) -> str:
+        """
+        Create a markdown content representing a CCM Alert from Flashpoint.
+        :param alert: A Flashpoint CCM Alert to convert into markdown
+        :return: Markdown as string
+        """
+        markdown_content = (
+            "### Credential"
+            f"- **Username**: {alert.username}  \n"
+            f"- **Password**: {alert.password}  \n"
+            f"- **Domain**: {alert.domain}  \n"
+            f"- **Affected Domain**: {alert.affected_domain}  \n"
+            f"- **Affected Url**: {alert.affected_url}  \n"
+            "  \n"
+            "### Password Complexity"
+            f"- **Length**: {alert.password_complexity.length}  \n"
+            f"- **Lowercase Letter**: {alert.password_complexity.has_lowercase}  \n"
+            f"- **Uppercase Letter**: {alert.password_complexity.has_uppercase}  \n"
+            f"- **Number**: {alert.password_complexity.has_number}  \n"
+            f"- **Symbol**: {alert.password_complexity.has_symbol}  \n"
+            "  \n"
+            "### Breach"
+            f"- **Title**: {alert.breach.title}  \n"
+            f"- **Sourced From**: {alert.breach.source}  \n"
+            f"- **Source Type**: {alert.breach.source_type}  \n"
+            f"- **Breached At**: {datetime.isoformat(alert.breach.created_at, timespec='seconds')}  \n"
+            f"- **Discovered At**: {datetime.isoformat(alert.breach.first_observed_at, timespec='seconds')}  \n"
+        )
+
+        if alert.infected_host:
+            markdown_content += (
+                "  \n"
+                "### Infection / Malware Data"
+                f"- **Malware Family**: {alert.infected_host.malware.family}  \n"
+                f"- **Malware Version**: {alert.infected_host.malware.version}  \n"
+            )
+
         return markdown_content
 
     @staticmethod
@@ -640,3 +685,169 @@ A media attachment ({alert.get("media_name")}) is available in Data section
             relationship_publishes,
         ]
         return stix_objects
+
+    def convert_ccm_alert_to_incident(
+        self, alert: CompromisedCredentialSighting
+    ) -> list[stix2.v21._STIXBase21]:
+        """
+        Convert a Flashpoint CCM Alert into STIX 2.1 objects.
+        :param alert: Flashpoint CCM alert to convert
+        :return: List of STIX 2.1 objects
+        """
+
+        stix_objects = []
+
+        incident_name = f"CCM Alert: {alert.username} - {alert.fpid}"
+        incident_description = (
+            f"A compromised credential has been detected for username:  **{alert.username}** on affected URL: **{alert.affected_url}**.  \n"
+            f"The alert was triggered on **{alert.header.indexed_at.strftime('%B %d, %Y, at %I:%M %p UTC')}**.  \n"
+            "  \n"
+            "For more details about this alert, please consult the Content tab.  \n"
+        )
+        incident_created_at = alert.breach.created_at
+        incident_external_reference = stix2.ExternalReference(
+            source_name="Flashpoint",
+            url=f"https://app.flashpoint.io/cti/ato/credential/{alert.credential_record_fpid}::{alert.fpid}",
+        )
+
+        # Generate a markdown file gathering all Flashpoint useful information
+        # and attach it as a file to the incident
+        incident_markdown = self._convert_ccm_alert_to_markdown_content(alert)
+        incident_markdown_file_data = {
+            "name": "alert.md",
+            "data": base64.b64encode(incident_markdown.encode("utf-8")),
+            "mime_type": "text/markdown",
+            "no_trigger_import": False,
+        }
+
+        stix_incident = stix2.Incident(
+            id=Incident.generate_id(
+                name=incident_name,
+                created=incident_created_at,
+            ),
+            name=incident_name,
+            created=incident_created_at,
+            description=incident_description,
+            labels=[alert.breach.source_type],
+            external_references=[incident_external_reference],
+            object_marking_refs=[self.marking],
+            created_by_ref=self.author_id,
+            custom_properties={
+                "first_seen": incident_created_at,
+                "last_seen": alert.last_observed_at,
+                "source": "Flashpoint CCM",
+                "incident_type": "compromised credential",
+                "severity": "low",
+                "x_opencti_files": [incident_markdown_file_data],
+            },
+        )
+        stix_objects.append(stix_incident)
+
+        related_stix_objects = []  # STIX objects extracted from CCM Alert's attributes
+        if alert.email:
+            stix_email = stix2.EmailAddress(
+                value=alert.email,
+                object_marking_refs=[self.marking],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+            related_stix_objects.append(stix_email)
+        if alert.domain:
+            stix_domain = self.convert_ccm_alert_domain(alert.domain)
+            if stix_domain:
+                related_stix_objects.append(stix_domain)
+        if alert.affected_domain:
+            stix_affected_domain = self.convert_ccm_alert_domain(alert.affected_domain)
+            if stix_affected_domain:
+                related_stix_objects.append(stix_affected_domain)
+        if alert.affected_url:
+            stix_url = stix2.URL(
+                value=alert.affected_url,
+                object_marking_refs=[self.marking],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+            related_stix_objects.append(stix_url)
+        if alert.username and alert.password:
+            stix_account = stix2.UserAccount(
+                account_login=alert.username,
+                credential=alert.password,
+                object_marking_refs=[self.marking],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+            related_stix_objects.append(stix_account)
+        if alert.infected_host and alert.infected_host.malware:
+            malware_family = alert.infected_host.malware.family
+            if malware_family:
+                stix_malware = stix2.Malware(
+                    id=Malware.generate_id(malware_family),
+                    name=malware_family,
+                    is_family=True,
+                    object_marking_refs=[self.marking],
+                    created_by_ref=self.author_id,
+                )
+                related_stix_objects.append(stix_malware)
+
+        for related_stix_object in related_stix_objects:
+            related_to_relationship = self.create_relation(
+                source_id=related_stix_object.id,
+                target_id=stix_incident.id,
+                relation="related-to",
+            )
+            # self.create_relation currently handle exception internally and return None in case of error
+            # Exceptions should probably be handled in FlashpointConnector class in the future
+            if related_to_relationship:
+                stix_objects.append(related_stix_object)
+                stix_objects.append(related_to_relationship)
+
+        # Add self.marking to ensure a consistent bundle.
+        # Author is directly created through OpenCTI API in self.create_author()
+        stix_objects = [self.marking] + stix_objects
+
+        return stix_objects
+
+    def convert_ccm_alert_domain(
+        self, value: str
+    ) -> stix2.DomainName | stix2.IPv4Address | stix2.IPv6Address | None:
+        """
+        Convert a CCM Alert's domain or affected domain to its counterpart STIX observable.
+        CCM Alert's domain represents the domain of the user email.
+        CCM Alert's affected domain represents the domain of the website the credentials have leaked from.
+        :param value: Domain value
+        :return: Corresponding STIX Observable (DomainName, IPv4Address or IPv6Address)
+        """
+        stix_affected_domain = None
+        if is_domain(value):
+            stix_affected_domain = stix2.DomainName(
+                value=value,
+                object_marking_refs=[self.marking],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+        elif is_ipv4(value):
+            stix_affected_domain = stix2.IPv4Address(
+                value=value,
+                object_marking_refs=[self.marking],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+        elif is_ipv6(value):
+            stix_affected_domain = stix2.IPv6Address(
+                value=value,
+                object_marking_refs=[self.marking],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+        else:
+            self.helper.connector_logger.warning(
+                f"Unable to convert 'domain' or 'affected_domain' value to a STIX observable, value: {value}"
+            )
+
+        return stix_affected_domain
