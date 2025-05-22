@@ -36,7 +36,7 @@ class ConverterToStix:
 
     def __init__(self, helper: OpenCTIConnectorHelper):
         self.helper = helper
-        self.author_id = self.create_author()
+        self.author_id = self._create_author()
         self.marking = stix2.MarkingDefinition(
             id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
             definition_type="statement",
@@ -48,7 +48,7 @@ class ConverterToStix:
             },
         )
 
-    def create_author(self) -> dict:
+    def _create_author(self) -> dict:
         """
         Create Author
         :return: Author ID
@@ -61,7 +61,9 @@ class ConverterToStix:
         )
         return identity["standard_id"]
 
-    def create_relation(self, source_id, target_id, relation):
+    def create_relation(
+        self, source_id: str, target_id: str, relation: str
+    ) -> stix2.Relationship | None:
         """
         :param source_id:
         :param target_id:
@@ -338,34 +340,71 @@ class ConverterToStix:
         return channel
 
     @staticmethod
-    def convert_alert_to_markdown_content(alert):
+    def _generate_incident_name(alert: dict) -> str:
         """
-        :param alert:
-        :return:
+        Create a STIX Incident's name from Flashpoint alert.
+        :param alert: A Flashpoint alert
+        :return: Incident's name
         """
-        markdown_content = f"""
-### Metadata
-- **Alert Id**: {alert.get("alert_id")}
-- **Created**: {alert.get("created_at")}
-- **Site**: {alert.get("channel_type")}
-- **Title**: {alert.get("channel_name")}
-- **Author**: {alert.get("author")}
-- **Status**: {alert.get("alert_status")}
-- **Source**: {alert.get("alert_source")}
-- **Reason**: {alert.get("alert_reason")}
-- **Flashpoint or Code repository URL**: {alert.get("flashpoint_url")}
+        name = (
+            "Alert: "
+            + alert.get("alert_reason")
+            + " - "
+            + alert.get("channel_type")
+            + " - "
+            + alert.get("channel_name")
+            + " - "
+            + alert.get("alert_id")
+        )
+        return name
 
-### Post
-```
-{alert.get("highlight_text")}
-```
-"""
-        if alert.get("media_content", None):
-            media_part = f"""
-### Media
-A media attachment ({alert.get("media_name")}) is available in Data section
-"""
-            markdown_content += media_part
+    @staticmethod
+    def _generate_incident_description(alert: dict) -> str:
+        """
+        Create a STIX Incident's description from Flashpoint alert.
+        :param alert: A Flashpoint alert
+        :return: Incident's description
+        """
+        description = (
+            f"A potential data exposure has been detected in **{alert.get('channel_type')}**. "
+            f"The alert was triggered on "
+            f"**{parse(alert.get('created_at')).strftime('%B %d, %Y, at %I:%M %p UTC')}** "
+            f"by the rule **{alert.get('alert_reason').strip()}**. "
+            f"For more details about this alert, please consult the Content tab."
+        )
+        return description
+
+    @staticmethod
+    def _convert_alert_to_markdown_content(alert: dict) -> str:
+        """
+        Create a markdown content representing an Alert from Flashpoint.
+        :param alert: A Flashpoint alert to convert into markdown
+        :return: Markdown as string
+        """
+        markdown_content = (
+            "### Metadata"
+            f"- **Alert Id**: {alert.get('alert_id')}  \n"
+            f"- **Created**: {alert.get('created_at')}  \n"
+            f"- **Site**: {alert.get('channel_type')}  \n"
+            f"- **Title**: {alert.get('channel_name')}  \n"
+            f"- **Author**: {alert.get('author')}  \n"
+            f"- **Status**: {alert.get('alert_status')}  \n"
+            f"- **Source**: {alert.get('alert_source')}  \n"
+            f"- **Reason**: {alert.get('alert_reason')}  \n"
+            f"- **Flashpoint or Code repository URL**: {alert.get('flashpoint_url')}  \n"
+            "  \n"
+            "### Post"
+            "```"
+            f"{alert.get('highlight_text')}  \n"
+            "```"
+        )
+
+        if alert.get("media_content"):
+            markdown_content += (
+                "### Media"
+                f"A media attachment ({alert.get('media_name')}) is available in Data section"
+            )
+        return markdown_content
 
     @staticmethod
     def _convert_ccm_alert_to_markdown_content(
@@ -409,39 +448,6 @@ A media attachment ({alert.get("media_name")}) is available in Data section
 
         return markdown_content
 
-    @staticmethod
-    def generate_incident_name(alert):
-        """
-        :param alert:
-        :return:
-        """
-        name = (
-            "Alert: "
-            + alert.get("alert_reason")
-            + " - "
-            + alert.get("channel_type")
-            + " - "
-            + alert.get("channel_name")
-            + " - "
-            + alert.get("alert_id")
-        )
-        return name
-
-    @staticmethod
-    def generate_incident_description(alert):
-        """
-        :param alert:
-        :return:
-        """
-        description = (
-            f"A potential data exposure has been detected in **{alert.get('channel_type')}**. "
-            f"The alert was triggered on "
-            f"**{parse(alert.get('created_at')).strftime('%B %d, %Y, at %I:%M %p UTC')}** "
-            f"by the rule **{alert.get('alert_reason').strip()}**. "
-            f"For more details about this alert, please consult the Content tab."
-        )
-        return description
-
     def alert_to_incident(self, alert, create_related_entities):
         """
         Convert a Flashpoint communities Alert into an OpenCTI STIX incident
@@ -452,10 +458,10 @@ A media attachment ({alert.get("media_name")}) is available in Data section
         stix_objects = [self.marking]
 
         # generated incident name
-        incident_name = self.generate_incident_name(alert)
+        incident_name = self._generate_incident_name(alert)
 
         # generated incident description
-        incident_description = self.generate_incident_description(alert)
+        incident_description = self._generate_incident_description(alert)
 
         # generate octi incident id
         incident_id = Incident.generate_id(
@@ -469,7 +475,7 @@ A media attachment ({alert.get("media_name")}) is available in Data section
         ]
 
         # generate a content based on alert useful information
-        markdown_content = self.convert_alert_to_markdown_content(alert)
+        markdown_content = self._convert_alert_to_markdown_content(alert)
 
         # add the alert formatted content into a file attached to the incident
         files = []
@@ -496,7 +502,7 @@ A media attachment ({alert.get("media_name")}) is available in Data section
             )
 
         # generated incident name
-        incident_name = self.generate_incident_name(alert)
+        incident_name = self._generate_incident_name(alert)
 
         # alert flashpoint reference
         incident_external_reference = stix2.ExternalReference(

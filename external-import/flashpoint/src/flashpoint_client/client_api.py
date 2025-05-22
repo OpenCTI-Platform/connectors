@@ -171,7 +171,7 @@ class FlashpointClient:
 
     def get_compromised_credential_sightings(
         self, since: datetime = None
-    ) -> Generator[dict, None, None]:
+    ) -> Generator[CompromisedCredentialSighting, None, None]:
         """
         Get Compromised Credentials Sightings from Flashpoint API.
 
