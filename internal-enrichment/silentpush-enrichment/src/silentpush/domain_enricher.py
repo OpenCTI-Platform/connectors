@@ -1,6 +1,7 @@
 import json
 import uuid
 
+import pycti
 import requests
 from pycti import CustomObservableHostname, StixCoreRelationship
 from settings import API_KEY, API_VERIFY_CERT
@@ -220,7 +221,7 @@ class DomainEnricher(Enricher):
         if not domain_info.get("registrar"):
             return
         registrar = Identity(
-            id=Identity.generate_id(domain_info.get("registrar"), "organization"),
+            id=pycti.Identity.generate_id(domain_info.get("registrar"), "organization"),
             type="identity",
             name=domain_info.get("registrar"),
             description="Registrar",
