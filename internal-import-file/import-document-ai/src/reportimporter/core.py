@@ -3,7 +3,6 @@ import os
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import requests
 import stix2
@@ -65,12 +64,35 @@ class ReportImporter:
             .get("id", "")
         )
 
-    def _process_message(self, data: Dict) -> str:
+    def _process_message(self, data: dict) -> str:
         self.helper.connector_logger.info("Processing new message")
-        self.file = None
+        self.file: dict | None = None
         return self._process_import(data)
 
-    def _process_import(self, data: Dict) -> str:
+    def _process_import(self, data: dict) -> str:
+        """Main method to handle the import logic of a document file:
+            - Downloads the file
+            - Extracts entities and relationships via ML
+            - Constructs and sends a STIX bundle to OpenCTI
+
+        Args:
+            data (dict): Payload provided by OpenCTI when triggering the connector.
+                Must include:
+                - 'file_id' (str): ID of the file to import.
+                - 'file_mime' (str): MIME type of the file.
+                - 'file_fetch' (str): Path used to download the file.
+                Optionally includes:
+                - 'entity_id' (str): ID of a contextual entity (e.g., Report, Case, Threat Actor).
+                    If provided, the extracted entities/observables will be attached to this entity.
+                - 'bypass_validation' (bool): If True, skips validation before import.
+
+        Raises:
+            ConnectionError: Raised when the ImportDocumentAI webservice is unreachable
+            HTTPError: Raised when the webservice responds with an HTTP error code.
+
+        Returns:
+            str: Summary/log of the import action.
+        """
         file_name, file_content_buffered = self._download_import_file(data)
         entity_id = data.get("entity_id", None)
         bypass_validation = data.get("bypass_validation", False)
@@ -148,7 +170,7 @@ class ReportImporter:
     def start(self) -> None:
         self.helper.listen(self._process_message)
 
-    def _download_import_file(self, data: Dict) -> Tuple[str, BytesIO]:
+    def _download_import_file(self, data: dict) -> tuple[str, BytesIO]:
         file_fetch = data["file_fetch"]
         file_uri = self.helper.opencti_url + file_fetch
 
@@ -164,8 +186,8 @@ class ReportImporter:
         return file_name, buffer
 
     def _process_parsing_results(
-        self, parsed: Dict, context_entity: Dict
-    ) -> Tuple[List[Dict], List[Dict], Dict[str, str]]:
+        self, parsed: dict, context_entity: dict | None
+    ) -> tuple[list[dict], list[dict], dict[str, str]]:
         observables = []
         entities = []
         text_to_id = {}  # text value -> STIX id
@@ -267,10 +289,10 @@ class ReportImporter:
 
     def _process_parsed_objects(
         self,
-        entity: Dict,
-        observables: List,
-        entities: List,
-        predicted_rels: List,
+        entity: dict | None,
+        observables: list,
+        entities: list,
+        predicted_rels: list,
         bypass_validation: bool,
         file_name: str,
         text_to_id: dict,
@@ -278,26 +300,27 @@ class ReportImporter:
         """Build STIX bundle: includes observables, entities, and predicted relationships.
 
         Args:
-            entity (Dict): _description_
-            observables (List): _description_
-            entities (List): _description_
-            predicted_rels (List): _description_
-            bypass_validation (bool): _description_
-            file_name (str): _description_
-            text_to_id (dict): _description_
+            entity (dict | None): The context STIX entity (e.g., report, case, threat actor).
+                If provided, entities/observables will be attached to it accordingly.
+            observables (list): A list of STIX Cyber Observables (e.g., IPv4, domain names).
+            entities (list): A list of STIX Domain Objects (e.g., attack patterns, malware).
+            predicted_rels (list): A list of predicted relationships (dicts with source/target text and relation type).
+            bypass_validation (bool): If True, skips OpenCTI bundle validation before import.
+            file_name (str): Name of the input file used for building the Report (if no context entity).
+            text_to_id (dict): Mapping of matched text spans to their corresponding STIX IDs.
 
         Raises:
-            ValueError: _description_
+            ValueError: Raised if the context entity was expected but could not be found in OpenCTI.
 
         Returns:
-            int: _description_
+            int: Number of objects successfully sent to OpenCTI (excluding report update, if any).
         """
         if len(observables) == 0 and len(entities) == 0:
             return 0
 
-        ids: List[str] = []
-        observables_ids: List[str] = []
-        entities_ids: List[str] = []
+        ids: list[str] = []
+        observables_ids: list[str] = []
+        entities_ids: list[str] = []
 
         for o in observables:
             if o["id"] not in ids:
@@ -308,7 +331,7 @@ class ReportImporter:
                 entities_ids.append(e["id"])
                 ids.append(e["id"])
 
-        relationships: List[stix2.Relationship] = []  # accumulate all relationships
+        relationships: list[stix2.Relationship] = []  # accumulate all relationships
 
         # Build relationships defined by the connector's own rules
         if entity is not None:
@@ -461,8 +484,8 @@ class ReportImporter:
         # ------------------------------------------------------------
         # (3) Deduplicate objects and send bundle
         # ------------------------------------------------------------
-        final_ids: List[str] = []
-        final_objects: List[Dict] = []
+        final_ids: list[str] = []
+        final_objects: list[dict] = []
         for obj in observables:
             if obj["id"] not in final_ids:
                 final_ids.append(obj["id"])
