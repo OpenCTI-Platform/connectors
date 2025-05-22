@@ -1,7 +1,8 @@
 """The module defines the CourseOfActionModel class, which represents a course of action in STIX 2.1 format."""
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
+import pycti  # type: ignore
 from connector.src.stix.v21.models.cdts.external_reference_model import (
     ExternalReferenceModel,
 )
@@ -47,6 +48,17 @@ class CourseOfActionModel(BaseSDOModel):
             )
         return model
 
+    @model_validator(mode="before")
+    @classmethod
+    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate ID regardless of whether one is provided."""
+        if isinstance(data, dict) and "name" in data:
+            x_mitre_id = data.get("custom_properties", {}).get("x_mitre_id", None)
+            data["id"] = pycti.CourseOfAction.generate_id(
+                name=data["name"], x_mitre_id=x_mitre_id
+            )
+        return data
+
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""
-        return CourseOfAction(allow_custom=True, **self.model_dump(exclude_none=True))
+        return CourseOfAction(**self.model_dump(exclude_none=True))

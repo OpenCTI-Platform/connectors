@@ -1,10 +1,11 @@
 """The module defines the LocationModel class, which represents a STIX 2.1 Location object."""
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
+import pycti  # type: ignore
 from connector.src.stix.v21.models.ovs.region_ov_enums import RegionOV
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
-from pydantic import Field
+from pydantic import Field, model_validator
 from stix2.v21 import Location, _STIXBase21  # type: ignore
 
 
@@ -53,6 +54,26 @@ class LocationModel(BaseSDOModel):
     postal_code: Optional[str] = Field(
         default=None, description="Postal code for the Location."
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate ID regardless of whether one is provided."""
+        if isinstance(data, dict) and "name" in data:
+            name = data.get("name", None)
+            x_opencti_location_type = data.get("custom_properties", {}).get(
+                "x_opencti_location_type", None
+            )
+            latitude = data.get("latitude", None)
+            longitude = data.get("longitude", None)
+
+            data["id"] = pycti.Location.generate_id(
+                name=name,
+                x_opencti_location_type=x_opencti_location_type,
+                latitude=latitude,
+                longitude=longitude,
+            )
+        return data
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""

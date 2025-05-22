@@ -3,7 +3,6 @@
 from datetime import datetime
 from typing import Any, List, Optional
 
-import pycti  # type: ignore
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
     KillChainPhaseModel,
 )
@@ -48,14 +47,12 @@ class OctiAttackPatternModel:
             AttackPatternModel: The created attack pattern model
 
         """
-        stix_id = pycti.AttackPattern.generate_id(name=name, x_mitre_id=mitre_id)
         custom_properties = {}
         custom_properties["x_mitre_id"] = mitre_id
 
         data = {
             "type": "attack-pattern",
             "spec_version": "2.1",
-            "id": stix_id,
             "custom_properties": custom_properties,
             "created": kwargs.pop("created", datetime.now()),
             "modified": kwargs.pop("modified", datetime.now()),

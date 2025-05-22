@@ -1,8 +1,9 @@
 """The module defines a Threat Actor model for STIX 2.1, including validation and serialization methods."""
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
+import pycti  # type: ignore
 from connector.src.stix.v21.models.ovs.attack_motivation_ov_enums import (
     AttackMotivationOV,
 )
@@ -91,6 +92,18 @@ class ThreatActorModel(BaseSDOModel):
                 "'last_seen' must be greater than or equal to 'first_seen'."
             )
         return self
+
+    @model_validator(mode="before")
+    @classmethod
+    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate ID regardless of whether one is provided."""
+        if isinstance(data, dict) and "name" in data:
+            name = data.get("name", None)
+            opencti_type = data.get("custom_properties", {}).get("opencti_type", None)
+            data["id"] = pycti.ThreatActor.generate_id(
+                name=name, opencti_type=opencti_type
+            )
+        return data
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""

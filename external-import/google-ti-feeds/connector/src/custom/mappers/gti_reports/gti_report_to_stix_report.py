@@ -155,11 +155,22 @@ class GTIReportToSTIXReport:
             gti_to_stix_report_type = {
                 "News": ReportTypeOV.THREAT_REPORT,
                 "Actor Profile": ReportTypeOV.THREAT_ACTOR,
-                "OSINT": ReportTypeOV.INDICATOR,
-                "Vulnerability": ReportTypeOV.VULNERABILITY,
-                "Campaign": ReportTypeOV.CAMPAIGN,
-                "Malware": ReportTypeOV.MALWARE,
-                "Tool": ReportTypeOV.TOOL,
+                "Country Profile": ReportTypeOV.IDENTITY,
+                "Cyber Physical Security Roundup": ReportTypeOV.THREAT_REPORT,
+                "Event Coverage/Implication": ReportTypeOV.THREAT_REPORT,
+                "Industry Reporting": ReportTypeOV.THREAT_REPORT,
+                "Malware Profile": ReportTypeOV.MALWARE,
+                "Net Assessment": ReportTypeOV.THREAT_REPORT,
+                "Network Activity Reports": ReportTypeOV.OBSERVED_DATA,
+                "News Analysis": ReportTypeOV.THREAT_REPORT,
+                "OSINT Article": ReportTypeOV.THREAT_REPORT,
+                "Patch Report": ReportTypeOV.VULNERABILITY,
+                "Strategic Perspective": ReportTypeOV.THREAT_REPORT,
+                "TTP Deep Dive": ReportTypeOV.ATTACK_PATTERN,
+                "Threat Activity Alert": ReportTypeOV.INDICATOR,
+                "Threat Activity Report": ReportTypeOV.THREAT_REPORT,
+                "Trends and Forecasting": ReportTypeOV.CAMPAIGN,
+                "Weekly Vulnerability Exploitation Report": ReportTypeOV.VULNERABILITY,
             }
             report_type = gti_to_stix_report_type.get(
                 attributes.report_type, ReportTypeOV.THREAT_REPORT

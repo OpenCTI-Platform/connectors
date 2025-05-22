@@ -3,7 +3,6 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import pycti  # type: ignore
 from connector.src.stix.v21.models.ovs.region_ov_enums import RegionOV
 from connector.src.stix.v21.models.sdos.location_model import LocationModel
 
@@ -34,17 +33,12 @@ class OctiLocationModel:
             LocationModel: The created location model
 
         """
-        stix_id = pycti.Location.generate_id(
-            name=name, x_opencti_location_type="Country"
-        )
-
         custom_properties: Dict[str, Any] = kwargs.pop("custom_properties", {})
         custom_properties["x_opencti_location_type"] = "Country"
 
         data = {
             "type": "location",
             "spec_version": "2.1",
-            "id": stix_id,
             "created": kwargs.pop("created", datetime.now()),
             "modified": kwargs.pop("modified", datetime.now()),
             "name": name,
@@ -81,17 +75,12 @@ class OctiLocationModel:
             LocationModel: The created location model
 
         """
-        stix_id = pycti.Location.generate_id(
-            name=name, x_opencti_location_type="Region"
-        )
-
         custom_properties: Dict[str, Any] = kwargs.pop("custom_properties", {})
         custom_properties["x_opencti_location_type"] = "Region"
 
         data = {
             "type": "location",
             "spec_version": "2.1",
-            "id": stix_id,
             "created": kwargs.pop("created", datetime.now()),
             "modified": kwargs.pop("modified", datetime.now()),
             "name": name,

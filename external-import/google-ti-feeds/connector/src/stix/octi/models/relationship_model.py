@@ -3,7 +3,6 @@
 from datetime import datetime
 from typing import Any, List, Optional
 
-import pycti  # type: ignore
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
 
 
@@ -39,16 +38,9 @@ class OctiRelationshipModel:
             RelationshipModel: The created relationship model
 
         """
-        stix_id = pycti.StixCoreRelationship.generate_id(
-            relationship_type=relationship_type,
-            source_ref=source_ref,
-            target_ref=target_ref,
-        )
-
         data = {
             "type": "relationship",
             "spec_version": "2.1",
-            "id": stix_id,
             "created": created,
             "modified": modified,
             "relationship_type": relationship_type,

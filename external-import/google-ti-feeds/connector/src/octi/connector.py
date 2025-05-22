@@ -167,6 +167,7 @@ class Connector:
         latest_modified_date = None
         fetch_task = None
 
+        loop = None
         try:
             api_client = self._setup_api_client()
             work_id = self.work_manager.initiate_work(
@@ -265,7 +266,8 @@ class Connector:
 
             work_id = work_id if "work_id" in locals() else None
         finally:
-            self._cleanup_event_loop(loop)
+            if loop is not None:
+                self._cleanup_event_loop(loop)
 
         self.work_manager.work_to_process(
             work_id=work_id,

@@ -1,7 +1,8 @@
 """The module contains the IdentityModel class, which represents a STIX 2.1 Identity object."""
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
+import pycti  # type: ignore
 from connector.src.stix.v21.models.ovs.identity_class_ov_enums import (
     IdentityClassOV,
 )
@@ -9,7 +10,7 @@ from connector.src.stix.v21.models.ovs.industry_sector_ov_enums import (
     IndustrySectorOV,
 )
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
-from pydantic import Field
+from pydantic import Field, model_validator
 from stix2.v21 import Identity, _STIXBase21  # type: ignore
 
 
@@ -40,6 +41,18 @@ class IdentityModel(BaseSDOModel):
         default=None,
         description="Contact details for this Identity (email, phone, etc.). No defined format.",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate ID regardless of whether one is provided."""
+        if isinstance(data, dict) and "name" in data:
+            name = data.get("name", None)
+            identity_class = data.get("identity_class", None)
+            data["id"] = pycti.Identity.generate_id(
+                name=name, identity_class=identity_class
+            )
+        return data
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""

@@ -1,8 +1,9 @@
 """The module defines the IntrusionSetModel class, which represents a STIX 2.1 Intrusion Set object."""
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
+import pycti  # type: ignore
 from connector.src.stix.v21.models.ovs.attack_motivation_ov_enums import (
     AttackMotivationOV,
 )
@@ -10,7 +11,7 @@ from connector.src.stix.v21.models.ovs.attack_resource_level_ov_enums import (
     AttackResourceLevelOV,
 )
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
-from pydantic import Field
+from pydantic import Field, model_validator
 from stix2.v21 import IntrusionSet, _STIXBase21  # type: ignore
 
 
@@ -50,6 +51,14 @@ class IntrusionSetModel(BaseSDOModel):
         default=None,
         description="Secondary motivations behind this Intrusion Set. SHOULD come from the attack-motivation-ov vocabulary.",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate ID regardless of whether one is provided."""
+        if isinstance(data, dict) and "name" in data:
+            data["id"] = pycti.IntrusionSet.generate_id(name=data["name"])
+        return data
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""
