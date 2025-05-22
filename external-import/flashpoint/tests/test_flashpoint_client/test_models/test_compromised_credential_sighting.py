@@ -1,20 +1,18 @@
 import pytest
-from pydantic import ValidationError
 from flashpoint_client.models.compromised_credential_sighting import (
     Breach,
-    PasswordComplexity,
-    Header,
-    InfectedHost,
-    Machine,
-    InstalledSoftware,
-    Malware,
     CompromisedCredentialSighting,
-    Cookie,
-    MachineExtraInfo,
     Geopoint,
+    InfectedHost,
+    InstalledSoftware,
     InternetServiceProvider,
     Location,
+    Machine,
+    MachineExtraInfo,
+    Malware,
+    PasswordComplexity,
 )
+from pydantic import ValidationError
 
 
 def fake_valid_breach_data() -> dict:

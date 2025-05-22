@@ -3,12 +3,10 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from pycti import OpenCTIConnectorHelper
+from flashpoint_client import FlashpointClient
+from flashpoint_client.models import CompromisedCredentialSighting
 from requests import Response
 from requests.exceptions import HTTPError
-from flashpoint_client.models import CompromisedCredentialSighting
-from flashpoint_client import FlashpointClient
-from flashpoint_connector.config_loader import ConfigLoader
 
 TEST_API_BASE_URL = "http://flashpointtest.com"
 TEST_API_KEY = "<API_KEY>"

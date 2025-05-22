@@ -439,7 +439,7 @@ class FlashpointConnector:
                 )
 
                 self.helper.connector_logger.info(
-                    f"CCM alerts STIX bundle sent to OpenCTI",
+                    "CCM alerts STIX bundle sent to OpenCTI",
                     {"bundles_count": len(bundles_sent)},
                 )
 

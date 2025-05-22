@@ -1,7 +1,7 @@
+from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, ConfigDict, AliasPath
-from datetime import datetime
+from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
 
 class FrozenBaseModel(BaseModel):

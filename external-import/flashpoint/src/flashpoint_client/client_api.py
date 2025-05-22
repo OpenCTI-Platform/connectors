@@ -4,6 +4,7 @@ from typing import Generator
 
 import requests
 from requests.adapters import HTTPAdapter, Retry
+
 from .models import CompromisedCredentialSighting
 
 
