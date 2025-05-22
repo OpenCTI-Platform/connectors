@@ -83,7 +83,9 @@ def test_connector_process_data(
 
 
 @freezegun.freeze_time("2025-04-22T14:00:00Z")
-def test_connector_process_data_since_last_run(connector: Connector) -> None:
+def test_connector_process_data_since_last_email_ingestion(
+    connector: Connector,
+) -> None:
     connector.client = MagicMock()
 
     connector.process_data()
@@ -91,7 +93,9 @@ def test_connector_process_data_since_last_run(connector: Connector) -> None:
         datetime.datetime.fromisoformat("2025-03-23T14:00:00+00:00")
     )
 
-    connector.helper.get_state.return_value = {"last_run": "2025-04-22T14:00:00Z"}
+    connector.helper.get_state.return_value = {
+        "last_email_ingestion": "2025-04-22T14:00:00Z"
+    }
     connector.process_data()
     connector.client.fetch_from_relative_import_start_date.assert_called_with(
         datetime.datetime.fromisoformat("2025-04-22T14:00:00+00:00")

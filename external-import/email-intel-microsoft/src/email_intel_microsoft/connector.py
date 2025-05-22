@@ -13,18 +13,20 @@ class Connector(BaseConnector):
     client: ConnectorClient
     start_time = datetime.datetime.now(tz=datetime.UTC)
 
-    def get_last_run(self) -> datetime.datetime | None:
-        if last_run_str := self.state.get("last_run"):
-            last_run = datetime.datetime.fromisoformat(last_run_str)
-            self.helper.connector_logger.info(
-                f"Connector last run: {last_run.isoformat()}"
+    def get_last_email_ingestion(self) -> datetime.datetime | None:
+        if last_email_ingestion_str := self.state.get("last_email_ingestion"):
+            last_email_ingestion = datetime.datetime.fromisoformat(
+                last_email_ingestion_str
             )
-            return last_run
-        self.helper.connector_logger.info("Connector last run: Never")
+            self.helper.connector_logger.info(
+                f"Connector last email ingestion until: {last_email_ingestion.isoformat()}"
+            )
+            return last_email_ingestion
+        self.helper.connector_logger.info("Connector last email ingestion until: Never")
         return None
 
     def process_data(self) -> list[stix2.Report]:
-        since_date = self.get_last_run() or (
+        since_date = self.get_last_email_ingestion() or (
             datetime.datetime.now(tz=datetime.UTC)
             - self.config.email_intel_microsoft.relative_import_start_date
         )
@@ -40,4 +42,6 @@ class Connector(BaseConnector):
 
     def finalize_work(self, work_id: str, message: str) -> None:
         super().finalize_work(work_id=work_id, message=message)
-        self.update_state(last_run=self.start_time.isoformat(timespec="seconds"))
+        self.update_state(
+            last_email_ingestion=self.start_time.isoformat(timespec="seconds")
+        )
