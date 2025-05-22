@@ -41,3 +41,6 @@ virustotal:
   url_indicator_create_positives: 10 # Create an indicator for Url based observables once this positive threshold is reached. Note: specify 0 to disable indicator creation
   url_indicator_valid_minutes: 2880 # How long the indicator is valid for in minutes
   url_indicator_detect: true # Whether or not to set detection for the indicator to true
+
+  # Generic config settings for File, IP, Domain, URL
+  include_attributes_in_note:  false # Whether or not to include the attributes info in Note
