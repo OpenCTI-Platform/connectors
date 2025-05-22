@@ -115,7 +115,7 @@ def test_connector_process_data_since_relative_from_date(
 
 
 @freezegun.freeze_time("2025-04-22T14:00:00Z")
-def test_connector_process_data_since_last_run(
+def test_connector_process_data_since_last_email_ingestion(
     connector: Connector, mocked_mail_box: Mock
 ) -> None:
     two_months_ago = datetime.datetime.fromisoformat("2025-02-22T12:00:00Z")
@@ -130,7 +130,9 @@ def test_connector_process_data_since_last_run(
         connector.config.email_intel_imap.relative_import_start_date
         == datetime.timedelta(days=30)
     )
-    connector.helper.get_state.return_value = {"last_run": two_days_ago.isoformat()}
+    connector.helper.get_state.return_value = {
+        "last_email_ingestion": two_days_ago.isoformat()
+    }
     mocked_mail_box.fetch.return_value = [email1, email2, email3]
     stix_objects = connector.process_data()
 
@@ -142,7 +144,9 @@ def test_connector_process_data_since_last_run(
 
 def test_connector_known_warning(connector: Connector, mocked_mail_box: Mock) -> None:
     today = datetime.datetime.now(tz=datetime.UTC)
-    connector.helper.get_state.return_value = {"last_run": "1970-01-01T00:00:00Z"}
+    connector.helper.get_state.return_value = {
+        "last_email_ingestion": "1970-01-01T00:00:00Z"
+    }
     mocked_mail_box.fetch.return_value = [Mock(date=today)]
 
     assert (
@@ -152,7 +156,9 @@ def test_connector_known_warning(connector: Connector, mocked_mail_box: Mock) ->
 
 
 def test_connector_known_error(connector: Connector, mocked_mail_box: Mock) -> None:
-    connector.helper.get_state.return_value = {"last_run": "1970-01-01T00:00:00Z"}
+    connector.helper.get_state.return_value = {
+        "last_email_ingestion": "1970-01-01T00:00:00Z"
+    }
     mocked_mail_box.fetch.side_effect = ConnectorError("Known error")
 
     assert connector.process() == "Known error"
