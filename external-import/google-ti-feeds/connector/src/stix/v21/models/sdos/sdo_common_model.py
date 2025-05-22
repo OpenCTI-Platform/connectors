@@ -1,12 +1,12 @@
-"""The moduleq defines the base model for STIX Domain Objects (SDOs) in STIX 2.1 format."""
+"""The module defines the base model for STIX Domain Objects (SDOs) in STIX 2.1 format."""
 
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from connector.src.stix.v21.models.cdts.external_reference_model import (
     ExternalReferenceModel,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from stix2.v21 import _STIXBase21  # type: ignore
 
 
@@ -72,6 +72,25 @@ class SDOOptionalModel(BaseModel):
 class BaseSDOModel(SDORequiredModel, SDOOptionalModel):
     """Base model for all SDOs (STIX Domain Objects)."""
 
+    @model_validator(mode="before")
+    @classmethod
+    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate ID regardless of whether one is provided.
+
+        This base implementation doesn't generate an ID. Subclasses must override
+        this method to provide type-specific ID generation logic using pycti.
+
+        The generated ID will replace any existing ID to ensure consistency.
+        """
+        return data
+
     def to_stix2_object(self) -> _STIXBase21:
-        """Convert the Pydantic model to a STIX 2.1 object."""
+        """Convert the Pydantic model to a STIX 2.1 object.
+
+        This base implementation doesn't create a concrete object.
+        Subclasses must implement this method with type-specific logic.
+
+        Important: The implementation should always generate a new ID using pycti
+        regardless of whether an ID was provided in the model to ensure consistency.
+        """
         raise NotImplementedError("Subclasses must implement this method.")

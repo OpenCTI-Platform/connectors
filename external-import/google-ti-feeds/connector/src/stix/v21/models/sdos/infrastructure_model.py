@@ -1,8 +1,9 @@
 """The module defines the InfrastructureModel class, which represents a STIX 2.1 Infrastructure object."""
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
+import pycti  # type: ignore
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
     KillChainPhaseModel,
 )
@@ -10,7 +11,7 @@ from connector.src.stix.v21.models.ovs.infrastructure_type_ov_enums import (
     InfrastructureTypeOV,
 )
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
-from pydantic import Field
+from pydantic import Field, model_validator
 from stix2.v21 import Infrastructure, _STIXBase21  # type: ignore
 
 
@@ -45,6 +46,14 @@ class InfrastructureModel(BaseSDOModel):
         default=None,
         description="Timestamp when this Infrastructure was last observed. MUST be >= first_seen if both are present.",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate ID regardless of whether one is provided."""
+        if isinstance(data, dict) and "name" in data:
+            data["id"] = pycti.Infrastructure.generate_id(name=data["name"])
+        return data
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""

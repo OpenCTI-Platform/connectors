@@ -3,7 +3,6 @@
 from datetime import datetime
 from typing import Any
 
-import pycti  # type: ignore
 from connector.src.stix.v21.models.ovs.identity_class_ov_enums import IdentityClassOV
 from connector.src.stix.v21.models.sdos.identity_model import IdentityModel
 
@@ -30,12 +29,9 @@ class OctiIdentityAuthorModel:
         elif name.startswith("@"):
             identity_class = IdentityClassOV.INDIVIDUAL
 
-        stix_id = pycti.Identity.generate_id(identity_class=identity_class, name=name)
-
         data = {
             "type": "identity",
             "spec_version": "2.1",
-            "id": stix_id,
             "created": kwargs.pop("created", datetime.now()),
             "modified": kwargs.pop("modified", datetime.now()),
             "name": name,

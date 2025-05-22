@@ -3,6 +3,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+import pycti  # type: ignore
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
 from pydantic import Field, model_validator
 from stix2.v21 import ObservedData, _STIXBase21  # type: ignore
@@ -47,6 +48,15 @@ class ObservedDataModel(BaseSDOModel):
         if not self.objects and not self.object_refs:
             raise ValueError("At least one of 'objects' or 'object_refs' must be set.")
         return self
+
+    @model_validator(mode="before")
+    @classmethod
+    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate ID regardless of whether one is provided."""
+        if isinstance(data, dict) and "object_refs" in data:
+            object_ids = data.get("object_refs", [])
+            data["id"] = pycti.ObservedData.generate_id(object_ids=object_ids)
+        return data
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""

@@ -264,27 +264,53 @@ class FetchAll:
             filters = f"collection_type:report last_modification_date:{start_date}+"
 
             report_types = self.config.report_types
-            if report_types and "All" not in report_types:
-                filters += f" report_type:{','.join(report_types)}"
-
             origins = self.config.origins
-            if origins and "All" not in origins:
-                filters += f" origin:{','.join(origins)}"
 
-            params = {
-                "filter": filters,
-                "limit": 40,
-                "order": "last_modification_date+",
-            }
+            if (not report_types or "All" in report_types) and (
+                not origins or "All" in origins
+            ):
+                params = {
+                    "filter": filters,
+                    "limit": 40,
+                    "order": "last_modification_date+",
+                }
+                self.logger.info(
+                    f"Fetching all reports from GTI API (from {start_date})"
+                )
+                await self._fetch_paginated_data(
+                    endpoint=f"{self.config.api_url}/collections",
+                    params=params,
+                    model=GTIReportResponse,
+                    process_func=self._process_report_page,
+                )
+            else:
+                report_types = self.config.report_types
+                origins = self.config.origins
 
-            self.logger.info(f"Fetching reports from GTI API (from {start_date})")
+                for report_type in report_types:
+                    for origin in origins:
+                        if origin == "All":
+                            report_filter = f'{filters} report_type:"{report_type}"'
+                        else:
+                            report_filter = (
+                                f'{filters} report_type:"{report_type}" origin:{origin}'
+                            )
+                        params = {
+                            "filter": report_filter,
+                            "limit": 40,
+                            "order": "last_modification_date+",
+                        }
 
-            await self._fetch_paginated_data(
-                endpoint=f"{self.config.api_url}/collections",
-                params=params,
-                model=GTIReportResponse,
-                process_func=self._process_report_page,
-            )
+                        self.logger.info(
+                            f"Fetching reports with type={report_type}, origin={origin} (from {start_date})"
+                        )
+
+                        await self._fetch_paginated_data(
+                            endpoint=f"{self.config.api_url}/collections",
+                            params=params,
+                            model=GTIReportResponse,
+                            process_func=self._process_report_page,
+                        )
 
             self.logger.info(
                 f"Fetched {len(self.reports)} reports (from {start_date})."

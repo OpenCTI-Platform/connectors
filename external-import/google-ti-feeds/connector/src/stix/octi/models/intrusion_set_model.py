@@ -3,7 +3,6 @@
 from datetime import datetime
 from typing import Any, List, Optional
 
-import pycti  # type: ignore
 from connector.src.stix.v21.models.sdos.intrusion_set_model import IntrusionSetModel
 
 
@@ -47,12 +46,9 @@ class OctiIntrusionSetModel:
             IntrusionSetModel: The created intrusion set model
 
         """
-        stix_id = pycti.IntrusionSet.generate_id(name=name)
-
         data = {
             "type": "intrusion-set",
             "spec_version": "2.1",
-            "id": stix_id,
             "created": kwargs.pop("created", datetime.now()),
             "modified": kwargs.pop("modified", datetime.now()),
             "name": name,

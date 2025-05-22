@@ -3,7 +3,6 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import pycti  # type: ignore
 from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
 from connector.src.stix.v21.models.sdos.report_model import ReportModel
 
@@ -48,8 +47,6 @@ class OctiReportModel:
             ReportModel: The created report model
 
         """
-        stix_id = pycti.Report.generate_id(name, created)
-
         if published is None:
             published = created
 
@@ -69,7 +66,6 @@ class OctiReportModel:
         data = {
             "type": "report",
             "spec_version": "2.1",
-            "id": stix_id,
             "created": created,
             "modified": modified,
             "name": name,
@@ -108,12 +104,9 @@ class OctiReportModel:
             ReportModel: The created report model with minimal required fields
 
         """
-        stix_id = pycti.Report.generate_id(name, created)
-
         data = {
             "type": "report",
             "spec_version": "2.1",
-            "id": stix_id,
             "created": created,
             "modified": modified,
             "name": name,

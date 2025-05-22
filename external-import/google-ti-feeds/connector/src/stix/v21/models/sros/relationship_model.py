@@ -3,7 +3,8 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+import pycti  # type: ignore
+from pydantic import BaseModel, Field, model_validator
 from stix2.v21 import Relationship, _STIXBase21  # type: ignore
 
 
@@ -92,6 +93,26 @@ class RelationshipModel(BaseModel):
     )
 
     model_config = {"extra": "forbid"}
+
+    @model_validator(mode="before")
+    @classmethod
+    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate ID regardless of whether one is provided."""
+        if isinstance(data, dict) and "relationship_type" in data:
+            relationship_type = data.get("relationship_type", None)
+            source_ref = data.get("source_ref", None)
+            target_ref = data.get("target_ref", None)
+            start_time = data.get("start_time", None)
+            stop_time = data.get("stop_time", None)
+
+            data["id"] = pycti.Relationship.generate_id(
+                relationship_type=relationship_type,
+                source_ref=source_ref,
+                target_ref=target_ref,
+                start_time=start_time,
+                stop_time=stop_time,
+            )
+        return data
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""

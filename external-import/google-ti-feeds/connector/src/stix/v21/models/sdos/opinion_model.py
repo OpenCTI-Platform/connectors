@@ -1,10 +1,11 @@
 """The module defines the OpinionModel class, which represents a STIX 2.1 Opinion object."""
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
+import pycti  # type: ignore
 from connector.src.stix.v21.models.ovs.opinion_ov_enums import OpinionOV
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
-from pydantic import Field
+from pydantic import Field, model_validator
 from stix2.v21 import Opinion, _STIXBase21  # type: ignore
 
 
@@ -21,12 +22,22 @@ class OpinionModel(BaseSDOModel):
     )
     opinion: OpinionOV = Field(
         ...,
-        description="The producer’s opinion about the object(s). MUST be a value from the opinion-enum.",
+        description="The producer's opinion about the object(s). MUST be a value from the opinion-enum.",
     )
     object_refs: List[str] = Field(
         ...,
         description="STIX Object identifiers that this Opinion applies to.",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate ID regardless of whether one is provided."""
+        if isinstance(data, dict) and "created" in data:
+            created = data.get("created", None)
+            opinion = data.get("opinion", None)
+            data["id"] = pycti.Opinion.generate_id(created=created, opinion=opinion)
+        return data
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""
