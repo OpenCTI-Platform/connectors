@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import logging
 from typing import Any
 
 from azure.identity.aio import ClientSecretCredential
@@ -21,6 +22,8 @@ from msgraph.generated.models.message_collection_response import (
 from msgraph.generated.users.item.mail_folders.item.messages.messages_request_builder import (
     MessagesRequestBuilder,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ConnectorClient(BaseClient):
@@ -63,6 +66,17 @@ class ConnectorClient(BaseClient):
 
     async def _load_file_attachments(self, message: Message) -> None:
         """Download *FileAttachment* concurrently via `asyncio.gather`."""
+
+        def _is_supported(content_type: str | None) -> bool:
+            if content_type not in self._attachments_mime_types:
+                logger.info(
+                    "%s not in EMAIL_INTEL_ATTACHMENTS_MIME_TYPES%s, skipping...",
+                    content_type,
+                    self._attachments_mime_types,
+                )
+                return False
+            return True
+
         if not message.attachments:
             return
 
@@ -82,7 +96,7 @@ class ConnectorClient(BaseClient):
                 _download(attachment)
                 for attachment in message.attachments
                 if isinstance(attachment, FileAttachment)
-                and attachment.content_type in self._attachments_mime_types
+                and _is_supported(attachment.content_type)
             )
         )
 

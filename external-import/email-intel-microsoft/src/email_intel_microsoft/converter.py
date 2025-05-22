@@ -53,6 +53,7 @@ class ConnectorConverter(BaseConverter):
                         object_marking_refs=[self.tlp_marking.id],
                     )
                     for attachment in entity.attachments or []
+                    if attachment.content_bytes
                 ],
             )
         except Exception as e:
