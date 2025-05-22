@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 
+import pycti
 import stix2
 from pycti import (
     STIX_EXT_OCTI_SCO,
-    Identity,
     OpenCTIConnectorHelper,
     OpenCTIStix2,
     StixCoreRelationship,
@@ -93,7 +93,7 @@ class Enricher(ABC):
             ),
         ]
         self._author = stix2.Identity(
-            id=Identity.generate_id(SILENTPUSH_SIGNATURE, "organization"),
+            id=pycti.Identity.generate_id(SILENTPUSH_SIGNATURE, "organization"),
             type="identity",
             name=SILENTPUSH_SIGNATURE,
             description=f"""
@@ -136,6 +136,7 @@ class Enricher(ABC):
                 hashes={"SHA-1": _certificate.get("fingerprint_sha1")},
                 serial_number=_certificate.get("serial_number"),
                 signature_algorithm="sha1",
+                # make this an organisation object?
                 issuer=_certificate.get("issuer_organization"),
                 validity_not_before=datetime.fromisoformat(
                     _certificate.get("not_before")
