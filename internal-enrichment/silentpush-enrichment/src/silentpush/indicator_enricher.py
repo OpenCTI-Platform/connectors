@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import pycti
 from pycti import StixCoreRelationship
 from stix2 import ObservedData, Relationship
 
@@ -57,7 +58,7 @@ class IndicatorEnricher(Enricher):
         )
         self.enrich()
         observed_data = ObservedData(
-            id=ObservedData.generate_id(list(set(self._observed_data_refs))),
+            id=pycti.ObservedData.generate_id(list(set(self._observed_data_refs))),
             type="observed-data",
             first_observed=datetime.now(),
             last_observed=datetime.now(),

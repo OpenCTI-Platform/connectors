@@ -1,6 +1,7 @@
 import json
 from abc import abstractmethod
 
+import pycti
 from pycti import (
     STIX_EXT_OCTI,
     CustomObservableHostname,
@@ -166,14 +167,14 @@ class IPEnricher(Enricher):
         """
 
         _location = self._enriched_data.get("ip_location", {})
-        if not _location:
+        if not _location or not _location.get("country_name"):
             return
         self._helper.log_debug(
             f"building location {self._enriched_data.get('ip_location')}"
         )
         try:
             location = Location(
-                id=Location.generate_id(_location.get("country_name"), "Country"),
+                id=pycti.Location.generate_id(_location.get("country_name"), "Country"),
                 country=_location.get("country_name"),
                 region=_location.get("continent_name"),
                 created_by_ref=self._author["id"],
