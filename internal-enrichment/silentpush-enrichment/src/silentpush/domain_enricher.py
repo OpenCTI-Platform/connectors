@@ -186,6 +186,8 @@ class DomainEnricher(Enricher):
                     created_by_ref=self._author["id"],
                 )
                 self._stix_objects.append(relationship)
+            if not ns.get("ns_server"):
+                continue
             nameserver = CustomObservableHostname(
                 value=ns.get("ns_server"),
                 custom_properties={
@@ -269,30 +271,31 @@ class DomainEnricher(Enricher):
         )
         self._helper.log_debug(f"ip diversity response {ip_diversity_uri}: {response}")
         for asn in asns:
-            hostname = CustomObservableHostname(
-                value=asn.get("host"),
-                custom_properties={
-                    "x_asn_diversity": asn.get("asn_diversity"),
-                    "x_ip_diversity_all": asn.get("ip_diversity_all"),
-                },
-            )
-            self._observed_data_refs.append(hostname.id)
-            self._stix_objects.append(hostname)
-            self._helper.log_debug(hostname)
-            if hostname.value != self._domain.value:
-                relationship = Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", self._domain.value, hostname.id
-                    ),
-                    relationship_type="related-to",
-                    target_ref=hostname.id,
-                    description="Hostname",
-                    confidence=100,
-                    source_ref=self._domain.id,
-                    allow_custom=True,
-                    created_by_ref=self._author["id"],
+            if asn.get("host"):
+                hostname = CustomObservableHostname(
+                    value=asn.get("host"),
+                    custom_properties={
+                        "x_asn_diversity": asn.get("asn_diversity"),
+                        "x_ip_diversity_all": asn.get("ip_diversity_all"),
+                    },
                 )
-                self._stix_objects.append(relationship)
+                self._observed_data_refs.append(hostname.id)
+                self._stix_objects.append(hostname)
+                self._helper.log_debug(hostname)
+                if hostname.value != self._domain.value:
+                    relationship = Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", self._domain.value, hostname.id
+                        ),
+                        relationship_type="related-to",
+                        target_ref=hostname.id,
+                        description="Hostname",
+                        confidence=100,
+                        source_ref=self._domain.id,
+                        allow_custom=True,
+                        created_by_ref=self._author["id"],
+                    )
+                    self._stix_objects.append(relationship)
             for asn_timeline in asn.get("timeline"):
                 if not asn_timeline.get("ip"):
                     continue
