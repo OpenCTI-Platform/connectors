@@ -6,7 +6,7 @@ connector:
   id: ChangeMe(UUIDv4 token)
   type: 'EXTERNAL_IMPORT'
   name: 'Luminar Threat Intelligence'
-  scope: 'identity,attack-pattern,malware,tool,report,vulnerability,campaign,incident,indicator,location,threat-actor,tool,software,useraccount'
+  scope: 'identity,attack-pattern,malware,tool,report,vulnerability,campaign,incident,indicator,location,threat-actor,relationship,software,useraccount'
   create_indicator: True
   update_existing_data: True
   log_level: 'info'
