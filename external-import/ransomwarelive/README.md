@@ -13,7 +13,7 @@ General description of the connector
 
 ### Requirements
 
-- OpenCTI Platform >= 6.6.12
+- OpenCTI Platform >= 6.6.13
 
 ### Configuration
 
