@@ -17,19 +17,15 @@ from utils import ExternalImportHelper
     cache_file=ConfigConnector.MITRE_CACHE_FILENAME,
     ttl=1,
 )
-def get_mitre_mapper(adapter, endpoint, params, decode=True, **kwargs):
+def get_mitre_mapper(adapter, endpoint, params, helper, decode=True, **kwargs):
     # type: (TIAdapter, str, dict, bool, dict) -> dict
-    adapter.helper.connector_logger.info(
-        f"Starting get_mitre_mapper with endpoint: {endpoint}"
-    )
+    helper.connector_logger.info(f"Starting get_mitre_mapper with endpoint: {endpoint}")
     mitre_mapper = {}
 
     response = adapter.send_request(
         endpoint=endpoint, params=params, decode=decode, **kwargs
     )
-    adapter.helper.connector_logger.debug(
-        f"Received response from endpoint: {endpoint}"
-    )
+    helper.connector_logger.debug(f"Received response from endpoint: {endpoint}")
 
     for pattern_dictionary in response.get("AttackPattern").values():
         name = pattern_dictionary.get("name", "")
@@ -37,11 +33,11 @@ def get_mitre_mapper(adapter, endpoint, params, decode=True, **kwargs):
             name = name[1:-1:]
             name = name.split("->")[-1]
         mitre_mapper[pattern_dictionary.get("mitreId")] = name
-        adapter.helper.connector_logger.debug(
+        helper.connector_logger.debug(
             f"Mapped MITRE ID {pattern_dictionary.get('mitreId')} to name: {name}"
         )
 
-    adapter.helper.connector_logger.info(
+    helper.connector_logger.info(
         f"Completed get_mitre_mapper, mapped {len(mitre_mapper)} attack patterns"
     )
     return mitre_mapper
@@ -71,9 +67,9 @@ class ExternalImportConnector:
     """
 
     def __init__(self):
-        self.helper.connector_logger.info("Initializing ExternalImportConnector")
         self.cfg = ConfigConnector()
         self.helper = OpenCTIConnectorHelper({})
+        self.helper.connector_logger.info("Initializing ExternalImportConnector")
         self.pc = ProxyConfigurator()
         self.helper.connector_logger.debug(
             "Initialized ConfigConnector, OpenCTIConnectorHelper, and ProxyConfigurator"
@@ -143,7 +139,7 @@ class ExternalImportConnector:
             collection_mapping_config=self.cfg.collection_mapping_config,
             collections_last_sequence_updates=current_state,
         )
-        self.helper.connector_logger.info(f"Initialized TI Adapter, {self.ti_adapter}")
+        self.helper.connector_logger.info("Initialized TI Adapter")
 
         # create list of collections feeds generators
         self.MITRE_MAPPER = None
@@ -317,6 +313,7 @@ class ExternalImportConnector:
                             adapter=self.ti_adapter,
                             endpoint="common/matrix/vocab/techniques",
                             params={},
+                            helper=self.helper,
                         )
                         self.helper.connector_logger.info("MITRE mapper initialized")
 
@@ -415,6 +412,9 @@ class ExternalImportConnector:
                                     count += 1
                                     self.helper.connector_logger.info(
                                         f"Parsing {count}/{size}"
+                                    )
+                                    self.helper.connector_logger.info(
+                                        f"Processing event for collection: {collection}. All data from the received event: {event}"
                                     )
                                     bundle_objects = self._collect_intelligence(
                                         collection,
