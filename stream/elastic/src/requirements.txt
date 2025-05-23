@@ -1,6 +1,6 @@
 pycti==6.6.12
 pandas==2.2.3
-elasticsearch==7.17.12
+elasticsearch==9.0.1
 scalpl==0.4.2
 docopt==0.6.2
 elasticsearch-dsl==7.4.1
