@@ -170,30 +170,34 @@ class Enricher(ABC):
             "favicon", []
         ) or []
         if not _favicon:
-            return
-        for k, v in _favicon[0].items():
-            if k.startswith("favicon") and v:
-                favicon = File(
-                    type="file",
-                    name=f"{k}: {v}",
-                    # created_by_ref=self._author["id"],
-                    # can't use MD5, validation fails
-                    # hashes={"MD5": v}
-                )
-                self._stix_objects.append(favicon)
-                relationship = Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", source.value, favicon.id
-                    ),
-                    relationship_type="related-to",
-                    target_ref=favicon.id,
-                    description="Favicon",
-                    confidence=100,
-                    source_ref=source.id,
-                    allow_custom=True,
-                    created_by_ref=self._author["id"],
-                )
-                self._stix_objects.append(relationship)
+            return {}
+        try:
+            for k, v in _favicon[0].items():
+                if k.startswith("favicon") and v:
+                    favicon = File(
+                        type="file",
+                        name=f"{k}: {v}",
+                        # created_by_ref=self._author["id"],
+                        # can't use MD5, validation fails
+                        # hashes={"MD5": v}
+                    )
+                    self._stix_objects.append(favicon)
+                    relationship = Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", source.value, favicon.id
+                        ),
+                        relationship_type="related-to",
+                        target_ref=favicon.id,
+                        description="Favicon",
+                        confidence=100,
+                        source_ref=source.id,
+                        allow_custom=True,
+                        created_by_ref=self._author["id"],
+                    )
+                    self._stix_objects.append(relationship)
+        except (IndexError, AttributeError) as e:
+            self._helper.log_warning(f"build favicon error {e}")
+            return {}
         self._helper.log_debug(f"favicon _stix_objects: {self._stix_objects}")
 
     def _build_html_and_headers(self, scan_data):
@@ -207,22 +211,26 @@ class Enricher(ABC):
         _headers = scan_data.get("headers", [])
         _html = scan_data.get("html", [])
         self._helper.log_debug(f"_html: {_html}")
-        if not _html or not _headers or not _html[0].get("html_body_ssdeep"):
+        try:
+            if not _html or not _headers or not _html[0].get("html_body_ssdeep"):
+                return {}
+            self._helper.log_debug("building html")
+            html_body = Artifact(
+                type="artifact",
+                url="/",
+                mime_type=_html[0].get("content-type"),
+                hashes={"SSDEEP": _html[0].get("html_body_ssdeep")},
+            )
+            return HTTPRequestExt(
+                request_method="OPTIONS",
+                request_value="/",
+                request_header=_headers[0].get("headers"),
+                message_body_length=_html[0].get("content-length"),
+                message_body_data_ref=html_body,
+            )
+        except (IndexError, AttributeError) as e:
+            self._helper.log_warning(f"build html error {e}")
             return {}
-        self._helper.log_debug("building html")
-        html_body = Artifact(
-            type="artifact",
-            url="/",
-            mime_type=_html[0].get("content-type"),
-            hashes={"SSDEEP": _html[0].get("html_body_ssdeep")},
-        )
-        return HTTPRequestExt(
-            request_method="OPTIONS",
-            request_value="/",
-            request_header=_headers[0].get("headers"),
-            message_body_length=_html[0].get("content-length"),
-            message_body_data_ref=html_body,
-        )
 
     def _build_extensions(self):
         """
