@@ -228,6 +228,10 @@ class FlashpointConfig(ConfigBaseModel):
         description="Whether to include indicators in the reports imported from MispFeed or not.",
         default=False,
     )
+    guess_relationships_from_reports: bool = Field(
+        description="Whether to guess relationships between entities or not.",
+        default=False,
+    )
     import_indicators: bool = Field(
         description="WHether to import indicators of compromise (IoCs) or not.",
         default=True,
