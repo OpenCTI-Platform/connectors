@@ -174,17 +174,17 @@ class BaseEntity(_CommonUtils):
         if text:
             self.description = self._remove_html_tags(self._sanitize(text))
 
-    def set_valid_from(self, date):
-        # type: (datetime) -> None
+    def set_valid_from(self, valid_from):
+        # type: (Optional[datetime]) -> None
         """Set object valid_from"""
-        if date:
-            self.valid_from = date
+        if valid_from:
+            self.valid_from = valid_from
 
-    def set_valid_until(self, date):
-        # type: (datetime) -> None
+    def set_valid_until(self, valid_until):
+        # type: (Optional[datetime]) -> None
         """Set object valid_until"""
-        if date:
-            self.valid_until = date
+        if valid_until:
+            self.valid_until = valid_until
 
     def _generate_relationship(self, source_id, target_id, relation_type="based-on"):
         return stix2.Relationship(
