@@ -1,7 +1,7 @@
 -r ./base_connector/requirements.txt
 imap-tools==1.10.0
-pycti==6.5.10
-pydantic==2.10.6
+pycti==6.6.12
+pydantic~=2.11.3
 google-api-python-client>=2.169.0
 google-api-core==2.24.2
 google-auth==2.40.1
