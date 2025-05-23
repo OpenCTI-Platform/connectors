@@ -1,2 +1,2 @@
-pycti==6.6.12
+pycti==6.6.13
 reversinglabs-sdk-py3==2.9.0
