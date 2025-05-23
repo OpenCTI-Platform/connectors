@@ -1,0 +1,19 @@
+[MAIN]
+max-line-length=120
+init-hook='import sys; sys.path.append("src")'
+ignore=venv,tests
+
+[MESSAGES CONTROL]
+disable=
+    duplicate-code,
+    missing-docstring,
+    broad-exception-caught,
+    wrong-import-order,
+    ungrouped-imports,
+    pointless-string-statement,
+    too-many-arguments,
+    too-many-function-args,
+    too-many-positional-arguments,
+    too-few-public-methods,
+    invalid-name,
+    fixme
