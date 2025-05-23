@@ -43,7 +43,7 @@ class ReportImporter:
             "CONNECTOR_WEB_SERVICE_URL",
             ["connector", "web_service_url"],
             config,
-            default="https://importdoc.ariane.filigran.io",
+            default="https://importdoc.ariane.testing.filigran.io",
         )
         license_key_pem = get_config_variable(
             "CONNECTOR_LICENCE_KEY_PEM", ["connector", "licence_key_pem"], config
@@ -63,6 +63,14 @@ class ReportImporter:
             .get("settings", {})
             .get("id", "")
         )
+
+    @staticmethod
+    def _sanitise_name(raw_text: str | None) -> str | None:
+        """Return a clean name or None if it is too short ( < 2 chars )."""
+        if not raw_text:
+            return None
+        cleaned = raw_text.strip().rstrip(",")
+        return cleaned if len(cleaned) >= 2 else None
 
     def _process_message(self, data: dict) -> str:
         self.helper.connector_logger.info("Processing new message")
@@ -208,7 +216,14 @@ class ReportImporter:
         # Iterate over entities/observables extracted by the ML model
         for match in parsed.get("entities", []):
             category = match[RESULT_FORMAT_CATEGORY]
-            txt = match[RESULT_FORMAT_MATCH]
+            txt = self._sanitise_name(match[RESULT_FORMAT_MATCH])
+            if not txt:
+                # text must be at least 2 characters in length
+                # Skip objects like "." or empty strings: they would break GraphQL
+                self.helper.connector_logger.debug(
+                    f"Skip object with invalid name: {match[RESULT_FORMAT_MATCH]!r}"
+                )
+                assert txt is not None
 
             if match[RESULT_FORMAT_TYPE] == "entity":
                 stix_object = create_stix_object(
@@ -447,7 +462,7 @@ class ReportImporter:
                 src_id = text_to_id.get(src_txt)
                 dst_id = text_to_id.get(dst_txt)
 
-                if not src_id or not dst_id or not rel_type:
+                if not src_id or not dst_id or not rel_type or (src_id == dst_id):
                     self.helper.connector_logger.warning(
                         f"Skipped relation (missing data): {rel}"
                     )
@@ -487,7 +502,9 @@ class ReportImporter:
         final_ids: list[str] = []
         final_objects: list[dict] = []
         for obj in observables:
-            if obj["id"] not in final_ids:
+            # Keep only objects whose name field is OK
+            bad_name = isinstance(obj, dict) and "name" in obj and len(obj["name"]) < 2
+            if obj["id"] not in final_ids and not bad_name:
                 final_ids.append(obj["id"])
                 final_objects.append(obj)
 
