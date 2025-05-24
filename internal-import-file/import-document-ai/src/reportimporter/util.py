@@ -3,12 +3,14 @@ from typing import Dict, List
 import stix2
 from pycti import (
     AttackPattern,
+    Identity,
     IntrusionSet,
     Location,
     Malware,
     ThreatActorGroup,
     Vulnerability,
 )
+from pycti.utils.constants import CustomObjectChannel, IdentityTypes
 
 
 def create_stix_object(
@@ -137,6 +139,36 @@ stix_object_mapping = {
     ),
     "Intrusion-Set": lambda value, object_markings, custom_properties: stix2.IntrusionSet(
         id=IntrusionSet.generate_id(value),
+        name=value,
+        object_markings=object_markings,
+        custom_properties=custom_properties,
+        allow_custom=True,
+    ),
+    "Sector": lambda value, object_markings, custom_properties: stix2.Identity(
+        id=Identity.generate_id(value, IdentityTypes.SECTOR.value),
+        name=value,
+        identity_class=IdentityTypes.SECTOR,
+        object_markings=object_markings,
+        custom_properties=custom_properties,
+        allow_custom=True,
+    ),
+    "Organization": lambda value, object_markings, custom_properties: stix2.Identity(
+        id=Identity.generate_id(value, IdentityTypes.ORGANIZATION.value),
+        name=value,
+        identity_class=IdentityTypes.ORGANIZATION,
+        object_markings=object_markings,
+        custom_properties=custom_properties,
+        allow_custom=True,
+    ),
+    "Individual": lambda value, object_markings, custom_properties: stix2.Identity(
+        id=Identity.generate_id(value, IdentityTypes.INDIVIDUAL.value),
+        name=value,
+        identity_class=IdentityTypes.INDIVIDUAL,
+        object_markings=object_markings,
+        custom_properties=custom_properties,
+        allow_custom=True,
+    ),
+    "Channel": lambda value, object_markings, custom_properties: CustomObjectChannel(
         name=value,
         object_markings=object_markings,
         custom_properties=custom_properties,
