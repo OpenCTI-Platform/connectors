@@ -1,0 +1,18 @@
+version: "3"
+services:
+  connector-luminar:
+    image: opencti/connector-luminar:6.6.9
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe(UUIDv4 token)
+      - CONNECTOR_ID=ChangeMe(UUIDv4 token)
+      - CONNECTOR_NAME=Luminar
+      - CONNECTOR_SCOPE=luminar
+      - CONNECTOR_LOG_LEVEL=error
+      - LUMINAR_BASE_URL=ChangeMe
+      - LUMINAR_ACCOUNT_ID=ChangeMe
+      - LUMINAR_CLIENT_ID=ChangeMe
+      - LUMINAR_CLIENT_SECRET=ChangeMe
+      - LUMINAR_INITIAL_FETCH_DATE=YYYY-MM-DD
+      - LUMINAR_CREATE_OBSERVABLE=true
+    restart: always
