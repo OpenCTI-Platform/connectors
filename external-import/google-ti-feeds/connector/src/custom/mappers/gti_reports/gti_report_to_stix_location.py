@@ -1,0 +1,160 @@
+"""Converts a GTI report's targeted regions to STIX Location objects."""
+
+from typing import Any, List, Optional
+
+import pycountry
+from connector.src.custom.models.gti_reports.gti_report_model import (
+    GTIReportData,
+    TargetedRegion,
+)
+from connector.src.stix.octi.models.location_model import OctiLocationModel
+from connector.src.stix.v21.models.ovs.region_ov_enums import RegionOV
+from stix2.v21 import Identity, Location, MarkingDefinition  # type: ignore
+
+
+class GTIReportToSTIXLocation:
+    """Converts a GTI report's targeted regions to STIX Location objects."""
+
+    def __init__(
+        self,
+        report: GTIReportData,
+        organization: Identity,
+        tlp_marking: MarkingDefinition,
+    ):
+        """Initialize the GTIReportToSTIXLocation object.
+
+        Args:
+            report (GTIReportData): The GTI report data to convert.
+            organization (Identity): The organization identity object.
+            tlp_marking (MarkingDefinition): The TLP marking definition.
+
+        """
+        self.report = report
+        self.organization = organization
+        self.tlp_marking = tlp_marking
+
+    def to_stix(self) -> List[Location]:
+        """Convert the GTI report targeted regions to STIX Location objects.
+
+        Returns:
+            List[Location]: The list of STIX Location objects.
+
+        """
+        result: List[Location] = []
+
+        targeted_regions = self.report.attributes.targeted_regions_hierarchy
+        if not targeted_regions:
+            return result
+
+        for region_data in targeted_regions:
+            location = self._process_region(region_data)
+            if location:
+                result.append(location)
+
+        return result
+
+    def _process_region(self, region_data: TargetedRegion) -> Optional[Location]:
+        """Process a targeted region entry and convert to appropriate Location type.
+
+        Args:
+            region_data (TargetedRegion): The targeted region data to process.
+
+        Returns:
+            Optional[Location]: The STIX Location object, or None if no valid location found.
+
+        """
+        location = None
+        if region_data.country:
+            location = self._create_country(region_data)
+        if location is None and region_data.sub_region:
+            location = self._create_region(region_data, is_sub_region=True)
+        if location is None and region_data.region:
+            location = self._create_region(region_data, is_sub_region=False)
+
+        return location
+
+    def country_to_iso(self, name: str) -> Any:
+        """Given a country name (full or partial), return its ISO 3166-1 codes:
+        - alpha_2: two-letter code
+        Returns None if no match is found.
+        """
+        country = pycountry.countries.get(name=name)
+
+        if country is None:
+            for c in pycountry.countries:
+                if c.name.lower() == name.lower():
+                    country = c
+                    break
+
+        if country is None:
+            try:
+                country = pycountry.countries.search_fuzzy(name)[0]
+            except LookupError:
+                return None
+
+        if country is None:
+            return None
+
+        return country.alpha_2
+
+    def _create_country(self, region_data: TargetedRegion) -> Location:
+        """Create a LocationCountry object.
+
+        Args:
+            region_data (TargetedRegion): The targeted region data containing country information.
+
+        Returns:
+            Location: The STIX LocationCountry object.
+
+        """
+        if not region_data.country:
+            return None
+
+        iso_code = self.country_to_iso(region_data.country)
+        if iso_code is None:
+            return None
+
+        country = OctiLocationModel.create_country(
+            name=region_data.country,
+            country_code=iso_code,
+            description=region_data.description,
+            organization_id=self.organization.id,
+            marking_ids=[self.tlp_marking.id],
+        )
+
+        country_stix = country.to_stix2_object()
+        return country_stix
+
+    def _create_region(
+        self, region_data: TargetedRegion, is_sub_region: bool
+    ) -> Location:
+        """Create a LocationRegion object.
+
+        Args:
+            region_data (TargetedRegion): The targeted region data containing region information.
+            is_sub_region (bool): Whether to use the sub_region field (True) or region field (False).
+
+        Returns:
+            Location: The STIX LocationRegion object.
+
+        """
+        region_name = region_data.sub_region if is_sub_region else region_data.region
+        if not region_name:
+            return None
+
+        try:
+            region_value = RegionOV(region_name.lower().replace(" ", "-"))
+        except ValueError:
+            return None
+
+        region = OctiLocationModel.create_region(
+            name=region_name,
+            region_value=region_value,
+            description=region_data.description,
+            organization_id=self.organization.id,
+            marking_ids=[self.tlp_marking.id],
+        )
+
+        region_stix = region.to_stix2_object()
+
+        return region_stix
