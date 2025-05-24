@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict
 
 import pycountry
@@ -43,16 +43,37 @@ class GreyNoiseConnector:
             "GREYNOISE_SIGHTING_NOT_SEEN", ["greynoise", "sighting_not_seen"], config
         )
         self.greynoise_ent_name = get_config_variable(
-            "GREYNOISE_NAME", ["greynoise", "name"], config
+            "GREYNOISE_NAME",
+            ["greynoise", "name"],
+            config,
+            default="GreyNoise Internet Scanner",
         )
         self.greynoise_ent_desc = get_config_variable(
-            "GREYNOISE_DESCRIPTION", ["greynoise", "description"], config
-        )
-        self.default_score = get_config_variable(
-            "GREYNOISE_DEFAULT_SCORE",
-            ["greynoise", "default_score"],
+            "GREYNOISE_DESCRIPTION",
+            ["greynoise", "description"],
             config,
-            True,
+            default="GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.",
+        )
+        self.indicator_score_malicious = get_config_variable(
+            "GREYNOISE_INDICATOR_SCORE_MALICIOUS",
+            ["greynoisefeed", "indicator_score_malicious"],
+            config,
+            isNumber=True,
+            default=75,
+        )
+        self.indicator_score_suspicious = get_config_variable(
+            "GREYNOISE_INDICATOR_SCORE_SUSPICIOUS",
+            ["greynoisefeed", "indicator_score_suspicious"],
+            config,
+            isNumber=True,
+            default=50,
+        )
+        self.indicator_score_benign = get_config_variable(
+            "GREYNOISE_INDICATOR_SCORE_BENIGN",
+            ["greynoisefeed", "indicator_score_benign"],
+            config,
+            isNumber=True,
+            default=20,
         )
 
         # Define variables
@@ -134,6 +155,16 @@ class GreyNoiseConnector:
                 "[API] GreyNoise API key is not valid or not supported for this integration. API Response: "
                 + str(e)
             )
+
+    def _get_indicator_score(self, classification):
+        if classification == "malicious":
+            self.indicator_score = self.indicator_score_malicious
+        elif classification == "suspicious":
+            self.indicator_score = self.indicator_score_suspicious
+        else:
+            self.indicator_score = self.indicator_score_benign
+
+        return self.indicator_score
 
     def _extract_and_check_markings(self, opencti_entity: dict) -> bool:
         """
@@ -236,6 +267,10 @@ class GreyNoiseConnector:
             # Create label GreyNoise "malicious"
             self._create_custom_label("gn-classification: malicious", "#ff8178")
 
+        elif data["classification"] == "suspicious":
+            # Create label GreyNoise "suspicious"
+            self._create_custom_label("gn-classification: suspicious", "#e3d922")
+
         if data["bot"] is True:
             # Create label for "Known Bot Activity"
             self._create_custom_label("Known BOT Activity", "#7e4ec2")
@@ -244,23 +279,23 @@ class GreyNoiseConnector:
             # Create label for "Known Tor Exit Node"
             self._create_custom_label("Known TOR Exit Node", "#7e4ec2")
 
+        if data["vpn"] is True:
+            # Create label for "Known VPN"
+            self._create_custom_label("Known VPN", "#7e4ec2")
+
         # Create all Labels in entity_tags
         for tag in entity_tags:
             tag_details_matching = self._get_match(data_tags["metadata"], "name", tag)
             if tag_details_matching is not None:
                 tag_details = tag_details_matching
             else:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] The tag was created, but its details were not correctly recognized by GreyNoise, which is often related to a name problem.",
-                    {"Tag_name": tag},
-                )
                 self.all_labels.append(tag)
                 continue
 
             # Create red label when malicious intent and type not category worm and activity
             if tag_details["intention"] == "malicious" and tag_details[
                 "category"
-            ] not in ["worm", "activity"]:
+            ] not in ["worm"]:
                 self._create_custom_label(f"{tag}", "#ff8178")
 
             # If category is worm, prepare malware object
@@ -273,19 +308,12 @@ class GreyNoiseConnector:
                 all_malwares.append(malware_worm)
                 self.all_labels.append(tag)
 
-            # If category is malicious and activity, prepare malware object
-            elif (
-                tag_details["intention"] == "malicious"
-                and tag_details["category"] == "activity"
-            ):
-                malware_malicious_activity = {
-                    "name": f"{tag}",
-                    "description": f"{tag_details['description']}",
-                    "type": "malicious_activity",
-                }
-                all_malwares.append(malware_malicious_activity)
-                self.all_labels.append(tag)
-
+            elif tag_details["intention"] == "benign":
+                # Create green label for benign tags
+                self._create_custom_label(f"{tag_details['name']}", "#06c93a")
+            elif tag_details["intention"] == "suspicious":
+                # Create yellow label for suspicious tags
+                self._create_custom_label(f"{tag_details['name']}", "#e3d922")
             else:
                 # Create white label otherwise
                 self._create_custom_label(f"{tag}", "#ffffff")
@@ -379,7 +407,7 @@ class GreyNoiseConnector:
             name=entity_asn,
             custom_properties={
                 "created_by_ref": self.greynoise_identity["id"],
-                "x_opencti_score": self.default_score,
+                "x_opencti_score": self.indicator_score,
             },
         )
         self.stix_objects.append(stix_asn)
@@ -665,7 +693,7 @@ class GreyNoiseConnector:
             external_references=external_reference,
             custom_properties={
                 "pattern_type": "stix",
-                "x_opencti_score": self.default_score,
+                "x_opencti_score": self.indicator_score,
                 "x_opencti_main_observable_type": "IPv4-Addr",
                 "detection": True if detection is True else False,
             },
@@ -699,7 +727,7 @@ class GreyNoiseConnector:
             value=self.stix_entity["value"],
             custom_properties={
                 "x_opencti_external_references": external_reference,
-                "x_opencti_score": self.default_score,
+                "x_opencti_score": self.indicator_score,
                 "x_opencti_labels": labels if detection is True else [],
                 "x_opencti_created_by_ref": self.greynoise_identity["id"],
             },
@@ -750,8 +778,21 @@ class GreyNoiseConnector:
                 {"IPv4": stix_entity["value"]},
             )
 
-            self.first_seen = parse(data["first_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
-            self.last_seen = parse(data["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if "first_seen" in data and data["first_seen"]:
+                self.first_seen = parse(data["first_seen"]).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+                self.last_seen = parse(data["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
+            else:
+                self.first_seen = parse(data["last_seen"]).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+                self.last_seen = datetime.strptime(
+                    data["last_seen"], "%Y-%m-%d"
+                ) + timedelta(hours=23)
+                self.last_seen = self.last_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+            self._get_indicator_score(data.get("classification", "unknown"))
 
             # Generate Stix Object for bundle
             labels, malwares = self._process_labels(data, data_tags)
