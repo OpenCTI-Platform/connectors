@@ -1,9 +1,11 @@
 import asyncio
+import copy
 import sys
 
 from aiohttp import ClientConnectionError, ClientResponseError
 from connector.models import (
     ConfigLoader,
+    ObservableResponse,
     SecurityIncidentResponse,
     TaskResponse,
 )
@@ -260,32 +262,76 @@ class ConnectorServicenow:
                 )
                 return
 
-            security_incident_tasks = [
+            security_incident_futures = [
                 (
                     security_incident,
                     asyncio.create_task(
                         self.client.get_tasks(security_incident.get("sys_id"))
                     ),
-                    # Todo get_observables
+                    asyncio.create_task(
+                        self.client.get_observables(security_incident.get("sys_id"))
+                    ),
                 )
                 for security_incident in result_main_futures
             ]
 
             security_incidents_results = []
 
-            for si_incident, si_task in security_incident_tasks:
-                collected_tasks = await asyncio.gather(si_task, return_exceptions=True)
-                security_incident_id = si_incident.get("sys_id")
+            for sir_incident, sir_task, sir_observable in security_incident_futures:
+                security_incidents_combined = {"get_security_incident": sir_incident}
+                security_incident_id = sir_incident.get("sys_id")
 
-                result_tasks_related_to_sir = self._classify_results(
-                    collected_tasks, security_incident_id
+                sir_collected_tasks, sir_collected_observables = await asyncio.gather(
+                    sir_task, sir_observable, return_exceptions=True
                 )
 
-                security_incidents_combined = {"get_security_incident": si_incident}
+                # Observables related to the Security Incident (SIR)
+                result_observables_related_to_sir = self._classify_results(
+                    [sir_collected_observables], security_incident_id
+                )
+                if result_observables_related_to_sir:
+                    security_incidents_combined.get("get_security_incident")[
+                        "get_observables"
+                    ] = result_observables_related_to_sir
+
+                # Tasks related to the Security Incident Response (SIR)
+                result_tasks_related_to_sir = self._classify_results(
+                    [sir_collected_tasks], security_incident_id
+                )
+
                 if result_tasks_related_to_sir:
-                    security_incidents_combined["get_tasks"] = (
-                        result_tasks_related_to_sir
-                    )
+                    tasks_futures = [
+                        (
+                            task,
+                            asyncio.create_task(
+                                self.client.get_observables(task.get("sys_id"))
+                            ),
+                        )
+                        for task in result_tasks_related_to_sir
+                    ]
+
+                    tasks_results = []
+                    for sit_task, sit_observable in tasks_futures:
+                        task_id = sit_task.get("sys_id")
+
+                        sit_collected_observables = await asyncio.gather(
+                            sit_observable, return_exceptions=True
+                        )
+
+                        # Observables related to the Task (SIT)
+                        result_observables_related_to_task = self._classify_results(
+                            sit_collected_observables, task_id
+                        )
+                        if result_observables_related_to_task:
+                            sit_task["get_observables"] = (
+                                result_observables_related_to_task
+                            )
+
+                        tasks_results.append(sit_task)
+
+                    security_incidents_combined.get("get_security_incident")[
+                        "get_tasks"
+                    ] = tasks_results
 
                 security_incidents_results.append(security_incidents_combined)
 
@@ -301,72 +347,140 @@ class ConnectorServicenow:
             )
             raise
 
-    def _valid_intelligence(self, collected_intelligence: list):
+    def model_validation_process(
+        self,
+        parent_data: dict,
+        parent_name: str,
+        models_name: type[TaskResponse | ObservableResponse | SecurityIncidentResponse],
+        child_method_name: str | None = None,
+    ) -> dict | None:
+        if not isinstance(parent_data, dict):
+            return None
+
+        if child_method_name:
+            data_raw_children = parent_data.get(child_method_name) or []
+            validated_list_child = []
+            for data_raw_child in data_raw_children:
+                try:
+                    validated_child = models_name.model_validate(data_raw_child)
+                    validated_list_child.append(validated_child)
+                except ValidationError as err:
+                    message = (
+                        f"[VALIDATION-WARNING] A validation error has occurred on a entity linked to an "
+                        f"'{parent_name}'. This entity will be ignored."
+                    )
+                    self.helper.connector_logger.warning(
+                        message,
+                        {
+                            "collection_parent_name": parent_name,
+                            "parent_entity_number": parent_data.get("number"),
+                            "parent_entity_sys_id": parent_data.get("sys_id"),
+                            "collection_child_name": child_method_name,
+                            "error": err,
+                        },
+                    )
+                    continue
+            return (
+                {child_method_name: validated_list_child}
+                if validated_list_child
+                else None
+            )
+        else:
+            try:
+                validated_parent = models_name.model_validate(parent_data)
+                return {parent_name: validated_parent} if validated_parent else None
+            except ValidationError as err:
+                message = f"[VALIDATION-WARNING] A validation error has occurred on an '{parent_name}'. "
+                "This entity will be ignored."
+                self.helper.connector_logger.warning(
+                    message,
+                    {
+                        "collection_parent_name": parent_name,
+                        "parent_entity_number": parent_data.get("number"),
+                        "parent_entity_sys_id": parent_data.get("sys_id"),
+                        "collection_child_name": child_method_name,
+                        "error": err,
+                    },
+                )
+                return None
+
+    def _validate_children(
+        self,
+        parent_name: str,
+        parent_data: dict,
+        model_map: dict,
+        hierarchy_map: dict,
+    ):
+        for child_name in hierarchy_map.get(parent_name, []):
+            child_entities = parent_data.get(child_name)
+            if not child_entities:
+                continue
+
+            if child_name in hierarchy_map:
+                for child_entity in child_entities:
+                    for sub_child in hierarchy_map[child_name]:
+                        validated = self.model_validation_process(
+                            child_entity, child_name, model_map[sub_child], sub_child
+                        )
+                        child_entity[sub_child] = (
+                            validated[sub_child] if validated else None
+                        )
+
+            validated = self.model_validation_process(
+                parent_data, parent_name, model_map[child_name], child_name
+            )
+            parent_data[child_name] = validated[child_name] if validated else None
+
+    def _valid_intelligence(self, collected_intelligence: list[dict]):
+        """
+        get_security_incident
+        ├── get_tasks
+        │   └── get_observables
+        └── get_observables
+        """
         try:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starts validating intelligence from ServiceNow..."
             )
 
-            validated_intelligence = []
+            collected_intelligence_init = copy.deepcopy(collected_intelligence)
 
+            # All models
             intelligence_models = {
                 "get_security_incident": SecurityIncidentResponse,
                 "get_tasks": TaskResponse,
+                "get_observables": ObservableResponse,
             }
 
-            for intelligence in collected_intelligence:
-                validated_per_collection_name = {}
-                for intelligence_name, intelligence_value in intelligence.items():
+            # Parent (dict) / Children (list)
+            intelligence_hierarchy = {
+                "get_security_incident": ["get_tasks", "get_observables"],
+                "get_tasks": ["get_observables"],
+            }
 
-                    if intelligence_name not in intelligence_models:
+            for intelligence in collected_intelligence or []:
+                for parent_name, parent_value in intelligence.items():
+                    if parent_name not in intelligence_hierarchy:
                         continue
 
-                    intelligence_model = intelligence_models.get(intelligence_name)
+                    self._validate_children(
+                        parent_name,
+                        parent_value,
+                        intelligence_models,
+                        intelligence_hierarchy,
+                    )
 
-                    if isinstance(intelligence_value, dict):
-                        try:
-                            validated_per_collection_name[intelligence_name] = (
-                                intelligence_model.model_validate(intelligence_value)
-                            )
-                        except ValidationError as err:
-                            self.helper.connector_logger.warning(
-                                "[VALIDATION] A validation error has occurred on an incident security. "
-                                "This entity will be ignored along with all associated entities.",
-                                {
-                                    "collection_name": intelligence_name,
-                                    "entity_number": intelligence_value.get("number"),
-                                    "entity_sys_id": intelligence_value.get("sys_id"),
-                                    "error": err,
-                                },
-                            )
-                            break
-                    if isinstance(intelligence_value, list):
-                        validated_list = []
-                        for item in intelligence_value:
-                            try:
-                                validated = intelligence_model.model_validate(item)
-                                validated_list.append(validated)
-                            except ValidationError as err:
-                                self.helper.connector_logger.warning(
-                                    "[VALIDATION] A validation error has occurred on a entity linked to an security incident. "
-                                    "This entity will be ignored.",
-                                    {
-                                        "collection_name": intelligence_name,
-                                        "entity_number": item.get("number"),
-                                        "entity_sys_id": item.get("sys_id"),
-                                        "error": err,
-                                    },
-                                )
-                                continue
-                        validated_per_collection_name[intelligence_name] = (
-                            validated_list
-                        )
-                if validated_per_collection_name:
-                    validated_intelligence.append(validated_per_collection_name)
+                    validated_parent = self.model_validation_process(
+                        parent_value, parent_name, intelligence_models[parent_name]
+                    )
+                    intelligence[parent_name] = (
+                        validated_parent[parent_name] if validated_parent else None
+                    )
+
             self.helper.connector_logger.info(
                 "[CONNECTOR] Finalisation of the validation of information from ServiceNow."
             )
-            return validated_intelligence
+            return collected_intelligence
 
         except Exception as err:
             self.helper.connector_logger.error(
@@ -374,6 +488,121 @@ class ConnectorServicenow:
                 {"error": err},
             )
             raise
+
+    def _process_indicator(self, observables: list) -> list:
+        all_patterns_mapping = {
+            "Domain-Name": "domain-name:value",
+            "Url": "url:value",
+            "Hostname": "hostname:value",
+            "Email-Addr": "email-addr:value",
+            "Email-Message--Body": "email-message:body",
+            "Email-Message--Message_id": "email-message:subject",
+            "Email-Message--Subject": "email-message:subject",
+            "IPv4-Addr": "ipv4-addr:value",
+            "IPv6-Addr": "ipv6-addr:value",
+            "Mac-Addr": "mac-addr:value",
+            "MD5": "file:hashes.'MD5'",
+            "SHA-1": "file:hashes.'SHA-1'",
+            "SHA-256": "file:hashes.'SHA-256'",
+            "SHA-512": "file:hashes.'SHA-512'",
+            "StixFile": "file:name",
+            "Directory": "directory:path",
+            "Mutex": "mutex:name",
+            "Autonomous-System": "autonomous-system:number",
+            "Phone-Number": "phone-number:value",
+            "Windows-Registry-Key": "windows-registry-key:key",
+            "User-Account": "user-account:account_login",
+        }
+
+        all_indicators_with_relationship = []
+
+        for observable in observables:
+
+            pattern_indicator = ""
+            for pattern in all_patterns_mapping:
+                if observable.type == pattern:
+                    pattern_indicator = observable.type
+                    break
+                else:
+                    continue
+            if pattern_indicator:
+                pattern = f"[{pattern_indicator} = '{observable.value}']"
+                # Todo Make indicator
+                # Todo Make Relationshop between indicator and observable (based-on)
+
+        return all_indicators_with_relationship
+
+    def _process_observable(self, observables: list) -> list:
+
+        observables_make_mapping = {
+            "Domain-Name": lambda *arg: self.converter_to_stix.make_domain_name(*arg),
+            "IPv4-Addr": lambda *arg: self.converter_to_stix.make_ipv4(*arg),
+            "IPv6-Addr": lambda *arg: self.converter_to_stix.make_ipv6(*arg),
+            "Url": lambda *arg: self.converter_to_stix.make_url(*arg),
+            "Email-Addr": lambda *arg: self.converter_to_stix.make_email_address(*arg),
+            "Email-Message--Body": lambda *arg: self.converter_to_stix.make_email_message(
+                *arg
+            ),
+            "Email-Message--Message_id": lambda *arg: self.converter_to_stix.make_email_message(
+                *arg
+            ),
+            "Email-Message--Subject": lambda *arg: self.converter_to_stix.make_email_message(
+                *arg
+            ),
+            "MD5": lambda *arg: self.converter_to_stix.make_file(*arg),
+            "SHA-1": lambda *arg: self.converter_to_stix.make_file(*arg),
+            "SHA-256": lambda *arg: self.converter_to_stix.make_file(*arg),
+            "SHA-512": lambda *arg: self.converter_to_stix.make_file(*arg),
+            "StixFile": lambda *arg: self.converter_to_stix.make_file(*arg),
+            "Directory": lambda *arg: self.converter_to_stix.make_directory(*arg),
+            "Hostname": lambda *arg: self.converter_to_stix.make_hostname(*arg),
+            "Mutex": lambda *arg: self.converter_to_stix.make_mutex(*arg),
+            "Autonomous-System": lambda *arg: self.converter_to_stix.make_asn(*arg),
+            "Phone-Number": lambda *arg: self.converter_to_stix.make_phone_number(*arg),
+            "Windows-Registry-Key": lambda *arg: self.converter_to_stix.make_windows_registry_key(
+                *arg
+            ),
+            "User-Account": lambda *arg: self.converter_to_stix.make_user_account(*arg),
+            "CVE-Number": lambda *arg: self.converter_to_stix.make_vulnerability(*arg),
+            "Organization-Name": lambda *arg: self.converter_to_stix.make_organization_name(
+                *arg
+            ),
+        }
+
+        all_observables = []
+        for observable in observables:
+            observable_type = observable.type
+            if observable_type in observables_make_mapping:
+                observable_all_labels = [
+                    label
+                    for label in [
+                        *observable.sys_tags,
+                        *observable.security_tags,
+                        *observable.finding,
+                    ]
+                    if label and label.lower() != "unknown"
+                ]
+                # Make External Reference
+                observable_external_reference = (
+                    self.converter_to_stix.make_external_reference(
+                        observable.sys_id,
+                        "sn_ti_observable",
+                        observable.sys_id,
+                    )
+                )
+                make_observable = observables_make_mapping.get(observable_type)
+
+                # Make Observable object
+                observable_object = (
+                    make_observable(
+                        observable, observable_all_labels, observable_external_reference
+                    )
+                    if make_observable
+                    else None
+                )
+                all_observables.append(observable_object)
+
+        return all_observables
 
     def _transform_intelligence(self, validated_intelligence):
         try:
@@ -434,8 +663,6 @@ class ConnectorServicenow:
                             stix_objects.append(mitre_object)
                             case_incident_object_refs.append(mitre_object)
 
-                # Todo Make Observables object -> Observable
-
                 # Transform comment in markdown for security_incident
                 new_description = self.utils.transform_description_to_markdown(
                     self.config.servicenow.comment_to_exclude,
@@ -470,9 +697,26 @@ class ConnectorServicenow:
                     [external_reference_sir],
                 )
 
+                # Make Observables Object
+                observables_in_sir = getattr(
+                    item.get("get_security_incident"), "get_observables", None
+                )
+                if observables_in_sir:
+                    observables_list_sir = self._process_observable(observables_in_sir)
+                    stix_objects.extend(observables_list_sir)
+                    case_incident_object_refs.extend(observables_list_sir)
+
+                    if self.config.servicenow.promote_observables_as_indicators:
+                        indicators_list_sir = self._process_indicator(observables_in_sir)
+                        stix_objects.append(indicators_list_sir)
+
                 # Make Tasks object -> CustomObjectTask
-                all_tasks_object = item.get("get_tasks")
+                all_tasks_object = getattr(
+                    item.get("get_security_incident"), "get_tasks", None
+                )
                 if all_tasks_object:
+
+                    task_all_objects = [custom_case_incident]
                     for task in all_tasks_object:
 
                         # Make External Reference Task for custom case incident parent
@@ -494,10 +738,30 @@ class ConnectorServicenow:
                             )
                         )
                         task.comments_and_work_notes = new_description_task
-                        all_labels = [*task.sys_tags, *task.security_tags]
+                        all_labels = [
+                            label
+                            for label in [*task.sys_tags, *task.security_tags]
+                            if label and label.lower() != "unknown"
+                        ]
 
+                        # Make Observables Object
+                        observables_in_sit = getattr(task, "get_observables", None)
+                        if observables_in_sit:
+                            observables_list_sit = self._process_observable(
+                                observables_in_sit
+                            )
+                            stix_objects.extend(observables_list_sit)
+                            task_all_objects.extend(observables_list_sit)
+                            # add task-related observables to the parent Security incident (SIR)
+                            case_incident_object_refs.extend(observables_list_sit)
+
+                            if self.config.servicenow.promote_observables_as_indicators:
+                                indicators_list_sit = self._process_indicator(observables_in_sit)
+                                stix_objects.append(indicators_list_sit)
+
+                        # Make task object
                         custom_task = self.converter_to_stix.make_custom_task(
-                            task, custom_case_incident, all_labels
+                            task, task_all_objects, all_labels
                         )
                         stix_objects.append(custom_task)
 
