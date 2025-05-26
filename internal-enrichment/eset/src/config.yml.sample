@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'ESET MISP Enrichment'
+  scope: 'report'
+  log_level: 'info'
+  auto: true # Enable/disable auto-enrichment of observables
+
+eset:
+  api_base_url: 'ChangeMe'
+  api_key: 'ChangeMe'
+  api_host: 'https://eti.eset.com/'
