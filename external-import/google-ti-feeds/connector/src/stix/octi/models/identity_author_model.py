@@ -23,11 +23,7 @@ class OctiIdentityAuthorModel:
             IdentityModel: The created identity model
 
         """
-        identity_class = IdentityClassOV.UNKNOWN
-        if name.startswith("Google"):
-            identity_class = IdentityClassOV.ORGANIZATION
-        elif name.startswith("@"):
-            identity_class = IdentityClassOV.INDIVIDUAL
+        identity_class = IdentityClassOV.ORGANIZATION
 
         data = {
             "type": "identity",

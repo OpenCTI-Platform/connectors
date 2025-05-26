@@ -27,12 +27,22 @@ class NoteModel(BaseSDOModel):
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
+        data["id"] = NoteModel._generate_id(data=data)
+        return data
+
+    @classmethod
+    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+        """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "created" in data:
             created = data.get("created", None)
             content = data.get("content", None)
             data["id"] = pycti.Note.generate_id(created=created, content=content)
-        return data
+        return data["id"]
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""
-        return Note(**self.model_dump(exclude_none=True))
+        data = self.model_dump(exclude={"id"}, exclude_none=True)
+        pycti_id = NoteModel._generate_id(data=data)
+        data.pop("id")
+
+        return Note(id=pycti_id, **data)

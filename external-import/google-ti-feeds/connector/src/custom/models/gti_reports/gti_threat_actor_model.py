@@ -242,7 +242,7 @@ class TargetedRegion(BaseModel):
 class ThreatActorModel(BaseModel):
     """Model representing a GTI threat actor."""
 
-    name: Optional[str] = Field(..., description="Threat actor's name.")
+    name: str = Field(..., description="Threat actor's name.")
     collection_type: Optional[str] = Field(
         None,
         description="Type of object; typically 'threat_actor'.",

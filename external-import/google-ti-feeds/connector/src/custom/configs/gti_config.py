@@ -45,7 +45,7 @@ class GTIConfig(BaseConfig):
     model_config = SettingsConfigDict(env_prefix="gti_")
 
     api_key: str
-    import_start_date: str = "P30D"
+    import_start_date: str = "P1D"
     api_url: str = "https://www.virustotal.com/api/v3"
     import_reports: bool = True
     report_types: List[str] | str = "All"

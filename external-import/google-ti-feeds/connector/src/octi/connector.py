@@ -1,9 +1,10 @@
 """Core connector as defined in the OpenCTI connector template."""
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
+from connector.src.custom.batch_processor import BatchProcessor
 from connector.src.custom.configs.gti_config import GTIConfig
 from connector.src.custom.convert_to_stix import ConvertToSTIX
 from connector.src.custom.exceptions import (
@@ -11,7 +12,6 @@ from connector.src.custom.exceptions import (
     GTIAsyncError,
     GTIEntityConversionError,
     GTIPartialDataProcessingError,
-    GTIStateManagementError,
     GTIWorkProcessingError,
 )
 from connector.src.custom.fetch_all import FetchAll
@@ -22,8 +22,9 @@ from connector.src.utils.api_engine.circuit_breaker import CircuitBreaker
 from connector.src.utils.api_engine.retry_request_strategy import RetryRequestStrategy
 
 if TYPE_CHECKING:
-    from connector.src.octi.global_config import GlobalConfig
     from pycti import OpenCTIConnectorHelper as OctiHelper  # type: ignore
+
+    from connector.src.octi.global_config import GlobalConfig
 
 
 LOG_PREFIX = "[Connector]"
@@ -112,19 +113,18 @@ class Connector:
             error_flag = True
         except GTIWorkProcessingError as work_err:
             error_message = f"Work processing error: {str(work_err)}"
+            work_id = getattr(work_err, "work_id", self.work_manager.get_current_work_id())
             self._logger.error(
                 f"{LOG_PREFIX} {error_message}",
                 meta={
                     "error": str(work_err),
-                    "work_id": getattr(work_err, "work_id", None),
+                    "work_id": work_id,
                 },
             )
             error_flag = True
         except Exception as err:
             error_message = f"An unexpected error occurred: {str(err)}"
-            self._logger.error(
-                f"{LOG_PREFIX} {error_message}", meta={"error": str(err)}
-            )
+            self._logger.error(f"{LOG_PREFIX} {error_message}", meta={"error": str(err)})
             error_flag = True
         finally:
             self._logger.info(
@@ -152,48 +152,43 @@ class Connector:
             duration_period=self._config.connector_config.duration_period,
         )
 
-    def _process_reports(self):
+    def _process_reports(self) -> Optional[Any]:
         """Process GTI reports and related entities.
 
         Returns:
             str: Error message if an error occurred, None otherwise
+
         """
         error_flag = False
         error_message = None
         self._logger.info(f"{LOG_PREFIX} Starting Google Threat Intel Feeds process")
 
-        reports = []
-        related_entities = {}
+        reports: List[Dict[str, Any]] = []
+        related_entities: Dict[str, Any] = {}
         latest_modified_date = None
         fetch_task = None
 
         loop = None
         try:
             api_client = self._setup_api_client()
-            work_id = self.work_manager.initiate_work(
-                name="Google Threat Intel Feeds - Reports"
-            )
+            work_id = self.work_manager.initiate_work(name="Google Threat Intel Feeds - Reports")
             state = self.work_manager.get_state()
             gti_config = self._config.get_config_class(GTIConfig)
 
-            fetcher, converter = self._create_fetcher_and_converter(
-                api_client, state, gti_config
+            fetcher, converter, batch_processor = self._create_fetcher_and_converter(
+                api_client, state, gti_config, work_id
             )
 
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
             try:
-
                 fetch_task = asyncio.ensure_future(fetcher.fetch_all_data(), loop=loop)
-                self._logger.info(
-                    f"{LOG_PREFIX} Fetching data from Google Threat Intelligence API"
-                )
+                self._logger.info(f"{LOG_PREFIX} Fetching data from Google Threat Intelligence API")
 
                 try:
-
-                    reports, related_entities, latest_modified_date = (
-                        loop.run_until_complete(fetch_task)
+                    reports, related_entities, latest_modified_date = loop.run_until_complete(
+                        fetch_task
                     )
                     self._logger.info(
                         f"{LOG_PREFIX} Fetched {len(reports)} reports with related entities"
@@ -201,14 +196,11 @@ class Connector:
 
                     if not reports:
                         self._logger.info(f"{LOG_PREFIX} No reports to process")
-                        return
+                        return ""
 
-                    self._process_fetched_data(
-                        work_id,
-                        reports,
-                        related_entities,
-                        latest_modified_date,
-                        converter,
+                    batch_processor.update_final_state()
+                    self._logger.info(
+                        f"{LOG_PREFIX} Processed {batch_processor.get_total_stix_objects_count()} STIX objects in {batch_processor.get_total_batches_processed()} batches"
                     )
                 except (KeyboardInterrupt, SystemExit):
                     error_flag, error_message = self._handle_keyboard_interrupt(
@@ -263,8 +255,6 @@ class Connector:
                 },
             )
             error_flag = True
-
-            work_id = work_id if "work_id" in locals() else None
         finally:
             if loop is not None:
                 self._cleanup_event_loop(loop)
@@ -276,7 +266,7 @@ class Connector:
         )
         return error_message
 
-    def _setup_api_client(self):
+    def _setup_api_client(self) -> ApiClient:
         """Set up the API client with retry strategy and circuit breaker.
 
         Returns:
@@ -284,6 +274,7 @@ class Connector:
 
         Raises:
             GTIApiClientError: If there's an error setting up the API client
+
         """
         try:
             http_client = AioHttpClient(default_timeout=120, logger=self._logger)
@@ -304,29 +295,49 @@ class Connector:
             )
             return ApiClient(strategy=retry_strategy, logger=self._logger)
         except Exception as e:
-            raise GTIApiClientError(
-                f"Failed to set up API client: {str(e)}", "setup"
-            ) from e
+            raise GTIApiClientError(f"Failed to set up API client: {str(e)}", "setup") from e
 
-    def _create_fetcher_and_converter(self, api_client, state, gti_config):
+    def _create_fetcher_and_converter(
+        self,
+        api_client: ApiClient,
+        state: Dict[str, Any],
+        gti_config: GTIConfig,
+        work_id: str,
+    ) -> Tuple[FetchAll, ConvertToSTIX, BatchProcessor]:
         """Create fetcher and converter instances.
 
         Args:
             api_client: The API client for fetching data
             state: Current connector state
             gti_config: GTI configuration
+            work_id: OpenCTI work ID to send data as it's processed
 
         Returns:
-            tuple: (FetchAll instance, ConvertToSTIX instance)
+            tuple: (FetchAll instance, ConvertToSTIX instance, BatchProcessor instance)
+
         """
-        fetcher = FetchAll(gti_config, api_client, state, self._logger)
         converter = ConvertToSTIX(
             tlp_level=self._config.connector_config.tlp_level.lower(),
             logger=self._logger,
         )
-        return fetcher, converter
 
-    def _handle_keyboard_interrupt(self, loop, fetch_task, work_id, converter):
+        batch_processor = BatchProcessor(
+            work_manager=self.work_manager,
+            work_id=work_id,
+            converter=converter,
+            logger=self._logger,
+        )
+
+        fetcher = FetchAll(gti_config, api_client, state, self._logger, batch_processor)
+        return fetcher, converter, batch_processor
+
+    def _handle_keyboard_interrupt(
+        self,
+        loop: asyncio.AbstractEventLoop,
+        fetch_task: Any,
+        work_id: str,
+        converter: ConvertToSTIX,
+    ) -> Tuple[bool, Optional[str]]:
         """Handle keyboard interrupt by processing partial data.
 
         Args:
@@ -340,37 +351,36 @@ class Connector:
 
         Raises:
             GTIAsyncError: If there's an error during async operation handling
+
         """
         error_message = "User interrupted the connector operation"
         self._logger.info(f"{LOG_PREFIX} Gracefully cancelling fetch operation...")
         fetch_task.cancel()
         try:
-
             try:
-
                 if fetch_task.done() and not fetch_task.exception():
-                    reports, related_entities, latest_modified_date = (
-                        fetch_task.result()
-                    )
+                    reports, related_entities, latest_modified_date = fetch_task.result()
                 else:
-
-                    reports, related_entities, latest_modified_date = (
-                        loop.run_until_complete(
-                            asyncio.wait_for(asyncio.shield(fetch_task), 2.0)
-                        )
+                    reports, related_entities, latest_modified_date = loop.run_until_complete(
+                        asyncio.wait_for(asyncio.shield(fetch_task), 2.0)
                     )
 
                 if reports:
                     self._logger.info(
                         f"{LOG_PREFIX} Processing {len(reports)} reports fetched before cancellation"
                     )
-                    self._process_fetched_data(
-                        work_id,
-                        reports,
-                        related_entities,
-                        latest_modified_date,
-                        converter,
+                    current_work_id = self.work_manager.get_current_work_id() or work_id
+
+                    cancel_batch_processor = BatchProcessor(
+                        work_manager=self.work_manager,
+                        work_id=current_work_id,
+                        converter=converter,
+                        logger=self._logger,
                     )
+                    cancel_batch_processor.process_batch(reports, related_entities)
+                    if latest_modified_date:
+                        cancel_batch_processor.set_latest_modified_date(latest_modified_date)
+                    cancel_batch_processor.update_final_state()
             except (asyncio.CancelledError, asyncio.TimeoutError) as err:
                 error_message = f"Could not retrieve partial results: {str(err)}"
                 self._logger.info(f"{LOG_PREFIX} {error_message}")
@@ -378,19 +388,18 @@ class Connector:
                     error_message, "interrupt_handler", {"work_id": work_id}
                 ) from err
         except (asyncio.CancelledError, asyncio.TimeoutError) as e:
-            error_message = (
-                f"Async operation failed during interrupt handling: {str(e)}"
-            )
+            error_message = f"Async operation failed during interrupt handling: {str(e)}"
             raise GTIAsyncError(error_message, "interrupt_handler") from e
         except GTIAsyncError:
-
             raise
         except Exception as e:
             error_message = f"Unexpected error during interrupt handling: {str(e)}"
             raise GTIAsyncError(error_message, "interrupt_handler") from e
         return True, error_message
 
-    def _try_process_partial_data(self, fetch_task, work_id, converter, source):
+    def _try_process_partial_data(
+        self, fetch_task: Any, work_id: str, converter: ConvertToSTIX, source: str
+    ) -> Optional[Any]:
         """Try to process any data fetched before an error or cancellation.
 
         Args:
@@ -401,18 +410,26 @@ class Connector:
 
         Returns:
             str: Optional error message if an error occurred
+
         """
         error_message = None
         try:
             if fetch_task and fetch_task.done() and not fetch_task.exception():
                 reports, related_entities, latest_modified_date = fetch_task.result()
-                self._process_fetched_data(
-                    work_id, reports, related_entities, latest_modified_date, converter
-                )
+                if reports:
+                    current_work_id = self.work_manager.get_current_work_id() or work_id
+                    partial_batch_processor = BatchProcessor(
+                        work_manager=self.work_manager,
+                        work_id=current_work_id,
+                        converter=converter,
+                        logger=self._logger,
+                    )
+                    partial_batch_processor.process_batch(reports, related_entities)
+                    if latest_modified_date:
+                        partial_batch_processor.set_latest_modified_date(latest_modified_date)
+                    partial_batch_processor.update_final_state()
         except Exception as process_err:
-            error_message = (
-                f"Error processing partial data after {source}: {str(process_err)}"
-            )
+            error_message = f"Error processing partial data after {source}: {str(process_err)}"
             self._logger.error(
                 f"{LOG_PREFIX} {error_message}",
                 meta={"error": str(process_err)},
@@ -427,11 +444,12 @@ class Connector:
             ) from process_err
         return error_message
 
-    def _cleanup_event_loop(self, loop):
+    def _cleanup_event_loop(self, loop: Any) -> None:
         """Clean up the event loop by cancelling pending tasks and closing it.
 
         Args:
             loop: The event loop to clean up
+
         """
         pending = asyncio.all_tasks(loop=loop)
         for task in pending:
@@ -440,76 +458,7 @@ class Connector:
         if pending:
             try:
                 loop.run_until_complete(asyncio.wait(pending, timeout=1.0))
-            except (asyncio.CancelledError, Exception):
-                pass
+            except (asyncio.CancelledError, Exception) as e:
+                self._logger.debug(f"{LOG_PREFIX} Exception while cleaning up event loop: {str(e)}")
 
         loop.close()
-
-    def _process_fetched_data(
-        self, work_id, reports, related_entities, latest_modified_date, converter
-    ):
-        """Process fetched data by converting to STIX and sending to OpenCTI.
-
-        Args:
-            work_id: The ID of the current work
-            reports: List of report data
-            related_entities: Dictionary of related entities
-            latest_modified_date: Latest modification date of reports
-            converter: ConvertToSTIX instance
-
-        Raises:
-            GTIEntityConversionError: If there's an error converting data to STIX
-            GTIWorkProcessingError: If there's an error processing the work
-            GTIStateManagementError: If there's an error updating the state
-        """
-        if not reports:
-            self._logger.info(f"{LOG_PREFIX} No reports to process")
-            return
-
-        try:
-            self._logger.info(f"{LOG_PREFIX} Converting data to STIX format")
-            stix_objects = converter.convert_all_data(reports, related_entities)
-
-            self._logger.info(
-                f"{LOG_PREFIX} Sending {len(stix_objects)} STIX objects to OpenCTI"
-            )
-            try:
-                self.work_manager.send_bundle(work_id=work_id, bundle=stix_objects)
-            except Exception as bundle_err:
-                raise GTIWorkProcessingError(
-                    f"Failed to send bundle: {str(bundle_err)}",
-                    work_id,
-                    {"stix_objects_count": len(stix_objects)},
-                ) from bundle_err
-
-            try:
-
-                converter_latest_date = converter.get_latest_report_date()
-                if converter_latest_date:
-                    self.work_manager.update_state(
-                        state_key="last_work_date", state_value=converter_latest_date
-                    )
-
-                elif latest_modified_date:
-                    self.work_manager.update_state(
-                        state_key="last_work_date", state_value=latest_modified_date
-                    )
-                else:
-                    self.work_manager.update_state(state_key="last_work_date")
-            except Exception as state_err:
-                raise GTIStateManagementError(
-                    f"Failed to update state: {str(state_err)}", "last_work_date"
-                ) from state_err
-        except GTIEntityConversionError:
-
-            raise
-        except Exception as e:
-            if isinstance(e, (GTIWorkProcessingError, GTIStateManagementError)):
-
-                raise
-
-            raise GTIWorkProcessingError(
-                f"Failed to process fetched data: {str(e)}",
-                work_id,
-                {"reports_count": len(reports)},
-            ) from e

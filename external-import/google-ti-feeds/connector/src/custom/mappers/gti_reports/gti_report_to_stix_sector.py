@@ -39,6 +39,8 @@ class GTIReportToSTIXSector:
 
         """
         result: List[Identity] = []
+        if not hasattr(self.report, "attributes") or not self.report.attributes:
+            raise ValueError("Invalid report attributes")
 
         targeted_industries = self.report.attributes.targeted_industries_tree
         if not targeted_industries:

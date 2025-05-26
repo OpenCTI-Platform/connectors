@@ -26,6 +26,8 @@ class GTIReportToSTIXIdentity:
             Identity: The STIX identity object.
 
         """
+        if not hasattr(self.report, "attributes") or not self.report.attributes:
+            raise ValueError("Invalid report attributes")
         attributes = self.report.attributes
         author = "Google Threat Intelligence"
         if attributes.author and len(attributes.author) > 2:

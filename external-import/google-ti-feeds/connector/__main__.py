@@ -1,5 +1,6 @@
 """Main entry point for the connector."""
 
+import os
 import traceback
 
 from connector.src.octi.connector import Connector
@@ -10,15 +11,14 @@ from pycti import OpenCTIConnectorHelper  # type: ignore
 def main() -> None:
     """Define the main function to run the connector."""
     try:
-        #     dev_mode = os.getenv("CONNECTOR_DEV_MODE", "").lower() == "true"
-        #     if dev_mode:
-        #         for k in list(os.environ):
-        #             if k.upper().startswith(("CONNECTOR_", "GTI_", "OPENCTI_")):
-        #                 if k != "CONNECTOR_DEV_MODE":
-        #                     del os.environ[k]
-        #     else:
-        #         load_dotenv(override=True)
-        load_dotenv(override=True)
+        dev_mode = os.getenv("CONNECTOR_DEV_MODE", "").lower() == "true"
+        if dev_mode:
+            for k in list(os.environ):
+                if k.upper().startswith(("CONNECTOR_", "GTI_", "OPENCTI_")):
+                    if k != "CONNECTOR_DEV_MODE":
+                        del os.environ[k]
+        else:
+            load_dotenv(override=True)
 
         from connector.src.custom.configs.gti_config import GTIConfig
         from connector.src.octi.global_config import GlobalConfig

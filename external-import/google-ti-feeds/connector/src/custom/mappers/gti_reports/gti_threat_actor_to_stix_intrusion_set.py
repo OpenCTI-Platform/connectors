@@ -42,6 +42,12 @@ class GTIThreatActorToSTIXIntrusionSet:
             IntrusionSet: The STIX intrusion set object.
 
         """
+        if (
+            not hasattr(self.threat_actor, "attributes")
+            or not self.threat_actor.attributes
+        ):
+            raise ValueError("Invalid GTI threat actor data")
+
         attributes = self.threat_actor.attributes
 
         created = datetime.fromtimestamp(attributes.creation_date)
@@ -60,12 +66,14 @@ class GTIThreatActorToSTIXIntrusionSet:
         )
 
         resource_level = self._extract_resource_level(attributes)
+        name = attributes.name
+        description = attributes.description
 
         intrusion_set_model = OctiIntrusionSetModel.create(
-            name=attributes.name,
+            name=name,
             organization_id=self.organization.id,
             marking_ids=[self.tlp_marking.id],
-            description=attributes.description,
+            description=description,
             aliases=aliases,
             first_seen=first_seen,
             last_seen=last_seen,
