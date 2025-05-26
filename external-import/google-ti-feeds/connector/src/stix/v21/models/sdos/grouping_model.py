@@ -34,6 +34,12 @@ class GroupingModel(BaseSDOModel):
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
+        data["id"] = GroupingModel._generate_id(data=data)
+        return data
+
+    @classmethod
+    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+        """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "name" in data:
             name = data.get("name", None)
             context = data.get("context", None)
@@ -41,8 +47,12 @@ class GroupingModel(BaseSDOModel):
             data["id"] = pycti.Grouping.generate_id(
                 name=name, context=context, created=created
             )
-        return data
+        return data["id"]
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""
-        return Grouping(**self.model_dump(exclude_none=True))
+        data = self.model_dump(exclude={"id"}, exclude_none=True)
+        pycti_id = GroupingModel._generate_id(data=data)
+        data.pop("id")
+
+        return Grouping(id=pycti_id, **data)

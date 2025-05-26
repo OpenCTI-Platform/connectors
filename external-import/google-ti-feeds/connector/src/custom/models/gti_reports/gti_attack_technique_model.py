@@ -42,7 +42,7 @@ class Info(BaseModel):
         None,
         description="If true, the technique can be used to execute something on a remote system.",
     )
-    x_mitre_impact_type: Optional[List[str]] = Field(
+    x_mitre_impact_type: Optional[Union[str, List[str]]] = Field(
         None,
         description="Denotes if the technique can be used for integrity or availability attacks.",
     )
@@ -50,7 +50,7 @@ class Info(BaseModel):
         None,
         description="Additional information on requirements needed for the technique.",
     )
-    x_mitre_tactic_type: Optional[str] = Field(
+    x_mitre_tactic_type: Optional[Union[str, List[str]]] = Field(
         None, description="Tactic type of the technique."
     )
     x_mitre_deprecated: Optional[bool] = Field(
@@ -96,17 +96,7 @@ class GTIAttackTechniqueData(BaseModel):
     attributes: Optional[AttackTechniqueModel] = None
 
 
-class GTIAttackTechniqueReference(BaseModel):
-    """Model representing a reference to a GTI attack technique (without full attributes)."""
-
-    id: str
-    type: str
-
-
 class GTIAttackTechniqueResponse(BaseModel):
     """Model representing a response containing GTI attack technique data."""
 
-    data: Union[
-        GTIAttackTechniqueData,
-        List[Union[GTIAttackTechniqueData, GTIAttackTechniqueReference]],
-    ]
+    data: GTIAttackTechniqueData

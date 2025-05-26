@@ -52,6 +52,9 @@ class GTIReportToSTIXReport:
             Report: The STIX report object.
 
         """
+        if not hasattr(self.report, "attributes") or not self.report.attributes:
+            raise ValueError("Invalid GTI report data")
+
         attributes = self.report.attributes
 
         name = attributes.name
@@ -72,7 +75,7 @@ class GTIReportToSTIXReport:
             report_types=[report_type],
             published=created,
             object_refs=object_refs,
-            organization_id=self.organization.id,
+            organization_id=self.author_identity.id,
             marking_ids=[self.tlp_marking.id],
             labels=labels,
             external_references=[
@@ -133,9 +136,17 @@ class GTIReportToSTIXReport:
         external_references = []
         if attributes.link:
             external_reference = ExternalReferenceModel(
-                source_name="Google Threat Intelligence",
-                description="Google Threat Intelligence Report",
+                source_name="Source link",
+                description="Source link for the Report",
                 url=attributes.link,
+            )
+            external_references.append(external_reference)
+
+        if self.report.id:
+            external_reference = ExternalReferenceModel(
+                source_name="Google Threat Intelligence Platform",
+                description="Google Threat Intelligence Report Link",
+                url=f"https://www.virustotal.com/gui/collection/{self.report.id}",
             )
             external_references.append(external_reference)
         return external_references
@@ -185,9 +196,6 @@ class GTIReportToSTIXReport:
 
         """
         object_refs = []
-        if self.author_identity:
-            object_refs.append(self.author_identity.id)
-
         for sector in self.sectors:
             object_refs.append(sector.id)
 
@@ -208,43 +216,26 @@ class GTIReportToSTIXReport:
             Report: The updated STIX report with all original data preserved.
 
         """
-        name = existing_report.name
-        created = existing_report.created
-        modified = existing_report.modified
+        updated_refs = existing_report.get("object_refs", [])
 
-        updated_refs = list(existing_report.object_refs)
         for obj_id in objects_to_add:
             if obj_id not in updated_refs:
                 updated_refs.append(obj_id)
 
-        report_types = getattr(
-            existing_report, "report_types", [ReportTypeOV.THREAT_REPORT]
-        )
-        description = getattr(existing_report, "description", None)
-        organization_id = getattr(existing_report, "created_by_ref", None)
-        marking_ids = getattr(existing_report, "object_marking_refs", [])
-        labels = getattr(existing_report, "labels", [])
-        external_references = getattr(existing_report, "external_references", [])
-        published = getattr(existing_report, "published", created)
-
-        custom_properties = {}
-        for key, value in vars(existing_report).items():
-            if key.startswith("x_"):
-                custom_properties[key] = value
-
         report = OctiReportModel.create(
-            name=name,
-            created=created,
-            modified=modified,
-            description=description,
-            report_types=report_types,
-            published=published,
+            name=existing_report.name,
+            created=existing_report.created,
+            modified=existing_report.modified,
+            description=existing_report.get("description", ""),
+            report_types=existing_report.report_types,
+            published=existing_report.published,
             object_refs=updated_refs,
-            organization_id=organization_id,
-            marking_ids=marking_ids,
-            labels=labels,
-            external_references=external_references,
-            custom_properties=custom_properties,
+            organization_id=existing_report.created_by_ref,
+            marking_ids=existing_report.object_marking_refs,
+            labels=existing_report.get("labels", []),
+            external_references=existing_report.get("external_references", []),
+            content=existing_report.get("x_opencti_content", None),
         )
+        report.object_refs = updated_refs
 
         return report.to_stix2_object()

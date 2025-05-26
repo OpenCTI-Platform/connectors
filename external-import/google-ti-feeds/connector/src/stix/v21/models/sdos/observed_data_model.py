@@ -53,11 +53,21 @@ class ObservedDataModel(BaseSDOModel):
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
+        data["id"] = ObservedDataModel._generate_id(data=data)
+        return data
+
+    @classmethod
+    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+        """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "object_refs" in data:
             object_ids = data.get("object_refs", [])
             data["id"] = pycti.ObservedData.generate_id(object_ids=object_ids)
-        return data
+        return data["id"]
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""
-        return ObservedData(**self.model_dump(exclude_none=True))
+        data = self.model_dump(exclude={"id"}, exclude_none=True)
+        pycti_id = ObservedDataModel._generate_id(data=data)
+        data.pop("id")
+
+        return ObservedData(id=pycti_id, **data)

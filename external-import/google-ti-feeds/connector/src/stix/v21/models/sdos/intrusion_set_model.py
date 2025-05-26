@@ -56,10 +56,20 @@ class IntrusionSetModel(BaseSDOModel):
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate ID regardless of whether one is provided."""
+        data["id"] = IntrusionSetModel._generate_id(data=data)
+        return data
+
+    @classmethod
+    def _generate_id(cls, data: Dict[str, Any]) -> Any:
+        """Generate ID regardless of whether one is provided."""
         if isinstance(data, dict) and "name" in data:
             data["id"] = pycti.IntrusionSet.generate_id(name=data["name"])
-        return data
+        return data["id"]
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""
-        return IntrusionSet(**self.model_dump(exclude_none=True))
+        data = self.model_dump(exclude={"id"}, exclude_none=True)
+        pycti_id = IntrusionSetModel._generate_id(data=data)
+        data.pop("id")
+
+        return IntrusionSet(id=pycti_id, **data)

@@ -1,5 +1,7 @@
 """Exception for errors when converting GTI attack techniques to STIX attack patterns."""
 
+from typing import Optional
+
 from connector.src.custom.exceptions.convert_errors.gti_entity_conversion_error import (
     GTIEntityConversionError,
 )
@@ -11,9 +13,9 @@ class GTITechniqueConversionError(GTIEntityConversionError):
     def __init__(
         self,
         message: str,
-        technique_id: str = None,
-        technique_name: str = None,
-        mitre_id: str = None,
+        technique_id: Optional[str] = None,
+        technique_name: Optional[str] = None,
+        mitre_id: Optional[str] = None,
     ):
         """Initialize the exception.
 
@@ -22,6 +24,7 @@ class GTITechniqueConversionError(GTIEntityConversionError):
             technique_id: ID of the attack technique that failed to convert
             technique_name: Name of the attack technique, if available
             mitre_id: MITRE ATT&CK ID, if available
+
         """
         super().__init__(message, technique_id, "AttackTechnique")
         self.technique_name = technique_name

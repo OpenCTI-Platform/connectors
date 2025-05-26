@@ -28,7 +28,6 @@ dependencies = [
     "stix2 >=3.0.1, <4",
     "aiohttp >=3.11.13, <4",
     "isodate >=0.7.2, <0.8",
-    "pycountry >=24.6.1, <25",
 ]
 
 [project.optional-dependencies]

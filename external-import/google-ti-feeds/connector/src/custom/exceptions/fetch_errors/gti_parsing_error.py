@@ -1,5 +1,7 @@
 """Exception for errors when parsing responses from Google Threat Intelligence API."""
 
+from typing import Optional
+
 from connector.src.custom.exceptions.gti_fetching_error import GTIFetchingError
 
 
@@ -9,9 +11,9 @@ class GTIParsingError(GTIFetchingError):
     def __init__(
         self,
         message: str,
-        endpoint: str = None,
-        entity_type: str = None,
-        data_sample: str = None,
+        endpoint: Optional[str] = None,
+        entity_type: Optional[str] = None,
+        data_sample: Optional[str] = None,
     ):
         """Initialize the exception.
 
@@ -20,6 +22,7 @@ class GTIParsingError(GTIFetchingError):
             endpoint: API endpoint where the response was received
             entity_type: Type of entity being parsed (e.g., "report", "malware")
             data_sample: Sample of the data that failed to parse (truncated if large)
+
         """
         error_msg = f"Error parsing response: {message}"
         if entity_type and endpoint:
@@ -39,4 +42,4 @@ class GTIParsingError(GTIFetchingError):
             else:
                 self.data_sample = data_sample
         else:
-            self.data_sample = None
+            self.data_sample = ""

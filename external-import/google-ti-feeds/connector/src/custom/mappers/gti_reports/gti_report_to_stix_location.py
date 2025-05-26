@@ -1,8 +1,7 @@
 """Converts a GTI report's targeted regions to STIX Location objects."""
 
-from typing import Any, List, Optional
+from typing import List, Optional
 
-import pycountry
 from connector.src.custom.models.gti_reports.gti_report_model import (
     GTIReportData,
     TargetedRegion,
@@ -41,6 +40,8 @@ class GTIReportToSTIXLocation:
 
         """
         result: List[Location] = []
+        if not hasattr(self.report, "attributes") or not self.report.attributes:
+            raise ValueError("Invalid report attributes")
 
         targeted_regions = self.report.attributes.targeted_regions_hierarchy
         if not targeted_regions:
@@ -73,30 +74,6 @@ class GTIReportToSTIXLocation:
 
         return location
 
-    def country_to_iso(self, name: str) -> Any:
-        """Given a country name (full or partial), return its ISO 3166-1 codes:
-        - alpha_2: two-letter code
-        Returns None if no match is found.
-        """
-        country = pycountry.countries.get(name=name)
-
-        if country is None:
-            for c in pycountry.countries:
-                if c.name.lower() == name.lower():
-                    country = c
-                    break
-
-        if country is None:
-            try:
-                country = pycountry.countries.search_fuzzy(name)[0]
-            except LookupError:
-                return None
-
-        if country is None:
-            return None
-
-        return country.alpha_2
-
     def _create_country(self, region_data: TargetedRegion) -> Location:
         """Create a LocationCountry object.
 
@@ -110,7 +87,7 @@ class GTIReportToSTIXLocation:
         if not region_data.country:
             return None
 
-        iso_code = self.country_to_iso(region_data.country)
+        iso_code = region_data.country_iso2
         if iso_code is None:
             return None
 

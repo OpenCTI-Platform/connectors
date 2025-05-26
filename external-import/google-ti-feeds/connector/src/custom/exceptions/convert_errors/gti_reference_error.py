@@ -1,18 +1,26 @@
 """Exception for errors related to adding references between STIX objects."""
 
+from typing import Optional
+
 from connector.src.custom.exceptions.gti_converting_error import GTIConvertingError
 
 
 class GTIReferenceError(GTIConvertingError):
     """Exception raised when there's an error adding a reference between STIX objects."""
 
-    def __init__(self, message: str, source_id: str = None, target_id: str = None):
+    def __init__(
+        self,
+        message: str,
+        source_id: Optional[str] = None,
+        target_id: Optional[str] = None,
+    ):
         """Initialize the exception.
 
         Args:
             message: Error message
             source_id: ID of the source object where the reference should be added
             target_id: ID of the target object being referenced
+
         """
         error_msg = f"Failed to add reference: {message}"
         if source_id and target_id:

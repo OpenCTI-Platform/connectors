@@ -1,5 +1,7 @@
 """Exception for API-related errors when fetching data from Google Threat Intelligence."""
 
+from typing import Any, Dict, Optional
+
 from connector.src.custom.exceptions.gti_fetching_error import GTIFetchingError
 
 
@@ -9,9 +11,9 @@ class GTIApiError(GTIFetchingError):
     def __init__(
         self,
         message: str,
-        status_code: int = None,
-        endpoint: str = None,
-        details: dict = None,
+        status_code: Optional[int] = None,
+        endpoint: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize the exception.
 
@@ -20,6 +22,7 @@ class GTIApiError(GTIFetchingError):
             status_code: HTTP status code, if available
             endpoint: API endpoint where the error occurred
             details: Additional details about the error
+
         """
         error_msg = message
         if endpoint and status_code:

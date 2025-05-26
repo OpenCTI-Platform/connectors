@@ -72,7 +72,7 @@ def all_optional_config(request) -> dict[str, str]:
 
 @pytest.fixture(
     params=[
-        {"gti_import_start_date": "P30D"},
+        {"gti_import_start_date": "P1D"},
         {"gti_api_url": "https://www.virustotal.com/api/v3"},
         {"gti_import_reports": "True"},
         {"gti_report_types": "All"},

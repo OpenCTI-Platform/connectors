@@ -33,6 +33,7 @@ class WorkManager:
         self._config = config
         self._helper = helper
         self._logger = logger or logging.getLogger(__name__)
+        self._current_work_id: Optional[str] = None
 
     def get_state(self) -> Dict[str, Any]:
         """Get the current state dict of the Connector.
@@ -59,6 +60,25 @@ class WorkManager:
             return True
         except ValueError:
             return False
+
+    def get_current_work_id(self) -> Optional[str]:
+        """Get the current work ID.
+
+        Returns:
+            Optional[str]: The current work ID or None if no work is currently active.
+
+        """
+        return self._current_work_id
+
+    def set_current_work_id(self, work_id: str) -> None:
+        """Set the current work ID.
+
+        Args:
+            work_id (str): The work ID to set as current.
+
+        """
+        self._current_work_id = work_id
+        self._logger.info(f"{LOG_PREFIX} Current work ID set to {work_id}")
 
     def update_state(
         self, state_key: str, date_str: str = "", error_flag: bool = False
@@ -94,12 +114,16 @@ class WorkManager:
             name (str): The name of the work.
             work_counter (Optional[int]): The counter for the work.
 
+        Returns:
+            str: The ID of the initiated work.
+
         """
         if work_counter is not None:
             name = f"{name} #({work_counter})"
         work_id: str = self._helper.api.work.initiate_work(
             self._helper.connect_id, name
         )
+        self._current_work_id = work_id
         self._logger.info(f"{LOG_PREFIX} Initiated work {work_id} for {name}")
         return work_id
 
@@ -126,6 +150,8 @@ class WorkManager:
             message=message,
             in_error=error_flag,
         )
+        if self._current_work_id == work_id:
+            self._current_work_id = None
         self._logger.info(f"{LOG_PREFIX} Work {work_id} marked to be processed")
 
     def process_all_remaining_works(
@@ -148,6 +174,7 @@ class WorkManager:
                     error_flag=error_flag,
                     error_message=error_message,
                 )
+        self._current_work_id = None
         self._logger.info(f"{LOG_PREFIX} All remaining works marked to be process.")
 
     def send_bundle(self, work_id: str, bundle: Any) -> None:

@@ -82,37 +82,3 @@ class OctiReportModel:
         }
 
         return ReportModel(**data)
-
-    @staticmethod
-    def create_minimal(
-        name: str,
-        created: datetime,
-        modified: datetime,
-        published: datetime,
-        object_refs: List[str],
-    ) -> ReportModel:
-        """Create a minimal Report model with only required fields.
-
-        Args:
-            name: The name of the report
-            created: When the report was created
-            modified: When the report was last modified
-            published: When the report was published
-            object_refs: List of referenced object IDs
-
-        Returns:
-            ReportModel: The created report model with minimal required fields
-
-        """
-        data = {
-            "type": "report",
-            "spec_version": "2.1",
-            "created": created,
-            "modified": modified,
-            "name": name,
-            "report_types": [ReportTypeOV.THREAT_REPORT],
-            "published": published,
-            "object_refs": object_refs,
-        }
-
-        return ReportModel(**data)

@@ -27,14 +27,19 @@ class GTIReportRelationship:
             report_id (str): The STIX ID of the report object.
 
         """
+        if hasattr(report, "attributes") and report.attributes is not None:
+            created = datetime.fromtimestamp(report.attributes.creation_date)
+            modified = datetime.fromtimestamp(report.attributes.last_modification_date)
+        else:
+            raise ValueError("Invalid report data")
+
         self.report = report
+
         self.organization = organization
         self.tlp_marking = tlp_marking
         self.report_id = report_id
-        self.created = datetime.fromtimestamp(self.report.attributes.creation_date)
-        self.modified = datetime.fromtimestamp(
-            self.report.attributes.last_modification_date
-        )
+        self.created = created
+        self.modified = modified
 
     def create_relationship(
         self,
@@ -55,11 +60,16 @@ class GTIReportRelationship:
             Relationship: The STIX relationship object.
 
         """
+        if hasattr(self.report, "attributes") and self.report.attributes is not None:
+            name = self.report.attributes.name
+        else:
+            raise ValueError("Report not initialized")
+
         return OctiRelationshipModel.create_from_report(
             relationship_type=relationship_type,
             report_id=self.report_id,
             target_ref=target_ref,
-            report_name=self.report.attributes.name,
+            report_name=name,
             target_name=target_name,
             organization_id=self.organization.id,
             marking_ids=[self.tlp_marking.id],
