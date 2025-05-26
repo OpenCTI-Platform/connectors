@@ -1,5 +1,6 @@
 import base64
 import re
+import urllib.parse
 from urllib.parse import urlparse
 
 import requests
@@ -21,6 +22,9 @@ class EsetConnector:
         )
         self.eset_api_secret = get_config_variable(
             "ESET_API_SECRET", ["eset", "api_secret"], config.load
+        )
+        self.host = get_config_variable(
+            "ESET_API_HOST", ["eset", "api_host"], config.load, default="https://eti.eset.com/",
         )
         # playbook_compatible=True only if a bundle is sent !
         self.helper = OpenCTIConnectorHelper(
@@ -86,7 +90,11 @@ class EsetConnector:
             if not parts.netloc or not parts.netloc.lower().endswith("eset.com"):
                 continue
 
-            return f"https://eti.eset.com/api/v2/apt-reports/{match.group('report_uid')}/download/pdf"
+            return urllib.parse.urljoin(
+                self.host,
+                f"api/v2/apt-reports/{match.group('report_uid')}/download/pdf"
+            )
+
         return None
 
     def enrich_report(self, report_object: dict, api_url: str, report_name: str) -> None:
@@ -109,7 +117,6 @@ class EsetConnector:
             "name": report_name,
             "data": base64.b64encode(content).decode("utf-8"),
             "mime_type": "application/octet-pdf",
-            "no_trigger_import": True,
         })
 
         report_object["custom_properties"] = custom_properties
@@ -123,11 +130,11 @@ class EsetConnector:
         return False
 
     def process_message(self, data: dict) -> str:
+        self.helper.log_debug("Processing", {"data": data})
+
         try:
             enrichment_entity = data["enrichment_entity"]
             entity_id = data["entity_id"]
-
-            self.helper.log_debug("Processing entity", {"entity": enrichment_entity})
 
             if not self.entity_in_scope(data):
                 return self.helper.log_info(
@@ -153,7 +160,7 @@ class EsetConnector:
 
             if self.has_attachment(enrichment_entity.get("importFiles", []), report_name):
                 return self.helper.log_info(
-                    "Report already has attachment imported", {"entity_id": entity_id, "file": report_name}
+                    "Report already has attachment imported", {"entity_id": entity_id, "name": report_name}
                 )
 
             url = self._get_eti_api_url(enrichment_entity.get("objects", []))
@@ -162,7 +169,7 @@ class EsetConnector:
                     "Skipping report without ETI portal link", {"entity_id": entity_id}
                 )
 
-            self.helper.log_info("Downloading report", {"entity_id": entity_id, "url": url})
+            self.helper.log_info("Downloading report", {"entity_id": entity_id, "name": report_name, "url": url})
 
             self.enrich_report(stix_object, url, report_name)
             stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)

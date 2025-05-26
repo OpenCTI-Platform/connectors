@@ -5,12 +5,12 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
-  name: 'Internal Enrichment Connector Template'
-  scope: 'ChangeMe'
+  name: 'ESET MISP Enrichment'
+  scope: 'report'
   log_level: 'info'
   auto: true # Enable/disable auto-enrichment of observables
 
-connector_template:
+eset:
   api_base_url: 'ChangeMe'
   api_key: 'ChangeMe'
-  max_tlp: "TLP:AMBER" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+  api_host: 'https://eti.eset.com/'
