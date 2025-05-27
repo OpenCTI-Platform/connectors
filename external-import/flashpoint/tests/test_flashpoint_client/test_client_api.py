@@ -20,7 +20,7 @@ def mock_flashpoint_client():
     )
 
 
-def mock_response(status_code: int, body: dict = None):
+def mock_response(status_code: int, body: dict | None = None):
     response = Mock(spec=Response)
 
     response.status_code = status_code

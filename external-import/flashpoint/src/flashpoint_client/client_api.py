@@ -45,7 +45,7 @@ class FlashpointClient:
         response.raise_for_status()
         return response.json()
 
-    def communities_search(self, query, start_date):
+    def communities_search(self, query: str, start_date: datetime) -> list[dict]:
         """
         :param query:
         :param start_date:
@@ -101,7 +101,7 @@ class FlashpointClient:
         response.raise_for_status()
         return base64.b64encode(response.content), response.headers.get("Content-Type")
 
-    def get_alerts(self, start_date):
+    def get_alerts(self, start_date: datetime) -> list[dict]:
         """
         :return:
         """
@@ -124,14 +124,16 @@ class FlashpointClient:
             alerts.extend(data.get("items"))
         return alerts
 
-    def get_reports(self, start_date):
+    def get_reports(self, start_date: datetime) -> list[dict]:
         """
         :return:
         """
         url = self.api_base_url + "/finished-intelligence/v1/reports"
         limit = 100
         params = {
-            "since": start_date,
+            "since": start_date.strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            ),  # UTC as +00:00 offset leads to 400 Bad Request
             "limit": limit,
             "skip": 0,
             "sort": "updated_at:asc",
@@ -171,7 +173,7 @@ class FlashpointClient:
         return data
 
     def get_compromised_credential_sightings(
-        self, since: datetime = None, fresh_only: bool = True
+        self, since: datetime | None = None, fresh_only: bool = True
     ) -> Generator[CompromisedCredentialSighting, None, None]:
         """
         Get Compromised Credentials Sightings from Flashpoint API.
@@ -206,7 +208,7 @@ class FlashpointClient:
             total_hits: int = data["hits"]["total"]
             # /scroll endpoint returns total hits as a dict {'relation': str, 'value': int}
             if isinstance(total_hits, dict):
-                total_hits: int = data["hits"]["total"]["value"]
+                total_hits: int = data["hits"]["total"]["value"]  # type: ignore[no-redef]
 
             results: list[dict] = data["hits"]["hits"]
             for result in results:

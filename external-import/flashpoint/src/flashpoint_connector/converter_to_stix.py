@@ -84,6 +84,7 @@ class ConverterToStix:
         except Exception as ex:
             message = f"An error occurred while creating relation: {source_id} {relation} {target_id}, error: {ex}"
             self.helper.connector_logger.error(message)
+            return None
 
     def _guess_knowledge_graph(self, tags, guess_relationships_from_reports):
         """
@@ -427,31 +428,31 @@ class ConverterToStix:
             "### Credential"
             f"- **Username**: {alert.username}  \n"
             f"- **Password**: {alert.password}  \n"
-            f"- **Domain**: {alert.domain}  \n"
-            f"- **Affected Domain**: {alert.affected_domain}  \n"
-            f"- **Affected Url**: {alert.affected_url}  \n"
+            f"- **Domain**: {alert.domain or '-'}  \n"
+            f"- **Affected Domain**: {alert.affected_domain or '-'}  \n"
+            f"- **Affected Url**: {alert.affected_url or '-'}  \n"
             "  \n"
             "### Password Complexity"
-            f"- **Length**: {alert.password_complexity.length}  \n"
-            f"- **Lowercase Letter**: {alert.password_complexity.has_lowercase}  \n"
-            f"- **Uppercase Letter**: {alert.password_complexity.has_uppercase}  \n"
-            f"- **Number**: {alert.password_complexity.has_number}  \n"
-            f"- **Symbol**: {alert.password_complexity.has_symbol}  \n"
+            f"- **Length**: {alert.password_complexity.length or '-'}  \n"
+            f"- **Lowercase Letter**: {alert.password_complexity.has_lowercase or '-'}  \n"
+            f"- **Uppercase Letter**: {alert.password_complexity.has_uppercase or '-'}  \n"
+            f"- **Number**: {alert.password_complexity.has_number or '-'}  \n"
+            f"- **Symbol**: {alert.password_complexity.has_symbol or '-'}  \n"
             "  \n"
             "### Breach"
-            f"- **Title**: {alert.breach.title}  \n"
-            f"- **Sourced From**: {alert.breach.source}  \n"
-            f"- **Source Type**: {alert.breach.source_type}  \n"
-            f"- **Breached At**: {datetime.isoformat(alert.breach.created_at, timespec='seconds')}  \n"
-            f"- **Discovered At**: {datetime.isoformat(alert.breach.first_observed_at, timespec='seconds')}  \n"
+            f"- **Title**: {alert.breach.title or '-'}  \n"
+            f"- **Sourced From**: {alert.breach.source or '-'}  \n"
+            f"- **Source Type**: {alert.breach.source_type or '-'}  \n"
+            f"- **Breached At**: {datetime.isoformat(alert.breach.created_at, timespec='seconds') if alert.breach.created_at else '-'}  \n"
+            f"- **Discovered At**: {datetime.isoformat(alert.breach.first_observed_at, timespec='seconds') if alert.breach.first_observed_at else '-'}  \n"
         )
 
-        if alert.infected_host:
+        if alert.infected_host and alert.infected_host.malware:
             markdown_content += (
                 "  \n"
                 "### Infection / Malware Data"
-                f"- **Malware Family**: {alert.infected_host.malware.family}  \n"
-                f"- **Malware Version**: {alert.infected_host.malware.version}  \n"
+                f"- **Malware Family**: {alert.infected_host.malware.family or '-'}  \n"
+                f"- **Malware Version**: {alert.infected_host.malware.version or '-'}  \n"
             )
 
         return markdown_content
@@ -713,8 +714,10 @@ class ConverterToStix:
 
         incident_name = f"CCM Alert: {alert.username} - {alert.fpid}"
         incident_description = (
-            f"A compromised credential has been detected for username:  **{alert.username}** on affected URL: **{alert.affected_url}**.  \n"
-            f"The alert was triggered on **{alert.header.indexed_at.strftime('%B %d, %Y, at %I:%M %p UTC')}**.  \n"
+            f"A compromised credential has been detected for username:  **{alert.username}**"
+            f" on affected URL: **{alert.affected_url or '_unknown_'}**.  \n"
+            "The alert was triggered on "
+            f"**{alert.header.indexed_at.strftime('%B %d, %Y, at %I:%M %p UTC') if alert.header.indexed_at else '_unknown date_'}**.  \n"
             "  \n"
             "For more details about this alert, please consult the Content tab.  \n"
         )

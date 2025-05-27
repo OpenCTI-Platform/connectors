@@ -33,7 +33,7 @@ class FlashpointConnector:
         connector_state = self.helper.get_state() or {}
 
         # Handle legacy connector's state (since 6.6.12)
-        last_run_iso: str = connector_state.get("last_run")
+        last_run_iso: str = connector_state.get("last_run")  # type: ignore[assignment]
         if last_run_iso and "last_alerts_run" not in connector_state:
             connector_state["last_alerts_run"] = last_run_iso
         if last_run_iso and "last_reports_run" not in connector_state:
@@ -65,7 +65,7 @@ class FlashpointConnector:
         except Exception as ex:
             self.helper.log_error(f"An error occurred while sending STIX bundle: {ex}")
 
-    def _import_reports(self, start_date):
+    def _import_reports(self, start_date: datetime) -> None:
         """
         :return:
         """
@@ -100,7 +100,7 @@ class FlashpointConnector:
         message = "End of import of reports"
         self.helper.api.work.to_processed(work_id, message)
 
-    def _import_communities(self, start_date: datetime):
+    def _import_communities(self, start_date: datetime) -> None:
         """
         :param start_date:
         :return:
@@ -140,7 +140,7 @@ class FlashpointConnector:
         message = "End of import of communities search"
         self.helper.api.work.to_processed(work_id, message)
 
-    def _import_misp_feed(self):
+    def _import_misp_feed(self) -> None:
         """
         :return:
         """
@@ -278,7 +278,7 @@ class FlashpointConnector:
         except Exception as err:
             self.helper.connector_logger.error(err)
 
-    def _import_alerts(self, start_date: datetime):
+    def _import_alerts(self, start_date: datetime) -> None:
         """
         :return:
         """
@@ -511,7 +511,7 @@ class FlashpointConnector:
                     "Import Alerts enabled, going to fetch Alerts since:",
                     {"since": start_date},
                 )
-                self._import_alerts(datetime.fromisoformat(start_date))
+                self._import_alerts(start_date)
 
                 current_state["last_alerts_run"] = now_iso
                 self._set_state(current_state)
