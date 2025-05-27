@@ -22,4 +22,5 @@ services:
       - FLASHPOINT_IMPORT_COMMUNITIES=false
       - FLASHPOINT_COMMUNITIES_QUERIES=cybersecurity,cyberattack
       - FLASHPOINT_IMPORT_CCM_ALERTS=false
+      - FLASHPOINT_FRESH_CCM_ALERTS_ONLY=true
     restart: always

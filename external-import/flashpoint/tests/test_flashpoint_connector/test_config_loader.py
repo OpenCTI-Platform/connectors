@@ -55,6 +55,7 @@ def fake_config_dict() -> dict[str, dict[str, Any]]:
             "import_communities": True,
             "communities_queries": "cybersecurity,cyberattack",
             "import_ccm_alerts": True,
+            "fresh_ccm_alerts_only": True,
         },
     }
 

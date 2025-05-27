@@ -22,3 +22,4 @@ flashpoint:
   import_communities: true
   communities_queries: "cybersecurity,cyberattack"
   import_ccm_alerts: true
+  fresh_ccm_alerts_only: true

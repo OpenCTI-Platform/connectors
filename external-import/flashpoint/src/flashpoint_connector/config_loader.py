@@ -256,6 +256,10 @@ class FlashpointConfig(ConfigBaseModel):
         description="Whether to import Compromised Credentials Monitoring alerts or not.",
         default=False,
     )
+    fresh_ccm_alerts_only: bool = Field(
+        description="Whether to import only fresh Compromised Credentials Monitoring alerts or all of them.",
+        default=True,
+    )
 
 
 class ConfigLoader(BaseSettings):
