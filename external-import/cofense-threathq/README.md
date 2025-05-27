@@ -176,16 +176,19 @@ Scope:
 - Report
   - Credential Phishing
   - Malware Campaign
-- Malwares
-- Vulnerability
+- Malwares (labels)
+- Vulnerability (WIP)
 - Observable
   - URL
   - File
-  - Email
+  - Email-Subject
+  - Email-Message
   - IPv4 Address
   - Domain Name
-  - Asn
-- Promote observables as indicators
+  - Asn (WIP)
+- Location (WIP)
+- Sector(Only Recipient NAICS Subsector(s))
+- Promote observables as indicators (WIP)
 
 
 ## Debugging

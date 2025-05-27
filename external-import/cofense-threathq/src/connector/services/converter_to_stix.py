@@ -288,6 +288,8 @@ class ConverterToStix:
 
         if report_type and "credential phishing" not in report_type.lower():
             report_type = "Malware Campaign"
+        else:
+            report_type = "Credential Phishing"
 
         report_pdf_binary = new_report_info.get("pdf_binary")
         if report_pdf_binary:
