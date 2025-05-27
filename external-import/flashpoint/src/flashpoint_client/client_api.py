@@ -106,7 +106,7 @@ class FlashpointClient:
         :return:
         """
         alerts = []
-        url = self.api_url + "/alert-management/v1/notifications"
+        url = self.api_base_url + "/alert-management/v1/notifications"
         params = {
             "created_after": start_date.strftime(
                 "%Y-%m-%dT%H:%M:%SZ"
