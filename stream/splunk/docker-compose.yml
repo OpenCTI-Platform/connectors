@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-splunk:
-    image: opencti/connector-splunk:6.6.11
+    image: opencti/connector-splunk:6.6.13
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -15,6 +15,7 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - SPLUNK_URL=https://splunk1.changeme.com:8089
       - SPLUNK_TOKEN=Token1
+      - SPLUNK_AUTH_TYPE=Bearer
       - SPLUNK_OWNER=nobody
       - SPLUNK_SSL_VERIFY=true
       - SPLUNK_APP=search

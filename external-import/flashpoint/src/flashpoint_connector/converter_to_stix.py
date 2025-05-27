@@ -13,6 +13,7 @@ from pycti import (
     Location,
     Malware,
     MarkingDefinition,
+    OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
     ThreatActorGroup,
@@ -29,7 +30,7 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper):
+    def __init__(self, helper: OpenCTIConnectorHelper):
         self.helper = helper
         self.author_id = self.create_author()
         self.marking = stix2.MarkingDefinition(
@@ -51,7 +52,8 @@ class ConverterToStix:
         identity = self.helper.api.identity.create(
             type="Organization",
             name="Flashpoint",
-            description="Flashpoint is a data and intelligence company that empowers our customers to take rapid, decisive action to stop threats and reduce risk.",
+            description="Flashpoint is a data and intelligence company that empowers our customers to take rapid, "
+            "decisive action to stop threats and reduce risk.",
         )
         return identity["standard_id"]
 
@@ -77,7 +79,7 @@ class ConverterToStix:
             message = f"An error occurred while creating relation: {source_id} {relation} {target_id}, error: {ex}"
             self.helper.connector_logger.error(message)
 
-    def _guess_knowledge_graph(self, tags):
+    def _guess_knowledge_graph(self, tags, guess_relationships_from_reports):
         """
         :param tags:
         :return:
@@ -207,51 +209,57 @@ class ConverterToStix:
                                 allow_custom=True,
                             )
                         )
+                if guess_relationships_from_reports:
+                    for attack_pattern in elements["attack_patterns"]:
+                        threats = (
+                            elements["threat_actors"]
+                            + elements["intrusion_sets"]
+                            + elements["malwares"]
+                        )
+                        for threat in threats:
+                            relationship_uses = self.create_relation(
+                                source_id=threat.id,
+                                target_id=attack_pattern.id,
+                                relation="uses",
+                            )
+                            report_objects.append(relationship_uses)
 
-                for attack_pattern in elements["attack_patterns"]:
-                    threats = (
-                        elements["threat_actors"]
-                        + elements["intrusion_sets"]
-                        + elements["malwares"]
+                    for malware in elements["malwares"]:
+                        threats = elements["threat_actors"] + elements["intrusion_sets"]
+                        for threat in threats:
+                            relationship_uses = self.create_relation(
+                                source_id=threat.id,
+                                target_id=malware.id,
+                                relation="uses",
+                            )
+                            report_objects.append(relationship_uses)
+
+                    for tool in elements["tools"]:
+                        threats = elements["threat_actors"] + elements["intrusion_sets"]
+                        for threat in threats:
+                            relationship_uses = self.create_relation(
+                                source_id=threat.id, target_id=tool.id, relation="uses"
+                            )
+                            report_objects.append(relationship_uses)
+
+                    victims = (
+                        elements["regions"]
+                        + elements["countries"]
+                        + elements["sectors"]
                     )
-                    for threat in threats:
-                        relationship_uses = self.create_relation(
-                            source_id=threat.id,
-                            target_id=attack_pattern.id,
-                            relation="uses",
+                    for victim in victims:
+                        threats = (
+                            elements["threat_actors"]
+                            + elements["intrusion_sets"]
+                            + elements["malwares"]
                         )
-                        report_objects.append(relationship_uses)
-
-                for malware in elements["malwares"]:
-                    threats = elements["threat_actors"] + elements["intrusion_sets"]
-                    for threat in threats:
-                        relationship_uses = self.create_relation(
-                            source_id=threat.id, target_id=malware.id, relation="uses"
-                        )
-                        report_objects.append(relationship_uses)
-
-                for tool in elements["tools"]:
-                    threats = elements["threat_actors"] + elements["intrusion_sets"]
-                    for threat in threats:
-                        relationship_uses = self.create_relation(
-                            source_id=threat.id, target_id=tool.id, relation="uses"
-                        )
-                        report_objects.append(relationship_uses)
-
-                victims = (
-                    elements["regions"] + elements["countries"] + elements["sectors"]
-                )
-                for victim in victims:
-                    threats = (
-                        elements["threat_actors"]
-                        + elements["intrusion_sets"]
-                        + elements["malwares"]
-                    )
-                    for threat in threats:
-                        relationship_uses = self.create_relation(
-                            source_id=threat.id, target_id=victim.id, relation="targets"
-                        )
-                        report_objects.append(relationship_uses)
+                        for threat in threats:
+                            relationship_uses = self.create_relation(
+                                source_id=threat.id,
+                                target_id=victim.id,
+                                relation="targets",
+                            )
+                            report_objects.append(relationship_uses)
                 report_objects = (
                     report_objects
                     + elements["regions"]
@@ -265,7 +273,7 @@ class ConverterToStix:
                 )
         return report_objects
 
-    def convert_flashpoint_report(self, report):
+    def convert_flashpoint_report(self, report, guess_relationships_from_reports):
         """
         :param report:
         :return:
@@ -274,7 +282,9 @@ class ConverterToStix:
         # Try to resolve
         tags = report["tags"]
         actors = report["actors"]
-        report_objects = self._guess_knowledge_graph(tags + actors)
+        report_objects = self._guess_knowledge_graph(
+            tags + actors, guess_relationships_from_reports
+        )
         object_refs = []
         for report_object in report_objects:
             objects.append(report_object)
@@ -387,10 +397,10 @@ A media attachment ({alert.get("media_name")}) is available in Data section
         :return:
         """
         description = (
-            f"A potential data exposure has been detected in **{alert.get("channel_type")}**. "
+            f"A potential data exposure has been detected in **{alert.get('channel_type')}**. "
             f"The alert was triggered on "
-            f"**{parse(alert.get("created_at")).strftime('%B %d, %Y, at %I:%M %p UTC')}** "
-            f"by the rule **{alert.get("alert_reason").strip()}**. "
+            f"**{parse(alert.get('created_at')).strftime('%B %d, %Y, at %I:%M %p UTC')}** "
+            f"by the rule **{alert.get('alert_reason').strip()}**. "
             f"For more details about this alert, please consult the Content tab."
         )
         return description

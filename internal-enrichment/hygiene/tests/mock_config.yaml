@@ -1,0 +1,20 @@
+# Mock config with non-standards
+opencti:
+  url: 'https://localhost:8080'
+
+connector:
+  id: 'test-id'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'Hygiene'
+  scope: 'IPv4-Addr,IPv6-Addr,Domain-Name,StixFile,Artifact'
+  auto: true # Enable/disable auto-enrichment of observables
+  confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+
+hygiene:
+  warninglists_slow_search: true  # Enable warning lists slow search mode
+  enrich_subdomains: true
+  label_name: likely-false-positive
+  label_color: "#ff0000"
+  label_parent_name: likely-false-positive-parent
+  label_color_parent: "#00ff00"

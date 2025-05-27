@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-greynoise:
-    image: opencti/connector-greynoise:6.6.11
+    image: opencti/connector-greynoise:6.6.13
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -12,8 +12,5 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - GREYNOISE_KEY=ChangeMe
       - GREYNOISE_MAX_TLP=TLP:AMBER
-      - "GREYNOISE_NAME=GreyNoise Internet Scanner"
-      - "GREYNOISE_DESCRIPTION=GreyNoise collects and analyzes opportunistic scan and attack activity for devices connected directly to the Internet."
       - GREYNOISE_SIGHTING_NOT_SEEN=false
-      - GREYNOISE_DEFAULT_SCORE=50
     restart: always

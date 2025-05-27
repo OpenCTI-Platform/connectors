@@ -12,4 +12,8 @@ connector:
   log_level: 'info'
 
 hygiene:
-  warninglists_slow_search: false  # Enable warning lists slow search mode
+  warninglists_slow_search: true  # Enable warning lists slow search mode
+  label_name: hygiene-label-name
+  label_color: "#fc0340"
+  label_parent_name: hygiene-parent-label-name
+  label_parent_color: "#fc0330"
