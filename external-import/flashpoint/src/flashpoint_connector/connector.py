@@ -1,8 +1,7 @@
 import mimetypes
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
-from dateutil.parser import parse
 from flashpoint_client import FlashpointClient
 from pycti import OpenCTIConnectorHelper
 
@@ -25,6 +24,32 @@ class FlashpointConnector:
         )
         self.converter_to_stix = ConverterToStix(self.helper)
         self.misp_converter_to_stix = MISPConverterToStix(self.helper, self.config)
+
+    def _get_state(self) -> dict:
+        """
+        Get the state of the connector.
+        :return: The state of the connector.
+        """
+        connector_state = self.helper.get_state() or {}
+
+        # Handle legacy connector's state (since 6.6.12)
+        last_run_iso: str = connector_state.get("last_run")
+        if last_run_iso and "last_alerts_run" not in connector_state:
+            connector_state["last_alerts_run"] = last_run_iso
+        if last_run_iso and "last_reports_run" not in connector_state:
+            connector_state["last_reports_run"] = last_run_iso
+        if last_run_iso and "last_communities_run" not in connector_state:
+            connector_state["last_communities_run"] = last_run_iso
+
+        return connector_state
+
+    def _set_state(self, state: dict) -> None:
+        """
+        Set the state of the connector.
+        :param state: The state to set.
+        """
+        self.helper.set_state(state)
+        self.helper.force_ping()  # force update on OpenCTI
 
     def _send_bundle(self, work_id: str, serialized_bundle: str) -> None:
         """
@@ -135,38 +160,30 @@ class FlashpointConnector:
                 and "misp_last_event_timestamp" in current_state
                 and "misp_last_event" in current_state
             ):
-                last_run = parse(current_state["misp_last_run"])
-                last_event = parse(current_state["misp_last_event"])
+                last_run = datetime.fromisoformat(current_state["misp_last_run"])
+                last_event = datetime.fromisoformat(current_state["misp_last_event"])
                 last_event_timestamp = current_state["misp_last_event_timestamp"]
                 self.helper.log_info(
-                    "Connector MISP Feed last run: "
-                    + last_run.astimezone(tz=timezone.utc).isoformat()
+                    "Connector MISP Feed last run: " + current_state["misp_last_run"]
                 )
                 self.helper.log_info(
                     "Connector MISP Feed latest event: "
-                    + last_event.astimezone(tz=timezone.utc).isoformat()
+                    + current_state["misp_last_event"]
                 )
             elif current_state is not None and "misp_last_run" in current_state:
-                last_run = parse(current_state["misp_last_run"])
+                last_run = datetime.fromisoformat(current_state["misp_last_run"])
                 last_event = last_run
                 last_event_timestamp = int(last_event.timestamp())
                 self.helper.log_info(
-                    "Connector MISP Feed last run: "
-                    + last_run.astimezone(tz=timezone.utc).isoformat()
+                    "Connector MISP Feed last run: " + current_state["misp_last_run"]
                 )
                 self.helper.log_info(
                     "Connector MISP Feed latest event: "
-                    + last_event.astimezone(tz=timezone.utc).isoformat()
+                    + current_state["misp_last_run"]  # last_event = last_run
                 )
             else:
-                if self.config.flashpoint.import_start_date is not None:
-                    if isinstance(self.config.flashpoint.import_start_date, timedelta):
-                        last_event = now - self.config.flashpoint.import_start_date
-                    else:
-                        last_event = self.config.flashpoint.import_start_date
-                    last_event_timestamp = int(last_event.timestamp())
-                else:
-                    last_event_timestamp = int(now.timestamp())
+                last_event = self.config.flashpoint.import_start_date
+                last_event_timestamp = int(last_event.timestamp())
                 self.helper.log_info("Connector MISP Feed has never run")
 
             number_events = 0
@@ -462,32 +479,19 @@ class FlashpointConnector:
         try:
             # Get the current state
             now = datetime.now(tz=timezone.utc)
-            current_state_datetime = now.isoformat()
+            now_iso = now.isoformat(timespec="seconds")
 
-            current_timestamp = int(datetime.timestamp(now))
-            current_state = self.helper.get_state()
+            current_state = self._get_state()
+            last_run = (
+                datetime.fromisoformat(current_state["last_run"])
+                if "last_run" in current_state
+                else None
+            )
 
-            if current_state is not None and "last_run" in current_state:
-                last_run = current_state["last_run"]
-
-                self.helper.connector_logger.info(
-                    "Connector last run",
-                    {"last_run_datetime": last_run},
-                )
-            else:
-                if isinstance(self.config.flashpoint.import_start_date, timedelta):
-                    last_run = now - self.config.flashpoint.import_start_date
-                else:
-                    last_run = self.config.flashpoint.import_start_date
-                if current_state is None:
-                    self.helper.set_state({"last_run": last_run.isoformat()})
-                else:
-                    if "last_run" not in current_state:
-                        current_state["last_run"] = last_run.isoformat()
-                        self.helper.set_state(current_state)
-
-            current_state = self.helper.get_state()
-
+            self.helper.connector_logger.info(
+                "Connector last run",
+                {"last_run": last_run or "Never"},
+            )
             self.helper.connector_logger.info(
                 "Running connector...",
                 {"connector_name": self.helper.connect_name},
@@ -496,47 +500,83 @@ class FlashpointConnector:
             # Performing the collection of intelligence
 
             if self.config.flashpoint.import_alerts:
-                start_date = current_state["last_run"]
+                last_alerts_run = (
+                    datetime.fromisoformat(current_state["last_alerts_run"])
+                    if "last_alerts_run" in current_state
+                    else None
+                )
+                start_date = last_alerts_run or self.config.flashpoint.import_start_date
+
                 self.helper.connector_logger.info(
-                    f"Import Alerts enabled, "
-                    f"going to fetch Alerts since: {start_date}"
+                    "Import Alerts enabled, going to fetch Alerts since:",
+                    {"since": start_date},
                 )
                 self._import_alerts(datetime.fromisoformat(start_date))
 
+                current_state["last_alerts_run"] = now_iso
+                self._set_state(current_state)
+
             if self.config.flashpoint.import_reports:
-                start_date = current_state["last_run"]
+                last_reports_run = (
+                    datetime.fromisoformat(current_state["last_reports_run"])
+                    if "last_reports_run" in current_state
+                    else None
+                )
+                start_date = (
+                    last_reports_run or self.config.flashpoint.import_start_date
+                )
+
                 self.helper.connector_logger.info(
-                    f"Import Reports enabled, "
-                    f"going to fetch Reports since: {start_date}"
+                    "Import Reports enabled, going to fetch Reports since:",
+                    {"since": start_date},
                 )
                 self._import_reports(start_date)
 
+                current_state["last_reports_run"] = now_iso
+                self._set_state(current_state)
+
             if self.config.flashpoint.import_indicators:
-                start_date = current_state["last_run"]
+                # start date is calculated inside self._import_misp_feed()
+
                 self.helper.connector_logger.info(
-                    f"Import Indicators enabled, "
-                    f"going to fetch Indicators since: {start_date}"
+                    "Import Indicators enabled, going to fetch Indicators since:",
+                    {"since": last_run or self.config.flashpoint.import_start_date},
                 )
                 self._import_misp_feed()
 
+                # connector's state is updated inside self._import_misp_feed()
+
             if self.config.flashpoint.import_communities:
-                start_date = current_state["last_run"]
-                self.helper.connector_logger.info(
-                    f"Import Communities Data enabled, "
-                    f"going to fetch Communities Data since: {start_date}"
+                last_communities_run = (
+                    datetime.fromisoformat(current_state["last_communities_run"])
+                    if "last_communities_run" in current_state
+                    else None
                 )
-                self._import_communities(datetime.fromisoformat(start_date))
+                start_date = (
+                    last_communities_run or self.config.flashpoint.import_start_date
+                )
+
+                self.helper.connector_logger.info(
+                    "Import Communities Data enabled, going to fetch Communities Data since:",
+                    {"since": start_date},
+                )
+                self._import_communities(start_date)
+
+                current_state["last_communities_run"] = now_iso
+                self._set_state(current_state)
 
             if self.config.flashpoint.import_ccm_alerts:
-                if "last_ccm_alert" not in current_state:
-                    current_state["last_ccm_alert"] = (
-                        self.config.flashpoint.import_start_date.isoformat()
-                    )
-                    self.helper.set_state(current_state)
+                last_ccm_alerts_run = (
+                    datetime.fromisoformat(current_state["last_ccm_alerts_run"])
+                    if "last_ccm_alerts_run" in current_state
+                    else None
+                )
+                start_date = (
+                    last_ccm_alerts_run or self.config.flashpoint.import_start_date
+                )
 
-                start_date = datetime.fromisoformat(current_state["last_ccm_alert"])
                 self.helper.connector_logger.info(
-                    f"Import CCM Alerts enabled, "
+                    "Import CCM Alerts enabled, "
                     f"going to fetch CCM Alerts since: {start_date.isoformat(timespec='seconds')}"
                 )
                 self._import_ccm_alerts(
@@ -544,28 +584,24 @@ class FlashpointConnector:
                     fresh_only=self.config.flashpoint.fresh_ccm_alerts_only,
                 )
 
-            # Store the current timestamp as a last run of the connector
+                current_state["last_ccm_alerts_run"] = now_iso
+                self._set_state(current_state)
+
+            # Store the current datetime as a last run of the connector
             self.helper.connector_logger.debug(
                 "Getting current state and update it with last run of the connector",
-                {"current_timestamp": current_timestamp},
+                {"current_datetime": now_iso},
             )
-            current_state = self.helper.get_state()
+            current_state["last_run"] = now_iso
+            self._set_state(current_state)
 
-            if current_state:
-                current_state["last_run"] = current_state_datetime
-            else:
-                current_state = {"last_run": current_state_datetime}
-            self.helper.set_state(current_state)
-
-            message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(current_state_datetime)
+            self.helper.connector_logger.info(
+                "Connector successfully run, storing connector's state: ",
+                {"connector_name": self.helper.connect_name, "state": current_state},
             )
-            self.helper.connector_logger.info(message)
-
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
-                "[CONNECTOR] Connector stopped...",
+                "Connector stopped...",
                 {"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
