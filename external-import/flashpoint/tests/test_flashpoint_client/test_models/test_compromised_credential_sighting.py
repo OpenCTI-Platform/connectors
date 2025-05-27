@@ -277,16 +277,15 @@ def test_infected_host_should_accept_valid_input(input_data):
 @pytest.mark.parametrize(
     "input_data, error_field",
     [
-        # TODO: check if fpid is required or optional
-        # pytest.param(
-        #     {
-        #         "installed_software": fake_valid_installed_software(),
-        #         "machine": fake_valid_machine_data(),
-        #         "malware": fake_valid_malware_data(),
-        #     },
-        #     "fpid",
-        #     id="missing_fpid",
-        # ),
+        pytest.param(
+            {
+                "installed_software": fake_valid_installed_software(),
+                "machine": fake_valid_machine_data(),
+                "malware": fake_valid_malware_data(),
+            },
+            "fpid",
+            id="missing_fpid",
+        ),
         pytest.param(
             {
                 "fpid": "flashpoint-test-id",
