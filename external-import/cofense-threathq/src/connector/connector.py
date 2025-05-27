@@ -2,7 +2,6 @@ import asyncio
 import re
 import sys
 from datetime import datetime
-from time import timezone
 
 import pytz
 from aiohttp import ClientConnectionError, ClientResponseError
@@ -14,7 +13,6 @@ from connector.services import (
     Utils,
 )
 from pycti import OpenCTIConnectorHelper
-from pydantic import ValidationError
 from tenacity import RetryError
 
 

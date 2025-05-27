@@ -1,14 +1,7 @@
 from datetime import datetime
-from typing import Literal
 
 import pycti
 import stix2
-from connector.models import (
-    Author,
-    ExternalReference,
-    Relationship,
-    TLPMarking,
-)
 
 
 class ConverterToStix:
