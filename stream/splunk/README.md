@@ -24,6 +24,7 @@ This connector allows organizations to feed a **Splunk** KV Store using OpenCTI 
 | `connector_live_stream_start_timestamp` | `CONNECTOR_LIVE_STREAM_START_TIMESTAMP` | No        | Start timestamp used on connector first start.                                                |
 | `splunk_url`                            | `SPLUNK_URL`                            | Yes       | The Splunk instances REST API URLs as array                                                   |
 | `splunk_token`                          | `SPLUNK_TOKEN`                          | Yes       | The Splunk token                                                                              |
+| `splunk_auth_type`                      | `SPLUNK_AUTH_TYPE`                      | Yes       | The Splunk auth type: Bearer or Basic (default: `Bearer`)                                     |
 | `splunk_owner`                          | `SPLUNK_OWNER`                          | Yes       | The Splunk KV store owners as array (same order as URLs)                                      |
 | `splunk_ssl_verify`                     | `SPLUNK_SSL_VERIFY`                     | Yes       | Enable the SSL certificate check for all instances (default: `true`)                          |
 | `splunk_app`                            | `SPLUNK_APP`                            | Yes       | The app of the KV Store for all instances.                                                    |
@@ -37,6 +38,7 @@ This connector allows organizations to feed a **Splunk** KV Store using OpenCTI 
 
 - This connector will connect your Splunk API as the user specified in field splunk_owner (recommended value is `nobody` which is the default for splunk to create a kvstore)
 - You have to create a token in Splunk (beware of expiration time): Settings > Users and Authentication > Tokens
+- If you are using Splunk version lower than 7.3, you must use Basic authentication (`SPLUNK_AUTH_TYPE=Basic`) instead of Bearer tokens. In this case, set the `SPLUNK_TOKEN` parameter to your credentials encoded as base64(user:password), as required by Basic authentication.
 - You may have to whitelist your connector EGRESS IP address to hit the API endpoint: Settings > Server Settings > IP allow list > Search head API Access (tab)
 - As a splunk_url, it is recommended to use your search head instance, so that the created kvstore is replicated across your other splunk instances. Note that any kvstore created on "non-search head" won't be replicated nor visible on the search head.
 - The connector will create a kvstore named as per splunk_kv_store_name field value. Note that no other existing object in your splunk instance can have the same name.
