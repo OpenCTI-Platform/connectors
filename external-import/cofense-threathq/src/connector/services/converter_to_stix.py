@@ -281,7 +281,7 @@ class ConverterToStix:
         report_name = (
             str(new_report_info.get("threat_id"))
             + " - "
-            + new_report_info.get("description")
+            + new_report_info.get("threat_title")
         )
 
         report_type = new_report_info.get("threat_title")
