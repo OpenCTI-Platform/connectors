@@ -14,10 +14,10 @@ from pydantic import (
 )
 from pydantic_settings import (
     BaseSettings,
-    SettingsConfigDict,
     DotEnvSettingsSource,
     EnvSettingsSource,
     PydanticBaseSettingsSource,
+    SettingsConfigDict,
     YamlConfigSettingsSource,
 )
 
@@ -106,6 +106,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
 
 class _ConfigLoaderCofenseThreatHQ(ConfigBaseSettings):
     """Interface for loading Cofense ThreatHQ dedicated configuration."""
+
     model_config = SettingsConfigDict(
         env_nested_delimiter="_",
         env_nested_max_split=2,
@@ -142,16 +143,14 @@ class _ConfigLoaderCofenseThreatHQ(ConfigBaseSettings):
         description="List of impact types to exclude: None, Moderate, Major",
     )
     import_report_pdf: Optional[bool] = Field(
-        default=True,
-        description="Import Cofense ThreatHQ reports in pdf format."
+        default=True, description="Import Cofense ThreatHQ reports in pdf format."
     )
     tlp_level: Optional[TLPToLower] = Field(
         default="amber+strict",
         description="Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
     )
     promote_observables_as_indicators: Optional[bool] = Field(
-        default=True,
-        description="Boolean to promote observables into indicators."
+        default=True, description="Boolean to promote observables into indicators."
     )
 
     @field_validator(
@@ -161,11 +160,13 @@ class _ConfigLoaderCofenseThreatHQ(ConfigBaseSettings):
     def parse_list(cls, value):
         if isinstance(value, str):
             return [x.strip().lower() for x in value.split(",") if x.strip()]
+        if value is None:
+            return []
         return value
 
     @field_validator("import_start_date", mode="after")
     def _convert_import_start_date_relative_to_utc_datetime(
-            cls, value: date | AwareDatetime | timedelta
+        cls, value: date | AwareDatetime | timedelta
     ) -> date | AwareDatetime | datetime:
         """Allow relative import_start_date values (timedelta)."""
         if isinstance(value, timedelta):
@@ -191,12 +192,12 @@ class ConfigLoader(ConfigBaseSettings):
 
     @classmethod
     def settings_customise_sources(
-            cls,
-            settings_cls: type[BaseSettings],
-            init_settings: PydanticBaseSettingsSource,
-            env_settings: PydanticBaseSettingsSource,
-            dotenv_settings: PydanticBaseSettingsSource,
-            file_secret_settings: PydanticBaseSettingsSource,
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource]:
         env_path = Path(__file__).parents[2] / ".env"
         yaml_path = Path(__file__).parents[2] / "config.yml"

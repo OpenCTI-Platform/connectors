@@ -63,71 +63,37 @@ class Utils:
             }
 
     @staticmethod
-    def description_to_markdown(description: str) -> str:
-        """This method allows you to structure the entity's description in OpenCTI, starting with a description and then
-        adding a Markdown table to list the comments written in ServiceNow. The description field can be empty, just
-        like the Markdown table.
+    def transform_description_to_markdown(report_info: dict) -> str:
+        description_field_in_opencti = ""
+        markdown_table = ""
+        markdown_init = "\n| Additional Information | Value |\n|-------|-------|\n"
+        markdown_adding_line = ""
 
-        The function divides comments into blocks based on a pattern that detects date and time (each comment starts
-        with a date and time). Depending on the user's configuration, comments can be filtered.
-        Removal of unwanted elements (e.g. code tags, HTML tags, line breaks and unwanted pipes).
+        fields_to_render = [
+            ("Threat Title", report_info.get("threat_title")),
+            ("Executive Summary", report_info.get("description")),
+            ("First Published ('US/Eastern')", report_info.get("first_published")),
+            ("Last Updated ('US/Eastern')", report_info.get("last_published")),
+            ("Language", report_info.get("language") or "N/A"),
+            ("Brands", report_info.get("brands") or "N/A"),
+            ("Recipient NAICS Subsector(s)", report_info.get("sub_sector") or "N/A"),
+            ("SEG Data", report_info.get("seg_data") or "N/A"),
+        ]
 
-        Args:
-            comment_to_exclude (list[str]): A list of comment types to exclude (e.g., ["private", "auto"]).
-            description (str): The original description content to include at the top.
-            comments (str): The raw comment string from ServiceNow to parse and format.
+        for additional_information, value in fields_to_render:
+            if isinstance(value, list):
+                value = ", ".join(str(v) for v in value) if value else "N/A"
+            elif not value:
+                value = "N/A"
 
-        Returns:
-            str: A formatted string containing the description and comments in the form of a Markdown table.
-        """
-        pattern = r"(?=\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} - )"
-        blocks = re.split(pattern, comments.strip())
-        list_comments = [block.strip() for block in blocks if block.strip()]
+            # Remove all unwanted elements
+            clean_value = re.sub(r"[|\n\r]", " ", str(value)).strip()
 
-        description_field_in_opencti = description + "\n"
+            markdown_adding_line += f"| {additional_information} | {clean_value} |\n"
 
-        if comments:
-            markdown_table = ""
-            markdown_init = (
-                "\n| Date | Author | Comments and Work Notes |\n| --- | --- | --- |\n"
-            )
-            markdown_adding_line = ""
-            for comment in list_comments:
-                match = re.match(r"^(.*?) - (.*?)\n(.*)", comment, re.DOTALL)
-                if match:
-                    date = match.group(1).strip()  # Ex: "2025-04-22 22:58:30"
-                    author = match.group(
-                        2
-                    ).strip()  # Ex: "System (Automation activity)"
-                    message = match.group(
-                        3
-                    ).strip()  # Ex: "Risk score changed from Empty to 69 due to change..."
+        if markdown_adding_line:
+            markdown_table += markdown_init
+            markdown_table += markdown_adding_line
 
-                    # Three types of possible exclusions :
-                    comment_mapping = {
-                        "private": "work notes",
-                        "public": "additional comments",
-                        "auto": "automation activity",
-                    }
-                    # Detection and filtering comments according to configuration.
-                    list_comment_to_exclude_config = comment_to_exclude or []
-                    if any(
-                            comment_mapping[item.lower()] in author.lower()
-                            for item in list_comment_to_exclude_config
-                    ):
-                        continue
-
-                    # Remove all unwanted elements
-                    message = re.sub(r"\[/?code]", "", message)
-                    message = re.sub(r"<.*?>", "", message)
-                    message = re.sub(r"\|", " ", message)
-                    message = re.sub(r"\n", " ", message)
-
-                    markdown_adding_line += f"| {date} | {author} | {message} |\n"
-
-            if markdown_adding_line:
-                markdown_table += markdown_init
-                markdown_table += markdown_adding_line
-
-            description_field_in_opencti += markdown_table
+        description_field_in_opencti += markdown_table
         return description_field_in_opencti

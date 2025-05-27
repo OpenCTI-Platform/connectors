@@ -32,4 +32,3 @@ class CofenseThreatHQConfig:
 
         except Exception as err:
             raise ValueError(err)
-
