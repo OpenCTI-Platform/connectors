@@ -171,12 +171,13 @@ class FlashpointClient:
         return data
 
     def get_compromised_credential_sightings(
-        self, since: datetime = None
+        self, since: datetime = None, fresh_only: bool = True
     ) -> Generator[CompromisedCredentialSighting, None, None]:
         """
         Get Compromised Credentials Sightings from Flashpoint API.
 
         :param since: The minimum date to search for Compromised Credentials Sightings.
+        :param fresh_only: If True (default), only return fresh sightings, otherwise return all sightings.
         :return: Found Compromised Credentials Sightings
 
         Doc: https://docs.flashpoint.io/flashpoint/reference/common-use-cases-2#retrieve-compromised-credential-sightings-for-the-last-24-hours-or-a-specified-time-interval
@@ -188,6 +189,7 @@ class FlashpointClient:
             "query": (
                 "+basetypes:(credential-sighting)"
                 + (f" +header_.indexed_at: [{since_timestamp} TO now]" if since else "")
+                + (" +is_fresh:(true)" if fresh_only else "")
             ),
             "sort": ["header_.indexed_at:asc"],
             "size": 25,
