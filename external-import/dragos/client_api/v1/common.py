@@ -141,6 +141,7 @@ class BaseClientAPIV1(ABC):  # noqa: B024
         async with ClientSession(
             headers=headers,
             timeout=self._timeout,
+            trust_env=True,
         ) as session:
             async with session.get(query_url) as resp:
                 _ = await resp.read()  # consume the response
