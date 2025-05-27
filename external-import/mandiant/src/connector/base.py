@@ -479,6 +479,65 @@ class Mandiant:
             )
             self.mandiant_report_types["News Analysis"] = news_analysis_report_type
 
+        self.guess_relationships_reports = get_config_variable(
+            "MANDIANT_GUESS_RELATIONSHIPS_REPORTS",
+            ["mandiant", "guess_relationships_reports"],
+            config,
+            default="Actor Profile, Malware Profile",
+        )
+
+        allowed_report_types = [
+            "All",
+            "Actor Profile",
+            "Country Profile",
+            "Event Coverage/Implication",
+            "Executive Perspective",
+            "ICS Security Roundup",
+            "Industry Reporting",
+            "Malware Profile",
+            "Network Activity Reports",
+            "Patch Report",
+            "TTP Deep Dive",
+            "Threat Activity Alert",
+            "Threat Activity Report",
+            "Trends and Forecasting",
+            "Vulnerability Report",
+            "Weekly Vulnerability Exploitation Report",
+            "News Analysis",
+        ]
+
+        if self.guess_relationships_reports:
+            requested = {
+                rt.strip() for rt in self.guess_relationships_reports.split(",")
+            }
+            if "All" in requested:
+                self.helper.connector_logger.info(
+                    "Relationship guessing enabled for ALL report types"
+                )
+                self.guess_relationships_reports = ["all"]
+            else:
+                valid = [
+                    self.mandiant_report_types[rt]
+                    for rt in requested
+                    if rt in allowed_report_types
+                ]
+
+                if not valid:
+                    self.helper.connector_logger.warning(
+                        "No valid report types found for relationship guessing. "
+                        "Using default values: Actor Profile, Malware Profile."
+                    )
+                    valid = [
+                        self.mandiant_report_types["Actor Profile"],
+                        self.mandiant_report_types["Malware Profile"],
+                    ]
+                else:
+                    self.helper.connector_logger.info(
+                        f"Relationship guessing enabled for: {', '.join(valid)}"
+                    )
+
+                self.guess_relationships_reports = valid
+
         try:
             for description, name in self.mandiant_report_types.items():
                 self.helper.api.vocabulary.create(
