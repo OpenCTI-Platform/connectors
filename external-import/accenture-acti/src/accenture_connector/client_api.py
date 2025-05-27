@@ -11,18 +11,9 @@ class ConnectorClient:
         self.helper = helper
         self.config = config
         self.base_api_url = "https://api.intel.accenture.com"
-
-        id_token = self.get_token()
-
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "*/*",
-            "Authorization": "Bearer " + id_token,
-        }
         self.session = requests.Session()
-        self.session.headers.update(headers)
 
-    def get_token(self):
+    def _refresh_and_set_token(self):
         """
         :return:
         """
@@ -34,7 +25,14 @@ class ConnectorClient:
             )
             u.authenticate(self.config.acti_password)
             id_token = u.id_token
-            return id_token
+
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "*/*",
+                "Authorization": "Bearer " + id_token,
+            }
+            self.session.headers.update(headers)
+
         except Exception as err:
             error_msg = f"[API] Error while retrieving token: {err}"
             self.helper.connector_logger.error(error_msg, {"error": {str(err)}})
@@ -46,6 +44,7 @@ class ConnectorClient:
         :return:
         """
         try:
+            self._refresh_and_set_token()
             api_url = self.base_api_url + "/collections/acti/collections"
             params = {"start_date": since}
             r = self.session.get(api_url, params=params)
