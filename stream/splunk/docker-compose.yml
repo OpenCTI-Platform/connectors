@@ -15,6 +15,7 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - SPLUNK_URL=https://splunk1.changeme.com:8089
       - SPLUNK_TOKEN=Token1
+      - SPLUNK_AUTH_TYPE=Bearer
       - SPLUNK_OWNER=nobody
       - SPLUNK_SSL_VERIFY=true
       - SPLUNK_APP=search

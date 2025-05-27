@@ -16,6 +16,7 @@ connector:
 splunk:
   url: 'https://splunk1.changeme.com:8089'
   token: 'ChangeMe'
+  auth_type: 'Bearer'
   owner: 'nobody'
   ssl_verify: true
   app: 'search'
