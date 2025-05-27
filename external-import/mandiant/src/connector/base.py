@@ -488,6 +488,7 @@ class Mandiant:
 
         allowed_report_types = [
             "All",
+            "None",
             "Actor Profile",
             "Country Profile",
             "Event Coverage/Implication",
@@ -506,37 +507,46 @@ class Mandiant:
             "News Analysis",
         ]
 
-        if self.guess_relationships_reports:
-            requested = {
-                rt.strip() for rt in self.guess_relationships_reports.split(",")
-            }
-            if "All" in requested:
-                self.helper.connector_logger.info(
-                    "Relationship guessing enabled for ALL report types"
-                )
-                self.guess_relationships_reports = ["all"]
-            else:
+        reports_value = self.guess_relationships_reports.strip()
+
+        requested = {rt.strip() for rt in reports_value.split(",")}
+        if "None" in requested:
+            self.helper.connector_logger.info("Relationship guessing disabled.")
+            self.guess_relationships_reports = []
+        elif "All" in requested:
+            self.helper.connector_logger.info(
+                "Relationship guessing enabled for ALL report types."
+            )
+            self.guess_relationships_reports = ["all"]
+        else:
+            valid = [
+                self.mandiant_report_types[rt]
+                for rt in requested
+                if rt in allowed_report_types and rt in self.mandiant_report_types
+            ]
+
+            if not valid:
+                fallback_keys = ["Actor Profile", "Malware Profile"]
                 valid = [
-                    self.mandiant_report_types[rt]
-                    for rt in requested
-                    if rt in allowed_report_types
+                    self.mandiant_report_types[k]
+                    for k in fallback_keys
+                    if k in self.mandiant_report_types
                 ]
 
-                if not valid:
+                if valid:
                     self.helper.connector_logger.warning(
                         "No valid report types found for relationship guessing. "
-                        "Using default values: Actor Profile, Malware Profile."
+                        f"Using default values: {', '.join(valid)}"
                     )
-                    valid = [
-                        self.mandiant_report_types["Actor Profile"],
-                        self.mandiant_report_types["Malware Profile"],
-                    ]
                 else:
-                    self.helper.connector_logger.info(
-                        f"Relationship guessing enabled for: {', '.join(valid)}"
-                    )
+                    self.helper.connector_logger.info("Relationship guessing disabled.")
 
-                self.guess_relationships_reports = valid
+            else:
+                self.helper.connector_logger.info(
+                    f"Relationship guessing enabled for: {', '.join(valid)}"
+                )
+
+            self.guess_relationships_reports = valid
 
         try:
             for description, name in self.mandiant_report_types.items():
