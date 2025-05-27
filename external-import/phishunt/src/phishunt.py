@@ -4,6 +4,7 @@ import ssl
 import sys
 import time
 import urllib.request
+import traceback
 from datetime import datetime
 
 import requests
@@ -168,7 +169,7 @@ class Phishunt:
             if os.path.exists(os.path.dirname(os.path.abspath(__file__)) + "/data.txt"):
                 os.remove(os.path.dirname(os.path.abspath(__file__)) + "/data.txt")
         except Exception as error:
-            self.helper.log_error(str(error))
+            self.helper.connector_logger.error(str(error))
 
     def _process_private_feed(self, work_id):
         try:
@@ -311,10 +312,10 @@ class Phishunt:
                 work_id=work_id,
             )
         except Exception as error:
-            self.helper.log_error(str(error))
+            self.helper.connector_logger.error(str(error))
 
     def run(self):
-        self.helper.log_info("Fetching Phishunt dataset...")
+        self.helper.connector_logger.info("Fetching Phishunt dataset...")
         while True:
             try:
                 # Get the current timestamp and check
@@ -322,7 +323,7 @@ class Phishunt:
                 current_state = self.helper.get_state()
                 if current_state is not None and "last_run" in current_state:
                     last_run = current_state["last_run"]
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "Connector last run: "
                         + datetime.utcfromtimestamp(last_run).strftime(
                             "%Y-%m-%d %H:%M:%S"
@@ -330,13 +331,13 @@ class Phishunt:
                     )
                 else:
                     last_run = None
-                    self.helper.log_info("Connector has never run")
+                    self.helper.connector_logger.info("Connector has never run")
                 # If the last_run is more than interval-1 day
                 if last_run is None or (
                     (timestamp - last_run)
                     > ((int(self.phishunt_interval) - 1) * 60 * 60 * 24)
                 ):
-                    self.helper.log_info("Connector will run!")
+                    self.helper.connector_logger.info("Connector will run!")
                     now = datetime.utcfromtimestamp(timestamp)
                     friendly_name = "Phishunt run @ " + now.strftime(
                         "%Y-%m-%d %H:%M:%S"
@@ -354,29 +355,33 @@ class Phishunt:
                     message = "Connector successfully run, storing last_run as " + str(
                         timestamp
                     )
-                    self.helper.log_info(message)
+                    self.helper.connector_logger.info(message)
                     self.helper.set_state({"last_run": timestamp})
                     self.helper.api.work.to_processed(work_id, message)
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "Last_run stored, next run in: "
                         + str(round(self.get_interval() / 60 / 60 / 24, 2))
                         + " days"
                     )
                 else:
                     new_interval = self.get_interval() - (timestamp - last_run)
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
+                    self.helper.connector_logger.info(
                         "Connector will not run, next run in: "
                         + str(round(new_interval / 60 / 60 / 24, 2))
                         + " days"
                     )
             except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("Connector stop")
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Connector stopped...",
+                    {"connector_name": self.helper.connect_name},
+                )
                 sys.exit(0)
             except Exception as error:
-                self.helper.log_error(str(error))
+                self.helper.connector_logger.error(str(error))
 
             if self.helper.connect_run_and_terminate:
-                self.helper.log_info("Connector stop")
+                self.helper.connector_logger.info("Connector stop")
                 self.helper.force_ping()
                 sys.exit(0)
 
@@ -387,7 +392,6 @@ if __name__ == "__main__":
     try:
         PhishuntConnector = Phishunt()
         PhishuntConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+    except Exception:
+        traceback.print_exc()
+        exit(1)
