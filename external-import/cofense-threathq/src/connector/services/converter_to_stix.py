@@ -70,7 +70,7 @@ class ConverterToStix:
     @staticmethod
     def make_external_reference(
         data: dict,
-    ) -> ExternalReference:
+    ) -> stix2.ExternalReference:
         """Make an `ExternalReference` object and its representation in STIX 2.1 format.
 
         Args:

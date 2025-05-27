@@ -506,13 +506,13 @@ class CofenseThreatHQ:
                             stix_objects.append(make_observable)
                             stix_object_refs.append(make_observable.get("id"))
 
-                        if "ipDetail" in observable:
-                            ip_detail = observable.get("ipDetail")
-                            # Todo
-                            # Create IP
-                            # Create Location
-                            # Create orga
-                            # Create Country / Region
+                        # if "ipDetail" in observable:
+                        #     ip_detail = observable.get("ipDetail")
+                        # Todo
+                        # Create IP
+                        # Create Location
+                        # Create orga
+                        # Create Country / Region
 
                 # Make Report and description
 
