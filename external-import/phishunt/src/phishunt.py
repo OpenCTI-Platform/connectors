@@ -5,7 +5,8 @@ import sys
 import time
 import urllib.request
 import traceback
-from datetime import datetime
+from datetime import datetime, UTC
+from typing import Any, Dict
 
 import requests
 import stix2
@@ -37,9 +38,18 @@ class Phishunt:
         self.phishunt_api_key = get_config_variable(
             "PHISHUNT_API_KEY", ["phishunt", "api_key"], config, default=""
         )
-        self.phishunt_interval = get_config_variable(
-            "PHISHUNT_INTERVAL", ["phishunt", "interval"], config, True, default=3
+
+        self.phishunt_duration_periode = get_config_variable(
+            "CONNECTOR_DURATION_PERIOD", ["phishunt", "duration_period"], config, True, default='P3D'
         )
+
+        self.phishunt_interval_sec = get_config_variable(
+            "CONNECTOR_INTERVAL_SEC", ["phishunt", "interval_sec"], config
+        )
+
+        if not self.phishunt_interval_sec:
+            self.phishunt_interval_sec = self.phishunt_duration_periode
+
         self.create_indicators = get_config_variable(
             "PHISHUNT_CREATE_INDICATORS",
             ["phishunt", "create_indicators"],
@@ -79,19 +89,13 @@ class Phishunt:
             default=None,
             required=False,
         )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
+
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name="Phishunt",
             description="Phishunt is providing URLs of potential malicious payload.",
         )
 
-    def get_interval(self):
-        return int(self.phishunt_interval) * 60 * 60 * 24
 
     def next_run(self, seconds):
         return
@@ -116,11 +120,11 @@ class Phishunt:
                     if count <= 3:
                         continue
                     line = line.strip()
-                    matchHtmlTag = re.search(r"^<\/?\w+>", line)
-                    if matchHtmlTag:
+                    match_html_tag = re.search(r"^<\/?\w+>", line)
+                    if match_html_tag:
                         continue
-                    matchBlankLine = re.search(r"^\s*$", line)
-                    if matchBlankLine:
+                    match_blank_line = re.search(r"^\s*$", line)
+                    if match_blank_line:
                         continue
                     stix_observable = stix2.URL(
                         value=line,
@@ -163,13 +167,12 @@ class Phishunt:
             bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.send_stix2_bundle(
                 bundle,
-                update=self.update_existing_data,
                 work_id=work_id,
             )
             if os.path.exists(os.path.dirname(os.path.abspath(__file__)) + "/data.txt"):
                 os.remove(os.path.dirname(os.path.abspath(__file__)) + "/data.txt")
         except Exception as error:
-            self.helper.connector_logger.error(str(error))
+            self.helper.connector_logger.error(f"Error while sending public feed bundle: {error}")
 
     def _process_private_feed(self, work_id):
         try:
@@ -308,85 +311,77 @@ class Phishunt:
             bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.send_stix2_bundle(
                 bundle,
-                update=self.update_existing_data,
                 work_id=work_id,
             )
         except Exception as error:
-            self.helper.connector_logger.error(str(error))
+            self.helper.connector_logger.error(f"Error while sending private feed bundle: {error}")
 
     def run(self):
+        if self.phishunt_duration_periode:
+            self.helper.schedule_iso(
+                message_callback=self.process_message,
+                duration_period=self.phishunt_duration_periode,
+            )
+        else:
+            self.helper.schedule_unit(
+                message_callback=self.process_message,
+                duration_period=self.phishunt_interval_sec,
+                time_unit=self.helper.TimeUnit.SECONDS,
+            )
+
+    def _load_state(self) -> Dict[str, Any]:
+        current_state = self.helper.get_state()
+        if not current_state:
+            return {}
+        return current_state
+
+    def process_message(self):
+        """Run Phishunt connector"""
         self.helper.connector_logger.info("Fetching Phishunt dataset...")
-        while True:
-            try:
-                # Get the current timestamp and check
-                timestamp = int(time.time())
-                current_state = self.helper.get_state()
-                if current_state is not None and "last_run" in current_state:
-                    last_run = current_state["last_run"]
-                    self.helper.connector_logger.info(
-                        "Connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
-                    )
-                else:
-                    last_run = None
-                    self.helper.connector_logger.info("Connector has never run")
-                # If the last_run is more than interval-1 day
-                if last_run is None or (
-                    (timestamp - last_run)
-                    > ((int(self.phishunt_interval) - 1) * 60 * 60 * 24)
-                ):
-                    self.helper.connector_logger.info("Connector will run!")
-                    now = datetime.utcfromtimestamp(timestamp)
-                    friendly_name = "Phishunt run @ " + now.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
 
-                    if len(self.phishunt_api_key) > 0:
-                        self._process_private_feed(work_id)
-                    else:
-                        self._process_public_feed(work_id)
+        try:
+            # Get the current timestamp and check
+            timestamp = int(time.time())
+            current_state = self._load_state()
 
-                    # Store the current timestamp as a last run
-                    message = "Connector successfully run, storing last_run as " + str(
-                        timestamp
-                    )
-                    self.helper.connector_logger.info(message)
-                    self.helper.set_state({"last_run": timestamp})
-                    self.helper.api.work.to_processed(work_id, message)
-                    self.helper.connector_logger.info(
-                        "Last_run stored, next run in: "
-                        + str(round(self.get_interval() / 60 / 60 / 24, 2))
-                        + " days"
-                    )
-                else:
-                    new_interval = self.get_interval() - (timestamp - last_run)
-                    self.helper.connector_logger.info(
-                    self.helper.connector_logger.info(
-                        "Connector will not run, next run in: "
-                        + str(round(new_interval / 60 / 60 / 24, 2))
-                        + " days"
-                    )
-            except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info(f"Loaded stat: {current_state}")
+
+            if current_state is not None and "last_run" in current_state:
+                last_run = current_state["last_run"]
                 self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector stopped...",
-                    {"connector_name": self.helper.connect_name},
+                    f"{self.helper.connect_name} connector last run: "
+                    + datetime.fromtimestamp(last_run, tz=UTC).isoformat()
                 )
-                sys.exit(0)
-            except Exception as error:
-                self.helper.connector_logger.error(str(error))
+            else:
+                self.helper.connector_logger.info("Connector has never run")
 
-            if self.helper.connect_run_and_terminate:
-                self.helper.connector_logger.info("Connector stop")
-                self.helper.force_ping()
-                sys.exit(0)
+            self.helper.connector_logger.info("Connector will run!")
+            friendly_name = "Phishunt run"
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
 
-            time.sleep(60)
+            if len(self.phishunt_api_key) > 0:
+                self._process_private_feed(work_id)
+            else:
+                self._process_public_feed(work_id)
 
+            # Store the current timestamp as a last run
+            message = "Connector successfully run, storing last_run as " + str(
+                timestamp
+            )
+            self.helper.connector_logger.info(message)
+            self.helper.set_state({"last_run": timestamp})
+            self.helper.api.work.to_processed(work_id, message)
+
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Connector stopped...",
+                {"connector_name": self.helper.connect_name},
+            )
+            sys.exit(0)
+        except Exception as error:
+            self.helper.connector_logger.error(f"Phishunt connector internal error: {error}")
 
 if __name__ == "__main__":
     try:
@@ -394,4 +389,4 @@ if __name__ == "__main__":
         PhishuntConnector.run()
     except Exception:
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)
