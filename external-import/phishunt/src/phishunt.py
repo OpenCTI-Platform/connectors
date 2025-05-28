@@ -3,9 +3,9 @@ import re
 import ssl
 import sys
 import time
-import urllib.request
 import traceback
-from datetime import datetime, UTC
+import urllib.request
+from datetime import UTC, datetime
 from typing import Any, Dict
 
 import requests
@@ -40,7 +40,11 @@ class Phishunt:
         )
 
         self.phishunt_duration_periode = get_config_variable(
-            "CONNECTOR_DURATION_PERIOD", ["phishunt", "duration_period"], config, True, default='P3D'
+            "CONNECTOR_DURATION_PERIOD",
+            ["phishunt", "duration_period"],
+            config,
+            True,
+            default="P3D",
         )
 
         self.phishunt_interval_sec = get_config_variable(
@@ -95,7 +99,6 @@ class Phishunt:
             name="Phishunt",
             description="Phishunt is providing URLs of potential malicious payload.",
         )
-
 
     def next_run(self, seconds):
         return
@@ -172,7 +175,9 @@ class Phishunt:
             if os.path.exists(os.path.dirname(os.path.abspath(__file__)) + "/data.txt"):
                 os.remove(os.path.dirname(os.path.abspath(__file__)) + "/data.txt")
         except Exception as error:
-            self.helper.connector_logger.error(f"Error while sending public feed bundle: {error}")
+            self.helper.connector_logger.error(
+                f"Error while sending public feed bundle: {error}"
+            )
 
     def _process_private_feed(self, work_id):
         try:
@@ -314,7 +319,9 @@ class Phishunt:
                 work_id=work_id,
             )
         except Exception as error:
-            self.helper.connector_logger.error(f"Error while sending private feed bundle: {error}")
+            self.helper.connector_logger.error(
+                f"Error while sending private feed bundle: {error}"
+            )
 
     def run(self):
         if self.phishunt_duration_periode:
@@ -381,7 +388,10 @@ class Phishunt:
             )
             sys.exit(0)
         except Exception as error:
-            self.helper.connector_logger.error(f"Phishunt connector internal error: {error}")
+            self.helper.connector_logger.error(
+                f"Phishunt connector internal error: {error}"
+            )
+
 
 if __name__ == "__main__":
     try:
