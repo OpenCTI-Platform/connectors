@@ -1,4 +1,4 @@
-pycti==6.6.13
+pycti==6.6.14
 weasyprint==65.1
 Jinja2==3.1.6
 pygal==3.0.5
