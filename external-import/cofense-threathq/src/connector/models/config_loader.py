@@ -130,6 +130,14 @@ class _ConfigLoaderCofenseThreatHQ(ConfigBaseSettings):
         default="https://www.threathq.com/apiv1/",
         description="Base URL of the Cofense ThreatHQ API.",
     )
+    api_leaky_bucket_rate: Optional[int] = Field(
+        default=100,
+        description="Api leaky bucket rate.",
+    )
+    api_leaky_bucket_capacity: Optional[int] = Field(
+        default=100,
+        description="Api leaky bucket capacity.",
+    )
     api_retry: Optional[int] = Field(
         default=5,
         description="Maximum number of retry attempts in case of API failure.",

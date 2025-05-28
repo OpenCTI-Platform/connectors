@@ -2,7 +2,7 @@ import base64
 
 from aiohttp import BasicAuth, ClientSession
 from tenacity import retry, stop_after_attempt, wait_exponential_jitter
-
+from limiter import Limiter
 
 class CofenseThreatHQClient:
     def __init__(self, helper, config):
@@ -19,6 +19,11 @@ class CofenseThreatHQClient:
         self.auth = BasicAuth(
             login=self.config.cofense_threathq.token_user,
             password=self.config.cofense_threathq.token_password,
+        )
+        self.rate_limiter = Limiter(
+            rate=self.config.cofense_threathq.api_leaky_bucket_rate,
+            capacity=self.config.cofense_threathq.api_leaky_bucket_capacity,
+            bucket="cofense_threat_hq",
         )
 
     def _build_url(self, endpoint_rest: str, query_parameters: str) -> str:
@@ -51,7 +56,7 @@ class CofenseThreatHQClient:
             ),
         )
         async def _retry_wrapped():
-            async with ClientSession(auth=self.auth, raise_for_status=True) as session:
+            async with ClientSession(auth=self.auth, raise_for_status=True, trust_env=True) as session:
                 async with session.request(
                     method=request_method, url=url_built
                 ) as response:
@@ -59,8 +64,8 @@ class CofenseThreatHQClient:
                         return await response.read()
                     else:
                         return await response.json()
-
-        return await _retry_wrapped()
+        async with self.rate_limiter:
+            return await _retry_wrapped()
 
     async def get_reports(self, next_position: str = None):
         # next_position (str): A string that defines the next position in reports retrieval.
@@ -99,8 +104,8 @@ class CofenseThreatHQClient:
 
         if self.import_report_pdf:
             pdf_binary = await self._request_data(
-                request_method, endpoint_rest, expect_binary=True
-            )
+                    request_method, endpoint_rest, expect_binary=True
+                )
             encoded_pdf = base64.b64encode(pdf_binary).decode("utf-8")
 
             return {

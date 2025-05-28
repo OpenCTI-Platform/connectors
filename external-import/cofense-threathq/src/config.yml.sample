@@ -27,6 +27,8 @@ cofense_threathq:
   # Cofense-ThreatHQ definition parameters - OPTIONAL
   #import_start_date: 'ChangeMe' # Format 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS+HH:MM' or ISO 8601 duration - Default: "P30D"
   #api_base_url: 'ChangeMe' # Default: "https://www.threathq.com/apiv1/"
+  #api_leaky_bucket_rate: ChangeMe # Default: 100
+  #api_leaky_bucket_capacity: ChangeMe # Default: 100
   #api_retry: ChangeMe # Default: 5
   #api_backoff: 'ChangeMe' # Default: 'PT30S'
   #impact_to_exclude: 'ChangeMe' # Available values are: none, moderate, major - Example: "None,Moderate"
