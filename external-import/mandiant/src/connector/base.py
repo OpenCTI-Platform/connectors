@@ -483,7 +483,7 @@ class Mandiant:
             "MANDIANT_GUESS_RELATIONSHIPS_REPORTS",
             ["mandiant", "guess_relationships_reports"],
             config,
-            default="Actor Profile, Malware Profile",
+            default="Actor Profile, Malware Profile, Vulnerability Report",
         )
 
         allowed_report_types = [
@@ -526,7 +526,11 @@ class Mandiant:
             ]
 
             if not valid:
-                fallback_keys = ["Actor Profile", "Malware Profile"]
+                fallback_keys = [
+                    "Actor Profile",
+                    "Malware Profile",
+                    "Vulnerability Report",
+                ]
                 valid = [
                     self.mandiant_report_types[k]
                     for k in fallback_keys
