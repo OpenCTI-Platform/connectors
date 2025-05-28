@@ -67,11 +67,11 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
     log_level: Optional[LogLevelToLower] = Field(
-        default="error",
+        default="info",
         description="Determines the verbosity of the logs.",
     )
     duration_period: Optional[timedelta] = Field(
-        default="PT5M",
+        default="PT5H",
         description="Duration between two scheduled runs of the connector (ISO 8601 format).",
     )
     queue_threshold: Optional[PositiveInt] = Field(
@@ -123,7 +123,7 @@ class _ConfigLoaderCofenseThreatHQ(ConfigBaseSettings):
         description="Token Password associated with the user to access the Cofense ThreatHQ API.",
     )
     import_start_date: Optional[date | AwareDatetime | timedelta] = Field(
-        default="P6M",
+        default="P30D",
         description="Start date of first import (ISO date format).",
     )
     api_base_url: Optional[HttpUrlToString] = Field(

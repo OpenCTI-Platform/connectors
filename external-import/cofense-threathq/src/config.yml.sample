@@ -10,8 +10,8 @@ connector:
   # Connector definition parameters - OPTIONAL
   #name: 'ChangeMe' # Default: 'Cofense ThreatHQ'
   #scope: 'ChangeMe' # Default: 'Cofense ThreatHQ'
-  #log_level: 'ChangeMe' # Default: 'error'
-  #duration_period: 'ChangeMe' # Default: 'PT24H' (ISO8601 format in String, start with P...)
+  #log_level: 'ChangeMe' # Default: 'info'
+  #duration_period: 'ChangeMe' # Default: 'PT5H' (ISO8601 format in String, start with P...)
   #queue_threshold: ChangeMe # Default: 500 MBytes, Float accepted
   #run_and_terminate: ChangeMe # Default: False, True run connector once
   #send_to_queue: ChangeMe # Default: True
