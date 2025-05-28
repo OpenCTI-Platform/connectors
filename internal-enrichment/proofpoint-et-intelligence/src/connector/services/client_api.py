@@ -68,7 +68,9 @@ class ProofpointEtIntelligenceClient:
                 entity_value, source_entity_type, target_entity_type
             )
             async with ClientSession(
-                headers=self.headers, raise_for_status=True
+                headers=self.headers,
+                raise_for_status=True,
+                trust_env=True,
             ) as session:
                 async with session.get(url=url_built) as response:
                     return await response.json()

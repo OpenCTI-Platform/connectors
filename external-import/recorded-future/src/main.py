@@ -11,18 +11,17 @@
 
 import os
 import traceback
-from datetime import datetime, timezone
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from rflib import (
     APP_VERSION,
+    AnalystNote,
     RecordedFutureAlertConnector,
     RecordedFutureApiClient,
     RecordedFuturePlaybookAlertConnector,
     RFClient,
     RiskList,
-    StixNote,
     ThreatMap,
 )
 
@@ -58,6 +57,12 @@ class BaseRFConnector:
         )
         self.rf_pull_risk_list = get_config_variable(
             "RECORDED_FUTURE_PULL_RISK_LIST", ["rf", "pull_risk_list"], config
+        )
+        self.rf_riskrules_as_label = get_config_variable(
+            "RECORDED_FUTURE_RISKRULES_AS_LABEL",
+            ["rf", "riskrules_as_label"],
+            config,
+            default=False,
         )
         self.rf_insikt_only = get_config_variable(
             "RECORDED_FUTURE_INSIKT_ONLY", ["rf", "insikt_only"], config
@@ -196,151 +201,6 @@ class BaseRFConnector:
         )
 
 
-class RFNotes:
-    """Connector object"""
-
-    def __init__(
-        self,
-        helper,
-        rfapi,
-        last_published_notes_interval,
-        rf_initial_lookback,
-        rf_pull_signatures,
-        rf_insikt_only,
-        rf_topics,
-        tlp,
-        rf_person_to_TA,
-        rf_TA_to_intrusion_set,
-        risk_as_score,
-        risk_threshold,
-    ):
-        """Read in config variables"""
-        self.helper = helper
-        self.rfapi = rfapi
-        self.last_published_notes_interval = last_published_notes_interval
-        self.rf_initial_lookback = rf_initial_lookback
-        self.rf_pull_signatures = rf_pull_signatures
-        self.rf_insikt_only = rf_insikt_only
-        self.rf_topics = rf_topics
-        self.tlp = tlp
-        self.rf_person_to_TA = rf_person_to_TA
-        self.rf_TA_to_intrusion_set = rf_TA_to_intrusion_set
-        self.risk_as_score = risk_as_score
-        self.risk_threshold = risk_threshold
-
-    def run(self):
-        """Run connector on a schedule"""
-
-        # Get the current state
-        now = datetime.now()
-        current_timestamp = int(datetime.timestamp(now))
-        current_state = self.helper.get_state() or {}
-
-        if current_state is not None and "last_analyst_notes_run" in current_state:
-            last_analyst_notes_run = current_state["last_analyst_notes_run"]
-
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Connector last analyst notes run",
-                {"last_run_datetime": last_analyst_notes_run},
-            )
-            published = self.last_published_notes_interval
-        else:
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Connector has never run...",
-                {"initial_lookback_hours": self.rf_initial_lookback},
-            )
-            published = self.rf_initial_lookback
-
-        # Friendly name will be displayed on OpenCTI platform
-        friendly_name = "Recorded Future Analyst Notes"
-
-        # Initiate a new work
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, friendly_name
-        )
-
-        try:
-            # Import, convert and send to OpenCTI platform Analyst Notes
-            tas = self.rfapi.get_threat_actors()
-            self.convert_and_send(published, tas, work_id)
-        except Exception as e:
-            self.helper.connector_logger.error(str(e))
-
-        # Store the current timestamp as a last run of the connector
-        self.helper.connector_logger.debug(
-            "Getting current state and update it with last run of the connector",
-            {"current_timestamp": current_timestamp},
-        )
-
-        current_state = self.helper.get_state() or {}
-        last_run_datetime = datetime.fromtimestamp(
-            current_timestamp, tz=timezone.utc
-        ).strftime("%Y-%m-%d %H:%M:%S")
-        current_state.update({"last_analyst_notes_run": last_run_datetime})
-        self.helper.set_state(state=current_state)
-        message = (
-            f"{self.helper.connect_name} connector successfully run, storing last run for Analyst Notes as "
-            + str(last_run_datetime)
-        )
-        self.helper.api.work.to_processed(work_id, message)
-
-    def convert_and_send(self, published, tas, work_id):
-        """Pulls Analyst Notes, converts to Stix2, sends to OpenCTI"""
-        self.helper.connector_logger.info(
-            f"[ANALYST NOTES] Pull Signatures is {str(self.rf_pull_signatures)} of type "
-            f"{type(self.rf_pull_signatures)}"
-        )
-        self.helper.connector_logger.info(
-            f"[ANALYST NOTES] Insikt Only is {str(self.rf_insikt_only)} of type {type(self.rf_insikt_only)}"
-        )
-        self.helper.connector_logger.info(
-            f"[ANALYST NOTES] Topics are {str(self.rf_topics)} of type {type(self.rf_topics)}"
-        )
-        notes = []
-        notes_ids = []
-        for topic in self.rf_topics:
-            new_notes = self.rfapi.get_notes(
-                published, self.rf_pull_signatures, self.rf_insikt_only, topic
-            )
-            for new_note in new_notes:
-                if new_note["id"] not in notes_ids:
-                    notes.append(new_note)
-                    notes_ids.append(new_note["id"])
-
-        self.helper.connector_logger.info(
-            f"[ANALYST NOTES] Fetched {len(notes)} Analyst notes from API"
-        )
-        for note in notes:
-            try:
-                stixnote = StixNote(
-                    self.helper,
-                    tas,
-                    self.rfapi,
-                    self.rf_person_to_TA,
-                    self.rf_TA_to_intrusion_set,
-                    self.risk_as_score,
-                    self.risk_threshold,
-                )
-                stixnote.from_json(note, self.tlp)
-                stixnote.create_relations()
-                bundle = stixnote.to_stix_bundle()
-                self.helper.connector_logger.info(
-                    "[ANALYST NOTES] Sending Bundle to server with "
-                    + str(len(bundle.objects))
-                    + " objects"
-                )
-                self.helper.send_stix2_bundle(
-                    bundle.serialize(),
-                    work_id=work_id,
-                )
-            except Exception as exception:
-                self.helper.connector_logger.error(
-                    f"[ANALYST NOTES] Bundle has been skipped due to exception: "
-                    f"{str(exception)}"
-                )
-                continue
-
-
 class RFConnector:
     def __init__(self):
         self.RF = BaseRFConnector()
@@ -388,6 +248,7 @@ class RFConnector:
                 self.RF.tlp,
                 self.RF.risk_list_threshold,
                 self.RF.risklist_related_entities,
+                self.RF.rf_riskrules_as_label,
             )
             self.risk_list.start()
         else:
@@ -411,7 +272,7 @@ class RFConnector:
 
         # Pull Analyst Notes if enabled
         if self.RF.rf_pull_analyst_notes:
-            self.analyst_notes = RFNotes(
+            self.analyst_notes = AnalystNote(
                 self.RF.helper,
                 self.RF.rfapi,
                 self.RF.last_published_notes_interval,
@@ -425,7 +286,7 @@ class RFConnector:
                 self.RF.risk_as_score,
                 self.RF.risk_threshold,
             )
-            self.analyst_notes.run()
+            self.analyst_notes.start()
         else:
             self.RF.helper.connector_logger.info(
                 "[ANALYST NOTES] Analyst notes fetching disabled"

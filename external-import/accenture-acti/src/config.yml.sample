@@ -1,0 +1,28 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Accenture ACTI'
+  scope: 'accenture'
+  log_level: 'info'
+  duration_period: 'PT1H' # Interval given for scheduler process in ISO-8601 format
+  #============================================#
+  # Optional connector's definition parameters #
+  #============================================#
+  #queue_threshold: 500
+  #run_and_terminate: 'False'
+  #send_to_queue: 'True'
+  #send_to_directory: 'False'
+  #send_to_directory_path: 'ChangeMe'
+  #send_to_directory_retention: 7
+
+accenture_acti:
+  username: 'ChangeMe'
+  password: 'ChangeMe'
+  user_pool_id: 'ChangeMe'
+  client_id: 'ChangeMe'
+  tlp_level: 'ChangeMe' # available values are: clear, white, green, amber, amber+strict, red - Default: 'amber+strict'
+  relative_import_start_date: 'P30D'

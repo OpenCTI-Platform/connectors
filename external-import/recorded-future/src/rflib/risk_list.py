@@ -14,6 +14,7 @@ class RiskList(threading.Thread):
         tlp,
         risk_list_threshold,
         risklist_related_entities,
+        riskrules_as_label,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
@@ -21,6 +22,7 @@ class RiskList(threading.Thread):
         self.tlp = tlp
         self.risk_list_threshold = risk_list_threshold
         self.risklist_related_entities = risklist_related_entities
+        self.riskrules_as_label = riskrules_as_label
 
     def run(self):
         try:
@@ -91,6 +93,7 @@ class RiskList(threading.Thread):
                         + "|--|--|--|"
                         + "\n"
                     )
+                    labels = []
 
                     for index, criticality in enumerate(rule_criticality_list):
                         # If criticality comes with empty string, replace value at 0
@@ -111,8 +114,11 @@ class RiskList(threading.Thread):
                                     + "|"
                                     + "\n"
                                 )
+                                labels.append(risk_rules_list[index])
 
                     indicator.add_description(description)
+                    if self.riskrules_as_label:
+                        indicator.add_labels(labels)
                     indicator.map_data(row, self.tlp, self.risklist_related_entities)
                     indicator.build_bundle(indicator)
                     # Create bundle

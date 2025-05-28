@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+#  name: 'Email Intel Microsoft'
+#  scope: 'email-intel-microsoft'
+#  log_level: 'error'
+#  duration_period: 'PT1H'
+
+email_intel_microsoft:
+#  tlp_level: 'amber+strict'
+#  relative_import_start_date: 'P30D'
+  tenant_id: 'ChangeMe'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  email: 'ChangeMe'
+#  mailbox: 'INBOX'
+#  attachments_mime_types: 'application/pdf,text/csv,text/plain'
