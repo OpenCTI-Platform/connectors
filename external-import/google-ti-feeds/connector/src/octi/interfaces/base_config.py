@@ -66,4 +66,5 @@ class BaseConfig(ABC, BaseSettings):
 
             return (lambda: data,)  # type: ignore
 
+        # noinspection PyRedundantParentheses
         return (init_settings, env_settings, dotenv_settings, file_secret_settings)

@@ -2,6 +2,7 @@
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
+# noinspection PyProtectedMember
 from stix2.v21 import URL, _STIXBase21  # type: ignore
 
 

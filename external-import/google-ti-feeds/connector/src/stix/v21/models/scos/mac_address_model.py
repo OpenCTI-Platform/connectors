@@ -4,6 +4,7 @@ import re
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field, field_validator
+# noinspection PyProtectedMember
 from stix2.v21 import MACAddress, _STIXBase21  # type: ignore
 
 
@@ -15,6 +16,7 @@ class MACAddressModel(BaseSCOModel):
         description="A single colon-delimited, lowercase MAC-48 address with leading zeros (e.g., 00:00:ab:cd:ef:01).",
     )
 
+    # noinspection PyNestedDecorators
     @field_validator("value")
     @classmethod
     def validate_mac_format(cls, v: str) -> str:

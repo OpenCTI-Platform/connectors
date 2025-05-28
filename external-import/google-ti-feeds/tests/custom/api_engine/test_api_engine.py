@@ -234,6 +234,7 @@ async def test_retry_strategy_exhausts_retries(
     url = "https://api.test.com/persistent-error"
     persistent_error = ApiTimeoutError("Simulated persistent error")
     mock_aiohttp_client.get.side_effect = persistent_error
+    # noinspection PyUnresolvedReferences
     max_retries = api_client.strategy.max_retries
 
     # When
@@ -303,7 +304,7 @@ def _given_mock_response(
         mock_response = AsyncMock()
         mock_response.json = AsyncMock(return_value=data)
         mock_response.status = status
-        if status >= 200 and status < 300:
+        if 200 <= status < 300:
             getattr(mock_client, method).return_value = data
         else:
             http_error = Exception(f"HTTP Error {status}")
@@ -336,6 +337,7 @@ def _then_response_is_successful(
     """Assert that the API response is successful and matches expected data."""
     assert response is not None  # noqa: S101
     if model_type:
+        # noinspection PyTypeChecker
         assert isinstance(response, model_type)  # noqa: S101
         assert response.model_dump() == expected_data  # noqa: S101
     else:

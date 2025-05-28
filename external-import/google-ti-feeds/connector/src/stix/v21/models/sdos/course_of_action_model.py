@@ -11,6 +11,7 @@ from connector.src.stix.v21.models.ovs.course_of_action_type_ov_enums import (
 )
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
 from pydantic import Base64Bytes, Field, model_validator
+# noinspection PyProtectedMember
 from stix2.v21 import CourseOfAction, _STIXBase21  # type: ignore
 
 
@@ -48,6 +49,7 @@ class CourseOfActionModel(BaseSDOModel):
             )
         return model
 
+    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:

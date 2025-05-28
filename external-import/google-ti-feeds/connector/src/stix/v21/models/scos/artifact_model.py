@@ -7,6 +7,7 @@ from connector.src.stix.v21.models.ovs.encryption_algorithm_ov_enums import (
 )
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field, model_validator
+# noinspection PyProtectedMember
 from stix2.v21 import Artifact, _STIXBase21  # type: ignore
 
 

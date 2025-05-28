@@ -26,7 +26,6 @@ class GTITechniqueFetchError(GTIApiError):
             details: Additional details about the error
 
         """
-        error_msg = message
         if technique_id:
             error_msg = f"Error fetching attack technique {technique_id}: {message}"
         else:

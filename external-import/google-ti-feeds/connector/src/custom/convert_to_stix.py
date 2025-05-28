@@ -155,6 +155,7 @@ class ConvertToSTIX:
 
                 try:
                     report_entities = self._convert_report(report)
+                    # noinspection PyTypeChecker
                     self.stix_objects.extend(report_entities)
                 except GTIReportConversionError as report_err:
                     self.logger.error(
@@ -230,6 +231,7 @@ class ConvertToSTIX:
         except GTIEntityConversionError:
             raise
         except Exception as e:
+            # noinspection PyArgumentList
             self.logger.error(  # type: ignore
                 f"Error converting GTI data to STIX format: {str(e)}",
                 meta={"error": str(e)},
@@ -244,7 +246,8 @@ class ConvertToSTIX:
                 f"Failed to convert GTI data: {str(e)}"
             ) from e
 
-    def _create_organization(self) -> Identity:
+    @staticmethod
+    def _create_organization() -> Identity:
         """Create a STIX Identity object for the organization.
 
         Returns:
@@ -263,11 +266,13 @@ class ConvertToSTIX:
                 reliability=None,
                 aliases=["GTI"],
             )
+            # noinspection PyTypeChecker
             return organization_model.to_stix2_object()
         except Exception as e:
             raise GTIOrganizationCreationError(str(e)) from e
 
-    def _create_tlp_marking(self, tlp_level: str) -> MarkingDefinition:
+    @staticmethod
+    def _create_tlp_marking(tlp_level: str) -> MarkingDefinition:
         """Create a TLP marking definition.
 
         Args:
@@ -393,6 +398,7 @@ class ConvertToSTIX:
         except GTIReportConversionError:
             raise
         except Exception as e:
+            # noinspection PyArgumentList
             self.logger.error(  # type: ignore
                 f"Error converting report {report.id}: {str(e)}", meta={"error": str(e)}
             )
@@ -426,6 +432,7 @@ class ConvertToSTIX:
             return stix_malware
 
         except Exception as e:
+            # noinspection PyArgumentList
             self.logger.error(  # type: ignore
                 f"Error converting malware family {malware.id}: {str(e)}",
                 meta={"error": str(e)},
@@ -461,6 +468,7 @@ class ConvertToSTIX:
             return stix_actor
 
         except Exception as e:
+            # noinspection PyArgumentList
             self.logger.error(  # type: ignore
                 f"Error converting threat actor {actor.id}: {str(e)}",
                 meta={"error": str(e)},
@@ -498,6 +506,7 @@ class ConvertToSTIX:
             return stix_technique
 
         except Exception as e:
+            # noinspection PyArgumentList
             self.logger.error(  # type: ignore
                 f"Error converting attack technique {technique.id}: {str(e)}",
                 meta={"error": str(e)},
@@ -538,6 +547,7 @@ class ConvertToSTIX:
             return stix_vuln
 
         except Exception as e:
+            # noinspection PyArgumentList
             self.logger.error(  # type: ignore
                 f"Error converting vulnerability {vulnerability.id}: {str(e)}",
                 meta={"error": str(e)},
@@ -560,10 +570,10 @@ class ConvertToSTIX:
             GTIReferenceError: If there's an error adding the reference
 
         """
+        stix_report_id = self.object_id_map.get(report_id)
         try:
             object_ids = [object_id] if isinstance(object_id, str) else object_id
 
-            stix_report_id = self.object_id_map.get(report_id)
             if not stix_report_id:
                 self.logger.warning(f"Report {report_id} not found in object_id_map")
                 raise GTIReferenceError(
@@ -608,7 +618,7 @@ class ConvertToSTIX:
             self.logger.error(f"Error adding reference to report: {str(e)}", meta={"error": str(e)})  # type: ignore
             raise GTIReferenceError(
                 str(e),
-                source_id=stix_report_id if "stix_report_id" in locals() else None,
+                source_id=stix_report_id,
                 target_id=str(object_id),
             ) from e
 

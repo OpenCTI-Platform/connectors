@@ -62,9 +62,6 @@ class EntityFetcher(BaseFetcher):
             self.logger.info(
                 f"Processing {len(self.entity_fetchers)} entity types for report {report_id}"
             )
-            related_entities = {
-                entity_type: [] for entity_type in self.entity_fetchers.keys()
-            }
 
             for entity_type, fetcher in self.entity_fetchers.items():
                 self.logger.info(f"Fetching {entity_type} for report {report_id}")

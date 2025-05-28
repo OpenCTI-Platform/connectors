@@ -165,7 +165,7 @@ def test_connector_config_all_optional(  # type: ignore
 
 # Scenario: Ensure that all defaulted values are set correctly.
 def test_connector_config_all_defaulted(capfd, min_required_config, all_defaulted_config) -> None:  # type: ignore
-    """Test for the connector to check all of the defaulted values."""
+    """Test for the connector to check all the defaulted values."""
     # Given a minimum required configuration
     mock_env = _given_setup_env_vars(min_required_config)
     # When the connector is created
@@ -174,7 +174,7 @@ def test_connector_config_all_defaulted(capfd, min_required_config, all_defaulte
     data = {**min_required_config, **all_defaulted_config}
     _then_connector_created_successfully(capfd, mock_env, connector, data)
 
-
+# noinspection DuplicatedCode
 # Scenario: Test for the connector with all valid log level values.
 def test_connector_config_valid_log_level(  # type: ignore
     capfd, min_required_config, valid_log_level_config
@@ -202,7 +202,7 @@ def test_connector_config_invalid_log_level(  # type: ignore
     # Then the connector config should raise a custom ConfigurationException
     _then_connector_configuration_exception(mock_env, connector, config_ex)
 
-
+# noinspection DuplicatedCode
 # Scenario: Test for the connector with all valid connector type values.
 def test_connector_config_valid_connector_type(  # type: ignore
     capfd, min_required_config, valid_connector_type_config
@@ -268,17 +268,21 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
     for key, value in data.items():
         if key.startswith("OPENCTI_"):
             config_key = key[len("OPENCTI_") :].lower()
+            # noinspection PyProtectedMember
             assert (  # noqa: S101
                 getattr(connector._config.octi_config, config_key)
             ) == value
         elif key.startswith("CONNECTOR_"):
             config_key = key[len("CONNECTOR_") :].lower()
+            # noinspection PyProtectedMember
             assert (  # noqa: S101
                 str(getattr(connector._config.connector_config, config_key)) == value
             )
 
     log_records = capfd.readouterr()
+    # noinspection PyProtectedMember
     if connector._config.connector_config.log_level in ["info", "debug"]:
+        # noinspection PyProtectedMember
         registered_message = f'"name": "{connector._config.connector_config.name}", "message": "Connector registered with ID", "attributes": {{"id": "{connector._config.connector_config.id}"}}'
         assert registered_message in log_records.err  # noqa: S101
 

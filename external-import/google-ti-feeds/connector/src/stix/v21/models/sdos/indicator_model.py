@@ -12,6 +12,7 @@ from connector.src.stix.v21.models.ovs.indicator_type_ov_enums import (
 )
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
 from pydantic import Field, model_validator
+# noinspection PyProtectedMember
 from stix2.v21 import Indicator, _STIXBase21  # type: ignore
 
 
@@ -55,6 +56,7 @@ class IndicatorModel(BaseSDOModel):
         description="Kill chain phases to which this Indicator corresponds.",
     )
 
+    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:

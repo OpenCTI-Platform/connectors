@@ -3,6 +3,7 @@
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
+# noinspection PyProtectedMember
 from stix2.v21 import _STIXBase21  # type: ignore
 
 

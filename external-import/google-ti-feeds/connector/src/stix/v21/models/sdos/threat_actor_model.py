@@ -21,6 +21,7 @@ from connector.src.stix.v21.models.ovs.threat_actor_type_ov_enums import (
 )
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
 from pydantic import Field, model_validator
+# noinspection PyProtectedMember
 from stix2.v21 import ThreatActor, _STIXBase21  # type: ignore
 
 
@@ -93,6 +94,7 @@ class ThreatActorModel(BaseSDOModel):
             )
         return self
 
+    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:

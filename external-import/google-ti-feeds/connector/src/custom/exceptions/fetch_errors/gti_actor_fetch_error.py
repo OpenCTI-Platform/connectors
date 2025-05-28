@@ -26,7 +26,6 @@ class GTIActorFetchError(GTIApiError):
             details: Additional details about the error
 
         """
-        error_msg = message
         if actor_id:
             error_msg = f"Error fetching threat actor {actor_id}: {message}"
         else:

@@ -133,11 +133,12 @@ class GenericEntityFetcher(BaseFetcher):
             Configured exception class: If there's an error fetching the entity
 
         """
+        endpoint = f"{self.config.api_url}{self.entity_config.endpoint_template.format(entity_id=entity_id)}"
         try:
-            endpoint = f"{self.config.api_url}{self.entity_config.endpoint_template.format(entity_id=entity_id)}"
             self.logger.debug(
                 f"Fetching {self.entity_config.entity_type} entity {entity_id} from {endpoint}"
             )
+            # noinspection PyTypeChecker
             response = await self.api_client.call_api(
                 url=endpoint,
                 headers=self.headers,

@@ -63,7 +63,8 @@ class AioHttpClient(BaseHttpClient):
         self.default_timeout = default_timeout
         self._logger = logger or logging.getLogger(__name__)
 
-    def _is_network_error(self, error: Exception) -> bool:
+    @staticmethod
+    def _is_network_error(error: Exception) -> bool:
         """Check if an exception represents a network connectivity issue.
 
         Args:
@@ -129,6 +130,7 @@ class AioHttpClient(BaseHttpClient):
                     )
                     if response.status >= 400:
                         response_text = await response.text()
+                        # noinspection PyArgumentList
                         self._logger.error(  # type: ignore[call-arg]
                             f"{LOG_PREFIX} HTTP Error {response.status} for {method} {url}: {response_text}",
                             meta={"error": response_text},
@@ -136,6 +138,7 @@ class AioHttpClient(BaseHttpClient):
                         raise ApiHttpError(response.status, response_text)
                     return await response.json()
         except TimeoutError as e:
+            # noinspection PyArgumentList
             self._logger.error(  # type: ignore[call-arg]
                 f"{LOG_PREFIX} Request to {url} timed out after {actual_timeout.total}s: {e}",
                 meta={"error": str(e)},
@@ -143,12 +146,14 @@ class AioHttpClient(BaseHttpClient):
             raise ApiTimeoutError("Request timed out") from e
         except ClientError as e:
             if self._is_network_error(e):
+                # noinspection PyArgumentList
                 self._logger.error(  # type: ignore[call-arg]
                     f"{LOG_PREFIX} Network connectivity issue for {method} {url}: {str(e)}",
                     meta={"error": str(e), "is_network_error": True},
                 )
                 raise ApiNetworkError(f"Network connectivity issue: {str(e)}") from e
             else:
+                # noinspection PyArgumentList
                 self._logger.error(  # type: ignore[call-arg]
                     f"{LOG_PREFIX} ClientError for {url}: {e}",
                     meta={"error": str(e)},
@@ -158,12 +163,14 @@ class AioHttpClient(BaseHttpClient):
             raise
         except Exception as e:
             if self._is_network_error(e):
+                # noinspection PyArgumentList
                 self._logger.error(  # type: ignore[call-arg]
                     f"{LOG_PREFIX} Network connectivity issue for {method} {url}: {str(e)}",
                     meta={"error": str(e), "is_network_error": True},
                 )
                 raise ApiNetworkError(f"Network connectivity issue: {str(e)}") from e
 
+            # noinspection PyArgumentList
             self._logger.error(  # type: ignore[call-arg]
                 f"{LOG_PREFIX} Unexpected error during request to {url}: {e}",
                 meta={"error": str(e)},

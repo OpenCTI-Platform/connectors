@@ -93,7 +93,6 @@ class ReportFetcher(BaseFetcher):
                     params=params,
                     model=GTIReportResponse,
                     process_func=process_func,
-                    batch_process=True,
                 )
             else:
                 for report_type in report_types:
@@ -119,7 +118,6 @@ class ReportFetcher(BaseFetcher):
                             params=params,
                             model=GTIReportResponse,
                             process_func=process_func,
-                            batch_process=True,
                         )
 
         except ApiNetworkError as e:
@@ -206,7 +204,6 @@ class ReportFetcher(BaseFetcher):
         params: Dict[str, Any],
         model: Any,
         process_func: Callable[[Any], Any],
-        batch_process: bool = False,
     ) -> None:
         """Fetch paginated data from the API.
 
@@ -215,7 +212,6 @@ class ReportFetcher(BaseFetcher):
             params: Query parameters
             model: Model class for response data
             process_func: Function to process each page of data
-            batch_process: Whether to process data in batches
 
         Raises:
             GTIPaginationError: If there's an error with pagination
@@ -303,9 +299,9 @@ class ReportFetcher(BaseFetcher):
                 raise GTIApiError(
                     f"Network error: {str(net_err)}", endpoint=current_url
                 ) from net_err
-            except GTIApiError:
-                raise
             except GTIPaginationError:
+                raise
+            except GTIApiError:
                 raise
             except Exception as e:
                 self._log_error(

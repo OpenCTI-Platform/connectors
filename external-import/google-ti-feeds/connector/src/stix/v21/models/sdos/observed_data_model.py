@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 import pycti  # type: ignore
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
 from pydantic import Field, model_validator
+# noinspection PyProtectedMember
 from stix2.v21 import ObservedData, _STIXBase21  # type: ignore
 
 
@@ -49,6 +50,7 @@ class ObservedDataModel(BaseSDOModel):
             raise ValueError("At least one of 'objects' or 'object_refs' must be set.")
         return self
 
+    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:

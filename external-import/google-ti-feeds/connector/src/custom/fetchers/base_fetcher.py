@@ -44,7 +44,8 @@ class BaseFetcher:
             "accept": "application/json",
         }
 
-    def _extract_endpoint_name(self, url: str) -> str:
+    @staticmethod
+    def _extract_endpoint_name(url: str) -> str:
         """Extract a readable endpoint name from a URL.
 
         Args:
@@ -62,7 +63,7 @@ class BaseFetcher:
                     last_part = last_part.split("?")[0]
                 return last_part
             return url
-        except Exception:
+        except (AttributeError, TypeError):
             return url
 
     def _log_fetch_start(

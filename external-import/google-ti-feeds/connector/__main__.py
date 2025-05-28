@@ -10,6 +10,7 @@ from pycti import OpenCTIConnectorHelper  # type: ignore
 
 def main() -> None:
     """Define the main function to run the connector."""
+    # noinspection PyBroadException
     try:
         dev_mode = os.getenv("CONNECTOR_DEV_MODE", "").lower() == "true"
         if dev_mode:

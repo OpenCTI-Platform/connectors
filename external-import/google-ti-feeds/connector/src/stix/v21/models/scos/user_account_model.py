@@ -6,6 +6,7 @@ from typing import Dict, Optional, Union
 from connector.src.stix.v21.models.ovs.account_type_ov_enums import AccountTypeOV
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
+# noinspection PyProtectedMember
 from stix2.v21 import UserAccount, _STIXBase21  # type: ignore
 
 

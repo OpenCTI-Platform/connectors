@@ -8,6 +8,7 @@ from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
 )
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
 from pydantic import Field, model_validator
+# noinspection PyProtectedMember
 from stix2.v21 import AttackPattern, _STIXBase21  # type: ignore
 
 
@@ -28,6 +29,7 @@ class AttackPatternModel(BaseSDOModel):
         description="The list of Kill Chain Phases for which this Attack Pattern is used.",
     )
 
+    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:

@@ -84,9 +84,11 @@ class GTIReportToSTIXReport:
             content=attributes.content,
         )
 
+        # noinspection PyTypeChecker
         return report.to_stix2_object()
 
-    def _get_timestamps(self, attributes: ReportModel) -> Tuple[datetime, datetime]:
+    @staticmethod
+    def _get_timestamps(attributes: ReportModel) -> Tuple[datetime, datetime]:
         """Extract creation and modification timestamps from attributes.
 
         Args:
@@ -100,7 +102,8 @@ class GTIReportToSTIXReport:
         modified = datetime.fromtimestamp(attributes.last_modification_date)
         return created, modified
 
-    def _extract_labels(self, attributes: ReportModel) -> List[str]:
+    @staticmethod
+    def _extract_labels(attributes: ReportModel) -> List[str]:
         """Extract labels from report attributes.
 
         Args:
@@ -151,7 +154,8 @@ class GTIReportToSTIXReport:
             external_references.append(external_reference)
         return external_references
 
-    def _determine_report_type(self, attributes: ReportModel) -> ReportTypeOV:
+    @staticmethod
+    def _determine_report_type(attributes: ReportModel) -> ReportTypeOV:
         """Determine the report type based on attributes.
 
         Args:
@@ -238,4 +242,5 @@ class GTIReportToSTIXReport:
         )
         report.object_refs = updated_refs
 
+        # noinspection PyTypeChecker
         return report.to_stix2_object()

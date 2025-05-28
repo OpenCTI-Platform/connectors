@@ -51,10 +51,13 @@ class GTIConfig(BaseConfig):
     report_types: List[str] | str = "All"
     origins: List[str] | str = "All"
 
+    # noinspection PyNestedDecorators
     @field_validator("report_types", mode="before")
     @classmethod
     def split_and_validate(cls, v: str) -> List[str]:
         """Split and validate a comma-separated string into a list and validate its contents."""
+        parts = None
+
         if isinstance(v, str):
             parts = [item.strip() for item in v.split(",") if item.strip()]
 
@@ -69,10 +72,13 @@ class GTIConfig(BaseConfig):
             )
         return parts
 
+    # noinspection PyNestedDecorators
     @field_validator("origins", mode="before")
     @classmethod
     def split_and_validate_origins(cls, v: str) -> List[str]:
         """Split and validate a comma-separated string into a list and validate its contents."""
+        parts = None
+
         if isinstance(v, str):
             parts = [item.strip() for item in v.split(",") if item.strip()]
 

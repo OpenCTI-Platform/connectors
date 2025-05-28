@@ -11,6 +11,7 @@ from connector.src.custom.fetchers.base_fetcher import BaseFetcher
 from connector.src.utils.api_engine.exceptions.api_network_error import ApiNetworkError
 
 
+# noinspection DuplicatedCode
 class RelationshipFetcher(BaseFetcher):
     """Fetcher for relationship IDs between reports and their related entities."""
 
@@ -33,6 +34,7 @@ class RelationshipFetcher(BaseFetcher):
         entity_ids = []
         endpoint = f"{self.config.api_url}/collections/{report_id}/relationships/{relationship_type}"
 
+        # noinspection DuplicatedCode
         try:
             self.logger.info(
                 f"Fetching {relationship_type} for report {report_id} from {endpoint}"

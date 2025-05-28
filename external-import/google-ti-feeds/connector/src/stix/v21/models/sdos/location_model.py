@@ -6,6 +6,7 @@ import pycti  # type: ignore
 from connector.src.stix.v21.models.ovs.region_ov_enums import RegionOV
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
 from pydantic import Field, model_validator
+# noinspection PyProtectedMember
 from stix2.v21 import Location, _STIXBase21  # type: ignore
 
 
@@ -55,6 +56,7 @@ class LocationModel(BaseSDOModel):
         default=None, description="Postal code for the Location."
     )
 
+    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:

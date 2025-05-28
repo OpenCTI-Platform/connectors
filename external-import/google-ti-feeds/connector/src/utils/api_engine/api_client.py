@@ -95,18 +95,21 @@ class ApiClient:
                 else "Known API error"
             )
 
+            # noinspection PyArgumentList
             self._logger.error(  # type: ignore[call-arg]
                 f"{LOG_PREFIX} {error_prefix} during call_api for {method} {url}: {error_type} - {known_api_err}",
                 meta={"error": str(known_api_err), "error_type": error_type},
             )
             raise known_api_err
         except ApiError as api_err:
+            # noinspection PyArgumentList
             self._logger.error(  # type: ignore[call-arg]
                 f"{LOG_PREFIX} API error during call_api for {method} {url}: {api_err}",
                 meta={"error": str(api_err)},
             )
             raise api_err
         except Exception as e:
+            # noinspection PyArgumentList
             self._logger.error(  # type: ignore[call-arg]
                 f"{LOG_PREFIX} Unexpected failure in call_api for {method} {url}: {e}",
                 meta={"error": str(e)},

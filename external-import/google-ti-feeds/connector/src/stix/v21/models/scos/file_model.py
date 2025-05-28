@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field, model_validator
+# noinspection PyProtectedMember
 from stix2.v21 import File, _STIXBase21  # type: ignore
 
 

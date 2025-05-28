@@ -53,6 +53,7 @@ class FetchAll:
             logger: Logger for logging messages
 
         """
+        self.stix_converter = None
         self.config = gti_config
         self.api_client = api_client
         self.state = state or {}
@@ -68,27 +69,6 @@ class FetchAll:
         self.current_page_reports: List[GTIReportData] = []
         self.all_stix_objects: List[Any] = []
         self.latest_modified_date: Optional[str] = None
-
-    def _extract_endpoint_name(self, url: str) -> str:
-        """Extract a readable endpoint name from a URL.
-
-        Args:
-            url: The URL to extract from
-
-        Returns:
-            A simplified endpoint name for logging
-
-        """
-        try:
-            parts = url.split("/")
-            if len(parts) > 0:
-                last_part = parts[-1]
-                if "?" in last_part:
-                    last_part = last_part.split("?")[0]
-                return last_part
-            return url
-        except Exception:
-            return url
 
     def _prepare_partial_results(
         self, source: str

@@ -196,7 +196,7 @@ def test_gti_connector_all_defaulted_config(  # type: ignore
     data = {**min_required_config, **all_defaulted_config}
     _then_connector_created_successfully(capfd, mock_env, connector, data)
 
-
+# noinspection DuplicatedCode
 # Scenario: Create a connector with valid GTI report types
 def test_gti_connector_valid_gti_report_types(  # type: ignore
     capfd, min_required_config: Dict[str, str], valid_gti_report_types: Dict[str, str]
@@ -224,7 +224,7 @@ def test_gti_connector_invalid_gti_report_types(  # type: ignore
     # Then the connector should raise a ConfigurationError
     _then_connector_configuration_exception(mock_env, connector, config_ex)
 
-
+# noinspection DuplicatedCode
 # Scenario: Create a connector with valid GTI origins
 def test_gti_connector_valid_gti_origins(  # type: ignore
     capfd, min_required_config: Dict[str, str], valid_gti_origins: Dict[str, str]
@@ -291,11 +291,13 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
     for key, value in data.items():
         if key.startswith("OPENCTI_"):
             config_key = key[len("OPENCTI_") :].lower()
+            # noinspection PyProtectedMember
             assert (  # noqa: S101
                 getattr(connector._config.octi_config, config_key)
             ) == value
         elif key.startswith("GTI_"):
             config_key = key[len("GTI_") :].lower()
+            # noinspection PyProtectedMember
             gti_config = connector._config.get_config_class(GTIConfig)
             val = getattr(gti_config, config_key)
             if type(val) is list:
@@ -303,7 +305,9 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
             assert str(val) == value  # noqa: S101
 
     log_records = capfd.readouterr()
+    # noinspection PyProtectedMember
     if connector._config.connector_config.log_level in ["info", "debug"]:
+        # noinspection PyProtectedMember
         registered_message = f'"name": "{connector._config.connector_config.name}", "message": "Connector registered with ID", "attributes": {{"id": "{connector._config.connector_config.id}"}}'
         assert registered_message in log_records.err  # noqa: S101
 

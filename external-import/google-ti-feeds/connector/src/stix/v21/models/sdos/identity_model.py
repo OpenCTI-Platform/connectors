@@ -11,6 +11,7 @@ from connector.src.stix.v21.models.ovs.industry_sector_ov_enums import (
 )
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
 from pydantic import Field, model_validator
+# noinspection PyProtectedMember
 from stix2.v21 import Identity, _STIXBase21  # type: ignore
 
 
@@ -42,6 +43,7 @@ class IdentityModel(BaseSDOModel):
         description="Contact details for this Identity (email, phone, etc.). No defined format.",
     )
 
+    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:

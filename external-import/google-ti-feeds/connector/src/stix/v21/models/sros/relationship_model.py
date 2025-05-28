@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import pycti  # type: ignore
 from pydantic import BaseModel, Field, model_validator
+# noinspection PyProtectedMember
 from stix2.v21 import Relationship, _STIXBase21  # type: ignore
 
 
@@ -94,6 +95,7 @@ class RelationshipModel(BaseModel):
 
     model_config = {"extra": "forbid"}
 
+    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:

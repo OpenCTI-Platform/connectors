@@ -26,7 +26,6 @@ class GTIReportFetchError(GTIApiError):
             details: Additional details about the error
 
         """
-        error_msg = message
         if report_id:
             error_msg = f"Error fetching report {report_id}: {message}"
         else:

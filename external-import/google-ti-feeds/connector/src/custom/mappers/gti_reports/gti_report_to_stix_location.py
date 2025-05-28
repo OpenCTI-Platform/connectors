@@ -74,7 +74,7 @@ class GTIReportToSTIXLocation:
 
         return location
 
-    def _create_country(self, region_data: TargetedRegion) -> Location:
+    def _create_country(self, region_data: TargetedRegion) -> Optional[Location]:
         """Create a LocationCountry object.
 
         Args:
@@ -100,11 +100,12 @@ class GTIReportToSTIXLocation:
         )
 
         country_stix = country.to_stix2_object()
+        # noinspection PyTypeChecker
         return country_stix
 
     def _create_region(
         self, region_data: TargetedRegion, is_sub_region: bool
-    ) -> Location:
+    ) -> Optional[Location]:
         """Create a LocationRegion object.
 
         Args:
@@ -134,4 +135,5 @@ class GTIReportToSTIXLocation:
 
         region_stix = region.to_stix2_object()
 
+        # noinspection PyTypeChecker
         return region_stix

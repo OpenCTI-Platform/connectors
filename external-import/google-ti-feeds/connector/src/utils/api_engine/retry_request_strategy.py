@@ -56,7 +56,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
             logger: The logger to use.
 
         Raises:
-                Valueor: If max_retries is less than 0.
+                ValueError: If max_retries is less than 0.
                 ValueError: If backoff is less than 1.
 
         """
@@ -106,7 +106,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
 
         self._initialized = True
 
-    async def _perform_single_attempt(self, request: BaseRequestModel) -> Any:
+    async def _perform_single_attempt(self) -> Any:
         """Perform a single request attempt and process response."""
         try:
             await self._initialize()
@@ -148,6 +148,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 try:
                     return self.api_req.model.model_validate(data)
                 except Exception as validation_err:
+                    # noinspection PyArgumentList
                     self._logger.error(  # type: ignore[call-arg]
                         f"{LOG_PREFIX} Response validation failed: {validation_err}",
                         meta={"error": str(validation_err)},
@@ -176,6 +177,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
             )
             raise other_api_err
         except Exception as generic_err:
+            # noinspection PyArgumentList
             self._logger.error(  # type: ignore[call-arg]
                 f"{LOG_PREFIX} Unexpected error during single attempt for {self.api_req.url}",
                 meta={"error": str(generic_err)},
@@ -212,7 +214,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 self._logger.debug(
                     f"{LOG_PREFIX} Executing request attempt {attempt + 1}/{self.max_retries + 1} for {self.api_req.url}"
                 )
-                return await self._perform_single_attempt(request)
+                return await self._perform_single_attempt()
             except ApiNetworkError as e:
                 last_exception = e
                 network_error_count += 1
@@ -252,6 +254,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
 
         """
         if not isinstance(request, ApiRequestModel):
+            # noinspection PyArgumentList
             self._logger.error(
                 f"{LOG_PREFIX} RetryRequestStrategy only supports ApiRequestModel",  # type: ignore[call-arg]
                 meta={"error": "RetryRequestStrategy only supports ApiRequestModel"},
@@ -296,6 +299,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
         self.breaker.record_failure()
 
         if network_error_count >= max_network_errors:
+            # noinspection PyArgumentList
             self._logger.error(  # type: ignore[call-arg]
                 f"{LOG_PREFIX} Persistent network connectivity issues detected after {network_error_count} consecutive failures for {self.api_req.url}.",
                 meta={"error": str(error)},
@@ -337,6 +341,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
         )
         if not (isinstance(error, ApiHttpError) and error.status_code == 404):
             self.breaker.record_failure()
+            # noinspection PyArgumentList
             self._logger.error(  # type: ignore[call-arg]
                 f"{LOG_PREFIX} Failure recorded for circuit breaker due to error on {self.api_req.url}.",
                 meta={"error": str(error)},
@@ -347,6 +352,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
             )
 
         if isinstance(error, ApiHttpError) and error.status_code < 500:
+            # noinspection PyArgumentList
             self._logger.error(  # type: ignore[call-arg]
                 f"{LOG_PREFIX} Non-retryable HTTP error {error.status_code} for {self.api_req.url}. Not retrying.",
                 meta={"error": str(error)},
@@ -387,6 +393,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
             error: The unrecoverable API error.
 
         """
+        # noinspection PyArgumentList
         self._logger.error(  # type: ignore[call-arg]
             f"{LOG_PREFIX} Unrecoverable API error for {self.api_req.url}: {type(error).__name__} - {error}",
             meta={"error": str(error)},

@@ -1,4 +1,4 @@
-"""The module will contains method to manage OpenCTI Works related tasks."""
+"""The module will contain method to manage OpenCTI Works related tasks."""
 
 import logging
 from datetime import datetime, timezone
@@ -45,7 +45,8 @@ class WorkManager:
         self._helper.force_ping()
         return self._helper.get_state() or {}
 
-    def _is_valid_iso_format(self, date_string: str) -> bool:
+    @staticmethod
+    def _is_valid_iso_format(date_string: str) -> bool:
         """Check if a string is a valid ISO format date.
 
         Args:

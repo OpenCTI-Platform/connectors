@@ -39,7 +39,6 @@ from connector.src.custom.exceptions.gti_fetching_error import GTIFetchingError
 __all__ = [
     "GTIBaseError",
     "GTIConfigurationError",
-    "GTIConvertReportsError",
     "GTIConvertingError",
     "GTIFetchingError",
     "GTIEntityConversionError",

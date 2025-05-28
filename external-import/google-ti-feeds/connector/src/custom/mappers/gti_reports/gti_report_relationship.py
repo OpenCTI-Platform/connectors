@@ -7,6 +7,8 @@ from connector.src.custom.models.gti_reports.gti_report_model import GTIReportDa
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from stix2.v21 import Identity, MarkingDefinition, Relationship  # type: ignore
 
+from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
+
 
 class GTIReportRelationship:
     """Converts a GTI report into STIX relationship objects."""
@@ -47,7 +49,7 @@ class GTIReportRelationship:
         target_ref: str,
         target_name: Optional[str] = None,
         description: Optional[str] = None,
-    ) -> Relationship:
+    ) -> RelationshipModel:
         """Create a generic relationship from report to any target entity.
 
         Args:
@@ -78,7 +80,9 @@ class GTIReportRelationship:
             description=description,
         )
 
-    def to_stix(self, **kwargs: Any) -> List[Relationship]:
+    # noinspection PyUnusedLocal
+    @staticmethod
+    def to_stix(**kwargs: Any) -> List[Relationship]:
         """Convert the GTI report into STIX relationship objects.
 
         Args:

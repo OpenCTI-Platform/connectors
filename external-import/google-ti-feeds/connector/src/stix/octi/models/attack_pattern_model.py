@@ -47,8 +47,7 @@ class OctiAttackPatternModel:
             AttackPatternModel: The created attack pattern model
 
         """
-        custom_properties = {}
-        custom_properties["x_mitre_id"] = mitre_id
+        custom_properties = {"x_mitre_id": mitre_id}
 
         data = {
             "type": "attack-pattern",

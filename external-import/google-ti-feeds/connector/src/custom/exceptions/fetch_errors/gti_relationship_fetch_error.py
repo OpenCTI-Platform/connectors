@@ -28,7 +28,6 @@ class GTIRelationshipFetchError(GTIApiError):
             details: Additional details about the error
 
         """
-        error_msg = message
         if source_id and relationship_type:
             error_msg = f"Error fetching {relationship_type} relationships for {source_id}: {message}"
         elif source_id:

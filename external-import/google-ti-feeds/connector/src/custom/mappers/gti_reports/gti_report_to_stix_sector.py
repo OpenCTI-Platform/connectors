@@ -89,4 +89,5 @@ class GTIReportToSTIXSector:
 
         sector_stix = sector.to_stix2_object()
 
+        # noinspection PyTypeChecker
         return sector_stix

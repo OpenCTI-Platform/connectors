@@ -40,4 +40,5 @@ class GTIReportToSTIXIdentity:
 
         identity_stix = identity.to_stix2_object()
 
+        # noinspection PyTypeChecker
         return identity_stix

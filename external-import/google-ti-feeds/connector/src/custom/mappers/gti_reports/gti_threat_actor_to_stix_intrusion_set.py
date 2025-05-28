@@ -14,6 +14,7 @@ from connector.src.stix.v21.models.ovs.attack_motivation_ov_enums import (
 from stix2.v21 import Identity, IntrusionSet, MarkingDefinition  # type: ignore
 
 
+# noinspection DuplicatedCode
 class GTIThreatActorToSTIXIntrusionSet:
     """Converts a GTI threat actor to a STIX intrusion set object."""
 
@@ -65,7 +66,6 @@ class GTIThreatActorToSTIXIntrusionSet:
             attributes
         )
 
-        resource_level = self._extract_resource_level(attributes)
         name = attributes.name
         description = attributes.description
 
@@ -78,7 +78,6 @@ class GTIThreatActorToSTIXIntrusionSet:
             first_seen=first_seen,
             last_seen=last_seen,
             goals=goals,
-            resource_level=resource_level,
             primary_motivation=primary_motivation,
             secondary_motivations=secondary_motivations,
             labels=labels,
@@ -86,9 +85,11 @@ class GTIThreatActorToSTIXIntrusionSet:
             modified=modified,
         )
 
+        # noinspection PyTypeChecker
         return intrusion_set_model.to_stix2_object()
 
-    def _extract_aliases(self, attributes: ThreatActorModel) -> Optional[List[str]]:
+    @staticmethod
+    def _extract_aliases(attributes: ThreatActorModel) -> Optional[List[str]]:
         """Extract aliases from threat actor attributes.
 
         Args:
@@ -111,8 +112,9 @@ class GTIThreatActorToSTIXIntrusionSet:
 
         return aliases if aliases else None
 
+    @staticmethod
     def _extract_seen_dates(
-        self, attributes: ThreatActorModel
+            attributes: ThreatActorModel
     ) -> tuple[Optional[datetime], Optional[datetime]]:
         """Extract first_seen and last_seen dates from threat actor attributes.
 
@@ -153,16 +155,18 @@ class GTIThreatActorToSTIXIntrusionSet:
 
         return first_seen, last_seen
 
-    def _extract_labels(self, attributes: ThreatActorModel) -> Optional[List[str]]:
+    @staticmethod
+    def _extract_labels(attributes: ThreatActorModel) -> Optional[List[str]]:
+        # noinspection DuplicatedCode
         """Extract labels from threat actor attributes.
 
-        Args:
-            attributes: The threat actor attributes
+                Args:
+                    attributes: The threat actor attributes
 
-        Returns:
-            Optional[List[str]]: Extracted labels or None if no labels exist
+                Returns:
+                    Optional[List[str]]: Extracted labels or None if no labels exist
 
-        """
+                """
         if not hasattr(attributes, "tags_details") or not attributes.tags_details:
             return None
 
@@ -173,7 +177,8 @@ class GTIThreatActorToSTIXIntrusionSet:
 
         return labels if labels else None
 
-    def _extract_goals(self, attributes: ThreatActorModel) -> Optional[List[str]]:
+    @staticmethod
+    def _extract_goals(attributes: ThreatActorModel) -> Optional[List[str]]:
         """Extract goals from threat actor attributes.
 
         Args:
@@ -231,7 +236,8 @@ class GTIThreatActorToSTIXIntrusionSet:
 
         return primary_motivation, secondary_motivations
 
-    def _map_gti_motivation_to_stix_motivation(self, motivation: str) -> Optional[str]:
+    @staticmethod
+    def _map_gti_motivation_to_stix_motivation(motivation: str) -> Optional[str]:
         """Map GTI motivation to STIX attack motivation.
 
         Args:
@@ -263,15 +269,3 @@ class GTIThreatActorToSTIXIntrusionSet:
         }
 
         return motivation_map.get(motivation)
-
-    def _extract_resource_level(self, attributes: ThreatActorModel) -> Optional[str]:
-        """Extract resource level from threat actor attributes.
-
-        Args:
-            attributes: The threat actor attributes
-
-        Returns:
-            Optional[str]: Extracted resource level or None if resource level doesn't exist
-
-        """
-        return None

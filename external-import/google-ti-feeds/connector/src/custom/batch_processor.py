@@ -1,4 +1,4 @@
-"""The module will contains method to process batches of STIX objects."""
+"""The module will contain method to process batches of STIX objects."""
 
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -63,10 +63,9 @@ class BatchProcessor:
             self._logger.info(f"{LOG_PREFIX} No reports in batch to process")
             return
 
+        self._total_batches_processed += 1
+        batch_num = self._total_batches_processed
         try:
-            self._total_batches_processed += 1
-            batch_num = self._total_batches_processed
-
             self._logger.info(
                 f"{LOG_PREFIX} Converting batch #{batch_num} ({len(reports)} reports) to STIX format"
             )

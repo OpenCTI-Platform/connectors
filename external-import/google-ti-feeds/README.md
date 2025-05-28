@@ -8,7 +8,7 @@ Google Threat Intelligence Feeds Connector ingests threat intelligence from the 
 It extracts and transforms relevant data types report, location, sector, malware, intrusion-set, attack-pattern, vulnerability, and raw IOCs delivering structured, and ingest that in an intelligible way into OpenCTI.
 
 Most of the data is extracted from the reports, but some entities are extracted from the report's relationships.
-More informations can be found in the [Google Threat Intel API documentation](https://gtidocs.virustotal.com/reference/reports).
+More information can be found in the [Google Threat Intel API documentation](https://gtidocs.virustotal.com/reference/reports).
 
 > This connector requires a Google Threat Intel API key to function. You can obtain one by signing up for the Google Threat Intel service.5
 > Reports Analysis are only available to users with the Google Threat Intelligence (Google TI) Enterprise or Enterprise Plus licenses.5
@@ -86,7 +86,7 @@ Below are the optional parameters you can set for Google Threat Intel:
 | Google Threat Intel Report Types          | `gti_report_types`      | `GTI_REPORT_TYPES`          | All                               | No        | The types of reports to import from Google Threat Intel. Can be a string separated by comma for multiple values. Valid values are: `All`, `Actor Profile`, `Country Profile`, `Cyber Physical Security Roundup`, `Event Coverage/Implication`, `Industry Reporting`, `Malware Profile`, `Net Assessment`, `Network Activity Reports`, `News Analysis`, `OSINT Article`, `Patch Report`, `Strategic Perspective`, `TTP Deep Dive`, `Threat Activity Alert`, `Threat Activity Report`, `Trends and Forecasting`, `Weekly Vulnerability Exploitation Report` |
 | Google Threat Intel Report Origins        | `gti_origins`           | `GTI_ORIGINS`               | All                               | No        | The origin of the reports to import from Google Threat Intel. Can be a string separated by comma for multiple values. Valid values are: `All`, `partner`, `crowdsourced`, `google threat intelligence`.                                                                                                                                                                                                                                                                                                                                                   |
 
-> 📅 The `import_start_date` can be formatted as a time zone aware datetime or as a duration (e.g., `1970-01-01T00:00:00+03:00` for January, 1st 1970 at 3AM in Timezon +3H or `P3D` for 3 days ago relative to NOW UTC).
+> 📅 The `import_start_date` can be formatted as a time zone aware datetime or as a duration (e.g., `1970-01-01T00:00:00+03:00` for January, 1st 1970 at 3AM in Timezone +3H or `P3D` for 3 days ago relative to NOW UTC).
 
 ## Development
 
@@ -98,7 +98,7 @@ Please refer to [CONTRIBUTING.md](CONTRIBUTING.md).
 
 The connector is designed to be run in a Docker container. However, if you want to run it locally for development purposes, you can do so by following these steps:
 
-1/ Clone the connectors repository:
+1/ Clone the connector's repository:
 ```bash
     git clone <repository-url>
 ```
@@ -152,7 +152,7 @@ Note: Your commits must be signed using a GPG key. Otherwise, your Pull Request 
 
 ### Linting and formatting
 
-Added to the connectors linteing and formatting rules, this connector is developped and checked using ruff and mypy to ensure the code is type-checked and linted.
+Added to the connectors linteing and formatting rules, this connector is developed and checked using ruff and mypy to ensure the code is type-checked and linted.
 The dedicated configurations are set in the `pyproject.toml` file.
 You can run the following commands to check the code:
 

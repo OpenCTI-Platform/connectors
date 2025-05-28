@@ -35,6 +35,7 @@ def mock_env_vars(os_environ: "_Environ[str]", wanted_env: dict[str, str]) -> An
 def disable_config_yml() -> Any:
     """Fixture to disable config.yml for tests by stubbing yml_settings → {}."""
 
+    # noinspection PyUnusedLocal
     def fake_settings_customise_sources(
         cls,
         settings_cls,
@@ -46,6 +47,7 @@ def disable_config_yml() -> Any:
         def yml_settings() -> dict:
             return {}
 
+        # noinspection PyRedundantParentheses
         return (yml_settings, env_settings, dotenv_settings, file_secret_settings)
 
     patcher = patch(

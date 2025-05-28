@@ -72,9 +72,11 @@ class GTIAttackTechniqueToSTIXAttackPattern:
             modified=modified,
         )
 
+        # noinspection PyTypeChecker
         return attack_pattern_model.to_stix2_object()
 
-    def _extract_aliases(self, attributes: AttackTechniqueModel) -> Optional[List[str]]:
+    @staticmethod
+    def _extract_aliases(attributes: AttackTechniqueModel) -> Optional[List[str]]:
         """Extract aliases from attack technique attributes.
 
         Args:
@@ -88,8 +90,9 @@ class GTIAttackTechniqueToSTIXAttackPattern:
             return None
         return None
 
+    @staticmethod
     def _extract_kill_chain_phases(
-        self, attributes: AttackTechniqueModel
+            attributes: AttackTechniqueModel
     ) -> Optional[List[KillChainPhaseModel]]:
         """Extract kill chain phases from attack technique attributes.
 
@@ -104,7 +107,8 @@ class GTIAttackTechniqueToSTIXAttackPattern:
             return None
         return None
 
-    def _normalize_tactic_name(self, tactic_name: str) -> str:
+    @staticmethod
+    def _normalize_tactic_name(tactic_name: str) -> str:
         """Normalize tactic name to match MITRE ATT&CK format.
 
         Args:
@@ -117,7 +121,8 @@ class GTIAttackTechniqueToSTIXAttackPattern:
         normalized = tactic_name.lower().replace(" ", "-")
         return normalized
 
-    def _extract_labels(self, attributes: AttackTechniqueModel) -> Optional[List[str]]:
+    @staticmethod
+    def _extract_labels(attributes: AttackTechniqueModel) -> Optional[List[str]]:
         """Extract labels from attack technique attributes.
 
         Args:
