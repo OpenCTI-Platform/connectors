@@ -1,8 +1,9 @@
 import base64
 
 from aiohttp import BasicAuth, ClientSession
-from tenacity import retry, stop_after_attempt, wait_exponential_jitter
 from limiter import Limiter
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter
+
 
 class CofenseThreatHQClient:
     def __init__(self, helper, config):
@@ -56,7 +57,9 @@ class CofenseThreatHQClient:
             ),
         )
         async def _retry_wrapped():
-            async with ClientSession(auth=self.auth, raise_for_status=True, trust_env=True) as session:
+            async with ClientSession(
+                auth=self.auth, raise_for_status=True, trust_env=True
+            ) as session:
                 async with session.request(
                     method=request_method, url=url_built
                 ) as response:
@@ -64,6 +67,7 @@ class CofenseThreatHQClient:
                         return await response.read()
                     else:
                         return await response.json()
+
         async with self.rate_limiter:
             return await _retry_wrapped()
 
@@ -104,8 +108,8 @@ class CofenseThreatHQClient:
 
         if self.import_report_pdf:
             pdf_binary = await self._request_data(
-                    request_method, endpoint_rest, expect_binary=True
-                )
+                request_method, endpoint_rest, expect_binary=True
+            )
             encoded_pdf = base64.b64encode(pdf_binary).decode("utf-8")
 
             return {

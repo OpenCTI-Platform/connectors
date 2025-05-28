@@ -246,7 +246,6 @@ class CofenseThreatHQ:
                     report,
                     asyncio.create_task(
                         self.client.get_report_malware_details(report.get("threatId"))
-
                     ),
                     asyncio.create_task(
                         self.client.get_report_pdf(report.get("threatId"))
