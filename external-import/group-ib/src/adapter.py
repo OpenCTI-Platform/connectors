@@ -29,7 +29,9 @@ class DataToSTIXAdapter:
         self.tlp_color = tlp_color
         self.is_ioc = is_ioc
         self.helper.connector_logger.info("Initializing DataToSTIXAdapter")
-        self.author = ds.BaseEntity(name="", c_type="", tlp_color="white", helper=helper).author
+        self.author = ds.BaseEntity(
+            name="", c_type="", tlp_color="white", helper=helper
+        ).author
         self.helper.connector_logger.info(
             f"DataToSTIXAdapter initialized with collection: {collection}, tlp_color: {tlp_color}, is_ioc: {is_ioc}"
         )
