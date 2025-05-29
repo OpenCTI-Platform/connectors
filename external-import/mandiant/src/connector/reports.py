@@ -85,7 +85,12 @@ class MandiantReport:
         self.update_vulnerability()
         if not self.connector.mandiant_import_software_cpe:
             self.update_software()
-        self.create_relationships()
+
+        if (self.report_type in self.connector.guess_relationships_reports) or (
+            "all" in self.connector.guess_relationships_reports
+        ):
+            self.create_relationships()
+
         if self.create_notes:
             self.create_note()
         return stix2.parse(self.bundle, allow_custom=True)

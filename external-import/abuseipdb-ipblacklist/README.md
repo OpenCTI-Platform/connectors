@@ -150,9 +150,3 @@ e., `self.helper.connector_logger.error("An error message")`.
 <!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 
 ## Additional information
-
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
