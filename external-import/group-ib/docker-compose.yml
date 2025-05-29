@@ -3,7 +3,7 @@ services:
   connector:
     build: .
     container_name: ${CONNECTOR_DOCKER_CONTAINER_NAME}
-    image: opencti/connector-group-ib:6.3.1
+    image: opencti/connector-group-ib:6.6.13
     volumes:
       - ./docs/:/opt/connector/docs/
     env_file:
