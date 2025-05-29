@@ -45,10 +45,21 @@ class _CommonUtils:
     def _extract_domain(url, suffix=""):
         # type: (str, str) -> str
         """Extract domain name from url"""
-        parsed_url = urlparse(url)
-        if parsed_url.path and parsed_url.path != "/":
-            return parsed_url.netloc + suffix
-        return parsed_url.netloc
+        try:
+            parsed_url = urlparse(url)
+            domain = parsed_url.netloc
+            path = parsed_url.path
+        except ValueError:
+            # The thing is that if urlparse has an obfuscated URL 
+            # then we catch this error and take the domain ourselves. 
+            # Example of an obfuscated URL - http://example.web[.]app/
+            rest = url.split("://", 1)[-1]
+            domain = rest.split("/", 1)[0]
+            path = "/" + rest.split("/", 1)[1] if "/" in rest else ""
+            
+        if path and path != "/":
+            return domain + suffix
+        return domain
 
     @staticmethod
     def is_ipv4(ipv4):
@@ -124,7 +135,7 @@ class _CommonUtils:
 
 class BaseEntity(_CommonUtils):
 
-    def __init__(self, name, c_type, tlp_color):
+    def __init__(self, name, c_type, tlp_color, helper):
         self.name = name
         self.c_type = c_type
         self.author = self._generate_author()
@@ -146,6 +157,7 @@ class BaseEntity(_CommonUtils):
 
         self.stix_main_object = None
         self.stix_objects = None
+        self.helper = helper
 
     @staticmethod
     def _generate_author():
@@ -155,6 +167,10 @@ class BaseEntity(_CommonUtils):
             name=ConfigConnector.AUTHOR,
             identity_class="organization",
         )
+
+    @staticmethod
+    def stix_escape(value: str) -> str:
+        return value.replace("\\", "\\\\").replace("'", "\\'")
 
     def _generate_indicator(self):
         return
@@ -309,9 +325,9 @@ class _BaseIndicator(BaseEntity):
     3.
     """
 
-    def __init__(self, name, c_type, tlp_color, labels, risk_score):
+    def __init__(self, name, c_type, tlp_color, labels, risk_score, helper):
         # type: (str, str, str, List[str], Union[None, str]) -> None
-        super().__init__(name, c_type, tlp_color)
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, helper=helper)
 
         self.labels = labels
         self.risk_score = risk_score
@@ -321,6 +337,7 @@ class _BaseIndicator(BaseEntity):
 
     def _generate_indicator(self):
         """Creates and returns STIX2 indicator object"""
+        pattern = self._create_pattern(self.name)
         return stix2.Indicator(
             id=pycti.Indicator.generate_id(self.name),
             name=self.name,
@@ -328,7 +345,7 @@ class _BaseIndicator(BaseEntity):
             pattern_type="stix",
             valid_from=self.valid_from,
             valid_until=self.valid_until,
-            pattern=self._create_pattern(self.name),
+            pattern=pattern,
             created_by_ref=self.author.id,
             object_marking_refs=[self.tlp],
             custom_properties={
@@ -348,13 +365,14 @@ class Indicator(_BaseIndicator):
         self,
         name,
         c_type,
+        helper,
         tlp_color="white",
         labels=None,
         risk_score=None,
         context=None,
         created=None,
     ):
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
         self.context = context
         self.created = created
@@ -370,11 +388,12 @@ class Indicator(_BaseIndicator):
 
     def _generate_indicator(self):
         """Creates and returns STIX2 indicator object"""
+        pattern = self._create_pattern(self.c_type)
         self.stix_main_object = stix2.Indicator(
             id=pycti.Indicator.generate_id(self.name),
             name=self.name,
             description=self.description,
-            pattern=self._create_pattern(self.c_type),
+            pattern=pattern,
             pattern_type=self.c_type,
             valid_from=self.valid_from,
             valid_until=self.valid_until,
@@ -395,9 +414,9 @@ class Indicator(_BaseIndicator):
 class FileHash(_BaseIndicator):
     """Converts Hash to STIX2 File indicator and observable"""
 
-    def __init__(self, name, c_type, tlp_color="white", labels=None, risk_score=None):
+    def __init__(self, name, c_type, helper, tlp_color="white", labels=None, risk_score=None):
         # type: (list, str, str, List[str], Union[None, str]) -> None
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
     def _create_pattern(self, pattern_name):
         return f"[file:hashes.'{self.determine_hash_algorithm_by_length(pattern_name)}' = '{pattern_name}']"
@@ -420,35 +439,40 @@ class FileHash(_BaseIndicator):
 
     def _generate_indicator(self):
         """Creates and returns STIX2 indicator object"""
-        return [
-            stix2.Indicator(
-                id=pycti.Indicator.generate_id(_name),
-                name=_name,
-                description=self.description,
-                pattern_type="stix",
-                valid_from=self.valid_from,
-                valid_until=self.valid_until,
-                pattern=self._create_pattern(_name),
-                created_by_ref=self.author.id,
-                object_marking_refs=[self.tlp],
-                custom_properties={
-                    "x_opencti_score": self.risk_score or None,
-                    "x_opencti_main_observable_type": self._generate_main_observable_type(
-                        self.c_type
-                    ),
-                    "x_opencti_labels": self.labels,
-                },
-            )
-            for _name in self.name
-            if _name
-        ]
+        test = []
+        for _name in self.name:
+            if _name:
+                pattern = self._create_pattern(_name)
+                print('_generate_indicator 1', pattern)
+                self.helper.connector_logger.debug('_generate_indicator 1', pattern)
+                test.append(
+                    stix2.Indicator(
+                    id=pycti.Indicator.generate_id(_name),
+                    name=_name,
+                    description=self.description,
+                    pattern_type="stix",
+                    valid_from=self.valid_from,
+                    valid_until=self.valid_until,
+                    pattern=pattern,
+                    created_by_ref=self.author.id,
+                    object_marking_refs=[self.tlp],
+                    custom_properties={
+                        "x_opencti_score": self.risk_score or None,
+                        "x_opencti_main_observable_type": self._generate_main_observable_type(
+                            self.c_type
+                        ),
+                        "x_opencti_labels": self.labels,
+                    },
+                )
+                )
+        return test
 
 
 class IPAddress(_BaseIndicator):
     """Converts IP address to STIX2 IP indicator and observable"""
 
-    def __init__(self, name, c_type, tlp_color="white", labels=None, risk_score=None):
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+    def __init__(self, name, c_type, helper, tlp_color="white", labels=None, risk_score=None):
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
     def _create_pattern(self, pattern_name):
         if self.is_ipv4(pattern_name):
@@ -475,11 +499,13 @@ class IPAddress(_BaseIndicator):
 class URL(_BaseIndicator):
     """Converts URL to STIX2 URL indicator and observable"""
 
-    def __init__(self, name, c_type, tlp_color="white", labels=None, risk_score=None):
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+    def __init__(self, name, c_type, helper, tlp_color="white", labels=None, risk_score=None):
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
     def _create_pattern(self, pattern_name):
-        return f"[url:value = '{pattern_name}']"
+        pattern = f"[url:value = '{self.stix_escape(pattern_name)}']"
+        self.helper.connector_logger.debug(f'URL PATTERN: {pattern}, name: {pattern_name}')
+        return pattern
 
     def _generate_observable(self):
         self.stix_main_object = stix2.URL(
@@ -498,8 +524,8 @@ class URL(_BaseIndicator):
 class Domain(_BaseIndicator):
     """Converts URL to STIX2 URL indicator and observable"""
 
-    def __init__(self, name, c_type, tlp_color="white", labels=None, risk_score=None):
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+    def __init__(self, name, c_type, helper, tlp_color="white", labels=None, risk_score=None):
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
     def _create_pattern(self, pattern_name):
         return f"[domain-name:value = '{pattern_name}']"
@@ -520,8 +546,8 @@ class Domain(_BaseIndicator):
 class Email(_BaseIndicator):
     """Converts Email to STIX2 Email indicator and observable"""
 
-    def __init__(self, name, c_type, tlp_color="white", labels=None, risk_score=None):
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+    def __init__(self, name, c_type, helper, tlp_color="white", labels=None, risk_score=None):
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
     def _create_pattern(self, pattern_name):
         return f"[email-addr:value = '{pattern_name}']"
@@ -541,9 +567,9 @@ class Email(_BaseIndicator):
 
 
 class _BaseSDO(BaseEntity):
-    def __init__(self, name, c_type, tlp_color, labels, risk_score):
+    def __init__(self, name, c_type, tlp_color, labels, risk_score, helper):
         # type: (str, str, str, List[str], Union[None, str]) -> None
-        super().__init__(name, c_type, tlp_color)
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, helper=helper)
 
         self.labels = labels
         self.risk_score = risk_score
@@ -557,6 +583,7 @@ class ThreatActor(_BaseSDO):
         name,
         c_type,
         global_label,
+        helper,
         tlp_color="white",
         labels=None,
         risk_score=None,
@@ -566,7 +593,7 @@ class ThreatActor(_BaseSDO):
         goals=None,
         roles=None,
     ):
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
         self.global_label = global_label
         self.aliases = aliases
@@ -605,6 +632,7 @@ class IntrusionSet(_BaseSDO):
         name,
         c_type,
         global_label,
+        helper,
         tlp_color="white",
         labels=None,
         risk_score=None,
@@ -614,7 +642,7 @@ class IntrusionSet(_BaseSDO):
         goals=None,
         roles=None,
     ):
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
         # self.global_label = global_label
         self.aliases = aliases
@@ -653,13 +681,14 @@ class Malware(_BaseSDO):
         name,
         c_type,
         malware_types,
+        helper,
         tlp_color="white",
         labels=None,
         risk_score=None,
         aliases=None,
         last_seen=None,
     ):
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
         self.malware_types = []
         if malware_types:
@@ -696,6 +725,7 @@ class Vulnerability(_BaseSDO):
         self,
         name,
         c_type,
+        helper,
         tlp_color="white",
         labels=None,
         risk_score=None,
@@ -704,7 +734,7 @@ class Vulnerability(_BaseSDO):
         cvss_score=None,
         cvss_vector=None,
     ):
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
         self.created = created
         self.cvss_score = cvss_score
@@ -763,11 +793,12 @@ class AttackPattern(_BaseSDO):
         c_type,
         kill_chain_phases,
         mitre_id,
+        helper,
         tlp_color="white",
         labels=None,
         risk_score=None,
     ):
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
         self.kill_chain_phases = kill_chain_phases
         self.mitre_id = mitre_id
@@ -799,11 +830,12 @@ class Report(_BaseSDO):
         c_type,
         published_time,
         related_objects_ids,
+        helper,
         tlp_color="white",
         labels=None,
         risk_score=None,
     ):
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
         self.published_time = published_time or datetime.now()
         self.related_objects_ids = related_objects_ids
@@ -828,9 +860,9 @@ class Report(_BaseSDO):
 
 
 class _BaseCommon(BaseEntity):
-    def __init__(self, name, c_type, tlp_color, labels, risk_score):
+    def __init__(self, name, c_type, tlp_color, labels, risk_score, helper):
         # type: (str, str, str, List[str], Union[None, str]) -> None
-        super().__init__(name, c_type, tlp_color)
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, helper=helper)
 
         self.labels = labels
         self.risk_score = risk_score
@@ -843,12 +875,13 @@ class Location(_BaseCommon):
         self,
         name,
         c_type,
+        helper,
         tlp_color="white",
         labels=None,
         risk_score=None,
         location_type="Country",
     ):
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
         self.location_type = location_type
 
@@ -874,8 +907,8 @@ class Location(_BaseCommon):
 class KillChainPhase(_BaseCommon):
     """Converts KillChainPhase to STIX2 KillChainPhase SDO"""
 
-    def __init__(self, name, c_type, tlp_color="white", labels=None, risk_score=None):
-        super().__init__(name, c_type, tlp_color, labels, risk_score)
+    def __init__(self, name, c_type, helper, tlp_color="white", labels=None, risk_score=None):
+        super().__init__(name=name, c_type=c_type, tlp_color=tlp_color, labels=labels, risk_score=risk_score, helper=helper)
 
     def _generate_common(self):
         self.stix_main_object = stix2.KillChainPhase(

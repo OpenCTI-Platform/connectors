@@ -29,7 +29,7 @@ class DataToSTIXAdapter:
         self.tlp_color = tlp_color
         self.is_ioc = is_ioc
         self.helper.connector_logger.info("Initializing DataToSTIXAdapter")
-        self.author = ds.BaseEntity("", "", "white").author
+        self.author = ds.BaseEntity(name="", c_type="", tlp_color="white", helper=helper).author
         self.helper.connector_logger.info(
             f"DataToSTIXAdapter initialized with collection: {collection}, tlp_color: {tlp_color}, is_ioc: {is_ioc}"
         )
@@ -461,6 +461,7 @@ class DataToSTIXAdapter:
                 c_type=_type,
                 # tlp_color=self.tlp_color,
                 labels=[self.collection, _label],
+                helper=self.helper,
             )
             .generate_stix_objects()
             .stix_main_object
@@ -483,6 +484,7 @@ class DataToSTIXAdapter:
             c_type=_type,
             tlp_color=self.tlp_color,
             labels=[self.collection],
+            helper=self.helper,
         )
         self.helper.connector_logger.info(f"STIX domain object generated for: {name}")
         return domain
@@ -499,6 +501,7 @@ class DataToSTIXAdapter:
             c_type=_type,
             tlp_color=self.tlp_color,
             labels=[self.collection],
+            helper=self.helper,
         )
         self.helper.connector_logger.info(f"STIX URL object generated for: {name}")
         return url
@@ -515,6 +518,7 @@ class DataToSTIXAdapter:
             c_type=_type,
             tlp_color=self.tlp_color,
             labels=[self.collection],
+            helper=self.helper,
         )
         self.helper.connector_logger.info(f"STIX IPv4 object generated for: {name}")
         return ip
@@ -534,6 +538,7 @@ class DataToSTIXAdapter:
                 c_type=_type,
                 tlp_color=self.tlp_color,
                 labels=[self.collection],
+                helper=self.helper,
             ).generate_stix_objects()
             for _cc in obj_country_codes
             if _cc
@@ -587,6 +592,7 @@ class DataToSTIXAdapter:
                                 malware_types=_malware_types or [],
                                 tlp_color="red",
                                 labels=[self.collection],
+                                helper=self.helper,
                             )
                             malware.set_description(_description)
                             malware.generate_external_references(_portal_links)
@@ -605,6 +611,7 @@ class DataToSTIXAdapter:
                             malware_types=_malware_types,
                             tlp_color="red",
                             labels=[self.collection],
+                            helper=self.helper,
                         )
                         malware.set_description(_description)
                         malware.generate_external_references(_portal_links)
@@ -631,6 +638,7 @@ class DataToSTIXAdapter:
                     malware_types=_malware_types,
                     tlp_color="red",
                     labels=[self.collection],
+                    helper=self.helper,
                 )
                 malware.set_description(_description)
                 malware.generate_external_references(_portal_links)
@@ -698,6 +706,7 @@ class DataToSTIXAdapter:
                                 cvss_vector=_cvssv3_vector,
                                 tlp_color=self.tlp_color,
                                 labels=[self.collection],
+                                helper=self.helper,
                             )
                             vulnerability.set_description(_description)
                             vulnerability.generate_stix_objects()
@@ -723,6 +732,7 @@ class DataToSTIXAdapter:
                             cvss_vector=_cvssv3_vector,
                             tlp_color=self.tlp_color,
                             labels=[self.collection],
+                            helper=self.helper,
                         )
                         vulnerability.set_description(_description)
                         vulnerability.generate_stix_objects()
@@ -753,6 +763,7 @@ class DataToSTIXAdapter:
                     cvss_vector=_cvssv3_vector,
                     tlp_color=self.tlp_color,
                     labels=[self.collection],
+                    helper=self.helper,
                 )
                 vulnerability.set_description(_description)
                 vulnerability.generate_stix_objects()
@@ -806,6 +817,7 @@ class DataToSTIXAdapter:
                     kill_chain_phases=kill_chain_phases,
                     # tlp_color=self.tlp_color,
                     labels=[self.collection],
+                    helper=self.helper,
                 )
                 attack_pattern.set_description(_description)
                 attack_pattern.generate_external_references(v["portal_links"])
@@ -867,6 +879,7 @@ class DataToSTIXAdapter:
                 # last_seen=_date_last_seen,
                 goals=_threat_actor_goals,
                 roles=_threat_actor_roles,
+                helper=self.helper,
             )
             threat_actor.set_description(_threat_actor_description)
             threat_actor.generate_external_references(_portal_link)
@@ -979,6 +992,7 @@ class DataToSTIXAdapter:
                 # last_seen=_date_last_seen,
                 goals=_intrusion_set_goals,
                 roles=_intrusion_set_roles,
+                helper=self.helper,
             )
             intrusion_set.set_description(_intrusion_set_description)
             intrusion_set.generate_external_references(_portal_link)
@@ -1099,6 +1113,7 @@ class DataToSTIXAdapter:
                         c_type=_type,
                         tlp_color=self.tlp_color,
                         labels=[self.collection],
+                        helper=self.helper,
                     )
                     file.set_description(_description)
                     file.is_ioc = file_is_ioc
@@ -1157,6 +1172,7 @@ class DataToSTIXAdapter:
                     c_type=_type,
                     tlp_color=self.tlp_color,
                     labels=[self.collection],
+                    helper=self.helper,
                 )
                 file.set_description(_description)
                 file.is_ioc = file_is_ioc
@@ -1288,6 +1304,7 @@ class DataToSTIXAdapter:
                 if _url:
                     self.helper.connector_logger.debug(f"Processing URL: {_url}")
                     url = self.generate_stix_url(_url)
+                    self.helper.connector_logger.debug(f"Generated STIX URL: {url}")
                     url.is_ioc = url_is_ioc
                     url.set_valid_from(valid_from)
                     url.set_valid_until(valid_until)
@@ -1419,6 +1436,7 @@ class DataToSTIXAdapter:
             if _url:
                 self.helper.connector_logger.debug(f"Processing URL: {_url}")
                 url = self.generate_stix_url(_url)
+                self.helper.connector_logger.debug(f"Generated STIX URL: {url}")
                 url.is_ioc = url_is_ioc
                 url.set_valid_from(valid_from)
                 url.set_valid_until(valid_until)
@@ -1528,6 +1546,7 @@ class DataToSTIXAdapter:
             related_objects_ids=report_related_objects_ids,
             tlp_color=self.tlp_color,
             labels=[self.collection, _label, ta_label],
+            helper=self.helper,
         )
         report.set_description(f"Report {_id}: {_description}")
         report.generate_external_references(report_links)
@@ -1566,6 +1585,7 @@ class DataToSTIXAdapter:
             created=_date_created,
             tlp_color=self.tlp_color,
             labels=[self.collection, _label],
+            helper=self.helper,
         )
         yara.is_ioc = yara_is_ioc
         yara.set_valid_from(valid_from)
@@ -1614,6 +1634,7 @@ class DataToSTIXAdapter:
             created=_date_created,
             tlp_color=self.tlp_color,
             labels=[self.collection, _label],
+            helper=self.helper,
         )
         suricata.is_ioc = suricata_is_ioc
         suricata.set_valid_from(valid_from)
@@ -1666,6 +1687,7 @@ class DataToSTIXAdapter:
                 c_type=_type,
                 tlp_color=self.tlp_color,
                 labels=[self.collection],
+                helper=self.helper,
             )
             email.is_ioc = email_is_ioc
             email.set_valid_from(valid_from)
