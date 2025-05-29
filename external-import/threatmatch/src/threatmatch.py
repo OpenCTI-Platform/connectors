@@ -51,13 +51,6 @@ class ThreatMatch:
             False,
             True,
         )
-        # self.threatmatch_import_reports = get_config_variable(
-        #    "THREATMATCH_IMPORT_REPORTS",
-        #    ["threatmatch", "import_reports"],
-        #    config,
-        #    False,
-        #    True,
-        # )
         self.threatmatch_import_iocs = get_config_variable(
             "THREATMATCH_IMPORT_IOCS",
             ["threatmatch", "import_iocs"],
@@ -249,21 +242,6 @@ class ThreatMatch:
                             self._process_list(
                                 work_id, token, "alerts", data.get("list")
                             )
-                        # if self.threatmatch_import_reports:
-                        #    r = requests.get(
-                        #        self.threatmatch_url + "/api/reports/all",
-                        #        headers=headers,
-                        #        json={
-                        #            "mode": "compact",
-                        #            "date_since": import_from_date,
-                        #        },
-                        #    )
-                        #    if r.status_code != 200:
-                        #        self.helper.log_error(str(r.text))
-                        #    data = r.json()
-                        #    self._process_list(
-                        #        work_id, token, "reports", data.get("list")
-                        #    )
                         if self.threatmatch_import_iocs:
                             response = requests.get(
                                 self.threatmatch_url + "/api/taxii/groups",
