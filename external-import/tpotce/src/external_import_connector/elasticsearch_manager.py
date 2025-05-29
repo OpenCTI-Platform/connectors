@@ -3,14 +3,20 @@ from datetime import datetime
 import requests
 from requests.auth import HTTPBasicAuth
 
+class ElasticsearchConfig:
+    def __init__(self, host, username, password, timeout=10):
+        self.host = host
+        self.username = username
+        self.password = password
+        self.timeout = timeout
 
 class ElasticsearchManager:
     """Manages Elasticsearch querying and pagination."""
-
-    def __init__(self, elasticsearch_host, username, password, helper):
-        self.elasticsearch_host = elasticsearch_host
-        self.username = username
-        self.password = password
+    def __init__(self, config, helper):
+        self.elasticsearch_host = config.host
+        self.username = config.username
+        self.password = config.password
+        self.timeout = config.timeout
         self.helper = helper
 
     def query_with_pagination(self, last_run, now):
@@ -31,6 +37,7 @@ class ElasticsearchManager:
                 json=search_source_json,
                 auth=HTTPBasicAuth(self.username, self.password),
                 verify=False,
+                timeout=self.timeout,
             )
 
             if es_response.status_code == 200:

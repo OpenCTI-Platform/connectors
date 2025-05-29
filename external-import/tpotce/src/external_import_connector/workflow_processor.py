@@ -11,8 +11,6 @@ class WorkflowProcessor:
         download_manager,
         stix_labels,
         tlp_marking,
-        create_stix_entity,
-        create_relationship,
         fang_indicator,
     ):
         self.helper = helper
@@ -76,20 +74,20 @@ class WorkflowProcessor:
                 ) = self.download_manager.download_and_extract_file_info(url)
 
                 if not sha256 and not sha1 and not md5:
-                    logging.warning(f"No valid file downloaded or hashed from {url}.")
+                    logging.warning("No valid file downloaded or hashed from %s.", url)
                     continue
 
                 if not file_path:
-                    logging.warning(f"File not found for URL: {url}.")
+                    logging.warning("File not found for URL %s.", url)
                     continue
 
                 # Fang the URL for use in descriptions
                 fanged_url = self.fang_indicator(url)
 
                 # Create and add the URL object
-                description = (
-                    f"Observable URL for {fanged_url}, detected by {honeypot_type}"
-                )
+                logging.info("Observable URL for %s, detected by %s", fanged_url, honeypot_type)
+                description = f"Observable URL for {fanged_url}, detected by {honeypot_type}"
+
                 url_object = self.stix_utils.create_stix_entity(
                     "url",
                     value=url,
@@ -156,7 +154,9 @@ class WorkflowProcessor:
                     )
                     if ip_object:
                         # Create an indicator for the IP address
-                        ip_indicator_description = f"Indicator for IP {fanged_ip} extracted from C2 URL {fanged_url}, detected by {honeypot_type}"
+                        ip_indicator_description = (
+                            f"Indicator for IP {fanged_ip} extracted from C2 URL {fanged_url}, detected by {honeypot_type}"
+                        )
                         ip_indicator = self.stix_utils.create_stix_entity(
                             "indicator",
                             name=f"Indicator for IP {fanged_ip}",
@@ -263,7 +263,7 @@ class WorkflowProcessor:
                     self.helper.log_info(f"Processing bash script file: {file_path}")
 
                     # Read the content of the bash script
-                    with open(file_path, "r") as file:
+                    with open(file_path, "r", encoding="utf-8") as file:
                         bash_content = file.read()
 
                     # Extract additional network indicators (IPs, URLs, SSH keys)

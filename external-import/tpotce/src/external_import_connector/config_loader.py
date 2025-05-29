@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 from pycti import get_config_variable
 
-
+# pylint: disable=too-few-public-methods
 class ConfigConnector:
     def __init__(self):
         """
@@ -17,17 +17,12 @@ class ConfigConnector:
 
     @staticmethod
     def _load_config() -> dict:
-        """
-        Load the configuration from the YAML file
-        :return: Configuration dictionary
-        """
         config_file_path = Path(__file__).parents[1].joinpath("config.yml")
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-
+        if os.path.isfile(config_file_path):
+            with open(config_file_path, encoding="utf-8") as f:
+                config = yaml.load(f, Loader=yaml.FullLoader)
+        else:
+            config = {}
         return config
 
     def _initialize_configurations(self) -> None:
@@ -108,3 +103,4 @@ class ConfigConnector:
             self.load,
             default=None,
         )
+        

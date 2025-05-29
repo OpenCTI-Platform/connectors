@@ -1,9 +1,15 @@
-import stix2
-
 from .download_manager import DownloadManager  # Ensure this import is at the top
 from .stix_utils import StixUtils  # Import the centralized StixUtils class
 from .workflow_processor import WorkflowProcessor  # Import the WorkflowProcessor class
 
+class ConverterToStixConfig:
+    def __init__(self, helper, tlp_marking, author_name, labels, download_payloads=False, proxy_url=None):
+        self.helper = helper
+        self.tlp_marking = tlp_marking
+        self.author_name = author_name
+        self.labels = labels
+        self.download_payloads = download_payloads
+        self.proxy_url = proxy_url
 
 class ConverterToStix:
     """
@@ -13,22 +19,17 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(
-        self,
-        helper,
-        tlp_marking,
-        author_name,
-        labels,
-        download_payloads=False,
-        proxy_url=None,
-    ):
-        self.helper = helper
-        self.tlp_marking = tlp_marking
-        self.stix_labels = labels
-        self.download_payloads = download_payloads
+    def __init__(self, config: ConverterToStixConfig):
+        # Use config attributes here:
+        self.helper = config.helper
+        self.tlp_marking = config.tlp_marking
+        self.stix_labels = config.labels
+        self.download_payloads = config.download_payloads
+        proxy_url = config.proxy_url
+
         self.download_manager = DownloadManager(
-            helper, proxy_url=proxy_url
-        )  # Instantiate DownloadManager
+            self.helper, proxy_url=proxy_url
+        )
 
         # Initialize STIX utilities with helper
         self.stix_utils = StixUtils(
@@ -38,7 +39,7 @@ class ConverterToStix:
         )
 
         # Create the author identity via StixUtils
-        self.author_identity = self.stix_utils.create_identity(author_name)
+        self.author_identity = self.stix_utils.create_identity(config.author_name)
 
         # Initialize WorkflowProcessor with required arguments
         self.workflow_processor = WorkflowProcessor(
@@ -47,8 +48,6 @@ class ConverterToStix:
             download_manager=self.download_manager,
             stix_labels=self.stix_labels,
             tlp_marking=self.tlp_marking,
-            create_stix_entity=self.stix_utils.create_stix_entity,
-            create_relationship=self.stix_utils.create_relationship,
             fang_indicator=self.stix_utils.fang_indicator,
         )
         self.stix_objects = self.stix_utils.stix_objects
@@ -87,10 +86,10 @@ class ConverterToStix:
                 # Create geolocation and relate it to src_ip_object
                 geoip_data = row.get("geoip", {})
                 if geoip_data:
-                    self.stix_utils._generate_stix_location(geoip_data, src_ip_object)
+                    self.stix_utils.generate_stix_location(geoip_data, src_ip_object)
 
                     if geoip_data.get("asn"):
-                        asn_entity = self.stix_utils._generate_stix_asn(geoip_data)
+                        asn_entity = self.stix_utils.generate_stix_asn(geoip_data)
 
                         self.stix_utils.create_relationship(
                             source_ref=src_ip_object["id"],
@@ -136,9 +135,9 @@ class ConverterToStix:
                     fanged_attacker_commands, src_ip_object, indicator_src_ip
                 )
 
-                # Fixme ask filigran to create a custom observable that can be imported via pycti to not use api.
                 """ 
-                # Extract SSH-RSA keys if present
+                Fixme ask filigran to create a custom observable that can be imported via pycti to not use api.
+                Extract SSH-RSA keys if present
                 parsed_data = download_manager.extract_network_indicators(attacker_commands)
                 extracted_ssh_keys = parsed_data.get('ssh_keys', [])
                 

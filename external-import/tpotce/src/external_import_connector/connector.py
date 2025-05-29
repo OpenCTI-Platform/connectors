@@ -1,23 +1,25 @@
 import sys
 from datetime import datetime, timezone
-from pycti import OpenCTIConnectorHelper
 
 import pandas as pd
 import stix2
 import urllib3
+from pycti import OpenCTIConnectorHelper
 
+from .config_loader import ConfigConnector
+from .converter_to_stix import ConverterToStixConfig
 from .converter_to_stix import ConverterToStix
 from .elasticsearch_manager import ElasticsearchManager
-from .external_import import ExternalImportConnector
-from .config_variables import ConfigConnector
+from .elasticsearch_manager import ElasticsearchConfig
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-class CustomConnector(ExternalImportConnector):
+class CustomConnector:
     def __init__(self):
         """
         Initialize the Connector with necessary configurations
         """
+        super().__init__()  # call the base class init
         # Load configuration file and connection helpe
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
@@ -26,22 +28,26 @@ class CustomConnector(ExternalImportConnector):
         self.default_marking = stix2.TLP_GREEN
         self.tlp_marking = self.get_tlp_marking(self.config.config_marking)
 
-        # Initialize helper components
-        self.converter_to_stix = ConverterToStix(
-            self.helper,
-            self.tlp_marking,
-            self.config.stix_author,
-            self.config.stix_labels,
-            self.config.download_payloads,
+        # Create the config object for the STIX converter
+        config_stix = ConverterToStixConfig(
+            helper=self.helper,
+            tlp_marking=self.tlp_marking,
+            author_name=self.config.stix_author,
+            labels=self.config.stix_labels,
+            download_payloads=self.config.download_payloads,
             proxy_url=self.config.proxy_url,
         )
+
+        # Instantiate converter with the config object
+        self.converter_to_stix = ConverterToStix(config_stix)
         self.helper.connector_logger.debug("ConverterToStix initialized.")
-        self.elasticsearch_manager = ElasticsearchManager(
-            self.config.elasticsearch_host,
-            self.config.username,
-            self.config.password,
-            self.helper,
+        es_config = ElasticsearchConfig(
+            host=self.config.elasticsearch_host,
+            username=self.config.username,
+            password=self.config.password,
+            timeout=getattr(self.config, 'timeout', 10)  # default to 10 if no timeout set
         )
+        self.elasticsearch_manager = ElasticsearchManager(es_config, self.helper)
 
         self.helper.connector_logger.debug("ElasticsearchManager initialized.")
 
@@ -56,7 +62,8 @@ class CustomConnector(ExternalImportConnector):
                 )
                 self.config.retrofeed_start_date = None
 
-    def _collect_intelligence(self, last_run, now):
+    def _collect_intelligence(self, last_run):
+        now = datetime.now(tz=timezone.utc)
         self.helper.connector_logger.info(
             f"Collecting intelligence from {str(last_run)} to {str(now)}..."
         )
@@ -169,7 +176,7 @@ class CustomConnector(ExternalImportConnector):
             )
 
             # Perform intelligence collection
-            stix_objects = self._collect_intelligence(last_run, now)
+            stix_objects = self._collect_intelligence(last_run)
 
             if stix_objects:
                 stix_bundle = self.helper.stix2_create_bundle(stix_objects)

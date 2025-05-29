@@ -1,8 +1,7 @@
 import uuid
-
+from uuid import uuid5, NAMESPACE_DNS
 import stix2
 from pycti import Location
-
 
 class StixUtils:
     def __init__(
@@ -11,9 +10,8 @@ class StixUtils:
         tlp_marking,
         stix_labels,
         likelihood_notes=0,
-        author_identity=None,
         update_existing_data=False,
-    ):
+    ): # pylint: disable=too-many-arguments, too-many-positional-arguments
         self.author_identity = None  # Initialize as None
         self.helper = helper  # Store the helper for loggin
         self.tlp_marking = tlp_marking
@@ -28,10 +26,10 @@ class StixUtils:
         return indicator.replace(".", "[.]").replace(":", "[:]")
 
     def create_identity(self, author_name):
-        """Create an identity object for the STIX2 bundle."""
-        """Create and store the author identity."""
-
+        """Create an identity object for the STIX2 bundle and store the author identity."""
+        identity_id = f"identity--{str(uuid5(NAMESPACE_DNS, author_name))}"
         self.author_identity = stix2.Identity(
+            id=identity_id,
             name=author_name,
             identity_class="organization",
             custom_properties={
@@ -67,21 +65,30 @@ class StixUtils:
 
         entity = None
         if entity_type == "ipv4-addr":
+            ipv4_value = kwargs.get("value", "").strip()
+            ipv4_id = f"ipv4-addr--{str(uuid5(NAMESPACE_DNS, ipv4_value))}"
             entity = stix2.IPv4Address(
+                id=ipv4_id,
                 description=description,
                 custom_properties=custom_properties,
                 allow_custom=True,
                 **kwargs,
             )
         elif entity_type == "url":
+            url_value = kwargs.get("value", "").strip()
+            url_id = f"url--{str(uuid5(NAMESPACE_DNS, url_value))}"
             entity = stix2.URL(
+                id=url_id,
                 description=description,
                 custom_properties=custom_properties,
                 allow_custom=True,
                 **kwargs,
             )
         elif entity_type == "file":
+            file_name = kwargs.get("value", "Unknown file").strip()
+            file_id = f"file--{str(uuid5(NAMESPACE_DNS, file_name))}"
             entity = stix2.File(
+                id=file_id,
                 description=description,
                 custom_properties=custom_properties,
                 allow_custom=True,
@@ -89,7 +96,9 @@ class StixUtils:
             )
         elif entity_type == "indicator":
             pattern = kwargs.pop("pattern", None)
+            pattern_id = f"indicator--{str(uuid5(NAMESPACE_DNS, pattern.strip()))}"
             entity = stix2.Indicator(
+                id=pattern_id,
                 description=description,
                 pattern_type=kwargs.pop("pattern_type", "stix"),
                 pattern=pattern,
@@ -103,8 +112,22 @@ class StixUtils:
             )
             self.indicator_cache[pattern] = entity
         elif entity_type == "observed-data":
+            observed_objects = kwargs.pop("objects", {})
+            first_observed = kwargs.pop("first_observed", None)
+            last_observed = kwargs.pop("last_observed", None)
+            number_observed = kwargs.pop("number_observed", 1)
+
+             # Deterministic ID based on the observed object keys and timestamps
+            base_string = str(sorted(observed_objects.keys())) + str(first_observed) + str(last_observed)
+            observed_data_id = f"observed-data--{str(uuid5(NAMESPACE_DNS, base_string))}"
+
             entity = stix2.ObservedData(
+                id=observed_data_id,
                 description=description,
+                objects=observed_objects,
+                first_observed=first_observed,
+                last_observed=last_observed,
+                number_observed=number_observed,
                 custom_properties=custom_properties,
                 allow_custom=True,
                 **kwargs,
@@ -118,12 +141,17 @@ class StixUtils:
                 f"Created STIX entity of type {entity_type}: {entity.serialize()}"
             )
             return entity
+        return None
 
     def create_relationship(
         self, source_ref, target_ref, relationship_type, custom_properties=None
     ):
         """Create a STIX relationship and add it to the centralized bundle."""
+        rel_str = f"{source_ref}:{target_ref}:{relationship_type}"
+        rel_uuid = uuid5(NAMESPACE_DNS, rel_str)
+        rel_id = f"relationship--{rel_uuid}"
         rel = stix2.Relationship(
+            id=rel_id,
             source_ref=source_ref,
             target_ref=target_ref,
             relationship_type=relationship_type,
@@ -136,11 +164,13 @@ class StixUtils:
         self.stix_objects.append(rel)
         return rel
 
-    def _generate_stix_asn(self, geoip_data):
+
+    def generate_stix_asn(self, geoip_data):
         entity_asn = geoip_data.get("as_org", "Unknown ASN")
         asn_number = geoip_data.get("asn", 0)
-
+        input_string = f"{asn_number}{entity_asn}"
         stix_asn = stix2.AutonomousSystem(
+            id = f"autonomous-system--{uuid5(NAMESPACE_DNS, input_string)}",
             type="autonomous-system",
             number=asn_number,
             name=entity_asn,
@@ -155,7 +185,7 @@ class StixUtils:
 
         return stix_asn
 
-    def _generate_stix_location(self, geoip_data, src_ip_object):
+    def generate_stix_location(self, geoip_data, src_ip_object):
         # self.stix_objects = []
 
         # Generate City Location
@@ -171,7 +201,9 @@ class StixUtils:
             self.stix_objects.append(stix_city_location)
 
             self.create_relationship(
-                src_ip_object["id"], stix_city_location["id"], relationship_type="located-at"
+                src_ip_object["id"],
+                stix_city_location["id"],
+                relationship_type="located-at",
             )
 
         # Generate Country Location
@@ -297,9 +329,10 @@ class StixUtils:
                 self.helper.log_info(
                     f"Creating a new note for commands: {fanged_attacker_commands}"
                 )
+                note_id = f"note--{str(uuid.uuid4())}"
 
-                # Create the new note object
                 note_object = stix2.Note(
+                    id=note_id,
                     abstract="Command left by attackers",
                     content=fanged_attacker_commands,
                     object_refs=[src_ip_object["id"], indicator_src_ip["id"]],

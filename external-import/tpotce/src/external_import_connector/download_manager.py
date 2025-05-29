@@ -23,7 +23,7 @@ class DownloadManager:
             try:
                 self.proxy_url = self.validate_proxy_url(proxy_url)
                 self.session.proxies = {"http": self.proxy_url, "https": self.proxy_url}
-                self.helper.log_info(f"Proxy set to: {self.proxy_url}")
+                self.helper.log_info("Proxy set to: %s", self.proxy_url)
             except ValueError as e:
                 logging.error(str(e))
                 self.proxy_url = None  # Fallback to no proxy
@@ -159,12 +159,12 @@ class DownloadManager:
                     md5.update(chunk)
                     sha512.update(chunk)
 
-            self.helper.log_info(f"\t\tDetected sha256 for {url}: {sha256.hexdigest()}")
-            self.helper.log_info(f"\t\tDetected sha1 for {url}: {sha1.hexdigest()}")
-            self.helper.log_info(f"\t\tDetected md5 for {url}: {md5.hexdigest()}")
-            self.helper.log_info(f"\t\tDetected sha512 for {url}: {sha512.hexdigest()}")
-            self.helper.log_info(f"\t\tFile size: {file_size} bytes")
-            self.helper.log_info(f"\t\tMIME type: {mime_type}")
+            self.helper.log_info("\t\tDetected sha256 for %s: %s", url, sha256.hexdigest())
+            self.helper.log_info("\t\tDetected sha1 for %s: %s", url, sha1.hexdigest())
+            self.helper.log_info("\t\tDetected md5 for %s: %s", url, md5.hexdigest())
+            self.helper.log_info("\t\tDetected sha512 for %s: %s", url, sha512.hexdigest())
+            self.helper.log_info("\t\tFile size: %d bytes", file_size)
+            self.helper.log_info("\t\tMIME type: %s", mime_type)
 
             # Return file details
             return (
@@ -180,11 +180,12 @@ class DownloadManager:
             )
 
         except requests.exceptions.Timeout:
-            logging.error(f"Timeout occurred when trying to download file from {url}")
+            logging.error("Timeout occurred when trying to download file from %s", url)
+
         except requests.exceptions.RequestException as e:
-            logging.error(f"Error downloading or hashing file from {url}: {e}")
+            logging.error("Error downloading or hashing file from %s: %s", url, e)
         except Exception as e:
-            logging.error(f"Unexpected error occurred: {e}")
+            logging.error("Unexpected error occurred: %s", e)
 
         return None, None, None, None, 0, "application/octet-stream", None, {}, None
 
@@ -192,16 +193,16 @@ class DownloadManager:
         """Download the file with retry logic and exponential backoff in case of failure."""
         for attempt in range(retries):
             try:
-                self.helper.log_info(f"Attempt {attempt + 1} to download {url}")
+                self.helper.log_info("Attempt %d to download %s", attempt + 1, url)
                 response = self.session.get(url, stream=True, timeout=timeout)
                 response.raise_for_status()  # Check if the request was successful
                 return response
             except requests.exceptions.ProxyError:
-                logging.error(
-                    f"Proxy error during attempt {attempt + 1}. Check the proxy URL: {self.proxy_url}"
-                )
+                logging.error("Proxy error during attempt %d. Check the proxy URL: %s", attempt + 1, self.proxy_url)
+
                 break  # No need to retry if the proxy itself is invalid
             except requests.exceptions.RequestException as e:
-                logging.error(f"Attempt {attempt + 1} failed: {e}")
+                logging.error("Attempt %d failed: %s", attempt + 1, e)
+
                 sleep(backoff * (attempt + 1))  # Exponential backoff
         return None
