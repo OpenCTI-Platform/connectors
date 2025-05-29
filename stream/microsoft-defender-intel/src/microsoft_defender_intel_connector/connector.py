@@ -168,7 +168,17 @@ class MicrosoftDefenderIntelConnector:
         if is_stix_indicator(data):
             observables = self._convert_indicator_to_observables(data)
             for observable in observables:
-                result = self.api.find_indicators(observable["value"])
+                observable_value = None
+                if observable["type"] == "file":
+                    if "sha256" in observable["hashes"]:
+                        observable_value = observable["hashes"]["sha256"]
+                    elif "sha1" in observable["hashes"]:
+                        observable_value = observable["hashes"]["sha1"]
+                    elif "md5" in observable["hashes"]:
+                        observable_value = observable["hashes"]["md5"]
+                else:
+                    observable_value = observable["value"]
+                result = self.api.find_indicators(observable_value)
                 if len(result) > 0:
                     self._update_defender_indicator(result[0]["id"], observable)
                     did_update = True
@@ -207,7 +217,17 @@ class MicrosoftDefenderIntelConnector:
         if is_stix_indicator(data):
             observables = self._convert_indicator_to_observables(data)
             for observable in observables:
-                result = self.api.find_indicators(observable["value"])
+                observable_value = None
+                if observable["type"] == "file":
+                    if "sha256" in observable["hashes"]:
+                        observable_value = observable["hashes"]["sha256"]
+                    elif "sha1" in observable["hashes"]:
+                        observable_value = observable["hashes"]["sha1"]
+                    elif "md5" in observable["hashes"]:
+                        observable_value = observable["hashes"]["md5"]
+                else:
+                    observable_value = observable["value"]
+                result = self.api.find_indicators(observable_value)
                 for indicator_result in result:
                     self.api.delete_indicator(indicator_result["id"])
                     did_delete = True
