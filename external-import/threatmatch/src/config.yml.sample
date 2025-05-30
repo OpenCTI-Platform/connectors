@@ -15,7 +15,7 @@ threatmatch:
   url: 'https://eu.threatmatch.com'
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
-  interval: 5 # In Minutes
+  duration_period: 5 # In Minutes
   import_from_date: '2010-01-01 00:00'
   import_profiles: true # Import profiles
   import_alerts: true # Import alerts
