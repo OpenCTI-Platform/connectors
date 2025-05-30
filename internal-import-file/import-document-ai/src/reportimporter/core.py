@@ -13,13 +13,14 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
+from requests.exceptions import ConnectionError, HTTPError
+
 from reportimporter.constants import (
     RESULT_FORMAT_CATEGORY,
     RESULT_FORMAT_MATCH,
     RESULT_FORMAT_TYPE,
 )
 from reportimporter.util import create_stix_object
-from requests.exceptions import ConnectionError, HTTPError
 
 
 class ReportImporter:
@@ -156,7 +157,7 @@ class ReportImporter:
         predicted_rels = parsed.get("relationships", [])
 
         # Build and send STIX bundle to OpenCTI, including predicted relationships with relations handling fallback
-        observable_cnt = self._process_parsed_objects(
+        counts = self._process_parsed_objects(
             entity,
             observables,
             entities,
@@ -165,14 +166,25 @@ class ReportImporter:
             file_name,
             text_to_id,
         )
-        entity_cnt = len(entities)
 
+        if all(v == 0 for v in counts.values()):
+            return "No STIX objects sent — empty extraction or all filtered out."
         if self.helper.get_validate_before_import() and not bypass_validation:
-            return "Generated bundle sent for validation"
+            return (
+                f"Generated STIX bundle (awaiting validation) with: "
+                f"{counts['observables']} observables, "
+                f"{counts['entities']} entities, "
+                f"{counts['relationships']} relationships"
+                + (f", {counts['report']} report" if counts["report"] else "")
+            )
         else:
             return (
-                f"Sent {observable_cnt} observables, 1 report update and {entity_cnt} entity connections as stix "
-                f"bundle for worker import "
+                f"Sent STIX bundle with: "
+                f"{counts['observables']} observables, "
+                f"{counts['entities']} entities, "
+                f"{counts['relationships']} relationships"
+                + (f", {counts['report']} report" if counts["report"] else "")
+                + f" (total sent = {counts['total_sent']})"
             )
 
     def start(self) -> None:
@@ -311,12 +323,13 @@ class ReportImporter:
         bypass_validation: bool,
         file_name: str,
         text_to_id: dict,
-    ) -> int:
-        """Build STIX bundle: includes observables, entities, and predicted relationships.
+    ) -> dict:
+        """Build STIX bundle: includes observables, entities, and predicted relationships
+        (either linked to a context entity or wrapped in a new Report object).
 
         Args:
-            entity (dict | None): The context STIX entity (e.g., report, case, threat actor).
-                If provided, entities/observables will be attached to it accordingly.
+            entity (dict | None): A context STIX object (e.g., Report, Case, Threat Actor). If present,
+                parsed content is linked to this entity. If None, a new Report is created.
             observables (list): A list of STIX Cyber Observables (e.g., IPv4, domain names).
             entities (list): A list of STIX Domain Objects (e.g., attack patterns, malware).
             predicted_rels (list): A list of predicted relationships (dicts with source/target text and relation type).
@@ -328,10 +341,23 @@ class ReportImporter:
             ValueError: Raised if the context entity was expected but could not be found in OpenCTI.
 
         Returns:
-            int: Number of objects successfully sent to OpenCTI (excluding report update, if any).
+            dict: A dictionary containing the number of objects sent:
+                {
+                    "observables": int,     # Count of observables
+                    "entities": int,        # Count of STIX domain entities
+                    "relationships": int,   # Count of relationships
+                    "report": int,          # 1 if a report was created, 0 otherwise
+                    "total_sent": int       # Actual number of objects sent to OpenCTI
+                }
         """
         if len(observables) == 0 and len(entities) == 0:
-            return 0
+            return {
+                "observables": 0,
+                "entities": 0,
+                "relationships": 0,
+                "report": 0,
+                "total_sent": 0,
+            }
 
         ids: list[str] = []
         observables_ids: list[str] = []
@@ -347,6 +373,8 @@ class ReportImporter:
                 ids.append(e["id"])
 
         relationships: list[stix2.Relationship] = []  # accumulate all relationships
+
+        report_is_update = entity is not None
 
         # Build relationships defined by the connector's own rules
         if entity is not None:
@@ -480,7 +508,7 @@ class ReportImporter:
 
             observables = observables + entities + relationships
 
-            relationship_ids = [rel["id"] for rel in relationships]
+            relationship_ids = list({rel["id"] for rel in relationships})
 
             # No context entity: wrap everything in a freshly created Report
             now = datetime.now(timezone.utc)
@@ -503,7 +531,21 @@ class ReportImporter:
         final_objects: list[dict] = []
         for obj in observables:
             # Keep only objects whose name field is OK
-            bad_name = isinstance(obj, dict) and "name" in obj and len(obj["name"]) < 2
+            bad_name = (
+                "name" in obj and isinstance(obj["name"], str) and len(obj["name"]) < 2
+            )
+            if bad_name:
+                self.helper.connector_logger.debug(
+                    f"Skipping object with short name: {obj}"
+                )
+            if obj["id"] in final_ids:
+                self.helper.connector_logger.debug(
+                    f"Duplicate object skipped: {obj['id']}"
+                )
+            if "name" not in obj:
+                self.helper.connector_logger.debug(
+                    f"Object without name accepted: {obj}"
+                )
             if obj["id"] not in final_ids and not bad_name:
                 final_ids.append(obj["id"])
                 final_objects.append(obj)
@@ -516,5 +558,13 @@ class ReportImporter:
             entity_id=entity["id"] if entity else None,
         )
 
-        # len() - 1 because a report update is counted as an observable by OpenCTI
-        return len(bundles_sent) - 1
+        # Correction if updated report counted as observable
+        actual_count = len(bundles_sent) - 1 if report_is_update else len(bundles_sent)
+
+        return {
+            "observables": len(observables_ids),
+            "entities": len(entities_ids),
+            "relationships": len(relationship_ids),
+            "report": 0 if report_is_update else 1,
+            "total_sent": actual_count,
+        }
