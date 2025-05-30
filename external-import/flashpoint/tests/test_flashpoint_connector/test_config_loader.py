@@ -48,12 +48,14 @@ def fake_config_dict() -> dict[str, dict[str, Any]]:
             ),  # Reduce precision for later comparison in tests
             "import_reports": True,
             "indicators_in_reports": True,
+            "guess_relationships_from_reports": False,
             "import_alerts": True,
             "alert_create_related_entities": True,
             "import_indicators": True,
             "import_communities": True,
             "communities_queries": "cybersecurity,cyberattack",
-            "guess_relationships_from_reports": False,
+            "import_ccm_alerts": True,
+            "fresh_ccm_alerts_only": True,
         },
     }
 
