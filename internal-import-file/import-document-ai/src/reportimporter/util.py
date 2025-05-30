@@ -147,7 +147,7 @@ stix_object_mapping = {
     "Sector": lambda value, object_markings, custom_properties: stix2.Identity(
         id=Identity.generate_id(value, IdentityTypes.SECTOR.value),
         name=value,
-        identity_class=IdentityTypes.SECTOR,
+        identity_class=IdentityTypes.SECTOR.value,
         object_markings=object_markings,
         custom_properties=custom_properties,
         allow_custom=True,
@@ -155,7 +155,7 @@ stix_object_mapping = {
     "Organization": lambda value, object_markings, custom_properties: stix2.Identity(
         id=Identity.generate_id(value, IdentityTypes.ORGANIZATION.value),
         name=value,
-        identity_class=IdentityTypes.ORGANIZATION,
+        identity_class=IdentityTypes.ORGANIZATION.value,
         object_markings=object_markings,
         custom_properties=custom_properties,
         allow_custom=True,
@@ -163,7 +163,7 @@ stix_object_mapping = {
     "Individual": lambda value, object_markings, custom_properties: stix2.Identity(
         id=Identity.generate_id(value, IdentityTypes.INDIVIDUAL.value),
         name=value,
-        identity_class=IdentityTypes.INDIVIDUAL,
+        identity_class=IdentityTypes.INDIVIDUAL.value,
         object_markings=object_markings,
         custom_properties=custom_properties,
         allow_custom=True,
