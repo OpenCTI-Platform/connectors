@@ -149,6 +149,9 @@ class _ConfigLoaderServiceNow(ConfigBaseSettings):
         default="red",
         description="Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
     )
+    promote_observables_as_indicators: Optional[bool] = Field(
+        default=True, description="Boolean to promote observables into indicators."
+    )
 
     @field_validator(
         "state_to_exclude",
