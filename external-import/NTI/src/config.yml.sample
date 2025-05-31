@@ -1,0 +1,20 @@
+opencti:
+  url: "http://opencti:8080"
+  token: 'ChangeMe'
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'NTI'
+  scope: nti
+  log_level: 'error'
+  duration_period: 'P1D' # Interval given for scheduler process in ISO-8601 format
+
+NSFOCUS:
+  nti_base_url: 'https://nti.nsfocusglobal.com/api/v2/'
+  nti_api_key: 'ChangeMe'
+  nti_tlp: 'white' # available values are(low -> high): clear, white, green, amber, amber+strict, red - Default: 'clear'
+  nti_create_ioc: true
+  nti_create_ip: true
+  nti_create_domain: true
+  nti_create_file: true
+  nti_create_url: true
