@@ -89,7 +89,7 @@ class ConverterToStix:
             f"**Time Generated (UTC)**: {alert.get('TimeGenerated')}  \n"
             f"**Tactics**: {alert.get('Tactics')}  \n"
             f"**Description**: {alert.get('Description')}  \n"
-            f"**Remediation**:  \n{''.join([f"{step}  \n" for step in json.loads(alert.get('RemediationSteps', "[]"))])}  \n"
+            f"**Remediation**:  \n{''.join([f"{step}  \n" for step in json.loads(alert.get('RemediationSteps') or "[]")])}  \n"
         )
         stix_incident = stix2.Incident(
             id=Incident.generate_id(incident_name, incident_created_at),
@@ -139,7 +139,7 @@ class ConverterToStix:
             f"**Last Activity Time (UTC)**: {incident.get('LastActivityTime')}  \n"
             f"**Creation Time (UTC)**: {incident.get('CreatedTime')}  \n"
             f"**Last Modified Time (UTC)**: {incident.get('LastModifiedTime')}  \n"
-            f"**Alerts Count**: {json.loads(incident.get('AdditionalData', '{}')).get('alertsCount')}  \n"
+            f"**Alerts Count**: {json.loads(incident.get('AdditionalData') or '{}').get('alertsCount')}  \n"
             f"**Description**: {incident.get('Description') or 'Incident from Microsoft Sentinel | classification:' + incident.get('Classification', 'unknown')}"
         )
 
