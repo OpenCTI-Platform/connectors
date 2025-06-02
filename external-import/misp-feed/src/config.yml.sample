@@ -13,7 +13,7 @@ connector:
 misp_feed:
   url: 'https://changeme.com/misp-feed'
   ssl_verify: true
-  http_authorization_Header: Basic dXNlcjpwYXNzd29yZA== # Sets a static authorization header if its needed for accessing the feed
+  http_authorization_Header: Basic dXNlcjpwYXNzd29yZA== # Optional, sets a static authorization header if its needed for accessing the feed
   create_reports: true # Required, create report for MISP event
   report_type: 'misp-event' # Report typpe to use for event
   import_from_date: '2010-01-01' # Required, import all event from this date
