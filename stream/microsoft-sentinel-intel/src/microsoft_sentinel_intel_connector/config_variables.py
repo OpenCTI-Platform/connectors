@@ -37,23 +37,6 @@ class ConfigConnector:
         """
         # OpenCTI configurations
 
-        # Connector extra parameters
-        self.tenant_id = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_TENANT_ID",
-            ["microsoft_sentinel_intel", "tenant_id"],
-            self.load,
-        )
-        self.client_id = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_CLIENT_ID",
-            ["microsoft_sentinel_intel", "client_id"],
-            self.load,
-        )
-        self.client_secret = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET",
-            ["microsoft_sentinel_intel", "client_secret"],
-            self.load,
-        )
-
         self.workspace_id = get_config_variable(
             "MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID",
             ["sentinel_intel", "workspace_id"],
@@ -66,14 +49,6 @@ class ConfigConnector:
             self.load,
             False,
             "Opencti Stream Connector",
-        )
-
-        self.login_type = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_LOGIN_TYPE",
-            ["microsoft_sentinel_intel", "login_type"],
-            self.load,
-            False,
-            "client_secret",
         )
 
         self.resource_group = get_config_variable(
@@ -110,4 +85,20 @@ class ConfigConnector:
             ["microsoft_sentinel_intel", "extra_labels"],
             self.load,
             False,
+        )
+
+        self.workspace_api_version = get_config_variable(
+            "MICROSOFT_SENTINEL_WORKSPACE_API_VERSION",
+            ["microsoft_sentinel_intel", "workspace_api_version"],
+            self.load,
+            False,
+            "2024-02-01-preview",
+        )
+
+        self.management_api_version = get_config_variable(
+            "MICROSOFT_SENTINEL_MANAGEMENT_API_VERSION",
+            ["microsoft_sentinel_intel", "management_api_version"],
+            self.load,
+            False,
+            "2025-03-01",
         )

@@ -4,7 +4,9 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
+from azure.identity import DefaultAzureCredential
 
+from azure.core.exceptions import AzureError
 
 class SentinelApiHandlerError(Exception):
     def __init__(self, msg, metadata):
@@ -26,41 +28,37 @@ class SentinelApiHandler:
         self.session = requests.Session()
         self.retries_builder()
         self._expiration_token_date = None
-        self.workspace_url = f"https://api.ti.sentinel.azure.com/workspaces/{self.config.workspace_id}/threat-intelligence-stix-objects:upload?api-version=2024-02-01-preview"
+        self.workspace_url = f"https://api.ti.sentinel.azure.com/workspaces/{self.config.workspace_id}/threat-intelligence-stix-objects:upload?api-version={self.config.workspace_api_version}"
         self.management_url = f"https://management.azure.com/subscriptions/{self.config.subscription_id}/resourceGroups/{self.config.resource_group}/providers/Microsoft.OperationalInsights/workspaces/{self.config.workspace_name}/providers/Microsoft.SecurityInsights/threatIntelligence/main"
         self.extra_labels = (
             self.config.extra_labels.split(",") if self.config.extra_labels else None
         )
 
-    def _get_authorization_managed_identity_token(self):
+    def _get_authorization_token(self):
         """
-        Get a token from the metadata endpoint
+        Get an OAuth token using azure-identity SDK based on login type.
         """
-        url = "http://169.254.169.254/metadata/identity/oauth2/token"
-        params = {
-            "api-version": "2018-02-01",
-            "resource": "https://management.azure.com/",
-        }
-        headers = {"Metadata": "true"}
-        response = requests.get(url, params=params, headers=headers)
-        response_json = response.json()
-        return response_json
+        try:
+            credential = DefaultAzureCredential()
+            token = credential.get_token("https://management.azure.com/.default")
+            return {
+                "access_token": token.token,
+                "expires_on": token.expires_on
+            }
+        except AzureError as e:
+            self.helper.connector_logger.error(
+                f"[ERROR] Azure Identity failed: {str(e)}"
+            )
+            raise
+
 
     def _update_authorization_header(self):
         response = {}
 
-        if self.config.login_type == "client_secret":
-            response = self._get_authorization_client_secret_token()
-        elif self.config.login_type == "managed_identity":
-            response = self._get_authorization_managed_identity_token()
-        else:
-            self.helper.connector_logger.error(
-                "[ERROR]: No auth mechanism has been provided"
-            )
-
+        token = self._get_authorization_token()
         try:
-            oauth_token = response["access_token"]
-            oauth_expired = float(response["expires_in"])  # time in seconds
+            oauth_token = token["access_token"]
+            oauth_expired = float(token["expires_on"])  # time in seconds
             self.session.headers.update({"Authorization": f"Bearer {oauth_token}"})
             self._expiration_token_date = datetime.now() + timedelta(
                 seconds=int(oauth_expired * 0.9)
@@ -70,22 +68,6 @@ class SentinelApiHandler:
             error_message = f"[ERROR] Failed generating oauth token (managed identity): {error_description}"
             self.helper.connector_logger.error(error_message, {"response": response})
             raise e
-
-    def _get_authorization_client_secret_token(self):
-        """
-        Get an OAuth access token and set it as Authorization header in headers.
-        """
-        response_json = {}
-        url = f"https://login.microsoftonline.com/{self.config.tenant_id}/oauth2/v2.0/token"
-        body = {
-            "client_id": self.config.client_id,
-            "client_secret": self.config.client_secret,
-            "grant_type": "client_credentials",
-            "scope": "https://management.azure.com/.default",
-        }
-        response = requests.post(url, data=body)
-        response_json = response.json()
-        return response_json
 
     def retries_builder(self) -> None:
         """
@@ -165,6 +147,8 @@ class SentinelApiHandler:
         Create a Threat Intelligence Indicator on Sentinel from an OpenCTI indicator.
         :param indicator: OpenCTI indicator
         """
+
+
         request_body = self._build_request_body(indicator)
         self._send_request(
             "post",
@@ -178,7 +162,8 @@ class SentinelApiHandler:
         :param indicator_id: OpenCTI indicator to delete Threat Intelligence Indicator for
         """
         name = self._search_indicator_name(indicator_id)
-        url = f"{self.management_url}/indicators/{name}?api-version=2025-03-01"
+        url = f"{self.management_url}/indicators/{name}?api-version={self.config.management_api_version}"
+
         self._send_request("delete", url)
 
     def _search_indicator_name(self, indicator_id: str) -> str:
@@ -186,7 +171,7 @@ class SentinelApiHandler:
         Search a Threat Intelligence Indicator name based on the Opencti ID
         :param indicator_id: OpenCTI indicator to search Threat Intelligence Indicator for
         """
-        url = f"{self.management_url}/queryIndicators?api-version=2025-03-01"
+        url = f"{self.management_url}/queryIndicators?api-version={self.config.management_api_version}"
         data = {"keywords": indicator_id}
         resp = self._send_request("post", url, json=data)
         if resp is not None and len(resp["value"]) == 1:
