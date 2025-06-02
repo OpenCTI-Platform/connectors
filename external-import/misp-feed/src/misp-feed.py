@@ -104,6 +104,11 @@ class MispFeed:
             self.misp_feed_ssl_verify = get_config_variable(
                 "MISP_FEED_SSL_VERIFY", ["misp_feed", "ssl_verify"], config, False, True
             )
+        self.http_authorization_header = get_config_variable(
+            "MISP_FEED_HTTP_AUTHORIZATION_HEADER",
+            ["misp_feed", "http_authorization_Header"],
+            config,
+        )
         self.misp_feed_import_from_date = get_config_variable(
             "MISP_FEED_IMPORT_FROM_DATE", ["misp_feed", "import_from_date"], config
         )
@@ -225,9 +230,12 @@ class MispFeed:
             A string with the content or None in case of failure.
         """
         try:
+            request = urllib.request.Request(url)
+            if self.http_authorization_header is not None:
+                request.add_header("Authorization", self.http_authorization_header)
             return (
                 urllib.request.urlopen(
-                    url,
+                    request,
                     context=ssl.create_default_context(),
                 )
                 .read()
