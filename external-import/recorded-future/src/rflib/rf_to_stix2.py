@@ -263,11 +263,13 @@ class IPAddress(Indicator):
             return stix2.IPv6Address(
                 value=self.name,
                 object_marking_refs=self.tlp,
+                custom_properties={"x_opencti_created_by_ref": self.author.id},
             )
         elif self.is_ipv4() is True:
             return stix2.IPv4Address(
                 value=self.name,
                 object_marking_refs=self.tlp,
+                custom_properties={"x_opencti_created_by_ref": self.author.id},
             )
         else:
             raise ValueError(
@@ -289,7 +291,11 @@ class Domain(Indicator):
         return f"[domain-name:value = '{self.name}']"
 
     def _create_obs(self):
-        return stix2.DomainName(value=self.name, object_marking_refs=self.tlp)
+        return stix2.DomainName(
+            value=self.name,
+            object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
+        )
 
 
 class URL(Indicator):
@@ -304,7 +310,11 @@ class URL(Indicator):
         return f"[url:value = '{ioc}']"
 
     def _create_obs(self):
-        return stix2.URL(value=self.name, object_marking_refs=self.tlp)
+        return stix2.URL(
+            value=self.name,
+            object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
+        )
 
 
 class FileHash(Indicator):
@@ -333,7 +343,9 @@ class FileHash(Indicator):
 
     def _create_obs(self):
         return stix2.File(
-            hashes={self.algorithm: self.name}, object_marking_refs=self.tlp
+            hashes={self.algorithm: self.name},
+            object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
         )
 
 
@@ -785,6 +797,7 @@ class Software(RFStixEntity):
         self.software_object = stix2.Software(
             name=self.name,
             object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
         )
 
 
