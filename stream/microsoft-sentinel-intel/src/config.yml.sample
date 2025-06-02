@@ -6,9 +6,16 @@ connector:
   id: 'ChangeMe'
   type: 'STREAM'
   name: 'Microsoft Sentinel Intel'
+  scope: 'sentinel' # MIME type or SCO
+  log_level: 'info'
   live_stream_id: 'ChangeMe'
+  live_stream_listen_delete: true
+  live_stream_no_dependencies: true
 
 microsoft_sentinel_intel:
-  tenant_id: 'ChangeMe'
-  client_id: 'ChangeMe' 
-  client_secret: 'ChangeMe'
+  source_system: 'Opencti Stream Connector'
+  workspace_id: 'ChangeMe'
+  delete_extensions: True
+  resource_group: 'default' # For deletion
+  subscription_id: 'ChangeMe' # For deletion
+  workspace_name: 'ChangeMe' # For deletion
