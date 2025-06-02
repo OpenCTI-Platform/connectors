@@ -12,6 +12,7 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - MISP_FEED_URL=https://changeme.com/misp-feed
       - MISP_FEED_SSL_VERIFY=true # Required
+      - "MISP_FEED_HTTP_AUTHORIZATION_HEADER=Basic dXNlcjpwYXNzd29yZA==" # Optional if feed needs authorization
       - MISP_FEED_IMPORT_FROM_DATE=2000-01-01 # Required, import all event from this date
       - MISP_FEED_CREATE_REPORTS=true # Required, create report for MISP event
       - MISP_FEED_REPORT_TYPE=misp-event
