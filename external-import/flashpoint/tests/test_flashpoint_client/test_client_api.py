@@ -35,7 +35,7 @@ def mock_response(status_code: int, body: dict | None = None):
 
 
 def get_data_sample(file_name):
-    file_path = Path(__file__).parent.joinpath("data_samples", file_name)
+    file_path = Path(__file__).parent.parent.joinpath("data_samples", file_name)
     with open(file_path, encoding="utf-8") as f:
         data = json.load(f)
     return data
