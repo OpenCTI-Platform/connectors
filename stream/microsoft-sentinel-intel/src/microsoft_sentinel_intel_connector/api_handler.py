@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
 
 import requests
+from azure.core.exceptions import AzureError
+from azure.identity import DefaultAzureCredential
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
-from azure.identity import DefaultAzureCredential
 
-from azure.core.exceptions import AzureError
 
 class SentinelApiHandlerError(Exception):
     def __init__(self, msg, metadata):
@@ -41,16 +41,12 @@ class SentinelApiHandler:
         try:
             credential = DefaultAzureCredential()
             token = credential.get_token("https://management.azure.com/.default")
-            return {
-                "access_token": token.token,
-                "expires_on": token.expires_on
-            }
+            return {"access_token": token.token, "expires_on": token.expires_on}
         except AzureError as e:
             self.helper.connector_logger.error(
                 f"[ERROR] Azure Identity failed: {str(e)}"
             )
             raise
-
 
     def _update_authorization_header(self):
         response = {}
@@ -147,7 +143,6 @@ class SentinelApiHandler:
         Create a Threat Intelligence Indicator on Sentinel from an OpenCTI indicator.
         :param indicator: OpenCTI indicator
         """
-
 
         request_body = self._build_request_body(indicator)
         self._send_request(

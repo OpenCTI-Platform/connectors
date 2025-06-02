@@ -5,9 +5,7 @@ from pycti import OpenCTIConnectorHelper
 
 from .api_handler import SentinelApiHandler, SentinelApiHandlerError
 from .config_variables import ConfigConnector
-from .utils import (
-    is_stix_indicator,
-)
+from .utils import is_stix_indicator
 
 
 class MicrosoftSentinelIntelConnector:
