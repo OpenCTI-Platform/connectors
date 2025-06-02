@@ -1,1 +1,2 @@
-pycti==6.6.14
+pycti==6.5.9
+azure-identity==1.23.0
