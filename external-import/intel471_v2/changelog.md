@@ -1,3 +1,8 @@
+# v2.1.2
+
+  + Upgrade `Titan-Client` to version `1.20.0.10`
+  + Improve handling of special characters in URLs
+
 # v2.1.1
 
   + Decrease page number in Reports stream for better performance 
