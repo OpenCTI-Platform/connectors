@@ -37,73 +37,6 @@ class ConfigConnector:
         """
         # OpenCTI configurations
 
-        self.workspace_id = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID",
-            ["microsoft_sentinel_intel", "workspace_id"],
-            self.load,
-        )
-
-        self.source_system = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM",
-            ["microsoft_sentinel_intel", "source_system"],
-            self.load,
-            False,
-            "Opencti Stream Connector",
-        )
-
-        self.resource_group = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP",
-            ["microsoft_sentinel_intel", "resource_group"],
-            self.load,
-            False,
-        )
-
-        self.subscription_id = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID",
-            ["microsoft_sentinel_intel", "subscription_id"],
-            self.load,
-            False,
-        )
-
-        self.workspace_name = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME",
-            ["microsoft_sentinel_intel", "workspace_name"],
-            self.load,
-            False,
-        )
-
-        self.delete_extensions = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_DELETE_EXTENSIONS",
-            ["microsoft_sentinel_intel", "delete_extensions"],
-            self.load,
-            False,
-            True,
-        )
-
-        self.extra_labels = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_EXTRA_LABELS",
-            ["microsoft_sentinel_intel", "extra_labels"],
-            self.load,
-            False,
-        )
-
-        self.workspace_api_version = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_WORKSPACE_API_VERSION",
-            ["microsoft_sentinel_intel", "workspace_api_version"],
-            self.load,
-            False,
-            "2024-02-01-preview",
-        )
-
-        self.management_api_version = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_MANAGEMENT_API_VERSION",
-            ["microsoft_sentinel_intel", "management_api_version"],
-            self.load,
-            False,
-            "2025-03-01",
-        )
-
-        # Could be deprecated soon
         self.tenant_id = get_config_variable(
             "MICROSOFT_SENTINEL_INTEL_TENANT_ID",
             ["microsoft_sentinel_intel", "tenant_id"],
@@ -119,9 +52,62 @@ class ConfigConnector:
             ["microsoft_sentinel_intel", "client_secret"],
             self.load,
         )
-        self.login_url = get_config_variable(
-            "MICROSOFT_SENTINEL_INTEL_LOGIN_URL",
-            ["microsoft_sentinel_intel", "login_url"],
+
+        self.workspace_id = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID",
+            ["microsoft_sentinel_intel", "workspace_id"],
             self.load,
-            default="https://login.microsoft.com",
+        )
+
+        self.workspace_name = get_config_variable(  # For deletion API
+            "MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME",
+            ["microsoft_sentinel_intel", "workspace_name"],
+            self.load,
+        )
+
+        self.subscription_id = get_config_variable(  # For deletion API
+            "MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID",
+            ["microsoft_sentinel_intel", "subscription_id"],
+            self.load,
+        )
+
+        self.resource_group = get_config_variable(  # For deletion API
+            "MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP",
+            ["microsoft_sentinel_intel", "resource_group"],
+            self.load,
+            default="default",
+        )
+
+        self.source_system = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM",
+            ["microsoft_sentinel_intel", "source_system"],
+            self.load,
+            default="Opencti Stream Connector",
+        )
+
+        self.delete_extensions = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_DELETE_EXTENSIONS",
+            ["microsoft_sentinel_intel", "delete_extensions"],
+            self.load,
+            default=True,
+        )
+
+        self.extra_labels = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_EXTRA_LABELS",
+            ["microsoft_sentinel_intel", "extra_labels"],
+            self.load,
+        )
+
+        self.workspace_api_version = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_WORKSPACE_API_VERSION",
+            ["microsoft_sentinel_intel", "workspace_api_version"],
+            self.load,
+            default="2024-02-01-preview",
+        )
+
+        self.management_api_version = get_config_variable(
+            "MICROSOFT_SENTINEL_INTEL_MANAGEMENT_API_VERSION",
+            ["microsoft_sentinel_intel", "management_api_version"],
+            self.load,
+            default="2025-03-01",
         )
