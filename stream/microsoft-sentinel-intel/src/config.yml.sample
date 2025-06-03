@@ -13,9 +13,15 @@ connector:
   live_stream_no_dependencies: true
 
 microsoft_sentinel_intel:
-  source_system: 'Opencti Stream Connector'
+  tenant_id: 'ChangeMe'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
   workspace_id: 'ChangeMe'
-  delete_extensions: True
-  resource_group: 'default' # For deletion
-  subscription_id: 'ChangeMe' # For deletion
   workspace_name: 'ChangeMe' # For deletion
+  subscription_id: 'ChangeMe' # For deletion
+#  resource_group: 'default' # For deletion
+#  source_system: 'Opencti Stream Connector'
+#  delete_extensions: True
+#  extra_labels: 'label1,label2'
+#  workspace_api_version: '2024-02-01-preview'
+#  management_api_version: '2025-03-01'
