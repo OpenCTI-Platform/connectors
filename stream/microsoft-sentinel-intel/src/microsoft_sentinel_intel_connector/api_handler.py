@@ -111,7 +111,12 @@ class SentinelApiHandler:
             )
 
             if response.content:
-                return response.json()
+                res = response.json()
+                if errors := res.get("errors"):
+                    raise SentinelApiHandlerError(
+                        "[API] Error in response from Sentinel",
+                        {"url_path": f"{method.upper()} {url}", "errors": errors},
+                    )
 
         except (RetryError, HTTPError, Timeout, ConnectionError) as err:
             raise SentinelApiHandlerError(
