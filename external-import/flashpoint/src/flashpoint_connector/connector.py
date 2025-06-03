@@ -2,8 +2,9 @@ import mimetypes
 import sys
 from datetime import datetime, timezone
 
-from flashpoint_client import FlashpointClient
+from flashpoint_client import FlashpointClient, FlashpointClientError
 from pycti import OpenCTIConnectorHelper
+from stix2.exceptions import STIXError
 
 from .config_loader import ConfigLoader
 from .converter_to_stix import ConverterToStix
@@ -423,6 +424,9 @@ class FlashpointConnector:
             connector_id=self.helper.connect_id,
             friendly_name="Flashpoint CCM Alerts run @ " + now.isoformat(),
         )
+        # Flag to indicate if an error occurred during the process
+        # This will be used to mark the work as processed or in error
+        in_error = False
 
         try:
             compromised_credential_sightings = (
@@ -432,28 +436,38 @@ class FlashpointConnector:
                 )
             )
             for compromised_credential_sighting in compromised_credential_sightings:
-                stix_objects = self.converter_to_stix.convert_ccm_alert_to_incident(
-                    alert=compromised_credential_sighting
-                )
+                try:
+                    stix_objects = self.converter_to_stix.convert_ccm_alert_to_incident(
+                        alert=compromised_credential_sighting
+                    )
 
-                bundle = self.helper.stix2_create_bundle(stix_objects)
-                bundles_sent = self.helper.send_stix2_bundle(
-                    bundle=bundle,
-                    work_id=work_id,
-                )
+                    bundle = self.helper.stix2_create_bundle(stix_objects)
+                    bundles_sent = self.helper.send_stix2_bundle(
+                        bundle=bundle,
+                        work_id=work_id,
+                    )
 
-                self.helper.connector_logger.info(
-                    "CCM alerts STIX bundle sent to OpenCTI",
-                    {"bundles_count": len(bundles_sent)},
-                )
+                    self.helper.connector_logger.info(
+                        "CCM alerts STIX bundle sent to OpenCTI",
+                        {"bundles_count": len(bundles_sent)},
+                    )
+                except STIXError as err:
+                    self.helper.connector_logger.error(
+                        "An error occurred while converting CCM alert, skipping it...",
+                        {
+                            "ccm_alert_id": compromised_credential_sighting.fpid,
+                            "error": str(err),
+                        },
+                    )
 
             message = "CCM alerts import completed"
             self.helper.connector_logger.info(message)
-            self.helper.api.work.to_processed(work_id, message, in_error=False)
-        except Exception as err:
-            message = f"An error occurred while importing CCM alerts, error: {err}"
-            self.helper.connector_logger.error(message)
-            self.helper.api.work.to_processed(work_id, message, in_error=True)
+        except FlashpointClientError as err:
+            in_error = True
+            message = "An error occurred while fetching CCM alerts"
+            self.helper.connector_logger.error(message, {"error": str(err)})
+        finally:
+            self.helper.api.work.to_processed(work_id, message, in_error)
 
     def process_data(self) -> None:
         """
