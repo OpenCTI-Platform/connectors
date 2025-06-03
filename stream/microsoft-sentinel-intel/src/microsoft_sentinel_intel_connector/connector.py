@@ -85,7 +85,7 @@ class MicrosoftSentinelIntelConnector:
         """
         self.api.delete_indicator(indicator_data["id"])
         self.helper.connector_logger.info(
-            "[DELETE] Indicator updated",
+            "[DELETE] Indicator deleted",
             {"opencti_id": indicator_data["id"]},
         )
 
