@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 import requests
 from azure.core.exceptions import AzureError
 from azure.identity import ClientSecretCredential, DefaultAzureCredential
+from microsoft_sentinel_intel_connector.config import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
@@ -15,7 +17,7 @@ class SentinelApiHandlerError(Exception):
 
 
 class SentinelApiHandler:
-    def __init__(self, helper, config):
+    def __init__(self, helper: OpenCTIConnectorHelper, config: ConnectorSettings):
         """
         Init Sentinel Intel API handler.
         :param helper: PyCTI helper instance
@@ -28,10 +30,12 @@ class SentinelApiHandler:
         self.session = requests.Session()
         self.retries_builder()
         self._expiration_token_date = None
-        self.workspace_url = f"https://api.ti.sentinel.azure.com/workspaces/{self.config.workspace_id}/threat-intelligence-stix-objects:upload?api-version={self.config.workspace_api_version}"
-        self.management_url = f"https://management.azure.com/subscriptions/{self.config.subscription_id}/resourceGroups/{self.config.resource_group}/providers/Microsoft.OperationalInsights/workspaces/{self.config.workspace_name}/providers/Microsoft.SecurityInsights/threatIntelligence/main"
+        self.workspace_url = f"https://api.ti.sentinel.azure.com/workspaces/{self.config.microsoft_sentinel_intel.workspace_id}/threat-intelligence-stix-objects:upload?api-version={self.config.microsoft_sentinel_intel.workspace_api_version}"
+        self.management_url = f"https://management.azure.com/subscriptions/{self.config.microsoft_sentinel_intel.subscription_id}/resourceGroups/{self.config.microsoft_sentinel_intel.resource_group}/providers/Microsoft.OperationalInsights/workspaces/{self.config.microsoft_sentinel_intel.workspace_name}/providers/Microsoft.SecurityInsights/threatIntelligence/main"
         self.extra_labels = (
-            self.config.extra_labels.split(",") if self.config.extra_labels else None
+            self.config.microsoft_sentinel_intel.extra_labels.split(",")
+            if self.config.microsoft_sentinel_intel.extra_labels
+            else None
         )
 
     def _get_authorization_token(self):
@@ -40,10 +44,16 @@ class SentinelApiHandler:
         """
 
         if all(
-            {self.config.tenant_id, self.config.client_id, self.config.client_secret}
+            {
+                self.config.microsoft_sentinel_intel.tenant_id,
+                self.config.microsoft_sentinel_intel.client_id,
+                self.config.microsoft_sentinel_intel.client_secret,
+            }
         ):
             credential = ClientSecretCredential(
-                self.config.tenant_id, self.config.client_id, self.config.client_secret
+                self.config.microsoft_sentinel_intel.tenant_id,
+                self.config.microsoft_sentinel_intel.client_id,
+                self.config.microsoft_sentinel_intel.client_secret,
             )
         else:
             credential = DefaultAzureCredential()
@@ -137,7 +147,7 @@ class SentinelApiHandler:
                   where "stixobjects" contains the modified indicator.
         """
 
-        if self.config.delete_extensions:
+        if self.config.microsoft_sentinel_intel.delete_extensions:
             del indicator["extensions"]
 
         if self.extra_labels:
@@ -148,7 +158,10 @@ class SentinelApiHandler:
             else:
                 indicator["labels"] = self.extra_labels
 
-        data = {"sourcesystem": self.config.source_system, "stixobjects": [indicator]}
+        data = {
+            "sourcesystem": self.config.microsoft_sentinel_intel.source_system,
+            "stixobjects": [indicator],
+        }
         return data
 
     def post_indicator(self, indicator: dict) -> None:
@@ -170,7 +183,7 @@ class SentinelApiHandler:
         :param indicator_id: OpenCTI indicator to delete Threat Intelligence Indicator for
         """
         name = self._search_indicator_name(indicator_id)
-        url = f"{self.management_url}/indicators/{name}?api-version={self.config.management_api_version}"
+        url = f"{self.management_url}/indicators/{name}?api-version={self.config.microsoft_sentinel_intel.management_api_version}"
 
         self._send_request("delete", url)
 
@@ -179,7 +192,7 @@ class SentinelApiHandler:
         Search a Threat Intelligence Indicator name based on the Opencti ID
         :param indicator_id: OpenCTI indicator to search Threat Intelligence Indicator for
         """
-        url = f"{self.management_url}/queryIndicators?api-version={self.config.management_api_version}"
+        url = f"{self.management_url}/queryIndicators?api-version={self.config.microsoft_sentinel_intel.management_api_version}"
         data = {"keywords": indicator_id}
         resp = self._send_request("post", url, json=data)
         if resp is not None and len(resp["value"]) == 1:
