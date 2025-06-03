@@ -30,18 +30,7 @@ class FlashpointConnector:
         Get the state of the connector.
         :return: The state of the connector.
         """
-        connector_state = self.helper.get_state() or {}
-
-        # Handle legacy connector's state (since 6.6.12)
-        last_run_iso: str = connector_state.get("last_run")  # type: ignore[assignment]
-        if last_run_iso and "last_alerts_run" not in connector_state:
-            connector_state["last_alerts_run"] = last_run_iso
-        if last_run_iso and "last_reports_run" not in connector_state:
-            connector_state["last_reports_run"] = last_run_iso
-        if last_run_iso and "last_communities_run" not in connector_state:
-            connector_state["last_communities_run"] = last_run_iso
-
-        return connector_state
+        return self.helper.get_state() or {}
 
     def _set_state(self, state: dict) -> None:
         """
@@ -498,83 +487,39 @@ class FlashpointConnector:
             )
 
             # Performing the collection of intelligence
+            start_date = last_run or self.config.flashpoint.import_start_date
 
             if self.config.flashpoint.import_alerts:
-                last_alerts_run = (
-                    datetime.fromisoformat(current_state["last_alerts_run"])
-                    if "last_alerts_run" in current_state
-                    else None
-                )
-                start_date = last_alerts_run or self.config.flashpoint.import_start_date
-
                 self.helper.connector_logger.info(
                     "Import Alerts enabled, going to fetch Alerts since:",
                     {"since": start_date},
                 )
                 self._import_alerts(start_date)
 
-                current_state["last_alerts_run"] = now_iso
-                self._set_state(current_state)
-
             if self.config.flashpoint.import_reports:
-                last_reports_run = (
-                    datetime.fromisoformat(current_state["last_reports_run"])
-                    if "last_reports_run" in current_state
-                    else None
-                )
-                start_date = (
-                    last_reports_run or self.config.flashpoint.import_start_date
-                )
-
                 self.helper.connector_logger.info(
                     "Import Reports enabled, going to fetch Reports since:",
                     {"since": start_date},
                 )
                 self._import_reports(start_date)
 
-                current_state["last_reports_run"] = now_iso
-                self._set_state(current_state)
-
             if self.config.flashpoint.import_indicators:
-                # start date is calculated inside self._import_misp_feed()
-
                 self.helper.connector_logger.info(
                     "Import Indicators enabled, going to fetch Indicators since:",
                     {"since": last_run or self.config.flashpoint.import_start_date},
                 )
+                # start date is calculated inside self._import_misp_feed()
                 self._import_misp_feed()
-
                 # connector's state is updated inside self._import_misp_feed()
 
             if self.config.flashpoint.import_communities:
-                last_communities_run = (
-                    datetime.fromisoformat(current_state["last_communities_run"])
-                    if "last_communities_run" in current_state
-                    else None
-                )
-                start_date = (
-                    last_communities_run or self.config.flashpoint.import_start_date
-                )
-
                 self.helper.connector_logger.info(
                     "Import Communities Data enabled, going to fetch Communities Data since:",
                     {"since": start_date},
                 )
                 self._import_communities(start_date)
 
-                current_state["last_communities_run"] = now_iso
-                self._set_state(current_state)
-
             if self.config.flashpoint.import_ccm_alerts:
-                last_ccm_alerts_run = (
-                    datetime.fromisoformat(current_state["last_ccm_alerts_run"])
-                    if "last_ccm_alerts_run" in current_state
-                    else None
-                )
-                start_date = (
-                    last_ccm_alerts_run or self.config.flashpoint.import_start_date
-                )
-
                 self.helper.connector_logger.info(
                     "Import CCM Alerts enabled, "
                     f"going to fetch CCM Alerts since: {start_date.isoformat(timespec='seconds')}"
@@ -584,10 +529,7 @@ class FlashpointConnector:
                     fresh_only=self.config.flashpoint.fresh_ccm_alerts_only,
                 )
 
-                current_state["last_ccm_alerts_run"] = now_iso
-                self._set_state(current_state)
-
-            # Store the current datetime as a last run of the connector
+            # Store the current datetime as last run of the connector
             self.helper.connector_logger.debug(
                 "Getting current state and update it with last run of the connector",
                 {"current_datetime": now_iso},
