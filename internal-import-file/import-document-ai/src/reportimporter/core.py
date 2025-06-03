@@ -13,17 +13,27 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-from requests.exceptions import ConnectionError, HTTPError
-
 from reportimporter.constants import (
     RESULT_FORMAT_CATEGORY,
     RESULT_FORMAT_MATCH,
     RESULT_FORMAT_TYPE,
 )
 from reportimporter.util import create_stix_object
+from requests.exceptions import ConnectionError, HTTPError
 
 
 class ReportImporter:
+    """Handles the import of a document into OpenCTI:
+    1) Downloads the file from OpenCTI
+    2) Calls an ML web service to extract entities/relationships
+    3) Constructs a STIX bundle containing:
+         - Observables (e.g., IPv4, DomainName, etc.)
+         - Domain Entities (e.g., Malware, Individual, etc.)
+         - Predicted Relationships or context-based relationships
+         - A Report (if no context entity) or attaching to an existing entity
+    4) Sends the final STIX bundle to OpenCTI for ingestion
+    """
+
     def __init__(self) -> None:
         # Instantiate the connector helper from config
         base_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +44,8 @@ class ReportImporter:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
+
+        # Read connector flags from config (create_indicator, web_service_url, etc.)
         self.create_indicator = get_config_variable(
             "IMPORT_DOCUMENT_CREATE_INDICATOR",
             ["import_document", "create_indicator"],
@@ -50,6 +62,7 @@ class ReportImporter:
             "CONNECTOR_LICENCE_KEY_PEM", ["connector", "licence_key_pem"], config
         )
         self.licence_key_base64 = base64.b64encode(license_key_pem.encode())
+        # Retrieve the OpenCTI instance ID (used as a header for the ML service)
         self.instance_id = (
             self.helper.api.query(
                 """
@@ -74,6 +87,14 @@ class ReportImporter:
         return cleaned if len(cleaned) >= 2 else None
 
     def _process_message(self, data: dict) -> str:
+        """Entry point when a new message arrives on the connector’s queue.
+
+        Args:
+            data (dict): Payload from OpenCTI
+
+        Returns:
+            str: A human-readable summary of what was imported or why it was skipped.
+        """
         self.helper.connector_logger.info("Processing new message")
         self.file: dict | None = None
         return self._process_import(data)
@@ -102,9 +123,11 @@ class ReportImporter:
         Returns:
             str: Summary/log of the import action.
         """
+        # Step 1: Download the file (returns filename and a BytesIO buffer)
         file_name, file_content_buffered = self._download_import_file(data)
         entity_id = data.get("entity_id", None)
         bypass_validation = data.get("bypass_validation", False)
+        # If an entity_id was provided, fetch that STIX object
         entity = (
             self.helper.api.stix_core_object.read(id=entity_id)
             if entity_id is not None
@@ -113,7 +136,7 @@ class ReportImporter:
         if self.helper.get_only_contextual() and entity is None:
             return "Connector is only contextual and entity is not defined. Nothing was imported"
 
-        # Handles file attachment in the stix bundle
+        # If the file ID starts with "import/global", attach it as x_opencti_files in the bundle
         if data["file_id"].startswith("import/global"):
             file_data_encoded = base64.b64encode(file_content_buffered.read())
             self.file = {
@@ -124,7 +147,7 @@ class ReportImporter:
             # Reset file offset
             file_content_buffered.seek(0)
 
-        # Send to extract_entities_relations endpoint that also returns relationships by default
+        # Step 2: Call our ML service to extract entities & relationships
         try:
             response = requests.post(
                 url=self.web_service_url + "/extract_entities_relations",
@@ -150,13 +173,13 @@ class ReportImporter:
         if not parsed:
             return "No information extracted from report"
 
-        # Parse and build STIX entities / observables, and map text to STIX id (for relationship linking)
+        # Step 3: Parse and build STIX entities / observables, and map text to STIX id (for relationship linking)
         observables, entities, text_to_id = self._process_parsing_results(
             parsed, entity
         )
         predicted_rels = parsed.get("relationships", [])
 
-        # Build and send STIX bundle to OpenCTI, including predicted relationships with relations handling fallback
+        # Step 4: Build the STIX bundle (attach to context or wrap in a new report)
         counts = self._process_parsed_objects(
             entity,
             observables,
@@ -167,6 +190,7 @@ class ReportImporter:
             text_to_id,
         )
 
+        # Build an end‐user summary
         if all(v == 0 for v in counts.values()):
             return "No STIX objects sent — empty extraction or all filtered out."
         if self.helper.get_validate_before_import() and not bypass_validation:
@@ -188,9 +212,18 @@ class ReportImporter:
             )
 
     def start(self) -> None:
+        """Begin listening for messages on the queue. Each message will trigger `_process_message`."""
         self.helper.listen(self._process_message)
 
     def _download_import_file(self, data: dict) -> tuple[str, BytesIO]:
+        """Download the file from OpenCTI using the 'file_fetch' path.
+
+        Args:
+            data (dict): Payload provided by OpenCTI when triggering the connector.
+
+        Returns:
+            tuple[str, BytesIO]: The local filename and a buffer of its contents.
+        """
         file_fetch = data["file_fetch"]
         file_uri = self.helper.opencti_url + file_fetch
 
@@ -208,6 +241,18 @@ class ReportImporter:
     def _process_parsing_results(
         self, parsed: dict, context_entity: dict | None
     ) -> tuple[list[dict], list[dict], dict[str, str]]:
+        """Convert the JSON output of the ML service into two lists:
+          - observables: STIX Cyber Observables (e.g., IPv4Address, DomainName, etc.)
+          - entities: STIX Domain Objects (e.g., Malware, Identity, etc.)
+        Also builds a text-to-ID mapping so predicted relationships can lookup IDs.
+
+        Args:
+            parsed (dict): Json output of the ML service
+            context_entity (dict | None): Contextual entity (e.g., Report, Case, Threat Actor)
+
+        Returns:
+            tuple[list[dict], list[dict], dict[str, str]]: _description_
+        """
         observables = []
         entities = []
         text_to_id = {}  # text value -> STIX id
@@ -238,6 +283,7 @@ class ReportImporter:
                 assert txt is not None
 
             if match[RESULT_FORMAT_TYPE] == "entity":
+                # Create a STIX Domain Object (Malware, Identity, etc.)
                 stix_object = create_stix_object(
                     category,
                     txt,
@@ -246,7 +292,7 @@ class ReportImporter:
                         "created_by_ref": author,
                     },
                 )
-                # Fallback for MITRE ATT&CK IDs already existing in the database
+                # If it's an MITRE TTP (Attack-Pattern.x_mitre_id) and already exists, fetch that instead
                 if category == "Attack-Pattern.x_mitre_id":
                     ttp_object = self.helper.api.attack_pattern.read(
                         filters={
@@ -277,6 +323,7 @@ class ReportImporter:
                     )
 
             if match[RESULT_FORMAT_TYPE] == "observable":
+                # Create a STIX Cyber Observable (IPv4Address, DomainName, etc.)
                 stix_object = create_stix_object(
                     category,
                     txt,
@@ -350,6 +397,7 @@ class ReportImporter:
                     "total_sent": int       # Actual number of objects sent to OpenCTI
                 }
         """
+        # If no objects at all, return zeros
         if len(observables) == 0 and len(entities) == 0:
             return {
                 "observables": 0,
