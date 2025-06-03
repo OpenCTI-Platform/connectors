@@ -39,7 +39,9 @@ class SentinelApiHandler:
         Get an OAuth token using azure-identity SDK based.
         """
 
-        if self.config.client_secret != "":
+        if all(
+            {self.config.tenant_id, self.config.client_id, self.config.client_secret}
+        ):
             credential = ClientSecretCredential(
                 self.config.tenant_id, self.config.client_id, self.config.client_secret
             )
