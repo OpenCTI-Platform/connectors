@@ -1,3 +1,4 @@
+antlr4-python3-runtime==4.9.3
 pycti==6.7.1
 requests==2.32.4
 stix2==3.0.1
