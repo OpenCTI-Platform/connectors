@@ -39,7 +39,7 @@ class ConfigConnector:
 
         self.workspace_id = get_config_variable(
             "MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID",
-            ["sentinel_intel", "workspace_id"],
+            ["microsoft_sentinel_intel", "workspace_id"],
             self.load,
         )
 
