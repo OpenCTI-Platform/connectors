@@ -3,8 +3,9 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from flashpoint_client import FlashpointClient
+from flashpoint_client import FlashpointClient, FlashpointClientError
 from flashpoint_client.models import CompromisedCredentialSighting
+from pydantic import ValidationError
 from requests import Response
 from requests.exceptions import HTTPError
 
@@ -81,15 +82,48 @@ def test_get_compromised_credential_sightings_should_return_compromised_credenti
         pytest.param(429, id="too_many_requests"),
     ],
 )
-def test_get_compromised_credential_sightings_should_handle_exceptions(
+def test_get_compromised_credential_sightings_should_handle_requests_exceptions(
     mock_flashpoint_client, status_code
 ):
     with patch(
         "requests.Session.request",
         return_value=mock_response(status_code=status_code),
     ):
-        with pytest.raises(HTTPError) as err:
+        with pytest.raises(FlashpointClientError) as exc_info:
             data = mock_flashpoint_client.get_compromised_credential_sightings()
             _ = [obj for obj in data]  # convert to list to execute generator
 
-    assert str(status_code) in str(err)
+    assert "Failed to fetch Compromised Credential Sightings" in str(exc_info)
+    assert isinstance(exc_info.value.__cause__, HTTPError)
+    assert str(status_code) in str(exc_info.value.__cause__)
+
+
+def test_get_compromised_credential_sightings_should_handle_validation_exceptions(
+    mock_flashpoint_client,
+):
+    with patch(
+        "requests.Session.request",
+        return_value=mock_response(
+            status_code=200,
+            body={
+                "hits": {
+                    "total": 1,
+                    "hits": [
+                        {
+                            "_source": {
+                                "header_": {"indexed_at": 1234567890},
+                                "basetype": "credential-sighting",
+                                # Missing required fields for CompromisedCredentialSighting
+                            }
+                        }
+                    ],
+                },
+            },
+        ),
+    ):
+        with pytest.raises(FlashpointClientError) as exc_info:
+            data = mock_flashpoint_client.get_compromised_credential_sightings()
+            _ = [obj for obj in data]  # convert to list to execute generator
+
+    assert "Invalid Compromised Credential Sighting data" in str(exc_info)
+    assert isinstance(exc_info.value.__cause__, ValidationError)
