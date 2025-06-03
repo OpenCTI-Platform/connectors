@@ -115,7 +115,6 @@ class MicrosoftSentinelIntelConnector:
         :param data: Streamed data (representing either an observable or an indicator)
         """
 
-        self.helper.connector_logger.warning("[DELETE] Start deleting")
         if is_stix_indicator(data):
             self._delete_sentinel_indicator(data)
         else:
