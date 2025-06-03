@@ -3,9 +3,16 @@ from datetime import datetime, timedelta
 from typing import Generator
 
 import requests
+from pydantic import ValidationError
 from requests.adapters import HTTPAdapter, Retry
 
 from .models import CompromisedCredentialSighting
+
+
+class FlashpointClientError(Exception):
+    """
+    Custom exception for Flashpoint client errors
+    """
 
 
 class FlashpointClient:
@@ -30,7 +37,12 @@ class FlashpointClient:
         self.session = requests.Session()
         self.session.headers.update(headers)
 
-        retry_strategy = Retry(total=retry, backoff_factor=backoff.total_seconds())
+        retry_strategy = Retry(
+            total=retry,
+            backoff_factor=backoff.total_seconds(),
+            status_forcelist=[429, 500, 502, 503, 504],
+            raise_on_status=False,  # do not raise MaxRetryError - let response.raise_for_status() raise exceptions
+        )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount(self.api_base_url, adapter)
 
@@ -198,31 +210,38 @@ class FlashpointClient:
             "scroll": "2m",
         }
 
-        sightings_count = 0
-        while True:
-            response = self.session.post(url, json=body)
-            response.raise_for_status()
-            data: dict = response.json()
+        try:
+            sightings_count = 0
+            while True:
+                response = self.session.post(url, json=body)
+                response.raise_for_status()
+                data: dict = response.json()
 
-            # /search endpoint returns total hits as an integer
-            total_hits: int = data["hits"]["total"]
-            # /scroll endpoint returns total hits as a dict {'relation': str, 'value': int}
-            if isinstance(total_hits, dict):
-                total_hits: int = data["hits"]["total"]["value"]  # type: ignore[no-redef]
+                # /search endpoint returns total hits as an integer
+                total_hits: int = data["hits"]["total"]
+                # /scroll endpoint returns total hits as a dict {'relation': str, 'value': int}
+                if isinstance(total_hits, dict):
+                    total_hits: int = data["hits"]["total"]["value"]  # type: ignore[no-redef]
 
-            results: list[dict] = data["hits"]["hits"]
-            for result in results:
-                try:
-                    sighting = CompromisedCredentialSighting.model_validate(
-                        result["_source"]
-                    )
-                    yield sighting
-                except Exception as e:
-                    print(e)
+                results: list[dict] = data["hits"]["hits"]
+                for result in results:
+                    try:
+                        sighting = CompromisedCredentialSighting.model_validate(
+                            result["_source"]
+                        )
+                        yield sighting
+                    except ValidationError as err:
+                        raise FlashpointClientError(
+                            "Invalid Compromised Credential Sighting data"
+                        ) from err
 
-            sightings_count += len(results)
-            if sightings_count == total_hits:
-                break
+                sightings_count += len(results)
+                if sightings_count == total_hits:
+                    break
 
-            url = self.api_base_url + "/sources/v1/noncommunities/scroll?scroll=2m"
-            body = {"scroll_id": data["_scroll_id"]}
+                url = self.api_base_url + "/sources/v1/noncommunities/scroll?scroll=2m"
+                body = {"scroll_id": data["_scroll_id"]}
+        except requests.HTTPError as err:
+            raise FlashpointClientError(
+                "Failed to fetch Compromised Credential Sightings"
+            ) from err
