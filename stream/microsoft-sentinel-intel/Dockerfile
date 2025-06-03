@@ -14,7 +14,7 @@ RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-de
 # Expose and entrypoint
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+#ENTRYPOINT ["sh"]
 
 
 

@@ -1,6 +1,8 @@
 import json
+import sys
 from json import JSONDecodeError
 
+from filigran_sseclient.sseclient import Event
 from pycti import OpenCTIConnectorHelper
 
 from .api_handler import SentinelApiHandler, SentinelApiHandlerError
@@ -9,41 +11,15 @@ from .utils import is_stix_indicator
 
 
 class MicrosoftSentinelIntelConnector:
-    """
-    Specifications of the Stream connector
-
-    This class encapsulates the main actions, expected to be run by any stream connector.
-    Note that the attributes defined below will be complemented per each connector type.
-    This type of connector has the capability to listen to live streams from the OpenCTI platform.
-    It is highly useful for creating connectors that can react and make decisions in real time.
-    Actions on OpenCTI will apply the changes to the third-party connected platform
-    ---
-
-    Attributes
-        - `config (ConfigConnector())`:
-            Initialize the connector with necessary configuration environment variables
-
-        - `helper (OpenCTIConnectorHelper(config))`:
-            This is the helper to use.
-            ALL connectors have to instantiate the connector helper with configurations.
-            Doing this will do a lot of operations behind the scene.
-
-    ---
-
-    Best practices
-        - `self.helper.connector_logger.[info/debug/warning/error]` is used when logging a message
-
-    """
-
-    def __init__(self):
-        """
-        Initialize the Connector with necessary configurations
-        """
-
-        # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.api = SentinelApiHandler(self.helper, self.config)
+    def __init__(
+        self,
+        config: ConfigConnector,
+        helper: OpenCTIConnectorHelper,
+        client: SentinelApiHandler,
+    ) -> None:
+        self.config = config
+        self.helper = helper
+        self.client = client
 
     def _check_stream_id(self) -> None:
         """
@@ -61,7 +37,7 @@ class MicrosoftSentinelIntelConnector:
         Create a Threat Intelligence Indicator on Sentinel from an OpenCTI indicator.
         :param indicator_data: OpenCTI indicator data
         """
-        self.api.post_indicator(indicator_data)
+        self.client.post_indicator(indicator_data)
         self.helper.connector_logger.info(
             "[CREATE] Indicator created",
             {"opencti_id": indicator_data["id"]},
@@ -72,7 +48,7 @@ class MicrosoftSentinelIntelConnector:
         Update a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
         :param indicator_data: OpenCTI observable data
         """
-        self.api.post_indicator(indicator_data)
+        self.client.post_indicator(indicator_data)
         self.helper.connector_logger.info(
             "[UPDATE] Indicator updated",
             {"opencti_id": indicator_data["id"]},
@@ -83,7 +59,7 @@ class MicrosoftSentinelIntelConnector:
         Delete Threat Intelligence Indicators on Sentinel corresponding to an OpenCTI observable.
         :param indicator_data: OpenCTI observable data
         """
-        self.api.delete_indicator(indicator_data["id"])
+        self.client.delete_indicator(indicator_data["id"])
         self.helper.connector_logger.info(
             "[DELETE] Indicator deleted",
             {"opencti_id": indicator_data["id"]},
@@ -135,7 +111,7 @@ class MicrosoftSentinelIntelConnector:
             )
             raise JSONDecodeError("Data cannot be parsed to JSON", msg.data, 0)
 
-    def process_message(self, msg) -> None:
+    def process_message(self, msg: Event) -> None:
         """
         Main process if connector successfully works
         The data passed in the data parameter is a dictionary with the following structure as shown in
@@ -155,7 +131,9 @@ class MicrosoftSentinelIntelConnector:
                 self._handle_update_event(data)
             if msg.event == "delete":
                 self._handle_delete_event(data)
-
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info("Connector stopped by user.")
+            sys.exit(0)
         except SentinelApiHandlerError as err:
             self.helper.connector_logger.error(err.msg, err.metadata)
 
