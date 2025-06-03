@@ -6,14 +6,14 @@ from filigran_sseclient.sseclient import Event
 from pycti import OpenCTIConnectorHelper
 
 from .api_handler import SentinelApiHandler, SentinelApiHandlerError
-from .config_variables import ConfigConnector
+from .config import ConnectorSettings
 from .utils import is_stix_indicator
 
 
 class MicrosoftSentinelIntelConnector:
     def __init__(
         self,
-        config: ConfigConnector,
+        config: ConnectorSettings,
         helper: OpenCTIConnectorHelper,
         client: SentinelApiHandler,
     ) -> None:
