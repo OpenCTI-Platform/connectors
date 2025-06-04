@@ -23,13 +23,14 @@ from dragos.interfaces.common import FrozenBaseModel
 
 logger = getLogger(__name__)
 
+
 def _convert_duration_to_past_datetime(
-        duration: timedelta,
-    ) -> AwareDatetime:
-        """Convert a timedelta to a past datetime relative to now."""
-        if not isinstance(duration, timedelta):
-            raise TypeError("duration must be a timedelta instance.")
-        return datetime.now(tz=timezone.utc) - duration
+    duration: timedelta,
+) -> AwareDatetime:
+    """Convert a timedelta to a past datetime relative to now."""
+    if not isinstance(duration, timedelta):
+        raise TypeError("duration must be a timedelta instance.")
+    return datetime.now(tz=timezone.utc) - duration
 
 
 class ConfigRetrievalError(Exception):
