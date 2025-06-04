@@ -23,6 +23,14 @@ from dragos.interfaces.common import FrozenBaseModel
 
 logger = getLogger(__name__)
 
+def _convert_duration_to_past_datetime(
+        duration: timedelta,
+    ) -> AwareDatetime:
+        """Convert a timedelta to a past datetime relative to now."""
+        if not isinstance(duration, timedelta):
+            raise TypeError("duration must be a timedelta instance.")
+        return datetime.now(tz=timezone.utc) - duration
+
 
 class ConfigRetrievalError(Exception):
     """Known errors wrapper for config loaders."""
@@ -261,8 +269,8 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
         description="Dragos API secret.",
     )
     import_start_date: AwareDatetime | timedelta = Field(
-        default=timedelta(days=30),
-        description="Start date of first import (ISO format).",
+        default=_convert_duration_to_past_datetime(timedelta(days=30)),
+        description="Start date of first import (ISO format).Can be a relative or an absolute date.",
     )
     tlp_level: Literal["white", "green", "amber", "amber+strict", "red"] = Field(
         default="amber+strict",
@@ -323,7 +331,7 @@ class ConfigLoaderDragos(ABC, FrozenBaseModel):
             logger.info(
                 msg="Converting relative import_start_date to UTC datetime.",
             )
-            return datetime.now(tz=timezone.utc) - value
+            return _convert_duration_to_past_datetime(value)
         return value
 
 
