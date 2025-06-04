@@ -1,6 +1,7 @@
-import git
+# Git handler for repo cloning and updating
 import os
 from datetime import datetime
+import git
 
 class GitHandler:
     def __init__(self, repo_url, local_path):
@@ -37,16 +38,16 @@ class GitHandler:
                     for file in files:
                         if file.endswith('.json'):  # Only process JSON files
                             all_files.append(os.path.join(root, file))
-    
+
         self.update_last_run_time()
         return all_files
 
     def _get_files_since_last_run(self):
-        commits = list(self.repo.iter_commits(f'main', since=self.last_run_time))
+        commits = list(self.repo.iter_commits('main', since=self.last_run_time))
         updated_files = set()
         for commit in commits:
             updated_files.update(commit.stats.files.keys())
-            
+
         self.update_last_run_time()
         return [os.path.join(self.local_path, f) for f in updated_files if f.startswith('cves/') and f.endswith('.json') and not f.endswith('delta.json') and not f.endswith('deltaLog.json')]
 
