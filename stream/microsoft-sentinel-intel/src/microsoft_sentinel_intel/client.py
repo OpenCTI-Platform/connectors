@@ -3,20 +3,15 @@ from datetime import datetime, timedelta
 import requests
 from azure.core.exceptions import AzureError
 from azure.identity import ClientSecretCredential, DefaultAzureCredential
-from microsoft_sentinel_intel_connector.config import ConnectorSettings
+from microsoft_sentinel_intel.config import ConnectorSettings
+from microsoft_sentinel_intel.errors import ConnectorClientError
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
 
 
-class SentinelApiHandlerError(Exception):
-    def __init__(self, msg, metadata):
-        self.msg = msg
-        self.metadata = metadata
-
-
-class SentinelApiHandler:
+class ConnectorClient:
     def __init__(self, helper: OpenCTIConnectorHelper, config: ConnectorSettings):
         """
         Init Sentinel Intel API handler.
@@ -123,13 +118,13 @@ class SentinelApiHandler:
             if response.content:
                 res = response.json()
                 if errors := res.get("errors"):
-                    raise SentinelApiHandlerError(
+                    raise ConnectorClientError(
                         "[API] Error in response from Sentinel",
                         {"url_path": f"{method.upper()} {url}", "errors": errors},
                     )
 
         except (RetryError, HTTPError, Timeout, ConnectionError) as err:
-            raise SentinelApiHandlerError(
+            raise ConnectorClientError(
                 "[API] An error occurred during request",
                 {"url_path": f"{method.upper()} {url} {str(err)}"},
             ) from err

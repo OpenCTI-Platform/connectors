@@ -1,8 +1,8 @@
 import traceback
 
-from microsoft_sentinel_intel_connector import MicrosoftSentinelIntelConnector
-from microsoft_sentinel_intel_connector.api_handler import SentinelApiHandler
-from microsoft_sentinel_intel_connector.config import ConnectorSettings
+from microsoft_sentinel_intel import Connector
+from microsoft_sentinel_intel.client import ConnectorClient
+from microsoft_sentinel_intel.config import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 
@@ -18,11 +18,9 @@ def main() -> None:
     """
     config = ConnectorSettings()
     helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
-    client = SentinelApiHandler(helper, config)
+    client = ConnectorClient(helper=helper, config=config)
 
-    connector = MicrosoftSentinelIntelConnector(
-        config=config, helper=helper, client=client
-    )
+    connector = Connector(helper=helper, config=config, client=client)
     connector.run()
 
 

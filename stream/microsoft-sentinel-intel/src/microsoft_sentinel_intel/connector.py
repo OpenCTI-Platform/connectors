@@ -3,22 +3,22 @@ import sys
 from json import JSONDecodeError
 
 from filigran_sseclient.sseclient import Event
+from microsoft_sentinel_intel.client import ConnectorClient
+from microsoft_sentinel_intel.config import ConnectorSettings
+from microsoft_sentinel_intel.errors import ConnectorClientError
+from microsoft_sentinel_intel.utils import is_stix_indicator
 from pycti import OpenCTIConnectorHelper
 
-from .api_handler import SentinelApiHandler, SentinelApiHandlerError
-from .config import ConnectorSettings
-from .utils import is_stix_indicator
 
-
-class MicrosoftSentinelIntelConnector:
+class Connector:
     def __init__(
         self,
-        config: ConnectorSettings,
         helper: OpenCTIConnectorHelper,
-        client: SentinelApiHandler,
+        config: ConnectorSettings,
+        client: ConnectorClient,
     ) -> None:
-        self.config = config
         self.helper = helper
+        self.config = config
         self.client = client
 
     def _check_stream_id(self) -> None:
@@ -134,8 +134,8 @@ class MicrosoftSentinelIntelConnector:
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("Connector stopped by user.")
             sys.exit(0)
-        except SentinelApiHandlerError as err:
-            self.helper.connector_logger.error(err.msg, err.metadata)
+        except ConnectorClientError as err:
+            self.helper.connector_logger.error(err.message, err.metadata)
 
         except Exception as err:
             self.helper.connector_logger.error(
