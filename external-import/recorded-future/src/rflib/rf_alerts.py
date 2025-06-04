@@ -137,6 +137,12 @@ class RecordedFutureAlertConnector(threading.Thread):
         timestamp = datetime.datetime.now(pytz.timezone("UTC"))
         current_state = self.helper.get_state() or {}
 
+        # DEBUG: set arbitrary past datetime
+        current_state["last_alerts_run"] = (
+            datetime.datetime.now(tz=datetime.timezone.utc)
+            - datetime.timedelta(days=30)
+        ).strftime("%Y-%m-%dT%H:%M:%S")
+
         if current_state is not None and "last_alerts_run" in current_state:
 
             last_alerts_run = datetime.datetime.strptime(

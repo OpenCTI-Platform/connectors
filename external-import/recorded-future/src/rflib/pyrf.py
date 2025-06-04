@@ -324,7 +324,7 @@ class RecordedFutureApiClient:
                         params={
                             "alertRule": str(priorited_rule.rule_id),
                             "limit": 100,
-                            "triggered": str(date),
+                            "triggered": f"[{str(date)},]",
                             "from": str(from_api),
                         },
                     )
