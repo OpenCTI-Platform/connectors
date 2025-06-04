@@ -50,21 +50,20 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Name   | name             | `CONNECTOR_NAME`             |         | Yes       | Name of the connector.                                                                       |
 | Connector Scope  | scope            | `CONNECTOR_SCOPE`            |         | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.     |
 | Log Level        | log_level        | `CONNECTOR_LOG_LEVEL`        | info    | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.       |
-| Duration Period  | duration_period  | `CONNECTOR_DURATION_PERIOD`  | P3D     | Yes       | Determines the time interval between each launch of the connector in ISO 8601, ex: `PT30M`.  |
+| Duration Period  | duration_period  | `CONNECTOR_DURATION_PERIOD`  | P3D     | No        | Determines the time interval between each launch of the connector in ISO 8601, ex: `PT30M`.  |
 
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter               | config.yml              | Docker environment variable        | Default | Mandatory | Description                                                                                                   |
-|-------------------------|-------------------------|------------------------------------|---------|-----------|---------------------------------------------------------------------------------------------------------------|
-| API key                 | api_key                 | `PHISHUNT_API_KEY`                 |         | Yes       | The API key for Phishunt.                                                                                     |
-| Create Indicators       | create_indicators       | `PHISHUNT_CREATE_INDICATORS`       | `True`  | No        | If true then indicators will be created from Pulse indicators and added to the report.                        |
-| default_x_opencti_score | default_x_opencti_score | `PHISHUNT_DEFAULT_X_OPENCTI_SCORE` | `40`    | No        | The default x_opencti_score to use for indicators. If a per indicator type score is not set, this is used.    |
-| Create Indicators       | create_indicators       | `PHISHUNT_CREATE_INDICATORS`       | `True`  | No        | If true then indicators will be created from Pulse indicators and added to the report.                        |
-| x_opencti_score_ip      | x_opencti_score_ip      | `PHISHUNT_X_OPENCTI_SCORE_IP`      | `40`    | No        | The x_opencti_score to use for IP indicators. If not set, the default value is `default_x_opencti_score`.     |
-| x_opencti_score_domain  | x_opencti_score_domain  | `PHISHUNT_X_OPENCTI_SCORE_DOMAIN`  | `40`    | No        | The x_opencti_score to use for Domain indicators. If not set, the default value is `default_x_opencti_score`. |
-| x_opencti_score_url     | x_opencti_score_url     | `PHISHUNT_X_OPENCTI_SCORE_URL`     | `60`    | No        | The x_opencti_score to use for URL indicators. If not set, the default value is `default_x_opencti_score`.    |
+| Parameter            | config.yml              | Docker environment variable        | Default                    | Mandatory | Description                                                                                                   |
+|----------------------|-------------------------|------------------------------------|----------------------------|-----------|---------------------------------------------------------------------------------------------------------------|
+| API key              | api_key                 | `PHISHUNT_API_KEY`                 |                            | Yes       | The API key for Phishunt.                                                                                     |
+| Create Indicators    | create_indicators       | `PHISHUNT_CREATE_INDICATORS`       | `True`                     | No        | If true then indicators will be created from Pulse indicators and added to the report.                        |
+| OpenCTI Score        | default_x_opencti_score | `PHISHUNT_DEFAULT_X_OPENCTI_SCORE` | `40`                       | No        | The default x_opencti_score to use for indicators. If a per indicator type score is not set, this is used.    |
+| OpenCTI Score IP     | x_opencti_score_ip      | `PHISHUNT_X_OPENCTI_SCORE_IP`      | `default_x_opencti_score`  | No        | The x_opencti_score to use for IP indicators. If not set, the default value is `default_x_opencti_score`.     |
+| OpenCTI Score Domain | x_opencti_score_domain  | `PHISHUNT_X_OPENCTI_SCORE_DOMAIN`  | `default_x_opencti_score`  | No        | The x_opencti_score to use for Domain indicators. If not set, the default value is `default_x_opencti_score`. |
+| OpenCTI Score URL    | x_opencti_score_url     | `PHISHUNT_X_OPENCTI_SCORE_URL`     | `default_x_opencti_score`  | No        | The x_opencti_score to use for URL indicators. If not set, the default value is `default_x_opencti_score`.    |
 
 ## Deployment
 

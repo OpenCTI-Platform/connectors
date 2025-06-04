@@ -11,15 +11,16 @@ services:
       - CONNECTOR_ID=ChangeMe(UUIDv4 token)
       - CONNECTOR_NAME=Phishunt
       - CONNECTOR_SCOPE=phishunt
-      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=P3D # ISO8601 format in String, start with 'P...' for Period
 
       # Connector's custom execution parameters
       - PHISHUNT_API_KEY= # Optional, if not provided, consume only https://phishunt.io/feed.txt
       - PHISHUNT_CREATE_INDICATORS=true
+      - PHISHUNT_INTERVAL=3 # In days, must be strictly greater than 1
       - PHISHUNT_DEFAULT_X_OPENCTI_SCORE=40 # Optional: default is 40
-      - PHISHUNT_X_OPENCTI_SCORE_DOMAIN=40 # Optional
-      - PHISHUNT_X_OPENCTI_SCORE_IP=40 # Optional
-      - PHISHUNT_X_OPENCTI_SCORE_URL=60 # Optional
+      - PHISHUNT_X_OPENCTI_SCORE_DOMAIN=40 # Optional: Default PHISHUNT_DEFAULT_X_OPENCTI_SCORE
+      - PHISHUNT_X_OPENCTI_SCORE_IP=40 # Optional: Default PHISHUNT_DEFAULT_X_OPENCTI_SCORE
+      - PHISHUNT_X_OPENCTI_SCORE_URL=40 # Optional: Default PHISHUNT_DEFAULT_X_OPENCTI_SCORE
 
     restart: always
