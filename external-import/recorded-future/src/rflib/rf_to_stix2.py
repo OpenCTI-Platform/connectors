@@ -830,8 +830,9 @@ class Location(RFStixEntity):
             id=pycti.Location.generate_id(self.name, self.type),
             name=self.name,
             country=self.name,
-            custom_properties={"x_opencti_location_type": self.type},
+            created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_location_type": self.type},
         )
 
 
@@ -850,6 +851,7 @@ class Campaign(RFStixEntity):
         self.campaign_object = stix2.Campaign(
             id=pycti.Campaign.generate_id(self.name),
             name=self.name,
+            created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
         )
 
