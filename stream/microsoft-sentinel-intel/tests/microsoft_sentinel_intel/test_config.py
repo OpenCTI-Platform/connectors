@@ -1,5 +1,5 @@
 import pytest
-from microsoft_sentinel_intel_connector.config import ConnectorSettings
+from microsoft_sentinel_intel.config import ConnectorSettings
 from pydantic import HttpUrl
 
 
@@ -20,7 +20,7 @@ def test_config() -> None:
     assert microsoft_sentinel_intel["client_id"] == "ChangeMe"
     assert microsoft_sentinel_intel["client_secret"] == "ChangeMe"
     assert microsoft_sentinel_intel["delete_extensions"] == True
-    assert microsoft_sentinel_intel["extra_labels"] == ["label1", "label2"]
+    assert microsoft_sentinel_intel["extra_labels"] == ["label"]
     assert microsoft_sentinel_intel["management_api_version"] == "2025-03-01"
     assert microsoft_sentinel_intel["resource_group"] == "default"
     assert microsoft_sentinel_intel["source_system"] == "Opencti Stream Connector"

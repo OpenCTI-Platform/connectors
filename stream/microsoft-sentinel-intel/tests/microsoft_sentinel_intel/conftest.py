@@ -4,7 +4,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from microsoft_sentinel_intel_connector.config import ConnectorSettings
+from microsoft_sentinel_intel.config import ConnectorSettings
 from pytest_mock import MockerFixture
 
 
