@@ -338,16 +338,16 @@ class Phishunt:
             )
 
     def run(self):
-        if self.phishunt_duration_periode:
+        if self.phishunt_duration_period:
             self.helper.schedule_iso(
                 message_callback=self.process_message,
-                duration_period=self.phishunt_duration_periode,
+                duration_period=self.phishunt_duration_period,
             )
         else:
             self.helper.schedule_unit(
                 message_callback=self.process_message,
-                duration_period=self.phishunt_interval_sec,
-                time_unit=self.helper.TimeUnit.SECONDS,
+                duration_period=self.phishunt_interval,
+                time_unit=self.helper.TimeUnit.DAYS,
             )
 
     def _load_state(self) -> Dict[str, Any]:
