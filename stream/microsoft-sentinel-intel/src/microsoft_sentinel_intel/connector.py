@@ -1,11 +1,15 @@
 import json
 import sys
-from json import JSONDecodeError
+import traceback
 
 from filigran_sseclient.sseclient import Event
 from microsoft_sentinel_intel.client import ConnectorClient
 from microsoft_sentinel_intel.config import ConnectorSettings
-from microsoft_sentinel_intel.errors import ConnectorClientError
+from microsoft_sentinel_intel.errors import (
+    ConnectorConfigError,
+    ConnectorError,
+    ConnectorWarning,
+)
 from microsoft_sentinel_intel.utils import is_stix_indicator
 from pycti import OpenCTIConnectorHelper
 
@@ -30,122 +34,73 @@ class Connector:
             self.helper.connect_live_stream_id is None
             or self.helper.connect_live_stream_id == "ChangeMe"
         ):
-            raise ValueError("Missing stream ID, please check your configurations.")
-
-    def _create_sentinel_indicator(self, indicator_data) -> None:
-        """
-        Create a Threat Intelligence Indicator on Sentinel from an OpenCTI indicator.
-        :param indicator_data: OpenCTI indicator data
-        """
-        self.client.post_indicator(indicator_data)
-        self.helper.connector_logger.info(
-            "[CREATE] Indicator created",
-            {"opencti_id": indicator_data["id"]},
-        )
-
-    def _update_sentinel_indicator(self, indicator_data) -> None:
-        """
-        Update a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
-        :param indicator_data: OpenCTI observable data
-        """
-        self.client.post_indicator(indicator_data)
-        self.helper.connector_logger.info(
-            "[UPDATE] Indicator updated",
-            {"opencti_id": indicator_data["id"]},
-        )
-
-    def _delete_sentinel_indicator(self, indicator_data) -> None:
-        """
-        Delete Threat Intelligence Indicators on Sentinel corresponding to an OpenCTI observable.
-        :param indicator_data: OpenCTI observable data
-        """
-        self.client.delete_indicator(indicator_data["id"])
-        self.helper.connector_logger.info(
-            "[DELETE] Indicator deleted",
-            {"opencti_id": indicator_data["id"]},
-        )
-
-    def _handle_create_event(self, data):
-        """
-        Handle create event by trying to create the corresponding Threat Intelligence Indicator on Sentinel.
-        :param data: Streamed data (representing either an observable or an indicator)
-        """
-        if is_stix_indicator(data):
-            self._create_sentinel_indicator(data)
-        else:
-            self.helper.connector_logger.info("[CREATE] Entity not supported")
-
-    def _handle_update_event(self, data):
-        """
-        Handle update event by trying to update the corresponding Threat Intelligence Indicator on Sentinel.
-        :param data: Streamed data (representing either an observable or an indicator)
-        """
-        if is_stix_indicator(data):
-            self._update_sentinel_indicator(data)
-        else:
-            self.helper.connector_logger.info("[UPDATE] Entity not supported")
-
-    def _handle_delete_event(self, data):
-        """
-        Handle delete event by trying to delete the corresponding Threat Intelligence Indicators on Sentinel.
-        :param data: Streamed data (representing either an observable or an indicator)
-        """
-
-        if is_stix_indicator(data):
-            self._delete_sentinel_indicator(data)
-        else:
-            self.helper.connector_logger.info("[DELETE] Entity not supported")
-
-    def validate_json(self, msg) -> dict | JSONDecodeError:
-        """
-        Validate the JSON data from the stream
-        :param msg: Message event from stream
-        :return: Parsed JSON data or raise JSONDecodeError if JSON data cannot be parsed
-        """
-        try:
-            parsed_msg = json.loads(msg.data)
-            return parsed_msg
-        except json.JSONDecodeError:
-            self.helper.connector_logger.error(
-                "[ERROR] Data cannot be parsed to JSON", {"msg_data": msg.data}
+            raise ConnectorConfigError(
+                "Missing stream ID, please check your configurations."
             )
-            raise JSONDecodeError("Data cannot be parsed to JSON", msg.data, 0)
 
-    def process_message(self, msg: Event) -> None:
+    def _process_event(self, event_type: str, indicator: dict) -> None:
+        match event_type:
+            case "create" | "update":
+                self.client.post_indicator(indicator)
+            case "delete":
+                self.client.delete_indicator(indicator["id"])
+            case _:
+                raise ConnectorWarning(
+                    message=f"Unsupported event type: {event_type}, Skipping..."
+                )
+
+    def _handle_event(self, event: Event):
+        try:
+            data = json.loads(event.data)["data"]
+        except json.JSONDecodeError as err:
+            raise ConnectorError(
+                message="[ERROR] Data cannot be parsed to JSON",
+                metadata={"message_data": event.data, "error": str(err)},
+            ) from err
+
+        if is_stix_indicator(data):
+            self.helper.connector_logger.info(
+                message=f"[{event.event.upper()}] Processing message",
+                meta={"data": data, "event": event.event},
+            )
+            self._process_event(event_type=event.event, indicator=data)
+
+            self.helper.connector_logger.info(
+                message=f"[{event.event.upper()}] Indicator processed",
+                meta={"opencti_id": data["id"]},
+            )
+        else:
+            self.helper.connector_logger.info(
+                message=f"[{event.event.upper()}] Entity not supported"
+            )
+
+    def process_message(self, message: Event) -> None:
         """
         Main process if connector successfully works
         The data passed in the data parameter is a dictionary with the following structure as shown in
         https://docs.opencti.io/latest/development/connectors/#additional-implementations
-        :param msg: Message event from stream
+        :param message: Message event from stream
         :return: string
         """
         try:
             self._check_stream_id()
-
-            parsed_msg = self.validate_json(msg)
-            data = parsed_msg["data"]
-
-            if msg.event == "create":
-                self._handle_create_event(data)
-            if msg.event == "update":
-                self._handle_update_event(data)
-            if msg.event == "delete":
-                self._handle_delete_event(data)
+            self._handle_event(message)
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("Connector stopped by user.")
             sys.exit(0)
-        except ConnectorClientError as err:
-            self.helper.connector_logger.error(err.message, err.metadata)
-
+        except ConnectorWarning as err:
+            self.helper.connector_logger.warning(message=err.message)
+        except ConnectorError as err:
+            self.helper.connector_logger.error(
+                message=err.message,
+                meta=err.metadata,
+            )
         except Exception as err:
+            traceback.print_exc()
             self.helper.connector_logger.error(
-                "[ERROR] Failed processing data {" + str(err) + "}"
+                message=f"Unexpected error: {err}",
+                meta={"error": str(err)},
             )
-            self.helper.connector_logger.error(
-                "[ERROR] Message data {" + str(msg) + "}"
-            )
-        finally:
-            return None
 
     def run(self) -> None:
         """
@@ -154,4 +109,5 @@ class Connector:
         The connector have the capability to listen a live stream from the platform.
         The helper provide an easy way to listen to the events.
         """
+        self.helper.set_state({})
         self.helper.listen_stream(message_callback=self.process_message)

@@ -37,33 +37,25 @@ class ConnectorClient:
         """
         Get an OAuth token using azure-identity SDK based.
         """
-
-        if all(
-            {
-                self.config.microsoft_sentinel_intel.tenant_id,
-                self.config.microsoft_sentinel_intel.client_id,
-                self.config.microsoft_sentinel_intel.client_secret,
-            }
-        ):
-            credential = ClientSecretCredential(
-                self.config.microsoft_sentinel_intel.tenant_id,
-                self.config.microsoft_sentinel_intel.client_id,
-                self.config.microsoft_sentinel_intel.client_secret,
-            )
-        else:
-            credential = DefaultAzureCredential()
         try:
+            credential = (
+                ClientSecretCredential(
+                    self.config.microsoft_sentinel_intel.tenant_id,
+                    self.config.microsoft_sentinel_intel.client_id,
+                    self.config.microsoft_sentinel_intel.client_secret,
+                )
+                if self.config.microsoft_sentinel_intel.tenant_id
+                else DefaultAzureCredential()
+            )
             token = credential.get_token("https://management.azure.com/.default")
             return {"access_token": token.token, "expires_on": token.expires_on}
-        except AzureError as e:
-            self.helper.connector_logger.error(
-                f"[ERROR] Azure Identity failed: {str(e)}"
-            )
-            raise
+        except (ValueError, AzureError) as e:
+            raise ConnectorClientError(
+                message="[AUTH] Failed to get authorization token",
+                metadata={"error": str(e)},
+            ) from e
 
     def _update_authorization_header(self):
-        response = {}
-
         token = self._get_authorization_token()
         try:
             oauth_token = token["access_token"]
@@ -72,11 +64,11 @@ class ConnectorClient:
             self._expiration_token_date = datetime.now() + timedelta(
                 seconds=int(oauth_expired * 0.9)
             )
-        except (requests.exceptions.HTTPError, KeyError) as e:
-            error_description = response.get("error_description", "Unknown error")
-            error_message = f"[ERROR] Failed generating oauth token (managed identity): {error_description}"
-            self.helper.connector_logger.error(error_message, {"response": response})
-            raise e
+        except KeyError as e:
+            raise ConnectorClientError(
+                message=f"[ERROR] Failed generating oauth token (managed identity): {str(e)}",
+                metadata={"error": str(e)},
+            ) from e
 
     def retries_builder(self) -> None:
         """
@@ -119,14 +111,17 @@ class ConnectorClient:
                 res = response.json()
                 if errors := res.get("errors"):
                     raise ConnectorClientError(
-                        "[API] Error in response from Sentinel",
-                        {"url_path": f"{method.upper()} {url}", "errors": errors},
+                        message="[API] Error in response from Sentinel",
+                        metadata={
+                            "url_path": f"{method.upper()} {url}",
+                            "errors": errors,
+                        },
                     )
 
         except (RetryError, HTTPError, Timeout, ConnectionError) as err:
             raise ConnectorClientError(
-                "[API] An error occurred during request",
-                {"url_path": f"{method.upper()} {url} {str(err)}"},
+                message="[API] An error occurred during request",
+                metadata={"url_path": f"{method.upper()} {url}", "error": str(err)},
             ) from err
 
     def _build_request_body(self, indicator: dict) -> dict:
@@ -153,11 +148,10 @@ class ConnectorClient:
             else:
                 indicator["labels"] = self.extra_labels
 
-        data = {
+        return {
             "sourcesystem": self.config.microsoft_sentinel_intel.source_system,
             "stixobjects": [indicator],
         }
-        return data
 
     def post_indicator(self, indicator: dict) -> None:
         """
@@ -193,6 +187,7 @@ class ConnectorClient:
         if resp is not None and len(resp["value"]) == 1:
             return resp["value"][0]["name"]
         else:
-            self.helper.connector_logger.error(
-                f"[SEARCH] Indicator not found in Sentinel: {indicator_id}"
+            raise ConnectorClientError(
+                message="[SEARCH] Indicator not found in Sentinel",
+                metadata={"indicator_id": indicator_id, "response": resp},
             )
