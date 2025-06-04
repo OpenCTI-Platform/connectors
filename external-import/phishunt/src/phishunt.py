@@ -96,9 +96,6 @@ class Phishunt:
             description="Phishunt is providing URLs of potential malicious payload.",
         )
 
-    def next_run(self, seconds):
-        return
-
     def _process_public_feed(self, work_id):
         try:
             response = urllib.request.urlopen(
