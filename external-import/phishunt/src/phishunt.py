@@ -187,9 +187,8 @@ class Phishunt:
             )
             sys.exit(0)
         except Exception as error:
-            self.helper.connector_logger.error(
-                f"Error while sending public feed bundle: {error}"
-            )
+            msg = f"Error while sending public feed bundle: {error}"
+            self.helper.connector_logger.error(msg)
 
     def _process_private_feed(self, work_id):
         try:
@@ -368,9 +367,8 @@ class Phishunt:
             )
             sys.exit(0)
         except Exception as error:
-            self.helper.connector_logger.error(
-                f"Error while sending private feed bundle: {error}"
-            )
+            msg = f"Error while sending private feed bundle: {error}"
+            self.helper.connector_logger.error(msg)
 
     def run(self):
         if self.phishunt_duration_period:
@@ -400,14 +398,14 @@ class Phishunt:
             timestamp = int(time.time())
             current_state = self._load_state()
 
-            self.helper.connector_logger.info(f"Loaded stat: {current_state}")
+            self.helper.connector_logger.info(
+                "Loaded state", {"current state": current_state}
+            )
 
             if current_state is not None and "last_run" in current_state:
                 last_run = current_state["last_run"]
-                self.helper.connector_logger.info(
-                    f"{self.helper.connect_name} connector last run: "
-                    + datetime.fromtimestamp(last_run, tz=UTC).isoformat()
-                )
+                message = f"{self.helper.connect_name} connector last run: " + datetime.fromtimestamp(last_run, tz=UTC).isoformat()
+                self.helper.connector_logger.info(message)
             else:
                 self.helper.connector_logger.info("Connector has never run")
 
@@ -437,9 +435,8 @@ class Phishunt:
             )
             sys.exit(0)
         except Exception as error:
-            self.helper.connector_logger.error(
-                f"Phishunt connector internal error: {error}"
-            )
+            msg = f"Phishunt connector internal error: {error}"
+            self.helper.connector_logger.error(msg)
 
 
 if __name__ == "__main__":
