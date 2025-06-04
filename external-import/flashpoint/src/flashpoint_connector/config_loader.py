@@ -228,6 +228,10 @@ class FlashpointConfig(ConfigBaseModel):
         description="Whether to include indicators in the reports imported from MispFeed or not.",
         default=False,
     )
+    guess_relationships_from_reports: bool = Field(
+        description="Whether to guess relationships between entities or not.",
+        default=False,
+    )
     import_indicators: bool = Field(
         description="WHether to import indicators of compromise (IoCs) or not.",
         default=True,
@@ -248,9 +252,13 @@ class FlashpointConfig(ConfigBaseModel):
         description="List of community queries to execute.",
         default=["cybersecurity", "cyberattack"],
     )
-    guess_relationships_from_reports: bool = Field(
-        description="Whether to guess relationships between entities or not.",
+    import_ccm_alerts: bool = Field(
+        description="Whether to import Compromised Credentials Monitoring alerts or not.",
         default=False,
+    )
+    fresh_ccm_alerts_only: bool = Field(
+        description="Whether to import only fresh Compromised Credentials Monitoring alerts or all of them.",
+        default=True,
     )
 
 
