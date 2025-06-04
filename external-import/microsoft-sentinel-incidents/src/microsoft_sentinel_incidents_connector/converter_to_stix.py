@@ -74,11 +74,33 @@ class ConverterToStix:
 
     @handle_stix2_error
     def create_incident(self, alert: dict) -> stix2.Incident | None:
+        def _get_remediation(remediation_steps: str | None) -> str:
+            try:
+                return f"  \n{'  \n'.join(json.loads(remediation_steps, '[]') or [])}"
+            except json.JSONDecodeError:
+                self.helper.connector_logger.warning(
+                    "Error while decoding remediation steps, RemediationSteps must be a valid JSON list:"
+                    f"{remediation_steps}, falling back to empty string"
+                )
+                return "  \n"
+
         incident_name = alert.get("DisplayName")
         incident_created_at = format_datetime(alert.get("TimeGenerated"))
         incident_modified_at = format_datetime(alert.get("EndTime"))
         incident_labels = [alert.get("AlertType")] if alert.get("AlertType") else None
-        incident_description = alert.get("Description", "")
+        incident_description = (
+            f"**Display Name**: {alert.get('DisplayName')}  \n"
+            f"**Alert ID**: {alert.get('SystemAlertId')}  \n"
+            f"**Status**: {alert.get('Status')}  \n"
+            f"**Severity**: {alert.get('AlertSeverity')}  \n"
+            f"**Alert Type**: {alert.get('AlertType')}  \n"
+            f"**Start Time (UTC)**: {alert.get('StartTime')}  \n"
+            f"**End Time (UTC)**: {alert.get('EndTime')}  \n"
+            f"**Time Generated (UTC)**: {alert.get('TimeGenerated')}  \n"
+            f"**Tactics**: {alert.get('Tactics')}  \n"
+            f"**Description**: {alert.get('Description')}  \n"
+            f"**Remediation**:{_get_remediation(alert.get("RemediationSteps"))}"
+        )
         stix_incident = stix2.Incident(
             id=Incident.generate_id(incident_name, incident_created_at),
             created=incident_created_at,
@@ -115,16 +137,33 @@ class ConverterToStix:
         :param bundle_objects: List of all the STIX 2.1 objects referring to the incident
         :return: Case Incident in STIX 2.1 format
         """
+
+        def _get_additional_data(additional_data: str | None) -> dict:
+            try:
+                return json.loads(incident.get("AdditionalData", "{}")) or {}
+            except json.JSONDecodeError:
+                self.helper.connector_logger.warning(
+                    "Error while decoding additional data, AdditionalData must be a valid JSON dict:"
+                    f"{additional_data}, falling back to empty dict"
+                )
+                return {}
+
         case_incident_name = incident.get("Title")
         case_incident_created_at = format_datetime(incident.get("CreatedTime"))
         case_incident_description = (
-            incident.get("Description", "")
-            if len(incident.get("Description", "")) > 0
-            else (
-                "Incident from Microsoft Sentinel | classification: "
-                + incident.get("Classification", "unknown")
-            )
+            f"**Title**: {incident.get('Title')}  \n"
+            f"**Incident Number**: {incident.get('IncidentNumber')}  \n"
+            f"**Status**: {incident.get('Status')}  \n"
+            f"**Severity**: {incident.get('Severity')}  \n"
+            f"**Classification**: {incident.get('Classification')}  \n"
+            f"**First Activity Time (UTC)**: {incident.get('FirstActivityTime')}  \n"
+            f"**Last Activity Time (UTC)**: {incident.get('LastActivityTime')}  \n"
+            f"**Creation Time (UTC)**: {incident.get('CreatedTime')}  \n"
+            f"**Last Modified Time (UTC)**: {incident.get('LastModifiedTime')}  \n"
+            f"**Alerts Count**: {_get_additional_data(incident.get('AdditionalData')).get('alertsCount', 0)}  \n"
+            f"**Description**: {incident.get('Description') or 'Incident from Microsoft Sentinel | classification:' + incident.get('Classification', 'unknown')}"
         )
+
         case_incident_labels = (
             json.loads(incident.get("Labels", "[]"))
             if len(incident.get("Labels", "[]")) > 0
