@@ -39,7 +39,7 @@ class _ConfigLoaderEnvConnector(ConfigLoaderConnector):
     @property
     def _scope(self) -> Optional[list[str]]:
         scope = os.getenv("CONNECTOR_SCOPE")
-        return scope.split(",") if scope else []
+        return scope.split(",") if scope else None
 
     @property
     def _log_level(self) -> Optional[Literal["debug", "info", "warn", "error"]]:
