@@ -91,12 +91,6 @@ class Phishunt:
             default=None,
         )
 
-        self.identity = self.helper.api.identity.create(
-            type="Organization",
-            name="Phishunt",
-            description="Phishunt is providing URLs of potential malicious payload.",
-        )
-
     def _process_public_feed(self, work_id):
         url = "https://phishunt.io/feed.txt"
         try:
@@ -106,6 +100,18 @@ class Phishunt:
             with urllib.request.urlopen(
                     url=url, context=ssl.create_default_context()
             ) as fp:
+                stix_created_by = stix2.Identity(
+                    id=Identity.generate_id(
+                        name="Phishunt", identity_class="organization"
+                    ),
+                    name="Phishunt",
+                    identity_class="organization",
+                    description="Phishunt is providing URLs of potential malicious payload.",
+                    custom_properties={
+                        "x_opencti_organization_type": "vendor",
+                    },
+                )
+
                 for line in fp:
                     count += 1
                     if count <= 3:
@@ -126,7 +132,7 @@ class Phishunt:
                             "x_opencti_score": self.x_opencti_score_url
                             or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
-                            "x_opencti_created_by_ref": self.identity["standard_id"],
+                            "x_opencti_created_by_ref": stix_created_by["id"],
                         },
                     )
                     bundle_objects.append(stix_observable)
@@ -138,7 +144,7 @@ class Phishunt:
                             name=line,
                             description="Phishunt malicious URL",
                             pattern_type="stix",
-                            created_by_ref=self.identity["standard_id"],
+                            created_by_ref=stix_created_by["id"],
                             pattern=pattern,
                             labels=["osint", "phishing"],
                             object_marking_refs=[stix2.TLP_WHITE],
@@ -158,6 +164,9 @@ class Phishunt:
                             allow_custom=True,
                         )
                         bundle_objects.append(stix_relationship)
+
+            if bundle_objects is not None and len(bundle_objects) is not None:
+                bundle_objects.insert(0, stix_created_by)
 
             bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.send_stix2_bundle(
@@ -193,6 +202,18 @@ class Phishunt:
             data = resp.json()
             bundle_objects = []
 
+            stix_created_by = stix2.Identity(
+                id=Identity.generate_id(
+                    name="Phishunt", identity_class="organization"
+                ),
+                name="Phishunt",
+                identity_class="organization",
+                description="Phishunt is providing URLs of potential malicious payload.",
+                custom_properties={
+                    "x_opencti_organization_type": "vendor",
+                },
+            )
+
             for url in data:
                 stix_url = stix2.URL(
                     value=url["url"],
@@ -202,10 +223,11 @@ class Phishunt:
                         "x_opencti_score": self.x_opencti_score_url
                         or self.default_x_opencti_score,
                         "x_opencti_labels": ["osint", "phishing"],
-                        "x_opencti_created_by_ref": self.identity["standard_id"],
+                        "x_opencti_created_by_ref": stix_created_by["id"],
                     },
                 )
                 bundle_objects.append(stix_url)
+
                 if self.create_indicators:
                     pattern = "[url:value = '" + url["url"] + "']"
                     stix_indicator = stix2.Indicator(
@@ -213,7 +235,7 @@ class Phishunt:
                         name=url["url"],
                         description="Phishunt malicious URL",
                         pattern_type="stix",
-                        created_by_ref=self.identity["standard_id"],
+                        created_by_ref=stix_created_by["id"],
                         pattern=pattern,
                         labels=["osint", "phishing"],
                         object_marking_refs=[stix2.TLP_WHITE],
@@ -222,6 +244,7 @@ class Phishunt:
                         },
                     )
                     bundle_objects.append(stix_indicator)
+
                     stix_relationship = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
                             "based-on", stix_indicator.id, stix_url.id
@@ -232,6 +255,7 @@ class Phishunt:
                         allow_custom=True,
                     )
                     bundle_objects.append(stix_relationship)
+
                     stix_domain = stix2.DomainName(
                         value=url["domain"],
                         object_marking_refs=[stix2.TLP_WHITE],
@@ -240,9 +264,10 @@ class Phishunt:
                             "x_opencti_score": self.x_opencti_score_domain
                             or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
-                            "x_opencti_created_by_ref": self.identity["standard_id"],
+                            "x_opencti_created_by_ref": stix_created_by["id"],
                         },
                     )
+
                     stix_relationship_url_domain = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
                             "related-to", stix_url.id, stix_domain.id
@@ -254,6 +279,7 @@ class Phishunt:
                         allow_custom=True,
                     )
                     bundle_objects.append(stix_relationship_url_domain)
+
                     stix_organization = stix2.Identity(
                         id=Identity.generate_id(
                             url["company"].capitalize(), "organization"
@@ -261,9 +287,10 @@ class Phishunt:
                         name=url["company"].capitalize(),
                         identity_class="organization",
                         object_marking_refs=[stix2.TLP_WHITE],
-                        created_by_ref=self.identity["standard_id"],
+                        created_by_ref=stix_created_by["id"],
                     )
                     bundle_objects.append(stix_organization)
+
                     stix_relationship_organization_url = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
                             "related-to", stix_url.id, stix_domain.id
@@ -275,6 +302,7 @@ class Phishunt:
                         allow_custom=True,
                     )
                     bundle_objects.append(stix_relationship_organization_url)
+
                     stix_ip = stix2.IPv4Address(
                         value=url["ip"],
                         object_marking_refs=[stix2.TLP_WHITE],
@@ -283,10 +311,11 @@ class Phishunt:
                             "x_opencti_score": self.x_opencti_score_ip
                             or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
-                            "x_opencti_created_by_ref": self.identity["standard_id"],
+                            "x_opencti_created_by_ref": stix_created_by["id"],
                         },
                     )
                     bundle_objects.append(stix_ip)
+
                     stix_relationship_domain_ip = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
                             "resolves-to", stix_domain.id, stix_ip.id
@@ -298,15 +327,17 @@ class Phishunt:
                         allow_custom=True,
                     )
                     bundle_objects.append(stix_relationship_domain_ip)
+
                     stix_location = stix2.Location(
                         id=Location.generate_id(url["country"], "Country"),
                         name=url["country"],
                         country=url["country"],
-                        created_by_ref=self.identity["standard_id"],
+                        created_by_ref=stix_created_by["id"],
                         allow_custom=True,
                         custom_properties={"x_opencti_location_type": "Country"},
                     )
                     bundle_objects.append(stix_relationship_domain_ip)
+
                     stix_relationship_ip_location = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
                             "located-at", stix_ip.id, stix_location.id
@@ -318,6 +349,10 @@ class Phishunt:
                         allow_custom=True,
                     )
                     bundle_objects.append(stix_relationship_ip_location)
+
+            if bundle_objects is not None and len(bundle_objects) is not None:
+                bundle_objects.insert(0, stix_created_by)
+
             bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.send_stix2_bundle(
                 bundle,
