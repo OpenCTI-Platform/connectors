@@ -179,8 +179,10 @@ class Phishunt:
                 "https://api.phishunt.io/suspicious/feed_json",
                 headers={"x-api-key": self.phishunt_api_key},
             )
+            resp.raise_for_status()
             data = resp.json()
             bundle_objects = []
+
             for url in data:
                 stix_url = stix2.URL(
                     value=url["url"],
@@ -311,6 +313,15 @@ class Phishunt:
                 bundle,
                 work_id=work_id,
             )
+        except requests.exceptions.HTTPError as err:
+            msg = f"[Phishunt] Http error during private feed process: {err}"
+            self.helper.connector_logger.error(msg)
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Connector stopped by user/system...",
+                {"connector_name": self.helper.connect_name},
+            )
+            sys.exit(0)
         except Exception as error:
             self.helper.connector_logger.error(
                 f"Error while sending private feed bundle: {error}"
