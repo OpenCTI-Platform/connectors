@@ -4,6 +4,7 @@ import ssl
 import sys
 import time
 import traceback
+import urllib.error
 import urllib.request
 from datetime import UTC, datetime
 from typing import Any, Dict
@@ -97,31 +98,26 @@ class Phishunt:
         )
 
     def _process_public_feed(self, work_id):
+        url = "https://phishunt.io/feed.txt"
         try:
-            response = urllib.request.urlopen(
-                "https://phishunt.io/feed.txt",
-                context=ssl.create_default_context(),
-            )
-            image = response.read()
-            with open(
-                os.path.dirname(os.path.abspath(__file__)) + "/data.txt",
-                "wb",
-            ) as file:
-                file.write(image)
             count = 0
             bundle_objects = []
-            with open(os.path.dirname(os.path.abspath(__file__)) + "/data.txt") as fp:
+
+            with urllib.request.urlopen(
+                    url=url, context=ssl.create_default_context()
+            ) as fp:
                 for line in fp:
                     count += 1
                     if count <= 3:
                         continue
-                    line = line.strip()
+                    line = line.decode("utf-8").strip()
                     match_html_tag = re.search(r"^<\/?\w+>", line)
                     if match_html_tag:
                         continue
                     match_blank_line = re.search(r"^\s*$", line)
                     if match_blank_line:
                         continue
+
                     stix_observable = stix2.URL(
                         value=line,
                         object_marking_refs=[stix2.TLP_WHITE],
@@ -134,6 +130,7 @@ class Phishunt:
                         },
                     )
                     bundle_objects.append(stix_observable)
+
                     if self.create_indicators:
                         pattern = "[url:value = '" + line + "']"
                         stix_indicator = stix2.Indicator(
@@ -150,6 +147,7 @@ class Phishunt:
                             },
                         )
                         bundle_objects.append(stix_indicator)
+
                         stix_relationship = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
                                 "based-on", stix_indicator.id, stix_observable.id
@@ -160,13 +158,25 @@ class Phishunt:
                             allow_custom=True,
                         )
                         bundle_objects.append(stix_relationship)
+
             bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.send_stix2_bundle(
                 bundle,
                 work_id=work_id,
             )
-            if os.path.exists(os.path.dirname(os.path.abspath(__file__)) + "/data.txt"):
-                os.remove(os.path.dirname(os.path.abspath(__file__)) + "/data.txt")
+        except (
+                urllib.error.URLError,
+                urllib.error.HTTPError,
+                urllib.error.ContentTooShortError,
+        ) as urllib_error:
+            msg = f"Error retrieving url {url}: {urllib_error}"
+            self.helper.connector_logger.error(msg)
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Connector stopped by user/system...",
+                {"connector_name": self.helper.connect_name},
+            )
+            sys.exit(0)
         except Exception as error:
             self.helper.connector_logger.error(
                 f"Error while sending public feed bundle: {error}"
