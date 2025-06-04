@@ -28,70 +28,66 @@ class Phishunt:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.config = {}
+        if os.path.isfile(config_file_path):
+            with open(config_file_path) as f:
+                self.config = yaml.load(f, Loader=yaml.FullLoader)
+
+        self.helper = OpenCTIConnectorHelper(self.config)
+
         # Extra config
         self.phishunt_api_key = get_config_variable(
-            "PHISHUNT_API_KEY", ["phishunt", "api_key"], config, default=""
+            env_var="PHISHUNT_API_KEY",
+            yaml_path=["phishunt", "api_key"],
+            config=self.config,
         )
 
-        self.phishunt_duration_periode = get_config_variable(
-            "CONNECTOR_DURATION_PERIOD",
-            ["phishunt", "duration_period"],
-            config,
-            True,
-            default="P3D",
+        self.phishunt_duration_period = get_config_variable(
+            env_var="CONNECTOR_DURATION_PERIOD",
+            yaml_path=["connector", "duration_period"],
+            config=self.config,
         )
 
-        self.phishunt_interval_sec = get_config_variable(
-            "CONNECTOR_INTERVAL_SEC", ["phishunt", "interval_sec"], config
+        self.phishunt_interval = get_config_variable(
+            env_var="CONNECTOR_INTERVAL",
+            yaml_path=["phishunt", "interval"],
+            config=self.config,
+            isNumber=True,
         )
-
-        if not self.phishunt_interval_sec:
-            self.phishunt_interval_sec = self.phishunt_duration_periode
 
         self.create_indicators = get_config_variable(
-            "PHISHUNT_CREATE_INDICATORS",
-            ["phishunt", "create_indicators"],
-            config,
-            False,
+            env_var="PHISHUNT_CREATE_INDICATORS",
+            yaml_path=["phishunt", "create_indicators"],
+            config=self.config,
             default=True,
         )
         self.default_x_opencti_score = get_config_variable(
-            "PHISHUNT_DEFAULT_X_OPENCTI_SCORE",
-            ["phishunt", "default_x_opencti_score"],
-            config,
+            env_var="PHISHUNT_DEFAULT_X_OPENCTI_SCORE",
+            yaml_path=["phishunt", "default_x_opencti_score"],
+            config=self.config,
             isNumber=True,
             default=40,
-            required=False,
         )
         self.x_opencti_score_domain = get_config_variable(
-            "PHISHUNT_X_OPENCTI_SCORE_DOMAIN",
-            ["phishunt", "x_opencti_score_domain"],
-            config,
+            env_var="PHISHUNT_X_OPENCTI_SCORE_DOMAIN",
+            yaml_path=["phishunt", "x_opencti_score_domain"],
+            config=self.config,
             isNumber=True,
             default=None,
-            required=False,
         )
         self.x_opencti_score_ip = get_config_variable(
-            "PHISHUNT_X_OPENCTI_SCORE_IP",
-            ["phishunt", "x_opencti_score_ip"],
-            config,
+            env_var="PHISHUNT_X_OPENCTI_SCORE_IP",
+            yaml_path=["phishunt", "x_opencti_score_ip"],
+            config=self.config,
             isNumber=True,
             default=None,
-            required=False,
         )
         self.x_opencti_score_url = get_config_variable(
-            "PHISHUNT_X_OPENCTI_SCORE_URL",
-            ["phishunt", "x_opencti_score_url"],
-            config,
+            env_var="PHISHUNT_X_OPENCTI_SCORE_URL",
+            yaml_path=["phishunt", "x_opencti_score_url"],
+            config=self.config,
             isNumber=True,
             default=None,
-            required=False,
         )
 
         self.identity = self.helper.api.identity.create(
