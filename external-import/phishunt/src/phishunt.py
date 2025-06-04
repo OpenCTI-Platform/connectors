@@ -2,7 +2,6 @@ import os
 import re
 import ssl
 import sys
-import time
 import traceback
 import urllib.error
 import urllib.request
@@ -20,9 +19,6 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-
-PHISHUNT_PUBLIC_FEED = "https://phishunt.io/feed.txt"
-PHISHUNT_PRIVATE_FEED = "https://api.phishunt.io/suspicious/feed_json"
 
 
 class Phishunt:
@@ -91,6 +87,9 @@ class Phishunt:
             default=None,
         )
 
+        self.last_run = None
+        self.last_run_datetime_with_ingested_data = None
+
     def _process_public_feed(self, work_id):
         url = "https://phishunt.io/feed.txt"
         try:
@@ -130,7 +129,7 @@ class Phishunt:
                         custom_properties={
                             "x_opencti_description": "Phishunt malicious URL",
                             "x_opencti_score": self.x_opencti_score_url
-                            or self.default_x_opencti_score,
+                                               or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
                             "x_opencti_created_by_ref": stix_created_by["id"],
                         },
@@ -166,13 +165,14 @@ class Phishunt:
                         bundle_objects.append(stix_relationship)
 
             if bundle_objects is not None and len(bundle_objects) is not None:
-                bundle_objects.insert(0, stix_created_by)
-
-            bundle = self.helper.stix2_create_bundle(bundle_objects)
-            self.helper.send_stix2_bundle(
-                bundle,
-                work_id=work_id,
-            )
+                bundle = self.helper.stix2_create_bundle(bundle_objects)
+                self.helper.send_stix2_bundle(
+                    bundle,
+                    work_id=work_id,
+                )
+                self.last_run_datetime_with_ingested_data = datetime.now(
+                    tz=UTC
+                ).isoformat(sep=" ", timespec="seconds")
         except (
                 urllib.error.URLError,
                 urllib.error.HTTPError,
@@ -220,7 +220,7 @@ class Phishunt:
                     custom_properties={
                         "x_opencti_description": "Phishunt malicious URL",
                         "x_opencti_score": self.x_opencti_score_url
-                        or self.default_x_opencti_score,
+                                           or self.default_x_opencti_score,
                         "x_opencti_labels": ["osint", "phishing"],
                         "x_opencti_created_by_ref": stix_created_by["id"],
                     },
@@ -261,7 +261,7 @@ class Phishunt:
                         custom_properties={
                             "x_opencti_description": "Phishunt domain based on malicious URL",
                             "x_opencti_score": self.x_opencti_score_domain
-                            or self.default_x_opencti_score,
+                                               or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
                             "x_opencti_created_by_ref": stix_created_by["id"],
                         },
@@ -308,7 +308,7 @@ class Phishunt:
                         custom_properties={
                             "x_opencti_description": "Phishunt domain based on malicious URL",
                             "x_opencti_score": self.x_opencti_score_ip
-                            or self.default_x_opencti_score,
+                                               or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
                             "x_opencti_created_by_ref": stix_created_by["id"],
                         },
@@ -351,12 +351,11 @@ class Phishunt:
 
             if bundle_objects is not None and len(bundle_objects) is not None:
                 bundle_objects.insert(0, stix_created_by)
-
-            bundle = self.helper.stix2_create_bundle(bundle_objects)
-            self.helper.send_stix2_bundle(
-                bundle,
-                work_id=work_id,
-            )
+                bundle = self.helper.stix2_create_bundle(bundle_objects)
+                self.helper.send_stix2_bundle(
+                    bundle,
+                    work_id=work_id,
+                )
         except requests.exceptions.HTTPError as err:
             msg = f"[Phishunt] Http error during private feed process: {err}"
             self.helper.connector_logger.error(msg)
@@ -395,7 +394,7 @@ class Phishunt:
 
         try:
             # Get the current timestamp and check
-            timestamp = int(time.time())
+            now = datetime.now(tz=UTC)
             current_state = self._load_state()
 
             self.helper.connector_logger.info(
@@ -403,29 +402,69 @@ class Phishunt:
             )
 
             if current_state is not None and "last_run" in current_state:
-                last_run = current_state["last_run"]
-                message = f"{self.helper.connect_name} connector last run: " + datetime.fromtimestamp(last_run, tz=UTC).isoformat()
-                self.helper.connector_logger.info(message)
-            else:
-                self.helper.connector_logger.info("Connector has never run")
+                if isinstance(current_state["last_run"], int):
+                    self.last_run = datetime.fromtimestamp(current_state["last_run"])
+                else:
+                    self.last_run = datetime.fromisoformat(current_state["last_run"])
 
-            self.helper.connector_logger.info("Connector will run!")
+            self.last_run_datetime_with_ingested_data = (
+                current_state.get("last_run_datetime_with_ingested_data")
+                if current_state
+                else None
+            )
+
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Starting connector...",
+                {
+                    "connector_name": self.helper.connect_name,  # self.helper.connect_name
+                    "connector_start_time": now.isoformat(sep=" ", timespec="seconds"),
+                    "last_run": (
+                        self.last_run if self.last_run else "Connector has never run"
+                    ),
+                    "last_run_datetime_with_ingested_data": (
+                        self.last_run_datetime_with_ingested_data
+                        if self.last_run_datetime_with_ingested_data
+                        else "Connector has never ingested data"
+                    ),
+                },
+            )
+
             friendly_name = "Phishunt run"
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
 
-            if len(self.phishunt_api_key) > 0:
+            if self.phishunt_api_key:
                 self._process_private_feed(work_id)
             else:
                 self._process_public_feed(work_id)
 
-            # Store the current timestamp as a last run
-            message = "Connector successfully run, storing last_run as " + str(
-                timestamp
+            # Store the current start utc isoformat as a last run
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Getting current state and update it with last run of the connector.",
+                {
+                    "current_state": self.last_run,
+                    "new_last_run_start_datetime": now.isoformat(
+                        sep=" ", timespec="seconds"
+                    ),
+                },
             )
-            self.helper.connector_logger.info(message)
-            self.helper.set_state({"last_run": timestamp})
+
+            if self.last_run:
+                current_state["last_run"] = now.isoformat(sep=" ", timespec="seconds")
+            else:
+                current_state = {"last_run": now.isoformat(sep=" ", timespec="seconds")}
+
+            if self.last_run_datetime_with_ingested_data:
+                current_state["last_run_datetime_with_ingested_data"] = (
+                    self.last_run_datetime_with_ingested_data
+                )
+
+            self.helper.set_state(current_state)
+            message = "Connector successfully run, storing last_run as" + now.isoformat(
+                sep=" ", timespec="seconds"
+            )
+
             self.helper.api.work.to_processed(work_id, message)
 
         except (KeyboardInterrupt, SystemExit):
