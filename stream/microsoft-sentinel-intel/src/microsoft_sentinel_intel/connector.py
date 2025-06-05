@@ -50,12 +50,12 @@ class Connector:
     def _process_event(self, event_type: str, indicator: dict) -> None:
         match event_type:
             case "create" | "update":
-                self.client.post_indicator(
-                    stix_objects=[self._prepare_stix_objects(indicator)],
+                self.client.upload_stix_objects(
+                    stix_objects=self._prepare_stix_objects(indicator),
                     source_system=self.config.microsoft_sentinel_intel.source_system,
                 )
             case "delete":
-                self.client.delete_indicator(indicator["id"])
+                self.client.delete_indicator_by_id(indicator["id"])
             case _:
                 raise ConnectorWarning(
                     message=f"Unsupported event type: {event_type}, Skipping..."
