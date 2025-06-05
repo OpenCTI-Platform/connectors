@@ -557,12 +557,20 @@ class RansomwareAPIConnector:
                     )
                     if self.create_threat_actor:
                         relation_sec_TA = self.relationship_generator(
-                            threat_actor.get("id"), sector_id, "targets"
+                            threat_actor.get("id"),
+                            sector_id,
+                            "targets",
+                            attack_date_iso,
+                            discovered_iso,
                         )
                         bundle.append(relation_sec_TA)
                         report.get("object_refs").append(relation_sec_TA.get("id"))
                     relation_is_sec = self.relationship_generator(
-                        intrusion_set.get("id"), sector_id, "targets"
+                        intrusion_set.get("id"),
+                        sector_id,
+                        "targets",
+                        attack_date_iso,
+                        discovered_iso,
                     )
                     bundle.append(relation_sec_vic)
                     bundle.append(relation_is_sec)
@@ -674,11 +682,19 @@ class RansomwareAPIConnector:
             )
 
             relation_is_lo = self.relationship_generator(
-                intrusion_set.get("id"), location3.get("id"), "targets"
+                intrusion_set.get("id"),
+                location3.get("id"),
+                "targets",
+                attack_date_iso,
+                discovered_iso,
             )
             if self.create_threat_actor:
                 relation_TA_LO = self.relationship_generator(
-                    threat_actor.get("id"), location3.get("id"), "targets"
+                    threat_actor.get("id"),
+                    location3.get("id"),
+                    "targets",
+                    attack_date_iso,
+                    discovered_iso,
                 )
                 bundle.append(relation_TA_LO)
                 report.get("object_refs").append(relation_TA_LO.get("id"))
