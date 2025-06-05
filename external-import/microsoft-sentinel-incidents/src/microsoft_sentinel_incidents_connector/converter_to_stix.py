@@ -76,7 +76,7 @@ class ConverterToStix:
     def create_incident(self, alert: dict) -> stix2.Incident | None:
         def _get_remediation(remediation_steps: str | None) -> str:
             try:
-                return f"  \n{'  \n'.join(json.loads(remediation_steps, '[]') or [])}"
+                return f"  \n{'  \n'.join(json.loads(remediation_steps) if remediation_steps else [])}"
             except json.JSONDecodeError:
                 self.helper.connector_logger.warning(
                     "Error while decoding remediation steps, RemediationSteps must be a valid JSON list:"
