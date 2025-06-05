@@ -70,21 +70,18 @@ class Phishunt:
             yaml_path=["phishunt", "x_opencti_score_domain"],
             config=self.config,
             isNumber=True,
-            default=None,
         )
         self.x_opencti_score_ip = get_config_variable(
             env_var="PHISHUNT_X_OPENCTI_SCORE_IP",
             yaml_path=["phishunt", "x_opencti_score_ip"],
             config=self.config,
             isNumber=True,
-            default=None,
         )
         self.x_opencti_score_url = get_config_variable(
             env_var="PHISHUNT_X_OPENCTI_SCORE_URL",
             yaml_path=["phishunt", "x_opencti_score_url"],
             config=self.config,
             isNumber=True,
-            default=None,
         )
 
         self.last_run = None
@@ -164,7 +161,7 @@ class Phishunt:
                         )
                         bundle_objects.append(stix_relationship)
 
-            if bundle_objects is not None and len(bundle_objects) is not None:
+            if bundle_objects is not None and len(bundle_objects) > 0:
                 bundle_objects.insert(0, stix_created_by)
                 bundle = self.helper.stix2_create_bundle(bundle_objects)
                 self.helper.send_stix2_bundle(
@@ -179,8 +176,9 @@ class Phishunt:
             urllib.error.HTTPError,
             urllib.error.ContentTooShortError,
         ) as urllib_error:
-            msg = f"Error retrieving url {url}: {urllib_error}"
-            self.helper.connector_logger.error(msg)
+            self.helper.connector_logger.error(
+                "Error retrieving url", {"url": url, "error": urllib_error}
+            )
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped by user/system...",
@@ -188,8 +186,9 @@ class Phishunt:
             )
             sys.exit(0)
         except Exception as error:
-            msg = f"Error while sending public feed bundle: {error}"
-            self.helper.connector_logger.error(msg)
+            self.helper.connector_logger.error(
+                "Error while sending public feed bundle", {"error": error}
+            )
 
     def _process_private_feed(self, work_id):
         try:
@@ -349,7 +348,7 @@ class Phishunt:
                     )
                     bundle_objects.append(stix_relationship_ip_location)
 
-            if bundle_objects is not None and len(bundle_objects) is not None:
+            if bundle_objects is not None and len(bundle_objects) > 0:
                 bundle_objects.insert(0, stix_created_by)
                 bundle = self.helper.stix2_create_bundle(bundle_objects)
                 self.helper.send_stix2_bundle(
@@ -360,8 +359,9 @@ class Phishunt:
                     tz=UTC
                 ).isoformat(sep=" ", timespec="seconds")
         except requests.exceptions.HTTPError as err:
-            msg = f"[Phishunt] Http error during private feed process: {err}"
-            self.helper.connector_logger.error(msg)
+            self.helper.connector_logger.error(
+                "[Phishunt] Http error during private feed process.", {"error": err}
+            )
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped by user/system...",
@@ -369,8 +369,9 @@ class Phishunt:
             )
             sys.exit(0)
         except Exception as error:
-            msg = f"Error while sending private feed bundle: {error}"
-            self.helper.connector_logger.error(msg)
+            self.helper.connector_logger.error(
+                "Error while sending private feed bundle", {"error": error}
+            )
 
     def run(self):
         if self.phishunt_duration_period:
@@ -477,8 +478,9 @@ class Phishunt:
             )
             sys.exit(0)
         except Exception as error:
-            msg = f"Phishunt connector internal error: {error}"
-            self.helper.connector_logger.error(msg)
+            self.helper.connector_logger.error(
+                "Phishunt connector internal error", {"error": error}
+            )
 
 
 if __name__ == "__main__":
