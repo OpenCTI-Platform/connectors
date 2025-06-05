@@ -1,0 +1,1 @@
+"""Offer observations OpenCTI entities."""

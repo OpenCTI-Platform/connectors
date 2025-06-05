@@ -1,0 +1,1 @@
+"""Offer events OpenCTI entities."""
