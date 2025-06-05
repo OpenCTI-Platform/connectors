@@ -38,10 +38,22 @@ class Connector:
                 "Missing stream ID, please check your configurations."
             )
 
+    def _prepare_stix_objects(self, indicator: dict) -> list[dict]:
+        if self.config.microsoft_sentinel_intel.delete_extensions:
+            del indicator["extensions"]
+
+        if extra_labels := self.config.microsoft_sentinel_intel.extra_labels:
+            indicator["labels"] = list(set(indicator.get("labels", []) + extra_labels))
+
+        return [indicator]
+
     def _process_event(self, event_type: str, indicator: dict) -> None:
         match event_type:
             case "create" | "update":
-                self.client.post_indicator(indicator)
+                self.client.post_indicator(
+                    stix_objects=[self._prepare_stix_objects(indicator)],
+                    source_system=self.config.microsoft_sentinel_intel.source_system,
+                )
             case "delete":
                 self.client.delete_indicator(indicator["id"])
             case _:
