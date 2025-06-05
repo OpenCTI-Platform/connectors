@@ -124,46 +124,15 @@ class ConnectorClient:
                 metadata={"url_path": f"{method.upper()} {url}", "error": str(err)},
             ) from err
 
-    def _build_request_body(self, indicator: dict) -> dict:
-        """
-        Builds a request body dictionary by modifying the provided indicator.
-
-        This function checks for the presence of configuration options like `delete_extensions`
-        and `extra_labels` and updates the indicator accordingly. It then creates a dictionary
-        containing the source system and the indicator as part of the request body.
-
-        :params: indicator (dict): A dictionary representing a STIX indicator.
-        :return dict: A dictionary with the keys "sourcesystem" and "stixobjects",
-                  where "stixobjects" contains the modified indicator.
-        """
-
-        if self.config.microsoft_sentinel_intel.delete_extensions:
-            del indicator["extensions"]
-
-        if self.extra_labels:
-            if "labels" in indicator:
-                indicator["labels"] = list(
-                    set(indicator["labels"].append(self.extra_labels))
-                )
-            else:
-                indicator["labels"] = self.extra_labels
-
-        return {
-            "sourcesystem": self.config.microsoft_sentinel_intel.source_system,
-            "stixobjects": [indicator],
-        }
-
-    def post_indicator(self, indicator: dict) -> None:
+    def post_indicator(self, stix_objects: list[dict], source_system: str):
         """
         Create a Threat Intelligence Indicator on Sentinel from an OpenCTI indicator.
         :param indicator: OpenCTI indicator
         """
-
-        request_body = self._build_request_body(indicator)
         self._send_request(
-            "post",
-            self.workspace_url,
-            json=request_body,
+            method="post",
+            url=self.workspace_url,
+            json={"stixobjects": stix_objects, "sourcesystem": source_system},
         )
 
     def delete_indicator(self, indicator_id: str):
@@ -172,9 +141,10 @@ class ConnectorClient:
         :param indicator_id: OpenCTI indicator to delete Threat Intelligence Indicator for
         """
         name = self._search_indicator_name(indicator_id)
-        url = f"{self.management_url}/indicators/{name}?api-version={self.config.microsoft_sentinel_intel.management_api_version}"
-
-        self._send_request("delete", url)
+        self._send_request(
+            method="delete",
+            url=f"{self.management_url}/indicators/{name}?api-version={self.config.microsoft_sentinel_intel.management_api_version}",
+        )
 
     def _search_indicator_name(self, indicator_id: str) -> str:
         """
