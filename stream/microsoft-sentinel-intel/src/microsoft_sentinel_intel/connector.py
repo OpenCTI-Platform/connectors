@@ -6,7 +6,6 @@ from filigran_sseclient.sseclient import Event
 from microsoft_sentinel_intel.client import ConnectorClient
 from microsoft_sentinel_intel.config import ConnectorSettings
 from microsoft_sentinel_intel.errors import (
-    ConnectorConfigError,
     ConnectorError,
     ConnectorWarning,
 )
@@ -24,19 +23,6 @@ class Connector:
         self.helper = helper
         self.config = config
         self.client = client
-
-    def _check_stream_id(self) -> None:
-        """
-        In case of stream_id configuration is missing, raise Value Error
-        :return: None
-        """
-        if (
-            self.helper.connect_live_stream_id is None
-            or self.helper.connect_live_stream_id == "ChangeMe"
-        ):
-            raise ConnectorConfigError(
-                "Missing stream ID, please check your configurations."
-            )
 
     def _prepare_stix_objects(self, indicator: dict) -> list[dict]:
         if self.config.microsoft_sentinel_intel.delete_extensions:
@@ -95,7 +81,6 @@ class Connector:
         :return: string
         """
         try:
-            self._check_stream_id()
             self._handle_event(message)
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("Connector stopped by user.")

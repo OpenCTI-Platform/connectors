@@ -10,6 +10,7 @@ from pydantic import (
     Field,
     HttpUrl,
     PlainSerializer,
+    field_validator,
     model_validator,
 )
 from pydantic_core.core_schema import SerializationInfo
@@ -115,6 +116,13 @@ class StreamConnectorConfig(BaseModel):
         ):
             values["listen_protocol_api_uri"] = "https://127.0.0.1:7070"
         return values
+
+    @field_validator("live_stream_id")
+    @classmethod
+    def validate_live_stream_id(cls, v: str) -> str:
+        if v == "changeMe":
+            raise ValueError('name cannot be the placeholder "changeMe"')
+        return v
 
 
 class BaseConnectorSettings(abc.ABC, BaseSettings):
