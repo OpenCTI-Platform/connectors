@@ -100,9 +100,10 @@ class ThreatMatch:
         if r.status_code == 200:
             data = r.json()["objects"]
             for object in data:
-                object["description"] = BeautifulSoup(
-                    object["description"], "html.parser"
-                ).get_text()
+                if "description" in object:
+                    object["description"] = BeautifulSoup(
+                        object["description"], "html.parser"
+                    ).get_text()
             return data
 
     def _process_list(self, work_id, token, type, list):
