@@ -96,6 +96,7 @@ def set_report_context(report_obj: Any) -> None:
 
 def get_report_context() -> Any:
     """Get the current report context."""
+    # flake8: noqa # in used to create relationships/object_refs
     global _current_report_context
     return _current_report_context
 

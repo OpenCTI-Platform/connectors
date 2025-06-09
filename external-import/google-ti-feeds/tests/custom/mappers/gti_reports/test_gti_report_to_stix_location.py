@@ -48,7 +48,7 @@ class GTIReportDataFactory(ModelFactory[GTIReportData]):
 @pytest.fixture
 def mock_organization():
     """Mock organization Identity object."""
-    return Identity(
+    return Identity(  # pylint: disable=W9101  # it's a test no real ingest
         name="Test Organization",
         identity_class="organization",
     )

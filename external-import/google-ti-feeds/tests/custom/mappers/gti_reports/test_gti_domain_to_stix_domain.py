@@ -71,7 +71,7 @@ class GTIDomainDataFactory(ModelFactory[GTIDomainData]):
 @pytest.fixture
 def mock_organization() -> Identity:
     """Fixture for mock organization identity."""
-    return Identity(
+    return Identity(  # pylint: disable=W9101  # it's a test no real ingest
         name="Test Organization",
         identity_class="organization",
     )
