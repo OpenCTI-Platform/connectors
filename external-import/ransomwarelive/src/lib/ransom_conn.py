@@ -43,15 +43,15 @@ class RansomwareAPIConnector:
     def __init__(self):
         self.helper = OpenCTIConnectorHelper({})
         self.work_id = None
-        self.get_historic = os.environ.get("CONNECTOR_PULL_HISTORY", "false").lower()
+        self.get_historic = os.environ.get("RANSOMWARE_PULL_HISTORY", "false").lower()
         self.get_historic_year = os.environ.get(
-            "CONNECTOR_HISTORY_START_YEAR", 2020
+            "RANSOMWARE_HISTORY_START_YEAR", 2020
         ).lower()
         # Specific connector attributes for external import connectors
         try:
-            self.interval = os.environ.get("CONNECTOR_RUN_EVERY", None).lower()
+            self.interval = os.environ.get("RANSOMWARE_INTERVAL", None).lower()
             self.helper.connector_logger.info(
-                "Verifying integrity of the CONNECTOR_RUN_EVERY value",
+                "Verifying integrity of the RANSOMWARE_INTERVAL value",
                 {"interval": self.interval},
             )
             unit = self.interval[-1]
@@ -60,14 +60,14 @@ class RansomwareAPIConnector:
             int(self.interval[:-1])
         except TypeError as _:
             msg = (
-                f"Error ({_}) when grabbing CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. It SHOULD"
+                f"Error ({_}) when grabbing RANSOMWARE_INTERVAL environment variable: '{self.interval}'. It SHOULD"
                 f" be a string in the format '7d', '12h', '10m', '30s' where the final letter SHOULD be one of 'd',"
                 f" 'h', 'm', 's' standing for day, hour, minute, second respectively. "
             )
             self.helper.connector_logger.error(msg)
             raise ValueError(msg) from _
 
-        create_threat_actor = os.environ.get("CONNECTOR_CREATE_THREAT_ACTOR", "false")
+        create_threat_actor = os.environ.get("RANSOMWARE_CREATE_THREAT_ACTOR", "false")
         self.tlp_marking = "TLP:WHITE"
         self.marking = TLP_WHITE
         author = Identity(
@@ -95,7 +95,7 @@ class RansomwareAPIConnector:
         ]:
             self.create_threat_actor = create_threat_actor
         else:
-            msg = f"Error when grabbing CONNECTOR_CREATE_THREAT_ACTOR environment variable: '{create_threat_actor}'. It SHOULD be either `true` or `false`. `false` is assumed. "
+            msg = f"Error when grabbing RANSOMWARE_CREATE_THREAT_ACTOR environment variable: '{create_threat_actor}'. It SHOULD be either `true` or `false`. `false` is assumed. "
             self.helper.connector_logger.warning(msg)
             self.create_threat_actor = "false"
 
@@ -939,14 +939,14 @@ class RansomwareAPIConnector:
             raise ValueError(f"Unsupported unit: {unit}")
         except Exception as e:
             self.helper.connector_logger.error(
-                "Error when converting CONNECTOR_RUN_EVERY environment variable",
+                "Error when converting RANSOMWARE_INTERVAL environment variable",
                 {"interval": self.interval, "error": str(e)},
             )
             raise ValueError(
-                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
+                f"Error when converting RANSOMWARE_INTERVAL environment variable: '{self.interval}'. {str(e)}"
             ) from e
 
-    def run(self) -> None:
+    def process_message(self) -> None:
         # Main procedure
         self.helper.connector_logger.info(
             "Starting connector...", {"connector_name": self.helper.connect_name}
@@ -1083,3 +1083,16 @@ class RansomwareAPIConnector:
                 sys.exit(0)
 
             time.sleep(60)
+
+    def run(self):
+        if self.duration_period:
+            self.helper.schedule_iso(
+                message_callback=self.process_message,
+                duration_period=self.duration_period,
+            )
+        else:
+            self.helper.schedule_unit(
+                message_callback=self.process_message,
+                duration_period=self.interval,
+                time_unit=self.helper.TimeUnit.DAYS,
+            )
