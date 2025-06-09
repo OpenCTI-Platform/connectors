@@ -3,6 +3,8 @@
 from datetime import datetime
 from typing import List, Optional
 
+from stix2.v21 import Identity, IntrusionSet, MarkingDefinition  # type: ignore
+
 from connector.src.custom.models.gti_reports.gti_threat_actor_model import (
     GTIThreatActorData,
     ThreatActorModel,
@@ -11,11 +13,10 @@ from connector.src.stix.octi.models.intrusion_set_model import OctiIntrusionSetM
 from connector.src.stix.v21.models.ovs.attack_motivation_ov_enums import (
     AttackMotivationOV,
 )
-from stix2.v21 import Identity, IntrusionSet, MarkingDefinition  # type: ignore
+from connector.src.utils.converters.generic_converter_config import BaseMapper
 
 
-# noinspection DuplicatedCode
-class GTIThreatActorToSTIXIntrusionSet:
+class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
     """Converts a GTI threat actor to a STIX intrusion set object."""
 
     def __init__(
@@ -85,8 +86,7 @@ class GTIThreatActorToSTIXIntrusionSet:
             modified=modified,
         )
 
-        # noinspection PyTypeChecker
-        return intrusion_set_model.to_stix2_object()
+        return intrusion_set_model
 
     @staticmethod
     def _extract_aliases(attributes: ThreatActorModel) -> Optional[List[str]]:
@@ -114,7 +114,7 @@ class GTIThreatActorToSTIXIntrusionSet:
 
     @staticmethod
     def _extract_seen_dates(
-            attributes: ThreatActorModel
+        attributes: ThreatActorModel,
     ) -> tuple[Optional[datetime], Optional[datetime]]:
         """Extract first_seen and last_seen dates from threat actor attributes.
 
@@ -157,16 +157,15 @@ class GTIThreatActorToSTIXIntrusionSet:
 
     @staticmethod
     def _extract_labels(attributes: ThreatActorModel) -> Optional[List[str]]:
-        # noinspection DuplicatedCode
         """Extract labels from threat actor attributes.
 
-                Args:
-                    attributes: The threat actor attributes
+        Args:
+            attributes: The threat actor attributes
 
-                Returns:
-                    Optional[List[str]]: Extracted labels or None if no labels exist
+        Returns:
+            Optional[List[str]]: Extracted labels or None if no labels exist
 
-                """
+        """
         if not hasattr(attributes, "tags_details") or not attributes.tags_details:
             return None
 

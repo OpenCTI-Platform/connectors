@@ -3,8 +3,9 @@
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
-# noinspection PyProtectedMember
-from stix2.v21 import _STIXBase21  # type: ignore
+from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
+    _STIXBase21,
+)
 
 
 class SCORequiredModel(BaseModel):
@@ -14,7 +15,7 @@ class SCORequiredModel(BaseModel):
         ...,
         description="The object type. MUST match the specific SCO type being defined.",
     )
-    id: str = Field(..., description="The unique STIX identifier for this SCO object.")
+    id: str = Field(description="The unique STIX identifier for this SCO object.")
 
 
 class SCOOptionalModel(BaseModel):
@@ -39,6 +40,10 @@ class SCOOptionalModel(BaseModel):
     extensions: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Custom STIX extensions applied to this object.",
+    )
+    custom_properties: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Custom properties that are not part of the STIX specification.",
     )
 
 

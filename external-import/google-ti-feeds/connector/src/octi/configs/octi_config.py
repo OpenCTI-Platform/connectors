@@ -1,7 +1,8 @@
 """Global OpenCTI connector configuration—common settings for all connectors."""
 
-from connector.src.octi.interfaces.base_config import BaseConfig
 from pydantic_settings import SettingsConfigDict
+
+from connector.src.octi.interfaces.base_config import BaseConfig
 
 
 class OctiConfig(BaseConfig):

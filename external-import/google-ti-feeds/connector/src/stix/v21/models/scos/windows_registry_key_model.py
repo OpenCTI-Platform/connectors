@@ -3,13 +3,16 @@
 from datetime import datetime
 from typing import List, Optional
 
+from pydantic import BaseModel, Field, model_validator
+from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
+    WindowsRegistryKey,
+    _STIXBase21,
+)
+
 from connector.src.stix.v21.models.ovs.windows_registry_datatype_ov_enums import (
     WindowsRegistryDatatypeOV,
 )
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
-from pydantic import BaseModel, Field, model_validator
-# noinspection PyProtectedMember
-from stix2.v21 import WindowsRegistryKey, _STIXBase21  # type: ignore
 
 
 class WindowsRegistryValueModel(BaseModel):

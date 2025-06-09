@@ -52,10 +52,10 @@ class Motivation(BaseModel):
     description: Optional[str] = Field(
         None, description="Additional information about the threat's motivation."
     )
-    first_seen: Optional[str] = Field(
+    first_seen: Optional[int] = Field(
         ..., description="UTC timestamp when the motivation was first seen."
     )
-    last_seen: Optional[str] = Field(
+    last_seen: Optional[int] = Field(
         ..., description="UTC timestamp when the motivation was last seen."
     )
     value: str = Field(
@@ -77,10 +77,10 @@ class SourceRegion(BaseModel):
     description: Optional[str] = Field(
         None, description="Additional context about the source region."
     )
-    first_seen: Optional[str] = Field(
+    first_seen: Optional[int] = Field(
         ..., description="UTC timestamp when the source region was first seen."
     )
-    last_seen: Optional[str] = Field(
+    last_seen: Optional[int] = Field(
         ..., description="UTC timestamp when the source region was last seen."
     )
     region: Optional[str] = Field(None, description="Region of threat origin.")
@@ -99,10 +99,10 @@ class TagDetail(BaseModel):
     description: Optional[str] = Field(
         None, description="Additional context about the tag."
     )
-    first_seen: Optional[str] = Field(
+    first_seen: Optional[int] = Field(
         ..., description="UTC timestamp when the tag was first seen."
     )
-    last_seen: Optional[str] = Field(
+    last_seen: Optional[int] = Field(
         ..., description="UTC timestamp when the tag was last seen."
     )
     value: str = Field(..., description="Tag value.")
@@ -117,10 +117,10 @@ class TargetedIndustry(BaseModel):
     description: Optional[str] = Field(
         None, description="Additional info about the targeted industry."
     )
-    first_seen: Optional[str] = Field(
+    first_seen: Optional[int] = Field(
         ..., description="UTC timestamp when the industry was first targeted."
     )
-    last_seen: Optional[str] = Field(
+    last_seen: Optional[int] = Field(
         ..., description="UTC timestamp when the industry was last seen targeted."
     )
     industry: Optional[str] = Field(
@@ -147,10 +147,10 @@ class TargetedRegion(BaseModel):
     description: Optional[str] = Field(
         None, description="Additional context on the targeted region."
     )
-    first_seen: Optional[str] = Field(
+    first_seen: Optional[int] = Field(
         ..., description="UTC timestamp when the region was first targeted."
     )
-    last_seen: Optional[str] = Field(
+    last_seen: Optional[int] = Field(
         ..., description="UTC timestamp when the region was last seen targeted."
     )
     region: Optional[str] = Field(None, description="Region targeted by the threat.")

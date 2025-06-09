@@ -2,10 +2,13 @@
 
 from typing import Optional
 
-from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
-# noinspection PyProtectedMember
-from stix2.v21 import EmailAddress, _STIXBase21  # type: ignore
+from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
+    EmailAddress,
+    _STIXBase21,
+)
+
+from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 
 
 class EmailAddressModel(BaseSCOModel):

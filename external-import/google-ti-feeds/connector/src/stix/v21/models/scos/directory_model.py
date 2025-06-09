@@ -3,10 +3,13 @@
 from datetime import datetime
 from typing import List, Optional
 
-from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
-# noinspection PyProtectedMember
-from stix2.v21 import Directory, _STIXBase21  # type: ignore
+from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
+    Directory,
+    _STIXBase21,
+)
+
+from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 
 
 class DirectoryModel(BaseSCOModel):

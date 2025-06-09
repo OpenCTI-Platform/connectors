@@ -3,12 +3,14 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel, Field, model_validator
+from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
+    _STIXBase21,
+)
+
 from connector.src.stix.v21.models.cdts.external_reference_model import (
     ExternalReferenceModel,
 )
-from pydantic import BaseModel, Field, model_validator
-# noinspection PyProtectedMember
-from stix2.v21 import _STIXBase21  # type: ignore
 
 
 class SDORequiredModel(BaseModel):
@@ -73,7 +75,6 @@ class SDOOptionalModel(BaseModel):
 class BaseSDOModel(SDORequiredModel, SDOOptionalModel):
     """Base model for all SDOs (STIX Domain Objects)."""
 
-    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:

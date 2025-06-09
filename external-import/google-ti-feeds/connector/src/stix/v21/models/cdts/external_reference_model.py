@@ -2,10 +2,9 @@
 
 from typing import Dict, Optional
 
-from connector.src.stix.v21.models.ovs.hashing_algorithm_ov_enums import (
-    HashAlgorithmOV,
-)
 from pydantic import BaseModel, Field
+
+from connector.src.stix.v21.models.ovs.hashing_algorithm_ov_enums import HashAlgorithmOV
 
 
 class ExternalReferenceModel(BaseModel):

@@ -3,10 +3,12 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import pycti  # type: ignore
+import pycti  # type: ignore[import-untyped]  # Missing library stubs
 from pydantic import BaseModel, Field, model_validator
-# noinspection PyProtectedMember
-from stix2.v21 import Relationship, _STIXBase21  # type: ignore
+from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
+    Relationship,
+    _STIXBase21,
+)
 
 
 class RelationshipModel(BaseModel):
@@ -20,7 +22,9 @@ class RelationshipModel(BaseModel):
         "2.1",
         description="The version of the STIX specification used to represent this object.",
     )
-    id: str = Field(..., description="The identifier of this object.")
+    id: Optional[str] = Field(
+        default=None, description="The identifier of this object."
+    )
     created: datetime = Field(
         ..., description="The time at which this object was created."
     )
@@ -95,7 +99,6 @@ class RelationshipModel(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -113,7 +116,7 @@ class RelationshipModel(BaseModel):
             start_time = data.get("start_time", None)
             stop_time = data.get("stop_time", None)
 
-            data["id"] = pycti.Relationship.generate_id(
+            data["id"] = pycti.StixCoreRelationship.generate_id(
                 relationship_type=relationship_type,
                 source_ref=source_ref,
                 target_ref=target_ref,

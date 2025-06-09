@@ -2,16 +2,18 @@
 
 from typing import List, Optional
 
+from stix2.v21 import Identity, Location, MarkingDefinition  # type: ignore
+
 from connector.src.custom.models.gti_reports.gti_report_model import (
     GTIReportData,
     TargetedRegion,
 )
 from connector.src.stix.octi.models.location_model import OctiLocationModel
 from connector.src.stix.v21.models.ovs.region_ov_enums import RegionOV
-from stix2.v21 import Identity, Location, MarkingDefinition  # type: ignore
+from connector.src.utils.converters.generic_converter_config import BaseMapper
 
 
-class GTIReportToSTIXLocation:
+class GTIReportToSTIXLocation(BaseMapper):
     """Converts a GTI report's targeted regions to STIX Location objects."""
 
     def __init__(
@@ -40,6 +42,7 @@ class GTIReportToSTIXLocation:
 
         """
         result: List[Location] = []
+
         if not hasattr(self.report, "attributes") or not self.report.attributes:
             raise ValueError("Invalid report attributes")
 
@@ -100,7 +103,6 @@ class GTIReportToSTIXLocation:
         )
 
         country_stix = country.to_stix2_object()
-        # noinspection PyTypeChecker
         return country_stix
 
     def _create_region(
@@ -133,7 +135,6 @@ class GTIReportToSTIXLocation:
             marking_ids=[self.tlp_marking.id],
         )
 
-        region_stix = region.to_stix2_object()
+        region_stix = region
 
-        # noinspection PyTypeChecker
         return region_stix

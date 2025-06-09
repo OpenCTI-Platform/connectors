@@ -3,11 +3,14 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import pycti  # type: ignore
-from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
+import pycti  # type: ignore[import-untyped]  # Missing library stubs
 from pydantic import Field, model_validator
-# noinspection PyProtectedMember
-from stix2.v21 import Campaign, _STIXBase21  # type: ignore
+from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
+    Campaign,
+    _STIXBase21,
+)
+
+from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
 
 
 class CampaignModel(BaseSDOModel):
@@ -35,7 +38,6 @@ class CampaignModel(BaseSDOModel):
         description="Defines the Campaign’s primary goal, objective, desired outcome, or intended effect — what the Threat Actor or Intrusion Set hopes to accomplish.",
     )
 
-    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:

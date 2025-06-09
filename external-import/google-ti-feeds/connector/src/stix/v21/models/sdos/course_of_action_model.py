@@ -2,7 +2,13 @@
 
 from typing import Any, Dict, List, Optional
 
-import pycti  # type: ignore
+import pycti  # type: ignore[import-untyped]  # Missing library stubs
+from pydantic import Base64Bytes, Field, model_validator
+from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
+    CourseOfAction,
+    _STIXBase21,
+)
+
 from connector.src.stix.v21.models.cdts.external_reference_model import (
     ExternalReferenceModel,
 )
@@ -10,9 +16,6 @@ from connector.src.stix.v21.models.ovs.course_of_action_type_ov_enums import (
     CourseOfActionTypeOV,
 )
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
-from pydantic import Base64Bytes, Field, model_validator
-# noinspection PyProtectedMember
-from stix2.v21 import CourseOfAction, _STIXBase21  # type: ignore
 
 
 class CourseOfActionModel(BaseSDOModel):
@@ -41,15 +44,14 @@ class CourseOfActionModel(BaseSDOModel):
     )
 
     @model_validator(mode="after")
-    def validate_action_exclusivity(self, model):  # type: ignore
+    def validate_action_exclusivity(self) -> "CourseOfActionModel":
         """Ensure that only one of action_bin or action_reference is set."""
-        if model.action_bin and model.action_reference:
+        if self.action_bin and self.action_reference:
             raise ValueError(
                 "Only one of 'action_bin' or 'action_reference' may be set, not both."
             )
-        return model
+        return self
 
-    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:

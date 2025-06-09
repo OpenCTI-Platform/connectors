@@ -12,6 +12,7 @@ class GTIWorkProcessingError(GTIBaseError):
         self,
         message: str,
         work_id: Optional[str] = None,
+        batch_number: Optional[int] = None,
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize the exception.
@@ -19,6 +20,7 @@ class GTIWorkProcessingError(GTIBaseError):
         Args:
             message: Error message
             work_id: ID of the work that failed to process
+            batch_number: Batch number that failed to process
             details: Additional details about the error
 
         """
@@ -26,6 +28,6 @@ class GTIWorkProcessingError(GTIBaseError):
         if work_id:
             error_msg = f"Error processing work {work_id}: {message}"
 
-        super().__init__(error_msg)
+        super().__init__(error_msg, details)
         self.work_id = work_id
-        self.details = details or {}
+        self.batch_number = batch_number

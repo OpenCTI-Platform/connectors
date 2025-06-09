@@ -2,14 +2,17 @@
 
 from typing import Any, Dict, List, Optional
 
-import pycti  # type: ignore
+import pycti  # type: ignore[import-untyped]  # Missing library stubs
+from pydantic import Field, model_validator
+from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
+    Grouping,
+    _STIXBase21,
+)
+
 from connector.src.stix.v21.models.ovs.grouping_context_ov_enums import (
     GroupingContextOV,
 )
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
-from pydantic import Field, model_validator
-# noinspection PyProtectedMember
-from stix2.v21 import Grouping, _STIXBase21  # type: ignore
 
 
 class GroupingModel(BaseSDOModel):
@@ -31,7 +34,6 @@ class GroupingModel(BaseSDOModel):
         description="List of STIX Object identifiers referred to by this Grouping.",
     )
 
-    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:

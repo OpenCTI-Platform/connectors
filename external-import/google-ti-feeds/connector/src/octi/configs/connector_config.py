@@ -2,8 +2,9 @@
 
 from typing import ClassVar, Literal, Optional
 
-from connector.src.octi.interfaces.base_config import BaseConfig
 from pydantic_settings import SettingsConfigDict
+
+from connector.src.octi.interfaces.base_config import BaseConfig
 
 
 class ConnectorConfig(BaseConfig):
@@ -15,7 +16,9 @@ class ConnectorConfig(BaseConfig):
     id: str
     type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
     name: str = "Google Threat Intel Feeds"
-    scope: str = "report,location,identity"
+    scope: str = (
+        "report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability"
+    )
     log_level: Literal["debug", "info", "warn", "error"] = "info"
     duration_period: str = "PT2H"
     queue_threshold: int = 500

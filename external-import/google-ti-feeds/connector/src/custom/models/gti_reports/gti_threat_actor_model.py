@@ -50,7 +50,6 @@ class Counters(BaseModel):
     urls: int = Field(..., description="Number of URLs related to the threat actor.")
 
 
-# noinspection DuplicatedCode
 class AltNameDetail(BaseModel):
     """Alternative names/aliases by which the threat actor could be known."""
 
@@ -72,7 +71,6 @@ class AltNameDetail(BaseModel):
     value: str = Field(..., description="Alternative name/alias.")
 
 
-# noinspection DuplicatedCode
 class SeenDetail(BaseModel):
     """Details about when the threat actor was first or last seen."""
 
@@ -315,7 +313,7 @@ class ThreatActorModel(BaseModel):
         None, description="Regions/countries targeted by the threat actor."
     )
 
-# noinspection DuplicatedCode
+
 class GTIThreatActorData(BaseModel):
     """Model representing data for a GTI threat actor."""
 

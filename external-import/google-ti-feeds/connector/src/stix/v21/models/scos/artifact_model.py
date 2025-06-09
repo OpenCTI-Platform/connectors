@@ -2,13 +2,16 @@
 
 from typing import Dict, Optional
 
+from pydantic import Field, model_validator
+from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
+    Artifact,
+    _STIXBase21,
+)
+
 from connector.src.stix.v21.models.ovs.encryption_algorithm_ov_enums import (
     EncryptionAlgorithmOV,
 )
 from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
-from pydantic import Field, model_validator
-# noinspection PyProtectedMember
-from stix2.v21 import Artifact, _STIXBase21  # type: ignore
 
 
 class ArtifactModel(BaseSCOModel):

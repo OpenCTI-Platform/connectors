@@ -2,10 +2,11 @@
 
 from typing import TYPE_CHECKING, Any, Dict, Type
 
+from pydantic_core import ValidationError
+
 from connector.src.octi.configs.connector_config import ConnectorConfig
 from connector.src.octi.configs.octi_config import OctiConfig
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
-from pydantic_core import ValidationError
 
 if TYPE_CHECKING:
     from connector.src.octi.interfaces.base_config import BaseConfig
@@ -18,14 +19,12 @@ class GlobalConfig:
         """Initialize the global configuration."""
         self.instanciate_configs: Dict[str, Any] = {}
         try:
-            # noinspection PyArgumentList
             self.octi_config = OctiConfig()
         except ValidationError as e:
             raise ConfigurationError(
                 "Error loading the OpenCTI configuration", errors=e.errors
             ) from e
         try:
-            # noinspection PyArgumentList
             self.connector_config = ConnectorConfig()
         except ValidationError as e:
             raise ConfigurationError(

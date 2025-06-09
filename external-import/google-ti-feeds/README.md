@@ -59,14 +59,14 @@ Below are the required parameters you can set for running the connector:
 
 Below are the optional parameters you can set for running the connector:
 
-| Parameter                 | config.yml        | Docker Environment Variable | Default                   | Mandatory | Description                                                                 |
-| ---                       | ---               | ---                         | ---                       | ---       | ---                                                                         |
-| Connector Name            | `name`            | `CONNECTOR_NAME`            | Google Threat Intel Feeds | No        | The name of the connector as it will appear in OpenCTI.                     |
-| Connector Scope           | `scope`           | `CONNECTOR_SCOPE`           | report,location,identity  | No        | The scope of data to import, a list of Stix Objects.                        |
-| Connector Log Level       | `log_level`       | `CONNECTOR_LOG_LEVEL`       | info                      | No        | Sets the verbosity of logs. Options: `debug`, `info`, `warn`, `error`.      |
-| Connector Duration Period | `duration_period` | `CONNECTOR_DURATION_PERIOD` | PT2H                      | No        | The duration period between two schedule for the connector.                 |
-| Connector TLP Level       | `tlp_level`       | `CONNECTOR_TLP_LEVEL`       | AMBER+STRICT              | No        | The TLP level for the connector. Options: `WHITE`, `GREEN`, `AMBER`, `RED`. |
-| Connector Queue Threshold | `queue_threshold` | `CONNECTOR_QUEUE_THRESHOLD` | 500                       | No        | The threshold for the queue size before processing.                         |
+| Parameter                 | config.yml        | Docker Environment Variable | Default                                                                                                      | Mandatory | Description                                                                 |
+| ---                       | ---               | ---                         | ---                                                                                                          | ---       | ---                                                                         |
+| Connector Name            | `name`            | `CONNECTOR_NAME`            | Google Threat Intel Feeds                                                                                    | No        | The name of the connector as it will appear in OpenCTI.                     |
+| Connector Scope           | `scope`           | `CONNECTOR_SCOPE`           | report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability | No        | The scope of data to import, a list of Stix Objects.                        |
+| Connector Log Level       | `log_level`       | `CONNECTOR_LOG_LEVEL`       | info                                                                                                         | No        | Sets the verbosity of logs. Options: `debug`, `info`, `warn`, `error`.      |
+| Connector Duration Period | `duration_period` | `CONNECTOR_DURATION_PERIOD` | PT2H                                                                                                         | No        | The duration period between two schedule for the connector.                 |
+| Connector TLP Level       | `tlp_level`       | `CONNECTOR_TLP_LEVEL`       | AMBER+STRICT                                                                                                 | No        | The TLP level for the connector. Options: `WHITE`, `GREEN`, `AMBER`, `RED`. |
+| Connector Queue Threshold | `queue_threshold` | `CONNECTOR_QUEUE_THRESHOLD` | 500                                                                                                          | No        | The threshold for the queue size before processing.                         |
 
 ### GTI Configuration
 
@@ -80,7 +80,7 @@ Below are the optional parameters you can set for Google Threat Intel:
 
 | Parameter                                 | config.yml              | Docker Environment Variable | Default                           | Mandatory | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | ---                                       | ---                     | ---                         | ---                               | ---       | ---                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Google Threat Intel Import Start Date     | `gti_import_start_date` | `GTI_IMPORT_START_DATE`     | P1D                              | No        | The start date for importing data from Google Threat Intel.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Google Threat Intel Import Start Date     | `gti_import_start_date` | `GTI_IMPORT_START_DATE`     | P1D                               | No        | The start date for importing data from Google Threat Intel.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | Google Threat Intel API URL               | `gti_api_url`           | `GTI_API_URL`               | https://www.virustotal.com/api/v3 | No        | The API URL for Google Threat Intel.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Google Threat Intel Toggle Import Reports | `gti_import_reports`    | `GTI_IMPORT_REPORTS`        | True                              | No        | If set to `True`, the connector will import reports from Google Threat Intel.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Google Threat Intel Report Types          | `gti_report_types`      | `GTI_REPORT_TYPES`          | All                               | No        | The types of reports to import from Google Threat Intel. Can be a string separated by comma for multiple values. Valid values are: `All`, `Actor Profile`, `Country Profile`, `Cyber Physical Security Roundup`, `Event Coverage/Implication`, `Industry Reporting`, `Malware Profile`, `Net Assessment`, `Network Activity Reports`, `News Analysis`, `OSINT Article`, `Patch Report`, `Strategic Perspective`, `TTP Deep Dive`, `Threat Activity Alert`, `Threat Activity Report`, `Trends and Forecasting`, `Weekly Vulnerability Exploitation Report` |
@@ -128,22 +128,31 @@ OR sourcing a `.env` file:
 ```
 OR creating a "config.yml" file at the root of the project:
 ```yaml
-        opencti:
-            url: <your_opencti_url>
-        ...
+       opencti:
+           url: <your_opencti_url>
+       ...
+```
+
+5b/ If you want to run it from `config.yml` instead of the environment variables, you need to set that environment variable:
+```bash
+     export CONNECTOR_DEV_MODE=true
 ```
 
 6/ Run the connector:
 ```bash
-        GoogleTIFeeds
+       GoogleTIFeeds
 ```
-  or by launching the main.py:
+  or ignore 5b and run it with the environment variable:
 ```bash
-        python connector/__main__.py
+      CONNECTOR_DEV_MODE=true GoogleTIFeeds
 ```
-  or by launching the module:
+ or by launching the main.py:
 ```bash
-        python -m connector
+      CONNECTOR_DEV_MODE=true python connector/__main__.py
+```
+ or by launching the module:
+```bash
+      CONNECTOR_DEV_MODE=true python -m connector
 ```
 
 ### Commit

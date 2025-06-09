@@ -4,13 +4,19 @@ from collections import OrderedDict
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import pycti  # type: ignore
+import pycti  # type: ignore[import-untyped]  # Missing library stubs
+from pydantic import Field, model_validator
+from stix2.properties import (  # type: ignore[import-untyped]  # Missing library stubs
+    ListProperty,
+    ReferenceProperty,
+)
+from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
+    Report,
+    _STIXBase21,
+)
+
 from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
 from connector.src.stix.v21.models.sdos.sdo_common_model import BaseSDOModel
-from pydantic import Field, model_validator
-from stix2.properties import ListProperty, ReferenceProperty  # type: ignore
-# noinspection PyProtectedMember
-from stix2.v21 import Report, _STIXBase21  # type: ignore
 
 
 class ReportModel(BaseSDOModel):
@@ -33,7 +39,6 @@ class ReportModel(BaseSDOModel):
         description="List of STIX Object identifiers referenced in this Report.",
     )
 
-    # noinspection PyNestedDecorators
     @model_validator(mode="before")
     @classmethod
     def generate_id(cls, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -52,9 +57,8 @@ class ReportModel(BaseSDOModel):
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""
-        # noinspection PyProtectedMember
         Report._properties = OrderedDict(Report._properties)
-        # noinspection PyProtectedMember
+
         Report._properties["object_refs"] = ListProperty(
             ReferenceProperty(valid_types=["SCO", "SDO", "SRO"], spec_version="2.1"),
             required=False,

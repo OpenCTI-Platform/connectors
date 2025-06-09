@@ -2,15 +2,17 @@
 
 from typing import List, Optional
 
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+
 from connector.src.custom.models.gti_reports.gti_report_model import (
     GTIReportData,
     TargetedIndustry,
 )
 from connector.src.stix.octi.models.identity_sector_model import OctiIdentitySectorModel
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+from connector.src.utils.converters.generic_converter_config import BaseMapper
 
 
-class GTIReportToSTIXSector:
+class GTIReportToSTIXSector(BaseMapper):
     """Converts a GTI report's targeted industries to STIX Identity objects as sectors."""
 
     def __init__(
@@ -87,7 +89,6 @@ class GTIReportToSTIXSector:
             marking_ids=[self.tlp_marking.id],
         )
 
-        sector_stix = sector.to_stix2_object()
+        sector_stix = sector
 
-        # noinspection PyTypeChecker
         return sector_stix

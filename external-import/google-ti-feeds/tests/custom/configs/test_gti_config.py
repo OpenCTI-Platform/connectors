@@ -6,6 +6,8 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from pycti import OpenCTIConnectorHelper  # type: ignore
+
 from connector.src.custom.configs.gti_config import GTIConfig
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
@@ -13,7 +15,6 @@ from connector.src.custom.exceptions.gti_configuration_error import (
 from connector.src.octi.connector import Connector
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
-from pycti import OpenCTIConnectorHelper  # type: ignore
 from tests.conftest import mock_env_vars
 
 # =====================
@@ -196,6 +197,7 @@ def test_gti_connector_all_defaulted_config(  # type: ignore
     data = {**min_required_config, **all_defaulted_config}
     _then_connector_created_successfully(capfd, mock_env, connector, data)
 
+
 # noinspection DuplicatedCode
 # Scenario: Create a connector with valid GTI report types
 def test_gti_connector_valid_gti_report_types(  # type: ignore
@@ -223,6 +225,7 @@ def test_gti_connector_invalid_gti_report_types(  # type: ignore
     connector, config_ex = _when_connector_created()
     # Then the connector should raise a ConfigurationError
     _then_connector_configuration_exception(mock_env, connector, config_ex)
+
 
 # noinspection DuplicatedCode
 # Scenario: Create a connector with valid GTI origins

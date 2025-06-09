@@ -7,8 +7,8 @@ Thank you for your interest in contributing to the Google Threat Intelligence (G
 Use this checklist to guide your journey through implementing a new feature or entity type:
 
 - [ ] **Understand the Architecture**
-  - [ ] Review the connector flow diagram
-  - [ ] Understand the fetcher hierarchy and factory pattern
+  - [ ] Review the orchestrator system components
+  - [ ] Understand the factory pattern implementation
   - [ ] Familiarize yourself with STIX 2.1 mapping concepts
 
 - [ ] **Implement the Data Model**
@@ -21,20 +21,15 @@ Use this checklist to guide your journey through implementing a new feature or e
   - [ ] Update `__init__.py` files to expose the exceptions
   - [ ] Follow the established exception hierarchy
 
-- [ ] **Configure the Fetcher**
-  - [ ] Add an `EntityFetcherConfig` in `fetchers/entity_config.py`
-  - [ ] Register the config in the `ENTITY_CONFIGS` dictionary
-  - [ ] Ensure endpoint and relationship types are correct
+- [ ] **Configure the System**
+  - [ ] Register fetcher configuration in `FETCHER_CONFIGS`
+  - [ ] Register converter configuration in `CONVERTER_CONFIGS`
+  - [ ] Update ClientAPI entity extraction if needed
 
 - [ ] **Create the STIX Mapper**
   - [ ] Implement a mapper class in `mappers/gti_reports/`
-  - [ ] Define the `to_stix()` method
+  - [ ] Extend `BaseMapper` and implement `to_stix()` method
   - [ ] Map all relevant fields to STIX objects
-
-- [ ] **Update ConvertToSTIX**
-  - [ ] Add a conversion method for your entity type
-  - [ ] Update the main processing flow to include your entity
-  - [ ] Ensure relationships are properly established
 
 - [ ] **Testing**
   - [ ] Create mock API responses
@@ -47,546 +42,407 @@ Use this checklist to guide your journey through implementing a new feature or e
   - [ ] Add examples if necessary
 
 ## Table of Contents
-1. [Architecture Overview](#architecture-overview)
-2. [Code Organization](#code-organization)
-3. [Development Workflow](#development-workflow)
-4. [Key Components](#key-components)
-5. [Adding New Features](#adding-new-features)
-6. [Best Practices](#best-practices)
-7. [Error Handling](#error-handling)
-8. [Testing](#testing)
-9. [Complete Example: Adding Campaigns Support](#complete-example-adding-campaigns-support)
+1. [System Architecture Overview](#system-architecture-overview)
+2. [Core Workflow](#core-workflow)
+3. [Quick Start Guide](#quick-start-guide)
+4. [Code Organization](#code-organization)
+5. [Key Components](#key-components)
+6. [Adding New Features](#adding-new-features)
+7. [Development Best Practices](#development-best-practices)
+8. [Error Handling](#error-handling)
+9. [Testing Strategy](#testing-strategy)
+10. [Common Issues and Solutions](#common-issues-and-solutions)
 
-## Architecture Overview
+## System Architecture Overview
 
-The GTI Feeds connector follows a modular architecture designed to fetch, normalize, and ingest threat intelligence data from Google Threat Intelligence into OpenCTI. The connector uses asynchronous processing, handles pagination, implements comprehensive error handling, and converts data into STIX 2.1 format.
+The GTI Feeds connector is built on a modular orchestrator system with three core components: **Fetchers**, **Converters**, and **Batch Processors**. This architecture enables flexible data source integration and entity type support through factory patterns.
 
 ```mermaid
 graph TD
-    subgraph Configuration
-        DockerEnv[Environment Variables]
-        ConfigYml[config.yml]
-        GTIConfig[GTI Configuration]
+    subgraph "Orchestrator System"
+        A[Orchestrator] --> B[ClientAPI]
+        A --> C[ConvertToSTIX]
+        A --> D[GenericBatchProcessor]
+
+        B --> E[GenericFetcherFactory]
+        C --> F[GenericConverterFactory]
+
+        E --> G[FETCHER_CONFIGS]
+        F --> H[CONVERTER_CONFIGS]
+        D --> I[BATCH_PROCESSOR_CONFIG]
     end
 
-    subgraph Connector Flow
-        Main("__main__.py")
-        Connector("Connector")
-        WorkManager("WorkManager")
-        FetchAll("FetchAll")
-        ConvertToSTIX("ConvertToSTIX")
-        ApiClient("ApiClient")
+    subgraph "Utils Layer"
+        J[utils/fetchers/]
+        K[utils/converters/]
+        L[utils/batch_processors/]
+
+        E --> J
+        F --> K
+        D --> L
     end
 
-    subgraph Error Handling
-        ExceptionHandling["Exception Hierarchy"]
-        CircuitBreaker["Circuit Breaker"]
-        RetryStrategy["Retry Strategy"]
-        RateLimiter["Rate Limiter"]
+    subgraph "Custom Implementation"
+        M[Custom Models]
+        N[Custom Mappers]
+        O[Custom Configs]
+
+        G --> M
+        H --> N
+        I --> O
     end
-
-    subgraph Data Models
-        GTIModels["GTI Pydantic Models"]
-        MapperClasses["STIX Mapper Classes"]
-        STIXModels["STIX Pydantic Models"]
-    end
-
-    subgraph OpenCTI Integration
-        StateManagement["State Management"]
-        StixBundle["STIX Bundle"]
-        OpenCTIQueue["OpenCTI Queue"]
-    end
-
-    DockerEnv --> Main
-    ConfigYml --> Main
-    Main --> GTIConfig
-    Main --> Connector
-
-    Connector -- "1 - Initiates Work" --> WorkManager
-    WorkManager -- "2 - Starts Fetching" --> FetchAll
-    FetchAll -- "3 - Fetches Reports" --> ApiClient
-    FetchAll -- "4 - Fetches Related Entities" --> ApiClient
-    ApiClient -- "Uses" --> RetryStrategy
-    RetryStrategy -- "Uses" --> CircuitBreaker
-    RetryStrategy -- "Uses" --> RateLimiter
-
-    FetchAll -- "5 - Returns Structured Data" --> GTIModels
-    WorkManager -- "6 - Passes Data to" --> ConvertToSTIX
-    GTIModels -- "Processed by" --> ConvertToSTIX
-    ConvertToSTIX -- "7 - Transforms using" --> MapperClasses
-    MapperClasses -- "8 - Produces" --> STIXModels
-
-    ConvertToSTIX -- "9 - Bundles into" --> StixBundle
-    WorkManager -- "10 - Updates" --> StateManagement
-    WorkManager -- "11 - Sends to" --> OpenCTIQueue
-
-    Connector -- "Handles" --> ExceptionHandling
 ```
+
+## Core Workflow
+
+The system follows a standardized workflow for processing threat intelligence data:
+
+1. **Fetch Reports** from the external API
+2. **Extract Subentity IDs** from report relationships
+3. **Fetch Subentity Details** using the fetcher factory system
+4. **Convert to STIX** using the converter factory system
+5. **Batch Process** using the batch processor system
+
+## Quick Start Guide
+
+### Adding a New Entity Type
+
+- [ ] **Step 1**: Create the data model in `models/gti_reports/`
+- [ ] **Step 2**: Create the mapper class in `mappers/gti_reports/`
+- [ ] **Step 3**: Register fetcher configuration in `configs/fetcher_configs.py`
+- [ ] **Step 4**: Register converter configuration in `configs/converter_configs.py`
+- [ ] **Step 5**: Update ClientAPI entity extraction if needed
+- [ ] **Step 6**: Test the integration
+
+### Adding a New Data Source
+
+- [ ] **Step 1**: Analyze the API structure
+- [ ] **Step 2**: Create data models
+- [ ] **Step 3**: Create mapper classes
+- [ ] **Step 4**: Create new configs following GTI pattern
+- [ ] **Step 5**: Update orchestrator class
+- [ ] **Step 6**: Test end-to-end workflow
 
 ## Code Organization
 
-The connector code is organized into several key directories:
+The connector follows a clean architecture with clear separation of concerns:
 
 ```
-connector/src/
-├── custom/                  # GTI-specific implementation
-│   ├── configs/             # Configuration classes
-│   ├── exceptions/          # Specialized exception hierarchy
-│   ├── fetchers/            # Data fetching components
-│   ├── mappers/             # Data transformation to STIX
-│   ├── models/              # Pydantic models for GTI data
-│   ├── batch_processor.py   # Processes batches of data
-│   ├── convert_to_stix.py   # Converts GTI data to STIX
-│   └── fetch_all.py         # Orchestrates data fetching
-├── octi/                    # OpenCTI integration
-├── stix/                    # STIX models and utilities
-└── utils/                   # Common utilities
+connector/src/custom/
+├── configs/                    # Configuration definitions
+│   ├── gti_config.py          # Main GTI configuration
+│   ├── fetcher_configs.py     # Fetcher configurations registry
+│   ├── converter_configs.py   # Converter configurations registry
+│   ├── batch_processor_config.py # Batch processor config
+│   └── __init__.py           # Config exports
+├── exceptions/                 # Exception hierarchy
+│   ├── fetch_errors/          # Fetching-related exceptions
+│   ├── convert_errors/        # Conversion-related exceptions
+│   └── connector_errors/      # General connector exceptions
+├── mappers/                   # STIX transformation logic
+│   └── gti_reports/           # GTI-specific mappers
+├── models/                    # Pydantic data models
+│   └── gti_reports/           # GTI API response models
+├── orchestrators/             # Workflow orchestration
+│   └── orchestrator.py       # Main orchestrator
+├── client_api.py              # GTI API client wrapper
+└── convert_to_stix.py         # STIX conversion wrapper
 ```
-
-## Development Workflow
-
-1. **Environment Setup**: Configure your development environment with Python 3.11+
-2. **Install Dependencies**: `pip install -e .[all]`
-3. **Code Changes**: Make your changes following the project structure
-4. **Testing**: Write and run tests for your changes
-5. **Documentation**: Update relevant documentation
-6. **Pull Request**: Submit a pull request with a clear description of changes
 
 ## Key Components
 
-### Generic Fetcher Architecture
+### Factory Pattern Implementation
 
-The connector uses a generic, configurable architecture for fetching data from the GTI API:
+The system uses factory patterns to create configured instances:
 
+```python
+# Fetcher Factory
+fetcher_factory = GenericFetcherFactory(
+    api_client=api_client,
+    base_headers=headers,
+    logger=logger
+)
+
+# Register configurations
+for entity_type, config in FETCHER_CONFIGS.items():
+    factory.register_config(entity_type, config)
+
+# Converter Factory
+converter_factory = GenericConverterFactory(
+    global_dependencies={"organization": org, "tlp_marking": tlp},
+    logger=logger
+)
+
+# Register configurations
+for entity_type, config in CONVERTER_CONFIGS.items():
+    factory.register_config(entity_type, config)
 ```
-FetchAll (Orchestrator)
-├── ReportFetcher (Reports + Pagination)
-└── EntityFetcher (Coordinates all entity types via factory)
-    └── FetcherFactory
-        ├── GenericEntityFetcher(MalwareFamilyConfig)
-        ├── GenericEntityFetcher(ThreatActorConfig)
-        ├── GenericEntityFetcher(AttackTechniqueConfig)
-        ├── GenericEntityFetcher(VulnerabilityConfig)
-        └── RelationshipFetcher (Shared by all entity fetchers)
-```
 
-### BaseFetcher
-- Base class providing common functionality
-- Manages API client and headers
-- Provides logging utilities and helper methods
+### Configuration-Driven Architecture
 
-### EntityFetcherConfig
-- Configuration for entity-specific parameters
-- Defines entity type names and relationship mappings
-- Specifies API endpoint templates and response models
-- Maps exception classes and display names
+All behavior is defined through configuration objects:
 
-### GenericEntityFetcher
-- Single implementation that handles all entity types
-- Configures behavior based on EntityFetcherConfig
-- Implements parallel fetching with asyncio
-- Handles exceptions with graceful degradation
+- **GenericFetcherConfig**: Defines how to fetch specific entity types
+- **GenericConverterConfig**: Defines how to convert entities to STIX
+- **GenericBatchProcessorConfig**: Defines how to batch process STIX objects
 
-### FetcherFactory
-- Creates configured GenericEntityFetcher instances
-- Provides type-safe factory methods
-- Supports bulk creation of all entity fetchers
+### Core Components
 
-### EntityFetcher
-- Orchestrates fetching of all entity types for reports
-- Implements parallel processing across entity types
-- Provides flexible entity type selection
-
-### ReportFetcher
-- Handles report fetching with pagination
-- Manages date filtering, sorting, and batch processing
-- Supports report type and origin filtering
-
-### ConvertToSTIX (Gonna be rework soon, working PoC legacy for now.)
-- Transforms GTI data into STIX 2.1 format
-- Uses specialized mapper classes for different entity types
-- Maintains relationships between objects
-- Creates properly formatted STIX bundles
+- **Orchestrator**: Coordinates the entire workflow
+- **ClientAPI**: Handles external API interactions
+- **ConvertToSTIX**: Manages STIX conversion process
 
 ## Adding New Features
 
 ### Adding New Entity Types
 
-1. Define a new Pydantic model to map API response in `models/gti_reports/`
-2. Create a new configuration in `fetchers/entity_config.py`:
+To add support for a new entity type, follow these steps:
+
+#### Step 1: Create the Data Model
 
 ```python
-NEW_ENTITY_CONFIG = EntityFetcherConfig(
-    entity_type="new_entities",
-    relationship_type="new_entities",
-    endpoint_template="/new_endpoint/{entity_id}",
-    response_model=NewEntityResponse,
-    exception_class=NewEntityFetchError,
-    display_name="new entities",
-    display_name_singular="new entity"
-)
-
-# Add to registry
-ENTITY_CONFIGS["new_entities"] = NEW_ENTITY_CONFIG
-```
-
-3. Create a new STIX mapper in `mappers/gti_reports/`
-4. Update `convert_to_stix.py` to include the new entity type
-
-### Adding New STIX Mappings
-
-1. Create a new mapper class in `mappers/gti_reports/`
-2. Implement the `to_stix()` method to convert GTI data to STIX
-3. Update `ConvertToSTIX` class to use your new mapper
-
-## Best Practices
-
-1. **Type Safety**: Use type hints and Pydantic models consistently
-2. **Error Handling**: Follow the exception hierarchy pattern
-3. **Asynchronous Code**:
-   - Use `asyncio` for concurrent operations, if needed. Take care of race conditions
-   - Handle task cancellation properly
-   - Implement proper timeout handling
-4. **Logging**:
-   - Use structured logging with context
-   - Log at appropriate levels
-   - Include relevant identifiers in log messages
-5. **Configuration**:
-   - Use Pydantic for config validation
-   - Implement proper defaults
-   - Support both environment variables and config files
-
-## Error Handling
-
-The connector implements a specialized exception hierarchy:
-
-```
-GTIBaseError
-├── GTIConfigurationError
-├── GTIConvertingError
-│   └── GTIEntityConversionError
-│       ├── GTIReportConversionError
-│       ├── GTIMalwareConversionError
-│       ├── GTIActorConversionError
-│       ├── GTITechniqueConversionError
-│       └── GTIVulnerabilityConversionError
-└── GTIFetchingError
-    ├── GTIApiError
-    │   ├── GTIReportFetchError
-    │   ├── GTIMalwareFetchError
-    │   ├── GTIActorFetchError
-    │   ├── GTITechniqueFetchError
-    │   ├── GTIVulnerabilityFetchError
-    │   └── GTIRelationshipFetchError
-    ├── GTIPaginationError
-    └── GTIParsingError
-```
-
-When adding new features:
-1. Use the appropriate exception class
-2. Include context information in exceptions
-3. Handle exceptions at appropriate levels
-4. Implement graceful degradation when possible
-
-## Testing
-
-1. **Unit Tests**: Test individual components in isolation
-2. **Integration Tests**: Test component interactions
-3. **Mock API Responses**: Use mock data for API testing
-4. **Error Scenarios**: Test failure conditions and recovery
-5. **Performance Testing**: Test with realistic data volumes
-
-### Testing New Entity Types
-
-When adding a new entity type:
-1. Create mock API responses in test fixtures
-2. Test the fetching process with different scenarios
-3. Test the STIX conversion with various inputs
-4. Verify relationships (if any) are correctly established
-
-## Complete Example: Adding Campaigns Support
-
-This example walks through the complete process of adding support for GTI campaign entities to the connector.
-
-### Step-by-Step Checklist
-
-#### 1. Create Pydantic Models
-
-First, create a new model file in `connector/src/custom/models/gti_reports/gti_campaign_model.py`:
-
-```python
-"""Model representing a Google Threat Intelligence Campaign."""
-
-from typing import Dict, List, Optional, Union
-
+# File: src/custom/models/gti_reports/gti_{entity_type}_model.py
 from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Union
 
+class {EntityType}Model(BaseModel):
+    """Model representing a GTI {entity_type}."""
+    name: str = Field(..., description="{EntityType} name")
+    creation_date: int = Field(..., description="Creation date (UTC timestamp)")
+    last_modification_date: int = Field(..., description="Last modification date")
+    # Add other fields based on GTI API response
 
-class CampaignModel(BaseModel):
-    """Model representing a GTI campaign."""
-
-    name: str = Field(..., description="Campaign's name.")
-    creation_date: int = Field(..., description="Creation date of the campaign (UTC timestamp).")
-    last_modification_date: int = Field(..., description="Date when the campaign was last updated.")
-    description: Optional[str] = Field(None, description="Campaign's description.")
-    objective: Optional[str] = Field(None, description="Campaign's objective.")
-    first_seen: Optional[int] = Field(None, description="First observed timestamp.")
-    last_seen: Optional[int] = Field(None, description="Last observed timestamp.")
-    private: bool = Field(False, description="Whether the campaign object is private.")
-
-
-class GTICampaignData(BaseModel):
-    """Model representing data for a GTI campaign."""
-
+class GTI{EntityType}Data(BaseModel):
+    """Model representing data for a GTI {entity_type}."""
     id: str
-    type: str = Field("campaign")
+    type: str = Field("{entity_type}")
     links: Optional[Dict[str, str]] = None
-    attributes: Optional[CampaignModel] = None
+    attributes: Optional[{EntityType}Model] = None
 
-
-class GTICampaignResponse(BaseModel):
-    """Model representing a response containing GTI campaign data."""
-
-    data: Union[GTICampaignData, List[GTICampaignData]]
+class GTI{EntityType}Response(BaseModel):
+    """Model representing a response containing GTI {entity_type} data."""
+    data: Union[GTI{EntityType}Data, List[GTI{EntityType}Data]]
 ```
 
-#### 2. Create Exception Class
-
-Add a new exception class in `connector/src/custom/exceptions/fetch_errors/gti_campaign_fetch_error.py`:
+#### Step 2: Create the Mapper Class
 
 ```python
-"""Exception for errors when fetching campaigns from Google Threat Intelligence API."""
+# File: src/custom/mappers/gti_reports/gti_{entity_type}_to_stix_{stix_type}.py
+from stix2.v21 import {STIXObjectType}, Identity, MarkingDefinition
+from connector.src.utils.converters.generic_converter_config import BaseMapper
 
-from typing import Any, Dict, Optional
+class GTI{EntityType}ToSTIX{STIXObjectType}(BaseMapper):
+    """Converts GTI {entity_type} to STIX {stix_type}."""
 
-from connector.src.custom.exceptions.fetch_errors.gti_api_error import GTIApiError
-
-
-class GTICampaignFetchError(GTIApiError):
-    """Exception raised when there's an error fetching campaigns from GTI API."""
-
-    def __init__(
-        self,
-        message: str,
-        campaign_id: Optional[str] = None,
-        endpoint: Optional[str] = None,
-        status_code: Optional[int] = None,
-        details: Optional[Dict[str, Any]] = None,
-    ):
-        """Initialize the exception.
-
-        Args:
-            message: Error message
-            campaign_id: ID of the campaign that failed to fetch, if applicable
-            endpoint: API endpoint where the error occurred
-            status_code: HTTP status code, if available
-            details: Additional details about the error
-
-        """
-        error_msg = message
-        if campaign_id:
-            error_msg = f"Error fetching campaign {campaign_id}: {message}"
-        else:
-            error_msg = f"Error fetching campaigns: {message}"
-
-        super().__init__(error_msg, status_code, endpoint, details)
-        self.campaign_id = campaign_id
-```
-
-Don't forget to update the `__init__.py` in the fetch_errors directory to include your new exception.
-
-#### 3. Add Entity Configuration
-
-Update `connector/src/custom/fetchers/entity_config.py` to add your new entity:
-
-```python
-CAMPAIGN_CONFIG = EntityFetcherConfig(
-    entity_type="campaigns",
-    relationship_type="campaigns",
-    endpoint_template="/collections/{entity_id}/campaigns", # Adjust based on actual GTI API
-    response_model=GTICampaignResponse,
-    exception_class=GTICampaignFetchError,
-    display_name="campaigns",
-    display_name_singular="campaign"
-)
-
-# Add to registry
-ENTITY_CONFIGS["campaigns"] = CAMPAIGN_CONFIG
-```
-
-#### 4. Create STIX Mapper
-
-Create a new mapper in `connector/src/custom/mappers/gti_reports/gti_campaign_to_stix_campaign.py`:
-
-```python
-"""Converts a GTI campaign to a STIX campaign object."""
-
-from datetime import datetime
-from typing import Dict, List, Optional
-
-from connector.src.custom.models.gti_reports.gti_campaign_model import (
-    GTICampaignData,
-    CampaignModel,
-)
-from connector.src.stix.octi.models.campaign_model import OctiCampaignModel
-from stix2.v21 import Campaign, Identity, MarkingDefinition  # type: ignore
-
-
-class GTICampaignToSTIXCampaign:
-    """Converts a GTI campaign to a STIX campaign object."""
-
-    def __init__(
-        self,
-        campaign: GTICampaignData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
-    ) -> None:
-        """Initialize the GTICampaignToSTIXCampaign object.
-
-        Args:
-            campaign: The GTI campaign data to convert.
-            organization: The organization identity object.
-            tlp_marking: The TLP marking definition.
-
-        """
-        self.campaign = campaign
+    def __init__(self, entity_data: GTI{EntityType}Data, organization: Identity, tlp_marking: MarkingDefinition):
+        self.entity_data = entity_data
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> Campaign:
-        """Convert the GTI campaign to a STIX campaign object.
-
-        Returns:
-            Campaign: The STIX campaign object.
-
-        """
-        if not self.campaign or not self.campaign.attributes:
-            raise ValueError("Campaign attributes are missing")
-
-        attributes = self.campaign.attributes
-
-        created = datetime.fromtimestamp(attributes.creation_date)
-        modified = datetime.fromtimestamp(attributes.last_modification_date)
-
-        first_seen = None
-        if attributes.first_seen:
-            first_seen = datetime.fromtimestamp(attributes.first_seen)
-
-        last_seen = None
-        if attributes.last_seen:
-            last_seen = datetime.fromtimestamp(attributes.last_seen)
-
-        campaign_model = OctiCampaignModel.create(
-            name=attributes.name,
-            organization_id=self.organization.id,
-            marking_ids=[self.tlp_marking.id],
-            description=attributes.description,
-            objective=attributes.objective,
-            first_seen=first_seen,
-            last_seen=last_seen,
-            created=created,
-            modified=modified,
+    def to_stix(self) -> {STIXObjectType}:
+        """Convert GTI {entity_type} to STIX {stix_type}."""
+        return {STIXObjectType}(
+            name=self.entity_data.attributes.name,
+            created_by_ref=self.organization.id,
+            object_marking_refs=[self.tlp_marking.id],
+            # Map other GTI fields to STIX properties
         )
-
-        return campaign_model.to_stix2_object()
 ```
 
-#### 5. Update ConvertToSTIX Class
+#### Step 3: Register Fetcher Configuration
 
-Modify `connector/src/custom/convert_to_stix.py` to add your new entity type:
-
-1. Add a new import:
 ```python
-from connector.src.custom.exceptions import GTICampaignConversionError
-from connector.src.custom.mappers.gti_reports.gti_campaign_to_stix_campaign import GTICampaignToSTIXCampaign
-from connector.src.custom.models.gti_reports.gti_campaign_model import GTICampaignData
+# File: src/custom/configs/fetcher_configs.py
+GTI_{ENTITY_TYPE}_FETCHER_CONFIG = GenericFetcherConfig(
+    entity_type="{entity_type}",
+    endpoint="/collections/{{entity_id}}",
+    display_name="{entity_type}",
+    exception_class=GTI{EntityType}FetchError,
+    response_model=GTI{EntityType}Data,
+    method="GET",
+    headers={"accept": "application/json"},
+    timeout=60.0,
+    response_key="data",
+)
+
+# Add to registry
+FETCHER_CONFIGS["{entity_type}"] = GTI_{ENTITY_TYPE}_FETCHER_CONFIG
 ```
 
-2. Add a conversion method:
+#### Step 4: Register Converter Configuration
+
 ```python
-def _convert_campaign(self, campaign: GTICampaignData) -> Optional[Campaign]:
-    """Convert a GTI campaign to STIX format.
+# File: src/custom/configs/converter_configs.py
+GTI_{ENTITY_TYPE}_CONVERTER_CONFIG = GenericConverterConfig(
+    entity_type="{entity_type}",
+    mapper_class=GTI{EntityType}ToSTIX{STIXObjectType},
+    output_stix_type="{stix_type}",
+    exception_class=GTI{EntityType}ConversionError,
+    display_name="{entity_type}",
+    input_model=GTI{EntityType}Data,
+    display_name_singular="{entity_type_singular}",
+    validate_input=True,
+    postprocessing_function=create_report_linking_postprocessor(),
+)
 
-    Args:
-        campaign: GTI campaign data
-
-    Returns:
-        STIX campaign object
-
-    Raises:
-        GTICampaignConversionError: If there's an error converting the campaign
-
-    """
-    try:
-        self.logger.debug(f"Converting campaign {campaign.id} to STIX format")
-
-        mapper = GTICampaignToSTIXCampaign(
-            campaign, self.organization, self.tlp_marking
-        )
-        stix_campaign = mapper.to_stix()
-
-        self.object_id_map[campaign.id] = stix_campaign.id
-
-        return stix_campaign
-
-    except Exception as e:
-        self.logger.error(
-            f"Error converting campaign {campaign.id}: {str(e)}",
-            meta={"error": str(e)},
-        )
-        campaign_name = getattr(campaign.attributes, "name", None)
-        raise GTICampaignConversionError(str(e), campaign.id, campaign_name) from e
+# Add to registry
+CONVERTER_CONFIGS["{entity_type}"] = GTI_{ENTITY_TYPE}_CONVERTER_CONFIG
 ```
 
-3. Update the `convert_all_data` method to process campaigns:
+#### Step 5: Update ClientAPI Entity Extraction
+
 ```python
-# Add to the section where other entities are processed
-for campaign in related.get("campaigns", []):
-    try:
-        stix_campaign = self._convert_campaign(campaign)
-        if stix_campaign is not None:
-            self.stix_objects.append(stix_campaign)
-            ids_to_add.append(stix_campaign.id)
-    except GTICampaignConversionError as campaign_err:
-        self.logger.error(
-            f"Error processing campaign {campaign.id}: {str(campaign_err)}"
-        )
-        continue
+# File: src/custom/client_api.py
+# Add to fetch_subentities_ids method
+subentity_types = [
+    "malware_families",
+    "threat_actors",
+    "attack_techniques",
+    "vulnerabilities",
+    "domains",
+    "files",
+    "urls",
+    "ip_addresses",
+    "{entity_type}",  # Add your new entity type
+]
 ```
 
-#### 6. Testing Checklist
+#### Step 6: Test the Integration
 
-1. Create mock API responses for campaigns:
-   - Create a JSON fixture with sample campaign data
-   - Test parsing with the Pydantic model
+Create comprehensive tests to verify the implementation works correctly.
 
-2. Test the entity fetcher:
-   - Verify campaigns are fetched correctly
-   - Test error handling scenarios
-   - Ensure pagination works as expected
+## Development Best Practices
 
-3. Test the STIX conversion:
-   - Verify all campaign fields are mapped correctly
-   - Check edge cases (missing fields, unusual values)
-   - Validate STIX schema compliance
+### Code Organization
 
-4. Test integration with reports:
-   - Verify relationships are correctly established
-   - Check that campaigns appear in report object references
+- **Factory Pattern**: Use factories for object creation
+- **Configuration-Driven**: Define behavior through configuration objects
+- **Separation of Concerns**: Keep fetching, conversion, and processing separate
+- **Type Hints**: Always include comprehensive type hints
 
-5. Run end-to-end tests with a mock server
+### Naming Conventions
 
-#### 7. Documentation Updates
+- **Classes**: PascalCase (e.g., `Orchestrator`)
+- **Functions**: snake_case (e.g., `fetch_entity_data`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `FETCHER_CONFIGS`)
+- **Files**: snake_case (e.g., `orchestrator.py`)
 
-1. Update README with campaign support information
-2. Document campaign fields and mapping logic
-3. Add examples of campaign data to documentation
+### Configuration Best Practices
+
+- Use the existing configuration patterns
+- Leverage dependency injection through factory global_dependencies
+- Keep configurations centralized in config modules
+- Use descriptive names and proper exception classes
+
+### Error Handling
+
+Follow the established exception hierarchy:
+
+```python
+# Base exceptions
+GTIBaseError
+├── GTIConfigurationError
+├── GTIConvertingError
+│   └── GTI{Entity}ConversionError
+└── GTIFetchingError
+    └── GTI{Entity}FetchError
+```
+
+### Testing Strategy
+
+- **Unit Tests**: Test individual components in isolation
+- **Integration Tests**: Test factory patterns and configurations
+- **End-to-End Tests**: Test complete orchestrator workflows
+- **Mock External APIs**: Use realistic mock responses
+
+## Common Issues and Solutions
+
+### Issue: Factory Registration Fails
+
+**Symptoms**: Factory cannot create fetcher/converter instances
+**Solutions**:
+- Verify configuration is properly registered in the configs dictionary
+- Check that all required configuration fields are provided
+- Ensure exception classes and models are imported correctly
+
+### Issue: Mapper Conversion Fails
+
+**Symptoms**: STIX conversion throws exceptions
+**Solutions**:
+- Verify BaseMapper is properly extended
+- Check that `to_stix()` returns actual STIX objects, not dictionaries
+- Ensure all required STIX fields are populated
+- Add proper null checks and default values
+
+### Issue: Orchestrator Processing Fails
+
+**Symptoms**: End-to-end processing fails or returns no data
+**Solutions**:
+- Check API client configuration and authentication
+- Verify entity types are properly registered in orchestrator
+- Review pagination and cursor handling
+- Check batch processor configuration
+
+### Issue: Configuration Dependencies Missing
+
+**Symptoms**: Missing dependencies errors during factory creation
+**Solutions**:
+- Ensure global_dependencies are properly set in converter factory
+- Check that organization and tlp_marking are available
+- Verify all required imports are present
+
+## Success Criteria
+
+Before considering your implementation complete, ensure:
+
+- [ ] **Functionality**: All new features work as expected with real GTI API
+- [ ] **Integration**: Components integrate seamlessly with factory pattern
+- [ ] **Configuration**: All behavior is properly configured, not hardcoded
+- [ ] **Error Handling**: Comprehensive error handling follows established patterns
+- [ ] **Testing**: All tests pass, including unit and integration tests
+- [ ] **Documentation**: Code is well-documented with clear examples
+- [ ] **Performance**: System performs efficiently under expected load
+- [ ] **STIX Compliance**: Generated STIX objects are valid and complete
+
+## Getting Help
+
+- **Code Review**: Submit PRs for review by maintainers
+- **Documentation**: Reference this guide and inline code documentation
+- **Testing**: Run the full test suite before submitting changes
+- **Issues**: Create GitHub issues for bugs or feature requests
+
+## Implementation Checklist
+
+### Before You Start
+- [ ] Understand the current factory-based architecture
+- [ ] Review existing GTI entity implementations as examples
+- [ ] Set up development environment
+- [ ] Plan your implementation approach
+
+### During Implementation
+- [ ] Follow the factory pattern consistently
+- [ ] Use configuration objects instead of hardcoded values
+- [ ] Write tests as you implement features
+- [ ] Test with real GTI API responses
+- [ ] Handle edge cases and error conditions
+- [ ] Document your code thoroughly
+
+### Before Production
+- [ ] Run full test suite
+- [ ] Test with production-like data volumes
+- [ ] Verify STIX output validity
+- [ ] Check performance metrics
+- [ ] Update documentation
+- [ ] Submit for code review
 
 ## Questions and Support
 
-If you have questions or need help with your contribution, please:
-1. Check existing issues on GitHub
-2. Create a new issue with a clear description
-3. Join the OpenCTI Slack community for direct support
+If you have questions or need help:
 
-Thank you for contributing to the Google Threat Intelligence Feeds connector!
+1. **Check Documentation**: Review this guide and inline documentation
+2. **Review Examples**: Look at existing implementations in the codebase
+3. **Search Issues**: Look for similar issues in the project repository
+4. **Ask Questions**: Create a GitHub issue with detailed information
+5. **Contribute Back**: Share your improvements with the community
+
+Remember: Good contributions make the project better for everyone. Thank you for contributing!

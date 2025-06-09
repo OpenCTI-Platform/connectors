@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 if TYPE_CHECKING:
     from logging import Logger
 
-    from connector.src.octi.global_config import GlobalConfig
     from pycti import OpenCTIConnectorHelper as OctiHelper  # type: ignore
+
+    from connector.src.octi.global_config import GlobalConfig
 
 LOG_PREFIX = "[Work Manager]"
 
@@ -190,6 +191,7 @@ class WorkManager:
         bundles_sent = self._helper.send_stix2_bundle(
             bundle=bundle_json,
             work_id=work_id,
+            cleanup_inconsistent_bundle=True,
         )
         self._logger.info(
             f"{LOG_PREFIX} STIX objects sent to OpenCTI queue.",

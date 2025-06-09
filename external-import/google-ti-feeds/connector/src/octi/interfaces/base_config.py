@@ -11,7 +11,7 @@ from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 SettingsSource = PydanticBaseSettingsSource
 SettingsSources = Tuple[SettingsSource, ...]
 
-EMPTY_SOURCES = (  # type: ignore
+EMPTY_SOURCES = (  # type: ignore[var-annotated]
     lambda: {},
     lambda: {},
     lambda: {},
@@ -62,9 +62,8 @@ class BaseConfig(ABC, BaseSettings):
             data = raw.get(cls.yaml_section)
 
             if not data:
-                return EMPTY_SOURCES  # type: ignore
+                return EMPTY_SOURCES  # type: ignore[return-value]
 
-            return (lambda: data,)  # type: ignore
+            return (lambda: data,)  # type: ignore[return-value]
 
-        # noinspection PyRedundantParentheses
         return (init_settings, env_settings, dotenv_settings, file_secret_settings)

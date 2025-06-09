@@ -116,7 +116,7 @@ class AioHttpClient(BaseHttpClient):
             f"Params: {params is not None}, JSON: {json_payload is not None}"
         )
         try:
-            async with ClientSession(timeout=actual_timeout) as session:
+            async with ClientSession(timeout=actual_timeout, trust_env=True) as session:
                 async with session.request(
                     method=method,
                     url=url,
@@ -130,49 +130,38 @@ class AioHttpClient(BaseHttpClient):
                     )
                     if response.status >= 400:
                         response_text = await response.text()
-                        # noinspection PyArgumentList
-                        self._logger.error(  # type: ignore[call-arg]
+
+                        self._logger.error(
                             f"{LOG_PREFIX} HTTP Error {response.status} for {method} {url}: {response_text}",
-                            meta={"error": response_text},
                         )
                         raise ApiHttpError(response.status, response_text)
-                    return await response.json()
+                    return await response.json(content_type=None)
         except TimeoutError as e:
-            # noinspection PyArgumentList
-            self._logger.error(  # type: ignore[call-arg]
+            self._logger.error(
                 f"{LOG_PREFIX} Request to {url} timed out after {actual_timeout.total}s: {e}",
-                meta={"error": str(e)},
             )
             raise ApiTimeoutError("Request timed out") from e
         except ClientError as e:
             if self._is_network_error(e):
-                # noinspection PyArgumentList
-                self._logger.error(  # type: ignore[call-arg]
+                self._logger.error(
                     f"{LOG_PREFIX} Network connectivity issue for {method} {url}: {str(e)}",
-                    meta={"error": str(e), "is_network_error": True},
                 )
                 raise ApiNetworkError(f"Network connectivity issue: {str(e)}") from e
             else:
-                # noinspection PyArgumentList
-                self._logger.error(  # type: ignore[call-arg]
+                self._logger.error(
                     f"{LOG_PREFIX} ClientError for {url}: {e}",
-                    meta={"error": str(e)},
                 )
                 raise ApiHttpError(0, str(e)) from e
         except ApiHttpError:
             raise
         except Exception as e:
             if self._is_network_error(e):
-                # noinspection PyArgumentList
-                self._logger.error(  # type: ignore[call-arg]
+                self._logger.error(
                     f"{LOG_PREFIX} Network connectivity issue for {method} {url}: {str(e)}",
-                    meta={"error": str(e), "is_network_error": True},
                 )
                 raise ApiNetworkError(f"Network connectivity issue: {str(e)}") from e
 
-            # noinspection PyArgumentList
-            self._logger.error(  # type: ignore[call-arg]
+            self._logger.error(
                 f"{LOG_PREFIX} Unexpected error during request to {url}: {e}",
-                meta={"error": str(e)},
             )
             raise ApiError(f"Unexpected error: {str(e)}") from e

@@ -3,10 +3,13 @@
 from datetime import datetime
 from typing import Dict, Optional
 
-from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import BaseModel, Field
-# noinspection PyProtectedMember
-from stix2.v21 import X509Certificate, _STIXBase21  # type: ignore
+from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
+    X509Certificate,
+    _STIXBase21,
+)
+
+from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 
 
 class X509V3ExtensionsTypeModel(BaseModel):

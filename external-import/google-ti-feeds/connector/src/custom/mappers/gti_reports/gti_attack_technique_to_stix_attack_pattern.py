@@ -1,7 +1,9 @@
 """Converts a GTI attack technique to a STIX attack pattern object."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
+
+from stix2.v21 import AttackPattern, Identity, MarkingDefinition  # type: ignore
 
 from connector.src.custom.models.gti_reports.gti_attack_technique_model import (
     AttackTechniqueModel,
@@ -11,10 +13,10 @@ from connector.src.stix.octi.models.attack_pattern_model import OctiAttackPatter
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
     KillChainPhaseModel,
 )
-from stix2.v21 import AttackPattern, Identity, MarkingDefinition  # type: ignore
+from connector.src.utils.converters.generic_converter_config import BaseMapper
 
 
-class GTIAttackTechniqueToSTIXAttackPattern:
+class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):
     """Converts a GTI attack technique to a STIX attack pattern object."""
 
     def __init__(
@@ -47,8 +49,10 @@ class GTIAttackTechniqueToSTIXAttackPattern:
 
         attributes = self.attack_technique.attributes
 
-        created = datetime.fromtimestamp(attributes.creation_date)
-        modified = datetime.fromtimestamp(attributes.last_modification_date)
+        created = datetime.fromtimestamp(attributes.creation_date, tz=timezone.utc)
+        modified = datetime.fromtimestamp(
+            attributes.last_modification_date, tz=timezone.utc
+        )
 
         aliases = self._extract_aliases(attributes)
         kill_chain_phases = self._extract_kill_chain_phases(attributes)
@@ -72,8 +76,7 @@ class GTIAttackTechniqueToSTIXAttackPattern:
             modified=modified,
         )
 
-        # noinspection PyTypeChecker
-        return attack_pattern_model.to_stix2_object()
+        return attack_pattern_model
 
     @staticmethod
     def _extract_aliases(attributes: AttackTechniqueModel) -> Optional[List[str]]:
@@ -92,7 +95,7 @@ class GTIAttackTechniqueToSTIXAttackPattern:
 
     @staticmethod
     def _extract_kill_chain_phases(
-            attributes: AttackTechniqueModel
+        attributes: AttackTechniqueModel,
     ) -> Optional[List[KillChainPhaseModel]]:
         """Extract kill chain phases from attack technique attributes.
 

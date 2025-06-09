@@ -2,8 +2,8 @@
 
 from typing import Literal
 
-import pycti  # type: ignore
-import stix2  # type: ignore
+import pycti  # type: ignore[import-untyped]  # Missing library stubs
+import stix2  # type: ignore[import-untyped]  # Missing library stubs
 from pydantic import BaseModel, Field
 
 
@@ -25,7 +25,7 @@ class TLPMarkingModel(BaseModel):
                 id=pycti.MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
                 definition_type="statement",
                 definition={"statement": "custom"},
-                custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
+                custom_properties=dict(  # noqa: C408
                     x_opencti_definition_type="TLP",
                     x_opencti_definition="TLP:AMBER+STRICT",
                 ),

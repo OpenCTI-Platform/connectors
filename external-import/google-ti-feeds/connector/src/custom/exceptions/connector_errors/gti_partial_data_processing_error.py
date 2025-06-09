@@ -37,6 +37,6 @@ class GTIPartialDataProcessingError(GTIWorkProcessingError):
         if reports_count is not None:
             error_msg += f" ({reports_count} reports were fetched)"
 
-        super().__init__(error_msg, work_id, details)
+        super().__init__(error_msg, work_id, reports_count, details)
         self.interruption_type = interruption_type
         self.reports_count = reports_count

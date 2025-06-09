@@ -2,10 +2,13 @@
 
 from typing import List, Optional
 
-from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
-# noinspection PyProtectedMember
-from stix2.v21 import DomainName, _STIXBase21  # type: ignore
+from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
+    DomainName,
+    _STIXBase21,
+)
+
+from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 
 
 class DomainNameModel(BaseSCOModel):
@@ -22,4 +25,4 @@ class DomainNameModel(BaseSCOModel):
 
     def to_stix2_object(self) -> _STIXBase21:
         """Convert the model to a STIX 2.1 object."""
-        return DomainName(**self.model_dump(exclude_none=True))
+        return DomainName(**self.model_dump(exclude_none=True), allow_custom=True)
