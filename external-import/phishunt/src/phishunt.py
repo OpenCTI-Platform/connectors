@@ -326,27 +326,28 @@ class Phishunt:
                     )
                     bundle_objects.append(stix_relationship_domain_ip)
 
-                    stix_location = stix2.Location(
-                        id=Location.generate_id(url["country"], "Country"),
-                        name=url["country"],
-                        country=url["country"],
-                        created_by_ref=stix_created_by["id"],
-                        allow_custom=True,
-                        custom_properties={"x_opencti_location_type": "Country"},
-                    )
-                    bundle_objects.append(stix_location)
+                    if url.get("country") and url["country"] != "-":
+                        stix_location = stix2.Location(
+                            id=Location.generate_id(url["country"], "Country"),
+                            name=url["country"],
+                            country=url["country"],
+                            created_by_ref=stix_created_by["id"],
+                            allow_custom=True,
+                            custom_properties={"x_opencti_location_type": "Country"},
+                        )
+                        bundle_objects.append(stix_location)
 
-                    stix_relationship_ip_location = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "located-at", stix_ip.id, stix_location.id
-                        ),
-                        source_ref=stix_ip.id,
-                        target_ref=stix_location.id,
-                        relationship_type="located-at",
-                        object_marking_refs=[stix2.TLP_WHITE],
-                        allow_custom=True,
-                    )
-                    bundle_objects.append(stix_relationship_ip_location)
+                        stix_relationship_ip_location = stix2.Relationship(
+                            id=StixCoreRelationship.generate_id(
+                                "located-at", stix_ip.id, stix_location.id
+                            ),
+                            source_ref=stix_ip.id,
+                            target_ref=stix_location.id,
+                            relationship_type="located-at",
+                            object_marking_refs=[stix2.TLP_WHITE],
+                            allow_custom=True,
+                        )
+                        bundle_objects.append(stix_relationship_ip_location)
 
             if bundle_objects is not None and len(bundle_objects) > 0:
                 bundle_objects.insert(0, stix_created_by)
