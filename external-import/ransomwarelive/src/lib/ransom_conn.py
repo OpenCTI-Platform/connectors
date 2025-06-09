@@ -50,8 +50,9 @@ class RansomwareAPIConnector:
         # Specific connector attributes for external import connectors
         try:
             self.interval = os.environ.get("CONNECTOR_RUN_EVERY", None).lower()
-            self.helper.log_info(
-                f"Verifying integrity of the CONNECTOR_RUN_EVERY value: '{self.interval}'"
+            self.helper.connector_logger.info(
+                "Verifying integrity of the CONNECTOR_RUN_EVERY value",
+                {"interval": self.interval},
             )
             unit = self.interval[-1]
             if unit not in ["d", "h", "m", "s"]:
@@ -63,7 +64,7 @@ class RansomwareAPIConnector:
                 f" be a string in the format '7d', '12h', '10m', '30s' where the final letter SHOULD be one of 'd',"
                 f" 'h', 'm', 's' standing for day, hour, minute, second respectively. "
             )
-            self.helper.log_error(msg)
+            self.helper.connector_logger.error(msg)
             raise ValueError(msg) from _
 
         create_threat_actor = os.environ.get("CONNECTOR_CREATE_THREAT_ACTOR", "false")
@@ -95,7 +96,7 @@ class RansomwareAPIConnector:
             self.create_threat_actor = create_threat_actor
         else:
             msg = f"Error when grabbing CONNECTOR_CREATE_THREAT_ACTOR environment variable: '{create_threat_actor}'. It SHOULD be either `true` or `false`. `false` is assumed. "
-            self.helper.log_warning(msg)
+            self.helper.connector_logger.warning(msg)
             self.create_threat_actor = "false"
 
     # Generates a group description from the ransomware.live API data
@@ -168,6 +169,7 @@ class RansomwareAPIConnector:
                 params=params,
                 timeout=(20000, 20000),
             )
+            response.raise_for_status()
 
             if response.status_code == 200:
                 response_json = response.json()
@@ -177,10 +179,14 @@ class RansomwareAPIConnector:
                             ip_address = item.get("data")
                             return ip_address
             return None
+        except requests.exceptions.HTTPError as err:
+            self.helper.connector_logger.error(
+                "Http error during ip fetcher", {"error": err}
+            )
         except Exception as e:
-
-            self.helper.log_error(f"Error fetching IP address{domain}")
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(
+                "Error fetching IP address", {"domain": domain, "error": e}
+            )
             return None
 
     # Fetches the whois information of a domain
@@ -188,8 +194,9 @@ class RansomwareAPIConnector:
         try:
             w = whois.whois(domain)
         except Exception as e:
-            self.helper.log_error(f"Error fetching WHOIS for domain {domain}")
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(
+                "Error fetching WHOIS for domain", {"domain": domain, "error": e}
+            )
             return None
 
         try:
@@ -206,8 +213,9 @@ class RansomwareAPIConnector:
                     description += f" expiration_date {w.get('expiration_date')}  \n"
 
         except Exception as e:
-            self.helper.log_error(f"Error fetching whois for domain {domain}")
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(
+                "Error fetching whois for domain", {"domain": domain, "error": e}
+            )
             return None
 
         return description
@@ -222,8 +230,7 @@ class RansomwareAPIConnector:
                 return domain
             return None
         except Exception as e:
-            self.helper.log_error("Error extracting domain")
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error("Error extracting domain", {"error": e})
             return None
 
     # Fetches the location object from OpenCTI
@@ -235,8 +242,9 @@ class RansomwareAPIConnector:
                 return country_out.get("standard_id")
             return None
         except Exception as e:
-            self.helper.log_error(f"Error fetching location{country}")
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(
+                "Error fetching location", {"country": country, "error": e}
+            )
             return None
 
     def sector_fetcher(self, sector):
@@ -304,8 +312,9 @@ class RansomwareAPIConnector:
             return None
 
         except Exception as e:
-            self.helper.log_error(f"Error fetching sector{sector}")
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(
+                "Error fetching sector", {"sector": sector, "error": e}
+            )
             return None
 
     def ip_object_creator(self, ip):
@@ -316,12 +325,12 @@ class RansomwareAPIConnector:
                 return self.ipv6_generator(ip)
             return None
         except Exception as e:
-            self.helper.log_error(f"Error creating IP object{ip}")
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(
+                "Error creating IP object", {"ip": ip, "error": e}
+            )
             return None
 
     # Generates a ransom note external reference
-
     def ransom_note_generator(self, group_name):
 
         if group_name in ("lockbit3", "lockbit2"):
@@ -496,7 +505,9 @@ class RansomwareAPIConnector:
                 )
 
         except Exception as e:
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(
+                "Error while creating intrusion set object", {"error": e}
+            )
 
         # Creating External References Object if they have external references
         external_references = []
@@ -579,7 +590,9 @@ class RansomwareAPIConnector:
                     report.get("object_refs").append(relation_sec_vic.get("id"))
                     report.get("object_refs").append(relation_is_sec.get("id"))
         except Exception as e:
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(
+                "Error while creating Sector object", {"error": e}
+            )
 
         # Creating Domain object
         if self.is_domain(item.get("victim")):
@@ -629,10 +642,14 @@ class RansomwareAPIConnector:
                 try:
                     domain2 = self.domain_generator(domain_name, description)
                 except Exception as e:
-                    self.helper.log_error(
-                        f"Error creating domain object: {domain_name} {description}"
+                    self.helper.connector_logger.error(
+                        "Error creating domain object",
+                        {
+                            "domain_name": domain_name,
+                            "description": description,
+                            "error": e,
+                        },
                     )
-                    self.helper.log_error(str(e))
 
                 relation_vi_do2 = self.relationship_generator(
                     domain2.get("id"), victim.get("id"), "belongs-to"
@@ -707,8 +724,8 @@ class RansomwareAPIConnector:
             report.get("object_refs").append(location_relation.get("id"))
 
         bundle.append(report)
-        self.helper.log_info(
-            f"Sending {len(bundle)} STIX objects to collect_intelligence."
+        self.helper.connector_logger.info(
+            "Sending STIX objects to collect_intelligence.", {"len_bundle": len(bundle)}
         )
         return bundle
 
@@ -722,9 +739,17 @@ class RansomwareAPIConnector:
         # fetching group information
         try:
             response = requests.get(groups_url, headers=headers, timeout=(20000, 20000))
+            response.raise_for_status()
             group_data = response.json()
+        except requests.exceptions.HTTPError as err:
+            self.helper.connector_logger.error(
+                "Http error during collect of historic intelligence.",
+                {"error": err, "url": groups_url},
+            )
         except Exception as e:
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(
+                "Error while collecting historic intelligence", {"error": e}
+            )
             group_data = []
 
         current_year = int(dt.date.today().year)
@@ -742,6 +767,7 @@ class RansomwareAPIConnector:
             for month in range(1, 13):  # Looping through the months
                 url = year_url + "/" + str(month)
                 response = requests.get(url, headers=headers, timeout=(20000, 20000))
+                response.raise_for_status()
 
                 try:
                     if response.status_code == 200:
@@ -754,13 +780,15 @@ class RansomwareAPIConnector:
                                     item, group_data
                                 )
                             except Exception as e:
-                                self.helper.log_error(
-                                    f"Error creating STIX objects: {item.get('victim')}"
+                                self.helper.connector_logger.error(
+                                    "Error creating STIX objects",
+                                    {"victim": item.get("victim"), "error": e},
                                 )
-                                self.helper.log_error(str(e))
 
                             if bundle_list is None:
-                                self.helper.log_info("No new data to process")
+                                self.helper.connector_logger.info(
+                                    "No new data to process"
+                                )
 
                             else:
 
@@ -779,17 +807,24 @@ class RansomwareAPIConnector:
                                     work_id=self.work_id,
                                 )
 
-                            self.helper.log_info(
-                                f"Sending {len(bundle_list)} STIX objects to OpenCTI..."
+                            self.helper.connector_logger.info(
+                                "Sending STIX objects to OpenCTI...",
+                                {"len_bundle_list": len(bundle_list)},
                             )
                     else:
-
-                        self.helper.log_info(
-                            f"Error and response status code {response.status_code}"
+                        self.helper.connector_logger.info(
+                            "Error and response status code",
+                            {"status_code": response.status_code},
                         )
-
+                except requests.exceptions.HTTPError as err:
+                    self.helper.connector_logger.error(
+                        "Http error during collect of historic intelligence",
+                        {"error": err, "url": url},
+                    )
                 except Exception as e:
-                    self.helper.log_error(str(e))
+                    self.helper.connector_logger.error(
+                        "Error while collecting historic intelligence", {"error": e}
+                    )
                     return stix_objects
 
         return None
@@ -803,14 +838,23 @@ class RansomwareAPIConnector:
         # fetching group information
         try:
             response = requests.get(groups_url, headers=headers, timeout=(20000, 20000))
+            response.raise_for_status()
             group_data = response.json()
+        except requests.exceptions.HTTPError as err:
+            self.helper.connector_logger.error(
+                "Http error during collect intelligence",
+                {"error": err, "url": groups_url},
+            )
         except Exception as e:
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(
+                "Error while collecting intelligence", {"error": e}
+            )
             group_data = []
 
         # fetching recent requests
         try:
             response = requests.get(url, headers=headers, timeout=(20000, 20000))
+            response.raise_for_status()
             if response.status_code == 200:
                 response_json = response.json()
                 stix_objects = []
@@ -832,7 +876,7 @@ class RansomwareAPIConnector:
                         stix_objects.extend(bundle_list)
                         bundle = None
                         if bundle_list is None:
-                            self.helper.log_info("No new data to process")
+                            self.helper.connector_logger.info("No new data to process")
 
                         else:
 
@@ -841,8 +885,9 @@ class RansomwareAPIConnector:
                                 bundle_list
                             )
 
-                            self.helper.log_info(
-                                f"Sending {len(bundle_list)} STIX objects to OpenCTI..."
+                            self.helper.connector_logger.info(
+                                "Sending STIX objects to OpenCTI...",
+                                {"len_bundle_list": len(bundle_list)},
                             )
 
                             # Creating Bundle
@@ -855,11 +900,18 @@ class RansomwareAPIConnector:
                                 bundle,
                                 work_id=self.work_id,
                             )
-                self.helper.log_info(
-                    f"Sending {len(stix_objects)} STIX objects to OpenCTI..."
+                self.helper.connector_logger.info(
+                    "Sending STIX objects to OpenCTI...",
+                    {"len_stix_objects": len(stix_objects)},
                 )
+        except requests.exceptions.HTTPError as err:
+            self.helper.connector_logger.error(
+                "Http error during collect intelligence", {"error": err, "url": url}
+            )
         except Exception as e:
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(
+                "Error while collecting intelligence", {"error": e}
+            )
         return []
 
     def _get_interval(self) -> int:
@@ -886,8 +938,9 @@ class RansomwareAPIConnector:
                 return int(value)
             raise ValueError(f"Unsupported unit: {unit}")
         except Exception as e:
-            self.helper.log_error(
-                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
+            self.helper.connector_logger.error(
+                "Error when converting CONNECTOR_RUN_EVERY environment variable",
+                {"interval": self.interval, "error": str(e)},
             )
             raise ValueError(
                 f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
@@ -895,7 +948,9 @@ class RansomwareAPIConnector:
 
     def run(self) -> None:
         # Main procedure
-        self.helper.log_info(f"Starting {self.helper.connect_name} connector...")
+        self.helper.connector_logger.info(
+            "Starting connector...", {"connector_name": self.helper.connect_name}
+        )
         while True:
             try:
                 # Get the current timestamp and check
@@ -904,7 +959,7 @@ class RansomwareAPIConnector:
 
                 if current_state is not None and "last_run" in current_state:
                     last_run = current_state["last_run"]
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"{self.helper.connect_name} connector last run: "
                         + datetime.utcfromtimestamp(last_run).strftime(
                             "%Y-%m-%d %H:%M:%S"
@@ -912,13 +967,16 @@ class RansomwareAPIConnector:
                     )
                 else:
                     last_run = None
-                    self.helper.log_info(
-                        f"{self.helper.connect_name} connector has never run"
+                    self.helper.connector_logger.info(
+                        "Connector has never run",
+                        {"connector_name": self.helper.connect_name},
                     )
 
                 # If the last_run is more than interval-1 day
                 if last_run is None or ((timestamp - last_run) >= self._get_interval()):
-                    self.helper.log_info(f"{self.helper.connect_name} will run!")
+                    self.helper.connector_logger.info(
+                        f"{self.helper.connect_name} will run!"
+                    )
                     now = datetime.utcfromtimestamp(timestamp)
                     friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
                         "%Y-%m-%d %H:%M:%S"
@@ -937,7 +995,7 @@ class RansomwareAPIConnector:
                             bundle_objects = self.collect_intelligence(last_run)
 
                         if bundle_objects is None:
-                            self.helper.log_info("No new data to process")
+                            self.helper.connector_logger.info("No new data to process")
                             bundle = Bundle(
                                 objects=bundle_objects, allow_custom=True
                             ).serialize()
@@ -949,8 +1007,9 @@ class RansomwareAPIConnector:
                                 bundle_objects
                             )
 
-                            self.helper.log_info(
-                                f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
+                            self.helper.connector_logger.info(
+                                "Sending STIX objects to OpenCTI...",
+                                {"nb_bundle": len(bundle_objects)},
                             )
 
                             # Creating Bundle
@@ -958,11 +1017,10 @@ class RansomwareAPIConnector:
                                 objects=bundle_objects, allow_custom=True
                             ).serialize()
 
-                        # self.helper.log_info(f"Sending {bundle_objects} STIX objects to OpenCTI...")
-
                     except Exception as e:
-                        self.helper.log_error(str(e))
-                        self.helper.log_error("Something Wrong with Bundle creation")
+                        self.helper.connector_logger.error(
+                            "Something wrong with bundle creation", {"error": e}
+                        )
 
                     try:
                         if bundle_objects:
@@ -972,19 +1030,20 @@ class RansomwareAPIConnector:
                             )
 
                     except Exception as e:
-
-                        self.helper.log_error(str(e))
-                        self.helper.log_error("Error sending STIX2 bundle to OpenCTI")
+                        self.helper.connector_logger.error(
+                            "Error sending STIX2 bundle to OpenCTI", {"error": e}
+                        )
 
                     # Store the current timestamp as a last run
                     message = (
                         f"{self.helper.connect_name} connector successfully run, storing last_run as "
                         + str(timestamp)
                     )
-                    self.helper.log_info(message)
+                    self.helper.connector_logger.info(message)
 
-                    self.helper.log_debug(
-                        f"Grabbing current state and update it with last_run: {timestamp}"
+                    self.helper.connector_logger.debug(
+                        "Grabbing current state and update it with last_run",
+                        {"timestamp": timestamp},
                     )
                     current_state = self.helper.get_state()
                     if current_state:
@@ -994,27 +1053,33 @@ class RansomwareAPIConnector:
                     self.helper.set_state(current_state)
 
                     self.helper.api.work.to_processed(work_id, message)
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "Last_run stored, next run in: "
                         + str(round(self._get_interval() / 60 / 60, 2))
                         + " hours"
                     )
                 else:
                     new_interval = self._get_interval() - (timestamp - last_run)
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"{self.helper.connect_name} connector will not run, next run in: "
                         + str(round(new_interval / 60 / 60, 2))
                         + " hours"
                     )
 
             except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info(f"{self.helper.connect_name} connector stopped")
+                self.helper.connector_logger.info(
+                    "Connector stopped", {"connector_name": self.helper.connect_name}
+                )
                 sys.exit(0)
             except Exception as e:
-                self.helper.log_error(str(e))
+                self.helper.connector_logger.error(
+                    "Connector error on run", {"error": e}
+                )
 
             if self.helper.connect_run_and_terminate:
-                self.helper.log_info(f"{self.helper.connect_name} connector ended")
+                self.helper.connector_logger.info(
+                    "Connector ended", {"connector_name": self.helper.connect_name}
+                )
                 sys.exit(0)
 
             time.sleep(60)
