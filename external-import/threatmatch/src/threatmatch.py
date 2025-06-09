@@ -100,7 +100,7 @@ class ThreatMatch:
         if r.status_code == 200:
             data = r.json()["objects"]
             for object in data:
-                if "description" in object:
+                if object.get("description"):
                     object["description"] = BeautifulSoup(
                         object["description"], "html.parser"
                     ).get_text()
