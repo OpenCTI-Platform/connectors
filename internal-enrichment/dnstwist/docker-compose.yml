@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-dnstwist:
-    image: opencti/connector-dnstwist:6.6.14
+    image: opencti/connector-dnstwist:6.6.15
     environment:
       - CONNECTOR_NAME=DNS_TWISTER
       - CONNECTOR_SCOPE=Domain-Name
