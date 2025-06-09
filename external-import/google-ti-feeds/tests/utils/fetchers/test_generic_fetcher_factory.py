@@ -4,12 +4,11 @@ from typing import Any, Dict, List, Optional, Tuple
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from pydantic import BaseModel
-
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.fetchers.generic_fetcher import GenericFetcher
 from connector.src.utils.fetchers.generic_fetcher_config import GenericFetcherConfig
 from connector.src.utils.fetchers.generic_fetcher_factory import GenericFetcherFactory
+from pydantic import BaseModel
 
 # =====================
 # Test Models

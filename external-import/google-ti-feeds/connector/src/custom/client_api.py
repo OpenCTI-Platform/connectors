@@ -6,7 +6,6 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 from uuid import uuid4
 
 import isodate  # type: ignore
-
 from connector.src.custom.configs.fetcher_configs import FETCHER_CONFIGS
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient

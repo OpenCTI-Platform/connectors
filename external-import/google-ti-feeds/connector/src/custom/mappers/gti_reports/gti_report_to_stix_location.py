@@ -2,8 +2,6 @@
 
 from typing import List, Optional
 
-from stix2.v21 import Identity, Location, MarkingDefinition  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_report_model import (
     GTIReportData,
     TargetedRegion,
@@ -11,6 +9,7 @@ from connector.src.custom.models.gti_reports.gti_report_model import (
 from connector.src.stix.octi.models.location_model import OctiLocationModel
 from connector.src.stix.v21.models.ovs.region_ov_enums import RegionOV
 from connector.src.utils.converters.generic_converter_config import BaseMapper
+from stix2.v21 import Identity, Location, MarkingDefinition  # type: ignore
 
 
 class GTIReportToSTIXLocation(BaseMapper):

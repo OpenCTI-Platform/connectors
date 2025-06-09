@@ -3,14 +3,13 @@
 from datetime import datetime, timezone
 from typing import Dict, Optional
 
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_domain_model import (
     GTIDomainData,
 )
 from connector.src.stix.octi.models.domain_model import OctiDomainModel
 from connector.src.stix.v21.models.scos.domain_name_model import DomainNameModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 
 class GTIDomainToSTIXDomain(BaseMapper):

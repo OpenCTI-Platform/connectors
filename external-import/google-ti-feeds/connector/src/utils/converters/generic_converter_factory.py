@@ -7,13 +7,12 @@ work with any input data format, mapper class, and output STIX entity type.
 import logging
 from typing import Any, Dict, List, Optional, Type
 
-from pydantic import BaseModel
-
 from connector.src.utils.converters.generic_converter import GenericConverter
 from connector.src.utils.converters.generic_converter_config import (
     BaseMapper,
     GenericConverterConfig,
 )
+from pydantic import BaseModel
 
 LOG_PREFIX = "[GenericConverterFactory]"
 

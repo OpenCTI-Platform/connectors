@@ -3,11 +3,10 @@
 from datetime import datetime
 from typing import Any, List, Optional
 
-from stix2.v21 import Identity, MarkingDefinition, Relationship  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_report_model import GTIReportData
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
+from stix2.v21 import Identity, MarkingDefinition, Relationship  # type: ignore
 
 
 class GTIReportRelationship:

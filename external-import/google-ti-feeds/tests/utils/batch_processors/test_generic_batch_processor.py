@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from unittest.mock import MagicMock
 
 import pytest
-
 from connector.src.utils.batch_processors.generic_batch_processor import (
     GenericBatchProcessor,
 )

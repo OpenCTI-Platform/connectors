@@ -3,14 +3,13 @@
 from datetime import datetime, timezone
 from typing import Dict, Optional
 
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_url_model import (
     GTIURLData,
 )
 from connector.src.stix.octi.models.url_model import OctiUrlModel
 from connector.src.stix.v21.models.scos.url_model import URLModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 
 class GTIUrlToSTIXUrl(BaseMapper):

@@ -2,11 +2,10 @@
 
 from typing import Optional
 
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_report_model import GTIReportData
 from connector.src.stix.octi.models.identity_author_model import OctiIdentityAuthorModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 
 class GTIReportToSTIXIdentity(BaseMapper):

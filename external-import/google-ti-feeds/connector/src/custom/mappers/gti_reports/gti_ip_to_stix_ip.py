@@ -4,8 +4,6 @@ import ipaddress
 from datetime import datetime, timezone
 from typing import Dict, Optional, Union
 
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_ip_addresses_model import (
     GTIIPData,
 )
@@ -14,6 +12,7 @@ from connector.src.stix.octi.models.ipv6_address_model import OctiIPv6AddressMod
 from connector.src.stix.v21.models.scos.ipv4_address_model import IPv4AddressModel
 from connector.src.stix.v21.models.scos.ipv6_address_model import IPv6AddressModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 
 class GTIIPToSTIXIP(BaseMapper):

@@ -3,10 +3,6 @@
 from uuid import uuid4
 
 import pytest
-from polyfactory.factories.pydantic_factory import ModelFactory
-from polyfactory.fields import Use
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_sector import (
     GTIReportToSTIXSector,
 )
@@ -16,6 +12,9 @@ from connector.src.custom.models.gti_reports.gti_report_model import (
     ReportModel,
     TargetedIndustry,
 )
+from polyfactory.factories.pydantic_factory import ModelFactory
+from polyfactory.fields import Use
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 
 class LinksFactory(ModelFactory[Links]):

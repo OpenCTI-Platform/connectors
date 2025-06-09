@@ -5,13 +5,12 @@ import os
 import sys
 import traceback
 
+from connector.src.custom.exceptions import GTIConfigurationError
+from connector.src.octi.connector import Connector
 from dotenv import load_dotenv
 from pycti import (  # type: ignore  # Missing library stubs
     OpenCTIConnectorHelper,
 )
-
-from connector.src.custom.exceptions import GTIConfigurationError
-from connector.src.octi.connector import Connector
 
 logger = logging.getLogger(__name__)
 

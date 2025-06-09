@@ -109,6 +109,8 @@ class Orchestrator:
                     self.logger.info(
                         f"{LOG_PREFIX} ({report_idx + 1}/{total_reports}) Converted to {len(all_entities)} STIX entities {{{entities_summary}}}"
                     )
+                    self.batch_processor.add_item(self.converter._create_organization())
+                    self.batch_processor.add_item(self.converter._create_tlp_marking())
                     self.batch_processor.add_items(all_entities)
         finally:
             self._flush_batch_processor()

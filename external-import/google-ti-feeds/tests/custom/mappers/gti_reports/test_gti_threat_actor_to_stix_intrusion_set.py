@@ -5,10 +5,6 @@ from typing import Any, List, Optional
 from uuid import uuid4
 
 import pytest
-from polyfactory import Use
-from polyfactory.factories.pydantic_factory import ModelFactory
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.mappers.gti_reports.gti_threat_actor_to_stix_intrusion_set import (
     GTIThreatActorToSTIXIntrusionSet,
 )
@@ -21,6 +17,9 @@ from connector.src.custom.models.gti_reports.gti_threat_actor_model import (
     TargetedIndustry,
     ThreatActorModel,
 )
+from polyfactory import Use
+from polyfactory.factories.pydantic_factory import ModelFactory
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 # =====================
 # Polyfactory Factories

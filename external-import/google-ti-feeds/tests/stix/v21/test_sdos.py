@@ -4,8 +4,6 @@ from datetime import datetime, timezone
 from typing import Any, Dict
 
 import pytest
-from stix2 import AttackPattern, Identity, Indicator
-
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
     KillChainPhaseModel,
 )
@@ -34,6 +32,7 @@ from connector.src.stix.v21.models.sdos.infrastructure_model import Infrastructu
 from connector.src.stix.v21.models.sdos.intrusion_set_model import IntrusionSetModel
 from connector.src.stix.v21.models.sdos.malware_model import MalwareModel
 from connector.src.stix.v21.models.sdos.report_model import ReportModel
+from stix2 import AttackPattern, Identity, Indicator
 
 # =====================
 # Fixtures

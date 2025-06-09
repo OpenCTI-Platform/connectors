@@ -5,10 +5,6 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from polyfactory.factories.pydantic_factory import ModelFactory
-from polyfactory.fields import Use
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.mappers.gti_reports.gti_domain_to_stix_domain import (
     GTIDomainToSTIXDomain,
 )
@@ -21,6 +17,9 @@ from connector.src.custom.models.gti_reports.gti_domain_model import (
     ThreatScore,
     Verdict,
 )
+from polyfactory.factories.pydantic_factory import ModelFactory
+from polyfactory.fields import Use
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 
 class VerdictFactory(ModelFactory[Verdict]):

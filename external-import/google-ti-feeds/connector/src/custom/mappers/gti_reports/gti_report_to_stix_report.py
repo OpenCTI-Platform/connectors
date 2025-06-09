@@ -3,8 +3,6 @@
 from datetime import datetime, timezone
 from typing import List, Tuple
 
-from stix2.v21 import Identity, MarkingDefinition, Report  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_report_model import (
     GTIReportData,
     ReportModel,
@@ -15,6 +13,7 @@ from connector.src.stix.v21.models.cdts.external_reference_model import (
 )
 from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
 from connector.src.utils.converters.generic_converter_config import BaseMapper
+from stix2.v21 import Identity, MarkingDefinition, Report  # type: ignore
 
 
 class GTIReportToSTIXReport(BaseMapper):

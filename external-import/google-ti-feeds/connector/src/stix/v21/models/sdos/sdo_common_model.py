@@ -3,13 +3,12 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from connector.src.stix.v21.models.cdts.external_reference_model import (
+    ExternalReferenceModel,
+)
 from pydantic import BaseModel, Field, model_validator
 from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
     _STIXBase21,
-)
-
-from connector.src.stix.v21.models.cdts.external_reference_model import (
-    ExternalReferenceModel,
 )
 
 

@@ -6,8 +6,6 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from pycti import OpenCTIConnectorHelper  # type: ignore
-
 from connector.src.custom.configs.gti_config import GTIConfig
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
@@ -15,6 +13,7 @@ from connector.src.custom.exceptions.gti_configuration_error import (
 from connector.src.octi.connector import Connector
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
+from pycti import OpenCTIConnectorHelper  # type: ignore
 from tests.conftest import mock_env_vars
 
 # =====================

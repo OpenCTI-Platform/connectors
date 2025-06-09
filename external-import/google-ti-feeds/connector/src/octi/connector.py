@@ -13,9 +13,8 @@ from connector.src.custom.exceptions.gti_configuration_error import (
 from connector.src.octi.work_manager import WorkManager
 
 if TYPE_CHECKING:
-    from pycti import OpenCTIConnectorHelper as OctiHelper  # type: ignore
-
     from connector.src.octi.global_config import GlobalConfig
+    from pycti import OpenCTIConnectorHelper as OctiHelper  # type: ignore
 
 
 LOG_PREFIX = "[Connector]"
@@ -176,25 +175,6 @@ class Connector:
 
             self._logger.info(f"{LOG_PREFIX} Starting GTI full ingestion...")
             await orchestrator.run(initial_state)
-
-            # status = result.get("status", "unknown")
-            # reports_processed = result.get("reports_processed", 0)
-            # reports_failed = result.get("reports_failed", 0)
-            # total_entities = result.get("total_entities_processed", 0)
-
-            # if status == "completed":
-            #     self._logger.info(
-            #         f"{LOG_PREFIX} GTI ingestion completed successfully: "
-            #         f"{reports_processed} reports processed, {reports_failed} failed, "
-            #         f"{total_entities} total entities processed"
-            #     )
-            # else:
-            #     error_msg = result.get("error", "Unknown error")
-            #     self._logger.error(f"{LOG_PREFIX} GTI ingestion failed: {error_msg}")
-
-            # batch_stats = result.get("batch_statistics", {})
-            # if batch_stats:
-            #     self._logger.info(f"{LOG_PREFIX} Batch statistics: {batch_stats}")
 
         except Exception as e:
             self._logger.error(f"{LOG_PREFIX} GTI reports processing failed: {str(e)}")

@@ -3,14 +3,13 @@
 from datetime import datetime
 from typing import Dict, Optional, Union
 
+from connector.src.stix.v21.models.ovs.account_type_ov_enums import AccountTypeOV
+from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
 from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
     UserAccount,
     _STIXBase21,
 )
-
-from connector.src.stix.v21.models.ovs.account_type_ov_enums import AccountTypeOV
-from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 
 
 class UserAccountModel(BaseSCOModel):

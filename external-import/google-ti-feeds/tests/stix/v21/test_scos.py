@@ -5,8 +5,6 @@ from typing import Any, Dict
 from uuid import uuid4
 
 import pytest
-from pydantic import ValidationError
-
 from connector.src.stix.v21.models.ovs.account_type_ov_enums import AccountTypeOV
 from connector.src.stix.v21.models.ovs.hashing_algorithm_ov_enums import HashAlgorithmOV
 from connector.src.stix.v21.models.ovs.windows_registry_datatype_ov_enums import (
@@ -32,6 +30,7 @@ from connector.src.stix.v21.models.scos.windows_registry_key_model import (
 from connector.src.stix.v21.models.scos.x509_certificate_model import (
     X509CertificateModel,
 )
+from pydantic import ValidationError
 
 # =====================
 # Fixtures

@@ -3,9 +3,8 @@
 from typing import Any, Dict, Optional, Tuple
 
 import pytest
-from pydantic import BaseModel
-
 from connector.src.utils.fetchers.generic_fetcher_config import GenericFetcherConfig
+from pydantic import BaseModel
 
 # =====================
 # Test Models

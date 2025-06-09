@@ -2,8 +2,6 @@
 
 from typing import Any, List
 
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_identity import (
     GTIReportToSTIXIdentity,
 )
@@ -18,6 +16,7 @@ from connector.src.custom.mappers.gti_reports.gti_report_to_stix_sector import (
 )
 from connector.src.custom.models.gti_reports.gti_report_model import GTIReportData
 from connector.src.utils.converters.generic_converter_config import BaseMapper
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 
 class GTIReportToSTIXComposite(BaseMapper):

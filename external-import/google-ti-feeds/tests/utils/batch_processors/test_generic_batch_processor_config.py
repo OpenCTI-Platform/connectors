@@ -3,7 +3,6 @@
 from typing import Any, List, Optional, Tuple
 
 import pytest
-
 from connector.src.utils.batch_processors.generic_batch_processor_config import (
     GenericBatchProcessorConfig,
 )

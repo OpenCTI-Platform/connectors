@@ -1,8 +1,6 @@
 """Module to test the STIX 2.1 Common Data Types (CDTs)."""
 
 import pytest
-from pydantic import ValidationError
-
 from connector.src.stix.v21.models.cdts.external_reference_model import (
     ExternalReferenceModel,
 )
@@ -10,6 +8,7 @@ from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
     KillChainPhaseModel,
 )
 from connector.src.stix.v21.models.ovs.hashing_algorithm_ov_enums import HashAlgorithmOV
+from pydantic import ValidationError
 
 # =====================
 # Test Cases for KillChainPhaseModel

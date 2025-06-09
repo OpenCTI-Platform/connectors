@@ -2,14 +2,13 @@
 
 from typing import List, Optional
 
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_report_model import (
     GTIReportData,
     TargetedIndustry,
 )
 from connector.src.stix.octi.models.identity_sector_model import OctiIdentitySectorModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 
 class GTIReportToSTIXSector(BaseMapper):

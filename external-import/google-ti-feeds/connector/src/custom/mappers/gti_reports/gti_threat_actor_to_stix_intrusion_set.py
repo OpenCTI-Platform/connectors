@@ -3,8 +3,6 @@
 from datetime import datetime
 from typing import List, Optional
 
-from stix2.v21 import Identity, IntrusionSet, MarkingDefinition  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_threat_actor_model import (
     GTIThreatActorData,
     ThreatActorModel,
@@ -14,6 +12,7 @@ from connector.src.stix.v21.models.ovs.attack_motivation_ov_enums import (
     AttackMotivationOV,
 )
 from connector.src.utils.converters.generic_converter_config import BaseMapper
+from stix2.v21 import Identity, IntrusionSet, MarkingDefinition  # type: ignore
 
 
 class GTIThreatActorToSTIXIntrusionSet(BaseMapper):

@@ -3,14 +3,13 @@
 from datetime import datetime, timezone
 from typing import Dict, Optional
 
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_file_model import (
     GTIFileData,
 )
 from connector.src.stix.octi.models.file_model import OctiFileModel
 from connector.src.stix.v21.models.scos.file_model import FileModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 
 class GTIFileToSTIXFile(BaseMapper):

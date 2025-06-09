@@ -4,10 +4,6 @@ from datetime import datetime
 from uuid import uuid4
 
 import pytest
-from polyfactory.factories.pydantic_factory import ModelFactory
-from polyfactory.fields import Use
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import (
     GTIReportToSTIXReport,
 )
@@ -25,6 +21,9 @@ from connector.src.custom.models.gti_reports.gti_report_model import (
     Technology,
 )
 from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
+from polyfactory.factories.pydantic_factory import ModelFactory
+from polyfactory.fields import Use
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 
 class MotivationFactory(ModelFactory[Motivation]):

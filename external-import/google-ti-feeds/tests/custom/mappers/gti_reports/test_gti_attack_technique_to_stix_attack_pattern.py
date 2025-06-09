@@ -3,10 +3,6 @@
 from uuid import uuid4
 
 import pytest
-from polyfactory.factories.pydantic_factory import ModelFactory
-from polyfactory.fields import Use
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.mappers.gti_reports.gti_attack_technique_to_stix_attack_pattern import (
     GTIAttackTechniqueToSTIXAttackPattern,
 )
@@ -15,6 +11,9 @@ from connector.src.custom.models.gti_reports.gti_attack_technique_model import (
     GTIAttackTechniqueData,
     Info,
 )
+from polyfactory.factories.pydantic_factory import ModelFactory
+from polyfactory.fields import Use
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 
 class InfoFactory(ModelFactory[Info]):

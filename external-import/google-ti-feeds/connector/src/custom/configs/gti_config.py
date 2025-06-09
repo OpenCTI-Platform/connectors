@@ -2,13 +2,12 @@
 
 from typing import ClassVar, List
 
-from pydantic import field_validator
-from pydantic_settings import SettingsConfigDict
-
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
 )
 from connector.src.octi.interfaces.base_config import BaseConfig
+from pydantic import field_validator
+from pydantic_settings import SettingsConfigDict
 
 ALLOWED_REPORT_TYPES = [
     "All",

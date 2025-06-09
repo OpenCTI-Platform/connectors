@@ -4,9 +4,6 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
-from polyfactory.factories.pydantic_factory import ModelFactory
-from stix2.v21 import Identity, MarkingDefinition
-
 from connector.src.custom.mappers.gti_reports.gti_ip_to_stix_ip import (
     GTIIPToSTIXIP,
 )
@@ -21,6 +18,8 @@ from connector.src.custom.models.gti_reports.gti_ip_addresses_model import (
     TotalVotes,
     Verdict,
 )
+from polyfactory.factories.pydantic_factory import ModelFactory
+from stix2.v21 import Identity, MarkingDefinition
 
 
 class VerdictFactory(ModelFactory[Verdict]):
@@ -80,9 +79,9 @@ class GTIIPDataFactory(ModelFactory[GTIIPData]):
 @pytest.fixture
 def mock_organization():
     """Mock organization identity."""
-    return Identity(
+    return Identity(  # pylint: disable=W9101  # it's a test no real ingest
         name="Test Organization", identity_class="organization"
-    )  # pylint: disable=W9101  # it's a test no real ingest
+    )
 
 
 @pytest.fixture

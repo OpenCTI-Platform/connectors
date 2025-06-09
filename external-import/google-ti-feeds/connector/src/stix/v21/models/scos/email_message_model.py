@@ -3,13 +3,12 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
 from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
     EmailMessage,
     _STIXBase21,
 )
-
-from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 
 
 class EmailMessageModel(BaseSCOModel):

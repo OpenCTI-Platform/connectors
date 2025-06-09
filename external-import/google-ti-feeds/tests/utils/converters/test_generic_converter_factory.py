@@ -4,8 +4,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from unittest.mock import MagicMock
 
 import pytest
-from pydantic import BaseModel
-
 from connector.src.utils.converters.generic_converter import GenericConverter
 from connector.src.utils.converters.generic_converter_config import (
     BaseMapper,
@@ -14,6 +12,7 @@ from connector.src.utils.converters.generic_converter_config import (
 from connector.src.utils.converters.generic_converter_factory import (
     GenericConverterFactory,
 )
+from pydantic import BaseModel
 
 # =====================
 # Test Models and Mappers

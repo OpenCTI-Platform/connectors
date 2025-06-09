@@ -2,13 +2,12 @@
 
 from typing import List, Optional
 
+from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
 from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
     IPv6Address,
     _STIXBase21,
 )
-
-from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 
 
 class IPv6AddressModel(BaseSCOModel):

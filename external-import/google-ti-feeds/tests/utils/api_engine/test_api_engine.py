@@ -5,8 +5,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
-from pydantic import BaseModel
-
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.api_engine.circuit_breaker import CircuitBreaker
@@ -15,6 +13,7 @@ from connector.src.utils.api_engine.exceptions.api_timeout_error import ApiTimeo
 from connector.src.utils.api_engine.interfaces.base_rate_limiter import BaseRateLimiter
 from connector.src.utils.api_engine.rate_limiter import RateLimiterRegistry
 from connector.src.utils.api_engine.retry_request_strategy import RetryRequestStrategy
+from pydantic import BaseModel
 
 # =====================
 # Fixtures

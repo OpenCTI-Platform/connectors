@@ -7,9 +7,8 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 if TYPE_CHECKING:
     from logging import Logger
 
-    from pycti import OpenCTIConnectorHelper as OctiHelper  # type: ignore
-
     from connector.src.octi.global_config import GlobalConfig
+    from pycti import OpenCTIConnectorHelper as OctiHelper  # type: ignore
 
 LOG_PREFIX = "[Work Manager]"
 

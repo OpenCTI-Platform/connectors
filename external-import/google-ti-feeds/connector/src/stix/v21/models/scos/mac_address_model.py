@@ -2,13 +2,12 @@
 
 import re
 
+from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field, field_validator
 from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
     MACAddress,
     _STIXBase21,
 )
-
-from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 
 
 class MACAddressModel(BaseSCOModel):

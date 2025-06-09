@@ -3,8 +3,6 @@
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-from stix2.v21 import AttackPattern, Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.models.gti_reports.gti_attack_technique_model import (
     AttackTechniqueModel,
     GTIAttackTechniqueData,
@@ -14,6 +12,7 @@ from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
     KillChainPhaseModel,
 )
 from connector.src.utils.converters.generic_converter_config import BaseMapper
+from stix2.v21 import AttackPattern, Identity, MarkingDefinition  # type: ignore
 
 
 class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):

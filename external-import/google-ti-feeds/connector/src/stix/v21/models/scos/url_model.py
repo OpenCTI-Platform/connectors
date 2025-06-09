@@ -1,12 +1,11 @@
 """The module defines the URLModel class, which represents a STIX 2.1 URL object."""
 
+from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 from pydantic import Field
 from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
     URL,
     _STIXBase21,
 )
-
-from connector.src.stix.v21.models.scos.sco_common_model import BaseSCOModel
 
 
 class URLModel(BaseSCOModel):

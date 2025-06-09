@@ -3,14 +3,13 @@
 import logging
 from typing import Any, Dict, List, Literal, Optional, cast
 
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
-
 from connector.src.custom.configs.converter_configs import (
     CONVERTER_CONFIGS,
     clear_report_context,
     set_report_context,
 )
 from connector.src.utils.converters import GenericConverterFactory
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 LOG_PREFIX = "[Converters]"
 
@@ -64,11 +63,12 @@ class ConvertToSTIX:
         )
 
         organization_model = OctiOrganizationModel.create(
-            name="PoC",
-            description="PoC",
-            contact_information="PoC",
+            name="Google Threat Intelligence",
+            description="Google Threat Intelligence provides information on the latest threats.",
+            contact_information="https://gtidocs.virustotal.com",
             organization_type="vendor",
             reliability=None,
+            aliases=["GTI"],
         )
         organization = organization_model.to_stix2_object()
 
