@@ -72,9 +72,9 @@ class Observable(BaseEntity):
 
     @abstractmethod
     def to_indicator(
-            self,
-            valid_from: Optional[AwareDatetime] = None,
-            valid_until: Optional[AwareDatetime] = None,
+        self,
+        valid_from: Optional[AwareDatetime] = None,
+        valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
         """Make stix indicator based on current observable."""
 
@@ -105,9 +105,9 @@ class DomainName(Observable):
         )
 
     def to_indicator(
-            self,
-            valid_from: Optional[AwareDatetime] = None,
-            valid_until: Optional[AwareDatetime] = None,
+        self,
+        valid_from: Optional[AwareDatetime] = None,
+        valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
         """Make stix indicator based on current observable.
 
@@ -214,9 +214,9 @@ class File(Observable):
         )
 
     def to_indicator(
-            self,
-            valid_from: Optional[AwareDatetime] = None,
-            valid_until: Optional[AwareDatetime] = None,
+        self,
+        valid_from: Optional[AwareDatetime] = None,
+        valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
         """Make stix indicator based on current observable.
 
@@ -289,9 +289,9 @@ class IPV4Address(Observable):
         )
 
     def to_indicator(
-            self,
-            valid_from: Optional[AwareDatetime] = None,
-            valid_until: Optional[AwareDatetime] = None,
+        self,
+        valid_from: Optional[AwareDatetime] = None,
+        valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
         """Make stix indicator based on current observable.
 
@@ -350,9 +350,9 @@ class IPV6Address(Observable):
         )
 
     def to_indicator(
-            self,
-            valid_from: Optional[AwareDatetime] = None,
-            valid_until: Optional[AwareDatetime] = None,
+        self,
+        valid_from: Optional[AwareDatetime] = None,
+        valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
         """Make stix indicator based on current observable.
 
@@ -399,9 +399,9 @@ class Url(Observable):
         )
 
     def to_indicator(
-            self,
-            valid_from: Optional[AwareDatetime] = None,
-            valid_until: Optional[AwareDatetime] = None,
+        self,
+        valid_from: Optional[AwareDatetime] = None,
+        valid_until: Optional[AwareDatetime] = None,
     ) -> Indicator:
         """Make stix indicator based on current observable.
 
