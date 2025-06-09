@@ -31,8 +31,8 @@ class ThreatMatch:
         self.threatmatch_client_secret = get_config_variable(
             "THREATMATCH_CLIENT_SECRET", ["threatmatch", "client_secret"], config
         )
-        self.threatmatch_interval = get_config_variable(
-            "THREATMATCH_INTERVAL", ["threatmatch", "interval"], config, True, 5
+        self.threatmatch_duration_period = get_config_variable(
+            "DURATION_PERIOD", ["threatmatch", "duration_period"], config, True, 5
         )
         self.threatmatch_import_from_date = get_config_variable(
             "THREATMATCH_IMPORT_FROM_DATE", ["threatmatch", "import_from_date"], config
@@ -51,17 +51,19 @@ class ThreatMatch:
             False,
             True,
         )
+        # self.threatmatch_import_reports = get_config_variable(
+        #    "THREATMATCH_IMPORT_REPORTS",
+        #    ["threatmatch", "import_reports"],
+        #    config,
+        #    False,
+        #    True,
+        # )
         self.threatmatch_import_iocs = get_config_variable(
             "THREATMATCH_IMPORT_IOCS",
             ["threatmatch", "import_iocs"],
             config,
             False,
             True,
-        )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
         )
         self.identity = self.helper.api.identity.create(
             type="Organization",
@@ -70,10 +72,13 @@ class ThreatMatch:
         )
 
     def get_interval(self):
-        return int(self.threatmatch_interval) * 60
+        return int(self.threatmatch_duration_period) * 60
 
     def next_run(self, seconds):
         return
+
+    def _remove_html_tags(self, text):
+        return BeautifulSoup(text, "html.parser").get_text()
 
     def _get_token(self):
         r = requests.post(
@@ -95,14 +100,18 @@ class ThreatMatch:
             headers=headers,
         )
         if r.status_code != 200:
-            self.helper.log_error(str(r.text))
+            self.helper.log_error(
+                f"Could not fetch item: {item_id}, Error: {str(r.text)}"
+            )
             return []
         if r.status_code == 200:
             data = r.json()["objects"]
             for object in data:
-                object["description"] = BeautifulSoup(
-                    object["description"], "html.parser"
-                ).get_text()
+                if "description" in object:
+                    object["description"] = self._remove_html_tags(
+                        object["description"]
+                    )
+                    self.helper.log_info(f"Cleaned data : {object['description']}")
             return data
 
     def _process_list(self, work_id, token, type, list):
@@ -119,6 +128,7 @@ class ThreatMatch:
         if len(bundle) > 0:
             final_objects = []
             for stix_object in bundle:
+                # These are to handle the non-standard types that are present in the Threatmatch Stix output
                 if "error" in stix_object:
                     continue
                 if "created_by_ref" not in stix_object:
@@ -131,13 +141,59 @@ class ThreatMatch:
                 ]:
                     del stix_object["object_refs"]
                     pass
+                if (
+                    stix_object.get("relationship_type", "") == "associated_content"
+                    and stix_object.get("target_ref").startswith("campaign--")
+                    and stix_object.get("source_ref").startswith("threat-actor--")
+                ):
+                    stix_object["relationship_type"] = "attributed-to"
+                    source_ref = stix_object["target_ref"]
+                    stix_object["target_ref"] = stix_object["source_ref"]
+                    stix_object["source_ref"] = source_ref
+                if (
+                    stix_object.get("relationship_type", "") == "associated_content"
+                    and stix_object.get("target_ref").startswith("threat-actor--")
+                    and stix_object.get("source_ref").startswith("malware--")
+                ):
+                    stix_object["relationship_type"] = "uses"
+                    source_ref = stix_object["target_ref"]
+                    stix_object["target_ref"] = stix_object["source_ref"]
+                    stix_object["source_ref"] = source_ref
+                if (
+                    stix_object.get("relationship_type") == "associated_content"
+                    and stix_object.get("target_ref").startswith("campaign--")
+                    and stix_object.get("source_ref").startswith("malware--")
+                ):
+                    stix_object["relationship_type"] = "uses"
+                    source_ref = stix_object["target_ref"]
+                    stix_object["target_ref"] = stix_object["source_ref"]
+                    stix_object["source_ref"] = source_ref
+                if (
+                    stix_object.get("relationship_type", "") == "associated_content"
+                    and stix_object.get("target_ref").startswith("campaign--")
+                    and stix_object.get("source_ref").startswith("campaign--")
+                ):
+                    continue
+                if (
+                    stix_object.get("relationship_type", "") == "associated_content"
+                    and stix_object.get("target_ref").startswith("threat-actor--")
+                    and stix_object.get("source_ref").startswith("threat-actor--")
+                ):
+                    continue
+                if (
+                    stix_object.get("relationship_type", "") == "associated_content"
+                    and stix_object.get("target_ref").startswith("threat-actor--")
+                    and stix_object.get("source_ref").startswith("campaign--")
+                ):
+                    stix_object["relationship_type"] = "attributed-to"
+
                 final_objects.append(stix_object)
                 final_bundle = {"type": "bundle", "objects": final_objects}
                 final_bundle_json = json.dumps(final_bundle)
                 self.helper.send_stix2_bundle(
                     final_bundle_json,
                     work_id=work_id,
-                    update=self.update_existing_data,
+                    update=True,
                 )
 
     def run(self):
@@ -160,7 +216,8 @@ class ThreatMatch:
                     self.helper.log_info("Connector has never run")
                 # If the last_run is more than interval-1 day
                 if last_run is None or (
-                    (timestamp - last_run) > ((int(self.threatmatch_interval) - 1) * 60)
+                    (timestamp - last_run)
+                    > ((int(self.threatmatch_duration_period) - 1) * 60)
                 ):
                     self.helper.log_info("Connector will run!")
                     now = datetime.utcfromtimestamp(timestamp)
@@ -211,6 +268,21 @@ class ThreatMatch:
                             self._process_list(
                                 work_id, token, "alerts", data.get("list")
                             )
+                        # if self.threatmatch_import_reports:
+                        #    r = requests.get(
+                        #        self.threatmatch_url + "/api/reports/all",
+                        #        headers=headers,
+                        #        json={
+                        #            "mode": "compact",
+                        #            "date_since": import_from_date,
+                        #        },
+                        #    )
+                        #    if r.status_code != 200:
+                        #        self.helper.log_error(str(r.text))
+                        #    data = r.json()
+                        #    self._process_list(
+                        #        work_id, token, "reports", data.get("list")
+                        #    )
                         if self.threatmatch_import_iocs:
                             response = requests.get(
                                 self.threatmatch_url + "/api/taxii/groups",
