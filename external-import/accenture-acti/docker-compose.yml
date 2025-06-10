@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-accenture-acti:
-    image: opencti/connector-accenture-acti:6.6.14
+    image: opencti/connector-accenture-acti:6.6.15
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
