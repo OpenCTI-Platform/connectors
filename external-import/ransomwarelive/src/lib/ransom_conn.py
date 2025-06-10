@@ -2,8 +2,7 @@ import datetime as dt
 import os
 import re
 import sys
-import time
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pycti
 import requests
@@ -40,9 +39,14 @@ class RansomwareAPIConnector:
         self.helper = OpenCTIConnectorHelper({})
         self.work_id = None
         self.marking = TLP_WHITE
+        self.last_run = None
+        self.last_run_datetime_with_ingested_data = None
+
         self.get_historic = os.environ.get("RANSOMWARE_PULL_HISTORY", False)
         self.get_historic_year = os.environ.get("RANSOMWARE_HISTORY_START_YEAR", 2020)
-        self.create_threat_actor = os.environ.get("RANSOMWARE_CREATE_THREAT_ACTOR", False)
+        self.create_threat_actor = os.environ.get(
+            "RANSOMWARE_CREATE_THREAT_ACTOR", False
+        )
         self.duration_period = os.environ.get("CONNECTOR_DURATION_PERIOD", None)
         interval = os.environ.get("RANSOMWARE_INTERVAL", None)
         self.interval = interval if re.match(r"^\d+[dhms]$", interval) else None
@@ -762,8 +766,9 @@ class RansomwareAPIConnector:
 
                             if bundle is not None:
                                 self.helper.send_stix2_bundle(
-                                    bundle,
+                                    bundle=bundle,
                                     work_id=self.work_id,
+                                    cleanup_inconsistent_bundle=True,
                                 )
 
                             self.helper.connector_logger.info(
@@ -856,8 +861,9 @@ class RansomwareAPIConnector:
 
                         if bundle is not None:
                             self.helper.send_stix2_bundle(
-                                bundle,
+                                bundle=bundle,
                                 work_id=self.work_id,
+                                cleanup_inconsistent_bundle=True,
                             )
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",
@@ -910,138 +916,116 @@ class RansomwareAPIConnector:
         self.helper.connector_logger.info(
             "Starting connector...", {"connector_name": self.helper.connect_name}
         )
-        while True:
+
+        try:
+            # Get the current timestamp and check
+            now = datetime.now(tz=UTC)
+            current_state = self.helper.get_state()
+
+            self.last_run = current_state.get("last_run") if current_state else None
+            self.last_run_datetime_with_ingested_data = (
+                current_state.get("last_run_datetime_with_ingested_data")
+                if current_state
+                else None
+            )
+
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Starting connector...",
+                {
+                    "connector_name": self.helper.connect_name,
+                    "connector_start_time": now.isoformat(sep=" ", timespec="seconds"),
+                    "last_run": (
+                        self.last_run if self.last_run else "Connector has never run"
+                    ),
+                    "last_run_datetime_with_ingested_data": (
+                        self.last_run_datetime_with_ingested_data
+                        if self.last_run_datetime_with_ingested_data
+                        else "Connector has never ingested data"
+                    ),
+                },
+            )
+
+            # friendly_name will be display on OpenCTI platform
+            friendly_name = "RansomwareLive"
+
+            # Initiate new work
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
+
+            self.helper.connector_logger.info(
+                "Running connector...", {"connector_name": self.helper.connect_name}
+            )
+
+            # Perform the collect of intelligence
             try:
-                # Get the current timestamp and check
-                timestamp = int(time.time())
-                current_state = self.helper.get_state()
 
-                if current_state is not None and "last_run" in current_state:
-                    last_run = current_state["last_run"]
-                    self.helper.connector_logger.info(
-                        f"{self.helper.connect_name} connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
-                    )
+                if not self.last_run and self.get_historic:
+                    bundle_objects = self.collect_historic_intelligence()
                 else:
-                    last_run = None
-                    self.helper.connector_logger.info(
-                        "Connector has never run",
-                        {"connector_name": self.helper.connect_name},
+                    bundle_objects = self.collect_intelligence(self.last_run)
+
+                # Deduplicate the objects
+                if bundle_objects is not None and len(bundle_objects) > 0:
+                    bundle_objects = self.helper.stix2_deduplicate_objects(
+                        bundle_objects
                     )
-
-                # If the last_run is more than interval-1 day
-                if last_run is None or ((timestamp - last_run) >= self._get_interval()):
-                    self.helper.connector_logger.info(
-                        f"{self.helper.connect_name} will run!"
-                    )
-                    now = datetime.utcfromtimestamp(timestamp)
-                    friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
-                    self.work_id = work_id
-                    # testing get_historic or pull history config variable
-
-                    try:  # Performing the collection of intelligence
-
-                        if (last_run is None) and (self.get_historic.upper() == "TRUE"):
-                            bundle_objects = self.collect_historic_intelligence()
-                        else:
-                            bundle_objects = self.collect_intelligence(last_run)
-
-                        if bundle_objects is None:
-                            self.helper.connector_logger.info("No new data to process")
-                            bundle = Bundle(
-                                objects=bundle_objects, allow_custom=True
-                            ).serialize()
-
-                        else:
-
-                            # Deduplicate the objects
-                            bundle_objects = self.helper.stix2_deduplicate_objects(
-                                bundle_objects
-                            )
-
-                            self.helper.connector_logger.info(
-                                "Sending STIX objects to OpenCTI...",
-                                {"nb_bundle": len(bundle_objects)},
-                            )
-
-                            # Creating Bundle
-                            bundle = Bundle(
-                                objects=bundle_objects, allow_custom=True
-                            ).serialize()
-
-                    except Exception as e:
-                        self.helper.connector_logger.error(
-                            "Something wrong with bundle creation", {"error": e}
-                        )
-
-                    try:
-                        if bundle_objects:
-                            self.helper.send_stix2_bundle(
-                                bundle,
-                                work_id=work_id,
-                            )
-
-                    except Exception as e:
-                        self.helper.connector_logger.error(
-                            "Error sending STIX2 bundle to OpenCTI", {"error": e}
-                        )
-
-                    # Store the current timestamp as a last run
-                    message = (
-                        f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                        + str(timestamp)
-                    )
-                    self.helper.connector_logger.info(message)
-
-                    self.helper.connector_logger.debug(
-                        "Grabbing current state and update it with last_run",
-                        {"timestamp": timestamp},
-                    )
-                    current_state = self.helper.get_state()
-                    if current_state:
-                        current_state["last_run"] = timestamp
-                    else:
-                        current_state = {"last_run": timestamp}
-                    self.helper.set_state(current_state)
-
-                    self.helper.api.work.to_processed(work_id, message)
-                    self.helper.connector_logger.info(
-                        "Last_run stored, next run in: "
-                        + str(round(self._get_interval() / 60 / 60, 2))
-                        + " hours"
-                    )
-                else:
-                    new_interval = self._get_interval() - (timestamp - last_run)
-                    self.helper.connector_logger.info(
-                        f"{self.helper.connect_name} connector will not run, next run in: "
-                        + str(round(new_interval / 60 / 60, 2))
-                        + " hours"
-                    )
-
-            except (KeyboardInterrupt, SystemExit):
-                self.helper.connector_logger.info(
-                    "Connector stopped", {"connector_name": self.helper.connect_name}
-                )
-                sys.exit(0)
             except Exception as e:
                 self.helper.connector_logger.error(
-                    "Connector error on run", {"error": e}
+                    "Error during bundle creation", {"error": e}
                 )
 
-            if self.helper.connect_run_and_terminate:
-                self.helper.connector_logger.info(
-                    "Connector ended", {"connector_name": self.helper.connect_name}
+            # Create and send bundle
+            try:
+                if bundle_objects is not None and len(bundle_objects) > 0:
+                    bundle = self.helper.stix2_create_bundle(bundle_objects)
+                    bundles_sent = self.helper.send_stix2_bundle(
+                        bundle=bundle, work_id=work_id, cleanup_inconsistent_bundle=True
+                    )
+                    self.last_run_datetime_with_ingested_data = datetime.now(
+                        tz=UTC
+                    ).isoformat(timespec="seconds")
+                    self.helper.connector_logger.info(
+                        "Sending STIX objects to OpenCTI...",
+                        {"length_bundle_sent": len(bundles_sent)},
+                    )
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    "Error sending STIX2 bundle to OpenCTI", {"error": e}
                 )
-                sys.exit(0)
 
-            time.sleep(60)
+            # Store the current timestamp as a last run
+            self.helper.connector_logger.debug(
+                "Getting current state and update it with last_run",
+                {"current_state": self.last_run, "new_last_run": now.timestamp()},
+            )
+
+            if self.last_run:
+                current_state["last_run"] = now.isoformat(sep=" ", timespec="seconds")
+            else:
+                current_state = {"last_run": now.isoformat(sep=" ", timespec="seconds")}
+
+            if self.last_run_datetime_with_ingested_data:
+                current_state["last_run_datetime_with_ingested_data"] = (
+                    self.last_run_datetime_with_ingested_data
+                )
+
+            self.helper.set_state(current_state)
+
+            message = "Connector successfully run, storing last_run as" + now.isoformat(
+                sep=" ", timespec="seconds"
+            )
+            self.helper.api.work.to_processed(work_id, message)
+            self.helper.connector_logger.info(message)
+            self.work_id = None
+
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info(
+                "Connector stopped", {"connector_name": self.helper.connect_name}
+            )
+            sys.exit(0)
+        except Exception as e:
+            self.helper.connector_logger.error("Connector error on run", {"error": e})
 
     def run(self):
         if self.duration_period:
