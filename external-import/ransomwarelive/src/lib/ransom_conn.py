@@ -1,5 +1,6 @@
 import datetime as dt
 import os
+import re
 import sys
 import time
 from datetime import datetime
@@ -33,44 +34,20 @@ class RansomwareAPIConnector:
     This class encapsulates the main actions, expected to be run by
     any external-import connector. Note that the attributes defined below
     will be complemented per each connector type.
-
-    Attributes:
-        helper (OpenCTIConnectorHelper): The helper to use.
-        interval (str): The interval to use. It SHOULD be a string in the format '7d', '12h', '10m', '30s' where the
-        final letter SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively.
     """
 
     def __init__(self):
         self.helper = OpenCTIConnectorHelper({})
         self.work_id = None
-        self.get_historic = os.environ.get("RANSOMWARE_PULL_HISTORY", "false").lower()
-        self.get_historic_year = os.environ.get(
-            "RANSOMWARE_HISTORY_START_YEAR", 2020
-        ).lower()
-        # Specific connector attributes for external import connectors
-        try:
-            self.interval = os.environ.get("RANSOMWARE_INTERVAL", None).lower()
-            self.helper.connector_logger.info(
-                "Verifying integrity of the RANSOMWARE_INTERVAL value",
-                {"interval": self.interval},
-            )
-            unit = self.interval[-1]
-            if unit not in ["d", "h", "m", "s"]:
-                raise TypeError
-            int(self.interval[:-1])
-        except TypeError as _:
-            msg = (
-                f"Error ({_}) when grabbing RANSOMWARE_INTERVAL environment variable: '{self.interval}'. It SHOULD"
-                f" be a string in the format '7d', '12h', '10m', '30s' where the final letter SHOULD be one of 'd',"
-                f" 'h', 'm', 's' standing for day, hour, minute, second respectively. "
-            )
-            self.helper.connector_logger.error(msg)
-            raise ValueError(msg) from _
-
-        create_threat_actor = os.environ.get("RANSOMWARE_CREATE_THREAT_ACTOR", "false")
-        self.tlp_marking = "TLP:WHITE"
         self.marking = TLP_WHITE
-        author = Identity(
+        self.get_historic = os.environ.get("RANSOMWARE_PULL_HISTORY", False)
+        self.get_historic_year = os.environ.get("RANSOMWARE_HISTORY_START_YEAR", 2020)
+        self.create_threat_actor = os.environ.get("RANSOMWARE_CREATE_THREAT_ACTOR", False)
+        self.duration_period = os.environ.get("CONNECTOR_DURATION_PERIOD", None)
+        interval = os.environ.get("RANSOMWARE_INTERVAL", None)
+        self.interval = interval if re.match(r"^\d+[dhms]$", interval) else None
+
+        self.author = Identity(
             id=pycti.Identity.generate_id("Ransomware.Live", "organization"),
             name="Ransomware.Live",
             identity_class="organization",
@@ -80,24 +57,6 @@ class RansomwareAPIConnector:
             x_opencti_reliability="A - Completely reliable",
             allow_custom=True,
         )
-        self.author = author
-
-        if isinstance(create_threat_actor, str) and create_threat_actor.lower() in [
-            "true",
-            "false",
-        ]:
-            self.create_threat_actor = (
-                True if create_threat_actor.lower() == "true" else False
-            )
-        elif isinstance(create_threat_actor, bool) and create_threat_actor.lower in [
-            True,
-            False,
-        ]:
-            self.create_threat_actor = create_threat_actor
-        else:
-            msg = f"Error when grabbing RANSOMWARE_CREATE_THREAT_ACTOR environment variable: '{create_threat_actor}'. It SHOULD be either `true` or `false`. `false` is assumed. "
-            self.helper.connector_logger.warning(msg)
-            self.create_threat_actor = "false"
 
     # Generates a group description from the ransomware.live API data
     def threat_description_generator(self, group_name, group_data):
