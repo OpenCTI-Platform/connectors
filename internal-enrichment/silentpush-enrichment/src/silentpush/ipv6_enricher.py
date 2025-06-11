@@ -2,9 +2,8 @@ import uuid
 
 import requests
 from pycti import StixCoreRelationship
-from stix2 import IPv6Address, Relationship
-
 from settings import API_KEY, API_VERIFY_CERT
+from stix2 import IPv6Address, Relationship
 
 from .ip_enricher import IPEnricher
 

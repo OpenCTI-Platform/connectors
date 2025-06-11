@@ -4,9 +4,8 @@ import uuid
 import pycti
 import requests
 from pycti import CustomObservableHostname, StixCoreRelationship
-from stix2 import AutonomousSystem, DomainName, Identity, IPv4Address, Relationship
-
 from settings import API_KEY, API_VERIFY_CERT
+from stix2 import AutonomousSystem, DomainName, Identity, IPv4Address, Relationship
 
 from .enricher import Enricher
 
