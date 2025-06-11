@@ -2,5 +2,6 @@ pycti==6.7.7
 stix2==3.0.1
 validators==0.35.0
 pydantic>=2.10, <3
-tldextract
+tldextract==5.3.0
 python-whois>=0.9.5
+requests==2.32.3
