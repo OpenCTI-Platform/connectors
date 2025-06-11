@@ -145,9 +145,9 @@ TYPE_MAPPING = {
     "Email subject": "Email-Message--Subject",
     "IP address (V4)": "IPv4-Addr",
     "IP address (V6)": "IPv6-Addr",
-    "IPV4 network": "IPv4-Addr",
-    "IPV6 network": "IPv6-Addr",
-    "MAC Address": "Mac-Addr",
+    "IPV4 Network": "IPv4-Addr",
+    "IPV6 Network": "IPv6-Addr",
+    "MAC address": "Mac-Addr",
     "MD5 hash": "MD5",
     "SHA1 hash": "SHA-1",
     "SHA256 hash": "SHA-256",
@@ -259,8 +259,12 @@ class SecurityIncidentResponse(BaseModel):
     priority: Optional[str] = Field(default=None)
     severity: Optional[str] = Field(default=None)
     category: Optional[str] = Field(default=None)
-    subcategory: Optional[str] = Field(default=None)
+    subcategory: Optional[list[str]] = Field(default=None)
     comments_and_work_notes: Optional[str] = Field(default=None)
+    sys_tags: Optional[list[str]] = Field(default=None)
+    security_tags: Optional[list[str]] = Field(default=None)
+    contact_type: Optional[list[str]] = Field(default=None)
+    alert_sensor: Optional[list[str]] = Field(default=None)
     estimated_end: Optional[datetime] = Field(default=None)
     sys_created_on: Optional[datetime] = Field(default=None)
     sys_updated_on: Optional[datetime] = Field(default=None)
@@ -278,6 +282,11 @@ class SecurityIncidentResponse(BaseModel):
         "mitre_group",
         "mitre_malware",
         "mitre_tool",
+        "subcategory",
+        "sys_tags",
+        "security_tags",
+        "contact_type",
+        "alert_sensor",
         mode="before",
     )
     def parse_list(cls, value):

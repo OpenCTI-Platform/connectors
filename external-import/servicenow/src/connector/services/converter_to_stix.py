@@ -15,7 +15,6 @@ from connector.models import (
     ExternalReference,
     File,
     Hostname,
-    Indicator,
     IntrusionSet,
     IPv4Address,
     IPv6Address,
@@ -227,15 +226,17 @@ class ConverterToStix:
     def make_custom_case_incident(
         self,
         data: SecurityIncidentResponse,
-        case_incident_object_refs: list,
+        case_incident_related_objects: list,
         external_references: list[ExternalReference],
+        labels: list[str] = None,
     ) -> CustomCaseIncident:
         """Make a CustomCaseIncident object and its representation in STIX 2.1 format.
         The CustomCaseIncident is represented by the SIR in ServiceNow.
         Args:
             data (SecurityIncidentResponse): Validated security incident data from ServiceNow.
-            case_incident_object_refs (list): List of security incident-related objects.
+            case_incident_related_objects (list): List of security incident-related objects.
             external_references (list[ExternalReference]): An external link to the security incident data. (SIR)
+            labels (list[str] | None): List of labels for security incident.
         Returns:
             CustomCaseIncident: An object containing a security incident and its representation in STIX 2.1 format.
         """
@@ -247,11 +248,11 @@ class ConverterToStix:
             severity=data.severity,
             priority=data.priority,
             types=data.category,
-            labels=data.subcategory,
+            labels=labels,
             external_references=external_references,
             markings=[self._tlp_marking],
             author=self._author,
-            objects=case_incident_object_refs,
+            objects=case_incident_related_objects,
         )
 
     def make_relationship(
@@ -299,6 +300,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_ipv4(
@@ -315,6 +318,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_ipv6(
@@ -331,6 +336,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_url(
@@ -347,6 +354,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_email_address(
@@ -363,6 +372,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_email_message(
@@ -379,6 +390,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_file(
@@ -395,6 +408,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_directory(
@@ -411,6 +426,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_hostname(
@@ -427,6 +444,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_mutex(
@@ -443,6 +462,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_asn(
@@ -459,6 +480,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_phone_number(
@@ -475,6 +498,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_windows_registry_key(
@@ -491,6 +516,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_user_account(
@@ -507,6 +534,8 @@ class ConverterToStix:
             external_reference=external_reference,
             markings=[self._tlp_marking],
             author=self._author,
+            score=self.config.servicenow.observables_default_score,
+            promote_observable_as_indicator=self.config.servicenow.promote_observables_as_indicators,
         )
 
     def make_organization_name(
@@ -535,17 +564,6 @@ class ConverterToStix:
             labels=all_labels,
             description=observable.notes,
             external_reference=external_reference,
-            markings=[self._tlp_marking],
-            author=self._author,
-        )
-
-    def make_indicator(self, observable: ObservableResponse, pattern: str) -> Indicator:
-        return Indicator(
-            name=observable.value,
-            pattern=pattern,
-            type=observable.type,
-            labels=observable.labels,
-            external_reference=observable.external_reference,
             markings=[self._tlp_marking],
             author=self._author,
         )

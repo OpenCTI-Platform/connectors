@@ -1,4 +1,5 @@
 from aiohttp import ClientSession
+from limiter import Limiter
 from tenacity import retry, stop_after_attempt, wait_exponential_jitter
 
 
@@ -17,6 +18,13 @@ class ServiceNowClient:
         self.severity_to_exclude = self.config.servicenow.severity_to_exclude
         self.priority_to_exclude = self.config.servicenow.priority_to_exclude
         self.import_start_date = self.config.servicenow.import_start_date
+
+        # Limiter config
+        self.rate_limiter = Limiter(
+            rate=self.config.servicenow.api_leaky_bucket_rate,
+            capacity=self.config.servicenow.api_leaky_bucket_capacity,
+            bucket="servicenow",
+        )
 
         # Define headers in session and update when needed
         self.headers = {
@@ -207,6 +215,10 @@ class ServiceNowClient:
             "sys_updated_on",
             "estimated_end",
             "comments_and_work_notes",
+            "security_tags",
+            "sys_tags",
+            "contact_type",
+            "alert_sensor",
         ]
         sysparm_fields = ",".join(list_sysparm_fields)
 
@@ -339,4 +351,5 @@ class ServiceNowClient:
                 async with session.get(url=url_built) as response:
                     return await response.json()
 
-        return await _retry_wrapped()
+        async with self.rate_limiter:
+            return await _retry_wrapped()

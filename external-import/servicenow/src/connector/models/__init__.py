@@ -14,7 +14,6 @@ from connector.models.converter import (
     ExternalReference,
     File,
     Hostname,
-    Indicator,
     IntrusionSet,
     IPv4Address,
     IPv6Address,
@@ -67,5 +66,4 @@ __all__ = [
     "UserAccount",
     "OrganizationName",
     "Vulnerability",
-    "Indicator",
 ]
