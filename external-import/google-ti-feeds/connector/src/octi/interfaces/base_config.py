@@ -1,6 +1,5 @@
 """Base configuration class for all connector configs."""
 
-import os
 from abc import ABC
 from pathlib import Path
 from typing import ClassVar, Tuple, Type
@@ -10,13 +9,6 @@ from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 
 SettingsSource = PydanticBaseSettingsSource
 SettingsSources = Tuple[SettingsSource, ...]
-
-EMPTY_SOURCES = (  # type: ignore[var-annotated]
-    lambda: {},
-    lambda: {},
-    lambda: {},
-    lambda: {},
-)
 
 
 class BaseConfig(ABC, BaseSettings):
@@ -53,17 +45,14 @@ class BaseConfig(ABC, BaseSettings):
         A tuple of callables producing dicts for Pydantic to merge.
 
         """
-        if os.getenv("CONNECTOR_DEV_MODE", "").lower() == "true":
-            path = Path("config.yml")
-            if not path.exists():
-                raise FileNotFoundError("Config.yml not found.")
-
+        path = Path("config.yml")
+        try:
             raw = yaml.safe_load(path.read_text())
             data = raw.get(cls.yaml_section)
+        except Exception:
+            data = {}
 
-            if not data:
-                return EMPTY_SOURCES  # type: ignore[return-value]
+        def yml_settings() -> dict:
+            return data
 
-            return (lambda: data,)  # type: ignore[return-value]
-
-        return (init_settings, env_settings, dotenv_settings, file_secret_settings)
+        return (yml_settings, env_settings, dotenv_settings, file_secret_settings)

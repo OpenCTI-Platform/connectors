@@ -1,7 +1,6 @@
 """Main entry point for the connector."""
 
 import logging
-import os
 import sys
 import traceback
 
@@ -15,25 +14,10 @@ from pycti import (  # type: ignore  # Missing library stubs
 logger = logging.getLogger(__name__)
 
 
-def _check_if_dev_env() -> None:
-    try:
-        dev_mode = os.getenv("CONNECTOR_DEV_MODE", "").lower() == "true"
-        if dev_mode:
-            for k in list(os.environ):
-                if k.upper().startswith(("CONNECTOR_", "GTI_", "OPENCTI_")):
-                    if k != "CONNECTOR_DEV_MODE":
-                        del os.environ[k]
-        else:
-            load_dotenv(override=True)
-    except Exception as env_err:
-        logger.error(f"Error setting up environment: {str(env_err)}")
-        sys.exit(1)
-
-
 def main() -> None:
     """Define the main function to run the connector."""
     try:
-        _check_if_dev_env()
+        load_dotenv(override=True)
         try:
             from connector.src.custom.configs.gti_config import GTIConfig
             from connector.src.octi.global_config import GlobalConfig
