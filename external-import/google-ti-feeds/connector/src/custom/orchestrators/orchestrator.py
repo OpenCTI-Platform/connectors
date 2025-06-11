@@ -73,9 +73,7 @@ class Orchestrator:
             async for gti_reports in self.client_api.fetch_reports(initial_state):
                 total_reports = len(gti_reports)
                 for report_idx, report in enumerate(gti_reports):
-                    report_entities = await self.converter._convert_report_to_stix(
-                        report
-                    )
+                    report_entities = self.converter.convert_report_to_stix(report)
                     subentities_ids = await self.client_api.fetch_subentities_ids(
                         report.id
                     )
@@ -87,10 +85,10 @@ class Orchestrator:
                             f"{LOG_PREFIX} ({report_idx + 1}/{total_reports}) Found relationships {{{rel_summary}}}"
                         )
                     subentities_detailed = (
-                        await self.client_api._fetch_subentity_details(subentities_ids)
+                        await self.client_api.fetch_subentity_details(subentities_ids)
                     )
                     subentity_stix = (
-                        await self.converter._convert_subentities_to_stix_with_linking(
+                        self.converter.convert_subentities_to_stix_with_linking(
                             subentities_detailed, report_entities
                         )
                     )

@@ -111,7 +111,7 @@ class ConvertToSTIX:
         )
         return tlp_marking
 
-    async def _convert_report_to_stix(self, report_data: Any) -> List[Any]:
+    def convert_report_to_stix(self, report_data: Any) -> List[Any]:
         """Convert report to location, identity, and report STIX objects.
 
         Args:
@@ -139,7 +139,7 @@ class ConvertToSTIX:
             )
             return []
 
-    async def _convert_subentities_to_stix(
+    def convert_subentities_to_stix(
         self, subentities: Dict[str, List[Any]]
     ) -> List[Any]:
         """Convert each subentity to STIX format.
@@ -172,7 +172,7 @@ class ConvertToSTIX:
 
         return all_stix_entities
 
-    async def _convert_subentities_to_stix_with_linking(
+    def convert_subentities_to_stix_with_linking(
         self, subentities: Dict[str, List[Any]], report_entities: List[Any]
     ) -> Optional[List[Any]]:
         """Convert each subentity to STIX format with report linking.
@@ -195,12 +195,12 @@ class ConvertToSTIX:
             self.logger.warning(
                 f"{LOG_PREFIX} No report object found for linking, falling back to standard conversion"
             )
-            return await self._convert_subentities_to_stix(subentities)
+            return self.convert_subentities_to_stix(subentities)
 
         try:
             set_report_context(report_obj)
 
-            all_stix_entities = await self._convert_subentities_to_stix(subentities)
+            all_stix_entities = self.convert_subentities_to_stix(subentities)
 
             self.logger.debug(
                 f"{LOG_PREFIX} Converted sub-entities with report linking to {getattr(report_obj, 'id', 'unknown')}"

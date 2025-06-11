@@ -427,7 +427,7 @@ class ClientAPI:
                 f"{LOG_PREFIX} Finished gathering relationships for report {report_id}"
             )
 
-    async def _fetch_subentity_details(
+    async def fetch_subentity_details(
         self, subentity_ids: Dict[str, List[str]]
     ) -> Dict[str, List[Any]]:
         """Fetch subentity details in parallel for multiple IDs.
