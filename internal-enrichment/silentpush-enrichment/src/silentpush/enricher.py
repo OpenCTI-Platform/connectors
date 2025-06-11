@@ -8,7 +8,6 @@ from pycti import (
     OpenCTIStix2,
     StixCoreRelationship,
 )
-from settings import SILENTPUSH_SIGNATURE
 from stix2 import (
     Artifact,
     ExternalReference,
@@ -18,6 +17,8 @@ from stix2 import (
     X509Certificate,
 )
 from stix2.v20.vocab import INDUSTRY_SECTOR_TECHNOLOGY
+
+from settings import SILENTPUSH_SIGNATURE
 
 
 class Enricher(ABC):
