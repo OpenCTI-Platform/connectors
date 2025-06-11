@@ -1,5 +1,4 @@
 import asyncio
-import copy
 import sys
 
 from aiohttp import ClientConnectionError, ClientResponseError
