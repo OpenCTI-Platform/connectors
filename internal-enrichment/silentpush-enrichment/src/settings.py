@@ -32,5 +32,5 @@ ip_diversity_uri = (
     + "merge-api/explore/padns/lookup/ipdiversity/a/{domain}/?format=json&timeline=1&window=1"
 )
 enrich_uri = (
-        API_URI + "merge-api/explore/enrich/{type}/{ioc}/?format=json&scan_data=1&explain=1"
+    API_URI + "merge-api/explore/enrich/{type}/{ioc}/?format=json&scan_data=1&explain=1"
 )
