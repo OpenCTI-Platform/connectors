@@ -1,2 +1,5 @@
 pycti==6.6.14
 urllib3==2.4.0
+resquest==2.32.3
+stix2==3.0.1
+pyyaml==6.0.2
