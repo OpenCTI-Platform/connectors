@@ -18,6 +18,23 @@ from pydantic import (
 )
 
 
+class ModelRegistry:
+    def __init__(self) -> None:
+        self.models: dict[str, type[BaseModel]] = {}
+
+    def register(self, model_class: type[BaseModel]) -> type[BaseModel]:
+        self.models[model_class.__name__] = model_class
+        return model_class
+
+    def rebuild_all(self) -> None:
+        for model in self.models.values():
+            model.model_rebuild(_types_namespace=self.models)
+
+
+MODEL_REGISTRY = ModelRegistry()
+
+
+@MODEL_REGISTRY.register
 class BaseEntity(BaseModel):
     """Represent Base Entity for OpenCTI models."""
 
@@ -58,6 +75,7 @@ class BaseEntity(BaseModel):
         """Make stix object (usually from stix2 python lib objects)."""
 
 
+@MODEL_REGISTRY.register
 class BaseIdentifiedEntity(BaseEntity):
     """Base class that can be identified thanks to a stix-like id."""
 
@@ -101,7 +119,7 @@ class BaseIdentifiedEntity(BaseEntity):
     @property
     def id(self) -> str:
         """Return the unique identifier of the entity."""
-        stix_id = self.to_stix2_object().get("id", "")
+        stix_id: str = self.to_stix2_object().get("id", "")
         self._stix2_id = stix_id
         return stix_id
 
@@ -159,6 +177,7 @@ class BaseIdentifiedEntity(BaseEntity):
 
 class AssociatedFileStix(stix2.v21._STIXBase21):  # type: ignore[misc]
     # As stix2 is untyped, subclassing one of its element is not handled by type checkers.
+    # Note: This is a candidate for refactoring in the pycti package.
     """Stix like object for Associated File.
 
     Examples:
@@ -193,6 +212,7 @@ class AssociatedFileStix(stix2.v21._STIXBase21):  # type: ignore[misc]
     )
 
 
+@MODEL_REGISTRY.register
 class AssociatedFile(BaseEntity):
     """Represents a SDO's or SCO's corresponding file, such as a Report PDF or an Artifact binary.
 
@@ -200,7 +220,7 @@ class AssociatedFile(BaseEntity):
         >>> associated_file = AssociatedFile(
         ...     name="example_file.txt",
         ...     description="An example file for demonstration purposes.",
-        ...     content="Human readable like content.",
+        ...     content=b"qwerty",
         ...     mime_type="text/plain",
         ...     markings=[TLPMarking(level="white")],
         ...     )
@@ -256,6 +276,7 @@ class AssociatedFile(BaseEntity):
         )
 
 
+@MODEL_REGISTRY.register
 class Author(ABC, BaseIdentifiedEntity):
     """Represent an author.
 
@@ -277,6 +298,7 @@ class Author(ABC, BaseIdentifiedEntity):
         """
 
 
+@MODEL_REGISTRY.register
 class TLPMarking(BaseIdentifiedEntity):
     """Represent a TLP marking definition."""
 
@@ -304,6 +326,7 @@ class TLPMarking(BaseIdentifiedEntity):
         return mapping[self.level]
 
 
+@MODEL_REGISTRY.register
 class ExternalReference(BaseEntity):
     """Represents an external reference to a source of information."""
 
@@ -333,6 +356,10 @@ class ExternalReference(BaseEntity):
             # unused
             hashes=None,
         )
+
+
+# See https://docs.pydantic.dev/latest/errors/usage_errors/#class-not-fully-defined (consulted on 2025-06-10)
+MODEL_REGISTRY.rebuild_all()
 
 
 if __name__ == "__main__":  # pragma: no cover # Do not compute coverage on doctest

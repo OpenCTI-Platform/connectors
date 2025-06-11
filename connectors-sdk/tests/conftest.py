@@ -1,1 +1,75 @@
+# pragma: no cover  # do not test coverage of tests...
+# isort: skip_file
+# type: ignore
 """Provide fixtures and entrypoint script for pytest."""
+
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+from connectors_sdk.models.octi import (
+    AssociatedFile,
+    ExternalReference,
+    OrganizationAuthor,
+    TLPMarking,
+)
+
+
+@pytest.fixture
+def fake_valid_organization_author():
+    """Fixture to create a fake valid OrganizationAuthor."""
+    return OrganizationAuthor(name="Example Corp")
+
+
+@pytest.fixture
+def fake_valid_associated_files() -> list[AssociatedFile]:
+    """Fixture to create a fake valid associated file list."""
+    return [
+        AssociatedFile(
+            name="example_file.txt",
+            description="An example file for demonstration purposes.",
+            content=b"content",
+            mime_type="text/plain",
+            markings=[TLPMarking(level="white")],
+            author=OrganizationAuthor(name="Example Corp"),
+            version="1.0.0",
+        ),
+        AssociatedFile(
+            name="example_image.png",
+            description="An example pdf file.",
+            content=b"%PDF-1%%EOF",
+            mime_type="application/pdf",
+            markings=[TLPMarking(level="amber")],
+            version="1.0.0",
+            author=OrganizationAuthor(name="Example Corp"),
+        ),
+    ]
+
+
+@pytest.fixture
+def fake_valid_external_referencess() -> list[ExternalReference]:
+    """Fixture to create a fake valid ExternalReference list."""
+    return [
+        ExternalReference(
+            source_name="Example Source",
+            url="https://example.com/reference",
+            description="An example external reference.",
+            external_id="12345",
+        ),
+        ExternalReference(
+            source_name="Another Source",
+            url="https://another-example.com/reference",
+            description="Another example external reference.",
+            external_id="67890",
+        ),
+    ]
+
+
+@pytest.fixture
+def fake_valid_tlp_markings() -> list[TLPMarking]:
+    """Fixture to create a fake valid TLP marking list."""
+    return [
+        TLPMarking(level="amber+strict"),
+    ]

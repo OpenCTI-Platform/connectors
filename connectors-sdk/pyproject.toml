@@ -39,7 +39,7 @@ dev = [
     "black",
     "isort",
 ]
-tests = [
+test = [
     "pytest",
     "pytest-cov",
 ]
