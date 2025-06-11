@@ -713,17 +713,14 @@ class RansomwareAPIConnector:
             self.helper.connector_logger.error(
                 "Error while collecting historic intelligence", {"error": e}
             )
-            group_data = []
+
+        # Checking if the historic year is less than 2020 as there is no data past 2020
+        year = self.get_historic_year if self.get_historic_year >= 2020 else 2020
 
         current_year = int(dt.date.today().year)
-        # Checking if the historic year is less than 2020 as there is no data past 2020
-        if int(self.get_historic_year) < 2020:
-            year = 2020
-        else:
-            year = int(self.get_historic_year)
-
         stix_objects = []
         bundle = []
+        group_data = []
 
         for year in range(year, current_year + 1):  # Looping through the years
             year_url = base_url + str(year)
@@ -731,55 +728,49 @@ class RansomwareAPIConnector:
                 url = year_url + "/" + str(month)
                 response = requests.get(url, headers=headers, timeout=(20000, 20000))
                 response.raise_for_status()
+                response_json = response.json()
 
                 try:
-                    if response.status_code == 200:
-                        response_json = response.json()
+                    for item in response_json:
 
-                        for item in response_json:
-
-                            try:
-                                bundle_list = self.stix_object_generator(
-                                    item, group_data
-                                )
-                            except Exception as e:
-                                self.helper.connector_logger.error(
-                                    "Error creating STIX objects",
-                                    {"victim": item.get("victim"), "error": e},
-                                )
-
-                            if bundle_list is None:
-                                self.helper.connector_logger.info(
-                                    "No new data to process"
-                                )
-
-                            else:
-
-                                # Deduplicate the objects
-                                bundle_list = self.helper.stix2_deduplicate_objects(
-                                    bundle_list
-                                )
-
-                                bundle = Bundle(
-                                    objects=bundle_list, allow_custom=True
-                                ).serialize()
-
-                            if bundle is not None:
-                                self.helper.send_stix2_bundle(
-                                    bundle=bundle,
-                                    work_id=self.work_id,
-                                    cleanup_inconsistent_bundle=True,
-                                )
-
-                            self.helper.connector_logger.info(
-                                "Sending STIX objects to OpenCTI...",
-                                {"len_bundle_list": len(bundle_list)},
+                        try:
+                            bundle_list = self.stix_object_generator(
+                                item, group_data
                             )
-                    else:
+                        except Exception as e:
+                            self.helper.connector_logger.error(
+                                "Error creating STIX objects",
+                                {"victim": item.get("victim"), "error": e},
+                            )
+
+                        if bundle_list is None:
+                            self.helper.connector_logger.info(
+                                "No new data to process"
+                            )
+
+                        else:
+
+                            # Deduplicate the objects
+                            bundle_list = self.helper.stix2_deduplicate_objects(
+                                bundle_list
+                            )
+
+                            bundle = Bundle(
+                                objects=bundle_list, allow_custom=True
+                            ).serialize()
+
+                        if bundle is not None:
+                            self.helper.send_stix2_bundle(
+                                bundle=bundle,
+                                work_id=self.work_id,
+                                cleanup_inconsistent_bundle=True,
+                            )
+
                         self.helper.connector_logger.info(
-                            "Error and response status code",
-                            {"status_code": response.status_code},
+                            "Sending STIX objects to OpenCTI...",
+                            {"len_bundle_list": len(bundle_list)},
                         )
+
                 except requests.exceptions.HTTPError as err:
                     self.helper.connector_logger.error(
                         "Http error during collect of historic intelligence",
@@ -933,7 +924,7 @@ class RansomwareAPIConnector:
                 "[CONNECTOR] Starting connector...",
                 {
                     "connector_name": self.helper.connect_name,
-                    "connector_start_time": now.isoformat(sep=" ", timespec="seconds"),
+                    "connector_start_time": now.isoformat(timespec="seconds"),
                     "last_run": (
                         self.last_run if self.last_run else "Connector has never run"
                     ),
@@ -1001,9 +992,9 @@ class RansomwareAPIConnector:
             )
 
             if self.last_run:
-                current_state["last_run"] = now.isoformat(sep=" ", timespec="seconds")
+                current_state["last_run"] = now.isoformat(timespec="seconds")
             else:
-                current_state = {"last_run": now.isoformat(sep=" ", timespec="seconds")}
+                current_state = {"last_run": now.isoformat(timespec="seconds")}
 
             if self.last_run_datetime_with_ingested_data:
                 current_state["last_run_datetime_with_ingested_data"] = (
@@ -1013,7 +1004,7 @@ class RansomwareAPIConnector:
             self.helper.set_state(current_state)
 
             message = "Connector successfully run, storing last_run as" + now.isoformat(
-                sep=" ", timespec="seconds"
+                timespec="seconds"
             )
             self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
