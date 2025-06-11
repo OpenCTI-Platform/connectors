@@ -37,7 +37,7 @@ MODEL_REGISTRY.rebuild_all
 ```
 
 > [!TIP]
-> The registered models will also all be rebuilt in the `connectors_sdk.models.octi` public API.
+> The registered models is also rebuilt in the `connectors_sdk.models.octi` public API.
 
 ---
 
@@ -60,7 +60,8 @@ MODEL_REGISTRY.rebuild_all
 
 ## Alternatives Considered
 
-- **Manual Resolution of Nested Models**: This approach was deemed error-prone and difficult to maintain for large-scale projects.
+- Manual Resolution of Nested Models: This approach is error-prone and difficult to maintain for large-scale projects.
+- Use of `__init_subclass__`: Using the __init__subclass method in `BaseIdentifiedEntity` register models was considered and less verbose for developer that would not have to manually register models. However, the `REGISTRY_MODEL.rebuild_all` method would still need to be called at the end of the module to ensure all models are registered and fully defined. To remind developers the explicit registration process, is prefered.
 
 ---
 
@@ -68,5 +69,6 @@ MODEL_REGISTRY.rebuild_all
 
 - [Pydantic classnot fully defined guide](https://docs.pydantic.dev/2.11/errors/usage_errors/#class-not-fully-defined) (consulted on 2025-06-09)
 - [Model Registry Solution from cordery](https://github.com/pydantic/pydantic/discussions/11776#discussion-8218609) (consulted on 2025-06-09)
+- [PEP 487](https://peps.python.org/pep-0487/)
 
 ---

@@ -3,7 +3,7 @@
 import codecs
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Literal, Optional, OrderedDict
+from typing import Any, Literal, Optional, OrderedDict, TypeVar
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
@@ -17,12 +17,35 @@ from pydantic import (
     model_validator,
 )
 
+T = TypeVar("T", bound=BaseModel)  # Preserve metadata when using register decorator
 
-class ModelRegistry:
+
+class _ModelRegistry:
+    """Singleton registry for OpenCTI models."""
+
+    _instance: Optional["_ModelRegistry"] = None
+    _initialized: bool = False
+
+    def __new__(cls) -> "_ModelRegistry":
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self) -> None:
+        if _ModelRegistry._initialized:
+            return
         self.models: dict[str, type[BaseModel]] = {}
+        _ModelRegistry._initialized = True
 
-    def register(self, model_class: type[BaseModel]) -> type[BaseModel]:
+    def register(self, model_class: type[T]) -> type[T]:
+        """Register a model class in the registry.
+
+        Args:
+            model_class (BaseModel-like): The model class to register.
+
+        Returns:
+            BaseModel-like: The registered model class.
+        """
         self.models[model_class.__name__] = model_class
         return model_class
 
@@ -31,7 +54,7 @@ class ModelRegistry:
             model.model_rebuild(_types_namespace=self.models)
 
 
-MODEL_REGISTRY = ModelRegistry()
+MODEL_REGISTRY = _ModelRegistry()
 
 
 @MODEL_REGISTRY.register

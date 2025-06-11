@@ -13,6 +13,7 @@ from connectors_sdk.models.octi._common import (
     BaseIdentifiedEntity,
     ExternalReference,
     TLPMarking,
+    _ModelRegistry,
 )
 from pydantic import Field, ValidationError
 
@@ -518,3 +519,31 @@ def test_tlp_marking_should_convert_to_stix2_object():
     stix_object = tlp_marking.to_stix2_object()
     # Then the STIX-like object should have the correct properties
     assert isinstance(stix_object, stix2.v21.MarkingDefinition)
+
+
+### TEST MODEL REGISTRY
+def test_model_registry_should_register_models():
+    """Test that MODEL_REGISTRY registers models correctly."""
+    # Given the MODEL_REGISTRY
+    registry = _ModelRegistry()
+
+    # When registering a model
+    class DummyModel(BaseEntity):
+        def to_stix2_object(self) -> stix2.v21._STIXBase21:
+            return stix2.v21._STIXBase21()
+
+    registry.register(DummyModel)
+    # Then it should be registered
+    assert "DummyModel" in registry.models.keys()
+    assert registry.models["DummyModel"] is DummyModel
+
+
+def test_model_registry_should_be_a_singleton():
+    """Test that MODEL_REGISTRY returns the same instance."""
+    # Given the MODEL_REGISTRY
+    registry1 = _ModelRegistry()
+    # When getting the MODEL_REGISTRY again
+    registry2 = _ModelRegistry()
+    # Then it should return the same instance
+    assert registry1 is registry2
+    assert id(registry1) == id(registry2)
