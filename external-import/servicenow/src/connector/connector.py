@@ -67,9 +67,11 @@ class ConnectorServicenow:
         self.utils = Utils()
         self.last_run_start_datetime = None
         self.last_run_end_datetime_with_ingested_data = None
+        self.work_id = None
 
-    def _initiate_work(self) -> str:
+    def _initiate_work(self):
         """Starts a work process.
+        From now on, a work will only be created once it has been confirmed that the connector has new data to ingest.
         Sends a request to the API with the initiate_work method to initialize the work.
 
         Returns:
@@ -85,11 +87,11 @@ class ConnectorServicenow:
 
         # Friendly name will be displayed on OpenCTI platform
         friendly_name = f"ServiceNow - run @ {now_utc_isoformat}"
-        return self.helper.api.work.initiate_work(
+        self.work_id = self.helper.api.work.initiate_work(
             self.config.connector.id, friendly_name
         )
 
-    def _send_intelligence(self, work_id: str, prepared_objects: list) -> int:
+    def _send_intelligence(self, prepared_objects: list) -> int:
         """This method prepares and sends unique STIX objects to OpenCTI.
         This method takes a list of objects prepared by the models, extracts their STIX representations, creates a
         serialized STIX bundle, and It then sends this bundle to OpenCTI.
@@ -97,7 +99,6 @@ class ConnectorServicenow:
         After sending the STIX objects, it keeps inform of the number of bundles sent.
 
         Args:
-            work_id (str): The unique identifier for the work process associated with the STIX objects.
             prepared_objects (list): A list of objects containing STIX representations to be sent to OpenCTI.
 
         Returns:
@@ -113,7 +114,7 @@ class ConnectorServicenow:
             )
             bundle_sent = self.helper.send_stix2_bundle(
                 stix_objects_bundle,
-                work_id=work_id,
+                work_id=self.work_id,
                 cleanup_inconsistent_bundle=True,
             )
 
@@ -124,13 +125,10 @@ class ConnectorServicenow:
             )
             return length_bundle_sent
 
-    def _complete_work(self, work_id: str) -> None:
+    def _complete_work(self) -> None:
         """Marks the work process as complete.
         This method logs the completion of the work for a specific work ID.
         Sends a request to the API with the to_processed method to complete the work.
-
-        Args:
-            work_id (str): The unique identifier of the work collection to mark as complete.
 
         Returns:
             None
@@ -138,13 +136,19 @@ class ConnectorServicenow:
         self.helper.connector_logger.info(
             "[CONNECTOR] Complete work...",
             {
-                "work_id": work_id,
+                "work_id": self.work_id,
             },
         )
         message = "ServiceNow - Finished work"
-        self.helper.api.work.to_processed(work_id, message)
+        self.helper.api.work.to_processed(
+            work_id=self.work_id,
+            message=message,
+        )
+        self.work_id = None
 
-    def _classify_results(self, results: list, task_names: list | str = None) -> list:
+    def _handling_errors_tenacity(
+        self, results: list, task_names: list | str = None
+    ) -> list:
 
         classified_results = []
 
@@ -209,10 +213,114 @@ class ConnectorServicenow:
 
         return classified_results
 
+    async def _handling_collection_sir(self, result_security_incidents) -> list:
+
+        # For each security incident response, we need to make two separate api calls, one to retrieve the tasks
+        # and the other to retrieve the observables.
+        security_incident_futures = [
+            (
+                security_incident,
+                asyncio.create_task(
+                    self.client.get_tasks(security_incident.get("sys_id"))
+                ),
+                asyncio.create_task(
+                    self.client.get_observables(security_incident.get("sys_id"))
+                ),
+            )
+            for security_incident in result_security_incidents
+        ]
+
+        security_incidents_results = []
+
+        for sir_incident, sir_task, sir_observable in security_incident_futures:
+            security_incidents_combined = {"get_security_incident": sir_incident}
+            security_incident_id = sir_incident.get("sys_id")
+            security_incident_number = sir_incident.get("number")
+
+            sir_collected_tasks, sir_collected_observables = await asyncio.gather(
+                sir_task, sir_observable, return_exceptions=True
+            )
+
+            # Observables related to the Security Incident Response (SIR)
+            result_observables_related_to_sir = self._handling_errors_tenacity(
+                [sir_collected_observables], security_incident_id
+            )
+            if result_observables_related_to_sir:
+                security_incidents_combined.get("get_security_incident")[
+                    "get_observables"
+                ] = result_observables_related_to_sir
+
+            # Tasks related to the Security Incident Response (SIR)
+            result_tasks_related_to_sir = self._handling_errors_tenacity(
+                [sir_collected_tasks], security_incident_id
+            )
+
+            self.helper.connector_logger.info(
+                "[SIR-COLLECTION] All SIR information is collected...",
+                {
+                    "sir_sys_id": security_incident_id,
+                    "sir_number": security_incident_number,
+                    "total_observables_related_to_sir": len(
+                        result_observables_related_to_sir
+                    ),
+                    "total_tasks_related_to_sir": len(result_tasks_related_to_sir),
+                },
+            )
+
+            # For each task, we need to use an api call to retrieve all its linked observables.
+            if result_tasks_related_to_sir:
+                tasks_futures = [
+                    (
+                        task,
+                        asyncio.create_task(
+                            self.client.get_observables(task.get("sys_id"))
+                        ),
+                    )
+                    for task in result_tasks_related_to_sir
+                ]
+
+                tasks_results = []
+                for sit_task, sit_observable in tasks_futures:
+                    task_id = sit_task.get("sys_id")
+                    task_number = sit_task.get("number")
+
+                    sit_collected_observables = await asyncio.gather(
+                        sit_observable, return_exceptions=True
+                    )
+
+                    # Observables related to the Task (SIT)
+                    result_observables_related_to_task = self._handling_errors_tenacity(
+                        sit_collected_observables, task_id
+                    )
+
+                    self.helper.connector_logger.info(
+                        "[SIT-COLLECTION] All SIT information is collected...",
+                        {
+                            "sit_sys_id": task_id,
+                            "sit_number": task_number,
+                            "total_observables_related_to_sit": len(
+                                result_observables_related_to_task
+                            ),
+                        },
+                    )
+                    if result_observables_related_to_task:
+                        sit_task["get_observables"] = result_observables_related_to_task
+
+                    tasks_results.append(sit_task)
+
+                security_incidents_combined.get("get_security_incident")[
+                    "get_tasks"
+                ] = tasks_results
+
+            security_incidents_results.append(security_incidents_combined)
+        return security_incidents_results
+
     async def _collect_intelligence(self) -> list | None:
-        """Collect intelligence from the source and convert into STIX object
+        """This method recovers all raw data without any modification or validation, although filtering can be
+        performed and dictionary preparation is carried out to facilitate validation of the information received.
+
         Returns:
-            List of STIX objects or None
+            List | None
         """
         try:
 
@@ -220,6 +328,7 @@ class ConnectorServicenow:
                 "[CONNECTOR] Start the collection of information from ServiceNow.",
             )
 
+            # Prerequisites for filtering security incident responses
             prerequisites_futures = {
                 "get_state_to_exclude": self.client.get_state_to_exclude(),
                 "get_severity_to_exclude": self.client.get_severity_to_exclude(),
@@ -230,7 +339,7 @@ class ConnectorServicenow:
             )
 
             prerequisites_futures_names = list(prerequisites_futures.keys())
-            result_prerequisites_futures = self._classify_results(
+            result_prerequisites_futures = self._handling_errors_tenacity(
                 collected_prerequisites_futures, prerequisites_futures_names
             )
 
@@ -246,99 +355,33 @@ class ConnectorServicenow:
                     get_severity_to_exclude,
                     get_priority_to_exclude,
                     self.last_run_start_datetime,
-                )
+                ),
             }
 
             collected_security_incidents = await asyncio.gather(
                 *main_futures.values(), return_exceptions=True
             )
-            result_main_futures = self._classify_results(
+            result_security_incidents = self._handling_errors_tenacity(
                 collected_security_incidents, "get_security_incidents"
             )
 
-            if not result_main_futures:
+            if not result_security_incidents:
                 self.helper.connector_logger.info(
-                    "[CONNECTOR] No security incidents found.",
+                    "[CONNECTOR] No security incidents response found.",
                 )
                 return
 
-            security_incident_futures = [
-                (
-                    security_incident,
-                    asyncio.create_task(
-                        self.client.get_tasks(security_incident.get("sys_id"))
-                    ),
-                    asyncio.create_task(
-                        self.client.get_observables(security_incident.get("sys_id"))
-                    ),
-                )
-                for security_incident in result_main_futures
-            ]
-
-            security_incidents_results = []
-
-            for sir_incident, sir_task, sir_observable in security_incident_futures:
-                security_incidents_combined = {"get_security_incident": sir_incident}
-                security_incident_id = sir_incident.get("sys_id")
-
-                sir_collected_tasks, sir_collected_observables = await asyncio.gather(
-                    sir_task, sir_observable, return_exceptions=True
-                )
-
-                # Observables related to the Security Incident (SIR)
-                result_observables_related_to_sir = self._classify_results(
-                    [sir_collected_observables], security_incident_id
-                )
-                if result_observables_related_to_sir:
-                    security_incidents_combined.get("get_security_incident")[
-                        "get_observables"
-                    ] = result_observables_related_to_sir
-
-                # Tasks related to the Security Incident Response (SIR)
-                result_tasks_related_to_sir = self._classify_results(
-                    [sir_collected_tasks], security_incident_id
-                )
-
-                if result_tasks_related_to_sir:
-                    tasks_futures = [
-                        (
-                            task,
-                            asyncio.create_task(
-                                self.client.get_observables(task.get("sys_id"))
-                            ),
-                        )
-                        for task in result_tasks_related_to_sir
-                    ]
-
-                    tasks_results = []
-                    for sit_task, sit_observable in tasks_futures:
-                        task_id = sit_task.get("sys_id")
-
-                        sit_collected_observables = await asyncio.gather(
-                            sit_observable, return_exceptions=True
-                        )
-
-                        # Observables related to the Task (SIT)
-                        result_observables_related_to_task = self._classify_results(
-                            sit_collected_observables, task_id
-                        )
-                        if result_observables_related_to_task:
-                            sit_task["get_observables"] = (
-                                result_observables_related_to_task
-                            )
-
-                        tasks_results.append(sit_task)
-
-                    security_incidents_combined.get("get_security_incident")[
-                        "get_tasks"
-                    ] = tasks_results
-
-                security_incidents_results.append(security_incidents_combined)
+            # Enrich security incidents response by retrieving their related tasks and observables.
+            enriched_security_incidents = await self._handling_collection_sir(
+                result_security_incidents
+            )
 
             self.helper.connector_logger.info(
-                "[CONNECTOR] Complete the collection of information from ServiceNow."
+                "[CONNECTOR] The collection of information from ServiceNow is completed.",
+                {"total_sir_processed": len(enriched_security_incidents)},
             )
-            return security_incidents_results
+
+            return enriched_security_incidents
 
         except Exception as err:
             self.helper.connector_logger.error(
@@ -347,13 +390,14 @@ class ConnectorServicenow:
             )
             raise
 
-    def model_validation_process(
+    def _model_validation_entities(
         self,
         parent_data: dict,
         parent_name: str,
         models_name: type[TaskResponse | ObservableResponse | SecurityIncidentResponse],
         child_method_name: str | None = None,
     ) -> dict | None:
+
         if not isinstance(parent_data, dict):
             return None
 
@@ -363,6 +407,15 @@ class ConnectorServicenow:
             for data_raw_child in data_raw_children:
                 try:
                     validated_child = models_name.model_validate(data_raw_child)
+                    validated_child_sys_id = getattr(validated_child, "sys_id", None)
+                    self.helper.connector_logger.debug(
+                        "[MODEL-VALIDATE] Data for the child entity have been successfully validated.",
+                        {
+                            "entity_parent_name": parent_name,
+                            "entity_child_name": child_method_name,
+                            "validated_child_sys_id": validated_child_sys_id,
+                        },
+                    )
                     validated_list_child.append(validated_child)
                 except ValidationError as err:
                     message = (
@@ -388,6 +441,16 @@ class ConnectorServicenow:
         else:
             try:
                 validated_parent = models_name.model_validate(parent_data)
+                validated_parent_sys_id = getattr(validated_parent, "sys_id", None)
+
+                self.helper.connector_logger.debug(
+                    "[MODEL-VALIDATE] No entity children linked to the entity parent need to be validated.",
+                    {
+                        "entity_parent_name": parent_name,
+                        "entity_parent_sys_id": validated_parent_sys_id,
+                    },
+                )
+
                 return {parent_name: validated_parent} if validated_parent else None
             except ValidationError as err:
                 message = f"[VALIDATION-WARNING] A validation error has occurred on an '{parent_name}'. "
@@ -410,7 +473,7 @@ class ConnectorServicenow:
         parent_data: dict,
         model_map: dict,
         hierarchy_map: dict,
-    ):
+    ) -> None:
         for child_name in hierarchy_map.get(parent_name, []):
             child_entities = parent_data.get(child_name)
             if not child_entities:
@@ -419,31 +482,38 @@ class ConnectorServicenow:
             if child_name in hierarchy_map:
                 for child_entity in child_entities:
                     for sub_child in hierarchy_map[child_name]:
-                        validated = self.model_validation_process(
+                        validated = self._model_validation_entities(
                             child_entity, child_name, model_map[sub_child], sub_child
                         )
                         child_entity[sub_child] = (
                             validated[sub_child] if validated else None
                         )
 
-            validated = self.model_validation_process(
+            validated = self._model_validation_entities(
                 parent_data, parent_name, model_map[child_name], child_name
             )
+            # Here we replace in the parent the child's raw dict with the child's validated model.
             parent_data[child_name] = validated[child_name] if validated else None
 
-    def _valid_intelligence(self, collected_intelligence: list[dict]):
-        """
+    def _valid_intelligence(self, collected_intelligence: list[dict]) -> list[dict]:
+        """This method enables data collected previously to be validated via pydantic. A parent/child hierarchy system
+        has been set up with recurcive validation: for example, a security incident may have tasks and observables, but
+        the tasks may also have observables (see diagram).
+
         get_security_incident
         ├── get_tasks
         │   └── get_observables
         └── get_observables
+
+        Args:
+            collected_intelligence (list[dict]) Raw data recovery from ServiceNow.
+        Returns:
+            list[dict]
         """
         try:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starts validating intelligence from ServiceNow..."
             )
-
-            collected_intelligence_init = copy.deepcopy(collected_intelligence)
 
             # All models
             intelligence_models = {
@@ -470,9 +540,20 @@ class ConnectorServicenow:
                         intelligence_hierarchy,
                     )
 
-                    validated_parent = self.model_validation_process(
+                    validated_parent = self._model_validation_entities(
                         parent_value, parent_name, intelligence_models[parent_name]
                     )
+
+                    validated_parent_name = validated_parent.get(parent_name)
+                    self.helper.connector_logger.debug(
+                        "[MODEL-VALIDATE] Data for the parent entity have been successfully validated.",
+                        {
+                            "entity_parent_name": parent_name,
+                            "entity_parent_sys_id": validated_parent_name.sys_id,
+                        },
+                    )
+
+                    # Here we replace the parent's raw dictionary with its validated model with all its linked children.
                     intelligence[parent_name] = (
                         validated_parent[parent_name] if validated_parent else None
                     )
@@ -489,50 +570,18 @@ class ConnectorServicenow:
             )
             raise
 
-    def _process_indicator(self, observables: list) -> list:
-        all_patterns_mapping = {
-            "Domain-Name": "domain-name:value",
-            "Url": "url:value",
-            "Hostname": "hostname:value",
-            "Email-Addr": "email-addr:value",
-            "Email-Message--Body": "email-message:body",
-            "Email-Message--Message_id": "email-message:subject",
-            "Email-Message--Subject": "email-message:subject",
-            "IPv4-Addr": "ipv4-addr:value",
-            "IPv6-Addr": "ipv6-addr:value",
-            "Mac-Addr": "mac-addr:value",
-            "MD5": "file:hashes.'MD5'",
-            "SHA-1": "file:hashes.'SHA-1'",
-            "SHA-256": "file:hashes.'SHA-256'",
-            "SHA-512": "file:hashes.'SHA-512'",
-            "StixFile": "file:name",
-            "Directory": "directory:path",
-            "Mutex": "mutex:name",
-            "Autonomous-System": "autonomous-system:number",
-            "Phone-Number": "phone-number:value",
-            "Windows-Registry-Key": "windows-registry-key:key",
-            "User-Account": "user-account:account_login",
-        }
+    def _handling_observables(
+        self, observables: list[ObservableResponse], entity_number: str = None
+    ) -> list:
+        """This method manages all observables to be created in stix format, for security incidents and tasks.
 
-        all_indicators_with_relationship = []
+        Args:
+            observables (list[ObservableResponse]):
+            entity_number (str) : Entity identifier by "number" from ServiceNow (SIR - SIT)
 
-        for observable in observables:
-
-            pattern_indicator = ""
-            for pattern in all_patterns_mapping:
-                if observable.type == pattern:
-                    pattern_indicator = observable.type
-                    break
-                else:
-                    continue
-            if pattern_indicator:
-                pattern = f"[{pattern_indicator} = '{observable.value}']"
-                # Todo Make indicator
-                # Todo Make Relationshop between indicator and observable (based-on)
-
-        return all_indicators_with_relationship
-
-    def _process_observable(self, observables: list) -> list:
+        Returns:
+            list of observables
+        """
 
         observables_make_mapping = {
             "Domain-Name": lambda *arg: self.converter_to_stix.make_domain_name(*arg),
@@ -571,40 +620,113 @@ class ConnectorServicenow:
 
         all_observables = []
         for observable in observables:
-            observable_type = observable.type
-            if observable_type in observables_make_mapping:
-                observable_all_labels = [
-                    label
-                    for label in [
-                        *observable.sys_tags,
-                        *observable.security_tags,
-                        *observable.finding,
-                    ]
-                    if label and label.lower() != "unknown"
-                ]
+            observable_type = getattr(observable, "type", None)
+            observable_sys_id = getattr(observable, "sys_id", None)
+            observable_value = getattr(observable, "value", None)
+
+            if observable and observable_type in observables_make_mapping:
+
+                # Prepare all the labels for the observable.
+                prepared_labels_observable = self._handling_labels(
+                    entity=observable,
+                    observable=True,
+                )
+
                 # Make External Reference
                 observable_external_reference = (
                     self.converter_to_stix.make_external_reference(
-                        observable.sys_id,
-                        "sn_ti_observable",
-                        observable.sys_id,
+                        entity_number=observable_sys_id,
+                        table_name="sn_ti_observable",
+                        external_id=observable_sys_id,
                     )
                 )
-                make_observable = observables_make_mapping.get(observable_type)
-
                 # Make Observable object
+                make_observable = observables_make_mapping.get(observable_type)
                 observable_object = (
                     make_observable(
-                        observable, observable_all_labels, observable_external_reference
+                        observable,
+                        prepared_labels_observable,
+                        observable_external_reference,
                     )
                     if make_observable
                     else None
                 )
                 all_observables.append(observable_object)
 
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Creating a Observable object in stix format.",
+                    {
+                        "entity_number": entity_number,
+                        "observable_type": observable_type,
+                        "observables_sys_id": observable_sys_id,
+                        "observable_value": observable_value,
+                    },
+                )
+
         return all_observables
 
-    def _transform_intelligence(self, validated_intelligence):
+    @staticmethod
+    def _handling_labels(
+        entity: TaskResponse | ObservableResponse | SecurityIncidentResponse,
+        observable: bool = None,
+        task: bool = None,
+        security_incident: bool = None,
+    ) -> list[str]:
+        """
+        This method manages the labels for the different entities handled by the connector. A special feature is that
+        it deliberately filters out “unknown” values.
+
+        Args:
+            entity (TaskResponse | ObservableResponse | SecurityIncidentResponse): The data object from which labels
+            are to be extracted.
+            observable (bool | None): Set to True if the entity is an ObservableResponse. Defaults to None.
+            task (bool | None): Set to True if the entity is a TaskResponse. Defaults to None.
+            security_incident (bool | None): Set to True if the entity is a SecurityIncidentResponse. Defaults to None.
+
+        Returns:
+            list[str]: A list of valid labels extracted from the selected fields per entities. Labels are filtered to
+                       exclude null/empty values and the string "unknown".
+        """
+        labels_mapping = {}
+        if observable:
+            labels_mapping = {
+                "sys_tags",
+                "security_tags",
+                "finding",
+            }
+
+        if task:
+            labels_mapping = {
+                "sys_tags",
+                "security_tags",
+            }
+
+        if security_incident:
+            labels_mapping = {
+                "subcategory",
+                "sys_tags",
+                "security_tags",
+                "contact_type",
+                "alert_sensor",
+            }
+
+        return [
+            label
+            for key in labels_mapping
+            for label in (getattr(entity, key, []) or [])
+            if label and label.lower() != "unknown"
+        ]
+
+    def _transform_intelligence(self, validated_intelligence: list[dict]) -> list:
+        """This method is designed to transform data validation into stix format, and deals mainly with the creation of
+        case incident responses, tasks and observables.
+
+        Args:
+            validated_intelligence (list[dict]): A list[dict] containing the validated data, filtered using pydantic.
+
+        Returns:
+            List of entities with their stix representation.
+        """
         try:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starts transforming intelligence to STIX 2.1 format..."
@@ -613,7 +735,9 @@ class ConnectorServicenow:
 
             for item in validated_intelligence:
                 security_incident_object = item.get("get_security_incident")
-                case_incident_object_refs = []
+                sir_number = getattr(security_incident_object, "number", None)
+                sir_sys_id = getattr(security_incident_object, "sys_id", None)
+                case_incident_objects = []
                 all_external_references = []
 
                 mitre_mapping = {
@@ -638,17 +762,17 @@ class ConnectorServicenow:
 
                 # Make External Reference for custom case incident response and all entities Mitre
                 external_reference_sir = self.converter_to_stix.make_external_reference(
-                    security_incident_object.number,
-                    "sn_si_incident",
-                    security_incident_object.sys_id,
+                    entity_number=sir_number,
+                    table_name="sn_si_incident",
+                    external_id=sir_sys_id,
                 )
                 all_external_references.append(external_reference_sir)
 
                 for key, make_mitre_object in mitre_mapping.items():
-                    has_values = getattr(security_incident_object, key, None)
+                    mitre_values = getattr(security_incident_object, key, None)
 
-                    if isinstance(has_values, list) and has_values:
-                        for mitre in has_values:
+                    if isinstance(mitre_values, list) and mitre_values:
+                        for mitre in mitre_values:
                             mitre_part_1, mitre_part_2 = mitre.split(" ", 1)
                             # Removal of parentheses for the second part
                             clean_mitre_part_2 = mitre_part_2.strip("()")
@@ -661,13 +785,32 @@ class ConnectorServicenow:
                                 )
                             )
                             stix_objects.append(mitre_object)
-                            case_incident_object_refs.append(mitre_object)
+                            case_incident_objects.append(mitre_object)
+
+                            self.helper.connector_logger.info(
+                                "[CONNECTOR] Creating a MITRE object in stix format.",
+                                {
+                                    "sir_number": sir_number,
+                                    "sir_sys_id": sir_sys_id,
+                                    "mitre_type_servicenow": key,
+                                    "mitre_type_opencti": getattr(
+                                        mitre_object.stix2_representation, "type", None
+                                    ),
+                                    "mitre_name": getattr(mitre_object, "name", None),
+                                    "mitre_external_id": getattr(
+                                        mitre_object, "external_id", None
+                                    ),
+                                    "mitre_aliases": getattr(
+                                        mitre_object, "aliases", None
+                                    ),
+                                },
+                            )
 
                 # Transform comment in markdown for security_incident
                 new_description = self.utils.transform_description_to_markdown(
-                    self.config.servicenow.comment_to_exclude,
-                    security_incident_object.description,
-                    security_incident_object.comments_and_work_notes,
+                    comment_to_exclude=self.config.servicenow.comment_to_exclude,
+                    description=security_incident_object.description,
+                    comments=security_incident_object.comments_and_work_notes,
                 )
                 security_incident_object.comments_and_work_notes = new_description
 
@@ -682,49 +825,58 @@ class ConnectorServicenow:
                 )
                 security_incident_object.severity = severity_matched
                 if severity_matched is None:
+                    sir_severity = getattr(security_incident_object, "severity", None)
                     self.helper.connector_logger.warning(
                         "[WARNING] Severity has not been correctly identified and will be ignored.",
                         {
-                            "security_incident_id": security_incident_object.sys_id,
-                            "severity_in_security_incident": security_incident_object.severity,
+                            "security_incident_id": sir_sys_id,
+                            "severity_in_security_incident": sir_severity,
                         },
                     )
 
                 # Make Security Incident Response object -> CustomObjectCaseIncident
                 custom_case_incident = self.converter_to_stix.make_custom_case_incident(
-                    security_incident_object,
-                    case_incident_object_refs,
-                    [external_reference_sir],
+                    data=security_incident_object,
+                    case_incident_related_objects=case_incident_objects,
+                    external_references=[external_reference_sir],
                 )
 
                 # Make Observables Object
                 observables_in_sir = getattr(
-                    item.get("get_security_incident"), "get_observables", None
+                    security_incident_object, "get_observables", None
                 )
-                if observables_in_sir:
-                    observables_list_sir = self._process_observable(observables_in_sir)
-                    stix_objects.extend(observables_list_sir)
-                    case_incident_object_refs.extend(observables_list_sir)
 
-                    if self.config.servicenow.promote_observables_as_indicators:
-                        indicators_list_sir = self._process_indicator(observables_in_sir)
-                        stix_objects.append(indicators_list_sir)
+                if observables_in_sir:
+                    observables_list_sir = self._handling_observables(
+                        observables=observables_in_sir,
+                        entity_number=sir_number,
+                    )
+                    stix_objects.extend(observables_list_sir)
+                    case_incident_objects.extend(observables_list_sir)
+                else:
+                    self.helper.connector_logger.info(
+                        "[CONNECTOR] No observables found for the security incident response (SIR)",
+                        {
+                            "sir_number": sir_number,
+                            "sir_sys_id": sir_sys_id,
+                        },
+                    )
 
                 # Make Tasks object -> CustomObjectTask
-                all_tasks_object = getattr(
-                    item.get("get_security_incident"), "get_tasks", None
-                )
-                if all_tasks_object:
+                all_tasks = getattr(security_incident_object, "get_tasks", None)
+                if all_tasks:
 
                     task_all_objects = [custom_case_incident]
-                    for task in all_tasks_object:
+                    for task in all_tasks:
+                        sit_number = getattr(task, "number", None)
+                        sit_sys_id = getattr(task, "sys_id", None)
 
                         # Make External Reference Task for custom case incident parent
                         external_reference_task = (
                             self.converter_to_stix.make_external_reference(
-                                task.number,
-                                "task",
-                                task.sys_id,
+                                entity_number=sit_number,
+                                table_name="task",
+                                external_id=sit_sys_id,
                             )
                         )
                         all_external_references.append(external_reference_task)
@@ -738,42 +890,71 @@ class ConnectorServicenow:
                             )
                         )
                         task.comments_and_work_notes = new_description_task
-                        all_labels = [
-                            label
-                            for label in [*task.sys_tags, *task.security_tags]
-                            if label and label.lower() != "unknown"
-                        ]
+
+                        # Prepare all the labels for the task (SIT).
+                        prepared_labels_sit = self._handling_labels(
+                            entity=task,
+                            task=True,
+                        )
 
                         # Make Observables Object
                         observables_in_sit = getattr(task, "get_observables", None)
                         if observables_in_sit:
-                            observables_list_sit = self._process_observable(
-                                observables_in_sit
+                            observables_list_sit = self._handling_observables(
+                                observables=observables_in_sit,
+                                entity_number=sit_number,
                             )
                             stix_objects.extend(observables_list_sit)
                             task_all_objects.extend(observables_list_sit)
-                            # add task-related observables to the parent Security incident (SIR)
-                            case_incident_object_refs.extend(observables_list_sit)
+                            # Add task-related observables to the parent Security incident (SIR)
+                            case_incident_objects.extend(observables_list_sit)
+                        else:
+                            self.helper.connector_logger.info(
+                                "[CONNECTOR] No observables found for the task (SIT)",
+                                {
+                                    "sit_number": sit_number,
+                                    "sit_sys_id": sit_sys_id,
+                                },
+                            )
 
-                            if self.config.servicenow.promote_observables_as_indicators:
-                                indicators_list_sit = self._process_indicator(observables_in_sit)
-                                stix_objects.append(indicators_list_sit)
-
-                        # Make task object
+                        # Make Task object
                         custom_task = self.converter_to_stix.make_custom_task(
-                            task, task_all_objects, all_labels
+                            data=task,
+                            all_objects=task_all_objects,
+                            all_labels=prepared_labels_sit,
                         )
                         stix_objects.append(custom_task)
+                        self.helper.connector_logger.info(
+                            "[CONNECTOR] Creating a Task (SIT) object in stix format.",
+                            {
+                                "sit_number": sit_number,
+                                "sit_sys_id": sit_sys_id,
+                            },
+                        )
+
+                # Prepare all the labels for the Security Incident Response (SIR)
+                prepared_labels_sir = self._handling_labels(
+                    entity=security_incident_object,
+                    security_incident=True,
+                )
 
                 # Add all_external_references to the external ref of the parent security incident
                 final_custom_case_incident = (
                     self.converter_to_stix.make_custom_case_incident(
-                        security_incident_object,
-                        case_incident_object_refs,
-                        all_external_references,
+                        data=security_incident_object,
+                        case_incident_related_objects=case_incident_objects,
+                        external_references=all_external_references,
+                        labels=prepared_labels_sir,
                     )
                 )
                 stix_objects.append(final_custom_case_incident)
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Creating a Security Incident Response (SIR) object in stix format.",
+                    {
+                        "sir_number": sir_number,
+                        "sir_sys_id": sir_sys_id,
+                    },
+                )
 
             if stix_objects:
                 # Make Author object
@@ -786,10 +967,10 @@ class ConnectorServicenow:
                 )
                 stix_objects.append(markings)
 
-            len_stix_objects = len(stix_objects)
+            total_stix_objects = len(stix_objects)
             self.helper.connector_logger.info(
-                "[CONNECTOR] Finalisation of the transforming intelligence to STIX 2.1 format.",
-                {"len_stix_objects": len_stix_objects},
+                "[CONNECTOR] Finalisation of the transforming all intelligence to STIX 2.1 format.",
+                {"total_stix_objects": total_stix_objects},
             )
             return stix_objects
 
@@ -800,13 +981,24 @@ class ConnectorServicenow:
             )
             raise
 
-    def _prepare_intelligence(self, collected_intelligence: list):
+    def _prepare_intelligence(self, collected_intelligence: list[dict]) -> list:
+        """This is one of the global methods. It will first process the data by validating and filtering it using
+        Pydantic models, then transform the validated models into a STIX compatible format.
+
+        Args:
+             collected_intelligence (list[dict]): Raw data recovery from ServiceNow.
+        Returns:
+            List of entities with their stix representation.
+        """
         try:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starts preparing data for ServiceNow..."
             )
 
+            # Start validation of information from ServiceNow
             validated_intelligence = self._valid_intelligence(collected_intelligence)
+
+            # Start transformation of validated information into STIX format
             transformed_intelligence = self._transform_intelligence(
                 validated_intelligence
             )
@@ -864,7 +1056,7 @@ class ConnectorServicenow:
                 },
             )
 
-            work_id = self._initiate_work()
+            # Starting information collection from ServiceNow.
             collected_intelligence = asyncio.run(self._collect_intelligence())
 
             if collected_intelligence:
@@ -872,10 +1064,18 @@ class ConnectorServicenow:
                 prepared_intelligence = self._prepare_intelligence(
                     collected_intelligence
                 )
-                self._send_intelligence(work_id, prepared_intelligence)
+
+                # Work initialization only after confirmation of the presence of data to be ingested.
+                self._initiate_work()
+
+                # Start sending information to OpenCTI.
+                self._send_intelligence(prepared_intelligence)
                 self.last_run_end_datetime_with_ingested_data = self.utils.get_now(
                     DateTimeFormat.ISO
                 )
+
+                # Completing the work once the bundle has been sent to OpenCTI
+                self._complete_work()
 
             # Store the current start utc isoformat as a last run of the connector.
             self.helper.connector_logger.info(
@@ -896,20 +1096,19 @@ class ConnectorServicenow:
                 )
 
             self.helper.set_state(current_state)
-            self._complete_work(work_id)
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",
-                {"connector_name": self.config.connector.name},
+                {"connector_name": "ServiceNow"},
             )
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
 
     def run(self) -> None:
-        """Run the main process encapsulated in a scheduler
-        It allows you to schedule the process to run at a certain intervals
+        """Run the main process encapsulated in a scheduler.
+        It allows you to schedule the process to run at a certain intervals.
         This specific scheduler from the pycti connector helper will also check the queue size of a connector
         If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
         the connector's main process will not run until the queue is ingested and reduced sufficiently,
@@ -917,6 +1116,11 @@ class ConnectorServicenow:
         It requires the `duration_period` connector variable in ISO-8601 standard format
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
         If `duration_period` is set to 0 then it will function as a run and terminate
+
+        It's important to note that since Pydantic already checks that duration_period is in ISO 8601 format,
+        there's no need to use schedule_iso. You can use schedule_process directly, provided you transmit
+        duration_period in seconds.
+
         Returns:
             None
         """
