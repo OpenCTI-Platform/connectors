@@ -63,56 +63,46 @@ class ClientAPI:
             report_types = getattr(self.config, "report_types", ["All"])
             origins = getattr(self.config, "origins", ["All"])
 
+            if "All" in report_types:
+                report_types = ["All"]
+            if "All" in origins:
+                origins = ["All"]
+
             filter_configs = []
 
-            if (not report_types or "All" in report_types) and (
-                not origins or "All" in origins
-            ):
-                params = {
-                    "filter": base_filters,
-                    "limit": 40,
-                    "order": "last_modification_date+",
-                }
-                config = {
-                    "params": params,
-                    "cursor": (initial_state.get("cursor") if initial_state else None),
-                    "description": f"all reports from {start_date}",
-                }
-                filter_configs.append(config)
+            for report_type in report_types:
+                for origin in origins:
+                    current_filter = base_filters
+                    if report_type != "All":
+                        current_filter += f" report_type:{report_type}"
+                    if origin != "All":
+                        current_filter += f" origin:{origin}"
 
-                self.logger.debug(
-                    f"{LOG_PREFIX} Configured fetching all reports from GTI API (from {start_date})"
-                )
-            else:
-                for report_type in report_types:
-                    for origin in origins:
-                        if origin == "All":
-                            report_filter = (
-                                f'{base_filters} report_type:"{report_type}"'
-                            )
-                            description = f"type={report_type}, any origin"
-                        else:
-                            report_filter = f'{base_filters} report_type:"{report_type}" origin:{origin}'
-                            description = f"type={report_type}, origin={origin}"
+                    if report_type == "All" and origin == "All":
+                        description = "all reports"
+                    elif report_type == "All":
+                        description = f"all types, origin={origin}"
+                    elif origin == "All":
+                        description = f"type={report_type}, all origins"
+                    else:
+                        description = f"type={report_type}, origin={origin}"
 
-                        params = {
-                            "filter": report_filter,
+                    config = {
+                        "params": {
+                            "filter": current_filter,
                             "limit": 40,
                             "order": "last_modification_date+",
-                        }
+                        },
+                        "cursor": (
+                            initial_state.get("cursor") if initial_state else None
+                        ),
+                        "description": description,
+                    }
+                    filter_configs.append(config)
 
-                        config = {
-                            "params": params,
-                            "cursor": (
-                                initial_state.get("cursor") if initial_state else None
-                            ),
-                            "description": description,
-                        }
-                        filter_configs.append(config)
-
-                        self.logger.info(
-                            f"{LOG_PREFIX} Configured fetching reports with {description} (from {start_date})"
-                        )
+                    self.logger.info(
+                        f"{LOG_PREFIX} Configured fetching reports with {description} (from {start_date})"
+                    )
 
             return filter_configs
 
