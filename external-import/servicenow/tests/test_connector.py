@@ -1,15 +1,6 @@
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
-import pytest
 from connector.connector import ConnectorServicenow
-from connector.models import (
-    ConfigLoader,
-)
-from connector.services import (
-    ServiceNowClient,
-)
-from pycti import OpenCTIConnectorHelper
-from pydantic import ValidationError
 
 
 def test_invalid_retrieved_entity_should_be_skipped_with_warning():

@@ -2,9 +2,6 @@ import re
 from datetime import datetime, timezone
 from enum import Enum
 
-import pycti
-import stix2
-
 
 class DateTimeFormat(Enum):
     DATETIME = "datetime"  # Object datetime
