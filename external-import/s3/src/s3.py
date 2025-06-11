@@ -363,6 +363,8 @@ class S3Connector:
                     self.s3_client.delete_object(
                         Bucket=self.s3_bucket_name, Key=o.get("Key")
                     )
+                else:
+                    self.helper.log_info("No content to ingest")
 
             message = (
                 "Connector successfully run ("
