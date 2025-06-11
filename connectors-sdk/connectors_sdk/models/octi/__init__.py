@@ -13,17 +13,29 @@ from connectors_sdk.models.octi.activities.observations import (
     IPV4Address,
 )
 from connectors_sdk.models.octi.knowledge.entities import Organization
+from connectors_sdk.models.octi.relationships import (
+    AnyRelatedToAny,
+    IndicatorBasedOnObservable,
+    IndicatorDerivedFromIndicator,
+    based_on,
+    related_to,
+)
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
 
 __all__ = [
+    "AnyRelatedToAny",
     "AssociatedFile",
     "ExternalReference",
     "Indicator",
+    "IndicatorBasedOnObservable",
+    "IndicatorDerivedFromIndicator",
     "IPV4Address",
     "KillChainPhase",
     "Organization",
     "OrganizationAuthor",
     "TLPMarking",
+    "related_to",
+    "based_on",
 ]
 
 

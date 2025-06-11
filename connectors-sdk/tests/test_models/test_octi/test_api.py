@@ -7,14 +7,19 @@ import connectors_sdk.models.octi as octi
 from connectors_sdk.models.octi._common import BaseEntity
 
 FEATURE_NAMES = [
+    "AnyRelatedToAny",
     "AssociatedFile",
     "ExternalReference",
+    "Indicator",
+    "IndicatorBasedOnObservable",
+    "IndicatorDerivedFromIndicator",
     "IPV4Address",
+    "KillChainPhase",
+    "Organization",
     "OrganizationAuthor",
     "TLPMarking",
-    "Organization",
-    "Indicator",
-    "KillChainPhase",
+    "related_to",
+    "based_on",
     # When adding a new OCTI model or feature, add its name here
 ]
 

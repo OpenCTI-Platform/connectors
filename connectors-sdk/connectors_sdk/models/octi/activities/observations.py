@@ -1,6 +1,5 @@
 """Offer observations OpenCTI entities."""
 
-###WIP
 import ipaddress
 from abc import abstractmethod
 from typing import Any, Literal, Optional
