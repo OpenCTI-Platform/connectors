@@ -3,10 +3,6 @@
 # type: ignore
 """Provide fixtures and entrypoint script for pytest."""
 
-import subprocess
-import sys
-from pathlib import Path
-
 import pytest
 
 from connectors_sdk.models.octi import (

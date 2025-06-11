@@ -195,8 +195,12 @@ def implemented_base_identified_entity():
                     ]
                 )
 
+            # _id = f"base-identified-entity--123e4567-e89b-12d3-a456-42665544{"".join(str(ord(c)) for c in str(self.titi))[:4].ljust(4, '0')}"
+            # Not supported in python 3.11 => splitted to avoid generator in f-string
+            encoded = "".join(str(ord(c)) for c in str(self.titi))[:4].ljust(4, "0")
+            _id = f"base-identified-entity--123e4567-e89b-12d3-a456-42665544{encoded}"
             return DummyStixObject(
-                id=f"base-identified-entity--123e4567-e89b-12d3-a456-42665544{"".join(str(ord(c)) for c in str(self.titi))[:4].ljust(4, "0")}",
+                id=_id,
                 name=f"{self.toto}{self.titi}",
             )
 
