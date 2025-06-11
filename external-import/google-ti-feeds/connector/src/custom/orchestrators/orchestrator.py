@@ -8,7 +8,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from connector.src.custom.client_api import ClientAPI
-from connector.src.custom.configs import BATCH_PROCESSOR_CONFIG
+from connector.src.custom.configs import BATCH_PROCESSOR_CONFIG, GTIConfig
 from connector.src.custom.convert_to_stix import ConvertToSTIX
 from connector.src.octi.work_manager import WorkManager
 from connector.src.utils.batch_processors import GenericBatchProcessor
@@ -23,7 +23,7 @@ class Orchestrator:
         self,
         work_manager: WorkManager,
         logger: logging.Logger,
-        config: Any,
+        config: GTIConfig,
         tlp_level: str,
     ):
         """Initialize the Orchestrator.
