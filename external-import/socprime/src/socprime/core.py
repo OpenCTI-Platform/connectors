@@ -112,7 +112,7 @@ class SocprimeConnector:
 
     def _is_scheduled(self, last_run: Optional[int], current_time: int) -> bool:
         if last_run is None:
-            self.helper.log_info("Connector first run")
+            self.helper.connector_logger.info("Connector first run")
             return True
         time_diff = current_time - last_run
         return time_diff >= self.interval_sec
@@ -382,8 +382,11 @@ class SocprimeConnector:
                         if case_id not in res:
                             res[case_id] = []
                         res[case_id].append(siem_type)
-            except Exception:
-                self.helper.log_error("Error while getting availables siem types.")
+            except Exception as err:
+                self.helper.connector_logger.error(
+                    "Error while getting availables siem types.",
+                    meta={"error": str(err)},
+                )
         return res
 
     def _get_rules_from_content_lists_and_jobs(self) -> list[str]:
@@ -410,15 +413,18 @@ class SocprimeConnector:
         return names
 
     def _get_rules_from_one_content_list(self, content_list_name: str) -> List[dict]:
-        self.helper.log_info(f"Getting rules from content list {content_list_name}")
+        self.helper.connector_logger.info(
+            f"Getting rules from content list {content_list_name}"
+        )
         try:
             return self.tdm_api_client.get_rules_from_content_list(
                 content_list_name=content_list_name,
                 siem_type=self._indicator_siem_type,
             )
         except Exception as err:
-            self.helper.log_error(
-                f"Error while getting rules from content list - {err}"
+            self.helper.connector_logger.error(
+                f"Error while getting rules from content list - {err}",
+                meta={"error": str(err)},
             )
             return []
 
@@ -430,11 +436,13 @@ class SocprimeConnector:
         return ids
 
     def _get_rules_from_one_job(self, job_id: str) -> List[dict]:
-        self.helper.log_info(f"Getting rules from job {job_id}")
+        self.helper.connector_logger.info(f"Getting rules from job {job_id}")
         try:
             return self.tdm_api_client.get_rules_from_job(job_id=job_id)
         except Exception as err:
-            self.helper.log_error(f"Error while getting rules from job - {err}")
+            self.helper.connector_logger.error(
+                f"Error while getting rules from job - {err}", meta={"error": str(err)}
+            )
             return []
 
     def _create_author_identity(self, work_id: str) -> str:
@@ -479,9 +487,12 @@ class SocprimeConnector:
                 rules_count += 1
             except Exception as err:
                 case_id = rule.get("case", {}).get("id")
-                self.helper.log_error(f"Error while parsing rule {case_id} - {err}")
+                self.helper.connector_logger.error(
+                    f"Error while parsing rule {case_id} - {err}",
+                    meta={"error": str(err)},
+                )
 
-        self.helper.log_info(f"Sending {rules_count} rules")
+        self.helper.connector_logger.info(f"Sending {rules_count} rules")
 
         self._send_stix_objects(objects_list=bundle_objects, work_id=work_id)
 
@@ -503,16 +514,16 @@ class SocprimeConnector:
             self.helper.send_stix2_bundle(bundle, work_id=work_id)
 
     def run(self):
-        self.helper.log_info("Starting SOC Prime connector...")
+        self.helper.connector_logger.info("Starting SOC Prime connector...")
         while True:
-            self.helper.log_info("Running SOC Prime connector...")
+            self.helper.connector_logger.info("Running SOC Prime connector...")
             run_interval = self.interval_sec
 
             try:
                 timestamp = self._current_unix_timestamp()
                 current_state = self._load_state()
 
-                self.helper.log_info(f"Loaded state: {current_state}")
+                self.helper.connector_logger.info(f"Loaded state: {current_state}")
 
                 last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
                 if self._is_scheduled(last_run, timestamp):
@@ -529,7 +540,7 @@ class SocprimeConnector:
                     new_state = current_state.copy()
                     new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
 
-                    self.helper.log_info(f"Storing new state: {new_state}")
+                    self.helper.connector_logger.info(f"Storing new state: {new_state}")
                     self.helper.set_state(new_state)
                     message = (
                         "State stored, next run in: "
@@ -537,21 +548,21 @@ class SocprimeConnector:
                         + " seconds"
                     )
                     self.helper.api.work.to_processed(work_id, message)
-                    self.helper.log_info(message)
+                    self.helper.connector_logger.info(message)
                 else:
                     next_run = self.interval_sec - (timestamp - last_run)
                     run_interval = min(run_interval, next_run)
 
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"Connector will not run, next run in: {next_run} seconds"
                     )
 
             except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("Connector stop")
+                self.helper.connector_logger.info("Connector stop")
                 sys.exit(0)
 
             if self.helper.connect_run_and_terminate:
-                self.helper.log_info("Connector stop")
+                self.helper.connector_logger.info("Connector stop")
                 self.helper.force_ping()
                 sys.exit(0)
 
