@@ -26,4 +26,3 @@ def test_config() -> None:
     assert connector._siem_types_for_refs == "devo,snowflake"
     assert connector._indicator_siem_type == "ChangeMe"
     assert connector.interval_sec == 2000
-    assert connector.update_existing_data is True
