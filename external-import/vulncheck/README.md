@@ -1,5 +1,9 @@
 # OpenCTI VulnCheck Connector
 
+| Status            | Date       | Comment |
+| ----------------- |------------| ------- |
+| Filigran Verified | 2025-06-12 |    -    |
+
 The VulnCheck Connector for OpenCTI is a standalone Python process designed to
 integrate VulnCheck's extensive threat intelligence into the OpenCTI platform.
 VulnCheck aggregates data from a wide range of sources, providing actionable
