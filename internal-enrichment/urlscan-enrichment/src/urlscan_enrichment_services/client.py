@@ -144,15 +144,14 @@ class UrlscanClient:
                         )
                         if new_attempt.status_code == 200:
                             json_new_attempt = new_attempt.json()
-                            if (
-                                json_new_attempt["data"]["requests"][0]["response"][
-                                    "dataLength"
-                                ]
-                                == 0
-                            ):
-                                raise ValueError(
+                            data_length = json_new_attempt["data"]["requests"][0][
+                                "response"
+                            ]["dataLength"]
+
+                            if data_length == 0:
+                                self.helper.connector_logger.warning(
                                     "[API-RESULT] The request has been submitted to URLScan, "
-                                    "but the URL does not return any data."
+                                    "but the URL does not return any screenshot."
                                 )
                             return json_new_attempt
 
@@ -167,9 +166,11 @@ class UrlscanClient:
                 )
             else:
                 result = response.json()
-                if result["data"]["requests"][0]["response"]["dataLength"] == 0:
-                    raise ValueError(
-                        "[API-RESULT] The request has been submitted to URLScan, but the URL does not return any data."
+                data_length = result["data"]["requests"][0]["response"]["dataLength"]
+                if data_length == 0:
+                    self.helper.connector_logger.warning(
+                        "[API-RESULT] The request has been submitted to URLScan, "
+                        "but the URL does not return any screenshot."
                     )
                 return result
 

@@ -128,10 +128,11 @@ class UrlscanConnector:
             {"entity_type": stix_entity["type"], "entity_value": stix_entity["value"]},
         )
 
-        if is_submission is True:
+        if is_submission:
+            existing_screenshot_title = data["page"].get("title", None)
             prepared_file_png = (
                 self.utils.prepare_file_png(data)
-                if self.config.import_screenshot
+                if self.config.import_screenshot and existing_screenshot_title
                 else None
             )
             labels = self._generate_labels(data)
