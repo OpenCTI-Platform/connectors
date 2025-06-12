@@ -1,6 +1,5 @@
 """Unit tests for warning tools."""
 
-import warnings
 from typing import Literal
 
 import pytest
@@ -43,7 +42,7 @@ def test_field_warning_should_have_correct_string_representation():
 
 def test_validation_warning_should_aggregate_field_warnings():
     """Test that ValidationWarning aggregates FieldWarnings."""
-    # Given a ValidationWarning instance with multiple FieldWarnings
+    # Given multiple FieldWarnings
     warnings_list = [
         FieldWarning(
             type_="missing_recommended",
@@ -58,11 +57,10 @@ def test_validation_warning_should_aggregate_field_warnings():
             input_="extra_value",
         ),
     ]
+    # When creating a ValidationWarning with these warnings
     validation_warning = ValidationWarning(
         model=PermissiveBaseModel, warnings=warnings_list
     )
-    # When converting it to a string
-    warning_str = str(validation_warning)
     # Then ValidationWarning should aggregate the warnings
     assert validation_warning.warnings_count == len(validation_warning.warnings) == 2
 
@@ -131,7 +129,7 @@ def test_permissive_base_model_should_aggregate_warnings():
 
     # When creating an instance with multiple issues
     with pytest.warns(ValidationWarning) as validation_warning:
-        instance = MyModel(foo="hello", bar=None, baz="d", extra_field="extra_value")
+        _ = MyModel(foo="hello", bar=None, baz="d", extra_field="extra_value")
         assert len(validation_warning[0].message.warnings) == 3
 
 
