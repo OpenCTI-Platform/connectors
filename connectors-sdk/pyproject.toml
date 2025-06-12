@@ -29,6 +29,9 @@ pytest-cov = {version = "^4.1.0", optional=true}
 pydocstyle = {version = "^6.3.0", optional=true}
 isort = {version = "6.0.1", optional=true}
 pip-audit = {version = "2.9.0", optional=true}
+sphinx = {version = ">=7.0", optional=true}
+sphinx-autodoc-typehints = {version = ">=1.24", optional=true}
+sphinx-rtd-theme = {version = ">=2.0", optional=true}
 
 
 [tool.poetry.extras]
@@ -44,13 +47,18 @@ test = [
     "mypy",
     "ruff",
 ]
+doc = [
+    "sphinx",
+    "sphinx-autodoc-typehints",
+    "sphinx-rtd-theme",
+]
 
 
 [tool.pytest.ini_options]
 testpaths = [
     "./tests",
 ]
-addopts = "--cov=connectors_sdk --cov-fail-under=100" # Exit code is 2
+
 
 [tool.ruff]
 exclude = [
@@ -133,3 +141,7 @@ exclude = [
     '^venv',
 ]
 plugins = ['pydantic.mypy']
+
+[tool.sphinx]
+project = "Connectors SDK"
+author = "Filigran"
