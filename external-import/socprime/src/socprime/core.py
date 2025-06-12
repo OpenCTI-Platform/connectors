@@ -76,11 +76,6 @@ class SocprimeConnector:
         )
         self.tdm_api_client = ApiClient(api_key=tdm_api_key)
         self.mitre_attack = MitreAttack()
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
 
     @staticmethod
     def _read_configuration() -> Dict[str, str]:
@@ -498,9 +493,7 @@ class SocprimeConnector:
         ]
         if objects:
             bundle = Bundle(objects=objects).serialize()
-            self.helper.send_stix2_bundle(
-                bundle, update=self.update_existing_data, work_id=work_id
-            )
+            self.helper.send_stix2_bundle(bundle, work_id=work_id)
 
         objects = [
             x for x in objects_list if isinstance(x, self._stix_object_types_to_udate)

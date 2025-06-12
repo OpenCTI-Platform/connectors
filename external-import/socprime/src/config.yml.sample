@@ -8,7 +8,6 @@ connector:
   name: 'SOC Prime'
   scope: 'socprime'
   log_level: 'info'
-  update_existing_data: true
 
 socprime:
   api_key: 'ChangeMe'
