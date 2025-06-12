@@ -14,7 +14,7 @@ class MitreAttack:
     def _get_data_from_branch(self, domain, branch="master"):
         """get the ATT&CK STIX data from MITRE/CTI. Domain should be 'enterprise-attack', 'mobile-attack' or 'ics-attack'. Branch should typically be master."""
         stix_json = requests.get(
-            f"https://raw.githubusercontent.com/mitre/cti/{branch}/{domain}/{domain}.json"
+            url=f"https://raw.githubusercontent.com/mitre/cti/{branch}/{domain}/{domain}.json"
         ).json()
         return MemoryStore(stix_data=stix_json["objects"])
 
