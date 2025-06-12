@@ -3,6 +3,10 @@
 # type: ignore
 """Provide fixtures and entrypoint script for pytest."""
 
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 from connectors_sdk.models.octi import (
@@ -69,3 +73,27 @@ def fake_valid_tlp_markings() -> list[TLPMarking]:
     return [
         TLPMarking(level="amber+strict"),
     ]
+
+
+def pytest_sessionstart(session):
+    """Hook to run pre-test commands."""
+    repo_root = Path(__file__).resolve().parent.parent
+    # Find and switch to the repository root (where pyproject.toml is located)
+
+    try:
+        # Run Ruff check
+        subprocess.run(  # noqa: S603
+            [sys.executable, "-m", "ruff", "check", "."], cwd=repo_root, check=True
+        )
+        # Run Mypy check  # noqa: S603
+        subprocess.run(  # noqa: S603
+            [sys.executable, "-m", "mypy", "."], cwd=repo_root, check=True
+        )
+        # Run Pip audit
+        subprocess.run(  # noqa: S603
+            [sys.executable, "-m", "pip_audit", "--skip-editable"],
+            cwd=repo_root,
+            check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        pytest.exit(f"Pre-check failed: {e}", returncode=1)

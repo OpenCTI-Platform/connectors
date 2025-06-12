@@ -18,7 +18,6 @@ pydantic = ">=2.11, <3"
 pycti = "6.6.14"
 stix2 = "3.0.1"
 
-
 # Optional dependencies
 # octi-connectors = {path = "../.", extras = ["dev"], optional=true}
 # This could be a project used to defined the common linter, prettifier and other rules in the future
@@ -29,19 +28,21 @@ pytest = {version = "8.3.5", optional=true}
 pytest-cov = {version = "^4.1.0", optional=true}
 pydocstyle = {version = "^6.3.0", optional=true}
 isort = {version = "6.0.1", optional=true}
+pip-audit = {version = "2.9.0", optional=true}
 
 
 [tool.poetry.extras]
 dev = [
     # "octi-connectors", 
-    "mypy",
-    "ruff",
     "black",
     "isort",
 ]
 test = [
     "pytest",
+    "pip-audit",
     "pytest-cov",
+    "mypy",
+    "ruff",
 ]
 
 
@@ -49,7 +50,7 @@ test = [
 testpaths = [
     "./tests",
 ]
-
+addopts = "--cov=connectors_sdk --cov-fail-under=100" # Exit code is 2
 
 [tool.ruff]
 exclude = [
@@ -77,7 +78,7 @@ exclude = [
     "dist",
     "node_modules",
     "site-packages",
-    "tests",
+    # "tests",
     "venv",
 ]
 
@@ -94,7 +95,7 @@ target-version = "py312"
 # Never enforce `D407` (Missing dashed underline after section) 
 # Never enforce `D408` (Section underline should be in the line following the section’s name) 
 # Never enforce `D409` (Section underline should match the length of its name)
-ignore = ["I001", "D203", "E501", "F821", "D205", "D213" , "D211", "G004", "TRY003", "D407", "D408", "D409"]
+ignore = ["S101", "I001", "D203", "E501", "F821", "D205", "D213" , "D211", "G004", "TRY003", "D407", "D408", "D409"]
 select = ["E", "F", "W", "D", "G", "T", "B", "C", "N", "I", "S"]
 
 [tool.ruff.lint.pydocstyle]
