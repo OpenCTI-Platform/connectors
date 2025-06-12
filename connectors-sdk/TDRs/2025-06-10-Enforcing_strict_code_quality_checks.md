@@ -2,7 +2,7 @@
 
 ## Overview
 
-We are introducing strict code quality, style, and security controls for the `connectors-sdk` package. This will enforce rigorous linter, typing, and vulnerability checks rules as defined in the project's description. All these checks will run at the start of each `pytest` session, making it impossible to skip quality checks during continuous integration or local development.
+We are introducing strict code quality, style, and security controls for the `connectors-sdk` package. This will enforce rigorous linter, typing, and vulnerability checks rules as defined in the project's description. All these checks will run at the end of each `pytest` session, making it impossible to skip quality checks during continuous integration or local development.
 
 ---
 
@@ -33,7 +33,7 @@ The `connectors-sdk` serves as a foundational library for OpenCTI connectors. En
     - **Linter (Ruff):** Enforces style and static analysis rules.
     - **Type Checker (Mypy):** Ensures type correctness with strict settings.
     - **Security Audit (pip-audit):** Scans dependencies for known vulnerabilities.
-- **Pytest Session Start Enforcement:** At the start of every `pytest` run (locally or in CI), linter, type checks, and CVE audits are executed before any tests run. The test session fails if any check fails.
+- **Pytest Session End Enforcement:** At the end of every `pytest` run (locally or in CI), linter, type checks, and CVE audits are executed after any tests run. The test session fails if any check fails.
 
 ---
 

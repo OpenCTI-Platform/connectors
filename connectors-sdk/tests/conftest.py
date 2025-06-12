@@ -2,7 +2,7 @@
 # isort: skip_file
 # type: ignore
 """Provide fixtures and entrypoint script for pytest."""
-
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -75,11 +75,13 @@ def fake_valid_tlp_markings() -> list[TLPMarking]:
     ]
 
 
-def pytest_sessionstart(session):
-    """Hook to run pre-test commands."""
+def pytest_sessionfinish(session, exitstatus):
+    """Hook to run post-test commands."""
+    # Note : we implement pytest_sessionfinish rather tha pytest_sessionstart
+    # because it was leading to error with coverage when running tests with pytest-cov.
+    _ = session, exitstatus  # Unused parameters, but required by pytest
+    original_cwd = Path.cwd()
     repo_root = Path(__file__).resolve().parent.parent
-    # Find and switch to the repository root (where pyproject.toml is located)
-
     try:
         # Run Ruff check
         subprocess.run(  # noqa: S603
@@ -96,4 +98,7 @@ def pytest_sessionstart(session):
             check=True,
         )
     except subprocess.CalledProcessError as e:
-        pytest.exit(f"Pre-check failed: {e}", returncode=1)
+        pytest.exit(f"Post-check failed: {e}", returncode=1)
+    finally:
+        # Restore the original CWD
+        os.chdir(original_cwd)

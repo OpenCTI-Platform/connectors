@@ -58,9 +58,18 @@ doc = [
 testpaths = [
     "./tests",
 ]
+pythonpath = [
+    "./connectors_sdk",
+]
 addopts = [
     "--cov=connectors_sdk",
     "--cov-fail-under=100",
+]
+
+[tool.coverage.path]
+source = [
+    "./connectors_sdk",
+    "*/site-packages/connectors_sdk", # CI | ../run_tests.sh specific
 ]
 
 [tool.ruff]
