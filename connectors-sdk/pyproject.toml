@@ -58,7 +58,10 @@ doc = [
 testpaths = [
     "./tests",
 ]
-
+addopts = [
+    "--cov=connectors_sdk",
+    "--cov-fail-under=100",
+]
 
 [tool.ruff]
 exclude = [
@@ -86,7 +89,7 @@ exclude = [
     "dist",
     "node_modules",
     "site-packages",
-    # "tests",
+    "tests",
     "venv",
 ]
 
