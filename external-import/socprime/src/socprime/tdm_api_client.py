@@ -48,7 +48,12 @@ class ApiClient:
                 headers = {}
             headers["client_secret_id"] = self._api_key
             res = requests.request(
-                method, url, params=params, headers=headers, data=body, timeout=60
+                method=method,
+                url=url,
+                params=params,
+                headers=headers,
+                data=body,
+                timeout=60,
             )
             if not res.ok:
                 raise TdmApiResponseError(
