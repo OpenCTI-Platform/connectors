@@ -94,6 +94,12 @@ class S3Connector:
                     m=s3_marking
                 )
             )
+        self.s3_delete_after_import = get_config_variable(
+            "S3_DELETE_AFTER_IMPORT",
+            ["s3", "delete_after_import"],
+            config,
+            default=True,
+        )
         self.s3_interval = get_config_variable(
             "S3_INTERVAL", ["s3", "interval"], config, isNumber=True, default=5
         )
@@ -359,10 +365,11 @@ class S3Connector:
                 fixed_bundle = self.fix_bundle(content)
                 if fixed_bundle:
                     self.helper.send_stix2_bundle(bundle=fixed_bundle, work_id=work_id)
-                    self.helper.log_info("Deleting file " + o.get("Key"))
-                    self.s3_client.delete_object(
-                        Bucket=self.s3_bucket_name, Key=o.get("Key")
-                    )
+                    if self.s3_delete_after_import:
+                        self.helper.log_info("Deleting file " + o.get("Key"))
+                        self.s3_client.delete_object(
+                            Bucket=self.s3_bucket_name, Key=o.get("Key")
+                        )
                 else:
                     self.helper.log_info("No content to ingest")
 
