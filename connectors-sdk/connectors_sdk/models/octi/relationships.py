@@ -157,7 +157,7 @@ class IndicatorBasedOnObservable(Relationship):
     """Represent a relationship indicating that an indicator is based on an observable.
 
     Notes:
-        - This relationship creation can be delegated to the OpenCTI platform for simple cases.
+        This relationship creation can be delegated to the OpenCTI platform for simple cases.
         To do so you can create the indicator and set its `create_observables` attribute to True
         or create the Observable and set its create_indcator atribute to True.
 
