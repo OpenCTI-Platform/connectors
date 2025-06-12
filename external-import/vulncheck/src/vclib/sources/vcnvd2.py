@@ -112,6 +112,7 @@ def _extract_stix_from_vcnvd2(
             software = _create_software(
                 cpe=cpe, converter_to_stix=converter_to_stix, logger=logger
             )
+            result.append(software)
             if vuln is not None:
                 result.extend(
                     _create_rel_has(
