@@ -4,9 +4,9 @@ opencti:
 
 connector:
   id: "ChangeMe"
-  scope: "vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software"
+ # scope: "vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software"
 
 connector_vulncheck:
   api_key: "ChangeMe"
-  data_sources: "botnets,epss,exploits,initial-access,ipintel,nist-nvd2,snort,suricata,ransomware,threat-actors,vulncheck-kev,vulncheck-nvd2"
+ # data_sources: "botnets,epss,exploits,initial-access,ipintel,nist-nvd2,snort,suricata,ransomware,threat-actors,vulncheck-kev,vulncheck-nvd2"
 
