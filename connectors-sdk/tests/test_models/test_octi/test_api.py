@@ -4,11 +4,11 @@
 import inspect
 
 import connectors_sdk.models.octi as octi
-from connectors_sdk.models.octi._common import BaseEntity
 
 FEATURE_NAMES = [
     "AnyRelatedToAny",
     "AssociatedFile",
+    "BaseEntity",
     "ExternalReference",
     "Indicator",
     "IndicatorBasedOnObservable",
@@ -25,9 +25,9 @@ FEATURE_NAMES = [
 
 
 def test_no_pulic_class_are_abstract():
-    """Test that no public class in __all__ are abstract."""
+    """Test that no public class in __all__ are abstract except for BaseEntity for typing purpose."""
     # Given the public API of the octi module
-    public_features = octi.__all__
+    public_features = [feat for feat in octi.__all__ if feat != "BaseEntity"]
     # When checking each class in the public API
     for feature_name in public_features:
         cls = getattr(octi, feature_name)
@@ -58,7 +58,7 @@ def test_public_models_are_registered_to_be_rebuild():
         feat = getattr(octi, feature_name)
         if not inspect.isclass(feat):
             continue
-        if not issubclass(feat, BaseEntity):
+        if not issubclass(feat, octi.BaseEntity):
             continue
         # Then it should be registered to be rebuilt
         assert (

@@ -5,6 +5,7 @@ from connectors_sdk.models.octi._common import (
     MODEL_REGISTRY,
     AssociatedFile,
     Author,
+    BaseEntity,
     ExternalReference,
     TLPMarking,
 )
@@ -25,6 +26,7 @@ from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
 __all__ = [
     "AnyRelatedToAny",
     "AssociatedFile",
+    "BaseEntity",  # for typing purpose.
     "ExternalReference",
     "Indicator",
     "IndicatorBasedOnObservable",
