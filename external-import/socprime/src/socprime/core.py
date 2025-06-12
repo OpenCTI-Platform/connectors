@@ -17,7 +17,6 @@ from socprime.mitre_attack import MitreAttack
 from socprime.tdm_api_client import ApiClient
 from stix2 import (
     AttackPattern,
-    Bundle,
     Identity,
     Indicator,
     IntrusionSet,
@@ -462,7 +461,7 @@ class SocprimeConnector:
             ],
         )
 
-        serialized_bundle = Bundle(objects=[author_identity]).serialize()
+        serialized_bundle = self.helper.stix2_create_bundle(items=[author_identity])
         self.helper.send_stix2_bundle(serialized_bundle, work_id=work_id)
         return author_identity.get("id")
 
@@ -503,14 +502,14 @@ class SocprimeConnector:
             if not isinstance(x, self._stix_object_types_to_udate)
         ]
         if objects:
-            bundle = Bundle(objects=objects).serialize()
+            bundle = self.helper.stix2_create_bundle(items=objects)
             self.helper.send_stix2_bundle(bundle, work_id=work_id)
 
         objects = [
             x for x in objects_list if isinstance(x, self._stix_object_types_to_udate)
         ]
         if objects:
-            bundle = Bundle(objects=objects).serialize()
+            bundle = self.helper.stix2_create_bundle(items=objects)
             self.helper.send_stix2_bundle(bundle, work_id=work_id)
 
     def run(self):
