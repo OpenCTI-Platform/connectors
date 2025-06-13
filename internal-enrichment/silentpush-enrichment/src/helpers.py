@@ -2,6 +2,7 @@ import copy
 
 import requests
 from pycti import OpenCTIConnectorHelper
+
 from settings import API_KEY, API_URI, API_VERIFY_CERT, config
 from silentpush.domain_enricher import DomainEnricher
 from silentpush.indicator_enricher import IndicatorEnricher
