@@ -1,5 +1,4 @@
 import datetime
-import os
 import sys
 import time
 from copy import deepcopy
@@ -9,10 +8,7 @@ import pycti
 import yaml
 from dateutil.parser import parse as parse_date_str
 from pycti import StixCoreRelationship
-from pycti.connector.opencti_connector_helper import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from socprime.config import ConnectorSettings
 from socprime.mitre_attack import MitreAttack
 from socprime.tdm_api_client import ApiClient
@@ -45,52 +41,10 @@ class SocprimeConnector:
     _stix_object_types_to_udate = (Indicator, Relationship)
 
     def __init__(self):
-        config = ConnectorSettings().model_dump_pycti()
-        self.helper = OpenCTIConnectorHelper(config)
-        tdm_api_key = get_config_variable(
-            "SOCPRIME_API_KEY", ["socprime", "api_key"], config
-        )
-        if not tdm_api_key:
-            raise Exception("Configuration error. SOCPRIME_API_KEY is required.")
-        self._content_list_names = get_config_variable(
-            "SOCPRIME_CONTENT_LIST_NAME", ["socprime", "content_list_name"], config
-        )
-        self._job_ids = get_config_variable(
-            "SOCPRIME_JOB_IDS", ["socprime", "job_ids"], config
-        )
-        self._siem_types_for_refs = get_config_variable(
-            "SOCPRIME_SIEM_TYPE", ["socprime", "siem_type"], config
-        )
-        self._indicator_siem_type = get_config_variable(
-            "SOCPRIME_INDICATOR_SIEM_TYPE",
-            ["socprime", "indicator_siem_type"],
-            config,
-            default="sigma",
-        )
-        self.interval_sec = get_config_variable(
-            env_var="SOCPRIME_INTERVAL_SEC",
-            yaml_path=["socprime", "interval_sec"],
-            config=config,
-            isNumber=True,
-            default=self._DEFAULT_CONNECTOR_RUN_INTERVAL_SEC,
-        )
-        self.tdm_api_client = ApiClient(api_key=tdm_api_key)
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
+        self.tdm_api_client = ApiClient(api_key=self.config.socprime.api_key)
         self.mitre_attack = MitreAttack()
-
-    @staticmethod
-    def _read_configuration() -> Dict[str, str]:
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/../config.yml"
-        if not os.path.isfile(config_file_path):
-            return {}
-        return yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-
-    def get_siem_types_for_refs(self) -> List[str]:
-        if not self._siem_types_for_refs:
-            return []
-        elif isinstance(self._siem_types_for_refs, list):
-            return self._siem_types_for_refs
-        else:
-            return [x.strip() for x in str(self._siem_types_for_refs).split(",")]
 
     @staticmethod
     def _current_unix_timestamp() -> int:
@@ -115,7 +69,7 @@ class SocprimeConnector:
             self.helper.connector_logger.info("Connector first run")
             return True
         time_diff = current_time - last_run
-        return time_diff >= self.interval_sec
+        return time_diff >= self.config.socprime.interval_sec
 
     @classmethod
     def _sleep(cls, delay_sec: Optional[int] = None) -> None:
@@ -373,7 +327,7 @@ class SocprimeConnector:
         if rule_ids:
             try:
                 query = "case.id: (" + " OR ".join(rule_ids) + ")"
-                for siem_type in self.get_siem_types_for_refs():
+                for siem_type in self.config.socprime.siem_type:
                     rules = self.tdm_api_client.search_rules(
                         siem_type=siem_type, client_query_string=query
                     )
@@ -390,27 +344,14 @@ class SocprimeConnector:
         return res
 
     def _get_rules_from_content_lists_and_jobs(self) -> list[str]:
-        list_names = self._get_content_list_names()
-        job_ids = self._get_job_ids()
-        if not list_names and not job_ids:
-            raise Exception(
-                "Configuration error. At least one job id or one content list name must be provided."
-            )
         res = []
-        for list_name in list_names:
+        for list_name in self.config.socprime.content_list_name:
             res.extend(
                 self._get_rules_from_one_content_list(content_list_name=list_name)
             )
-        for job_id in job_ids:
+        for job_id in self.config.socprime.job_ids:
             res.extend(self._get_rules_from_one_job(job_id=job_id))
         return res
-
-    def _get_content_list_names(self) -> list[str]:
-        if not self._content_list_names:
-            return []
-        names = str(self._content_list_names).split(",")
-        names = [x.strip() for x in names if x.strip()]
-        return names
 
     def _get_rules_from_one_content_list(self, content_list_name: str) -> List[dict]:
         self.helper.connector_logger.info(
@@ -419,7 +360,7 @@ class SocprimeConnector:
         try:
             return self.tdm_api_client.get_rules_from_content_list(
                 content_list_name=content_list_name,
-                siem_type=self._indicator_siem_type,
+                siem_type=self.config.socprime.indicator_siem_type,
             )
         except Exception as err:
             self.helper.connector_logger.error(
@@ -427,13 +368,6 @@ class SocprimeConnector:
                 meta={"error": str(err)},
             )
             return []
-
-    def _get_job_ids(self) -> list[str]:
-        if not self._job_ids:
-            return []
-        ids = str(self._job_ids).split(",")
-        ids = [x.strip() for x in ids if x.strip()]
-        return ids
 
     def _get_rules_from_one_job(self, job_id: str) -> List[dict]:
         self.helper.connector_logger.info(f"Getting rules from job {job_id}")
@@ -517,7 +451,7 @@ class SocprimeConnector:
         self.helper.connector_logger.info("Starting SOC Prime connector...")
         while True:
             self.helper.connector_logger.info("Running SOC Prime connector...")
-            run_interval = self.interval_sec
+            run_interval = self.config.socprime.interval_sec
 
             try:
                 timestamp = self._current_unix_timestamp()
@@ -544,13 +478,15 @@ class SocprimeConnector:
                     self.helper.set_state(new_state)
                     message = (
                         "State stored, next run in: "
-                        + str(self.interval_sec)
+                        + str(self.config.socprime.interval_sec)
                         + " seconds"
                     )
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.connector_logger.info(message)
                 else:
-                    next_run = self.interval_sec - (timestamp - last_run)
+                    next_run = self.config.socprime.interval_sec - (
+                        timestamp - last_run
+                    )
                     run_interval = min(run_interval, next_run)
 
                     self.helper.connector_logger.info(
