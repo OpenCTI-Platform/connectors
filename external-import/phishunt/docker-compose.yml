@@ -17,7 +17,6 @@ services:
       # Connector's custom execution parameters
       - PHISHUNT_API_KEY= # Optional, if not provided, consume only https://phishunt.io/feed.txt
       - PHISHUNT_CREATE_INDICATORS=true
-      - PHISHUNT_INTERVAL=3 # In days, must be strictly greater than 1
       - PHISHUNT_DEFAULT_X_OPENCTI_SCORE=40 # Optional: default is 40
       - PHISHUNT_X_OPENCTI_SCORE_DOMAIN=40 # Optional: Default PHISHUNT_DEFAULT_X_OPENCTI_SCORE
       - PHISHUNT_X_OPENCTI_SCORE_IP=40 # Optional: Default PHISHUNT_DEFAULT_X_OPENCTI_SCORE
