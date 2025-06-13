@@ -155,7 +155,6 @@ class IPEnricher(Enricher):
             relationship_type="belongs-to",
             target_ref=asn.id,
             description="ASN",
-            confidence=100,
             source_ref=self._ip.id,
             created_by_ref=self._author["id"],
         )
@@ -188,7 +187,6 @@ class IPEnricher(Enricher):
                 relationship_type="related-to",
                 target_ref=location.id,
                 description=location.get("country_name"),
-                confidence=100,
                 source_ref=self._ip.id,
                 allow_custom=True,
                 created_by_ref=self._author["id"],
@@ -221,7 +219,6 @@ class IPEnricher(Enricher):
             relationship_type="related-to",
             target_ref=hostname.id,
             description="PTR",
-            confidence=100,
             source_ref=self._ip.id,
             allow_custom=True,
             created_by_ref=self._author["id"],

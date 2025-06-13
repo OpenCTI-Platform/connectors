@@ -31,7 +31,6 @@ class URLIPv6Enricher(IPv6Enricher):
             relationship_type="related-to",
             target_ref=self._stix_entity.get("id"),
             description="URL IPv6",
-            confidence=100,
             source_ref=self._ip.id,
             allow_custom=True,
             created_by_ref=self._author["id"],

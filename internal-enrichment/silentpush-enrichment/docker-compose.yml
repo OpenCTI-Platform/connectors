@@ -22,9 +22,6 @@ services:
       # - HTTP_PROXY=CHANGEME
       # - HTTPS_PROXY=CHANGEME
       # - NO_PROXY=CHANGEME
-    depends_on:
-      opencti:
-        condition: service_healthy
     restart: always
 #    network_mode: "host"
 #    networks:

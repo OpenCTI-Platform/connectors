@@ -107,7 +107,6 @@ class Enricher(ABC):
                 INDUSTRY_SECTOR_TECHNOLOGY,
             ],
             contact_information="help@silentpush.com",
-            confidence=100,
             external_references=external_references,
         )
         self._stix_objects.append(self._author)
@@ -153,7 +152,6 @@ class Enricher(ABC):
                 relationship_type="related-to",
                 target_ref=certificate.id,
                 description="Certificate",
-                confidence=100,
                 source_ref=source.id,
                 created_by_ref=self._author["id"],
             )
@@ -189,7 +187,6 @@ class Enricher(ABC):
                         relationship_type="related-to",
                         target_ref=favicon.id,
                         description="Favicon",
-                        confidence=100,
                         source_ref=source.id,
                         allow_custom=True,
                         created_by_ref=self._author["id"],
