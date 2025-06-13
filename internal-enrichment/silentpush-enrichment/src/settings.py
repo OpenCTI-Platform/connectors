@@ -24,7 +24,9 @@ API_VERIFY_CERT = get_config_variable(
     True,
 )
 API_KEY = get_config_variable(
-    "API_KEY", ["silentpush", "CONNECTOR_SILENTPUSH_API_KEY"], config
+    "SILENTPUSH_API_KEY",
+     ["silentpush", "api_key"],
+     config,
 )
 SILENTPUSH_SIGNATURE = "Silent Push"
 ip_diversity_uri = (
