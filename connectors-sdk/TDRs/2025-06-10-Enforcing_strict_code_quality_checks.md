@@ -28,11 +28,6 @@ The `connectors-sdk` serves as a foundational library for OpenCTI connectors. En
 - **Security Audits with pip-audit:**  
   - Ensures no dependency is vulnerable to known CVEs.
   - This could later be complemented with `bandit` for connectors-sdk code checks.
-- **Pre-Test Checks:**  
-  - Before running any tests, the following checks are enforced:
-    - **Linter (Ruff):** Enforces style and static analysis rules.
-    - **Type Checker (Mypy):** Ensures type correctness with strict settings.
-    - **Security Audit (pip-audit):** Scans dependencies for known vulnerabilities.
 - **Pytest Session End Enforcement:** At the end of every `pytest` run (locally or in CI), linter, type checks, and CVE audits are executed after any tests run. The test session fails if any check fails.
 
 ---
