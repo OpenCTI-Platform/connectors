@@ -10,8 +10,8 @@ config = (
     else {}
 )
 API_URI = get_config_variable(
-    "API_URI",
-    ["silentpush", "CONNECTOR_SILENTPUSH_API_BASE_URL"],
+    "SILENTPUSH_API_BASE_URL",
+     ["silentpush", "api_base_url"],
     config,
     False,
     "https://app.silentpush.com/api/v1/",
