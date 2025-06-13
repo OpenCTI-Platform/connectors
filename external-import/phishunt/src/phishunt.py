@@ -101,7 +101,6 @@ class Phishunt:
     def _process_public_feed(self, work_id):
         url = "https://phishunt.io/feed.txt"
         try:
-            count = 0
             bundle_objects = []
 
             with urllib.request.urlopen(
