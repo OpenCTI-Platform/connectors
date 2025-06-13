@@ -401,6 +401,7 @@ class SocprimeConnector:
         return author_identity.get("id")
 
     def send_rules_from_tdm(self, work_id: str) -> None:
+        self.mitre_attack.initialize()
         author_id = self._create_author_identity(work_id)
 
         bundle_objects = []
