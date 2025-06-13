@@ -13,10 +13,10 @@ services:
       - CONNECTOR_AUTO=false
 
       # Connector's custom execution parameters
-      - CONNECTOR_SILENTPUSH_API_BASE_URL=https://app.silentpush.com/api/v1/merge-api/
-      - CONNECTOR_SILENTPUSH_API_KEY=${CONNECTOR_SILENTPUSH_API_KEY}
-      - CONNECTOR_SILENTPUSH_VERIFY_CERT=true
-      - CONNECTOR_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+      - SILENTPUSH_API_BASE_URL=https://app.silentpush.com/api/v1/merge-api/
+      - SILENTPUSH_API_KEY=${CONNECTOR_SILENTPUSH_API_KEY}
+      - SILENTPUSH_VERIFY_CERT=true
+      - SILENTPUSH_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
 
       # Add proxy parameters below if needed
       # - HTTP_PROXY=CHANGEME
