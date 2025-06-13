@@ -1,7 +1,5 @@
 # Phishunt Connector
 
-This connector retrieves urls of active websites that are suspicious of being phishing from the feed Phishunt
-
 Table of Contents
 
 - [OpenCTI External Ingestion Connector Template](#opencti-external-ingestion-connector-template)
@@ -18,7 +16,15 @@ Table of Contents
     - [Usage](#usage)
     - [Debugging](#debugging)
 
+## Status Filigran
+
+| Status            | Date       | Comment |
+|-------------------|------------|---------|
+| Filigran Verified | 2025-06-13 | -       |
+
 ## Introduction
+
+This connector retrieves urls of active websites that are suspicious of being phishing from the feed Phishunt
 
 ## Installation
 
