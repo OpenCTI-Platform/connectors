@@ -1,7 +1,6 @@
-import datetime
+from datetime import datetime
 
 import requests
-
 from pycti import OpenCTIConnectorHelper
 
 
@@ -315,55 +314,39 @@ class RecordedFutureApiClient:
         except:
             return False, str("error.png"), str("error.png")
 
-    def get_alert_by_rule_and_by_trigger(
-        self, triggered_since: datetime.datetime, after=None
-    ):
-        alert_filtered = 0
-        after_log = ""
-        if after is not None:
-            after_log = " generated after " + str(after)
+    def get_alert_by_rule_and_by_trigger(self, triggered_since: datetime):
+        """
+        Get alerts by rule and by trigger date.
+        :param triggered_since: The date from which to get alerts.
+
+        See https://docs.recordedfuture.com/reference/alert-search
+        """
+
         triggered_since_iso = triggered_since.strftime("%Y-%m-%d")
         for priorited_rule in self.priorited_rules:
             try:
-                from_api = 0
-                self.alert_count = 1
-                while int(from_api) < int(self.alert_count):
+                offset = 0
+                self.alert_count = 0
+                while self.alert_count == 0 or offset < self.alert_count:
                     response = requests.get(
-                        str(self.base_url + "v3/alerts"),
+                        self.base_url + "v3/alerts",
                         headers={
                             "X-RFToken": self.x_rf_token,
                         },
                         params={
-                            "alertRule": str(priorited_rule.rule_id),
-                            "limit": 100,
+                            "alertRule": priorited_rule.rule_id,
                             "triggered": f"[{triggered_since_iso},]",
-                            "from": str(from_api),
+                            "from": offset,
+                            "limit": 100,
                         },
                     )
 
                     # If there is an error during the request, the method raise the error
                     response.raise_for_status()
-
-                    # If there is an unexpected content type, log the error
-                    rf_alert_rule_content_type = response.headers.get("Content-Type")
-
-                    if rf_alert_rule_content_type != "application/json":
-                        self.helper.connector_logger.error(
-                            "Unexpected Content-Type from ApiRecordedFuture: ",
-                            {"content-type": rf_alert_rule_content_type},
-                        )
+                    # Check if the response has correct content type
+                    self._header_response_control(response)
 
                     data = response.json()
-
-                    # If the response doesn't contain data, log the error
-                    if not data.get("data"):
-                        self.helper.connector_logger.error(
-                            "No data returned from Recorded Future API",
-                            {
-                                "rule_id": priorited_rule.rule_id,
-                                "rule_name": priorited_rule.rule_name,
-                            },
-                        )
 
                     # If the response is not a dictionary, log the error
                     if not isinstance(data, dict):
@@ -371,49 +354,37 @@ class RecordedFutureApiClient:
                             "Response data is not a dictionary"
                         )
 
+                    # If the response doesn't contain data, log the result
+                    if not data.get("data"):
+                        self.helper.connector_logger.info(
+                            "No data returned from Recorded Future API",
+                            {
+                                "rule_id": priorited_rule.rule_id,
+                                "rule_name": priorited_rule.rule_name,
+                            },
+                        )
+                        break
+
                     # If the response contains data and contains the counts field, extract priority rules
                     if data.get("counts"):
                         if data["counts"]["total"] == 0:
-                            self.alert_count = 0
-                            from_api = 1
+                            break
                         else:
                             self.alert_count = data["counts"]["total"]
-                        from_api = from_api + data["counts"]["returned"]
+                        offset += data["counts"]["returned"]
+
                         for alert in data["data"]:
-                            if after is not None:
-                                triggered = alert["log"]["triggered"]
-                                triggered = datetime.datetime.strptime(
-                                    triggered, "%Y-%m-%dT%H:%M:%S.%fZ"
+                            self.alerts.append(
+                                Alert(
+                                    alert["id"],
+                                    alert["url"]["portal"],
+                                    alert["log"]["triggered"],
+                                    alert["title"],
+                                    alert["ai_insights"]["comment"],
+                                    priorited_rule,
+                                    alert["hits"],
                                 )
-                                after_date = datetime.datetime.strptime(
-                                    after, "%Y-%m-%dT%H:%M:%S"
-                                )
-                                if triggered >= after_date:
-                                    self.alerts.append(
-                                        Alert(
-                                            alert["id"],
-                                            alert["url"]["portal"],
-                                            alert["log"]["triggered"],
-                                            alert["title"],
-                                            alert["ai_insights"]["comment"],
-                                            priorited_rule,
-                                            alert["hits"],
-                                        )
-                                    )
-                                else:
-                                    alert_filtered = alert_filtered + 1
-                            else:
-                                self.alerts.append(
-                                    Alert(
-                                        alert["id"],
-                                        alert["url"]["portal"],
-                                        alert["log"]["triggered"],
-                                        alert["title"],
-                                        alert["ai_insights"]["comment"],
-                                        priorited_rule,
-                                        alert["hits"],
-                                    )
-                                )
+                            )
                     else:
                         # If data does not contain mandatory counts field, log the error
                         self.helper.connector_logger.error(
@@ -424,19 +395,6 @@ class RecordedFutureApiClient:
                     "Exception occured when trying to reach RecordedFuture's API : ",
                     {"error": str(e)},
                 )
-            except Exception as err:
-                self.helper.connector_logger.error(err)
-
-        self.helper.connector_logger.info(
-            "Queried alerts : "
-            + triggered_since_iso
-            + after_log
-            + " and "
-            + str(alert_filtered)
-            + " / "
-            + str(int(alert_filtered + len(self.alerts)))
-            + " alerts have been filtered."
-        )
 
     def compare_rf_rules_and_vocabularies(self, found_vocabulary):
         self.unfound_rf_rules_in_vocabularies = []
