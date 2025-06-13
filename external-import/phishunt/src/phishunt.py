@@ -427,9 +427,9 @@ class Phishunt:
                 current_state = {"last_run": now.isoformat(timespec="seconds")}
 
             if self.last_run_datetime_with_ingested_data:
-                current_state[
-                    "last_run_datetime_with_ingested_data"
-                ] = self.last_run_datetime_with_ingested_data
+                current_state["last_run_datetime_with_ingested_data"] = (
+                    self.last_run_datetime_with_ingested_data
+                )
 
             self.helper.set_state(current_state)
             message = "Connector successfully run, storing last_run as" + now.isoformat(
