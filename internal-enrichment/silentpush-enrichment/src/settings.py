@@ -17,8 +17,8 @@ API_URI = get_config_variable(
     "https://app.silentpush.com/api/v1/",
 )
 API_VERIFY_CERT = get_config_variable(
-    "API_VERIFY_CERT",
-    ["silentpush", "CONNECTOR_SILENTPUSH_VERIFY_CERT"],
+    "SILENTPUSH_VERIFY_CERT",
+     ["silentpush", "verify_cert"],
     config,
     False,
     True,
