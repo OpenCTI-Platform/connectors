@@ -89,9 +89,7 @@ class Phishunt:
         self.last_run_datetime_with_ingested_data = None
 
         self.stix_created_by = stix2.Identity(
-            id=Identity.generate_id(
-                name="Phishunt", identity_class="organization"
-            ),
+            id=Identity.generate_id(name="Phishunt", identity_class="organization"),
             name="Phishunt",
             identity_class="organization",
             description="Phishunt is providing URLs of potential malicious payload.",
@@ -109,7 +107,6 @@ class Phishunt:
             with urllib.request.urlopen(
                 url=url, context=ssl.create_default_context()
             ) as fp:
-
 
                 for count, line in enumerate(fp, 1):
                     count += 1
@@ -165,7 +162,9 @@ class Phishunt:
                         bundle_objects.append(stix_relationship)
 
             if bundle_objects:
-                bundle = self.helper.stix2_create_bundle([self.stix_created_by] + bundle_objects)
+                bundle = self.helper.stix2_create_bundle(
+                    [self.stix_created_by] + bundle_objects
+                )
                 self.helper.send_stix2_bundle(
                     bundle,
                     work_id=work_id,
@@ -177,7 +176,6 @@ class Phishunt:
             self.helper.connector_logger.error(
                 "Error retrieving url", {"url": url, "error": urllib_error}
             )
-
 
     def _process_private_feed(self, work_id):
         try:
@@ -329,7 +327,9 @@ class Phishunt:
                         bundle_objects.append(stix_relationship_ip_location)
 
             if bundle_objects:
-                bundle = self.helper.stix2_create_bundle([self.stix_created_by] + bundle_objects)
+                bundle = self.helper.stix2_create_bundle(
+                    [self.stix_created_by] + bundle_objects
+                )
                 self.helper.send_stix2_bundle(
                     bundle,
                     work_id=work_id,
@@ -417,9 +417,7 @@ class Phishunt:
                 "[CONNECTOR] Getting current state and update it with last run of the connector.",
                 {
                     "current_state": self.last_run,
-                    "new_last_run_start_datetime": now.isoformat(
-                        timespec="seconds"
-                    ),
+                    "new_last_run_start_datetime": now.isoformat(timespec="seconds"),
                 },
             )
 
@@ -429,9 +427,9 @@ class Phishunt:
                 current_state = {"last_run": now.isoformat(timespec="seconds")}
 
             if self.last_run_datetime_with_ingested_data:
-                current_state["last_run_datetime_with_ingested_data"] = (
-                    self.last_run_datetime_with_ingested_data
-                )
+                current_state[
+                    "last_run_datetime_with_ingested_data"
+                ] = self.last_run_datetime_with_ingested_data
 
             self.helper.set_state(current_state)
             message = "Connector successfully run, storing last_run as" + now.isoformat(
