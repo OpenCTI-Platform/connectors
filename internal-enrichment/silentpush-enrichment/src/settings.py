@@ -11,22 +11,22 @@ config = (
 )
 API_URI = get_config_variable(
     "SILENTPUSH_API_BASE_URL",
-     ["silentpush", "api_base_url"],
+    ["silentpush", "api_base_url"],
     config,
     False,
     "https://app.silentpush.com/api/v1/",
 )
 API_VERIFY_CERT = get_config_variable(
     "SILENTPUSH_VERIFY_CERT",
-     ["silentpush", "verify_cert"],
+    ["silentpush", "verify_cert"],
     config,
     False,
     True,
 )
 API_KEY = get_config_variable(
     "SILENTPUSH_API_KEY",
-     ["silentpush", "api_key"],
-     config,
+    ["silentpush", "api_key"],
+    config,
 )
 SILENTPUSH_SIGNATURE = "Silent Push"
 ip_diversity_uri = (
