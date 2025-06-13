@@ -1,5 +1,7 @@
 import pytest
+from pydantic import HttpUrl
 from socprime import SocprimeConnector
+from socprime.config import ConnectorSettings
 
 pytestmark = pytest.mark.usefixtures(
     "mocked_opencti_helper",
@@ -26,3 +28,24 @@ def test_config() -> None:
     assert connector._siem_types_for_refs == "devo,snowflake"
     assert connector._indicator_siem_type == "ChangeMe"
     assert connector.interval_sec == 2000
+
+
+def test_config_settings() -> None:
+    config = ConnectorSettings().model_dump()
+
+    assert config["opencti"]["url"] == HttpUrl("http://test-opencti-url/")
+    assert config["opencti"]["token"] == "test-opencti-token"
+
+    assert config["connector"]["id"] == "test-connector-id"
+    assert config["connector"]["name"] == "Soc Prime"
+    assert config["connector"]["type"] == "EXTERNAL_IMPORT"
+    assert config["connector"]["scope"] == ["socprime"]
+    assert config["connector"]["log_level"] == "error"
+
+    assert len(config["socprime"]) == 6
+    assert config["socprime"]["api_key"] == "api-key"
+    assert config["socprime"]["content_list_name"] == ["name1", "name2"]
+    assert config["socprime"]["job_ids"] == ["job1", "job2"]
+    assert config["socprime"]["siem_type"] == ["devo", "snowflake"]
+    assert config["socprime"]["indicator_siem_type"] == "ChangeMe"
+    assert config["socprime"]["interval_sec"] == 2000
