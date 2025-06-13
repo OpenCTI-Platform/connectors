@@ -2,7 +2,7 @@
 
 ## Overview
 
-This TDR explains the addition of a robust error and warning handling tools for developping the connectors developed using the SDK. The solution includes a dedicated subpackage, `exceptions`, which provides tools to handle validation warnings and errors effectively.
+This TDR explains the addition of a robust error and warning handling tools for developing the connectors using the SDK. The solution includes a dedicated subpackage, `exceptions`, which provides tools to handle validation warnings and errors effectively.
 
 ---
 

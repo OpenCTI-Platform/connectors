@@ -10,7 +10,7 @@ This structure will also facilitate the development of new features and improvem
 ## Motivation
 <!-- Why is this needed? What problem does it solve? -->
 
-To start the development of the connectors-sdk octi models package, it is essential to have a clear and organized structure. Defining this structure is crucial for the maintainability and scalability of the codebase. By mirroring the OCTI UI structure, we can ensure that the connectors models align with the frontend components, making it easier for developers to work on both ends of the application. This approach is driven by the MDE methodology, which helps avoid confusion between connectors-sdk and pycti, the Python API client used to interact with OCTI.
+To start the development of the connectors-sdk octi models package, it is essential to have a clear and organized structure. Defining this structure is crucial for the maintainability and scalability of the codebase. By mirroring the OCTI UI structure, we can ensure that the connectors models align with the frontend components, making it easier for developers to work on both ends of the application. This approach is driven by the Model Driven Engineering methodology, which helps avoid confusion between connectors-sdk and pycti, the Python API client used to interact with OCTI.
 
 ---
 
