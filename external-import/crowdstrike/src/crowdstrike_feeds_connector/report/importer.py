@@ -202,57 +202,85 @@ class ReportImporter(BaseImporter):
             return create_file_from_download(download, report_name)
 
     def _get_related_iocs(self, report_name):
-        related_indicators = []
-        related_indicators_with_related_entities = []
-        _limit = 10000
-        _sort = "last_updated|asc"
-        _fql_filter = f"reports:['{report_name}']"
+        try:
+            related_indicators = []
+            related_indicators_with_related_entities = []
+            _limit = 10000
+            _sort = "last_updated|asc"
+            _fql_filter = f"reports:['{report_name}']"
 
-        # Getting IOCs linked and based on report name
-        response = self.indicators_api_cs.get_combined_indicator_entities(
-            limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
-        )
-        related_indicators.extend(response["resources"])
+            # Getting IOCs linked and based on report name
+            response = self.indicators_api_cs.get_combined_indicator_entities(
+                limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
+            )
+            related_indicators.extend(response["resources"])
 
-        if related_indicators is not None:
-            for indicator in related_indicators:
-                bundle_builder_config = IndicatorBundleBuilderConfig(
-                    indicator=indicator,
-                    author=self.author,
-                    source_name=self._source_name(),
-                    object_markings=[self.tlp_marking],
-                    confidence_level=self._confidence_level(),
-                    create_observables=self.indicator_config["create_observables"],
-                    create_indicators=self.indicator_config["create_indicators"],
-                    default_x_opencti_score=self.indicator_config[
-                        "default_x_opencti_score"
-                    ],
-                    indicator_low_score=self.indicator_config["indicator_low_score"],
-                    indicator_low_score_labels=self.indicator_config[
-                        "indicator_low_score_labels"
-                    ],
-                    indicator_medium_score=self.indicator_config[
-                        "indicator_medium_score"
-                    ],
-                    indicator_medium_score_labels=self.indicator_config[
-                        "indicator_medium_score_labels"
-                    ],
-                    indicator_high_score=self.indicator_config["indicator_high_score"],
-                    indicator_high_score_labels=self.indicator_config[
-                        "indicator_high_score_labels"
-                    ],
-                    indicator_unwanted_labels=self.indicator_config[
-                        "indicator_unwanted_labels"
-                    ],
-                )
-                bundle_builder = IndicatorBundleBuilder(bundle_builder_config)
-                indicator_bundle_built = bundle_builder.build()
-                indicator_with_related_entities = indicator_bundle_built["object_refs"]
-                related_indicators_with_related_entities.extend(
-                    indicator_with_related_entities
-                )
+            if related_indicators is not None:
+                for indicator in related_indicators:
+                    bundle_builder_config = IndicatorBundleBuilderConfig(
+                        indicator=indicator,
+                        author=self.author,
+                        source_name=self._source_name(),
+                        object_markings=[self.tlp_marking],
+                        confidence_level=self._confidence_level(),
+                        create_observables=self.indicator_config["create_observables"],
+                        create_indicators=self.indicator_config["create_indicators"],
+                        default_x_opencti_score=self.indicator_config[
+                            "default_x_opencti_score"
+                        ],
+                        indicator_low_score=self.indicator_config[
+                            "indicator_low_score"
+                        ],
+                        indicator_low_score_labels=self.indicator_config[
+                            "indicator_low_score_labels"
+                        ],
+                        indicator_medium_score=self.indicator_config[
+                            "indicator_medium_score"
+                        ],
+                        indicator_medium_score_labels=self.indicator_config[
+                            "indicator_medium_score_labels"
+                        ],
+                        indicator_high_score=self.indicator_config[
+                            "indicator_high_score"
+                        ],
+                        indicator_high_score_labels=self.indicator_config[
+                            "indicator_high_score_labels"
+                        ],
+                        indicator_unwanted_labels=self.indicator_config[
+                            "indicator_unwanted_labels"
+                        ],
+                    )
+                    bundle_builder = IndicatorBundleBuilder(
+                        self.helper, bundle_builder_config
+                    )
+                    indicator_bundle_built = bundle_builder.build()
+                    if indicator_bundle_built:
+                        indicator_with_related_entities = indicator_bundle_built[
+                            "object_refs"
+                        ]
+                        related_indicators_with_related_entities.extend(
+                            indicator_with_related_entities
+                        )
+                    else:
+                        self.helper.connector_logger.debug(
+                            "[DEBUG] The construction of the indicator has been skipped in the report.",
+                            {
+                                "indicator_id": indicator.get("id"),
+                                "indicator_type": indicator.get("type"),
+                            },
+                        )
+                        continue
 
-        return related_indicators_with_related_entities
+            return related_indicators_with_related_entities
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "[ERROR] An unexpected error occurred when retrieving indicators for the report.",
+                {
+                    "error": err,
+                    "report_name": report_name,
+                },
+            )
+            raise
 
     def _create_report_bundle(
         self, report, report_file: Optional[Mapping[str, str]] = None

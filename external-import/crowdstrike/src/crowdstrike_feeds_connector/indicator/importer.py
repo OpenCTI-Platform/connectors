@@ -217,32 +217,44 @@ class IndicatorImporter(BaseImporter):
         return self.report_fetcher.get_by_codes(codes)
 
     def _create_indicator_bundle(self, indicator: dict) -> Optional[Bundle]:
-        bundle_builder_config = IndicatorBundleBuilderConfig(
-            indicator=indicator,
-            author=self.author,
-            source_name=self._source_name(),
-            object_markings=[self.tlp_marking],
-            confidence_level=self._confidence_level(),
-            create_observables=self.create_observables,
-            create_indicators=self.create_indicators,
-            default_x_opencti_score=self.default_x_opencti_score,
-            indicator_low_score=self.indicator_low_score,
-            indicator_low_score_labels=self.indicator_low_score_labels,
-            indicator_medium_score=self.indicator_medium_score,
-            indicator_medium_score_labels=self.indicator_medium_score_labels,
-            indicator_high_score=self.indicator_high_score,
-            indicator_high_score_labels=self.indicator_high_score_labels,
-            indicator_unwanted_labels=self.indicator_unwanted_labels,
-        )
-
         try:
-            bundle_builder = IndicatorBundleBuilder(bundle_builder_config)
-            indicator_bundle_built = bundle_builder.build()
-            return indicator_bundle_built["indicator_bundle"]
-        except TypeError as te:
-            self._error(
-                "Failed to build indicator bundle for '{0}': {1}",
-                indicator["id"],
-                te,
+            bundle_builder_config = IndicatorBundleBuilderConfig(
+                indicator=indicator,
+                author=self.author,
+                source_name=self._source_name(),
+                object_markings=[self.tlp_marking],
+                confidence_level=self._confidence_level(),
+                create_observables=self.create_observables,
+                create_indicators=self.create_indicators,
+                default_x_opencti_score=self.default_x_opencti_score,
+                indicator_low_score=self.indicator_low_score,
+                indicator_low_score_labels=self.indicator_low_score_labels,
+                indicator_medium_score=self.indicator_medium_score,
+                indicator_medium_score_labels=self.indicator_medium_score_labels,
+                indicator_high_score=self.indicator_high_score,
+                indicator_high_score_labels=self.indicator_high_score_labels,
+                indicator_unwanted_labels=self.indicator_unwanted_labels,
             )
-            return None
+
+            bundle_builder = IndicatorBundleBuilder(self.helper, bundle_builder_config)
+            indicator_bundle_built = bundle_builder.build()
+            if indicator_bundle_built:
+                return indicator_bundle_built.get("indicator_bundle")
+            else:
+                self.helper.connector_logger.warning(
+                    "[WARNING] The construction of the indicator and all related entities has been skipped.",
+                    {
+                        "indicator_id": indicator.get("id"),
+                        "indicator_type": indicator.get("type"),
+                    },
+                )
+                return None
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "[ERROR] An unexpected error occurred when creating a bundle indicator.",
+                {
+                    "error": err,
+                    "indicator_id": indicator.get("id"),
+                },
+            )
+            raise

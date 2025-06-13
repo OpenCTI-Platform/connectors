@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator builder module."""
 
-import logging
 from typing import Dict, List, NamedTuple, Optional, Set
 
 from crowdstrike_feeds_services.utils import (
@@ -33,6 +32,7 @@ from crowdstrike_feeds_services.utils import (
     create_vulnerability_external_references,
     timestamp_to_datetime,
 )
+from pycti import OpenCTIConnectorHelper
 from stix2 import (
     Bundle,
     Identity,
@@ -47,8 +47,6 @@ from stix2 import (
     Vulnerability,
 )
 from stix2.v21 import _DomainObject, _Observable  # type: ignore
-
-logger = logging.getLogger(__name__)
 
 
 class Observation(NamedTuple):
@@ -130,8 +128,11 @@ class IndicatorBundleBuilder:
         "ActionOnObjectives": "action-on-objectives",
     }
 
-    def __init__(self, config: IndicatorBundleBuilderConfig) -> None:
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, config: IndicatorBundleBuilderConfig
+    ) -> None:
         """Initialize indicator bundle builder."""
+        self.helper = helper
         self.indicator = config.indicator
         self.author = config.author
         self.source_name = config.source_name
@@ -177,7 +178,10 @@ class IndicatorBundleBuilder:
                 kill_chain
             )
             if lh_kill_chain is None:
-                logger.warning("Unknown kill chain: %s", kill_chain)
+                self.helper.connector_logger.warning(
+                    "[WARNING] Unknown kill chain...",
+                    {"kill_chain": kill_chain},
+                )
                 continue
 
             kill_chain_phase = self._create_kill_chain_phase(lh_kill_chain)
@@ -269,6 +273,10 @@ class IndicatorBundleBuilder:
         self, kill_chain_phases: List[KillChainPhase]
     ) -> Optional[Observation]:
         if not (self.create_observables or self.create_indicators):
+            self.helper.connector_logger.warning(
+                "[WARNING] The user configuration does not activate the creation of observables or indicators. "
+                "The creation process is therefore ignored.",
+            )
             return None
 
         # Get the labels.
@@ -278,6 +286,14 @@ class IndicatorBundleBuilder:
         for label in labels:
             label = label.lower()
             if label in self.indicator_unwanted_labels:
+                self.helper.connector_logger.warning(
+                    "[WARNING] The indicator contains a label which is one of the excluded labels defined in the "
+                    "configuration. Processing of this indicator is therefore ignored.",
+                    {
+                        "indicator_unwanted_labels": self.indicator_unwanted_labels,
+                        "current_indicator_labels": labels,
+                    },
+                )
                 return None
 
         # Determine the score based on the labels.
@@ -470,7 +486,13 @@ class IndicatorBundleBuilder:
         # Create observations.
         observation = self._create_observation(kill_chain_phases)
         if observation is None:
-            logger.error("No indicator nor observable for %s", self.indicator["id"])
+            self.helper.connector_logger.warning(
+                "[WARNING] Observation creation will be ignored.",
+                {
+                    "indicator_id": self.indicator.get("id"),
+                    "indicator_type": self.indicator.get("type"),
+                },
+            )
             return None
 
         # Get observables and add to bundle.
