@@ -1,0 +1,1 @@
+"""Offer threats OpenCTI entities."""
