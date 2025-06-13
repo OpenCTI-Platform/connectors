@@ -351,7 +351,7 @@ class Phishunt:
         else:
             self.helper.schedule_unit(
                 message_callback=self.process_message,
-                duration_period=self.connector_interval,
+                duration_period=self.phishunt_interval,
                 time_unit=self.helper.TimeUnit.DAYS,
             )
 
