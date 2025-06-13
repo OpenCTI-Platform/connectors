@@ -13,6 +13,7 @@ from pycti.connector.opencti_connector_helper import (
     OpenCTIConnectorHelper,
     get_config_variable,
 )
+from socprime.config import ConnectorSettings
 from socprime.mitre_attack import MitreAttack
 from socprime.tdm_api_client import ApiClient
 from stix2 import (
@@ -44,7 +45,7 @@ class SocprimeConnector:
     _stix_object_types_to_udate = (Indicator, Relationship)
 
     def __init__(self):
-        config = self._read_configuration()
+        config = ConnectorSettings().model_dump_pycti()
         self.helper = OpenCTIConnectorHelper(config)
         tdm_api_key = get_config_variable(
             "SOCPRIME_API_KEY", ["socprime", "api_key"], config
