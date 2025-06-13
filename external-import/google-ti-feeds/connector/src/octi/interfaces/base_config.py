@@ -2,7 +2,7 @@
 
 from abc import ABC
 from pathlib import Path
-from typing import ClassVar, Tuple, Type
+from typing import ClassVar, Tuple, Type, cast
 
 import yaml
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
@@ -52,7 +52,7 @@ class BaseConfig(ABC, BaseSettings):
         except Exception:
             data = {}
 
-        def yml_settings() -> dict:
-            return data
+        def yml_settings() -> dict[str, str]:
+            return cast(dict[str, str], data)
 
         return (yml_settings, env_settings, dotenv_settings, file_secret_settings)

@@ -107,6 +107,14 @@ class Orchestrator:
                     self.logger.info(
                         f"{LOG_PREFIX} ({report_idx + 1}/{total_reports}) Converted to {len(all_entities)} STIX entities {{{entities_summary}}}"
                     )
+                    if (
+                        self.batch_processor.get_current_batch_size()
+                        + len(all_entities)
+                    ) >= self.batch_processor.config.batch_size:
+                        self.logger.info(
+                            f"{LOG_PREFIX} Need to Flush before adding next items to preserve consistency of the bundle"
+                        )
+                        self.batch_processor.flush()
                     self.batch_processor.add_item(self.converter.organization)
                     self.batch_processor.add_item(self.converter.tlp_marking)
                     self.batch_processor.add_items(all_entities)

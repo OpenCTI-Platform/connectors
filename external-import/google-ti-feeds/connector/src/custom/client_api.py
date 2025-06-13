@@ -74,9 +74,9 @@ class ClientAPI:
                 for origin in origins:
                     current_filter = base_filters
                     if report_type != "All":
-                        current_filter += f" report_type:{report_type}"
+                        current_filter += f" report_type:'{report_type}'"
                     if origin != "All":
-                        current_filter += f" origin:{origin}"
+                        current_filter += f" origin:'{origin}'"
 
                     if report_type == "All" and origin == "All":
                         description = "all reports"
