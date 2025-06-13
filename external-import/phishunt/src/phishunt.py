@@ -356,10 +356,7 @@ class Phishunt:
             )
 
     def _load_state(self) -> dict[str, Any]:
-        current_state = self.helper.get_state()
-        if not current_state:
-            return {}
-        return current_state
+        return self.helper.get_state() or {}
 
     def process_message(self):
         """Run Phishunt connector"""
@@ -374,7 +371,7 @@ class Phishunt:
                 "Loaded state", {"current state": current_state}
             )
 
-            if current_state is not None and "last_run" in current_state:
+            if current_state and "last_run" in current_state:
                 if isinstance(current_state["last_run"], int):
                     self.last_run = datetime.fromtimestamp(current_state["last_run"])
                 else:
@@ -421,10 +418,7 @@ class Phishunt:
                 },
             )
 
-            if self.last_run:
-                current_state["last_run"] = now.isoformat(timespec="seconds")
-            else:
-                current_state = {"last_run": now.isoformat(timespec="seconds")}
+            current_state["last_run"] = now.isoformat(timespec="seconds")
 
             if self.last_run_datetime_with_ingested_data:
                 current_state["last_run_datetime_with_ingested_data"] = (
