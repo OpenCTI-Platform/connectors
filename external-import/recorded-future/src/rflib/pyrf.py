@@ -2,6 +2,8 @@ import datetime
 
 import requests
 
+from pycti import OpenCTIConnectorHelper
+
 
 class PlaybookAlertSummary:
     def __init__(self, playbook_alert_id, priority, created, category, title):
@@ -64,19 +66,19 @@ class Alert:
 class RecordedFutureApiClient:
     def __init__(
         self,
-        x_rf_token,
-        helper,
-        base_url="https://api.recordedfuture.com/",
+        x_rf_token: str,
+        helper: OpenCTIConnectorHelper,
+        base_url: str = "https://api.recordedfuture.com/",
         priority_alerts_only: bool = None,
     ):
         self.x_rf_token = x_rf_token
         self.base_url = base_url
-        self.priorited_rules = []
-        self.unfound_rf_rules_in_vocabularies = []
-        self.alerts = []
-        self.playbook_alerts = []
+        self.priorited_rules: list[PrioritiedRule] = []
+        self.unfound_rf_rules_in_vocabularies: list[PrioritiedRule] = []
+        self.alerts: list[Alert] = []
+        self.playbook_alerts: list[PlaybookId] = []
         self.helper = helper
-        self.playbook_alerts_summaries = []
+        self.playbook_alerts_summaries: list[PlaybookAlertSummary] = []
         self.priority_alerts_only = priority_alerts_only
 
     def _header_response_control(self, response):
@@ -84,7 +86,7 @@ class RecordedFutureApiClient:
         rf_content_type = response.headers.get("Content-Type")
 
         if rf_content_type != "application/json":
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 "Unexpected Content-Type from ApiRecordedFuture: ",
                 {"content-type": rf_content_type},
             )
@@ -107,33 +109,35 @@ class RecordedFutureApiClient:
                - Confirms that the "status_message" matches the expected message. Logs an error if it doesn't.
 
         Error Handling:
-            - Logs specific error messages using `self.helper.log_error` when validation fails.
+            - Logs specific error messages using `self.helper.connector_logger.error` when validation fails.
             - Errors include missing fields, incorrect status codes, or mismatched status messages.
         """
 
         # If the response doesn't contain data, log the error
         if not data.get("data"):
-            self.helper.log_error("No rules returned from Recorded Future API")
+            self.helper.connector_logger.error(
+                "No rules returned from Recorded Future API"
+            )
 
         # If the response is not a dictionary, log the error
         if not isinstance(data, dict):
-            self.helper.log_error("Response data is not a dictionary")
+            self.helper.connector_logger.error("Response data is not a dictionary")
 
         if expected_status_message is not None:
             # If the response does not contain mandatory fields, log the error
             if "status" not in data:
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     "Response does not contain mandatory status field",
                     {"mandatory_field": "status"},
                 )
 
             # If the response status_code is not Ok, log the error
             if data.get("status", {}).get("status_code", "").lower() != "ok":
-                self.helper.log_error("Response status_code is not Ok")
+                self.helper.connector_logger.error("Response status_code is not Ok")
 
             # If the alert search is unsuccessful, log the error
             if data["status"]["status_message"] != f"{expected_status_message}":
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     "Process unsuccessful",
                     {"status_message": data["status"]["status_message"]},
                 )
@@ -207,23 +211,25 @@ class RecordedFutureApiClient:
                             )
                     else:
                         # If data does not contain mandatory counts field, log the error
-                        self.helper.log_error(
+                        self.helper.connector_logger.error(
                             "Response does not contain mandatory <counts> field"
                         )
 
         except requests.exceptions.RequestException as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 "Exception occured when trying to reach RecordedFuture's API : ",
                 {"error": str(e)},
             )
         except Exception as err:
-            self.helper.log_error(err)
+            self.helper.connector_logger.error(err)
 
     def get_complete_playbook_alert(self, playbook_alert_summary):
         try:
             # If playbook_alert_summary is None, log the error
             if playbook_alert_summary.playbook_alert_id is None:
-                self.helper.log_error("You must provide an playbook alert summary")
+                self.helper.connector_logger.error(
+                    "You must provide an playbook alert summary"
+                )
 
             # If playbook_alert.category is not one of: domain_abuse, identity_novel_exposures, code_repo_leakage, log the error
             playbook_alert_categories = [
@@ -232,7 +238,7 @@ class RecordedFutureApiClient:
                 "code_repo_leakage",
             ]
             if playbook_alert_summary.category not in playbook_alert_categories:
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     "You must provide an playbook alert whose category is among : domain_abuse, identity_novel_exposures, code_repo_leakage"
                 )
 
@@ -269,12 +275,12 @@ class RecordedFutureApiClient:
             return data
 
         except requests.exceptions.RequestException as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 "Exception occured when trying to reach RecordedFuture's API : ",
                 {"error": str(e)},
             )
         except Exception as err:
-            self.helper.log_error(err)
+            self.helper.connector_logger.error(err)
 
     def get_image_alert(self, image_id):
         try:
@@ -293,14 +299,18 @@ class RecordedFutureApiClient:
                 response.raw.decode_content = True
                 return True, response.content, image_name
             else:
-                self.helper.log_info("Perhaps, the image doesn't exist anymore...")
+                self.helper.connector_logger.info(
+                    "Perhaps, the image doesn't exist anymore..."
+                )
                 return False, str("error.png"), str("error.png")
         except requests.exceptions.RequestException as e:
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 "Exception occured when trying to reach RecordedFuture's API : "
                 + str(e)
             )
-            self.helper.log_info("Perhaps, the image doesn't exist anymore...")
+            self.helper.connector_logger.info(
+                "Perhaps, the image doesn't exist anymore..."
+            )
             return False, str("error.png"), str("error.png")
         except:
             return False, str("error.png"), str("error.png")
@@ -338,7 +348,7 @@ class RecordedFutureApiClient:
                     rf_alert_rule_content_type = response.headers.get("Content-Type")
 
                     if rf_alert_rule_content_type != "application/json":
-                        self.helper.log_error(
+                        self.helper.connector_logger.error(
                             "Unexpected Content-Type from ApiRecordedFuture: ",
                             {"content-type": rf_alert_rule_content_type},
                         )
@@ -347,7 +357,7 @@ class RecordedFutureApiClient:
 
                     # If the response doesn't contain data, log the error
                     if not data.get("data"):
-                        self.helper.log_error(
+                        self.helper.connector_logger.error(
                             "No data returned from Recorded Future API",
                             {
                                 "rule_id": priorited_rule.rule_id,
@@ -357,7 +367,9 @@ class RecordedFutureApiClient:
 
                     # If the response is not a dictionary, log the error
                     if not isinstance(data, dict):
-                        self.helper.log_error("Response data is not a dictionary")
+                        self.helper.connector_logger.error(
+                            "Response data is not a dictionary"
+                        )
 
                     # If the response contains data and contains the counts field, extract priority rules
                     if data.get("counts"):
@@ -404,18 +416,18 @@ class RecordedFutureApiClient:
                                 )
                     else:
                         # If data does not contain mandatory counts field, log the error
-                        self.helper.log_error(
+                        self.helper.connector_logger.error(
                             "Response does not contain mandatory <counts> field"
                         )
             except requests.exceptions.RequestException as e:
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     "Exception occured when trying to reach RecordedFuture's API : ",
                     {"error": str(e)},
                 )
             except Exception as err:
-                self.helper.log_error(err)
+                self.helper.connector_logger.error(err)
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "Queried alerts : "
             + triggered_since_iso
             + after_log
@@ -435,7 +447,7 @@ class RecordedFutureApiClient:
             ):
                 self.unfound_rf_rules_in_vocabularies.append(rule)
         for rule in self.unfound_rf_rules_in_vocabularies:
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 "Unfound Intelligence goal in Vocabularies : "
                 + rule.rule_intelligence_goal
             )
@@ -497,13 +509,13 @@ class RecordedFutureApiClient:
                     )
                 else:
                     # If data does not contain mandatory counts field, log the error
-                    self.helper.log_error(
+                    self.helper.connector_logger.error(
                         "Response does not contain mandatory <counts> field"
                     )
         except requests.exceptions.RequestException as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 "Exception occured when trying to reach RecordedFuture's API : ",
                 {"error": str(e)},
             )
         except Exception as err:
-            self.helper.log_error(err)
+            self.helper.connector_logger.error(err)

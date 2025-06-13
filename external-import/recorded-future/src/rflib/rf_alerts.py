@@ -15,6 +15,7 @@ from pycti import (
 
 from .constants import TLP_MAP
 from .utils import is_ip_v4_address, is_ip_v6_address, make_markdown_table
+from .pyrf import RecordedFutureApiClient
 
 
 class Vocabulary:
@@ -24,7 +25,13 @@ class Vocabulary:
 
 
 class RecordedFutureAlertConnector(threading.Thread):
-    def __init__(self, helper, rf_alerts_api, opencti_default_severity, tlp):
+    def __init__(
+        self,
+        helper: pycti.OpenCTIConnectorHelper,
+        rf_alerts_api: RecordedFutureApiClient,
+        opencti_default_severity: str,
+        tlp: str,
+    ):
         threading.Thread.__init__(self)
         self.helper = helper
 
