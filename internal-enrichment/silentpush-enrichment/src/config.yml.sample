@@ -11,7 +11,7 @@ connector:
   auto: false # Enable/disable auto-enrichment of observables
 
 silentpush:
-  CONNECTOR_SILENTPUSH_API_BASE_URL: 'https://app.silentpush.com/api/v1/'
-  CONNECTOR_SILENTPUSH_API_KEY: 'YOUR-SILENT-PUSH-API-KEY'
-  CONNECTOR_SILENTPUSH_VERIFY_CERT: true
-  CONNECTOR_MAX_TLP: "TLP:AMBER" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+  api_base_url: 'https://app.silentpush.com/api/v1/'
+  api_key: 'YOUR-SILENT-PUSH-API-KEY'
+  verify_cert: true
+  max_tlp: "TLP:AMBER" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
