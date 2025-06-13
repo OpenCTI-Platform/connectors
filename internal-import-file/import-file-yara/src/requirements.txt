@@ -1,3 +1,3 @@
-pycti==6.6.16
+pycti==6.6.17
 typing-extensions==4.13.2
 plyara==2.2.8
