@@ -55,7 +55,7 @@ To use the `connectors-sdk`, add it as a dependency in your project.
 You can add it to your `requirements.txt` or `pyproject.toml` file:
 
 ```text
-    connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.6.13#subdirectory=connectors-sdk
+    connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@<octi_version>#subdirectory=connectors-sdk
 ```
 
 #### Developing with the SDK Locally
