@@ -145,7 +145,7 @@ class RecordedFutureAlertConnector(threading.Thread):
 
             if last_alerts_run.date() == datetime.datetime.today().date():
                 self.run_for_time_period(
-                    trigger=str(datetime.datetime.today().date()),
+                    since=datetime.datetime.today(),
                     after=current_state["last_alerts_run"],
                 )
                 for alert in self.api_recorded_future.alerts:
@@ -170,14 +170,14 @@ class RecordedFutureAlertConnector(threading.Thread):
             else:
                 local_alerts = []
                 self.run_for_time_period(
-                    trigger=str(last_alerts_run.date()),
+                    since=last_alerts_run,
                     after=current_state["last_alerts_run"],
                 )
                 local_alerts.extend(self.api_recorded_future.alerts)
                 day_delta = datetime.datetime.today().date() - last_alerts_run.date()
                 for i in range(1, day_delta.days + 1):
                     day = last_alerts_run.date() + datetime.timedelta(days=i)
-                    self.run_for_time_period(trigger=str(day))
+                    self.run_for_time_period(since=day)
                     local_alerts.extend(self.api_recorded_future.alerts)
                 for alert in local_alerts:
                     try:
@@ -199,7 +199,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                     )
                     self.helper.set_state(current_state)
         else:
-            self.run_for_time_period(trigger=str(datetime.datetime.today().date()))
+            self.run_for_time_period(since=datetime.datetime.today())
             for alert in self.api_recorded_future.alerts:
                 try:
                     self.alert_to_incident(alert)
@@ -551,24 +551,19 @@ class RecordedFutureAlertConnector(threading.Thread):
             work_id=self.work_id,
         )
 
-    def run_for_time_period(self, trigger, after=None):
-        assert isinstance(
-            trigger, str
-        ), "Date must be a string with any format between : yyyy to yyyy-MM-dd'T'HH:mm:ss'Z'"
-        self.recordedfuture_alert_time = trigger
-
+    def run_for_time_period(self, since: datetime.datetime, after=None):
         self.api_recorded_future.alerts = []
         self.api_recorded_future.get_alert_by_rule_and_by_trigger(
-            self.recordedfuture_alert_time, after=after
+            triggered_since=since, after=after
         )
         if len(self.api_recorded_future.alerts) == 0:
             self.helper.connector_logger.info(
-                "[" + str(trigger) + "] No alert found : exiting"
+                "[" + since.isoformat(timespec="seconds") + "] No alert found : exiting"
             )
         else:
             self.helper.connector_logger.info(
                 "["
-                + str(trigger)
+                + since.isoformat(timespec="seconds")
                 + "] "
                 + str(len(self.api_recorded_future.alerts))
                 + " alerts were found"

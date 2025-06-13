@@ -305,12 +305,14 @@ class RecordedFutureApiClient:
         except:
             return False, str("error.png"), str("error.png")
 
-    def get_alert_by_rule_and_by_trigger(self, date, after=None):
+    def get_alert_by_rule_and_by_trigger(
+        self, triggered_since: datetime.datetime, after=None
+    ):
         alert_filtered = 0
         after_log = ""
         if after is not None:
             after_log = " generated after " + str(after)
-        date = str(date).replace(" 00:00:00", "")
+        triggered_since_iso = triggered_since.strftime("%Y-%m-%d")
         for priorited_rule in self.priorited_rules:
             try:
                 from_api = 0
@@ -324,7 +326,7 @@ class RecordedFutureApiClient:
                         params={
                             "alertRule": str(priorited_rule.rule_id),
                             "limit": 100,
-                            "triggered": str(date),
+                            "triggered": f"[{triggered_since_iso},]",
                             "from": str(from_api),
                         },
                     )
@@ -415,7 +417,7 @@ class RecordedFutureApiClient:
 
         self.helper.log_info(
             "Queried alerts : "
-            + str(date)
+            + triggered_since_iso
             + after_log
             + " and "
             + str(alert_filtered)
