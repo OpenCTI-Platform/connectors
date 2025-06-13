@@ -1,9 +1,9 @@
 """The module contains the Threat Actor Role OV Enums."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class ThreatActorRoleOV(str, Enum):
+class ThreatActorRoleOV(BaseOV):
     """Threat Actor Role Enumeration."""
 
     AGENT = "agent"

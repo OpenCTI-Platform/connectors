@@ -173,32 +173,9 @@ class GTIReportToSTIXReport(BaseMapper):
             ReportTypeOV: The determined report type
 
         """
-        report_type = ReportTypeOV.THREAT_REPORT
-        if attributes.report_type:
-            gti_to_stix_report_type = {
-                "News": ReportTypeOV.THREAT_REPORT,
-                "Actor Profile": ReportTypeOV.THREAT_ACTOR,
-                "Country Profile": ReportTypeOV.IDENTITY,
-                "Cyber Physical Security Roundup": ReportTypeOV.THREAT_REPORT,
-                "Event Coverage/Implication": ReportTypeOV.THREAT_REPORT,
-                "Industry Reporting": ReportTypeOV.THREAT_REPORT,
-                "Malware Profile": ReportTypeOV.MALWARE,
-                "Net Assessment": ReportTypeOV.THREAT_REPORT,
-                "Network Activity Reports": ReportTypeOV.OBSERVED_DATA,
-                "News Analysis": ReportTypeOV.THREAT_REPORT,
-                "OSINT Article": ReportTypeOV.THREAT_REPORT,
-                "Patch Report": ReportTypeOV.VULNERABILITY,
-                "Strategic Perspective": ReportTypeOV.THREAT_REPORT,
-                "TTP Deep Dive": ReportTypeOV.ATTACK_PATTERN,
-                "Threat Activity Alert": ReportTypeOV.INDICATOR,
-                "Threat Activity Report": ReportTypeOV.THREAT_REPORT,
-                "Trends and Forecasting": ReportTypeOV.CAMPAIGN,
-                "Weekly Vulnerability Exploitation Report": ReportTypeOV.VULNERABILITY,
-            }
-            report_type = gti_to_stix_report_type.get(
-                attributes.report_type, ReportTypeOV.THREAT_REPORT
-            )
-        return report_type
+        if attributes.report_type is None:
+            return ReportTypeOV("unknown")
+        return ReportTypeOV(attributes.report_type)
 
     @staticmethod
     def add_object_refs(objects_to_add: List[str], existing_report: Report) -> Report:

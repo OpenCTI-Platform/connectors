@@ -1,9 +1,9 @@
 """The module contains the InfrastructureTypeOV enum class."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class InfrastructureTypeOV(str, Enum):
+class InfrastructureTypeOV(BaseOV):
     """Infrastructure Type Enumeration."""
 
     AMPLIFICATION = "amplification"

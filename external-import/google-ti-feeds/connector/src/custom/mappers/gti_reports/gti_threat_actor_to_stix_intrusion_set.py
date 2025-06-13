@@ -58,10 +58,6 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
 
         first_seen, last_seen = self._extract_seen_dates(attributes)
 
-        labels = self._extract_labels(attributes)
-
-        goals = self._extract_goals(attributes)
-
         primary_motivation, secondary_motivations = self._extract_motivations(
             attributes
         )
@@ -77,10 +73,8 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             aliases=aliases,
             first_seen=first_seen,
             last_seen=last_seen,
-            goals=goals,
             primary_motivation=primary_motivation,
             secondary_motivations=secondary_motivations,
-            labels=labels,
             created=created,
             modified=modified,
         )
@@ -154,52 +148,6 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
 
         return first_seen, last_seen
 
-    @staticmethod
-    def _extract_labels(attributes: ThreatActorModel) -> Optional[List[str]]:
-        """Extract labels from threat actor attributes.
-
-        Args:
-            attributes: The threat actor attributes
-
-        Returns:
-            Optional[List[str]]: Extracted labels or None if no labels exist
-
-        """
-        if not hasattr(attributes, "tags_details") or not attributes.tags_details:
-            return None
-
-        labels = []
-        for tag in attributes.tags_details:
-            if hasattr(tag, "value") and tag.value:
-                labels.append(tag.value)
-
-        return labels if labels else None
-
-    @staticmethod
-    def _extract_goals(attributes: ThreatActorModel) -> Optional[List[str]]:
-        """Extract goals from threat actor attributes.
-
-        Args:
-            attributes: The threat actor attributes
-
-        Returns:
-            Optional[List[str]]: Extracted goals or None if no goals exist
-
-        """
-        if (
-            not hasattr(attributes, "targeted_industries_tree")
-            or not attributes.targeted_industries_tree
-        ):
-            return None
-
-        goals = []
-        for industry in attributes.targeted_industries_tree:
-            if hasattr(industry, "industry_group") and industry.industry_group:
-                goal = f"Target {industry.industry_group} industry"
-                goals.append(goal)
-
-        return goals if goals else None
-
     def _extract_motivations(
         self, attributes: ThreatActorModel
     ) -> tuple[Optional[str], Optional[List[str]]]:
@@ -245,25 +193,4 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             Optional[str]: Mapped STIX attack motivation or None if no mapping exists
 
         """
-        motivation_map = {
-            "Accidental": AttackMotivationOV.ACCIDENTAL,
-            "Coercion": AttackMotivationOV.COERCION,
-            "Control": AttackMotivationOV.DOMINANCE,
-            "Dominance": AttackMotivationOV.DOMINANCE,
-            "Ideology": AttackMotivationOV.IDEOLOGY,
-            "Political": AttackMotivationOV.IDEOLOGY,
-            "Religious": AttackMotivationOV.IDEOLOGY,
-            "Notoriety": AttackMotivationOV.NOTORIETY,
-            "Fame": AttackMotivationOV.NOTORIETY,
-            "Corporate Espionage": AttackMotivationOV.ORGANIZATIONAL_GAIN,
-            "Economic": AttackMotivationOV.ORGANIZATIONAL_GAIN,
-            "Organizational Gain": AttackMotivationOV.ORGANIZATIONAL_GAIN,
-            "Financial": AttackMotivationOV.PERSONAL_GAIN,
-            "Personal Gain": AttackMotivationOV.PERSONAL_GAIN,
-            "Entertainment": AttackMotivationOV.PERSONAL_SATISFACTION,
-            "Personal Satisfaction": AttackMotivationOV.PERSONAL_SATISFACTION,
-            "Revenge": AttackMotivationOV.REVENGE,
-            "Unpredictable": AttackMotivationOV.UNPREDICTABLE,
-        }
-
-        return motivation_map.get(motivation)
+        return AttackMotivationOV(motivation)

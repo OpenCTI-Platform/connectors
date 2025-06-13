@@ -1,9 +1,9 @@
 """The module defines an the stix2.1 account-type-ov."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class AccountTypeOV(str, Enum):
+class AccountTypeOV(BaseOV):
     """Account Type OV Enum."""
 
     FACEBOOK = "facebook"

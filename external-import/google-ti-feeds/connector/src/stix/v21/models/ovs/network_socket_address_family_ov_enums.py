@@ -1,9 +1,9 @@
 """The module defines the NetworkSocketAddressFamilyOV enum class."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class NetworkSocketAddressFamilyOV(str, Enum):
+class NetworkSocketAddressFamilyOV(BaseOV):
     """Network Socket Address Family Enumeration."""
 
     AF_UNSPEC = "AF_UNSPEC"

@@ -1,9 +1,9 @@
 """The module defines the ThreatActorSophisticationOV enum class."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class ThreatActorSophisticationOV(str, Enum):
+class ThreatActorSophisticationOV(BaseOV):
     """Threat Actor Sophistication Enumeration."""
 
     NONE = "none"

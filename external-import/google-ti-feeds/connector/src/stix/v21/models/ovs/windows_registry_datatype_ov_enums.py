@@ -1,9 +1,9 @@
 """The module defines an enumeration for Windows Registry data types."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class WindowsRegistryDatatypeOV(str, Enum):
+class WindowsRegistryDatatypeOV(BaseOV):
     """Windows Registry Data Type Enumeration."""
 
     REG_NONE = "REG_NONE"

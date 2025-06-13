@@ -1,7 +1,7 @@
 """Tests for the GTIDomainToSTIXDomain mapper."""
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, List
 from uuid import uuid4
 
 import pytest
@@ -13,10 +13,10 @@ from connector.src.custom.models.gti_reports.gti_domain_model import (
     DomainModel,
     GTIAssessment,
     GTIDomainData,
-    LastAnalysisStats,
     ThreatScore,
     Verdict,
 )
+from connector.src.stix.v21.models.ovs.indicator_type_ov_enums import IndicatorTypeOV
 from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
@@ -32,12 +32,6 @@ class ThreatScoreFactory(ModelFactory[ThreatScore]):
     """Factory for ThreatScore model."""
 
     __model__ = ThreatScore
-
-
-class LastAnalysisStatsFactory(ModelFactory[LastAnalysisStats]):
-    """Factory for LastAnalysisStats model."""
-
-    __model__ = LastAnalysisStats
 
 
 class ContributingFactorsFactory(ModelFactory[ContributingFactors]):
@@ -95,7 +89,6 @@ def minimal_domain_data() -> GTIDomainData:
             creation_date=None,
             last_modification_date=None,
             gti_assessment=None,
-            last_analysis_stats=None,
         ),
     )
 
@@ -109,7 +102,6 @@ def domain_with_timestamps() -> GTIDomainData:
             creation_date=1672531200,
             last_modification_date=1672617600,
             gti_assessment=None,
-            last_analysis_stats=None,
         ),
     )
 
@@ -127,7 +119,6 @@ def domain_with_mandiant_score() -> GTIDomainData:
                 threat_score=None,
                 verdict=None,
             ),
-            last_analysis_stats=None,
         ),
     )
 
@@ -145,7 +136,6 @@ def domain_with_threat_score() -> GTIDomainData:
                 threat_score=ThreatScoreFactory.build(value=70),
                 verdict=None,
             ),
-            last_analysis_stats=None,
         ),
     )
 
@@ -161,7 +151,6 @@ def domain_with_malicious_verdict() -> GTIDomainData:
                 contributing_factors=None,
                 threat_score=None,
             ),
-            last_analysis_stats=None,
         ),
     )
 
@@ -177,7 +166,6 @@ def domain_with_benign_verdict() -> GTIDomainData:
                 contributing_factors=None,
                 threat_score=None,
             ),
-            last_analysis_stats=None,
         ),
     )
 
@@ -192,55 +180,6 @@ def domain_with_suspicious_verdict() -> GTIDomainData:
                 verdict=VerdictFactory.build(value="SUSPICIOUS"),
                 contributing_factors=None,
                 threat_score=None,
-            ),
-            last_analysis_stats=None,
-        ),
-    )
-
-
-@pytest.fixture
-def domain_with_analysis_stats_malicious() -> GTIDomainData:
-    """Fixture for domain data with malicious analysis stats."""
-    return GTIDomainDataFactory.build(
-        id="stats-malicious.example.com",
-        attributes=DomainModelFactory.build(
-            gti_assessment=None,
-            last_analysis_stats=LastAnalysisStatsFactory.build(
-                malicious=5,
-                suspicious=1,
-                harmless=2,
-            ),
-        ),
-    )
-
-
-@pytest.fixture
-def domain_with_analysis_stats_suspicious() -> GTIDomainData:
-    """Fixture for domain data with suspicious analysis stats."""
-    return GTIDomainDataFactory.build(
-        id="stats-suspicious.example.com",
-        attributes=DomainModelFactory.build(
-            gti_assessment=None,
-            last_analysis_stats=LastAnalysisStatsFactory.build(
-                malicious=0,
-                suspicious=3,
-                harmless=2,
-            ),
-        ),
-    )
-
-
-@pytest.fixture
-def domain_with_analysis_stats_harmless() -> GTIDomainData:
-    """Fixture for domain data with harmless-only analysis stats."""
-    return GTIDomainDataFactory.build(
-        id="stats-harmless.example.com",
-        attributes=DomainModelFactory.build(
-            gti_assessment=None,
-            last_analysis_stats=LastAnalysisStatsFactory.build(
-                malicious=0,
-                suspicious=0,
-                harmless=10,
             ),
         ),
     )
@@ -260,11 +199,6 @@ def domain_with_all_data() -> GTIDomainData:
                     mandiant_confidence_score=95
                 ),
                 threat_score=ThreatScoreFactory.build(value=85),
-            ),
-            last_analysis_stats=LastAnalysisStatsFactory.build(
-                malicious=8,
-                suspicious=2,
-                harmless=1,
             ),
         ),
     )
@@ -287,7 +221,6 @@ def domain_with_empty_verdict() -> GTIDomainData:
                 contributing_factors=None,
                 threat_score=None,
             ),
-            last_analysis_stats=None,
         ),
     )
 
@@ -301,23 +234,6 @@ def domain_with_invalid_timestamps() -> GTIDomainData:
             creation_date=-1,
             last_modification_date=0,
             gti_assessment=None,
-            last_analysis_stats=None,
-        ),
-    )
-
-
-@pytest.fixture
-def domain_with_none_analysis_stats() -> GTIDomainData:
-    """Fixture for domain data with None values in analysis stats."""
-    return GTIDomainDataFactory.build(
-        id="none-stats.example.com",
-        attributes=DomainModelFactory.build(
-            gti_assessment=None,
-            last_analysis_stats=LastAnalysisStatsFactory.build(
-                malicious=None,
-                suspicious=None,
-                harmless=None,
-            ),
         ),
     )
 
@@ -337,11 +253,13 @@ def test_gti_domain_to_stix_minimal_data(
     # When converting to STIX
     stix_objects = _when_convert_to_stix(mapper)
 
-    # Then domain observable should be created
+    # Then domain observable, indicator, and relationship should be created
     _then_stix_objects_created_successfully(stix_objects)
+    domain_observable, indicator, relationship = stix_objects
     _then_stix_domain_has_correct_properties(
-        stix_objects, minimal_domain_data, mock_organization, mock_tlp_marking
+        domain_observable, minimal_domain_data, mock_organization, mock_tlp_marking
     )
+    _then_stix_indicator_has_unknown_type(indicator)
 
 
 # Scenario: Convert GTI domain with timestamps to STIX objects
@@ -359,8 +277,10 @@ def test_gti_domain_to_stix_with_timestamps(
     # When converting to STIX
     stix_objects = _when_convert_to_stix(mapper)
 
-    # Then STIX object should be created successfully
+    # Then STIX objects should be created successfully
     _then_stix_objects_created_successfully(stix_objects)
+    domain_observable, indicator, relationship = stix_objects
+    _then_stix_indicator_has_correct_timestamps(indicator, domain_with_timestamps)
 
 
 # Scenario: Convert GTI domain with Mandiant confidence score to STIX objects
@@ -378,9 +298,10 @@ def test_gti_domain_to_stix_with_mandiant_score(
     # When converting to STIX
     stix_objects = _when_convert_to_stix(mapper)
 
-    # Then STIX object should include mandiant score
+    # Then STIX objects should include mandiant score
     _then_stix_objects_created_successfully(stix_objects)
-    _then_stix_domain_has_score(stix_objects, 85)
+    domain_observable, indicator, relationship = stix_objects
+    _then_stix_objects_have_score(domain_observable, indicator, 85)
 
 
 # Scenario: Convert GTI domain with threat score fallback to STIX objects
@@ -398,9 +319,10 @@ def test_gti_domain_to_stix_with_threat_score(
     # When converting to STIX
     stix_objects = _when_convert_to_stix(mapper)
 
-    # Then STIX object should use threat score as fallback
+    # Then STIX objects should use threat score as fallback
     _then_stix_objects_created_successfully(stix_objects)
-    _then_stix_domain_has_score(stix_objects, 75)
+    domain_observable, indicator, relationship = stix_objects
+    _then_stix_objects_have_score(domain_observable, indicator, 70)
 
 
 # Scenario: Convert GTI domain with malicious verdict to STIX objects
@@ -418,8 +340,10 @@ def test_gti_domain_to_stix_with_malicious_verdict(
     # When converting to STIX
     stix_objects = _when_convert_to_stix(mapper)
 
-    # Then STIX object should be created
+    # Then STIX objects should be created with malicious indicator type
     _then_stix_objects_created_successfully(stix_objects)
+    domain_observable, indicator, relationship = stix_objects
+    _then_stix_indicator_has_type(indicator, IndicatorTypeOV("MALICIOUS"))
 
 
 # Scenario: Convert GTI domain with benign verdict to STIX objects
@@ -437,8 +361,10 @@ def test_gti_domain_to_stix_with_benign_verdict(
     # When converting to STIX
     stix_objects = _when_convert_to_stix(mapper)
 
-    # Then STIX object should be created
+    # Then STIX objects should be created with benign indicator type
     _then_stix_objects_created_successfully(stix_objects)
+    domain_observable, indicator, relationship = stix_objects
+    _then_stix_indicator_has_type(indicator, IndicatorTypeOV("BENIGN"))
 
 
 # Scenario: Convert GTI domain with suspicious verdict to STIX objects
@@ -456,65 +382,10 @@ def test_gti_domain_to_stix_with_suspicious_verdict(
     # When converting to STIX
     stix_objects = _when_convert_to_stix(mapper)
 
-    # Then STIX object should be created
+    # Then STIX objects should be created with suspicious indicator type
     _then_stix_objects_created_successfully(stix_objects)
-
-
-# Scenario: Convert GTI domain with malicious analysis stats to STIX objects
-def test_gti_domain_to_stix_with_analysis_stats_malicious(
-    domain_with_analysis_stats_malicious: GTIDomainData,
-    mock_organization: Identity,
-    mock_tlp_marking: MarkingDefinition,
-) -> None:
-    """Test conversion of GTI domain with malicious analysis stats to STIX objects."""
-    # Given a GTI domain with malicious analysis stats
-    mapper = _given_gti_domain_mapper(
-        domain_with_analysis_stats_malicious, mock_organization, mock_tlp_marking
-    )
-
-    # When converting to STIX
-    stix_objects = _when_convert_to_stix(mapper)
-
-    # Then STIX object should be created
-    _then_stix_objects_created_successfully(stix_objects)
-
-
-# Scenario: Convert GTI domain with suspicious analysis stats to STIX objects
-def test_gti_domain_to_stix_with_analysis_stats_suspicious(
-    domain_with_analysis_stats_suspicious: GTIDomainData,
-    mock_organization: Identity,
-    mock_tlp_marking: MarkingDefinition,
-) -> None:
-    """Test conversion of GTI domain with suspicious analysis stats to STIX objects."""
-    # Given a GTI domain with suspicious analysis stats
-    mapper = _given_gti_domain_mapper(
-        domain_with_analysis_stats_suspicious, mock_organization, mock_tlp_marking
-    )
-
-    # When converting to STIX
-    stix_objects = _when_convert_to_stix(mapper)
-
-    # Then STIX object should be created
-    _then_stix_objects_created_successfully(stix_objects)
-
-
-# Scenario: Convert GTI domain with harmless analysis stats to STIX objects
-def test_gti_domain_to_stix_with_analysis_stats_harmless(
-    domain_with_analysis_stats_harmless: GTIDomainData,
-    mock_organization: Identity,
-    mock_tlp_marking: MarkingDefinition,
-) -> None:
-    """Test conversion of GTI domain with harmless-only analysis stats to STIX objects."""
-    # Given a GTI domain with harmless-only analysis stats
-    mapper = _given_gti_domain_mapper(
-        domain_with_analysis_stats_harmless, mock_organization, mock_tlp_marking
-    )
-
-    # When converting to STIX
-    stix_objects = _when_convert_to_stix(mapper)
-
-    # Then STIX object should be created
-    _then_stix_objects_created_successfully(stix_objects)
+    domain_observable, indicator, relationship = stix_objects
+    _then_stix_indicator_has_type(indicator, IndicatorTypeOV("SUSPICIOUS"))
 
 
 # Scenario: Convert GTI domain with all data populated to STIX objects
@@ -532,13 +403,15 @@ def test_gti_domain_to_stix_with_all_data(
     # When converting to STIX
     stix_objects = _when_convert_to_stix(mapper)
 
-    # Then STIX object should include all available data
+    # Then STIX objects should include all available data
     _then_stix_objects_created_successfully(stix_objects)
+    domain_observable, indicator, relationship = stix_objects
     _then_stix_domain_has_correct_properties(
-        stix_objects, domain_with_all_data, mock_organization, mock_tlp_marking
+        domain_observable, domain_with_all_data, mock_organization, mock_tlp_marking
     )
-    # Domain timestamps are handled internally by OctiDomainModel.create()
-    _then_stix_domain_has_score(stix_objects, 95)
+    _then_stix_objects_have_score(domain_observable, indicator, 95)
+    _then_stix_indicator_has_type(indicator, IndicatorTypeOV("MALICIOUS"))
+    _then_stix_indicator_has_correct_timestamps(indicator, domain_with_all_data)
 
 
 # Scenario: Convert GTI domain without attributes to STIX objects
@@ -547,7 +420,7 @@ def test_gti_domain_to_stix_without_attributes(
     mock_organization: Identity,
     mock_tlp_marking: MarkingDefinition,
 ) -> None:
-    """Test conversion of GTI domain without attributes raises error."""
+    """Test conversion of GTI domain without attributes to STIX objects."""
     # Given a GTI domain without attributes
     mapper = _given_gti_domain_mapper(
         domain_without_attributes, mock_organization, mock_tlp_marking
@@ -558,6 +431,8 @@ def test_gti_domain_to_stix_without_attributes(
 
     # Then objects should still be created with fallback behavior
     _then_stix_objects_created_successfully(stix_objects)
+    domain_observable, indicator, relationship = stix_objects
+    _then_stix_indicator_has_unknown_type(indicator)
 
 
 # Scenario: Convert GTI domain with empty verdict to STIX objects
@@ -575,8 +450,10 @@ def test_gti_domain_to_stix_with_empty_verdict(
     # When converting to STIX
     stix_objects = _when_convert_to_stix(mapper)
 
-    # Then STIX object should be created
+    # Then STIX objects should be created with unknown indicator type
     _then_stix_objects_created_successfully(stix_objects)
+    domain_observable, indicator, relationship = stix_objects
+    _then_stix_indicator_has_unknown_type(indicator)
 
 
 # Scenario: Convert GTI domain with invalid timestamps to STIX objects
@@ -594,26 +471,7 @@ def test_gti_domain_to_stix_with_invalid_timestamps(
     # When converting to STIX
     stix_objects = _when_convert_to_stix(mapper)
 
-    # Then STIX object should be created successfully
-    _then_stix_objects_created_successfully(stix_objects)
-
-
-# Scenario: Convert GTI domain with None analysis stats to STIX objects
-def test_gti_domain_to_stix_with_none_analysis_stats(
-    domain_with_none_analysis_stats: GTIDomainData,
-    mock_organization: Identity,
-    mock_tlp_marking: MarkingDefinition,
-) -> None:
-    """Test conversion of GTI domain with None analysis stats to STIX objects."""
-    # Given a GTI domain with None analysis stats
-    mapper = _given_gti_domain_mapper(
-        domain_with_none_analysis_stats, mock_organization, mock_tlp_marking
-    )
-
-    # When converting to STIX
-    stix_objects = _when_convert_to_stix(mapper)
-
-    # Then STIX object should be created
+    # Then STIX objects should be created successfully
     _then_stix_objects_created_successfully(stix_objects)
 
 
@@ -665,11 +523,11 @@ def test_get_timestamps_without_data(
     assert timestamps["modified"].tzinfo == timezone.utc  # noqa: S101
 
 
-# Scenario: Extract Mandiant IC score with mandiant confidence score available
-def test_get_mandiant_ic_score_with_mandiant_score(
+# Scenario: Extract score with mandiant confidence score available
+def test_get_score_with_mandiant_score(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
-    """Test _get_mandiant_ic_score method with mandiant confidence score."""
+    """Test _get_score method with mandiant confidence score."""
     # Given a domain with mandiant confidence score
     domain_data = GTIDomainDataFactory.build(
         attributes=DomainModelFactory.build(
@@ -682,18 +540,18 @@ def test_get_mandiant_ic_score_with_mandiant_score(
     )
     mapper = _given_gti_domain_mapper(domain_data, mock_organization, mock_tlp_marking)
 
-    # When getting mandiant IC score
-    score = mapper._get_mandiant_ic_score()
+    # When getting score
+    score = mapper._get_score()
 
-    # Then mandiant score should be returned
+    # Then score should be returned
     assert score == 85  # noqa: S101
 
 
-# Scenario: Extract Mandiant IC score with threat score fallback
-def test_get_mandiant_ic_score_with_threat_score_fallback(
+# Scenario: Extract score with threat score fallback
+def test_get_score_with_threat_score_fallback(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
-    """Test _get_mandiant_ic_score method with threat score fallback."""
+    """Test _get_score method with threat score fallback."""
     # Given a domain with threat score but no mandiant score
     domain_data = GTIDomainDataFactory.build(
         attributes=DomainModelFactory.build(
@@ -707,32 +565,72 @@ def test_get_mandiant_ic_score_with_threat_score_fallback(
     )
     mapper = _given_gti_domain_mapper(domain_data, mock_organization, mock_tlp_marking)
 
-    # When getting mandiant IC score
-    score = mapper._get_mandiant_ic_score()
+    # When getting score
+    score = mapper._get_score()
 
     # Then threat score should be returned as fallback
     assert score == 70  # noqa: S101
 
 
-# Scenario: Extract Mandiant IC score without any score data available
-def test_get_mandiant_ic_score_without_data(
+# Scenario: Extract score without any score data available
+def test_get_score_without_data(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
-    """Test _get_mandiant_ic_score method without score data."""
+    """Test _get_score method without score data."""
     # Given a domain without score data
     domain_data = GTIDomainDataFactory.build(
         attributes=DomainModelFactory.build(gti_assessment=None)
     )
     mapper = _given_gti_domain_mapper(domain_data, mock_organization, mock_tlp_marking)
 
-    # When getting mandiant IC score
-    score = mapper._get_mandiant_ic_score()
+    # When getting score
+    score = mapper._get_score()
 
     # Then None should be returned
     assert score is None  # noqa: S101
 
 
-# Scenario: Determine indicator types with malicious verdict available
+# Scenario: Test determine indicator types method
+def test_determine_indicator_types_with_verdict(
+    mock_organization: Identity, mock_tlp_marking: MarkingDefinition
+) -> None:
+    """Test _determine_indicator_types method with verdict."""
+    # Given a domain with malicious verdict
+    domain_data = GTIDomainDataFactory.build(
+        attributes=DomainModelFactory.build(
+            gti_assessment=GTIAssessmentFactory.build(
+                verdict=VerdictFactory.build(value="MALICIOUS")
+            )
+        )
+    )
+    mapper = _given_gti_domain_mapper(domain_data, mock_organization, mock_tlp_marking)
+
+    # When determining indicator types
+    indicator_types = mapper._determine_indicator_types()
+
+    # Then malicious indicator type should be returned
+    assert indicator_types == [IndicatorTypeOV("MALICIOUS")]  # noqa: S101
+
+
+# Scenario: Test determine indicator types method without verdict
+def test_determine_indicator_types_without_verdict(
+    mock_organization: Identity, mock_tlp_marking: MarkingDefinition
+) -> None:
+    """Test _determine_indicator_types method without verdict."""
+    # Given a domain without verdict
+    domain_data = GTIDomainDataFactory.build(
+        attributes=DomainModelFactory.build(gti_assessment=None)
+    )
+    mapper = _given_gti_domain_mapper(domain_data, mock_organization, mock_tlp_marking)
+
+    # When determining indicator types
+    indicator_types = mapper._determine_indicator_types()
+
+    # Then unknown indicator type should be returned
+    assert indicator_types == [IndicatorTypeOV.UNKNOWN]  # noqa: S101
+
+
+# Scenario: Test create STIX domain method
 def test_create_stix_domain_method(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -756,6 +654,33 @@ def test_create_stix_domain_method(
     # Then domain observable should be created correctly
     assert domain_observable is not None  # noqa: S101
     assert hasattr(domain_observable, "value")  # noqa: S101
+    assert domain_observable.value == "test.example.com"  # noqa: S101
+
+
+# Scenario: Test create STIX indicator method
+def test_create_stix_indicator_method(
+    mock_organization: Identity, mock_tlp_marking: MarkingDefinition
+) -> None:
+    """Test _create_stix_indicator method directly."""
+    # Given a domain with verdict
+    domain_data = GTIDomainDataFactory.build(
+        id="test.example.com",
+        attributes=DomainModelFactory.build(
+            gti_assessment=GTIAssessmentFactory.build(
+                verdict=VerdictFactory.build(value="MALICIOUS")
+            )
+        ),
+    )
+    mapper = _given_gti_domain_mapper(domain_data, mock_organization, mock_tlp_marking)
+
+    # When creating STIX indicator
+    indicator = mapper._create_stix_indicator()
+
+    # Then indicator should be created correctly
+    assert indicator is not None  # noqa: S101
+    assert hasattr(indicator, "name")  # noqa: S101
+    assert indicator.name == "test.example.com"  # noqa: S101
+    assert indicator.pattern == "[domain-name:value='test.example.com']"  # noqa: S101
 
 
 def _given_gti_domain_mapper(
@@ -769,15 +694,19 @@ def _given_gti_domain_mapper(
     )
 
 
-def _when_convert_to_stix(mapper: GTIDomainToSTIXDomain) -> Any:
+def _when_convert_to_stix(mapper: GTIDomainToSTIXDomain) -> List[Any]:
     """Convert GTI domain to STIX objects."""
     return mapper.to_stix()
 
 
-def _then_stix_objects_created_successfully(stix_object: Any) -> None:
-    """Assert that STIX object was created successfully."""
-    assert stix_object is not None  # noqa: S101
-    assert hasattr(stix_object, "value")  # noqa: S101
+def _then_stix_objects_created_successfully(stix_objects: List[Any]) -> None:
+    """Assert that STIX objects were created successfully."""
+    assert stix_objects is not None  # noqa: S101
+    assert len(stix_objects) == 3  # noqa: S101
+    domain_observable, indicator, relationship = stix_objects
+    assert domain_observable is not None  # noqa: S101
+    assert indicator is not None  # noqa: S101
+    assert relationship is not None  # noqa: S101
 
 
 def _then_stix_domain_has_correct_properties(
@@ -792,7 +721,35 @@ def _then_stix_domain_has_correct_properties(
     assert tlp_marking.id in domain_observable.object_marking_refs  # noqa: S101
 
 
-def _then_stix_domain_has_score(domain_observable: Any, expected_score: int) -> None:
-    """Assert that STIX domain has score."""
+def _then_stix_objects_have_score(
+    domain_observable: Any, indicator: Any, expected_score: int
+) -> None:
+    """Assert that STIX objects have score."""
     if hasattr(domain_observable, "score"):
         assert domain_observable.score == expected_score  # noqa: S101
+    if hasattr(indicator, "score"):
+        assert indicator.score == expected_score  # noqa: S101
+
+
+def _then_stix_indicator_has_type(
+    indicator: Any, expected_type: IndicatorTypeOV
+) -> None:
+    """Assert that STIX indicator has correct type."""
+    assert hasattr(indicator, "indicator_types")  # noqa: S101
+    assert expected_type in indicator.indicator_types  # noqa: S101
+
+
+def _then_stix_indicator_has_unknown_type(indicator: Any) -> None:
+    """Assert that STIX indicator has unknown type."""
+    _then_stix_indicator_has_type(indicator, IndicatorTypeOV.UNKNOWN)
+
+
+def _then_stix_indicator_has_correct_timestamps(
+    indicator: Any, gti_domain: GTIDomainData
+) -> None:
+    """Assert that STIX indicator has correct timestamps."""
+    if gti_domain.attributes and gti_domain.attributes.creation_date:
+        expected_created = datetime.fromtimestamp(
+            gti_domain.attributes.creation_date, tz=timezone.utc
+        )
+        assert indicator.created == expected_created  # noqa: S101

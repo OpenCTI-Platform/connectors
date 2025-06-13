@@ -121,10 +121,15 @@ class GTIReportToSTIXLocation(BaseMapper):
         if not region_name:
             return None
 
-        try:
-            region_value = RegionOV(region_name.lower().replace(" ", "-"))
-        except ValueError:
+        # Normalize the region name for comparison
+        normalized_name = region_name.lower().replace(" ", "-")
+
+        # Check if the normalized name exists in the predefined RegionOV values
+        predefined_values = [member.value for member in RegionOV]
+        if normalized_name not in predefined_values:
             return None
+
+        region_value = RegionOV(normalized_name)
 
         region = OctiLocationModel.create_region(
             name=region_name,

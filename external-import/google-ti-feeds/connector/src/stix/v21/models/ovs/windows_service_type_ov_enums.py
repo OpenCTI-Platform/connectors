@@ -1,9 +1,9 @@
 """The module defines an enumeration for Windows service types."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class WindowsServiceTypeOV(str, Enum):
+class WindowsServiceTypeOV(BaseOV):
     """Windows Service Type Enumeration."""
 
     SERVICE_KERNEL_DRIVER = "SERVICE_KERNEL_DRIVER"

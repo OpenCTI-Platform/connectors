@@ -20,7 +20,6 @@ from connector.src.custom.models.gti_reports.gti_report_model import (
     TargetedRegion,
     Technology,
 )
-from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
 from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
@@ -366,22 +365,21 @@ def test_different_report_types_mapping(
     """Test mapping of different GTI report types to STIX report types."""
     # GIVEN: Four GTI reports with different report types: News, Actor Profile, Malware Profile, Unknown Type
     # representing various categories of threat intelligence reporting formats
-    expected_mappings = [
-        ReportTypeOV.THREAT_REPORT,
-        ReportTypeOV.THREAT_ACTOR,
-        ReportTypeOV.MALWARE,
-        ReportTypeOV.THREAT_REPORT,
+    expected_report_types = [
+        "News",
+        "Actor Profile",
+        "Malware Profile",
+        "Unknown Type",
     ]
 
     # WHEN: Converting each GTI report type to STIX report objects
-    # THEN: Each should map to the correct STIX report type based on content classification
-    # with unknown types defaulting to general threat report classification
+    # THEN: Each should be accepted by the open vocabulary system as valid report types
     for i, report_data in enumerate(report_with_different_types):
         mapper = _given_gti_report_mapper(
             report_data, mock_organization, mock_tlp_marking
         )
         result = _when_convert_to_stix(mapper)
-        _then_stix_report_has_report_type(result, expected_mappings[i])
+        _then_stix_report_has_open_vocab_report_type(result, expected_report_types[i])
 
 
 def test_extract_labels_from_report_data(
@@ -577,9 +575,9 @@ def test_determine_report_type_with_none_type(mock_organization, mock_tlp_markin
     mapper = _given_gti_report_mapper(report_data, mock_organization, mock_tlp_marking)
     result = _when_convert_to_stix(mapper)
 
-    # THEN: The STIX Report should default to THREAT_REPORT type
-    # providing a sensible fallback classification when specific type information is unavailable
-    _then_stix_report_has_report_type(result, ReportTypeOV.THREAT_REPORT)
+    # THEN: The STIX Report should handle None report_type gracefully
+    # Mapper provides "unknown" as default for None report_type
+    _then_stix_report_has_open_vocab_report_type(result, "unknown")
 
 
 def test_extract_labels_with_empty_fields(mock_organization, mock_tlp_marking):
@@ -685,6 +683,20 @@ def _then_stix_report_has_author_identity(result, author_identity):
 def _then_stix_report_has_report_type(result, expected_type):
     """Assert STIX report has expected report type."""
     assert expected_type in result.report_types  # noqa: S101
+
+
+def _then_stix_report_has_open_vocab_report_type(result, expected_type_value):
+    """Assert STIX report has expected report type value from open vocabulary."""
+    assert len(result.report_types) > 0  # noqa: S101
+    assert any(
+        rt.value == expected_type_value for rt in result.report_types
+    )  # noqa: S101
+
+
+def _then_stix_report_has_none_report_type(result):
+    """Assert STIX report handles None report type correctly."""
+    assert len(result.report_types) > 0  # noqa: S101
+    assert result.report_types[0].value == "unknown"  # noqa: S101
 
 
 def _then_stix_report_has_extracted_labels(result, original_data):

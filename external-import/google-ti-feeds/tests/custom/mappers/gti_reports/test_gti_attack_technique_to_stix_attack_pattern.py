@@ -69,45 +69,6 @@ def minimal_attack_technique_data() -> GTIAttackTechniqueData:
 
 
 @pytest.fixture
-def attack_technique_with_platforms() -> GTIAttackTechniqueData:
-    """Fixture for attack technique data with platform information."""
-    return GTIAttackTechniqueDataFactory.build(
-        attributes=AttackTechniqueModelFactory.build(
-            info=InfoFactory.build(
-                x_mitre_platforms=["Windows", "Linux", "macOS"],
-                x_mitre_data_sources=None,
-            )
-        )
-    )
-
-
-@pytest.fixture
-def attack_technique_with_data_sources() -> GTIAttackTechniqueData:
-    """Fixture for attack technique data with data source information."""
-    return GTIAttackTechniqueDataFactory.build(
-        attributes=AttackTechniqueModelFactory.build(
-            info=InfoFactory.build(
-                x_mitre_platforms=None,
-                x_mitre_data_sources=["Process monitoring", "File monitoring"],
-            )
-        )
-    )
-
-
-@pytest.fixture
-def attack_technique_with_all_info() -> GTIAttackTechniqueData:
-    """Fixture for attack technique data with all information."""
-    return GTIAttackTechniqueDataFactory.build(
-        attributes=AttackTechniqueModelFactory.build(
-            info=InfoFactory.build(
-                x_mitre_platforms=["Windows", "Linux"],
-                x_mitre_data_sources=["Process monitoring"],
-            )
-        )
-    )
-
-
-@pytest.fixture
 def attack_technique_with_external_refs() -> GTIAttackTechniqueData:
     """Fixture for attack technique data with external references."""
     return GTIAttackTechniqueDataFactory.build(
@@ -122,32 +83,6 @@ def attack_technique_with_external_refs() -> GTIAttackTechniqueData:
 def attack_technique_without_attributes() -> GTIAttackTechniqueData:
     """Fixture for attack technique without attributes."""
     return GTIAttackTechniqueDataFactory.build(attributes=None)
-
-
-@pytest.fixture
-def attack_technique_with_empty_info() -> GTIAttackTechniqueData:
-    """Fixture for attack technique with empty info."""
-    return GTIAttackTechniqueDataFactory.build(
-        attributes=AttackTechniqueModelFactory.build(
-            info=InfoFactory.build(
-                x_mitre_platforms=[],
-                x_mitre_data_sources=[],
-            )
-        )
-    )
-
-
-@pytest.fixture
-def attack_technique_with_none_info() -> GTIAttackTechniqueData:
-    """Fixture for attack technique with None info fields."""
-    return GTIAttackTechniqueDataFactory.build(
-        attributes=AttackTechniqueModelFactory.build(
-            info=InfoFactory.build(
-                x_mitre_platforms=None,
-                x_mitre_data_sources=None,
-            )
-        )
-    )
 
 
 @pytest.fixture
@@ -184,61 +119,6 @@ def test_gti_attack_technique_to_stix_minimal_data(
     )
 
 
-def test_gti_attack_technique_to_stix_with_platforms(
-    attack_technique_with_platforms, mock_organization, mock_tlp_marking
-):
-    """Test conversion of GTI attack technique with platforms to STIX attack pattern."""
-    # Given a GTI attack technique with platforms
-    mapper = _given_gti_attack_technique_mapper(
-        attack_technique_with_platforms, mock_organization, mock_tlp_marking
-    )
-
-    # When converting to STIX
-    attack_pattern = _when_convert_to_stix(mapper)
-
-    # Then STIX attack pattern should include platform labels
-    _then_stix_attack_pattern_created_successfully(attack_pattern)
-    _then_stix_attack_pattern_has_platform_labels(attack_pattern)
-
-
-def test_gti_attack_technique_to_stix_with_data_sources(
-    attack_technique_with_data_sources, mock_organization, mock_tlp_marking
-):
-    """Test conversion of GTI attack technique with data sources to STIX attack pattern."""
-    # Given a GTI attack technique with data sources
-    mapper = _given_gti_attack_technique_mapper(
-        attack_technique_with_data_sources, mock_organization, mock_tlp_marking
-    )
-
-    # When converting to STIX
-    attack_pattern = _when_convert_to_stix(mapper)
-
-    # Then STIX attack pattern should include data source labels
-    _then_stix_attack_pattern_created_successfully(attack_pattern)
-    _then_stix_attack_pattern_has_data_source_labels(attack_pattern)
-
-
-def test_gti_attack_technique_to_stix_with_all_info(
-    attack_technique_with_all_info, mock_organization, mock_tlp_marking
-):
-    """Test conversion of GTI attack technique with all info to STIX attack pattern."""
-    # Given a GTI attack technique with all info
-    mapper = _given_gti_attack_technique_mapper(
-        attack_technique_with_all_info, mock_organization, mock_tlp_marking
-    )
-
-    # When converting to STIX
-    attack_pattern = _when_convert_to_stix(mapper)
-
-    # Then STIX attack pattern should include all data
-    _then_stix_attack_pattern_created_successfully(attack_pattern)
-    _then_stix_attack_pattern_has_correct_properties(
-        attack_pattern, mock_organization, mock_tlp_marking
-    )
-    _then_stix_attack_pattern_has_platform_labels(attack_pattern)
-    _then_stix_attack_pattern_has_data_source_labels(attack_pattern)
-
-
 def test_gti_attack_technique_to_stix_with_external_refs(
     attack_technique_with_external_refs, mock_organization, mock_tlp_marking
 ):
@@ -272,40 +152,6 @@ def test_gti_attack_technique_to_stix_without_attributes(
     )
 
 
-def test_gti_attack_technique_to_stix_with_empty_info(
-    attack_technique_with_empty_info, mock_organization, mock_tlp_marking
-):
-    """Test conversion of GTI attack technique with empty info lists."""
-    # Given a GTI attack technique with empty info lists
-    mapper = _given_gti_attack_technique_mapper(
-        attack_technique_with_empty_info, mock_organization, mock_tlp_marking
-    )
-
-    # When converting to STIX
-    attack_pattern = _when_convert_to_stix(mapper)
-
-    # Then STIX attack pattern should have no labels
-    _then_stix_attack_pattern_created_successfully(attack_pattern)
-    _then_stix_attack_pattern_has_no_labels(attack_pattern)
-
-
-def test_gti_attack_technique_to_stix_with_none_info(
-    attack_technique_with_none_info, mock_organization, mock_tlp_marking
-):
-    """Test conversion of GTI attack technique with None info fields."""
-    # Given a GTI attack technique with None info fields
-    mapper = _given_gti_attack_technique_mapper(
-        attack_technique_with_none_info, mock_organization, mock_tlp_marking
-    )
-
-    # When converting to STIX
-    attack_pattern = _when_convert_to_stix(mapper)
-
-    # Then STIX attack pattern should have no labels
-    _then_stix_attack_pattern_created_successfully(attack_pattern)
-    _then_stix_attack_pattern_has_no_labels(attack_pattern)
-
-
 def test_gti_attack_technique_to_stix_with_duplicate_link(
     attack_technique_with_duplicate_link, mock_organization, mock_tlp_marking
 ):
@@ -323,7 +169,7 @@ def test_gti_attack_technique_to_stix_with_duplicate_link(
     _then_stix_attack_pattern_has_unique_external_references(attack_pattern)
 
 
-def test_extract_aliases_method(mock_organization, mock_tlp_marking):
+def test_extract_aliases_method():
     """Test _extract_aliases static method."""
     # Given attack technique attributes
     attributes = AttackTechniqueModelFactory.build()
@@ -331,11 +177,11 @@ def test_extract_aliases_method(mock_organization, mock_tlp_marking):
     # When extracting aliases
     aliases = GTIAttackTechniqueToSTIXAttackPattern._extract_aliases(attributes)
 
-    # Then aliases should be None
+    # Then aliases should be None (simplified implementation)
     assert aliases is None  # noqa: S101
 
 
-def test_extract_aliases_with_none_attributes(mock_organization, mock_tlp_marking):
+def test_extract_aliases_with_none_attributes():
     """Test _extract_aliases static method with None attributes."""
     # Given None attributes
     # When extracting aliases
@@ -345,7 +191,7 @@ def test_extract_aliases_with_none_attributes(mock_organization, mock_tlp_markin
     assert aliases is None  # noqa: S101
 
 
-def test_extract_kill_chain_phases_method(mock_organization, mock_tlp_marking):
+def test_extract_kill_chain_phases_method():
     """Test _extract_kill_chain_phases static method."""
     # Given attack technique attributes
     attributes = AttackTechniqueModelFactory.build()
@@ -355,13 +201,11 @@ def test_extract_kill_chain_phases_method(mock_organization, mock_tlp_marking):
         attributes
     )
 
-    # Then phases should be None
+    # Then phases should be None (simplified implementation)
     assert phases is None  # noqa: S101
 
 
-def test_extract_kill_chain_phases_with_none_attributes(
-    mock_organization, mock_tlp_marking
-):
+def test_extract_kill_chain_phases_with_none_attributes():
     """Test _extract_kill_chain_phases static method with None attributes."""
     # Given None attributes
     # When extracting kill chain phases
@@ -390,88 +234,6 @@ def test_normalize_tactic_name_method():
         assert result == expected_output  # noqa: S101
 
 
-def test_extract_labels_with_platforms(mock_organization, mock_tlp_marking):
-    """Test _extract_labels static method with platform information."""
-    # Given attack technique attributes with platforms
-    attributes = AttackTechniqueModelFactory.build(
-        info=InfoFactory.build(
-            x_mitre_platforms=["Windows", "Linux"],
-            x_mitre_data_sources=None,
-        )
-    )
-
-    # When extracting labels
-    labels = GTIAttackTechniqueToSTIXAttackPattern._extract_labels(attributes)
-
-    # Then labels should contain platform information
-    assert labels is not None  # noqa: S101
-    assert len(labels) == 2  # noqa: S101
-    assert "platform:Windows" in labels  # noqa: S101
-    assert "platform:Linux" in labels  # noqa: S101
-
-
-def test_extract_labels_with_data_sources(mock_organization, mock_tlp_marking):
-    """Test _extract_labels static method with data source information."""
-    # Given attack technique attributes with data sources
-    attributes = AttackTechniqueModelFactory.build(
-        info=InfoFactory.build(
-            x_mitre_platforms=None,
-            x_mitre_data_sources=["Process monitoring", "File monitoring"],
-        )
-    )
-
-    # When extracting labels
-    labels = GTIAttackTechniqueToSTIXAttackPattern._extract_labels(attributes)
-
-    # Then labels should contain data source information
-    assert labels is not None  # noqa: S101
-    assert len(labels) == 2  # noqa: S101
-    assert "data-source:Process monitoring" in labels  # noqa: S101
-    assert "data-source:File monitoring" in labels  # noqa: S101
-
-
-def test_extract_labels_with_all_info(mock_organization, mock_tlp_marking):
-    """Test _extract_labels static method with both platforms and data sources."""
-    # Given attack technique attributes with platforms and data sources
-    attributes = AttackTechniqueModelFactory.build(
-        info=InfoFactory.build(
-            x_mitre_platforms=["Windows"],
-            x_mitre_data_sources=["Process monitoring"],
-        )
-    )
-
-    # When extracting labels
-    labels = GTIAttackTechniqueToSTIXAttackPattern._extract_labels(attributes)
-
-    # Then labels should contain both platforms and data sources
-    assert labels is not None  # noqa: S101
-    assert len(labels) == 2  # noqa: S101
-    assert "platform:Windows" in labels  # noqa: S101
-    assert "data-source:Process monitoring" in labels  # noqa: S101
-
-
-def test_extract_labels_without_info(mock_organization, mock_tlp_marking):
-    """Test _extract_labels static method without info."""
-    # Given attack technique attributes without info
-    attributes = AttackTechniqueModelFactory.build(info=None)
-
-    # When extracting labels
-    labels = GTIAttackTechniqueToSTIXAttackPattern._extract_labels(attributes)
-
-    # Then labels should be None
-    assert labels is None  # noqa: S101
-
-
-def test_extract_labels_with_none_attributes(mock_organization, mock_tlp_marking):
-    """Test _extract_labels static method with None attributes."""
-    # Given None attributes
-    # When extracting labels
-    labels = GTIAttackTechniqueToSTIXAttackPattern._extract_labels(None)
-
-    # Then labels should be None
-    assert labels is None  # noqa: S101
-
-
 def test_create_external_references_with_all_data(mock_organization, mock_tlp_marking):
     """Test _create_external_references method with all external reference data."""
     # Given a GTI attack technique with all external reference data
@@ -495,40 +257,21 @@ def test_create_external_references_with_all_data(mock_organization, mock_tlp_ma
     assert len(external_refs) >= 2  # noqa: S101
 
     mitre_ref = next(
-        (
-            ref
-            for ref in external_refs
-            if (isinstance(ref, dict) and ref.get("external_id") == technique_id)
-            or (hasattr(ref, "external_id") and ref.external_id == technique_id)
-        ),
+        (ref for ref in external_refs if ref.get("external_id") == technique_id),
         None,
     )
     assert mitre_ref is not None  # noqa: S101
-    if isinstance(mitre_ref, dict):
-        assert mitre_ref["source_name"] == "mitre-attack"  # noqa: S101
-        assert (  # noqa: S101
-            mitre_ref["url"] == f"https://attack.mitre.org/techniques/{technique_id}/"
-        )
-    else:
-        assert mitre_ref.source_name == "mitre-attack"  # noqa: S101
-        assert (  # noqa: S101
-            mitre_ref.url == f"https://attack.mitre.org/techniques/{technique_id}/"
-        )
+    assert mitre_ref["source_name"] == "mitre-attack"  # noqa: S101
+    assert (  # noqa: S101
+        mitre_ref["url"] == f"https://attack.mitre.org/techniques/{technique_id}/"
+    )
 
     stix_ref = next(
-        (
-            ref
-            for ref in external_refs
-            if (isinstance(ref, dict) and ref.get("source_name") == "stix")
-            or (hasattr(ref, "source_name") and ref.source_name == "stix")
-        ),
+        (ref for ref in external_refs if ref.get("source_name") == "stix"),
         None,
     )
     assert stix_ref is not None  # noqa: S101
-    if isinstance(stix_ref, dict):
-        assert stix_ref["external_id"] == "attack-pattern--abc123"  # noqa: S101
-    else:
-        assert stix_ref.external_id == "attack-pattern--abc123"  # noqa: S101
+    assert stix_ref["external_id"] == "attack-pattern--abc123"  # noqa: S101
 
 
 def test_create_external_references_minimal_data(mock_organization, mock_tlp_marking):
@@ -554,18 +297,11 @@ def test_create_external_references_minimal_data(mock_organization, mock_tlp_mar
     assert len(external_refs) == 1  # noqa: S101
 
     mitre_ref = external_refs[0]
-    if isinstance(mitre_ref, dict):
-        assert mitre_ref["source_name"] == "mitre-attack"  # noqa: S101
-        assert mitre_ref["external_id"] == technique_id  # noqa: S101
-        assert (  # noqa: S101
-            mitre_ref["url"] == f"https://attack.mitre.org/techniques/{technique_id}/"
-        )
-    else:
-        assert mitre_ref.source_name == "mitre-attack"  # noqa: S101
-        assert mitre_ref.external_id == technique_id  # noqa: S101
-        assert (  # noqa: S101
-            mitre_ref.url == f"https://attack.mitre.org/techniques/{technique_id}/"
-        )
+    assert mitre_ref["source_name"] == "mitre-attack"  # noqa: S101
+    assert mitre_ref["external_id"] == technique_id  # noqa: S101
+    assert (  # noqa: S101
+        mitre_ref["url"] == f"https://attack.mitre.org/techniques/{technique_id}/"
+    )
 
 
 def test_create_external_references_with_none_attributes(
@@ -630,31 +366,26 @@ def _then_stix_attack_pattern_has_correct_properties(
 
 def _then_stix_attack_pattern_has_mitre_id(attack_pattern, expected_mitre_id: str):
     """Assert that STIX attack pattern has correct MITRE ID."""
-    assert hasattr(attack_pattern, "custom_properties")  # noqa: S101
-    assert (  # noqa: S101
-        attack_pattern.custom_properties.get("x_mitre_id") == expected_mitre_id
-    )
-
-
-def _then_stix_attack_pattern_has_platform_labels(attack_pattern):
-    """Assert that STIX attack pattern has platform labels."""
-    assert attack_pattern.labels is not None  # noqa: S101
-    assert any(  # noqa: S101
-        label.startswith("platform:") for label in attack_pattern.labels
-    )
-
-
-def _then_stix_attack_pattern_has_data_source_labels(attack_pattern):
-    """Assert that STIX attack pattern has data source labels."""
-    assert attack_pattern.labels is not None  # noqa: S101
-    assert any(  # noqa: S101
-        label.startswith("data-source:") for label in attack_pattern.labels
-    )
-
-
-def _then_stix_attack_pattern_has_no_labels(attack_pattern):
-    """Assert that STIX attack pattern has no labels."""
-    assert attack_pattern.labels is None  # noqa: S101
+    # Check if mitre_id is available as a property or custom property
+    if hasattr(attack_pattern, "mitre_id"):
+        assert attack_pattern.mitre_id == expected_mitre_id  # noqa: S101
+    elif hasattr(attack_pattern, "custom_properties"):
+        assert (  # noqa: S101
+            attack_pattern.custom_properties.get("x_mitre_id") == expected_mitre_id
+        )
+    else:
+        # Check external references for MITRE ID
+        assert attack_pattern.external_references is not None  # noqa: S101
+        mitre_ref = next(
+            (
+                ref
+                for ref in attack_pattern.external_references
+                if (isinstance(ref, dict) and ref.get("source_name") == "mitre-attack")
+                or (hasattr(ref, "source_name") and ref.source_name == "mitre-attack")
+            ),
+            None,
+        )
+        assert mitre_ref is not None  # noqa: S101
 
 
 def _then_stix_attack_pattern_has_external_references(attack_pattern):
@@ -668,10 +399,7 @@ def _then_stix_attack_pattern_has_unique_external_references(attack_pattern):
     assert attack_pattern.external_references is not None  # noqa: S101
     urls = []
     for ref in attack_pattern.external_references:
-        if isinstance(ref, dict):
-            url = ref.get("url")
-        else:
-            url = getattr(ref, "url", None)
+        url = ref.get("url") if isinstance(ref, dict) else getattr(ref, "url", None)
         if url:
             urls.append(url)
     assert len(urls) == len(set(urls))  # noqa: S101

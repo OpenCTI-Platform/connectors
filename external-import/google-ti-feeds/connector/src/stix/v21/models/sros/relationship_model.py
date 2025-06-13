@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import pycti  # type: ignore[import-untyped]  # Missing library stubs
+import pycti  # type: ignore  # Missing library stubs
 from pydantic import BaseModel, Field, model_validator
 from stix2.v21 import (  # type: ignore[import-untyped]  # Missing library stubs
     Relationship,

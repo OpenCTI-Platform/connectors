@@ -1,9 +1,9 @@
 """The module contains the ImplementationLanguageOV enum class."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class ImplementationLanguageOV(str, Enum):
+class ImplementationLanguageOV(BaseOV):
     """Implementation Language Enumeration."""
 
     APPLESCRIPT = "applescript"

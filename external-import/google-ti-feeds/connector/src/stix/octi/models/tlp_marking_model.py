@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-import pycti  # type: ignore[import-untyped]  # Missing library stubs
+import pycti  # type: ignore  # Missing library stubs
 import stix2  # type: ignore[import-untyped]  # Missing library stubs
 from pydantic import BaseModel, Field
 

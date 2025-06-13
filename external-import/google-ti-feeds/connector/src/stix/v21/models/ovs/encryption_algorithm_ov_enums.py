@@ -1,9 +1,9 @@
 """The file contains the EncryptionAlgorithmOV enum class for OpenAI API encryption algorithms."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class EncryptionAlgorithmOV(str, Enum):
+class EncryptionAlgorithmOV(BaseOV):
     """Encryption Algorithm Enumeration."""
 
     AES_256_GCM = "AES-256-GCM"

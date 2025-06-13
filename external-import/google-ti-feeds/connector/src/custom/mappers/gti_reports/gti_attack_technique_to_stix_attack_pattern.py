@@ -56,7 +56,6 @@ class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):
         aliases = self._extract_aliases(attributes)
         kill_chain_phases = self._extract_kill_chain_phases(attributes)
         first_seen, last_seen = None, None
-        labels = self._extract_labels(attributes)
         external_references = self._create_external_references(attributes)
 
         attack_pattern_model = OctiAttackPatternModel.create(
@@ -69,7 +68,6 @@ class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):
             first_seen=first_seen,
             last_seen=last_seen,
             kill_chain_phases=kill_chain_phases,
-            labels=labels,
             external_references=external_references,
             created=created,
             modified=modified,
@@ -122,43 +120,6 @@ class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):
         """
         normalized = tactic_name.lower().replace(" ", "-")
         return normalized
-
-    @staticmethod
-    def _extract_labels(attributes: AttackTechniqueModel) -> Optional[List[str]]:
-        """Extract labels from attack technique attributes.
-
-        Args:
-            attributes: The attack technique attributes
-
-        Returns:
-            Optional[List[str]]: Extracted labels or None if no labels exist
-
-        """
-        if not attributes:
-            return None
-        labels = []
-
-        if (
-            hasattr(attributes, "info")
-            and attributes.info
-            and hasattr(attributes.info, "x_mitre_platforms")
-        ):
-            platforms = attributes.info.x_mitre_platforms
-            if platforms:
-                for platform in platforms:
-                    labels.append(f"platform:{platform}")
-
-        if (
-            hasattr(attributes, "info")
-            and attributes.info
-            and hasattr(attributes.info, "x_mitre_data_sources")
-        ):
-            data_sources = attributes.info.x_mitre_data_sources
-            if data_sources:
-                for source in data_sources:
-                    labels.append(f"data-source:{source}")
-
-        return labels if labels else None
 
     def _create_external_references(
         self, attributes: AttackTechniqueModel

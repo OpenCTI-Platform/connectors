@@ -1,9 +1,9 @@
 """The module contains the AttackMotivationOV enum class, which defines various attack motivations."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class AttackMotivationOV(str, Enum):
+class AttackMotivationOV(BaseOV):
     """Attack Motivation OV Enum."""
 
     ACCIDENTAL = "accidental"

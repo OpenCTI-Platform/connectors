@@ -1,9 +1,9 @@
 """The module contains the ReportTypeOV enum class for OpenVAS report types."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class ReportTypeOV(str, Enum):
+class ReportTypeOV(BaseOV):
     """Report Type Enumeration."""
 
     ATTACK_PATTERN = "attack-pattern"

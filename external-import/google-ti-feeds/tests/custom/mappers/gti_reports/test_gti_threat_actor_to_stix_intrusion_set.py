@@ -377,7 +377,6 @@ def test_gti_threat_actor_to_stix_with_tags(
         mock_organization,
         mock_tlp_marking,
     )
-    _then_stix_intrusion_set_has_labels(stix_intrusion_set, threat_actor_with_tags)
 
 
 # Scenario: Create STIX intrusion set with goals
@@ -400,7 +399,6 @@ def test_gti_threat_actor_to_stix_with_goals(
         mock_organization,
         mock_tlp_marking,
     )
-    _then_stix_intrusion_set_has_goals(stix_intrusion_set, threat_actor_with_goals)
 
 
 # Scenario: Create STIX intrusion set with all optional data
@@ -430,8 +428,6 @@ def test_gti_threat_actor_to_stix_with_all_data(
     _then_stix_intrusion_set_has_motivations(
         stix_intrusion_set, threat_actor_with_all_data
     )
-    _then_stix_intrusion_set_has_labels(stix_intrusion_set, threat_actor_with_all_data)
-    _then_stix_intrusion_set_has_goals(stix_intrusion_set, threat_actor_with_all_data)
 
 
 # =====================
@@ -523,25 +519,25 @@ def test_gti_threat_actor_empty_collections(
     _then_stix_intrusion_set_handles_empty_collections(stix_intrusion_set)
 
 
-# Scenario: Test motivation mapping variations
+# Scenario: Test motivation mapping variations with open vocabulary
 @pytest.mark.parametrize(
-    "gti_motivation,expected_stix_motivation",
+    "gti_motivation",
     [
-        ("Financial", "personal-gain"),
-        ("Corporate Espionage", "organizational-gain"),
-        ("Ideology", "ideology"),
-        ("Revenge", "revenge"),
-        ("Notoriety", "notoriety"),
-        ("Accidental", "accidental"),
+        "Financial",
+        "Corporate Espionage",
+        "Ideology",
+        "Revenge",
+        "Notoriety",
+        "Accidental",
+        "Custom Motivation",
     ],
 )
 def test_motivation_mapping_variations(
     gti_motivation: str,
-    expected_stix_motivation: str,
     mock_organization: Identity,
     mock_tlp_marking: MarkingDefinition,
 ) -> None:
-    """Test various motivation mapping combinations."""
+    """Test open vocabulary motivation mapping."""
     # Given a threat actor with specific motivation
     threat_actor = GTIThreatActorDataFactory.build(
         attributes=ThreatActorModelFactory.build(
@@ -555,10 +551,8 @@ def test_motivation_mapping_variations(
     )
     stix_intrusion_set = _when_convert_to_stix(mapper)
 
-    # Then motivation should be mapped correctly
-    assert (  # noqa: S101
-        stix_intrusion_set.primary_motivation.value == expected_stix_motivation
-    )
+    # Then motivation should be accepted by open vocabulary
+    assert stix_intrusion_set.primary_motivation.value == gti_motivation  # noqa: S101
 
 
 # Scenario: Test multiple motivations
@@ -584,13 +578,13 @@ def test_multiple_motivations(
     )
     stix_intrusion_set = _when_convert_to_stix(mapper)
 
-    # Then should have primary and secondary motivations
-    assert stix_intrusion_set.primary_motivation.value == "personal-gain"  # noqa: S101
+    # Then should have primary and secondary motivations with open vocabulary values
+    assert stix_intrusion_set.primary_motivation.value == "Financial"  # noqa: S101
     assert stix_intrusion_set.secondary_motivations is not None  # noqa: S101
     assert len(stix_intrusion_set.secondary_motivations) == 2  # noqa: S101
     secondary_values = [m.value for m in stix_intrusion_set.secondary_motivations]
-    assert "organizational-gain" in secondary_values  # noqa: S101
-    assert "ideology" in secondary_values  # noqa: S101
+    assert "Corporate Espionage" in secondary_values  # noqa: S101
+    assert "Ideology" in secondary_values  # noqa: S101
 
 
 # =====================
@@ -642,7 +636,6 @@ def _then_stix_intrusion_set_created_successfully(
     assert stix_intrusion_set.created_by_ref == organization.id  # noqa: S101
     assert tlp_marking.id in stix_intrusion_set.object_marking_refs  # noqa: S101
 
-    # Check timestamps
     expected_created = datetime.fromtimestamp(gti_threat_actor.attributes.creation_date)
     expected_modified = datetime.fromtimestamp(
         gti_threat_actor.attributes.last_modification_date
@@ -706,37 +699,6 @@ def _then_stix_intrusion_set_has_motivations(
             )
 
 
-# Then STIX intrusion set has labels
-def _then_stix_intrusion_set_has_labels(
-    stix_intrusion_set: Any, gti_threat_actor: GTIThreatActorData
-) -> None:
-    """Check if STIX intrusion set has labels."""
-    expected_labels = [
-        tag.value for tag in gti_threat_actor.attributes.tags_details if tag.value
-    ]
-
-    if expected_labels:
-        assert stix_intrusion_set.labels is not None  # noqa: S101
-        for expected_label in expected_labels:
-            assert expected_label in stix_intrusion_set.labels  # noqa: S101
-    else:
-        assert stix_intrusion_set.labels is None  # noqa: S101
-
-
-# Then STIX intrusion set has goals
-def _then_stix_intrusion_set_has_goals(
-    stix_intrusion_set: Any, gti_threat_actor: GTIThreatActorData
-) -> None:
-    """Check if STIX intrusion set has goals."""
-    if gti_threat_actor.attributes.targeted_industries_tree:
-        assert stix_intrusion_set.goals is not None  # noqa: S101
-        for industry in gti_threat_actor.attributes.targeted_industries_tree:
-            expected_goal = f"Target {industry.industry_group} industry"
-            assert expected_goal in stix_intrusion_set.goals  # noqa: S101
-    else:
-        assert stix_intrusion_set.goals is None  # noqa: S101
-
-
 # Then STIX intrusion set handles invalid dates
 def _then_stix_intrusion_set_handles_invalid_dates(stix_intrusion_set: Any) -> None:
     """Check if STIX intrusion set handles invalid dates gracefully."""
@@ -749,7 +711,9 @@ def _then_stix_intrusion_set_handles_unmapped_motivations(
 ) -> None:
     """Check if STIX intrusion set handles unmapped motivations."""
     assert stix_intrusion_set is not None  # noqa: S101
-    assert stix_intrusion_set.primary_motivation.value == "unpredictable"  # noqa: S101
+    assert (
+        stix_intrusion_set.primary_motivation.value == "Unknown Motivation"
+    )  # noqa: S101
 
 
 # Then STIX intrusion set handles empty collections
@@ -757,8 +721,7 @@ def _then_stix_intrusion_set_handles_empty_collections(stix_intrusion_set: Any) 
     """Check if STIX intrusion set handles empty collections gracefully."""
     assert stix_intrusion_set is not None  # noqa: S101
     assert stix_intrusion_set.aliases is None  # noqa: S101
-    assert stix_intrusion_set.labels is None  # noqa: S101
-    assert stix_intrusion_set.goals is None  # noqa: S101
+
     assert stix_intrusion_set.primary_motivation is None  # noqa: S101
     assert stix_intrusion_set.secondary_motivations is None  # noqa: S101
 
@@ -804,40 +767,6 @@ def test_extract_seen_dates() -> None:
     _then_seen_dates_extracted_correctly(first_seen, last_seen)
 
 
-# Scenario: Test extract labels method
-def test_extract_labels() -> None:
-    """Test extracting labels from threat actor attributes."""
-    # Given threat actor attributes with tags
-    attributes = ThreatActorModelFactory.build(
-        tags_details=[
-            TagDetailFactory.build(value="APT"),
-            TagDetailFactory.build(value="Advanced Persistent Threat"),
-        ]
-    )
-    # When extracting labels
-    labels = _when_extract_labels(attributes)
-    # Then labels should be extracted correctly
-    _then_labels_extracted_correctly(labels, ["APT", "Advanced Persistent Threat"])
-
-
-# Scenario: Test extract goals method
-def test_extract_goals() -> None:
-    """Test extracting goals from threat actor attributes."""
-    # Given threat actor attributes with targeted industries
-    attributes = ThreatActorModelFactory.build(
-        targeted_industries_tree=[
-            TargetedIndustryFactory.build(industry_group="Financial Services"),
-            TargetedIndustryFactory.build(industry_group="Healthcare"),
-        ]
-    )
-    # When extracting goals
-    goals = _when_extract_goals(attributes)
-    # Then goals should be extracted correctly
-    _then_goals_extracted_correctly(
-        goals, ["Target Financial Services industry", "Target Healthcare industry"]
-    )
-
-
 # Scenario: Test extract motivations method
 def test_extract_motivations() -> None:
     """Test extracting motivations from threat actor attributes."""
@@ -862,9 +791,9 @@ def test_extract_motivations() -> None:
 
     # When extracting motivations
     primary, secondary = _when_extract_motivations(mapper, threat_actor.attributes)
-    # Then motivations should be extracted correctly
+    # Then motivations should be extracted correctly with open vocabulary
     _then_motivations_extracted_correctly(
-        primary, secondary, "personal-gain", ["organizational-gain"]
+        primary, secondary, "Financial", ["Corporate Espionage"]
     )
 
 
@@ -885,18 +814,6 @@ def _when_extract_seen_dates(
 ) -> tuple[Optional[datetime], Optional[datetime]]:
     """Extract seen dates from threat actor attributes."""
     return GTIThreatActorToSTIXIntrusionSet._extract_seen_dates(attributes)
-
-
-# When extract labels
-def _when_extract_labels(attributes: ThreatActorModel) -> Optional[List[str]]:
-    """Extract labels from threat actor attributes."""
-    return GTIThreatActorToSTIXIntrusionSet._extract_labels(attributes)
-
-
-# When extract goals
-def _when_extract_goals(attributes: ThreatActorModel) -> Optional[List[str]]:
-    """Extract goals from threat actor attributes."""
-    return GTIThreatActorToSTIXIntrusionSet._extract_goals(attributes)
 
 
 # When extract motivations
@@ -935,28 +852,6 @@ def _then_seen_dates_extracted_correctly(
     assert isinstance(last_seen, datetime)  # noqa: S101
     assert first_seen.year == 2023  # noqa: S101
     assert last_seen.year == 2023  # noqa: S101
-
-
-# Then labels extracted correctly
-def _then_labels_extracted_correctly(
-    labels: Optional[List[str]], expected: List[str]
-) -> None:
-    """Check if labels were extracted correctly."""
-    assert labels is not None  # noqa: S101
-    assert len(labels) == len(expected)  # noqa: S101
-    for expected_label in expected:
-        assert expected_label in labels  # noqa: S101
-
-
-# Then goals extracted correctly
-def _then_goals_extracted_correctly(
-    goals: Optional[List[str]], expected: List[str]
-) -> None:
-    """Check if goals were extracted correctly."""
-    assert goals is not None  # noqa: S101
-    assert len(goals) == len(expected)  # noqa: S101
-    for expected_goal in expected:
-        assert expected_goal in goals  # noqa: S101
 
 
 # Then motivations extracted correctly
@@ -1022,7 +917,6 @@ def test_threat_actor_empty_string_values(
 
     # Then should handle empty strings gracefully
     assert stix_intrusion_set is not None  # noqa: S101
-    # Empty values should result in None for optional fields
     assert stix_intrusion_set.aliases is None  # noqa: S101
     assert stix_intrusion_set.labels is None  # noqa: S101
 

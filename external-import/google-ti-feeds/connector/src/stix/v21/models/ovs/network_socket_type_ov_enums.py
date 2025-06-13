@@ -1,9 +1,9 @@
 """The module defines an enumeration for network socket types."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class NetworkSocketTypeOV(str, Enum):
+class NetworkSocketTypeOV(BaseOV):
     """Network Socket Type Enumeration."""
 
     SOCK_STREAM = "SOCK_STREAM"

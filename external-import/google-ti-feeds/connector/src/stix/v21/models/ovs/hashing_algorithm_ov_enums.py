@@ -1,9 +1,9 @@
 """The module defines an enumeration for various hashing algorithms."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class HashAlgorithmOV(str, Enum):
+class HashAlgorithmOV(BaseOV):
     """Hash Algorithm Enumeration."""
 
     MD5 = "MD5"

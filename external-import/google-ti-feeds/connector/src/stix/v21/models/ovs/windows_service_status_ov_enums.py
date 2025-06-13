@@ -1,9 +1,9 @@
 """The module contains the WindowsServiceStatusOV enum class."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class WindowsServiceStatusOV(str, Enum):
+class WindowsServiceStatusOV(BaseOV):
     """Windows Service Status Enumeration."""
 
     SERVICE_CONTINUE_PENDING = "SERVICE_CONTINUE_PENDING"

@@ -1,9 +1,9 @@
 """The module defines the Course of Action Type Enumeration."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class CourseOfActionTypeOV(str, Enum):
+class CourseOfActionTypeOV(BaseOV):
     """Course of Action Type Enumeration."""
 
     TEXTUAL_PLAIN = "textual:text/plain"

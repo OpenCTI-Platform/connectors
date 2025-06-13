@@ -1,9 +1,9 @@
 """The module contains the ToolTypeOV enum class for representing various tool types in an OV context."""
 
-from enum import Enum
+from connector.src.stix.v21.models.ovs.base_open_vocab import BaseOV
 
 
-class ToolTypeOV(str, Enum):
+class ToolTypeOV(BaseOV):
     """Tool Type OV Enum."""
 
     DENIAL_OF_SERVICE = "denial-of-service"
