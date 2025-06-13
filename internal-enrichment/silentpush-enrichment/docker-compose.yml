@@ -1,10 +1,6 @@
 services:
   connector-silentpush:
-    build:
-      context: "./"
-      target: "silentpush-enrichment"
-    env_file:
-      - .env
+    image: opencti/connector-silentpush-enrichment:6.6.15
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://opencti:8080
