@@ -31,7 +31,6 @@ class URLDomainEnricher(DomainEnricher):
             relationship_type="related-to",
             target_ref=self._stix_entity.get("id"),
             description="URL domain",
-            confidence=100,
             source_ref=self._domain.id,
             allow_custom=True,
             created_by_ref=self._author["id"],

@@ -39,7 +39,6 @@ class IPv6Enricher(IPEnricher):
             relationship_type="related-to",
             target_ref=subnet.id,
             description="Subnet",
-            confidence=100,
             source_ref=self._ip.id,
             allow_custom=True,
             created_by_ref=self._author["id"],

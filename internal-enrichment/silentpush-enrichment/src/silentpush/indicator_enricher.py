@@ -74,7 +74,6 @@ class IndicatorEnricher(Enricher):
             relationship_type="related-to",
             target_ref=self._stix_entity.get("id"),
             description="Indicator observables",
-            confidence=100,
             source_ref=observed_data.id,
             allow_custom=True,
             created_by_ref=self._author["id"],
