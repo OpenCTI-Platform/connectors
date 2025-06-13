@@ -39,8 +39,8 @@ class Phishunt:
             config=self.config,
         )
 
-        self.connector_interval = get_config_variable(
-            env_var="CONNECTOR_INTERVAL",
+        self.phishunt_interval = get_config_variable(
+            env_var="PHISHUNT_INTERVAL",
             yaml_path=["phishunt", "interval"],
             config=self.config,
             isNumber=True,

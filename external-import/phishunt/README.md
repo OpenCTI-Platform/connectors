@@ -51,7 +51,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Scope  | scope            | `CONNECTOR_SCOPE`            |         | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.     |
 | Log Level        | log_level        | `CONNECTOR_LOG_LEVEL`        | info    | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.       |
 | Duration Period  | duration_period  | `CONNECTOR_DURATION_PERIOD`  | P3D     | Yes       | Determines the time interval between each launch of the connector in ISO 8601, ex: `PT30M`.  |
-| ~~Interval~~ ⚠️Deprecated | ~~/~~             | ~~`CONNECTOR_INTERVAL`~~   | ~~3~~       | ~~❌~~    | ~~In days, must be strictly greater than 1.~~ |
+| ~~Interval~~ ⚠️Deprecated | ~~/~~             | ~~`PHISHUNT_INTERVAL`~~   | ~~3~~       | ~~❌~~    | ~~In days, must be strictly greater than 1.~~ |
 
 ### Connector extra parameters environment variables
 
