@@ -44,7 +44,7 @@ See [docs/HOW-TO-Handle-errors-in-connectors.md](docs/HOW-TO-Handle-errors-in-co
 ### Documentation
 
 You can generate full Read the Docs-style documentation using Sphinx. This will provide comprehensive information about the SDK's features, usage, and API.  
-See [How to generate documentation](docs/HOW-TO-generate-sphinx_doc.md) for more details on how to set up and use Sphinx for this project.
+See [How to generate documentation](docs/HOW-TO_Generate_sphinx_doc.md) for more details on how to set up and use Sphinx for this project.
 
 ## Using the Connectors SDK in Your Connector
 
