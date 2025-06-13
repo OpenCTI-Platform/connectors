@@ -6,7 +6,7 @@ import traceback
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
-from typing import Any, Dict
+from typing import Any
 
 import requests
 import stix2
@@ -33,23 +33,24 @@ class Phishunt:
         self.helper = OpenCTIConnectorHelper(self.config)
 
         # Extra config
-        self.phishunt_api_key = get_config_variable(
-            env_var="PHISHUNT_API_KEY",
-            yaml_path=["phishunt", "api_key"],
-            config=self.config,
-        )
-
-        self.phishunt_duration_period = get_config_variable(
+        self.connector_duration_period = get_config_variable(
             env_var="CONNECTOR_DURATION_PERIOD",
             yaml_path=["connector", "duration_period"],
             config=self.config,
         )
 
-        self.phishunt_interval = get_config_variable(
+        self.connector_interval = get_config_variable(
             env_var="CONNECTOR_INTERVAL",
             yaml_path=["phishunt", "interval"],
             config=self.config,
             isNumber=True,
+            default=3,
+        )
+
+        self.phishunt_api_key = get_config_variable(
+            env_var="PHISHUNT_API_KEY",
+            yaml_path=["phishunt", "api_key"],
+            config=self.config,
         )
 
         self.create_indicators = get_config_variable(
@@ -87,6 +88,18 @@ class Phishunt:
         self.last_run = None
         self.last_run_datetime_with_ingested_data = None
 
+        self.stix_created_by = stix2.Identity(
+            id=Identity.generate_id(
+                name="Phishunt", identity_class="organization"
+            ),
+            name="Phishunt",
+            identity_class="organization",
+            description="Phishunt is providing URLs of potential malicious payload.",
+            custom_properties={
+                "x_opencti_organization_type": "vendor",
+            },
+        )
+
     def _process_public_feed(self, work_id):
         url = "https://phishunt.io/feed.txt"
         try:
@@ -96,19 +109,9 @@ class Phishunt:
             with urllib.request.urlopen(
                 url=url, context=ssl.create_default_context()
             ) as fp:
-                stix_created_by = stix2.Identity(
-                    id=Identity.generate_id(
-                        name="Phishunt", identity_class="organization"
-                    ),
-                    name="Phishunt",
-                    identity_class="organization",
-                    description="Phishunt is providing URLs of potential malicious payload.",
-                    custom_properties={
-                        "x_opencti_organization_type": "vendor",
-                    },
-                )
 
-                for line in fp:
+
+                for count, line in enumerate(fp, 1):
                     count += 1
                     if count <= 3:
                         continue
@@ -128,7 +131,7 @@ class Phishunt:
                             "x_opencti_score": self.x_opencti_score_url
                             or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
-                            "x_opencti_created_by_ref": stix_created_by["id"],
+                            "x_opencti_created_by_ref": self.stix_created_by["id"],
                         },
                     )
                     bundle_objects.append(stix_observable)
@@ -140,7 +143,7 @@ class Phishunt:
                             name=line,
                             description="Phishunt malicious URL",
                             pattern_type="stix",
-                            created_by_ref=stix_created_by["id"],
+                            created_by_ref=self.stix_created_by["id"],
                             pattern=pattern,
                             labels=["osint", "phishing"],
                             object_marking_refs=[stix2.TLP_WHITE],
@@ -161,34 +164,20 @@ class Phishunt:
                         )
                         bundle_objects.append(stix_relationship)
 
-            if bundle_objects is not None and len(bundle_objects) > 0:
-                bundle_objects.insert(0, stix_created_by)
-                bundle = self.helper.stix2_create_bundle(bundle_objects)
+            if bundle_objects:
+                bundle = self.helper.stix2_create_bundle([self.stix_created_by] + bundle_objects)
                 self.helper.send_stix2_bundle(
                     bundle,
                     work_id=work_id,
                 )
                 self.last_run_datetime_with_ingested_data = datetime.now(
                     tz=UTC
-                ).isoformat(sep=" ", timespec="seconds")
-        except (
-            urllib.error.URLError,
-            urllib.error.HTTPError,
-            urllib.error.ContentTooShortError,
-        ) as urllib_error:
+                ).isoformat(timespec="seconds")
+        except urllib.error.URLError as urllib_error:
             self.helper.connector_logger.error(
                 "Error retrieving url", {"url": url, "error": urllib_error}
             )
-        except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Connector stopped by user/system...",
-                {"connector_name": self.helper.connect_name},
-            )
-            sys.exit(0)
-        except Exception as error:
-            self.helper.connector_logger.error(
-                "Error while sending public feed bundle", {"error": error}
-            )
+
 
     def _process_private_feed(self, work_id):
         try:
@@ -201,16 +190,6 @@ class Phishunt:
             data = resp.json()
             bundle_objects = []
 
-            stix_created_by = stix2.Identity(
-                id=Identity.generate_id(name="Phishunt", identity_class="organization"),
-                name="Phishunt",
-                identity_class="organization",
-                description="Phishunt is providing URLs of potential malicious payload.",
-                custom_properties={
-                    "x_opencti_organization_type": "vendor",
-                },
-            )
-
             for url in data:
                 stix_url = stix2.URL(
                     value=url["url"],
@@ -220,7 +199,7 @@ class Phishunt:
                         "x_opencti_score": self.x_opencti_score_url
                         or self.default_x_opencti_score,
                         "x_opencti_labels": ["osint", "phishing"],
-                        "x_opencti_created_by_ref": stix_created_by["id"],
+                        "x_opencti_created_by_ref": self.stix_created_by["id"],
                     },
                 )
                 bundle_objects.append(stix_url)
@@ -232,7 +211,7 @@ class Phishunt:
                         name=url["url"],
                         description="Phishunt malicious URL",
                         pattern_type="stix",
-                        created_by_ref=stix_created_by["id"],
+                        created_by_ref=self.stix_created_by["id"],
                         pattern=pattern,
                         labels=["osint", "phishing"],
                         object_marking_refs=[stix2.TLP_WHITE],
@@ -261,7 +240,7 @@ class Phishunt:
                             "x_opencti_score": self.x_opencti_score_domain
                             or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
-                            "x_opencti_created_by_ref": stix_created_by["id"],
+                            "x_opencti_created_by_ref": self.stix_created_by["id"],
                         },
                     )
                     bundle_objects.append(stix_domain)
@@ -285,7 +264,7 @@ class Phishunt:
                         name=url["company"].capitalize(),
                         identity_class="organization",
                         object_marking_refs=[stix2.TLP_WHITE],
-                        created_by_ref=stix_created_by["id"],
+                        created_by_ref=self.stix_created_by["id"],
                     )
                     bundle_objects.append(stix_organization)
 
@@ -309,7 +288,7 @@ class Phishunt:
                             "x_opencti_score": self.x_opencti_score_ip
                             or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
-                            "x_opencti_created_by_ref": stix_created_by["id"],
+                            "x_opencti_created_by_ref": self.stix_created_by["id"],
                         },
                     )
                     bundle_objects.append(stix_ip)
@@ -331,7 +310,7 @@ class Phishunt:
                             id=Location.generate_id(url["country"], "Country"),
                             name=url["country"],
                             country=url["country"],
-                            created_by_ref=stix_created_by["id"],
+                            created_by_ref=self.stix_created_by["id"],
                             allow_custom=True,
                             custom_properties={"x_opencti_location_type": "Country"},
                         )
@@ -349,45 +328,34 @@ class Phishunt:
                         )
                         bundle_objects.append(stix_relationship_ip_location)
 
-            if bundle_objects is not None and len(bundle_objects) > 0:
-                bundle_objects.insert(0, stix_created_by)
-                bundle = self.helper.stix2_create_bundle(bundle_objects)
+            if bundle_objects:
+                bundle = self.helper.stix2_create_bundle([self.stix_created_by] + bundle_objects)
                 self.helper.send_stix2_bundle(
                     bundle,
                     work_id=work_id,
                 )
                 self.last_run_datetime_with_ingested_data = datetime.now(
                     tz=UTC
-                ).isoformat(sep=" ", timespec="seconds")
+                ).isoformat(timespec="seconds")
         except requests.exceptions.HTTPError as err:
             self.helper.connector_logger.error(
                 "[Phishunt] Http error during private feed process.", {"error": err}
             )
-        except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Connector stopped by user/system...",
-                {"connector_name": self.helper.connect_name},
-            )
-            sys.exit(0)
-        except Exception as error:
-            self.helper.connector_logger.error(
-                "Error while sending private feed bundle", {"error": error}
-            )
 
     def run(self):
-        if self.phishunt_duration_period:
+        if self.connector_duration_period:
             self.helper.schedule_iso(
                 message_callback=self.process_message,
-                duration_period=self.phishunt_duration_period,
+                duration_period=self.connector_duration_period,
             )
         else:
             self.helper.schedule_unit(
                 message_callback=self.process_message,
-                duration_period=self.phishunt_interval,
+                duration_period=self.connector_interval,
                 time_unit=self.helper.TimeUnit.DAYS,
             )
 
-    def _load_state(self) -> Dict[str, Any]:
+    def _load_state(self) -> dict[str, Any]:
         current_state = self.helper.get_state()
         if not current_state:
             return {}
@@ -422,7 +390,7 @@ class Phishunt:
                 "[CONNECTOR] Starting connector...",
                 {
                     "connector_name": self.helper.connect_name,  # self.helper.connect_name
-                    "connector_start_time": now.isoformat(sep=" ", timespec="seconds"),
+                    "connector_start_time": now.isoformat(timespec="seconds"),
                     "last_run": (
                         self.last_run if self.last_run else "Connector has never run"
                     ),
@@ -450,15 +418,15 @@ class Phishunt:
                 {
                     "current_state": self.last_run,
                     "new_last_run_start_datetime": now.isoformat(
-                        sep=" ", timespec="seconds"
+                        timespec="seconds"
                     ),
                 },
             )
 
             if self.last_run:
-                current_state["last_run"] = now.isoformat(sep=" ", timespec="seconds")
+                current_state["last_run"] = now.isoformat(timespec="seconds")
             else:
-                current_state = {"last_run": now.isoformat(sep=" ", timespec="seconds")}
+                current_state = {"last_run": now.isoformat(timespec="seconds")}
 
             if self.last_run_datetime_with_ingested_data:
                 current_state["last_run_datetime_with_ingested_data"] = (
@@ -467,7 +435,7 @@ class Phishunt:
 
             self.helper.set_state(current_state)
             message = "Connector successfully run, storing last_run as" + now.isoformat(
-                sep=" ", timespec="seconds"
+                timespec="seconds"
             )
 
             self.helper.api.work.to_processed(work_id, message)

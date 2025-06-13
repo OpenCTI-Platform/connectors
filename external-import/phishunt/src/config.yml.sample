@@ -14,7 +14,6 @@ connector:
 phishunt:
   api_key: '' # Optional, if not provided, consume only https://phishunt.io/feed.txt
   create_indicators: True
-  interval: 3 # In days, must be strictly greater than 1
   default_x_opencti_score: 40 # Optional: Defaults to 40
   x_opencti_score_domain: 40  # Optional: Default default_x_opencti_score
   x_opencti_score_ip: 40      # Optional: Default default_x_opencti_score
