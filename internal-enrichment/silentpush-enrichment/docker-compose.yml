@@ -4,7 +4,7 @@ services:
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=silentpush
       - CONNECTOR_NAME=SilentPush
@@ -13,8 +13,8 @@ services:
       - CONNECTOR_AUTO=false
 
       # Connector's custom execution parameters
-      - SILENTPUSH_API_BASE_URL=https://app.silentpush.com/api/v1/merge-api/
-      - SILENTPUSH_API_KEY=${CONNECTOR_SILENTPUSH_API_KEY}
+      - SILENTPUSH_API_BASE_URL=https://app.silentpush.com/api/v1/
+      - SILENTPUSH_API_KEY=${SILENTPUSH_API_KEY}
       - SILENTPUSH_VERIFY_CERT=true
       - SILENTPUSH_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
 
