@@ -711,9 +711,9 @@ def test_build_stix_pattern_ipv6(
     pattern = mapper._build_stix_pattern()
 
     # Then IPv6 pattern should be returned
-    assert (
+    assert (  # noqa: S101
         pattern == "[ipv6-addr:value = '2001:0db8:85a3:0000:0000:8a2e:0370:7334']"
-    )  # noqa: S101
+    )
 
 
 # Scenario: Test determine indicator types method
@@ -807,9 +807,9 @@ def test_create_stix_ipv6_method(
     # Then IPv6 observable should be created correctly
     assert ip_observable is not None  # noqa: S101
     assert hasattr(ip_observable, "value")  # noqa: S101
-    assert (
+    assert (  # noqa: S101
         ip_observable.value == "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
-    )  # noqa: S101
+    )
 
 
 # Scenario: Test create STIX indicator method

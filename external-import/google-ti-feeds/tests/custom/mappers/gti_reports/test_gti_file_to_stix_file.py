@@ -694,13 +694,13 @@ def test_build_stix_pattern_with_hashes(
     pattern = mapper._build_stix_pattern()
 
     # Then pattern should include both hashes
-    assert (
+    assert (  # noqa: S101
         "file:hashes.'SHA-256' = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'"
         in pattern
-    )  # noqa: S101
-    assert (
+    )
+    assert (  # noqa: S101
         "file:hashes.MD5 = 'd41d8cd98f00b204e9800998ecf8427e'" in pattern
-    )  # noqa: S101
+    )
     assert " OR " in pattern  # noqa: S101
 
 
@@ -917,16 +917,16 @@ def _then_stix_indicator_has_hash_pattern(
     """Assert that STIX indicator has correct hash pattern."""
     if gti_file.attributes:
         if gti_file.attributes.sha256:
-            assert (
+            assert (  # noqa: S101
                 f"file:hashes.'SHA-256' = '{gti_file.attributes.sha256}'"
                 in indicator.pattern
-            )  # noqa: S101
+            )
         if gti_file.attributes.md5:
-            assert (
+            assert (  # noqa: S101
                 f"file:hashes.MD5 = '{gti_file.attributes.md5}'" in indicator.pattern
-            )  # noqa: S101
+            )
         if gti_file.attributes.sha1:
-            assert (
+            assert (  # noqa: S101
                 f"file:hashes.'SHA-1' = '{gti_file.attributes.sha1}'"
                 in indicator.pattern
-            )  # noqa: S101
+            )

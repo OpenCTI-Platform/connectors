@@ -711,9 +711,9 @@ def _then_stix_intrusion_set_handles_unmapped_motivations(
 ) -> None:
     """Check if STIX intrusion set handles unmapped motivations."""
     assert stix_intrusion_set is not None  # noqa: S101
-    assert (
+    assert (  # noqa: S101
         stix_intrusion_set.primary_motivation.value == "Unknown Motivation"
-    )  # noqa: S101
+    )
 
 
 # Then STIX intrusion set handles empty collections

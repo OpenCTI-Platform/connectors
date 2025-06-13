@@ -688,9 +688,9 @@ def _then_stix_report_has_report_type(result, expected_type):
 def _then_stix_report_has_open_vocab_report_type(result, expected_type_value):
     """Assert STIX report has expected report type value from open vocabulary."""
     assert len(result.report_types) > 0  # noqa: S101
-    assert any(
+    assert any(  # noqa: S101
         rt.value == expected_type_value for rt in result.report_types
-    )  # noqa: S101
+    )
 
 
 def _then_stix_report_has_none_report_type(result):
