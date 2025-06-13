@@ -1,4 +1,4 @@
-# TDR: Srtucture models mirroring OCTI UI
+# TDR: Structure models mirroring OCTI UI
 
 ## Overview
 
