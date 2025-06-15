@@ -365,14 +365,13 @@ class S3Connector:
                 fixed_bundle = self.fix_bundle(content)
                 if fixed_bundle:
                     self.helper.send_stix2_bundle(bundle=fixed_bundle, work_id=work_id)
-                    if self.s3_delete_after_import:
-                        self.helper.log_info("Deleting file " + o.get("Key"))
-                        self.s3_client.delete_object(
-                            Bucket=self.s3_bucket_name, Key=o.get("Key")
-                        )
                 else:
                     self.helper.log_info("No content to ingest")
-
+                if self.s3_delete_after_import:
+                    self.helper.log_info("Deleting file " + o.get("Key"))
+                    self.s3_client.delete_object(
+                        Bucket=self.s3_bucket_name, Key=o.get("Key")
+                    )
             message = (
                 "Connector successfully run ("
                 + str(len(objects.get("Contents")))
