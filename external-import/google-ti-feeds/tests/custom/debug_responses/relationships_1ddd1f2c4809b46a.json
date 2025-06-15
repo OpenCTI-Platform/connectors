@@ -1,0 +1,14 @@
+{
+  "request_info": {
+    "endpoint": "https://www.virustotal.com/api/v3/collections/report--24-10020775/relationships/threat_actors",
+    "query_params": {},
+    "entity_type": "relationships",
+    "method": "GET"
+  },
+  "response": [
+    {
+      "type": "collection",
+      "id": "threat-actor--562df3e6-c6c7-526f-800e-b633c189d75c"
+    }
+  ]
+}
