@@ -37,23 +37,23 @@ Note tha the `.env.sample` file can be used as a reference.
 
 The ones that follow are connector's generic execution parameters expected to be added for export connectors.
 
-| Parameter       | config.yml         | Docker environment variable | Mandatory | Description                                                                                                  |
-|-----------------|--------------------|-----------------------------|-----------|--------------------------------------------------------------------------------------------------------------|
-| OpenCTI URL     | `url`              | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080` |
-| OpenCTI Token   | `token`            | `OPENCTI_TOKEN`             | Yes       | The default admin token configured in the OpenCTI platform parameters file.                                  |
-| Connector ID    | `id`               | `CONNECTOR_ID`              | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                                           |
-| Connector Scope | `log_level`        | `CONNECTOR_LOG_LEVEL`       | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                |
+| Parameter                   | config.yml        | Docker environment variable  | Default | Mandatory | Description                                                                                                                                                                   |
+|-----------------------------|-------------------|------------------------------|---------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| OpenCTI URL                 | `url`             | `OPENCTI_URL`                |         | Yes       | The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`                                                                  |
+| OpenCTI Token               | `token`           | `OPENCTI_TOKEN`              |         | Yes       | The API token for authenticating with OpenCTI.                                                                                                                                |
+| Connector ID                | `id`              | `CONNECTOR_ID`               |         | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                                            |
+| Connector Scope             | `log_level`       | `CONNECTOR_LOG_LEVEL`        | error   | No        | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                 |
+| Duration period             | `duration_period` | `CONNECTOR_DURATION_PERIOD`  |         | Yes       | Determines the time interval between each launch of the connector in ISO 8601, ex: PT30M.                                                                                     |
+| ~~Interval~~ ⚠️Deprecated   | ~~/~~             | ~~`CONNECTOR_RUN_EVERY`~~    | ~~10m~~ | ~~❌~~     | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day. |
 
 
 Finally, the ones that follow are connector's specific execution parameters expected to be used by this connector.
 
-| Parameter           | config.yml            | Docker environment variable      | Default | Mandatory | Description                                                                                                                                                                   |
-|---------------------|-----------------------|----------------------------------|---------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Pull History        | `pull_history`        | `RANSOMWARE_PULL_HISTORY`        | False   | No        | Whether to pull historic data (Default: false)                                                                                                                                |
-| History Start Year  | `history_start_year`  | `RANSOMWARE_HISTORY_START_YEAR`  | 2023    | No        | The year to start from (Default: 2020)                                                                                                                                        |
-| Create Threat Actor | `create_threat_actor` | `RANSOMWARE_CREATE_THREAT_ACTOR` | False   | No        | Whether to create a Threat Actor object (Default: false)                                                                                                                      |
-| Duration period     | `duration_period`     | `CONNECTOR_DURATION_PERIOD`      | PT10M   | No        | Determines the time interval between each launch of the connector in ISO 8601, ex: PT30M.                                                                                     |
-| Interval            | `interval`            | `RANSOMWARE_INTERVAL`            |         | No        | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day. |
+| Parameter                 | config.yml            | Docker environment variable      | Default | Mandatory | Description                                              |
+|---------------------------|-----------------------|----------------------------------|---------|-----------|----------------------------------------------------------|
+| Pull History              | `pull_history`        | `RANSOMWARE_PULL_HISTORY`        | False   | No        | Whether to pull historic data (Default: false)           |
+| History Start Year        | `history_start_year`  | `RANSOMWARE_HISTORY_START_YEAR`  | 2023    | No        | The year to start from (Default: 2020)                   |
+| Create Threat Actor       | `create_threat_actor` | `RANSOMWARE_CREATE_THREAT_ACTOR` | False   | No        | Whether to create a Threat Actor object (Default: false) |
 
 ### Debugging
 
