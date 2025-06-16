@@ -125,12 +125,8 @@ download of data by re-running the connector.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+This connector enriches Domains, IPv4, IPv6 and URLs observables.
+Also enriches indicators containing those types of observables.
 
 
 ## Debugging
@@ -143,9 +139,4 @@ e., `self.helper.connector_logger.error("An error message")`.
 
 ## Additional information
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+Anything needed please talk to us at [info@silentpush.com](mailto:info@silentpush.com)
