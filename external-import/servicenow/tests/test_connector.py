@@ -21,6 +21,7 @@ def test_invalid_retrieved_entity_should_be_skipped_with_warning():
     # Then a warning should be emitted and the process should (continue (not raise an error)
     pass
 
+
 test_observable_handling_labels = (
     {
         "sys_tags": ["tag1", "", "unknown"],
@@ -30,7 +31,7 @@ test_observable_handling_labels = (
     True,
     False,
     False,
-    ["tag1", "secure1", "find1"]
+    ["tag1", "secure1", "find1"],
 )
 
 test_task_handling_labels = (
@@ -58,6 +59,7 @@ test_security_incident_handling_labels = (
     ["sub1", "tag3", "secure3", "contact1", "sensor1"],
 )
 
+
 @pytest.mark.parametrize(
     "entity_attrs, observable, task, security_incident, expected",
     [
@@ -68,8 +70,8 @@ test_security_incident_handling_labels = (
     ids=[
         "Aggregate and filter labels for Observable entity",
         "Aggregate and filter labels for Task entity",
-        "Aggregate and filter labels for Security Incident entity"
-    ]
+        "Aggregate and filter labels for Security Incident entity",
+    ],
 )
 def test_handling_labels(entity_attrs, observable, task, security_incident, expected):
     entity = Mock()

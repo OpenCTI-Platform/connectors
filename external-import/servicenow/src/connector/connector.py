@@ -549,7 +549,7 @@ class ConnectorServicenow:
                             {
                                 "parent_name": parent_name,
                                 "parent_value": parent_value,
-                            }
+                            },
                         )
                         continue
 
