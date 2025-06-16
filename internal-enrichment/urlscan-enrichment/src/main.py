@@ -129,10 +129,9 @@ class UrlscanConnector:
         )
 
         if is_submission:
-            existing_screenshot_title = data["page"].get("title", None)
             prepared_file_png = (
                 self.utils.prepare_file_png(data)
-                if self.config.import_screenshot and existing_screenshot_title
+                if self.config.import_screenshot
                 else None
             )
             labels = self._generate_labels(data)
