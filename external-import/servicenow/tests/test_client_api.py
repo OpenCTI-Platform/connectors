@@ -45,39 +45,45 @@ def test_build_url(mock_client):
         (
             # Handling "State"
             ["Closed", "NotExisting", "Cancelled"],
-            {"result": [
-                {"label": "Eradicate", "value": "19"},
-                {"label": "Analysis", "value": "16"},
-                {"label": "Closed", "value": "3"},
-                {"label": "Cancelled", "value": "7"},
-                {"label": "Draft", "value": "10"},
-                {"label": "Contain", "value": "18"},
-                {"label": "Review", "value": "100"},
-                {"label": "Recover", "value": "20"},
-            ]},
+            {
+                "result": [
+                    {"label": "Eradicate", "value": "19"},
+                    {"label": "Analysis", "value": "16"},
+                    {"label": "Closed", "value": "3"},
+                    {"label": "Cancelled", "value": "7"},
+                    {"label": "Draft", "value": "10"},
+                    {"label": "Contain", "value": "18"},
+                    {"label": "Review", "value": "100"},
+                    {"label": "Recover", "value": "20"},
+                ]
+            },
             "3,7",
         ),
         (
             # Handling "Severity"
             ["medium", "low", "NotExisting"],
-            {"result": [
-                {"label": "1 - High", "value": "1"},
-                {"label": "2 - Medium", "value": "2"},
-                {"label": "3 - Low", "value": "3"}
-            ]},
+            {
+                "result": [
+                    {"label": "1 - High", "value": "1"},
+                    {"label": "2 - Medium", "value": "2"},
+                    {"label": "3 - Low", "value": "3"},
+                ]
+            },
             "2,3",
         ),
         (
             # Handling "Priority"
             ["NotExisting", "low"],
-            {"result": [
-                {"label": "2 - High", "value": "2"},
-                {"label": "3 - Moderate", "value": "3"},
-                {"label": "4 - Low", "value": "4"},
-                {"label": "5 - Planning", "value": "5"},
-                {"label": "1 - Critical", "value": "1"}
-            ]},
-            "4"
+            {
+                "result": [
+                    {"label": "2 - High", "value": "2"},
+                    {"label": "3 - Moderate", "value": "3"},
+                    {"label": "4 - Low", "value": "4"},
+                    {"label": "5 - Planning", "value": "5"},
+                    {"label": "1 - Critical", "value": "1"},
+                ]
+            },
+            "4",
         ),
     ],
     ids=[
@@ -101,4 +107,3 @@ async def test_list_matched(config_labels, mock_response, expected_result):
     )
     # Then the results should be in the values matching the labels
     assert result == expected_result
-
