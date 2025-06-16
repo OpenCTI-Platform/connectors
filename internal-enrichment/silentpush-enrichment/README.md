@@ -48,23 +48,25 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter       | config.yml      | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|-----------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id              | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
-| Connector Name  | name            | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope           | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Connector Auto  | connector_auto	 | `CONNECTOR_AUTO`            | True            | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
+| Parameter       | config.yml      | Docker environment variable | Default | Mandatory | Description                                                                              |
+|-----------------|-----------------|-----------------------------|---------|-----------|------------------------------------------------------------------------------------------|
+| Connector ID    | id              | `CONNECTOR_ID`              | /       | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
+| Connector Type  | type            | `CONNECTOR_TYPE`            |         | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
+| Connector Name  | name            | `CONNECTOR_NAME`            |         | Yes       | Name of the connector.                                                                   |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`           |         | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | info    | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Connector Auto  | connector_auto	 | `CONNECTOR_AUTO`            | True    | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
 
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
+| Parameter                         | config.yml   | Docker environment variable | Default                            | Mandatory | Description |
+|-----------------------------------|--------------|-----------------------------|------------------------------------|-----------|-------------|
+| API base URL                      | api_base_url | SILENTPUSH_API_BASE_URL     | https://app.silentpush.com/api/v1/ | No        |             |
+| API key                           | api_key      | SILENTPUSH_API_KEY          |                                    | Yes       |             |
+| Signed or self signed Certificate | verify_cert  | SILENTPUSH_VERIFY_CERT      | True                               | No        |             |
+| TLP classification                | max_tlp      |                             |                                    | No        |             |
 
 ## Deployment
 
