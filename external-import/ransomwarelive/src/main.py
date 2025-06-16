@@ -5,6 +5,7 @@ from pycti import OpenCTIConnectorHelper
 from lib.ransom_conn import RansomwareAPIConnector
 from ransomwarelive.config import ConnectorSettings
 
+
 class CustomConnector(RansomwareAPIConnector):
     def _collect_intelligence(self) -> []:
         """Collects intelligence from channels
