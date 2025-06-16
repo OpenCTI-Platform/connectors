@@ -1,8 +1,9 @@
 import sys
 import traceback
 
+from pycti import OpenCTIConnectorHelper
 from lib.ransom_conn import RansomwareAPIConnector
-
+from ransomwarelive.config import ConnectorSettings
 
 class CustomConnector(RansomwareAPIConnector):
     def _collect_intelligence(self) -> []:
@@ -20,7 +21,9 @@ class CustomConnector(RansomwareAPIConnector):
 
 if __name__ == "__main__":
     try:
-        connector = CustomConnector()
+        config = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
+        connector = CustomConnector(helper=helper, config=config)
         connector.run()
     except Exception:
         traceback.print_exc()
