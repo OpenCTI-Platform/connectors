@@ -33,7 +33,7 @@ dependencies = [
 [project.optional-dependencies]
 test= [
     "pytest >=8.1.1, <9",
-    "pytest-asyncio >= 0.25.3, <1",
+    "pytest-asyncio >=1, <2",
     "freezegun >=1.2.0, <2"
 ]
 dev = [
