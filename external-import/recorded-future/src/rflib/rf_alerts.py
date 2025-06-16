@@ -425,7 +425,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                             in str(hit["document"]["source"]["name"]).lower()
                         ):
                             value = search(
-                                "(https:\/\/t.me\/.+?(?=\/))|(https:\/\/twitter.com\/.+?(?=\/))",
+                                r"(https:\/\/t.me\/.+?(?=\/))|(https:\/\/twitter.com\/.+?(?=\/))",
                                 hit["document"]["url"],
                             )
                             if value is None:
