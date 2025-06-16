@@ -61,12 +61,12 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter                         | config.yml   | Docker environment variable | Default                            | Mandatory | Description |
-|-----------------------------------|--------------|-----------------------------|------------------------------------|-----------|-------------|
-| API base URL                      | api_base_url | SILENTPUSH_API_BASE_URL     | https://app.silentpush.com/api/v1/ | No        |             |
-| API key                           | api_key      | SILENTPUSH_API_KEY          |                                    | Yes       |             |
-| Signed or self signed Certificate | verify_cert  | SILENTPUSH_VERIFY_CERT      | True                               | No        |             |
-| TLP classification                | max_tlp      |                             |                                    | No        |             |
+| Parameter                         | config.yml   | Docker environment variable | Default                            | Mandatory | Description                                                             |
+|-----------------------------------|--------------|-----------------------------|------------------------------------|-----------|-------------------------------------------------------------------------|
+| API base URL                      | api_base_url | SILENTPUSH_API_BASE_URL     | https://app.silentpush.com/api/v1/ | No        | The Silent Push API URL                                                 |
+| API key                           | api_key      | SILENTPUSH_API_KEY          |                                    | Yes       | You need an API key, sign up at https://explore.silentpush.com/register |
+| Signed or self signed Certificate | verify_cert  | SILENTPUSH_VERIFY_CERT      | True                               | No        |                                                                         |
+| TLP classification                | max_tlp      |                             |                                    | No        |                                                                         |
 
 ## Deployment
 
