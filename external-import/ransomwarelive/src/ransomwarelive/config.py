@@ -24,7 +24,7 @@ class _RansomwareConfig(BaseModel):
     pull_history: bool = Field(default=False)
     history_start_year: int = Field(default=2023)
     create_threat_actor: bool = Field(default=False)
-    interval: str = Field(default=None) # Warning Deprecated
+    interval: str = Field(default=None)  # Warning Deprecated
 
 
 class ConnectorSettings(BaseConnectorSettings):

@@ -1,9 +1,6 @@
-import datetime as dt
-import os
 import re
 import sys
 from datetime import UTC, datetime
-import socket
 
 import pycti
 import requests
@@ -26,6 +23,7 @@ from stix2 import (
     Report,
     ThreatActor,
 )
+
 from ransomwarelive.config import ConnectorSettings
 
 
@@ -38,7 +36,7 @@ class RansomwareAPIConnector:
     """
 
     def __init__(
-            self, helper: OpenCTIConnectorHelper, config: ConnectorSettings
+        self, helper: OpenCTIConnectorHelper, config: ConnectorSettings
     ) -> None:
         self.helper = helper
         self.config = config
@@ -72,7 +70,7 @@ class RansomwareAPIConnector:
         ]
 
         if matching_items and matching_items[0].get("description") is not (
-                None or "" or " " or "null"
+            None or "" or " " or "null"
         ):
             description = matching_items[0].get(
                 "description", "No description available"
@@ -84,12 +82,12 @@ class RansomwareAPIConnector:
 
     # Generates a relationship object
     def relationship_generator(
-            self,
-            source_ref: str,
-            target_ref: str,
-            relationship_type: str,
-            attack_date: datetime = None,
-            discovered: datetime = None,
+        self,
+        source_ref: str,
+        target_ref: str,
+        relationship_type: str,
+        attack_date: datetime = None,
+        discovered: datetime = None,
     ) -> Relationship:
 
         relation = Relationship(
@@ -140,7 +138,9 @@ class RansomwareAPIConnector:
                 response_json = response.json()
                 if response_json.get("Answer") is not None:
                     for item in response_json.get("Answer"):
-                        if item.get("type") == 1 and self.is_ipv4(item.get("data")): #ipaddress.ip_address(item.get("data")).version
+                        if item.get("type") == 1 and self.is_ipv4(
+                            item.get("data")
+                        ):  # ipaddress.ip_address(item.get("data")).version
                             ip_address = item.get("data")
                             return ip_address
             return None
@@ -297,9 +297,9 @@ class RansomwareAPIConnector:
     # Generates a ransom note external reference
     def ransom_note_generator(self, group_name):
         if group_name in ("lockbit3", "lockbit2"):
-            url="https://www.ransomware.live/ransomnotes/lockbit"
+            url = "https://www.ransomware.live/ransomnotes/lockbit"
         else:
-            url=f"https://www.ransomware.live/ransomnotes/{group_name}"
+            url = f"https://www.ransomware.live/ransomnotes/{group_name}"
 
         return ExternalReference(
             source_name="Ransom Note",
@@ -361,10 +361,12 @@ class RansomwareAPIConnector:
         try:
             return TypeAdapter(datetime).validate_python(value)
         except ValidationError:
-            (self.helper.connector_logger.debug(
-                "The expected value is not a valid datetime.",
-                {"field": check_field, "value": value},
-            ))
+            (
+                self.helper.connector_logger.debug(
+                    "The expected value is not a valid datetime.",
+                    {"field": check_field, "value": value},
+                )
+            )
             return None
 
     # Generates STIX objects from the ransomware.live API data
@@ -537,7 +539,9 @@ class RansomwareAPIConnector:
                             discovered_iso,
                         )
                         bundle_objects.append(relation_sector_threat_actor)
-                        report.get("object_refs").append(relation_sector_threat_actor.get("id"))
+                        report.get("object_refs").append(
+                            relation_sector_threat_actor.get("id")
+                        )
 
                     report.get("object_refs").append(relation_sector_victim.get("id"))
 
@@ -549,7 +553,9 @@ class RansomwareAPIConnector:
                         discovered_iso,
                     )
                     bundle_objects.append(relation_intrusion_sector)
-                    report.get("object_refs").append(relation_intrusion_sector.get("id"))
+                    report.get("object_refs").append(
+                        relation_intrusion_sector.get("id")
+                    )
         except Exception as e:
             self.helper.connector_logger.error(
                 "Error while creating Sector object", {"error": e}
@@ -562,10 +568,10 @@ class RansomwareAPIConnector:
             domain_name = self.domain_extractor(item.get("victim"))
         # Retrieve domain name where "victim" is not a domain name
         elif (
-                item.get("domain")
-                and item.get("domain") != ""
-                and not self.is_domain(item.get("victim"))
-                and self.domain_extractor(item.get("domain"))
+            item.get("domain")
+            and item.get("domain") != ""
+            and not self.is_domain(item.get("victim"))
+            and self.domain_extractor(item.get("domain"))
         ):
             domain_name = self.domain_extractor(item.get("domain"))
 
@@ -582,8 +588,8 @@ class RansomwareAPIConnector:
             bundle_objects.append(relation_victim_domain)
 
             # Fetching IP address of the domain
-            resolved_ip = self.ip_fetcher(domain_name) #TODO
-            ip_object = self.ip_object_creator(resolved_ip) # TODO
+            resolved_ip = self.ip_fetcher(domain_name)  # TODO
+            ip_object = self.ip_object_creator(resolved_ip)  # TODO
 
             if ip_object and ip_object.get("id"):
                 relation_domain_ip = self.relationship_generator(
@@ -598,17 +604,14 @@ class RansomwareAPIConnector:
             report.get("object_refs").append(relation_victim_domain.get("id"))
 
         # Creating Location object
-        if (
-                item.get("country")
-                and len(item.get("country", "Four")) < 4
-        ):
+        if item.get("country") and len(item.get("country", "Four")) < 4:
 
             country_name = item.get("country")
             country_stix_id = self.opencti_location_check(country_name)
 
             location = Location(
                 id=country_stix_id
-                   or pycti.Location.generate_id(country_name, "Country"),
+                or pycti.Location.generate_id(country_name, "Country"),
                 name=country_name,
                 country=item.get("country"),
                 type="location",
@@ -643,7 +646,9 @@ class RansomwareAPIConnector:
                     discovered_iso,
                 )
                 bundle_objects.append(relation_threat_actor_location)
-                report.get("object_refs").append(relation_threat_actor_location.get("id"))
+                report.get("object_refs").append(
+                    relation_threat_actor_location.get("id")
+                )
 
             report.get("object_refs").append(location.get("id"))
             report.get("object_refs").append(relation_intrusion_location.get("id"))
@@ -652,7 +657,8 @@ class RansomwareAPIConnector:
             bundle_objects.append(report)
 
         self.helper.connector_logger.info(
-            "Sending STIX objects to collect_intelligence.", {"len_bundle_objects": len(bundle_objects)}
+            "Sending STIX objects to collect_intelligence.",
+            {"len_bundle_objects": len(bundle_objects)},
         )
         return bundle_objects
 
@@ -680,7 +686,11 @@ class RansomwareAPIConnector:
             )
 
         # Checking if the historic year is less than 2020 as there is no data past 2020
-        year = self.config.ransomware.history_start_year if self.config.ransomware.history_start_year >= 2020 else 2020
+        year = (
+            self.config.ransomware.history_start_year
+            if self.config.ransomware.history_start_year >= 2020
+            else 2020
+        )
 
         current_year = datetime.now().year
         bundle = []
@@ -696,14 +706,10 @@ class RansomwareAPIConnector:
                 try:
                     for item in response_json:
 
-                        bundle_list = self.stix_object_generator(
-                            item, group_data
-                        )
+                        bundle_list = self.stix_object_generator(item, group_data)
 
                         if bundle_list is None:
-                            self.helper.connector_logger.info(
-                                "No new data to process"
-                            )
+                            self.helper.connector_logger.info("No new data to process")
                         else:
                             # Deduplicate the objects
                             bundle_list = self.helper.stix2_deduplicate_objects(
@@ -777,8 +783,8 @@ class RansomwareAPIConnector:
                     if last_run is None:
                         time_diff = 1
                     else:
-                        time_diff = int(datetime.timestamp(created)) - ( #TODO
-                                int(last_run) - 86400
+                        time_diff = int(datetime.timestamp(created)) - (  # TODO
+                            int(last_run) - 86400
                         )  # pushing all the data from the last 24 hours
 
                     if time_diff > 0:
