@@ -543,6 +543,16 @@ class ConnectorServicenow:
                         parent_value, parent_name, intelligence_models[parent_name]
                     )
 
+                    if validated_parent is None:
+                        self.helper.connector_logger.warning(
+                            "[WARNING] Validation failed. The entity will be ignored.",
+                            {
+                                "parent_name": parent_name,
+                                "parent_value": parent_value,
+                            }
+                        )
+                        continue
+
                     validated_parent_name = validated_parent.get(parent_name)
                     self.helper.connector_logger.debug(
                         "[MODEL-VALIDATE] Data for the parent entity have been successfully validated.",

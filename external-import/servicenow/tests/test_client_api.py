@@ -12,6 +12,10 @@ from connector.services.client_api import ServiceNowClient
 def mock_client():
     helper = Mock()
     config = Mock()
+
+    config.servicenow.api_leaky_bucket_rate = 10
+    config.servicenow.api_leaky_bucket_capacity = 10
+
     return ServiceNowClient(helper=helper, config=config)
 
 
