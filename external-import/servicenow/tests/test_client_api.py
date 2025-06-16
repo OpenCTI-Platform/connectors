@@ -88,8 +88,8 @@ def test_build_url(mock_client):
     ],
     ids=[
         "Match and filter multiple labels for state",
-        "Match and filter multiple labels for state",
-        "Match and filter multiple labels for state",
+        "Match and filter multiple labels for severity",
+        "Match and filter multiple labels for priority",
     ],
 )
 async def test_list_matched(config_labels, mock_response, expected_result):
