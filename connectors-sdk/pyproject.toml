@@ -6,7 +6,7 @@ build-backend = "poetry.core.masonry.api"
 name = "connectors-sdk"
 dynamic = ["version"]
 description = "Connectors SDK for Octi Connectors."
-requires-python = ">=3.11, <3.13"
+requires-python = ">=3.13, <3.14"
 
 [tool.poetry]
 version = "0.0.0" # unused as the vrsion is dynamically set by project.dynamic but needed for poetry to work
