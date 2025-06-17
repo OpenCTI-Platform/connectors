@@ -1,0 +1,191 @@
+"""
+This script is used for generating a JSON schema model purpose.
+Make sure to define or import ConfigLoader and ensure it is compatible (e.g., a Pydantic model).
+The code assumes that the __infos__ directory exists and contains the necessary JSON files.
+All methods are documented for clarity and maintainability.
+The print statement in create_connector_contract provides positive feedback when the contract is generated.
+The connector configuration MUST use `pydantic` or `pydantic-settings` Python libraries.
+"""
+import traceback
+import json
+import os
+from collections import OrderedDict
+
+from pydantic.json_schema import GenerateJsonSchema
+# Import your configuration model
+from src.__init_config__ import ConfigLoader
+
+__OPENCTI_CURRENT_VERSION__ = "6.7.0"
+
+class ConnectorContractGenerator:
+    """
+    Specifications of the generator
+
+    This class encapsulates the main actions to generate a connector contract.
+    """
+
+    def __init__(self):
+        self.connector_infos_filename = "connector_infos.json"
+        self.connector_schema_filename = "connector_schema.json"
+        self.connector_model_configs = ConfigLoader  # Should be a Pydantic model or config loader
+
+    def load_connector_infos(self) -> dict:
+        """
+        Utility function to load a json file to a dict
+        :return: dict containing connector information
+        """
+        filepath = os.path.join(os.path.dirname(__file__), "__infos__", self.connector_infos_filename)
+        with open(filepath, encoding="utf-8") as json_file:
+            return json.load(json_file)
+
+    def extract_connector_infos(self, schema: str) -> dict:
+        """
+        Extracts connector info and orders it, inserting the schema as the first key.
+
+        :param schema: The schema URI or identifier to include.
+        :return: OrderedDict with $schema and connector info.
+        """
+        connector_infos = self.load_connector_infos()
+
+        key_order = []
+        sorted_dict = OrderedDict()
+        key_order.append("$schema")
+        sorted_dict["$schema"] = schema
+
+        for key, value in connector_infos.items():
+            if key == "container_version":
+                value = __OPENCTI_CURRENT_VERSION__
+            key_order.append(key)
+            sorted_dict[key] = value
+
+        return sorted_dict
+
+    @staticmethod
+    def extract_connector_configurations(definitions: dict):
+        """
+        Processes configuration definitions to extract required fields, default values, and properties.
+
+        :param definitions: Dictionary of configuration definitions.
+        :return: Dictionary with 'default', 'required', and 'properties' keys.
+        """
+        base_configurations = definitions
+
+        custom_dict = {
+            "default": {},
+            "required": [],
+            "properties": {},
+        }
+
+        for key, value in base_configurations.items():
+            extract_required_from_base = value["required"]
+            custom_dict["required"].extend(extract_required_from_base)
+
+            extract_properties_from_base = value["properties"]
+
+            for config_name, config_value in extract_properties_from_base.items():
+                keys_to_exclude = ["title"]
+                for key_to_exclude in keys_to_exclude:
+                    if key_to_exclude in config_value:
+                        del config_value[key_to_exclude]
+
+                if "default" in config_value:
+                    if config_value["default"] is not None:
+                        custom_dict["properties"].update({config_name: config_value})
+                        custom_dict["default"].update({config_name: config_value["default"]})
+                    del config_value["default"]
+                if "anyOf" in config_value:
+                    for config_value_type in config_value["anyOf"]:
+                        if "format" in config_value_type:
+                            value["properties"][config_name]["format"] = config_value_type["format"]
+                        if "items" in config_value_type:
+                            if config_value_type["items"].get("type"):
+                                value["properties"][config_name]["type"] = config_value_type["items"]["type"]
+                            if config_value_type["items"].get("enum"):
+                                value["properties"][config_name]["enum"] = config_value_type["items"]["enum"]
+                        if "string" in config_value_type["type"]:
+                            value["properties"][config_name]["type"] = config_value_type["type"]
+                        if "integer" in config_value_type["type"]:
+                            value["properties"][config_name]["type"] = config_value_type["type"]
+                        if "boolean" in config_value_type["type"]:
+                            value["properties"][config_name]["type"] = config_value_type["type"]
+                        if "enum" in config_value_type:
+                            value["properties"][config_name]["enum"] = config_value_type["enum"]
+
+                    # Remove to be compliant with current usage of connector manager
+                    del config_value["anyOf"]
+
+            custom_dict["properties"].update(extract_properties_from_base)
+
+        return custom_dict
+
+    def make_connector_configurations(self, base_schema: dict, definitions) -> dict:
+        """
+        Combines base schema information with extracted configuration details.
+
+        :param base_schema: The base schema dictionary.
+        :param definitions: Configuration definitions.
+        :return: Dictionary merging base schema and extracted configurations.
+        """
+        keys_to_extract_from_base = ["type", "additionalProperties"]
+        base_schema = {
+            key: base_schema[key] for key in keys_to_extract_from_base if key in base_schema
+        }
+
+        connector_configurations = base_schema | self.extract_connector_configurations(
+            definitions
+        )
+
+        return connector_configurations
+
+    def generate_connector_schema(self):
+        """
+        Generates the complete connector schema using a custom schema generator compatible with Pydantic.
+        Isolate custom class generator, Pydantic expects a class, not an instance
+        Always subclass GenerateJsonSchema and pass the class to Pydantic, not an instance
+        :return: The generated connector schema as a dictionary.
+        """
+        extract_infos = self.extract_connector_infos
+        make_connector_configurations = self.make_connector_configurations
+
+        class ConnectorCustomSchemaGenerator(GenerateJsonSchema):
+            def generate(self, schema, mode="validation"):
+                json_schema = super().generate(schema, mode=mode)
+
+                connector_infos_json = extract_infos(self.schema_dialect)
+
+                # For connector that have properties configured for connector manager, add properties
+                if json_schema["properties"]:
+                    connector_configurations = make_connector_configurations(
+                        json_schema, self.definitions
+                    )
+                    connector_infos_json = connector_infos_json | connector_configurations
+
+                return connector_infos_json
+
+        return self.connector_model_configs.model_json_schema(
+            by_alias=True, schema_generator=ConnectorCustomSchemaGenerator
+        )
+
+    def create_connector_contract(self):
+        """
+        Generates the connector contract and writes it to a JSON file.
+        """
+        connector_json_schema = self.generate_connector_schema()
+        format_connector_schema = json.dumps(connector_json_schema, indent=2)
+
+        filepath = os.path.join(os.path.dirname(__file__), "__infos__", self.connector_schema_filename)
+        with open(filepath, "w") as file:
+            file.write(format_connector_schema)
+        print(f"✅- Connector contract written to {filepath}")
+
+
+if __name__ == "__main__":
+    """
+    Entry point of the script
+    """
+    try:
+        connector_contract_generator = ConnectorContractGenerator()
+        connector_contract_generator.create_connector_contract()
+    except Exception:
+        traceback.print_exc()
+        exit(1)

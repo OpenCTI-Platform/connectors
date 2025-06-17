@@ -1,36 +1,31 @@
-import os
 import re
+import traceback
 from typing import Dict
 
 import pycountry
 import requests
 import stix2
-import yaml
 from pycti import (
     Location,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
-    get_config_variable,
 )
+from src.services import IPInfoConfig
 
 
 class IpInfoConnector:
     def __init__(self):
         # Instantiate the connector helper from config
-        config_file_path = f"{os.path.dirname(os.path.abspath(__file__))}/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
+        self.config = IPInfoConfig()
+        self.config_instance = self.config.load
+        # Convert the config into a dictionary, automatically excluding any parameters set to `None`.
+        self.config_dict = self.config_instance.model_dump(exclude_none=True)
+        self.helper = OpenCTIConnectorHelper(
+            config=self.config_dict, playbook_compatible=True
         )
-        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
-        self.token = get_config_variable("IPINFO_TOKEN", ["ipinfo", "token"], config)
-        self.max_tlp = get_config_variable(
-            "IPINFO_MAX_TLP", ["ipinfo", "max_tlp"], config
-        )
-        self.use_asn_name = get_config_variable(
-            "IPINFO_USE_ASN_NAME", ["ipinfo", "use_asn_name"], config
-        )
+        self.token = self.config_instance.ipinfo.token
+        self.max_tlp = self.config_instance.ipinfo.max_tlp
+        self.use_asn_name = self.config_instance.ipinfo.use_asn_name
 
     def _generate_stix_bundle(
         self, stix_objects, stix_entity, country, city, loc, asn, privacy
@@ -153,7 +148,10 @@ class IpInfoConnector:
         stix_objects = data["stix_objects"]
         # Get the geo loc from the API
         api_url = (
-            "https://ipinfo.io/" + stix_entity["value"] + "/json/?token=" + self.token
+            "https://ipinfo.io/"
+            + stix_entity["value"]
+            + "/json/?token="
+            + self.token.get_secret_value()
         )
         response = requests.request(
             "GET",
@@ -210,5 +208,9 @@ class IpInfoConnector:
 
 
 if __name__ == "__main__":
-    ipInfoInstance = IpInfoConnector()
-    ipInfoInstance.start()
+    try:
+        ipInfoInstance = IpInfoConnector()
+        ipInfoInstance.start()
+    except Exception:
+        traceback.print_exc()
+        exit(1)
