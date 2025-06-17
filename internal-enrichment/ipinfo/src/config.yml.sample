@@ -3,15 +3,14 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
-  name: 'IpInfo'
-  scope: 'IPv4-Addr,IPv6-Addr'
-  auto: true # Enable/disable auto-enrichment of observables
-  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
-  log_level: 'info'
+  id: 'ChangeMe' # REQUIRED
+
+  # Connector definition parameters - OPTIONAL
+  #name: 'ChangeMe' # Default: 'IPInfo'
+  #scope: 'ChangeMe' # Default: 'ServiceNow'
+  #log_level: 'ChangeMe' # Default: 'error'
 
 ipinfo:
   token: 'ChangeMe'
-  max_tlp: 'TLP:AMBER'
-  use_asn_name: true      # Set false if you want ASN name to be just the number e.g. AS8075
+  # max_tlp: 'amber' # optional - default: 'amber' (available: clear, green, amber, amber+strict, red)
+  # use_asn_name: true # default: true // Set false if you want ASN name to be just the number e.g. AS8075

@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/ipinfo.schema.json",
+  "title": "IpInfo connector",
+  "description": "Accurate IP address data that keeps pace with secure, specific, and forward-looking use cases",
+  "short_description": "IpInfo enrichment connector",
+  "use_cases": [
+    "Incident Response & Ticketing",
+    "enrichment"
+  ],
+  "manager_supported": true,
+  "container_image": "opencti/connector-ipinfo",
+  "container_version": "6.7.0",
+  "container_type": "INTERNAL_ENRICHMENT",
+  "verified": true,
+  "last_verified_date": "15-06-2025",
+  "playbook_supported": true,
+  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://ipinfo.io/support",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/ipinfo",
+  "type": "object",
+  "additionalProperties": true,
+  "default": {
+    "CONNECTOR_TYPE": "INTERNAL_ENRICHMENT",
+    "CONNECTOR_NAME": "IPInfo",
+    "CONNECTOR_SCOPE": "IPv4-Addr,IPv6-Addr",
+    "CONNECTOR_LOG_LEVEL": "error",
+    "CONNECTOR_AUTO": true,
+    "IPINFO_MAX_TLP": "amber",
+    "IPINFO_USE_ASN_NAME": true
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_ID",
+    "IPINFO_TOKEN"
+  ],
+  "properties": {
+    "OPENCTI_URL": {
+      "type": "string",
+      "format": "uri",
+      "minLength": 1,
+      "maxLength": 2083,
+      "description": "The OpenCTI platform URL."
+    },
+    "OPENCTI_TOKEN": {
+      "type": "string",
+      "description": "The token of the user who represents the connector in the OpenCTI platform."
+    },
+    "CONNECTOR_TYPE": {
+      "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "description": "Determines the verbosity of the logs.",
+      "type": "string",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "error"
+      ]
+    },
+    "CONNECTOR_AUTO": {
+      "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
+      "type": "boolean"
+    },
+    "CONNECTOR_ID": {
+      "type": "string",
+      "description": "A unique UUIDv4 identifier for this connector instance."
+    },
+    "CONNECTOR_LISTEN_PROTOCOL": {
+      "description": "Protocol used for listening.",
+      "type": "string"
+    },
+    "CONNECTOR_LISTEN_PROTOCOL_API_PORT": {
+      "description": "Port used for API listening.",
+      "type": "integer"
+    },
+    "CONNECTOR_LISTEN_PROTOCOL_API_PATH": {
+      "description": "API path for callback.",
+      "type": "string"
+    },
+    "CONNECTOR_LISTEN_PROTOCOL_API_URI": {
+      "description": "Full URI for API listening.",
+      "type": "string"
+    },
+    "CONNECTOR_LISTEN_PROTOCOL_API_SSL": {
+      "description": "Enable SSL for API listening.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LISTEN_PROTOCOL_API_SSL_KEY": {
+      "description": "SSL key file path.",
+      "type": "string"
+    },
+    "CONNECTOR_LISTEN_PROTOCOL_API_SSL_CERT": {
+      "description": "SSL certificate file path.",
+      "type": "string"
+    },
+    "IPINFO_MAX_TLP": {
+      "description": "Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
+      "type": "string",
+      "enum": [
+        "clear",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ]
+    },
+    "IPINFO_USE_ASN_NAME": {
+      "description": "If enabled, uses the ASN name instead of the ASN number in enrichment results.",
+      "type": "boolean"
+    },
+    "IPINFO_TOKEN": {
+      "type": "string",
+      "writeOnly": true,
+      "format": "password",
+      "description": "API token used to authenticate requests to the IPInfo service."
+    }
+  }
+}
