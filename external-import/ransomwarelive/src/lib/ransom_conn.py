@@ -49,7 +49,7 @@ class RansomwareAPIConnector:
         self.last_run = None
         self.last_run_datetime_with_ingested_data = None
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
-        self.author = self.converter_to_stix.author()
+        self.author = self.converter_to_stix.author
 
         interval = self.config.ransomware.interval
         if interval:
@@ -182,12 +182,12 @@ class RansomwareAPIConnector:
         # Attack Date sets the start_time of the relationship between a threat actor or intrusion set and a victim.
         # This value (attack_date_iso) will also be used in the report. (Report : Attack Date -> Published)
         attack_date = item.get("attackdate")
-        attack_date_iso = safe_datetime(attack_date, "attack_date")
+        attack_date_iso = safe_datetime(attack_date)
 
         # Discovered sets the created date of the relationship between a Threat Actor or Intrusion Set and a Victim.
         # This value (discovered_iso) will also be used in the report. (Report : Discovered -> Created)
         discovered = item.get("discovered")
-        discovered_iso = safe_datetime(discovered, "discovered")
+        discovered_iso = safe_datetime(discovered)
 
         # Creating Threat Actor object
         threat_actor = None
