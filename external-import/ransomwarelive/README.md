@@ -20,7 +20,7 @@ General description of the connector
 Configuration parameters are provided using environment variables as described below.
 Some of them are placed directly in the `docker-compose.yml` since they are not expected to be modified by final users once that they have been defined by the developer of the connector.
 
-Note that the values that follow can be grabbed within Python code using `self.helper.{PARAMETER}` i.e., `self.helper.connector_nane`.
+Note that the values that follow can be grabbed within Python code using `self.helper.{PARAMETER}` i.e., `self.helper.connector_name`.
 
 Expected environment variables to be set in the  `docker-compose.yml` that describe the connector itself.
 Most of the time, these values are NOT expected to be changed.
@@ -33,7 +33,7 @@ Most of the time, these values are NOT expected to be changed.
 However, there are other values which are expected to be configured by end users.
 The following values are expected to be defined in the `.env` file.
 This file is included in the `.gitignore` to avoid leaking sensitive date. 
-Note tha the `.env.sample` file can be used as a reference.
+Note that the `.env.sample` file can be used as a reference.
 
 The ones that follow are connector's generic execution parameters expected to be added for export connectors.
 
