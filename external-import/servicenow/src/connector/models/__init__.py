@@ -1,6 +1,6 @@
-from connector.models.common import ConfigBaseSettings
-from connector.models.config_loader import ConfigLoader
-from connector.models.converter import (
+from src.connector.models.common import ConfigBaseSettings
+from src.connector.models.config_loader import ConfigLoader
+from src.connector.models.converter import (
     ASN,
     URL,
     AttackPattern,
@@ -28,7 +28,7 @@ from connector.models.converter import (
     Vulnerability,
     WindowsRegistyKey,
 )
-from connector.models.intelligence import (
+from src.connector.models.intelligence import (
     ObservableResponse,
     SecurityIncidentResponse,
     TaskResponse,

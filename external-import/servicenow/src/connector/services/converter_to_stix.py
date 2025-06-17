@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from connector.models import (
+from src.connector.models import (
     ASN,
     URL,
     AttackPattern,

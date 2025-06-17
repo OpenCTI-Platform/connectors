@@ -2,7 +2,6 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated, Literal, Optional
 
-from connector.models import ConfigBaseSettings
 from pydantic import (
     AwareDatetime,
     Field,
@@ -19,6 +18,7 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
     YamlConfigSettingsSource,
 )
+from src.connector.models import ConfigBaseSettings
 
 HttpUrlToString = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
 TimedeltaInSeconds = Annotated[

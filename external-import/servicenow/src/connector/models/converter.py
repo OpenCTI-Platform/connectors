@@ -4,8 +4,8 @@ from typing import Any, Literal, Optional
 
 import pycti
 import stix2
-from connector.models.intelligence import asn_regex
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt, PrivateAttr
+from src.connector.models.intelligence import asn_regex
 
 
 class Converter(BaseModel):
