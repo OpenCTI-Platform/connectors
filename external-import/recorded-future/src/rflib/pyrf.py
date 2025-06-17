@@ -68,13 +68,12 @@ class RecordedFutureApiClient:
         x_rf_token: str,
         helper: OpenCTIConnectorHelper,
         base_url: str = "https://api.recordedfuture.com/",
-        priority_alerts_only: bool = None,
+        priority_alerts_only: bool = False,
     ):
         self.x_rf_token = x_rf_token
         self.base_url = base_url
         self.priorited_rules: list[PrioritiedRule] = []
         self.unfound_rf_rules_in_vocabularies: list[PrioritiedRule] = []
-        self.alerts: list[Alert] = []
         self.playbook_alerts: list[PlaybookId] = []
         self.helper = helper
         self.playbook_alerts_summaries: list[PlaybookAlertSummary] = []
@@ -314,87 +313,99 @@ class RecordedFutureApiClient:
         except:
             return False, str("error.png"), str("error.png")
 
-    def get_alert_by_rule_and_by_trigger(self, triggered_since: datetime):
+    def get_alerts(
+        self,
+        rule: PrioritiedRule,
+        triggered_since: datetime,
+        triggered_until: datetime | None = None,
+    ) -> list[Alert]:
         """
         Get alerts by rule and by trigger date.
+        :param rule: The rule to get alerts for.
         :param triggered_since: The date from which to get alerts.
+        :param triggered_until: The date until which to get alerts. If None, it will get alerts until now.
 
         See https://docs.recordedfuture.com/reference/alert-search
         """
 
+        alerts = []
+
         triggered_since_iso = triggered_since.strftime("%Y-%m-%d")
-        for priorited_rule in self.priorited_rules:
+        triggered_until_iso = (
+            triggered_until.strftime("%Y-%m-%d") if triggered_until else ""
+        )
+
+        offset = 0
+        alerts_count = 0
+        while alerts_count < 1000 or offset < alerts_count:
             try:
-                offset = 0
-                self.alert_count = 0
-                while self.alert_count == 0 or offset < self.alert_count:
-                    response = requests.get(
-                        self.base_url + "v3/alerts",
-                        headers={
-                            "X-RFToken": self.x_rf_token,
-                        },
-                        params={
-                            "alertRule": priorited_rule.rule_id,
-                            "triggered": f"[{triggered_since_iso},]",
-                            "from": offset,
-                            "limit": 100,
+                response = requests.get(
+                    self.base_url + "v3/alerts",
+                    headers={
+                        "X-RFToken": self.x_rf_token,
+                    },
+                    params={
+                        "alertRule": rule.rule_id,
+                        "triggered": f"[{triggered_since_iso},{triggered_until_iso}]",
+                        "from": offset,
+                        "limit": 100,
+                    },
+                )
+
+                # If there is an error during the request, the method raise the error
+                response.raise_for_status()
+                # Check if the response has correct content type
+                self._header_response_control(response)
+
+                data = response.json()
+
+                # If the response doesn't contain data, log the result
+                if not data.get("data"):
+                    self.helper.connector_logger.info(
+                        "No data returned from Recorded Future API",
+                        {
+                            "rule_id": rule.rule_id,
+                            "rule_name": rule.rule_name,
                         },
                     )
+                    break
 
-                    # If there is an error during the request, the method raise the error
-                    response.raise_for_status()
-                    # Check if the response has correct content type
-                    self._header_response_control(response)
-
-                    data = response.json()
-
-                    # If the response is not a dictionary, log the error
-                    if not isinstance(data, dict):
-                        self.helper.connector_logger.error(
-                            "Response data is not a dictionary"
-                        )
-
-                    # If the response doesn't contain data, log the result
-                    if not data.get("data"):
-                        self.helper.connector_logger.info(
-                            "No data returned from Recorded Future API",
+                # If the response contains data and contains the counts field, extract priority rules
+                if data.get("counts"):
+                    if data["counts"]["total"] == 0:
+                        break
+                    if data["counts"]["total"] > 1000:
+                        # TODO: replace by custom pagination to ingest more than 1000 alerts
+                        self.helper.connector_logger.warning(
+                            "More than 1000 alerts found for this rule, only the first 1000 will be returned.",
                             {
-                                "rule_id": priorited_rule.rule_id,
-                                "rule_name": priorited_rule.rule_name,
+                                "rule_id": rule.rule_id,
+                                "rule_name": rule.rule_name,
                             },
                         )
-                        break
 
-                    # If the response contains data and contains the counts field, extract priority rules
-                    if data.get("counts"):
-                        if data["counts"]["total"] == 0:
-                            break
-                        else:
-                            self.alert_count = data["counts"]["total"]
-                        offset += data["counts"]["returned"]
+                    alerts_count = data["counts"]["total"]
+                    offset += data["counts"]["returned"]
 
-                        for alert in data["data"]:
-                            self.alerts.append(
-                                Alert(
-                                    alert["id"],
-                                    alert["url"]["portal"],
-                                    alert["log"]["triggered"],
-                                    alert["title"],
-                                    alert["ai_insights"]["comment"],
-                                    priorited_rule,
-                                    alert["hits"],
-                                )
+                    for alert in data["data"]:
+                        alerts.append(
+                            Alert(
+                                alert_id=alert["id"],
+                                alert_url=alert["url"]["portal"],
+                                alert_date=alert["log"]["triggered"],
+                                alert_title=alert["title"],
+                                alert_ai_insight=alert["ai_insights"]["comment"],
+                                alert_rf_rule=rule,
+                                alert_hits=alert["hits"],
                             )
-                    else:
-                        # If data does not contain mandatory counts field, log the error
-                        self.helper.connector_logger.error(
-                            "Response does not contain mandatory <counts> field"
                         )
             except requests.exceptions.RequestException as e:
                 self.helper.connector_logger.error(
                     "Exception occured when trying to reach RecordedFuture's API : ",
                     {"error": str(e)},
                 )
+
+        return alerts
 
     def compare_rf_rules_and_vocabularies(self, found_vocabulary):
         self.unfound_rf_rules_in_vocabularies = []

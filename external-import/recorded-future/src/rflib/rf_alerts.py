@@ -13,7 +13,7 @@ from pycti import (
 )
 
 from .constants import TLP_MAP
-from .pyrf import RecordedFutureApiClient
+from .pyrf import RecordedFutureApiClient, Alert
 from .utils import is_ip_v4_address, is_ip_v6_address, make_markdown_table
 
 
@@ -132,12 +132,42 @@ class RecordedFutureAlertConnector(threading.Thread):
                 }
             )
 
+    def collect_alerts(
+        self, since: datetime, until: datetime | None = None
+    ) -> list[Alert]:
+        """
+        Collects alerts from Recorded Future API based on the provided time range.
+
+        :param since: The start datetime for collecting alerts.
+        :param until: The end datetime for collecting alerts (optional).
+        :return: A list of Alert objects.
+        """
+        alerts = []
+        for rule in self.api_recorded_future.priorited_rules:
+            rule_alerts = self.api_recorded_future.get_alerts(
+                rule=rule,
+                triggered_since=since,
+                triggered_until=until,
+            )
+            alerts.extend(rule_alerts)
+
+        self.helper.connector_logger.info(
+            f"Alert(s) found: {len(alerts)}",
+            {"since": since, "until": until, "alerts_count": len(alerts)},
+        )
+
+        return alerts
+
     def run(self):
+        """
+        Main process to collect, transform and send intelligence to OpenCTI.
+        :return: None
+        """
         now = datetime.now(tz=timezone.utc)
 
         self.work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id,
-            "Recorded Future Alerts",
+            connector_id=self.helper.connector_id,
+            friendly_name="Recorded Future Alerts",
         )
 
         try:
@@ -146,9 +176,9 @@ class RecordedFutureAlertConnector(threading.Thread):
 
             current_state = self.helper.get_state() or {}
             last_alerts_run = (
-                datetime.fromisoformat(current_state.get("last_alerts_run")).astimezone(
-                    timezone.utc
-                )
+                datetime.fromisoformat(
+                    current_state.get("last_alerts_run", "")
+                ).astimezone(timezone.utc)
                 if current_state.get("last_alerts_run")
                 else None
             )
@@ -157,13 +187,14 @@ class RecordedFutureAlertConnector(threading.Thread):
             if last_alerts_run:
                 days_to_recover = (now - last_alerts_run).days
                 for day_delta in range(0, days_to_recover + 1):  # exclusive range
-                    self.run_for_time_period(
-                        since=last_alerts_run + timedelta(days=day_delta)
+                    # Recover alerts day by day until today
+                    recovered_alerts = self.collect_alerts(
+                        since=last_alerts_run + timedelta(days=day_delta),
+                        until=last_alerts_run + timedelta(days=day_delta + 1),
                     )
-                    alerts.extend(self.api_recorded_future.alerts)
+                    alerts.extend(recovered_alerts)
             else:
-                self.run_for_time_period(since=datetime.today())
-                alerts.extend(self.api_recorded_future.alerts)
+                alerts = self.collect_alerts(since=datetime.today())
 
             for alert in alerts:
                 try:
@@ -173,12 +204,6 @@ class RecordedFutureAlertConnector(threading.Thread):
                         "Incident cannot be created",
                         {"alert_id": alert.alert_id, "error_msg": str(err)},
                     )
-
-                # ? What is the purpose of storing the timestamp_checkpoint?
-                timestamp_checkpoint = datetime.now(tz=timezone.utc)
-                current_state = self.helper.get_state() or {}
-                current_state["last_alerts_run"] = timestamp_checkpoint.isoformat()
-                self.helper.set_state(current_state)
 
             current_state = self.helper.get_state() or {}
             current_state["last_alerts_run"] = now.isoformat()
@@ -510,15 +535,3 @@ class RecordedFutureAlertConnector(threading.Thread):
             update=True,
             work_id=self.work_id,
         )
-
-    def run_for_time_period(self, since: datetime):
-        self.api_recorded_future.alerts = []
-        self.api_recorded_future.get_alert_by_rule_and_by_trigger(triggered_since=since)
-
-        since_iso = since.isoformat(timespec="seconds")
-        if len(self.api_recorded_future.alerts):
-            self.helper.connector_logger.info(
-                f"[{since_iso}] {len(self.api_recorded_future.alerts)} alerts were found"
-            )
-        else:
-            self.helper.connector_logger.info(f"[{since_iso}] No alert found : exiting")
