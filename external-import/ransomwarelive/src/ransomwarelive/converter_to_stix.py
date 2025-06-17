@@ -1,7 +1,9 @@
+import datetime
+
 import stix2
 import stix2.exceptions
 from pycti import Identity, MarkingDefinition, StixCoreRelationship
-import datetime
+
 from .utils import is_ipv4, is_ipv6
 
 
@@ -44,7 +46,9 @@ class ConverterToStix:
         :return: Identity in STIX 2.1 format
         """
         author = stix2.Identity(
-            id=Identity.generate_id(name="Ransomware.Live", identity_class="organization"),
+            id=Identity.generate_id(
+                name="Ransomware.Live", identity_class="organization"
+            ),
             name="Ransomware.Live",
             identity_class="organization",
             type="identity",
@@ -58,12 +62,12 @@ class ConverterToStix:
 
     @handle_stix2_error
     def relationship_generator(
-            self,
-            source_ref: str,
-            target_ref: str,
-            relationship_type: str,
-            attack_date: datetime = None,
-            discovered: datetime = None,
+        self,
+        source_ref: str,
+        target_ref: str,
+        relationship_type: str,
+        attack_date: datetime = None,
+        discovered: datetime = None,
     ) -> stix2.Relationship:
         """
         Generates a relationship object
@@ -137,4 +141,3 @@ class ConverterToStix:
             created_by_ref=self.author.get("id"),
             allow_custom=True,
         )
-

@@ -17,18 +17,18 @@ from stix2 import (
 )
 
 from ransomwarelive.config import ConnectorSettings
+from ransomwarelive.converter_to_stix import ConverterToStix
 from ransomwarelive.utils import (
-    threat_description_generator,
+    domain_extractor,
     fetch_country_domain,
-    ransom_note_generator,
-    safe_datetime,
     ip_fetcher,
+    is_domain,
     is_ipv4,
     is_ipv6,
-    is_domain,
-    domain_extractor,
+    ransom_note_generator,
+    safe_datetime,
+    threat_description_generator,
 )
-from ransomwarelive.converter_to_stix import ConverterToStix
 
 
 class RansomwareAPIConnector:
@@ -254,8 +254,10 @@ class RansomwareAPIConnector:
             bundle_objects.append(relation_victim_intrusion)
 
             if self.config.ransomware.create_threat_actor:
-                relation_intrusion_threat_actor = self.converter_to_stix.relationship_generator(
-                    intrusion_set.get("id"), threat_actor.get("id"), "attributed-to"
+                relation_intrusion_threat_actor = (
+                    self.converter_to_stix.relationship_generator(
+                        intrusion_set.get("id"), threat_actor.get("id"), "attributed-to"
+                    )
                 )
                 bundle_objects.append(relation_intrusion_threat_actor)
         except Exception as e:
@@ -307,18 +309,22 @@ class RansomwareAPIConnector:
                 if sector_id:
                     report.get("object_refs").append(sector_id)
 
-                    relation_sector_victim = self.converter_to_stix.relationship_generator(
-                        victim.get("id"), sector_id, "part-of"
+                    relation_sector_victim = (
+                        self.converter_to_stix.relationship_generator(
+                            victim.get("id"), sector_id, "part-of"
+                        )
                     )
                     bundle_objects.append(relation_sector_victim)
 
                     if self.config.ransomware.create_threat_actor:
-                        relation_sector_threat_actor = self.converter_to_stix.relationship_generator(
-                            threat_actor.get("id"),
-                            sector_id,
-                            "targets",
-                            attack_date_iso,
-                            discovered_iso,
+                        relation_sector_threat_actor = (
+                            self.converter_to_stix.relationship_generator(
+                                threat_actor.get("id"),
+                                sector_id,
+                                "targets",
+                                attack_date_iso,
+                                discovered_iso,
+                            )
                         )
                         bundle_objects.append(relation_sector_threat_actor)
                         report.get("object_refs").append(
@@ -327,12 +333,14 @@ class RansomwareAPIConnector:
 
                     report.get("object_refs").append(relation_sector_victim.get("id"))
 
-                    relation_intrusion_sector = self.converter_to_stix.relationship_generator(
-                        intrusion_set.get("id"),
-                        sector_id,
-                        "targets",
-                        attack_date_iso,
-                        discovered_iso,
+                    relation_intrusion_sector = (
+                        self.converter_to_stix.relationship_generator(
+                            intrusion_set.get("id"),
+                            sector_id,
+                            "targets",
+                            attack_date_iso,
+                            discovered_iso,
+                        )
                     )
                     bundle_objects.append(relation_intrusion_sector)
                     report.get("object_refs").append(
@@ -361,7 +369,9 @@ class RansomwareAPIConnector:
         if domain_name:
             description = fetch_country_domain(domain_name)
 
-            domain = self.converter_to_stix.domain_generator(item.get("victim"), description)
+            domain = self.converter_to_stix.domain_generator(
+                item.get("victim"), description
+            )
             bundle_objects.append(domain)
 
             relation_victim_domain = self.converter_to_stix.relationship_generator(
@@ -425,12 +435,14 @@ class RansomwareAPIConnector:
             bundle_objects.append(relation_intrusion_location)
 
             if self.config.ransomware.create_threat_actor:
-                relation_threat_actor_location = self.converter_to_stix.relationship_generator(
-                    threat_actor.get("id"),
-                    location.get("id"),
-                    "targets",
-                    attack_date_iso,
-                    discovered_iso,
+                relation_threat_actor_location = (
+                    self.converter_to_stix.relationship_generator(
+                        threat_actor.get("id"),
+                        location.get("id"),
+                        "targets",
+                        attack_date_iso,
+                        discovered_iso,
+                    )
                 )
                 bundle_objects.append(relation_threat_actor_location)
                 report.get("object_refs").append(

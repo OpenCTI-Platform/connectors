@@ -1,3 +1,4 @@
+import ipaddress
 from datetime import datetime
 
 import pycti
@@ -5,7 +6,6 @@ import requests
 import tldextract
 import validators
 import whois
-import ipaddress
 from pydantic import TypeAdapter
 from stix2 import ExternalReference
 
@@ -28,6 +28,7 @@ def threat_description_generator(group_name, group_data) -> str:
 
     return description
 
+
 def fetch_country_domain(domain: str):
     """
     Fetches the whois information of a domain
@@ -48,6 +49,7 @@ def fetch_country_domain(domain: str):
 
     return description
 
+
 def ransom_note_generator(group_name: str):
     """
     Generates a ransom note external reference
@@ -64,6 +66,7 @@ def ransom_note_generator(group_name: str):
         url=url,
         description="Sample Ransom Note",
     )
+
 
 def safe_datetime(value: str | None) -> datetime | None:
     """Safely parses a string into a naive datetime object (without timezone).
@@ -82,6 +85,7 @@ def safe_datetime(value: str | None) -> datetime | None:
         > None
     """
     return TypeAdapter(datetime).validate_python(value)
+
 
 def ip_fetcher(domain: str):
     """
@@ -111,6 +115,7 @@ def ip_fetcher(domain: str):
                     return ip_address
     return None
 
+
 def is_ipv4(value: str) -> bool:
     """
     Determine whether the provided IP string is IPv4
@@ -122,6 +127,7 @@ def is_ipv4(value: str) -> bool:
         return True
     except ipaddress.AddressValueError:
         return False
+
 
 def is_ipv6(value: str) -> bool:
     """
@@ -135,6 +141,7 @@ def is_ipv6(value: str) -> bool:
     except ipaddress.AddressValueError:
         return False
 
+
 def is_domain(value: str) -> bool:
     """
     Valid domain name regex including internationalized domain name
@@ -142,6 +149,7 @@ def is_domain(value: str) -> bool:
     :return: A boolean
     """
     return validators.domain(value)
+
 
 def domain_extractor(url: str):
     """
