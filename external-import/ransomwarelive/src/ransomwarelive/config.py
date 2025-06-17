@@ -1,14 +1,15 @@
 import datetime
 import os
 
+from pydantic import BaseModel, Field
+from pydantic_settings import SettingsConfigDict
+
 from lib.base_connector_config import (
     BaseConnectorSettings,
     ConnectorConfig,
     ListFromString,
     LogLevelType,
 )
-from pydantic import BaseModel, Field
-from pydantic_settings import SettingsConfigDict
 
 _FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 
