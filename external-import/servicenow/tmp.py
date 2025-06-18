@@ -11,5 +11,3 @@ connector_json_schema = get_connector_config.model_json_schema()
 format_connector_schema = json.dumps(connector_json_schema, indent=2)
 
 print(format_connector_schema)
-
-
