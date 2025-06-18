@@ -1,7 +1,7 @@
-import datetime
 import sys
 import time
 from copy import deepcopy
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Union
 
 import pycti
@@ -32,11 +32,10 @@ class ParsedRule(NamedTuple):
     status: str | None
     author: str | None
     sigma_tags: list[str]
-    release_date: datetime.datetime | None
+    release_date: datetime | None
 
 
 class SocprimeConnector:
-    _DEFAULT_CONNECTOR_RUN_INTERVAL_SEC = 3600
     _STATE_LAST_RUN = "last_run"
     _stix_object_types_to_udate = (Indicator, Relationship)
 
@@ -45,10 +44,6 @@ class SocprimeConnector:
         self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
         self.tdm_api_client = ApiClient(api_key=self.config.socprime.api_key)
         self.mitre_attack = MitreAttack()
-
-    @staticmethod
-    def _current_unix_timestamp() -> int:
-        return int(time.time())
 
     def _load_state(self) -> Dict[str, Any]:
         current_state = self.helper.get_state()
@@ -63,17 +58,6 @@ class SocprimeConnector:
         if state is not None:
             return state.get(key, default)
         return default
-
-    def _is_scheduled(self, last_run: Optional[int], current_time: int) -> bool:
-        if last_run is None:
-            self.helper.connector_logger.info("Connector first run")
-            return True
-        time_diff = current_time - last_run
-        return time_diff >= self.config.socprime.interval_sec
-
-    @classmethod
-    def _sleep(cls, delay_sec: Optional[int] = None) -> None:
-        time.sleep(delay_sec)
 
     def get_stix_objects_from_rule(
         self,
@@ -448,62 +432,86 @@ class SocprimeConnector:
             bundle = self.helper.stix2_create_bundle(items=objects)
             self.helper.send_stix2_bundle(bundle, work_id=work_id)
 
+    def process(self):
+        """
+        Connector main process to collect, transform and send intelligence.
+        """
+        now = datetime.now(tz=timezone.utc)
+
+        friendly_name = "SOC Prime run @ " + now.isoformat(timespec="seconds")
+        work_id = self.helper.api.work.initiate_work(
+            connector_id=self.helper.connector_id,
+            friendly_name=friendly_name,
+        )
+        error_flag = False  # Work in_error flag
+        message = ""  # Work message placeholder
+
+        try:
+            current_state = self._load_state()
+            self.helper.connector_logger.debug(
+                f"Loaded state", {"current_state": current_state}
+            )
+
+            last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
+            if last_run is None:
+                self.helper.connector_logger.info("[CONNECTOR] Connector has never run")
+            else:
+                if isinstance(last_run, int):  # for legacy
+                    last_run = datetime.fromtimestamp(last_run, tz=timezone.utc)
+                elif isinstance(last_run, str):
+                    last_run = datetime.fromisoformat(last_run).replace(
+                        tzinfo=timezone.utc
+                    )
+
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Connector last run", {"last_run": last_run}
+                )
+
+            self.send_rules_from_tdm(work_id)
+
+            new_state = current_state.copy()
+            new_state[self._STATE_LAST_RUN] = now.isoformat()
+
+            self.helper.connector_logger.info(
+                f"Storing new state", {"new_state": new_state}
+            )
+            self.helper.set_state(new_state)
+
+            message = f"{self.helper.connect_name} connector successfully run"
+            self.helper.connector_logger.info(message)
+
+        except (KeyboardInterrupt, SystemExit):
+            error_flag = True
+            message = "Connector stopped by user or system"
+            self.helper.connector_logger.error(message)
+
+            sys.exit(0)
+        except Exception as err:
+            error_flag = True
+            message = "Unexpected error. See connector's log for more details."
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Unexpected error.", {"error": str(err)}
+            )
+
+        finally:
+            self.helper.api.work.to_processed(work_id, message, in_error=error_flag)
+
     def run(self):
-        self.helper.connector_logger.info("Starting SOC Prime connector...")
-        while True:
-            self.helper.connector_logger.info("Running SOC Prime connector...")
-            run_interval = self.config.socprime.interval_sec
-
-            try:
-                timestamp = self._current_unix_timestamp()
-                current_state = self._load_state()
-
-                self.helper.connector_logger.info(f"Loaded state: {current_state}")
-
-                last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
-                if self._is_scheduled(last_run, timestamp):
-                    now = datetime.datetime.utcfromtimestamp(timestamp)
-                    friendly_name = "SOC Prime run @ " + now.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
-
-                    self.send_rules_from_tdm(work_id)
-
-                    new_state = current_state.copy()
-                    new_state[self._STATE_LAST_RUN] = self._current_unix_timestamp()
-
-                    self.helper.connector_logger.info(f"Storing new state: {new_state}")
-                    self.helper.set_state(new_state)
-                    message = (
-                        "State stored, next run in: "
-                        + str(self.config.socprime.interval_sec)
-                        + " seconds"
-                    )
-                    self.helper.api.work.to_processed(work_id, message)
-                    self.helper.connector_logger.info(message)
-                else:
-                    next_run = self.config.socprime.interval_sec - (
-                        timestamp - last_run
-                    )
-                    run_interval = min(run_interval, next_run)
-
-                    self.helper.connector_logger.info(
-                        f"Connector will not run, next run in: {next_run} seconds"
-                    )
-
-            except (KeyboardInterrupt, SystemExit):
-                self.helper.connector_logger.info("Connector stop")
-                sys.exit(0)
-
-            if self.helper.connect_run_and_terminate:
-                self.helper.connector_logger.info("Connector stop")
-                self.helper.force_ping()
-                sys.exit(0)
-
-            self._sleep(delay_sec=run_interval)
+        """
+        Run the main process encapsulated in a scheduler
+        It allows you to schedule the process to run at a certain intervals
+        This specific scheduler from the pycti connector helper will also check the queue size of a connector
+        If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
+        the connector's main process will not run until the queue is ingested and reduced sufficiently,
+        allowing it to restart during the next scheduler check. (default is 500MB)
+        It requires the `duration_period` connector variable in ISO-8601 standard format
+        Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
+        :return: None
+        """
+        self.helper.schedule_process(
+            message_callback=self.process,
+            duration_period=self.config.connector.duration_period.total_seconds(),
+        )
 
     def _get_vulnerabilities_and_relations_from_indicator(
         self, indicator: Indicator, rule: dict
