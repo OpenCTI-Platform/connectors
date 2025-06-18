@@ -18,6 +18,6 @@ def test_main(
         os.environ["CONNECTOR_RUN_AND_TERMINATE"] = "true"
         main()
 
-    assert mocked_opencti_helper.force_ping.call_count == 1
+    assert mocked_opencti_helper.force_ping.call_count == 2
     mocked_mitre_attack_requests.get.assert_called_once()
     assert mocked_tdm_api_client_requests.request.call_count == 4
