@@ -1,0 +1,380 @@
+{
+  "$defs": {
+    "_ConfigLoaderConnector": {
+      "additionalProperties": false,
+      "description": "Interface for loading Connector dedicated configuration.",
+      "properties": {
+        "id": {
+          "description": "A unique UUIDv4 identifier for this connector instance.",
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "EXTERNAL_IMPORT",
+          "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+          "title": "Type"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "ServiceNow",
+          "description": "Name of the connector.",
+          "title": "Name"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "ServiceNow",
+          "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+          "title": "Scope"
+        },
+        "log_level": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": "error",
+          "description": "Determines the verbosity of the logs.",
+          "title": "Log Level"
+        },
+        "duration_period": {
+          "anyOf": [
+            {
+              "format": "duration",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "PT24H",
+          "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
+          "title": "Duration Period"
+        },
+        "queue_threshold": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Connector queue max size in Mbytes. Default to 500.",
+          "title": "Queue Threshold"
+        },
+        "run_and_terminate": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Connector run-and-terminate flag.",
+          "title": "Run And Terminate"
+        },
+        "send_to_queue": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Connector send-to-queue flag.",
+          "title": "Send To Queue"
+        },
+        "send_to_directory": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Connector send-to-directory flag.",
+          "title": "Send To Directory"
+        },
+        "send_to_directory_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Connector send-to-directory path.",
+          "title": "Send To Directory Path"
+        },
+        "send_to_directory_retention": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Connector send-to-directory retention in days.",
+          "title": "Send To Directory Retention"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "_ConfigLoaderConnector",
+      "type": "object"
+    },
+    "_ConfigLoaderOCTI": {
+      "additionalProperties": false,
+      "description": "Interface for loading OpenCTI dedicated configuration.",
+      "properties": {
+        "url": {
+          "description": "The OpenCTI platform URL.",
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "token": {
+          "description": "The token of the user who represents the connector in the OpenCTI platform.",
+          "title": "Token",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "token"
+      ],
+      "title": "_ConfigLoaderOCTI",
+      "type": "object"
+    },
+    "_ConfigLoaderServiceNow": {
+      "additionalProperties": false,
+      "description": "Interface for loading ServiceNow dedicated configuration.",
+      "properties": {
+        "instance_name": {
+          "description": "Corresponds to server instance name (will be used for API requests).",
+          "title": "Instance Name",
+          "type": "string"
+        },
+        "api_key": {
+          "description": "Secure identifier used to validate access to ServiceNow APIs.",
+          "title": "Api Key",
+          "type": "string"
+        },
+        "api_version": {
+          "anyOf": [
+            {
+              "enum": [
+                "v1",
+                "v2"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "v2",
+          "description": "ServiceNow API version used for REST requests.",
+          "title": "Api Version"
+        },
+        "api_retry": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 5,
+          "description": "Maximum number of retry attempts in case of API failure.",
+          "title": "Api Retry"
+        },
+        "api_backoff": {
+          "anyOf": [
+            {
+              "format": "duration",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "PT30S",
+          "description": "Exponential backoff duration between API retries (ISO 8601 duration format).",
+          "title": "Api Backoff"
+        },
+        "import_start_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "format": "duration",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "P30D",
+          "description": "Start date of first import (ISO date format).",
+          "title": "Import Start Date"
+        },
+        "state_to_exclude": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "List of security incident states to exclude from import.",
+          "title": "State To Exclude"
+        },
+        "severity_to_exclude": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "List of security incident severities to exclude from import.",
+          "title": "Severity To Exclude"
+        },
+        "priority_to_exclude": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "List of security incident priorities to exclude from import.",
+          "title": "Priority To Exclude"
+        },
+        "comment_to_exclude": {
+          "anyOf": [
+            {
+              "items": {
+                "enum": [
+                  "private",
+                  "public",
+                  "auto"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "List of comment types to exclude: private, public, auto",
+          "title": "Comment To Exclude"
+        },
+        "tlp_level": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": "red",
+          "description": "Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
+          "title": "Tlp Level"
+        }
+      },
+      "required": [
+        "instance_name",
+        "api_key"
+      ],
+      "title": "_ConfigLoaderServiceNow",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Interface for loading global configuration settings.",
+  "properties": {
+    "opencti": {
+      "$ref": "#/$defs/_ConfigLoaderOCTI",
+      "description": "OpenCTI configurations."
+    },
+    "connector": {
+      "$ref": "#/$defs/_ConfigLoaderConnector",
+      "description": "Connector configurations."
+    },
+    "servicenow": {
+      "$ref": "#/$defs/_ConfigLoaderServiceNow",
+      "description": "ServiceNow configurations."
+    }
+  },
+  "required": [
+    "opencti",
+    "connector",
+    "servicenow"
+  ],
+  "title": "ConfigLoader",
+  "type": "object"
+}
