@@ -1,6 +1,10 @@
 [tool.pytest.ini_options]
 log_cli = true
+pythonpath = [
+    ".",
+    "servicenow"
+]
 testpaths = [
-    "./tests",
+    "tests",
 ]
 #addopts = "-s"
