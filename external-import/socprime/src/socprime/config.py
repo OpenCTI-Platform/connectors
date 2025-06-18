@@ -1,4 +1,6 @@
 import os
+import warnings
+from datetime import timedelta
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -64,6 +66,7 @@ class ConnectorConfig(BaseModel):
     type: Literal["EXTERNAL_IMPORT"] = Field(default="EXTERNAL_IMPORT")
     scope: ListFromString = Field(default=["socprime"])
     log_level: LogLevelType = Field(default=LogLevelType.ERROR)
+    duration_period: timedelta = Field(default=timedelta(hours=1))
 
 
 class SocPrimeConfig(BaseModel):
@@ -72,7 +75,6 @@ class SocPrimeConfig(BaseModel):
     job_ids: ListFromString = Field(default=[])
     siem_type: ListFromString = Field(default=[])
     indicator_siem_type: str = Field(default="sigma")
-    interval_sec: int = Field(default=3600)
 
     @model_validator(mode="after")
     def check_dependencies(self):
@@ -122,6 +124,25 @@ class ConnectorSettings(BaseSettings):
         if Path(settings_cls.model_config["yaml_file"] or "").is_file():  # type: ignore
             return (YamlConfigSettingsSource(settings_cls),)
         return (env_settings,)
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_interval(cls, data: dict) -> dict:
+        """
+        Env var `SOCPRIME_INTERVAL_SEC` is deprecated.
+        This is a workaround to keep the old config working while we migrate to `CONNECTOR_DURATION_PERIOD`.
+        """
+        connector_data: dict = data.get("connector", {})
+        socprime_data: dict = data.get("socprime", {})
+
+        if interval_sec := socprime_data.pop("interval_sec", None):
+            warnings.warn(
+                "Env var 'SOCPRIME_INTERVAL_SEC' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
+            )
+
+            connector_data["duration_period"] = timedelta(seconds=int(interval_sec))
+
+        return data
 
     def model_dump_pycti(self) -> dict[str, Any]:
         return self.model_dump(mode="json", context={"mode": "pycti"})
