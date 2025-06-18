@@ -1,8 +1,8 @@
 import traceback
 
-from connector import ConnectorServicenow
-from connector.services.config_loader import ServiceNowConfig
 from pycti import OpenCTIConnectorHelper
+from src.connector import ConnectorServicenow
+from src.connector.services.config_loader import ServiceNowConfig
 
 if __name__ == "__main__":
     """
