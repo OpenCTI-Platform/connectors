@@ -88,8 +88,8 @@ class RecordedFutureApiClient:
         rf_content_type = response.headers.get("Content-Type")
 
         if rf_content_type != "application/json":
-            self.helper.connector_logger.error(
-                "Unexpected Content-Type from ApiRecordedFuture: ",
+            raise RecordedFutureApiError(
+                "Unexpected Content-Type from RecordedFuture's API: ",
                 {"content-type": rf_content_type},
             )
 
@@ -115,15 +115,17 @@ class RecordedFutureApiClient:
             - Errors include missing fields, incorrect status codes, or mismatched status messages.
         """
 
+        # If the response is not a dictionary, log the error
+        if not isinstance(data, dict):
+            self.helper.connector_logger.error("Response data is not a dictionary")
+            return
+
         # If the response doesn't contain data, log the error
         if not data.get("data"):
             self.helper.connector_logger.error(
                 "No rules returned from Recorded Future API"
             )
-
-        # If the response is not a dictionary, log the error
-        if not isinstance(data, dict):
-            self.helper.connector_logger.error("Response data is not a dictionary")
+            return
 
         if expected_status_message is not None:
             # If the response does not contain mandatory fields, log the error
@@ -132,10 +134,12 @@ class RecordedFutureApiClient:
                     "Response does not contain mandatory status field",
                     {"mandatory_field": "status"},
                 )
+                return
 
             # If the response status_code is not Ok, log the error
             if data.get("status", {}).get("status_code", "").lower() != "ok":
                 self.helper.connector_logger.error("Response status_code is not Ok")
+                return
 
             # If the alert search is unsuccessful, log the error
             if data["status"]["status_message"] != f"{expected_status_message}":
@@ -143,6 +147,7 @@ class RecordedFutureApiClient:
                     "Process unsuccessful",
                     {"status_message": data["status"]["status_message"]},
                 )
+                return
 
     def _raw_get_alerts(
         self,

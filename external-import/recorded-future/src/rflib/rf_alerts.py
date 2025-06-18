@@ -1,6 +1,6 @@
 import base64
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from re import search
 
 import pycti
@@ -13,7 +13,7 @@ from pycti import (
 )
 
 from .constants import TLP_MAP
-from .pyrf import RecordedFutureApiClient, Alert
+from .pyrf import Alert, RecordedFutureApiClient, RecordedFutureApiError
 from .utils import is_ip_v4_address, is_ip_v6_address, make_markdown_table
 
 
@@ -132,29 +132,42 @@ class RecordedFutureAlertConnector(threading.Thread):
                 }
             )
 
-    def collect_alerts(
-        self, since: datetime, until: datetime | None = None
-    ) -> list[Alert]:
+    def collect_alerts(self, since: datetime) -> list[Alert]:
         """
         Collects alerts from Recorded Future API based on the provided time range.
 
         :param since: The start datetime for collecting alerts.
-        :param until: The end datetime for collecting alerts (optional).
         :return: A list of Alert objects.
         """
         alerts = []
         for rule in self.api_recorded_future.priorited_rules:
-            rule_alerts = self.api_recorded_future.get_alerts(
-                rule=rule,
-                triggered_since=since,
-                triggered_until=until,
-            )
-            alerts.extend(rule_alerts)
+            try:
+                rule_alerts = self.api_recorded_future.get_alerts(
+                    rule=rule, since=since
+                )
+                alerts.extend(rule_alerts)
 
-        self.helper.connector_logger.info(
-            f"Alert(s) found: {len(alerts)}",
-            {"since": since, "until": until, "alerts_count": len(alerts)},
-        )
+                self.helper.connector_logger.info(
+                    f"{len(rule_alerts)} alert(s) found",
+                    {
+                        "rule_id": rule.rule_id,
+                        "rule_name": rule.rule_name,
+                        "since": since,
+                        "alerts_count": len(rule_alerts),
+                    },
+                )
+            except RecordedFutureApiError as err:
+                message = f"Skipping alerts for rule '{rule.rule_name}' due to RecordedFuture API error"
+                self.helper.connector_logger.error(
+                    message,
+                    {
+                        "error": err,
+                        "rule_id": rule.rule_id,
+                        "rule_name": rule.rule_name,
+                        "since": since,
+                    },
+                )
+                continue
 
         return alerts
 
@@ -178,24 +191,12 @@ class RecordedFutureAlertConnector(threading.Thread):
             last_alerts_run = (
                 datetime.fromisoformat(
                     current_state.get("last_alerts_run", "")
-                ).astimezone(timezone.utc)
+                ).replace(tzinfo=timezone.utc)
                 if current_state.get("last_alerts_run")
                 else None
             )
 
-            alerts = []
-            if last_alerts_run:
-                days_to_recover = (now - last_alerts_run).days
-                for day_delta in range(0, days_to_recover + 1):  # exclusive range
-                    # Recover alerts day by day until today
-                    recovered_alerts = self.collect_alerts(
-                        since=last_alerts_run + timedelta(days=day_delta),
-                        until=last_alerts_run + timedelta(days=day_delta + 1),
-                    )
-                    alerts.extend(recovered_alerts)
-            else:
-                alerts = self.collect_alerts(since=datetime.today())
-
+            alerts = self.collect_alerts(since=last_alerts_run or now)
             for alert in alerts:
                 try:
                     self.alert_to_incident(alert)
@@ -204,6 +205,7 @@ class RecordedFutureAlertConnector(threading.Thread):
                         "Incident cannot be created",
                         {"alert_id": alert.alert_id, "error_msg": str(err)},
                     )
+                    continue
 
             current_state = self.helper.get_state() or {}
             current_state["last_alerts_run"] = now.isoformat()
