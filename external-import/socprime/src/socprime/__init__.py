@@ -1,3 +1,3 @@
-from socprime.core import SocprimeConnector
+from socprime.connector import SocprimeConnector
 
 __all__ = ["SocprimeConnector"]

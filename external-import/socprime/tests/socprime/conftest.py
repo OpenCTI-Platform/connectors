@@ -74,7 +74,7 @@ def fixture_mocked_helper(
     mocker: MockerFixture, mocked_opencti_api_client: None
 ) -> Mock:
     mocked_opencti_helper = mocker.patch(
-        "socprime.core.OpenCTIConnectorHelper", OpenCTIConnectorHelper
+        "socprime.connector.OpenCTIConnectorHelper", OpenCTIConnectorHelper
     )
     # Mock the OpenCTI Connector Helper methods
     mocked_opencti_helper.send_stix2_bundle = MagicMock()
