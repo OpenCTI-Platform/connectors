@@ -1,7 +1,8 @@
 from unittest.mock import Mock
 
 import pytest
-from servicenow.src.connector.connector import ConnectorServicenow
+
+from .connector.connector import ConnectorServicenow
 
 
 def test_invalid_retrieved_entity_should_be_skipped_with_warning():
