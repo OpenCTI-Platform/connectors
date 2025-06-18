@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock
 from urllib.parse import urlparse
 
 import pytest
-from src.connector.services.client_api import ServiceNowClient
+from servicenow.src.connector.services.client_api import ServiceNowClient
 
 
 @pytest.fixture()
