@@ -2,7 +2,6 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated, Literal, Optional
 
-from connector.models import ConfigBaseSettings
 from pydantic import (
     AwareDatetime,
     Field,
@@ -19,6 +18,7 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
     YamlConfigSettingsSource,
 )
+from src.connector.models import ConfigBaseSettings
 
 HttpUrlToString = Annotated[HttpUrl, PlainSerializer(str, return_type=str)]
 TimedeltaInSeconds = Annotated[
@@ -117,7 +117,17 @@ class _ConfigLoaderServiceNow(ConfigBaseSettings):
         default="v2",
         description="ServiceNow API version used for REST requests.",
     )
-    api_retry: Optional[int] = Field(
+    api_leaky_bucket_rate: Optional[PositiveInt] = Field(
+        default=10,
+        description="Bucket refill rate (in tokens per second). Controls the rate at which API calls are allowed. "
+        "For example, a rate of 10 means that 10 calls can be made per second, if the bucket is not empty.",
+    )
+    api_leaky_bucket_capacity: Optional[PositiveInt] = Field(
+        default=10,
+        description="Maximum bucket capacity (in tokens). Defines the number of calls that can be made immediately in a "
+        "burst. Once the bucket is empty, it refills at the rate defined by 'api_leaky_bucket_rate'.",
+    )
+    api_retry: Optional[PositiveInt] = Field(
         default=5,
         description="Maximum number of retry attempts in case of API failure.",
     )
@@ -149,6 +159,15 @@ class _ConfigLoaderServiceNow(ConfigBaseSettings):
         default="red",
         description="Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
     )
+    observables_default_score: Optional[PositiveInt] = Field(
+        default=50,
+        description="Allows you to define a default score for observables and indicators when the "
+        "‘promote_observables_as_indicators’ variable is set to True.",
+    )
+    promote_observables_as_indicators: Optional[bool] = Field(
+        default=True,
+        description="Boolean to promote observables into indicators.",
+    )
 
     @field_validator(
         "state_to_exclude",
@@ -162,7 +181,7 @@ class _ConfigLoaderServiceNow(ConfigBaseSettings):
             return [x.strip().lower() for x in value.split(",") if x.strip()]
         return value
 
-    @field_validator("import_start_date", mode="after")
+    @field_validator("import_start_date", mode="after", check_fields=True)
     def _convert_import_start_date_relative_to_utc_datetime(
         cls, value: date | AwareDatetime | timedelta
     ) -> date | AwareDatetime | datetime:
@@ -176,12 +195,15 @@ class ConfigLoader(ConfigBaseSettings):
     """Interface for loading global configuration settings."""
 
     opencti: _ConfigLoaderOCTI = Field(
+        default_factory=_ConfigLoaderOCTI,
         description="OpenCTI configurations.",
     )
     connector: _ConfigLoaderConnector = Field(
+        default_factory=_ConfigLoaderConnector,
         description="Connector configurations.",
     )
     servicenow: _ConfigLoaderServiceNow = Field(
+        default_factory=_ConfigLoaderServiceNow,
         description="ServiceNow configurations.",
     )
 

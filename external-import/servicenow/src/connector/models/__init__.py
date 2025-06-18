@@ -1,24 +1,45 @@
-from connector.models.common import ConfigBaseSettings
-from connector.models.config_loader import ConfigLoader
-from connector.models.converter import (
+from src.connector.models.common import ConfigBaseSettings
+from src.connector.models.config_loader import ConfigLoader
+from src.connector.models.converter import (
+    ASN,
+    URL,
     AttackPattern,
     Author,
     CustomCaseIncident,
     CustomTask,
+    Directory,
+    DomainName,
+    EmailAddress,
+    EmailMessage,
     ExternalReference,
+    File,
+    Hostname,
     IntrusionSet,
+    IPv4Address,
+    IPv6Address,
     Malware,
+    Mutex,
+    OrganizationName,
+    PhoneNumber,
     Relationship,
     TLPMarking,
     Tool,
+    UserAccount,
+    Vulnerability,
+    WindowsRegistyKey,
 )
-from connector.models.intelligence import SecurityIncidentResponse, TaskResponse
+from src.connector.models.intelligence import (
+    ObservableResponse,
+    SecurityIncidentResponse,
+    TaskResponse,
+)
 
 __all__ = [
     "ConfigLoader",
     "ConfigBaseSettings",
     "SecurityIncidentResponse",
     "TaskResponse",
+    "ObservableResponse",
     "Author",
     "TLPMarking",
     "ExternalReference",
@@ -29,4 +50,20 @@ __all__ = [
     "CustomTask",
     "CustomCaseIncident",
     "Relationship",
+    "DomainName",
+    "IPv4Address",
+    "IPv6Address",
+    "URL",
+    "EmailAddress",
+    "EmailMessage",
+    "File",
+    "Directory",
+    "Hostname",
+    "Mutex",
+    "ASN",
+    "PhoneNumber",
+    "WindowsRegistyKey",
+    "UserAccount",
+    "OrganizationName",
+    "Vulnerability",
 ]
