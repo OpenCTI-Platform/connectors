@@ -78,9 +78,6 @@ class SocprimeConnector:
             pattern=parsed_rule.pattern,
             pattern_type=self._get_pattern_type(parsed_rule),
             labels=labels,
-            confidence=self.convert_sigma_status_to_stix_confidence(
-                sigma_level=parsed_rule.status
-            ),
             external_references=self._get_external_refs_from_rule(
                 rule, siem_types=siem_types
             ),
@@ -295,17 +292,6 @@ class SocprimeConnector:
             sigma_id = body["id"]
             return f"https://socprime.com/rs/rule/{sigma_id}"
 
-    @staticmethod
-    def convert_sigma_status_to_stix_confidence(sigma_level: str) -> Optional[int]:
-        mapping = {
-            "stable": 85,
-            "test": 50,
-            "experimental": 15,
-            "deprecated": 0,
-            "unsupported": 0,
-        }
-        return mapping.get(str(sigma_level).lower())
-
     def _get_available_siem_types(self, rule_ids: List[str]) -> Dict[str, List[str]]:
         res = {}
         if rule_ids:
@@ -371,7 +357,6 @@ class SocprimeConnector:
             type="identity",
             name=name,
             identity_class="organization",
-            confidence=85,
             description="SOC Prime operates the world’s largest and most advanced Platform for collaborative cyber defense. "
             + "The SOC Prime Platform integration with OpenCTI provides the latest detections within Sigma rules.",
             contact_information="support@socprime.com",
