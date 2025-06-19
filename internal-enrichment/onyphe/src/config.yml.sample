@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'ONYPHE'
+  scope: 'ipv4-addr,ipv6-addr,indicator,hostname,x509-certificate,text'
+  auto: false # Enable/disable auto-enrichment of observables
+  log_level: 'info'
+
+onyphe:
+  api_key: 'ChangeMe'
+  base_url: 'https://www.onyphe.io/api/v2/'
+  max_tlp: 'TLP:AMBER'
+  time_since: '2w'
+  default_score: 50
+  text_pivots: 'hhhash-sha256, hassh-md5'
+  import_search_results: true
+  create_note: false
+  import_full_data: false

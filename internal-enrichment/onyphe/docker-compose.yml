@@ -1,0 +1,28 @@
+version: '3'
+services:
+  connector-onyphe:
+    image: onyphe/connector-onyphe:latest
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ONYPHE_ID} # Valid UUIDv4
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=ONYPHE
+      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,indicator,hostname,x509-certificate,text
+      - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of observables. WARNING: potential impact on API quota
+      - CONNECTOR_ONLY_CONTEXTUAL=false # Only extract data related to an entity (a report, a threat actor, etc.)
+      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      - ONYPHE_API_KEY=ChangeMe
+      - ONYPHE_BASE_URL=https://www.onyphe.io/api/v2/
+      - ONYPHE_MAX_TLP=TLP:AMBER
+      - ONYPHE_TIME_SINCE=1w
+      - ONYPHE_DEFAULT_SCORE=50
+      - ONYPHE_TEXT_PIVOTS=hhhash-sha256,hassh-md5 #CSV list of labels for text observables that the connector will enrich
+      - ONYPHE_IMPORT_SEARCH_RESULTS=true #Create observables from data when enriching an indicator
+      - ONYPHE_CREATE_NOTE=false #Create a Note with ONYPHE search results each time an observable is enriched
+      - ONYPHE_IMPORT_FULL_DATA=false #Import full app.data.text field per result into OpenCTI (false: truncated to 2KB)
+    restart: always
+    depends_on:
+      opencti:
+        condition: service_healthy
