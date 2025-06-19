@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-opencsam:
-    image: opencti/connector-opencsam:6.6.17
+    image: opencti/connector-opencsam:6.6.18
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
