@@ -48,8 +48,10 @@ python -m pip install -q -r "$requirements_file"
 # Write Python version to manifest.json in the base directory
 echo -e "\nRun script and generate schema..."
 
-python $current_path/tmp.py > "$current_path/__infos__/servicenow.schema.json"
+python $current_path/tmp.py > "$current_path/__infos__/connector_schema.json"
 echo "Created manifest.json in $current_path"
+
+
 
 #echo "cleanup"
 #rm $current_path/tmp.py

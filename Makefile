@@ -1,2 +1,2 @@
 connector_schema:
-	sh ./tools/connector-composer/generate_schema.sh
+	sh ./tools/composer/generate_schema.sh

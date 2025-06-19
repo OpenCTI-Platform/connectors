@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+
+  "$id": "https://www.filigran.io/[CHANGEME].schema.json",
+  "title": "CHANGEME",
+  "description": "CHANGEME",
+  "short_description": "CHANGEME",
+
+  "manager_supported": true,
+  "container_version": "OCTI_VERSION",
+  "container_image": "opencti/connector-CONNECTOR_NAME",
+  "container_type": "CONNECTOR_TYPE",
+
+  "verified": CHANGEME,
+  "last_verified_date": "DD-MM-YYYY"
+  "playbook_supported": CHANGEME,
+  "images": ["CONNECTOR_IMAGES_LINKS"],
+  "support_version": ">= 6.5.1",
+  "trial_link": null,
+  "subscription_link": "CHANGEME or null",
+  "source_code": "CHANGEME"
+}

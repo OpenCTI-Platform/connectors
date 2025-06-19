@@ -1,3 +1,20 @@
 {
-  "verified": true
+  "id": "https://www.filigran.io/ipinfo.schema.json",
+  "title": "IpInfo connector",
+  "description": "Accurate IP address data that keeps pace with secure, specific, and forward-looking use cases",
+  "short_description": "",
+
+  "manager_supported": true,
+  "container_version": "[VARIABLE]",
+  "container_image": "opencti/connector-[VARIABLE]",
+  "container_type": "[VARIABLE]",
+
+  "verified": true,
+  "last_verified_date": "15-06-2025",
+  "playbook_supported": true,
+  "images": "[VARIABLE]",
+  "support_version": ">= 6.5.1",
+  "trial_link": null,
+  "subscription_link": "https://ipinfo.io/contact",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/ipinfo"
 }
