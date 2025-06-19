@@ -1,7 +1,10 @@
 import sys
-import time
+import traceback
+
+from pycti import OpenCTIConnectorHelper
 
 from lib.ransom_conn import RansomwareAPIConnector
+from ransomwarelive.config import ConnectorSettings
 
 
 class CustomConnector(RansomwareAPIConnector):
@@ -20,9 +23,10 @@ class CustomConnector(RansomwareAPIConnector):
 
 if __name__ == "__main__":
     try:
-        connector = CustomConnector()
+        config = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
+        connector = CustomConnector(helper=helper, config=config)
         connector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
