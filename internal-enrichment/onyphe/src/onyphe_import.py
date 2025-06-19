@@ -847,7 +847,7 @@ class ONYPHEConnector:
         # Extract Value from opencti entity data
         if stix_entity["type"] == "ipv4-addr":
             ip_value = stix_entity["value"]
-            self.helper.log_debug(f"Processing IPv4 observable: {ip_value}")
+            self.helper.log_info(f"Processing IPv4 observable: {ip_value}")
             try:
                 # Get ONYPHE ctiscan API Response
                 ctifilter = ""
@@ -872,7 +872,7 @@ class ONYPHEConnector:
                 return self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
         elif stix_entity["type"] == "hostname":
             hostname_value = stix_entity["value"]
-            self.helper.log_debug(f"Processing hostname observable: {hostname_value}")
+            self.helper.log_info(f"Processing hostname observable: {hostname_value}")
             try:
                 # Get ONYPHE ctiscan API Response
                 ctifilter = ""
@@ -898,7 +898,7 @@ class ONYPHEConnector:
         elif stix_entity["type"] == "x509-certificate":
             if "hashes" in stix_entity:
                 hashes = stix_entity["hashes"]
-                self.helper.log_debug(f"Processing x509 observable: {hashes}")
+                self.helper.log_info(f"Processing x509 observable: {hashes}")
             else:
                 return self.helper.log_error(
                     f"x509-certificate doesn't contain hashes: {stix_entity}"
@@ -939,7 +939,7 @@ class ONYPHEConnector:
 
         elif stix_entity["type"] == "text":
             text_value = stix_entity["value"]
-            self.helper.log_debug(f"Processing text observable: {text_value}")
+            self.helper.log_info(f"Processing text observable: {text_value}")
             labels = stix_entity.get("x_opencti_labels", [])
 
             allowed_pivots = [
@@ -1008,7 +1008,7 @@ class ONYPHEConnector:
                 ###TODO: handle all values in pattern. Currently just use first one
                 pattern_value = next(iter(pattern_dict))
                 pattern_type = pattern_dict[pattern_value]
-            self.helper.log_debug(
+            self.helper.log_info(
                 f"Processing Indicator {pattern_type} : {pattern_value}"
             )
 
