@@ -57,11 +57,9 @@ def extract_observables_from_pattern(pattern, pattern_type="stix"):
     elif pattern_type == "shodan":
         regexes = {
             "ipv4-addr": r"\bip\s*:\s*([\d\.]+)",
-            "hostname": r"\b(hostname|dns|http\.host)\s*:\s*\"?([\w\.-]+)\"?",
+            "hostname": r"\b(?:hostname|dns|http\.host)\s*:\s*\"?([\w\.-]+)\"?",
             "x509-certificate": r"\bssl\.cert\.fingerprint\s*:\s*([A-Fa-f0-9:]+)",
-            "organization": r"\borg\s*:\s*\"?([\w\s\.-]+)\"?",
-            "asn": r"\basn\s*:\s*(AS\d+)",
-            "text": r"\b(ja4t|hassh|hhhash|favicon)\S*:\s*(\S+)",
+            "text": r"\b(?:ja4t|hassh|hhhash|favicon)\S*:\s*(\S+)",
         }
 
     for obs_type, regex in regexes.items():
