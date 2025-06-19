@@ -25,7 +25,6 @@ from onyphe_references import (
     extract_observables_from_pattern,
 )
 
-
 def safe_get(d, key, empty=(None, "", {}, [])):
     value = d.get(key)
     return value if value not in empty else None
@@ -999,19 +998,6 @@ class ONYPHEConnector:
             else:
                 score = self.helper.get_attribute_in_extension("score", stix_entity)
 
-            pattern = stix_entity["pattern"]
-            # for example : pattern = "[x509-certificate:hashes.'SHA-256' = 'abc123def'] OR [ipv4-addr:value = '1.2.3.4']"
-            pattern_dict = extract_observables_from_pattern(
-                pattern, stix_entity["pattern_type"]
-            )
-            if pattern_dict:
-                ###TODO: handle all values in pattern. Currently just use first one
-                pattern_value = next(iter(pattern_dict))
-                pattern_type = pattern_dict[pattern_value]
-            self.helper.log_info(
-                f"Processing Indicator {pattern_type} : {pattern_value}"
-            )
-
             threats = []
             # Resolve indicates
             relationships = self.helper.api.stix_core_relationship.list(
@@ -1027,37 +1013,35 @@ class ONYPHEConnector:
                 )
                 threats.append(indicates_stix_entity)
 
+            pattern = stix_entity["pattern"]
+            # for example : pattern = "[x509-certificate:hashes.'SHA-256' = 'abc123def'] OR [ipv4-addr:value = '1.2.3.4']"
+            pattern_dict = extract_observables_from_pattern(
+                pattern, stix_entity["pattern_type"]
+            )
+            
+            ctifilter = ""
+            
+            if pattern_dict:
+                for pattern_value in pattern_dict:
+                    pattern_type = pattern_dict[pattern_value]
+                    self.helper.log_info(
+                        f"Processing Indicator {pattern_type} : {pattern_value}"
+                    )
+                    if pattern_type == "ipv4-addr" or pattern_type == "ipv6-addr":
+                        ctifilter += f"( ip.dest:{pattern_value} ) "
+                    if pattern_type == "hostname":
+                        ctifilter += f"( ?cert.hostname:{pattern_value} ?dns.hostname:{pattern_value} ) "
+                    if pattern_type == "x509-certificate":
+                        ctifilter += f"( ?cert.fingerprint.md5:{pattern_value} ?cert.fingerprint.sha1:{pattern_value} ?cert.fingerprint.sha256:{pattern_value} ) "
+                    if pattern_type == "text":
+                        ctifilter += f"( ?app.data.md5:{pattern_value} ?app.data.sha256:{pattern_value} ?http.body.data.md5:{pattern_value} ?http.body.data.sha256:{pattern_value} "
+                        ctifilter += f"?http.header.data.md5:{pattern_value} ?http.header.data.sha256:{pattern_value} ?favicon.data.md5:{pattern_value} ?favicon.data.sha256:{pattern_value} "
+                        ctifilter += f"?ssh.fingerprint.md5:{pattern_value} ?ssh.fingerprint.sha1:{pattern_value} ?ssh.fingerprint.sha256:{pattern_value} ?hassh.fingerprint.md5:{pattern_value} "
+                        ctifilter += f"?tcp.fingerprint.md5:{pattern_value} ?ja4t.fingerprint.md5:{pattern_value} ) "
+
             try:
                 bundle_objects = []
                 number_processed = 1
-
-                # attempt to match the pattern_value to any ctiscan fields
-                # TODO: improve and expand to handle ja4* ja3*
-                ctifilter = "( "
-                ctifilter += f"?ip.dest:{pattern_value} ?ip.organization:{pattern_value} ?ip.asn:{pattern_value} "
-                ctifilter += f"?cert.domain:{pattern_value} "
-                ctifilter += f"?dns.domain:{pattern_value} "
-                ctifilter += f"?cert.hostname:{pattern_value} "
-                ctifilter += f"?dns.hostname:{pattern_value} "
-                ctifilter += f"?cert.fingerprint.md5:{pattern_value} "
-                ctifilter += f"?cert.fingerprint.sha1:{pattern_value} "
-                ctifilter += f"?cert.fingerprint.sha256:{pattern_value} "
-                ctifilter += f"?app.data.md5:{pattern_value} "
-                ctifilter += f"?app.data.sha256:{pattern_value} "
-                ctifilter += f"?http.body.data.md5:{pattern_value} "
-                ctifilter += f"?http.body.data.sha256:{pattern_value} "
-                # ctifilter += f'?http.body.data.domhash:{pattern_value} ' #roadmap
-                ctifilter += f"?http.header.data.md5:{pattern_value} "
-                ctifilter += f"?http.header.data.sha256:{pattern_value} "
-                ctifilter += f"?favicon.data.md5:{pattern_value} "
-                ctifilter += f"?favicon.data.sha256:{pattern_value} "
-                ctifilter += f"?ssh.fingerprint.md5:{pattern_value} "
-                ctifilter += f"?ssh.fingerprint.sha1:{pattern_value} "
-                ctifilter += f"?ssh.fingerprint.sha256:{pattern_value} "
-                ctifilter += f"?hassh.fingerprint.md5:{pattern_value} "
-                ctifilter += f"?tcp.fingerprint.md5:{pattern_value} "
-                ctifilter += f"?ja4t.fingerprint.md5:{pattern_value} "
-                ctifilter += " )"
 
                 if self.config.import_search_results:
                     # Get full ONYPHE API Response

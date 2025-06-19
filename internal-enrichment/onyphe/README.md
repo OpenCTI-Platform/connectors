@@ -33,13 +33,13 @@ This connector allows observables or indicators with a supported ‘stix’ patt
 
 For an observable, it can be enriched with :
 
+- IP address + relationship
 - Organisation + relationship
 - DomainName + relationship
 - HostName + relationship
 - AutonomousSystem+ relationship
 - X509Certificate + relationship
-- Location (City & Country) + relationship
-- Vulnerability + relationship
+- Text analytical pivots + relationship
 - Updating the observable enriched with a description, labels, external reference
 
 For indicators, a note is created with a summary of key data points for the indicator value.
@@ -79,7 +79,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | ID                    | `id`        | `CONNECTOR_ID`               | /       | Yes        | A unique `UUIDv4` identifier for this connector instance.                               |
 | Name                  | `name`      | `CONNECTOR_NAME`             | ``      | Yes        | Full name of the connector : `ONYPHE`.                                                  |
 | Scope                 | `scope`     | `CONNECTOR_SCOPE`            | /       | Yes        | Can be any of `ipv4-addr,ipv6-addr,indicator,hostname,x509-certificate,text`.           |
-| Auto                  | `auto`      | `CONNECTOR_AUTO`             | False   | Yes        | Must be `true` or `false` to enable or disable auto-enrichment of observables.          |
+| Auto                  | `auto`      | `CONNECTOR_AUTO`             | False   | Yes        | Must be `true` or `false` to enable or disable auto-enrichment of observables. See warning.         |
 | Log Level             | `log_level` | `CONNECTOR_LOG_LEVEL`        | /       | Yes        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.  |
 
 Below are the parameters you'll need to set for ONYPHE Connector:
@@ -91,10 +91,10 @@ Below are the parameters you'll need to set for ONYPHE Connector:
 | max_tlp               | `max_tlp`               | `ONYPHE_MAX_TLP`               | `TLP:AMBER` | No        | The maximal TLP of the observable being enriched.                                               |
 | time_since               | `time_since`               | `ONYPHE_TIME_SINCE`               | `1w` | No        | The time range used for ONYPHE queries. Increase to match your license level                  |
 | default_score         | `default_score`         | `ONYPHE_DEFAULT_SCORE`         | `50`        | No        | Default_score allows you to add a default score for an indicator and its observable             |
-| text_pivots         | `text_pivots`         | `ONYPHE_TEXT_PIVOTS`         | `None`        | No        | CSV list. Text pivots filters text observables so that auto enrichment is limited to the list of defined labels |
+| text_pivots         | `text_pivots`         | `ONYPHE_TEXT_PIVOTS`         | `None`        | No        | CSV list. Text pivots filters text observables so that auto enrichment is limited to the list of defined labels. See warning. |
 | import_search_results | `import_search_results` | `ONYPHE_IMPORT_SEARCH_RESULTS` | `True`      | No        | Returns the observable results of the search against the enriched indicator. |
 | create_note | `create_note` | `ONYPHE_CREATE_NOTE` | `False` | No        | Adds ONYPHE results to a note, otherwise it is saved in the description. |
-| import_full_data | `import_full_data` | `ONYPHE_IMPORT_FULL_DATA` | `False` | No        | Full app.data.text field are imported from ONYPHE results for each enriched observable. |
+| import_full_data | `import_full_data` | `ONYPHE_IMPORT_FULL_DATA` | `False` | No        | Full app.data.text field are imported from ONYPHE results for each enriched observable. See warning. |
 
 ## Deployment
 
@@ -134,7 +134,7 @@ Install the required python dependencies (preferably in a virtual environment):
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+Then, start the connector from onyphe/src:
 
 ```shell
 python3 main.py
@@ -146,6 +146,13 @@ python3 main.py
 
 - ⚠️ import_full_data = True : This setting could theoretically import 50MB per observable (max 100 ONYPHE results per enrichment, 500KB per result)
 - ⚠️ text_pivots : Use with caution when the CONNECTOR_AUTO setting is set to True. Adding a widely used analytical pivot label here such as `ja4t-md5` could import thousands or millions of related observables.
+- ⚠️ auto = True : The component 'auto' enrichment feature is powerful but can result in thousands (or millions) of data points being pulled into the platform and enriched in turn. We recommend using a Trigger filter in order to limit auto enrichment to Indicators and certain types of Observables :
+
+  In the ONYPHE connector page: Data / Ingestion / Connectors / ONYPHE
+
+  For example : use the added filters titled `Trigger filters` and add two filters: `Entity type = indicator` OR ( `Entity type = IPv4 address` OR `Entity type = IPv6 address` OR `Entity type = x509-certificate`)
+
+  ![trigger-filters](./__docs__/media/trigger-filter.png)
 
 Useful links
 
