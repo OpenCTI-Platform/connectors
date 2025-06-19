@@ -4,8 +4,6 @@ import stix2
 import stix2.exceptions
 from pycti import Identity, MarkingDefinition, StixCoreRelationship
 
-from .utils import is_ipv4, is_ipv6
-
 
 def handle_stix2_error(decorated_function):
     """
@@ -66,16 +64,16 @@ class ConverterToStix:
         source_ref: str,
         target_ref: str,
         relationship_type: str,
-        attack_date: datetime = None,
-        discovered: datetime = None,
+        start_time: datetime = None,
+        created: datetime = None,
     ) -> stix2.Relationship:
         """
         Generates a relationship object
         :param source_ref:
         :param target_ref:
         :param relationship_type:
-        :param attack_date:
-        :param discovered:
+        :param start_time:
+        :param created:
         :return:
         """
         relation = stix2.Relationship(
@@ -83,13 +81,13 @@ class ConverterToStix:
                 relationship_type,
                 source_ref,
                 target_ref,
-                attack_date,
+                start_time,
             ),
             relationship_type=relationship_type,
             source_ref=source_ref,
             target_ref=target_ref,
-            start_time=attack_date,
-            created=discovered,
+            start_time=start_time,
+            created=created,
             created_by_ref=self.author.get("id"),
         )
         return relation
@@ -106,9 +104,10 @@ class ConverterToStix:
             value=domain_name,
             type="domain-name",
             object_marking_refs=[self.marking.get("id")],
-            allow_custom=True,
-            created_by_ref=self.author.get("id"),
-            x_opencti_description=description,
+            custom_properties={
+                "x_opencti_description": description,
+                "x_opencti_created_by_ref": self.author.get("id"),
+            },
         )
         return domain
 
