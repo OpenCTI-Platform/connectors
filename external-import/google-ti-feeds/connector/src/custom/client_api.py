@@ -1,7 +1,7 @@
 """Client API - Extracted fetch-related methods from orchestrator."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from uuid import uuid4
 
@@ -49,7 +49,9 @@ class ClientAPI:
             )
 
             if last_mod_date:
-                parsed_date = datetime.fromisoformat(last_mod_date)
+                parsed_date = datetime.fromisoformat(last_mod_date) + timedelta(
+                    seconds=1
+                )
                 start_date = parsed_date.astimezone(timezone.utc).strftime(
                     "%Y-%m-%dT%H:%M:%S"
                 )
@@ -245,6 +247,9 @@ class ClientAPI:
                 page_info += f" (total of {total_items} items)"
         elif total_items:
             page_info = f" (total of {total_items} items)"
+
+        if entity_description == "reports":
+            self.real_total_reports = total_items
 
         return f"{LOG_PREFIX} Fetched {data_count} {entity_description} from API{page_info}{cursor_info}"
 

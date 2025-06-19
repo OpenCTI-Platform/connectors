@@ -5,6 +5,7 @@ using the proper fetchers/converters/batch processor pattern.
 """
 
 import logging
+import re
 from typing import Any, Dict, Optional
 
 from connector.src.custom.client_api import ClientAPI
@@ -115,11 +116,26 @@ class Orchestrator:
                             f"{LOG_PREFIX} Need to Flush before adding next items to preserve consistency of the bundle"
                         )
                         self.batch_processor.flush()
+                    self._update_report_index_inplace()
                     self.batch_processor.add_item(self.converter.organization)
                     self.batch_processor.add_item(self.converter.tlp_marking)
                     self.batch_processor.add_items(all_entities)
         finally:
             self._flush_batch_processor()
+
+    def _update_report_index_inplace(self) -> None:
+        """Use to update the work message, trying to keep track of the number of reports."""
+
+        def replacer(m: Any) -> str:
+            current = int(m.group(1))
+            actual_total = self.client_api.real_total_reports
+            return f"({current + 1}/{actual_total} reports)"
+
+        self.batch_processor.config.work_name_template = re.sub(
+            r"\((\d+)/(\d+) reports\)",
+            replacer,
+            self.batch_processor.config.work_name_template,
+        )
 
     def _flush_batch_processor(self) -> None:
         """Flush any remaining items in the batch processor."""

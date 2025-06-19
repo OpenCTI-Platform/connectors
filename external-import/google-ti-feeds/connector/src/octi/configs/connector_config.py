@@ -18,7 +18,7 @@ class ConnectorConfig(BaseConfig):
     scope: str = (
         "report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability"
     )
-    log_level: Literal["debug", "info", "warn", "error"] = "info"
+    log_level: Literal["debug", "info", "warn", "error"] = "error"
     duration_period: str = "PT2H"
     queue_threshold: int = 500
     tlp_level: Literal[

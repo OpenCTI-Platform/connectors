@@ -70,7 +70,7 @@ def all_optional_config(request) -> dict[str, str]:  # type: ignore
 @pytest.fixture(
     params=[
         {"connector_duration_period": "PT2H"},
-        {"connector_log_level": "info"},
+        {"connector_log_level": "error"},
         {"connector_name": "Google Threat Intel Feeds"},
         {
             "connector_scope": "report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability"
