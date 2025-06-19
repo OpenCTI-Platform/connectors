@@ -25,6 +25,7 @@ from onyphe_references import (
     extract_observables_from_pattern,
 )
 
+
 def safe_get(d, key, empty=(None, "", {}, [])):
     value = d.get(key)
     return value if value not in empty else None
@@ -1018,9 +1019,9 @@ class ONYPHEConnector:
             pattern_dict = extract_observables_from_pattern(
                 pattern, stix_entity["pattern_type"]
             )
-            
+
             ctifilter = ""
-            
+
             if pattern_dict:
                 for pattern_value in pattern_dict:
                     pattern_type = pattern_dict[pattern_value]
