@@ -1,10 +1,9 @@
 import base64
-import datetime
 import threading
+from datetime import datetime, timezone
 from re import search
 
 import pycti
-import pytz
 import stix2
 from pycti import (
     CustomObjectChannel,
@@ -14,6 +13,7 @@ from pycti import (
 )
 
 from .constants import TLP_MAP
+from .pyrf import Alert, RecordedFutureApiClient, RecordedFutureApiError
 from .utils import is_ip_v4_address, is_ip_v6_address, make_markdown_table
 
 
@@ -24,7 +24,13 @@ class Vocabulary:
 
 
 class RecordedFutureAlertConnector(threading.Thread):
-    def __init__(self, helper, rf_alerts_api, opencti_default_severity, tlp):
+    def __init__(
+        self,
+        helper: pycti.OpenCTIConnectorHelper,
+        rf_alerts_api: RecordedFutureApiClient,
+        opencti_default_severity: str,
+        tlp: str,
+    ):
         threading.Thread.__init__(self)
         self.helper = helper
 
@@ -126,81 +132,72 @@ class RecordedFutureAlertConnector(threading.Thread):
                 }
             )
 
+    def collect_alerts(self, since: datetime) -> list[Alert]:
+        """
+        Collects alerts from Recorded Future API based on the provided time range.
+
+        :param since: The start datetime for collecting alerts.
+        :return: A list of Alert objects.
+        """
+        alerts = []
+        for rule in self.api_recorded_future.priorited_rules:
+            try:
+                rule_alerts = self.api_recorded_future.get_alerts(
+                    rule=rule, since=since
+                )
+                alerts.extend(rule_alerts)
+
+                self.helper.connector_logger.info(
+                    f"{len(rule_alerts)} alert(s) found",
+                    {
+                        "rule_id": rule.rule_id,
+                        "rule_name": rule.rule_name,
+                        "since": since,
+                        "alerts_count": len(rule_alerts),
+                    },
+                )
+            except RecordedFutureApiError as err:
+                message = f"Skipping alerts for rule '{rule.rule_name}' due to RecordedFuture API error"
+                self.helper.connector_logger.error(
+                    message,
+                    {
+                        "error": err,
+                        "rule_id": rule.rule_id,
+                        "rule_name": rule.rule_name,
+                        "since": since,
+                    },
+                )
+                continue
+
+        return alerts
+
     def run(self):
+        """
+        Main process to collect, transform and send intelligence to OpenCTI.
+        :return: None
+        """
+        now = datetime.now(tz=timezone.utc)
+
         self.work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id,
-            "Recorded Future Alerts",
+            connector_id=self.helper.connector_id,
+            friendly_name="Recorded Future Alerts",
         )
 
-        self.update_rules()
+        try:
+            # Populate self.api_recorded_future.priorited_rules list
+            self.update_rules()
 
-        timestamp = datetime.datetime.now(pytz.timezone("UTC"))
-        current_state = self.helper.get_state() or {}
-
-        if current_state is not None and "last_alerts_run" in current_state:
-
-            last_alerts_run = datetime.datetime.strptime(
-                current_state["last_alerts_run"], "%Y-%m-%dT%H:%M:%S"
+            current_state = self.helper.get_state() or {}
+            last_alerts_run = (
+                datetime.fromisoformat(
+                    current_state.get("last_alerts_run", "")
+                ).replace(tzinfo=timezone.utc)
+                if current_state.get("last_alerts_run")
+                else None
             )
 
-            if last_alerts_run.date() == datetime.datetime.today().date():
-                self.run_for_time_period(
-                    trigger=str(datetime.datetime.today().date()),
-                    after=current_state["last_alerts_run"],
-                )
-                for alert in self.api_recorded_future.alerts:
-                    try:
-                        self.alert_to_incident(alert)
-                    except Exception as err:
-                        self.helper.connector_logger.error(
-                            "Incident cannot be created",
-                            {"alert_id": alert.alert_id, "error_msg": str(err)},
-                        )
-                    timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
-
-                    current_state = self.helper.get_state() or {}
-                    current_state.update(
-                        {
-                            "last_alerts_run": timestamp_checkpoint.strftime(
-                                "%Y-%m-%dT%H:%M:%S"
-                            )
-                        }
-                    )
-                    self.helper.set_state(current_state)
-            else:
-                local_alerts = []
-                self.run_for_time_period(
-                    trigger=str(last_alerts_run.date()),
-                    after=current_state["last_alerts_run"],
-                )
-                local_alerts.extend(self.api_recorded_future.alerts)
-                day_delta = datetime.datetime.today().date() - last_alerts_run.date()
-                for i in range(1, day_delta.days + 1):
-                    day = last_alerts_run.date() + datetime.timedelta(days=i)
-                    self.run_for_time_period(trigger=str(day))
-                    local_alerts.extend(self.api_recorded_future.alerts)
-                for alert in local_alerts:
-                    try:
-                        self.alert_to_incident(alert)
-                    except Exception as err:
-                        self.helper.connector_logger.error(
-                            "Incident cannot be created",
-                            {"alert_id": alert.alert_id, "error_msg": str(err)},
-                        )
-                    timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
-
-                    current_state = self.helper.get_state() or {}
-                    current_state.update(
-                        {
-                            "last_alerts_run": timestamp_checkpoint.strftime(
-                                "%Y-%m-%dT%H:%M:%S"
-                            )
-                        }
-                    )
-                    self.helper.set_state(current_state)
-        else:
-            self.run_for_time_period(trigger=str(datetime.datetime.today().date()))
-            for alert in self.api_recorded_future.alerts:
+            alerts = self.collect_alerts(since=last_alerts_run or now)
+            for alert in alerts:
                 try:
                     self.alert_to_incident(alert)
                 except Exception as err:
@@ -208,26 +205,18 @@ class RecordedFutureAlertConnector(threading.Thread):
                         "Incident cannot be created",
                         {"alert_id": alert.alert_id, "error_msg": str(err)},
                     )
-                timestamp_checkpoint = datetime.datetime.now(pytz.timezone("UTC"))
+                    continue
 
-                current_state = self.helper.get_state() or {}
-                current_state.update(
-                    {
-                        "last_alerts_run": timestamp_checkpoint.strftime(
-                            "%Y-%m-%dT%H:%M:%S"
-                        )
-                    }
-                )
-                self.helper.set_state(current_state)
+            current_state = self.helper.get_state() or {}
+            current_state["last_alerts_run"] = now.isoformat()
+            self.helper.set_state(current_state)
 
-        current_state = self.helper.get_state() or {}
-        current_state.update(
-            {"last_alerts_run": timestamp.strftime("%Y-%m-%dT%H:%M:%S")}
-        )
-        self.helper.set_state(current_state)
+            message = f"{self.helper.connect_name} connector successfully run for Recorded Future Alerts"
+            self.helper.api.work.to_processed(self.work_id, message)
 
-        message = f"{self.helper.connect_name} connector successfully run for Recorded Future Alerts"
-        self.helper.api.work.to_processed(self.work_id, message)
+        except Exception as err:
+            self.helper.connector_logger.error(str(err))
+            self.helper.api.work.to_processed(self.work_id, str(err), in_error=True)
 
     def alert_to_incident(self, alert):
         external_files = []
@@ -521,9 +510,7 @@ class RecordedFutureAlertConnector(threading.Thread):
             stix_note = stix2.Note(
                 id=pycti.Note.generate_id(
                     hit_note,
-                    datetime.datetime.now(pytz.timezone("UTC")).strftime(
-                        "%Y-%m-%dT%H:%M:%S"
-                    ),
+                    datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
                 ),
                 object_marking_refs=self.tlp,
                 abstract=str(
@@ -550,27 +537,3 @@ class RecordedFutureAlertConnector(threading.Thread):
             update=True,
             work_id=self.work_id,
         )
-
-    def run_for_time_period(self, trigger, after=None):
-        assert isinstance(
-            trigger, str
-        ), "Date must be a string with any format between : yyyy to yyyy-MM-dd'T'HH:mm:ss'Z'"
-        self.recordedfuture_alert_time = trigger
-
-        self.api_recorded_future.alerts = []
-        self.api_recorded_future.get_alert_by_rule_and_by_trigger(
-            self.recordedfuture_alert_time, after=after
-        )
-        if len(self.api_recorded_future.alerts) == 0:
-            self.helper.connector_logger.info(
-                "[" + str(trigger) + "] No alert found : exiting"
-            )
-        else:
-            self.helper.connector_logger.info(
-                "["
-                + str(trigger)
-                + "] "
-                + str(len(self.api_recorded_future.alerts))
-                + " alerts were found"
-            )
-        return
