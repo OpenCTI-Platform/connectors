@@ -1,3 +1,5 @@
+import traceback
+
 from lib import ConfigLoader, RadarConnector
 from pycti import OpenCTIConnectorHelper
 
@@ -17,6 +19,6 @@ if __name__ == "__main__":
 
         connector = RadarConnector(config, helper)
         connector.run()
-    except Exception as e:
-        print(f"Error running connector: {str(e)}")
+    except Exception:
+        traceback.print_exc()
         exit(1)

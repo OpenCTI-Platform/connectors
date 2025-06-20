@@ -4,28 +4,16 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict
 
 import pycti
+import requests
 import stix2
-from lib.config_loader import CollectionConfigVar, ConfigLoader
 
-# PyCTI
-from pycti import Identity as PyctiIdentity
-from pycti import Indicator as PyctiIndicator
-
-# STIX2
 from stix2 import TLP_WHITE, Bundle
-from stix2 import Identity as Stix2Identity
-from stix2 import Indicator as Stix2Indicator
+from lib.config_loader import ConfigLoader
 
-# ===============================================================================
-# Constants
-# ===============================================================================
 BATCH_SIZE = 1000
-TLP_MARKING = TLP_WHITE.id
+TLP_MARKING = stix2.TLP_WHITE.id
 
 
-# ===============================================================================
-# Main Operator: RadarConnector
-# ===============================================================================
 class RadarConnector:
     """
     OpenCTI connector for SOCRadar threat intelligence feeds.
@@ -48,7 +36,7 @@ class RadarConnector:
         self.format_type = ".json?key="
 
         # Step 4.0: Initialize caches and patterns
-        self.identity_cache: Dict[str, Stix2Identity] = {}
+        self.identity_cache: Dict[str, stix2.Identity] = {}
         self.regex_patterns = {
             "md5": r"^[a-fA-F\d]{32}$",
             "sha1": r"^[a-fA-F\d]{40}$",
@@ -59,9 +47,8 @@ class RadarConnector:
             "url": r"^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$",
         }
 
-    # ===============================================================================
-    # Utility Methods
-    # ===============================================================================
+        self.work_id: str | None = None
+
     def _matches_pattern(self, value: str, pattern_name: str) -> bool:
         """Match value against regex pattern"""
         return bool(re.match(self.regex_patterns[pattern_name], value))
@@ -125,13 +112,12 @@ class RadarConnector:
             return self.identity_cache[maintainer_name]
 
         try:
-            identity_id = PyctiIdentity.generate_id(
-                name=maintainer_name,
-                identity_class="organization",
-            )
-            now = datetime.utcnow()
-            identity = Stix2Identity(
-                id=identity_id,
+            now = datetime.now(tz=timezone.utc)
+            identity = stix2.Identity(
+                id=pycti.Identity.generate_id(
+                    name=maintainer_name,
+                    identity_class="organization",
+                ),
                 name=maintainer_name,
                 identity_class="organization",
                 description=f"Feed Provider: {maintainer_name}",
@@ -140,15 +126,11 @@ class RadarConnector:
             )
             self.identity_cache[maintainer_name] = identity
             return identity
-        except Exception as e:
-            self.helper.log_error(
-                f"Error creating Identity for {maintainer_name}: {str(e)}"
+        except stix2.exceptions.STIXError as err:
+            self.helper.connector_logger.error(
+                f"Error creating Identity for {maintainer_name}", {"error": err}
             )
             return None
-
-    ########################################################################
-    # Feed Processing
-    ########################################################################
 
     def _process_feed_item(self, item: dict):
         """Process single feed item into STIX objects"""
@@ -189,37 +171,34 @@ class RadarConnector:
             )
             return stix_objects
 
-        # Step 7.0: Generate stable indicator ID
         try:
-            indicator_id = PyctiIndicator.generate_id(pattern)
-        except Exception as e:
-            self.helper.log_error(f"Indicator ID generation error: {str(e)}")
-            return stix_objects
+            # Step 8.0: Create STIX2 Indicator object
+            indicator = stix2.Indicator(
+                id=pycti.Indicator.generate_id(pattern),
+                name=f"{feed_type.upper()}: {value}",
+                description=f"Source: {maintainer}\nValue: {value}",
+                pattern=pattern,
+                pattern_type="stix",
+                valid_from=valid_from,
+                valid_until=valid_until,
+                created_by_ref=identity_obj.id,
+                object_marking_refs=[stix2.TLP_WHITE.id],
+                labels=["malicious-activity", feed_type],
+                created=valid_from,
+                modified=valid_from,
+            )
 
-        # Step 8.0: Create STIX2 Indicator object
-        indicator = Stix2Indicator(
-            id=indicator_id,
-            name=f"{feed_type.upper()}: {value}",
-            description=f"Source: {maintainer}\nValue: {value}",
-            pattern=pattern,
-            pattern_type="stix",
-            valid_from=valid_from,
-            valid_until=valid_until,
-            created_by_ref=identity_obj.id,
-            object_marking_refs=[TLP_WHITE.id],
-            labels=["malicious-activity", feed_type],
-            confidence=75,
-            created=valid_from,
-            modified=valid_from,
-        )
+            # Step 9.0: Combine all STIX objects
+            stix_objects.extend([identity_obj, indicator])
+            # Step 9.1: Log success
+            self.helper.connector_logger.info(
+                f"Created {feed_type} indicator => {value} from {maintainer}"
+            )
+        except stix2.exceptions.STIXError as err:
+            self.helper.connector_logger.error(
+                f"Indicator ID generation error", {"error": err}
+            )
 
-        # Step 9.0: Combine all STIX objects
-        stix_objects.extend([identity_obj, indicator])
-        # Step 9.1: Log success
-        self.helper.log_info(
-            f"Created {feed_type} indicator => {value} from {maintainer}"
-        )
-        # Step 9.2: Return combined objects
         return stix_objects
 
     def _process_feed(self, work_id: str):
@@ -276,30 +255,71 @@ class RadarConnector:
             except Exception as e:
                 self.helper.log_error(f"Failed to process {collection_name}: {str(e)}")
 
-    ########################################################################
-    # Connector Workflow
-    ########################################################################
-    def process_message(self):
+    #
+    #
+    #
+    #
+    #
+
+    def process(self):
         """
-        Called each run. Create "Work", process feed, finalize.
+        Run main process to collect, process and send intelligence to OpenCTI.
         """
-        self.helper.log_info("RadarConnector: process_message started.")
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        friendly_name = f"SOCRadar Connector run @ {now_str}"
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, friendly_name
+        error_flag = False
+
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Starting connector...",
+            {"connector_name": self.helper.connect_name},
         )
 
         try:
-            self._process_feed(work_id)
+            current_state = self.helper.get_state() or {}
+            if current_state.get("last_run"):
+                last_run = datetime.fromisoformat(
+                    current_state.get("last_run")
+                ).replace(tzinfo=timezone.utc)
+
+                self.helper.connector_logger.info(
+                    "Connector last run:", {"last_run": last_run}
+                )
+            else:
+                self.helper.connector_logger.info("Connector has never run")
+
+            # TODO: init work only if data to ingest
+            now = datetime.now(tz=timezone.utc)
+            friendly_name = (
+                f"SOCRadar Connector run @ {now.isoformat(timespec='seconds')}"
+            )
+            self.work_id = self.helper.api.work.initiate_work(
+                connector_id=self.helper.connector_id,
+                friendly_name=friendly_name,
+            )
+
+            self._process_feed(self.work_id)
             message = "Radar feed import complete"
-            self.helper.api.work.to_processed(work_id, message)
-            self.helper.log_info(message)
+            self.helper.connector_logger.info(message)
+
         except (KeyboardInterrupt, SystemExit):
-            self.helper.log_info("RadarConnector interrupted. Stopping.")
+            error_flag = True
+            message = "Connector stopped by user or system"
+            self.helper.connector_logger.info(
+                message, {"connector_name": self.helper.connect_name}
+            )
             sys.exit(0)
-        except Exception as e:
-            self.helper.log_error(f"process_message error: {str(e)}")
+        except Exception as err:
+            error_flag = True
+            self.helper.connector_logger.error("Unexpected error.", {"error": str(err)})
+            message = "Unexpected error. See connector's log for more details."
+
+        finally:
+            if self.work_id:
+                self.helper.api.work.to_processed(
+                    work_id=self.work_id,
+                    message=message,
+                    in_error=error_flag,
+                )
+
+            self.work_id = None
 
     def run(self):
         """
