@@ -1,0 +1,16 @@
+services:
+  connector-google-ti-feeds:
+    image: opencti/connector-google-ti-feeds:6.6.11
+    environment:
+      - OPENCTI_URL='http://localhost:PORT'
+      - OPENCTI_TOKEN='ChangeMe'
+      - CONNECTOR_ID='ChangeMe'
+      - GTI_API_KEY='ChangeMe'
+    restart: unless-stopped
+#     networks:
+#       - docker_default
+
+# networks:
+#   default:
+#     external: true
+#     name: docker_default
