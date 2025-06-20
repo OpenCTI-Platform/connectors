@@ -259,12 +259,6 @@ class RadarConnector:
                     f"Failed to process {collection_name}", {"error", err}
                 )
 
-    #
-    #
-    #
-    #
-    #
-
     def process(self):
         """
         Run main process to collect, process and send intelligence to OpenCTI.
@@ -327,17 +321,17 @@ class RadarConnector:
 
     def run(self):
         """
-        Run in start-up.
-        Mainly runs with OpenCTI's schedule_iso.
+        Run the main process encapsulated in a scheduler
+        It allows you to schedule the process to run at a certain intervals
+        This specific scheduler from the pycti connector helper will also check the queue size of a connector
+        If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
+        the connector's main process will not run until the queue is ingested and reduced sufficiently,
+        allowing it to restart during the next scheduler check. (default is 500MB)
+        It requires the `duration_period` connector variable in ISO-8601 standard format
+
+        Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
         """
-        # Step 1.0: Run immediately on startup
-        self.helper.log_info("Running initial collection...")
-        self.process_message()
-
-        # Step 2.0: Schedule recurring runs
-        duration_period = f"PT{self.interval}S"  # e.g., PT600S for 10 minutes
-        self.helper.log_info(f"Scheduling recurring runs every {self.interval} seconds")
-
-        self.helper.schedule_iso(
-            message_callback=self.process_message, duration_period=duration_period
+        self.helper.schedule_process(
+            message_callback=self.process,
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )
