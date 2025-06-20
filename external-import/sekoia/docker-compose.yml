@@ -15,3 +15,4 @@ services:
       - SEKOIA_LIMIT=100                # Optional, the number of elements to fetch in each request. Defaults to 200, maximum 2000
       - SEKOIA_CREATE_OBSERVABLES=true  # Create observables from indicators
       - SEKOIA_IMPORT_SOURCE_LIST=false # Create the list of sources observed by Sekoia as label
+      - SEKOIA_IMPORT_IOC_RELATIONSHIPS=true # Optional, Import IOCs relationships and related objects - Default: true
