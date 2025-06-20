@@ -1,0 +1,30 @@
+{
+  "request_info": {
+    "endpoint": "https://www.virustotal.com/api/v3/collections/vulnerability--cve-2021-26855",
+    "query_params": {},
+    "entity_type": "vulnerabilities",
+    "method": "GET"
+  },
+  "response": {
+    "id": "vulnerability--cve-2021-26855",
+    "type": "collection",
+    "links": {
+      "self": "https://www.virustotal.com/api/v3/collections/vulnerability--cve-2021-26855"
+    },
+    "attributes": {
+      "name": "CVE-2021-26855",
+      "creation_date": 1614723108,
+      "cvss": {
+        "cvssv3": null
+      },
+      "epss": {
+        "score": 0.94346,
+        "percentile": 0.99951
+      },
+      "link": null,
+      "last_modification_date": 1747761802,
+      "description": "\n\nA remote code execution vulnerability exists in Exchange Server 2019 Cumulative Update 8.  \nAn attacker who successfully exploited the vulnerability could run arbitrary code on the affected system.\n\n",
+      "private": true
+    }
+  }
+}

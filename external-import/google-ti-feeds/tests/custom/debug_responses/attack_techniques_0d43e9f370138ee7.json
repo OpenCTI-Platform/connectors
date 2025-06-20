@@ -1,0 +1,49 @@
+{
+  "request_info": {
+    "endpoint": "https://www.virustotal.com/api/v3/attack_techniques/T0822",
+    "query_params": {},
+    "entity_type": "attack_techniques",
+    "method": "GET"
+  },
+  "response": {
+    "id": "T0822",
+    "type": "attack_technique",
+    "links": {
+      "self": "https://www.virustotal.com/api/v3/attack_techniques/T0822"
+    },
+    "attributes": {
+      "info": {
+        "x_mitre_contributors": null,
+        "x_mitre_platforms": [
+          "None"
+        ],
+        "x_mitre_is_subtechnique": false,
+        "x_mitre_permissions_required": null,
+        "x_mitre_version": "1.1",
+        "x_mitre_data_sources": [
+          "Network Traffic: Network Traffic Flow",
+          "Logon Session: Logon Session Metadata",
+          "Application Log: Application Log Content"
+        ],
+        "x_mitre_detection": "",
+        "x_mitre_effective_permissions": null,
+        "x_mitre_defense_bypassed": null,
+        "x_mitre_remote_support": null,
+        "x_mitre_impact_type": null,
+        "x_mitre_system_requirements": null,
+        "x_mitre_tactic_type": null,
+        "x_mitre_deprecated": false,
+        "x_mitre_old_attack_id": null,
+        "x_mitre_network_requirements": null
+      },
+      "revoked": false,
+      "name": "External Remote Services",
+      "creation_date": 1590083006,
+      "link": "https://attack.mitre.org/techniques/T0822/",
+      "stix_id": "attack-pattern--8d2f3bab-507c-4424-b58b-edc977bd215c",
+      "last_modification_date": 1744838776,
+      "description": "Adversaries may leverage external remote services as a point of initial access into your network. These services allow users to connect to internal network resources from external locations. Examples are VPNs, Citrix, and other access mechanisms. Remote service gateways often manage connections and credential authentication for these services. \nExternal remote services allow administration of a control system from outside the system. Often, vendors and internal engineering groups have access to external remote services to control system networks via the corporate network. In some cases, this access is enabled directly from the internet. While remote access enables ease of maintenance when a control system is in a remote area, compromise of remote access solutions is a liability. The adversary may use these services to gain access to and execute attacks against a control system network. Access to valid accounts is often a requirement. \nAs they look for an entry point into the control system network, adversaries may begin searching for existing point-to-point VPN implementations at trusted third party networks or through remote support employee connections where split tunneling is enabled. ",
+      "private": false
+    }
+  }
+}
