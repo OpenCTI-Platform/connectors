@@ -1,23 +1,15 @@
-# ===============================================================================
-# Imports: System and Third-Party Libraries
-# ===============================================================================
-import json
-import os
 import re
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict
 
-import requests
-import yaml
+import pycti
+import stix2
+from lib.config_loader import CollectionConfigVar, ConfigLoader
 
-# ===============================================================================
-# Imports: OpenCTI Libraries
-# ===============================================================================
 # PyCTI
 from pycti import Identity as PyctiIdentity
 from pycti import Indicator as PyctiIndicator
-from pycti import OpenCTIConnectorHelper, get_config_variable
 
 # STIX2
 from stix2 import TLP_WHITE, Bundle
@@ -28,8 +20,6 @@ from stix2 import Indicator as Stix2Indicator
 # Constants
 # ===============================================================================
 BATCH_SIZE = 1000
-DEFAULT_INTERVAL = 600
-DEFAULT_CONFIDENCE = 75
 TLP_MARKING = TLP_WHITE.id
 
 
@@ -42,52 +32,17 @@ class RadarConnector:
     Processes indicators in batches and creates STIX2 objects.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self, config: ConfigLoader, helper: pycti.OpenCTIConnectorHelper
+    ) -> None:
         """Initialize RadarConnector with configuration and helpers"""
-        # Step 1.0: Set up configuration paths
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(base_dir, "..", "config.yml")
+        self.config = config
+        self.helper = helper
+
 
         # Step 1.1: Load configuration file
         if os.path.isfile(config_path):
             with open(config_path, "r") as f:
-                config = yaml.safe_load(f)
-        else:
-            config = {}
-
-        # Step 2.0: Initialize OpenCTI helper
-        self.helper = OpenCTIConnectorHelper(config)
-
-        # Step 3.0: Configure feed parameters
-        # Step 3.1: Set base URL and API key
-        self.base_url = get_config_variable(
-            "RADAR_BASE_FEED_URL", ["radar", "radar_base_feed_url"], config
-        )
-        self.socradar_key = get_config_variable(
-            "RADAR_SOCRADAR_KEY", ["radar", "radar_socradar_key"], config
-        )
-
-        # Step 3.2: Set run interval
-        self.interval = get_config_variable(
-            "RADAR_RUN_INTERVAL",
-            ["radar", "radar_run_interval"],
-            config,
-            default=DEFAULT_INTERVAL,
-        )
-        if isinstance(self.interval, str):
-            self.interval = int(self.interval)
-
-        # Step 3.3: Configure collections
-        raw_collections = get_config_variable(
-            "RADAR_COLLECTIONS_UUID", ["radar", "radar_collections_uuid"], config
-        )
-        if isinstance(raw_collections, str):
-            try:
-                self.collections = json.loads(raw_collections)
-            except Exception:
-                self.collections = {}
-        else:
-            self.collections = raw_collections or {}
 
         # Step 3.4: Set format type for API requests
         self.format_type = ".json?key="
