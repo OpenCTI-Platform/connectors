@@ -235,10 +235,8 @@ class RadarConnector:
 
                     # If we reached a batch boundary
                     if idx % BATCH_SIZE == 0:
-                        bundle = Bundle(objects=stix_batch, allow_custom=True)
-                        self.helper.send_stix2_bundle(
-                            bundle.serialize(), work_id=work_id
-                        )
+                        bundle = self.helper.stix2_create_bundle(stix_batch)
+                        self.helper.send_stix2_bundle(bundle, work_id=work_id)
                         total_sent += len(stix_batch)
                         self.helper.connector_logger.info(
                             f"Sent batch of {len(stix_batch)} objects (total: {total_sent})"
@@ -247,8 +245,8 @@ class RadarConnector:
 
                 # Final leftover
                 if stix_batch:
-                    bundle = Bundle(objects=stix_batch, allow_custom=True)
-                    self.helper.send_stix2_bundle(bundle.serialize(), work_id=work_id)
+                    bundle = self.helper.stix2_create_bundle(stix_batch)
+                    self.helper.send_stix2_bundle(bundle, work_id=work_id)
                     total_sent += len(stix_batch)
                     self.helper.connector_logger.info(
                         f"Sent final batch of {len(stix_batch)} objects (total: {total_sent})"
