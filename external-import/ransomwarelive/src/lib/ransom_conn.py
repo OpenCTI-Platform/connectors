@@ -1,6 +1,6 @@
 import re
 import sys
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 import pycti
 import requests
@@ -539,7 +539,7 @@ class RansomwareAPIConnector:
                     )
 
         if nb_stix_objects:
-            self.last_run_datetime_with_ingested_data = datetime.now(tz=UTC).isoformat(
+            self.last_run_datetime_with_ingested_data = datetime.now(tz=timezone.utc).isoformat(
                 timespec="seconds"
             )
 
@@ -654,7 +654,7 @@ class RansomwareAPIConnector:
 
                 if nb_stix_objects:
                     self.last_run_datetime_with_ingested_data = datetime.now(
-                        tz=UTC
+                        tz=timezone.utc
                     ).isoformat(timespec="seconds")
 
         except requests.exceptions.HTTPError as err:
@@ -678,7 +678,7 @@ class RansomwareAPIConnector:
 
         try:
             # Get the current timestamp and check
-            now = datetime.now(tz=UTC)
+            now = datetime.now(tz=timezone.utc)
             current_state = self.helper.get_state()
 
             if current_state and "last_run" in current_state:
