@@ -152,7 +152,7 @@ class RadarConnector:
         last_seen_str = item.get("latest_seen_date")
         # Step 3.3: Validate required fields exist
         if not (value and first_seen_str and last_seen_str):
-            self.helper.log_error(f"Item missing fields: {item}")
+            self.helper.connector_logger.error(f"Item missing fields: {item}")
             return stix_objects
 
         # Step 4.0: Convert and validate dates
@@ -166,7 +166,7 @@ class RadarConnector:
         # Step 6.0: Generate STIX pattern for indicator
         pattern = self._create_stix_pattern(value, feed_type)
         if not pattern:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Could not determine pattern for: {value} / {feed_type}"
             )
             return stix_objects
@@ -205,7 +205,7 @@ class RadarConnector:
         """
         Batched feed ingestion in chunks of 1000 items
         """
-        self.helper.log_info("RadarConnector: Starting feed collection...")
+        self.helper.connector_logger.info("RadarConnector: Starting feed collection...")
 
         for collection_name, collection_data in self.collections.items():
             try:
@@ -215,13 +215,15 @@ class RadarConnector:
                     f"{self.base_url}{coll_id}{self.format_type}{self.socradar_key}&v=2"
                 )
 
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"Fetching data from {collection_name} => {feed_url}"
                 )
                 resp = requests.get(feed_url, timeout=30)
                 resp.raise_for_status()
                 items = resp.json()
-                self.helper.log_info(f"Got {len(items)} items from {collection_name}")
+                self.helper.connector_logger.info(
+                    f"Got {len(items)} items from {collection_name}"
+                )
 
                 stix_batch = []
                 total_sent = 0
@@ -238,7 +240,7 @@ class RadarConnector:
                             bundle.serialize(), work_id=work_id
                         )
                         total_sent += len(stix_batch)
-                        self.helper.log_info(
+                        self.helper.connector_logger.info(
                             f"Sent batch of {len(stix_batch)} objects (total: {total_sent})"
                         )
                         stix_batch = []
@@ -248,12 +250,14 @@ class RadarConnector:
                     bundle = Bundle(objects=stix_batch, allow_custom=True)
                     self.helper.send_stix2_bundle(bundle.serialize(), work_id=work_id)
                     total_sent += len(stix_batch)
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"Sent final batch of {len(stix_batch)} objects (total: {total_sent})"
                     )
 
-            except Exception as e:
-                self.helper.log_error(f"Failed to process {collection_name}: {str(e)}")
+            except Exception as err:
+                self.helper.connector_logger.error(
+                    f"Failed to process {collection_name}", {"error", err}
+                )
 
     #
     #
