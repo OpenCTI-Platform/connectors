@@ -1,0 +1,33 @@
+version: "3"
+services:
+  connector-socradar:
+    image: opencti/connector-socradar:6.6.18
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGEME
+
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=SOCRadar
+      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT10M # ISO8601 format in String, start with 'P...' for Period
+
+      # Connector's definition parameters OPTIONAL
+      # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
+      # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
+      # - CONNECTOR_SEND_TO_QUEUE=True # Default True
+      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False
+      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+      # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
+
+      # Connector's custom execution parameters
+      - RADAR_BASE_FEED_URL=https://platform.socradar.com/api/threat/intelligence/feed_list/ # required
+      - RADAR_SOCRADAR_KEY=CHANGEME
+      - RADAR_FEED_LISTS=CHANGEME
+
+      # Add proxy parameters below if needed
+      # - HTTP_PROXY=CHANGEME
+      # - HTTPS_PROXY=CHANGEME
+      # - NO_PROXY=CHANGEME
