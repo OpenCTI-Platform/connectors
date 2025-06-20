@@ -31,6 +31,7 @@ connector-sekoia:
       - SEKOIA_LIMIT=100                # Optional, the number of elements to fetch in each request. Defaults to 200, maximum 2000
       - SEKOIA_CREATE_OBSERVABLES=true  # Create observables from indicators
       - SEKOIA_IMPORT_SOURCE_LIST=false # Create the list of sources observed by Sekoia as label
+      - SEKOIA_IMPORT_IOC_RELATIONSHIPS=true # Optional, Import IOCs relationships and related objects - Default: true
     restart: always
     depends_on:
       - opencti
@@ -84,6 +85,24 @@ Here are the elements of the Sekoia feed that can be found on OpenCTI after expo
 | Malwares	      | Malwares       |
 | Intrusion Set	 | Intrusion-sets |
 | Indicators	    | Indicators     |
+
+## Known behavior
+
+The configuration option `SEKOIA_IMPORT_IOC_RELATIONSHIPS` is setting to `true` by default to obtain in OpenCTI the same richness of information as offered through your portal BUT please note that as we ingest more data, the process of ingesting an IOC may take longer.
+
+To enhance ingestion performance, deploy two specialized connectors:
+
+- Primary Connector: Rapidly ingests IOCs without related objects for immediate processing
+
+- Secondary Connector: Asynchronously enriches IOCs with related objects during off-peak periods
+
+This parallel approach decouples initial ingestion from relationship processing, significantly reducing latency while maintaining data completeness. The separation of concerns allows:
+
+- Near-real-time IOC availability
+
+- Reduced load during peak ingestion windows
+
+- Gradual relationship mapping without blocking core ingestion
 
 ## Troubleshoot
 
