@@ -497,11 +497,8 @@ class RansomwareAPIConnector:
                         bundle_list = self.stix_object_generator(item, group_data)
 
                         if bundle_list:
-                            # Add Author object at first
-                            if not nb_stix_objects:
-                                bundle_list = [
-                                    self.converter_to_stix.author
-                                ] + bundle_list
+                            # Add Author object
+                            bundle_list = [self.converter_to_stix.author] + bundle_list
 
                             nb_stix_objects += len(bundle_list)
 
@@ -510,23 +507,29 @@ class RansomwareAPIConnector:
                                 bundle_list
                             )
 
-                            bundle = Bundle(
+                            bundles = Bundle(
                                 objects=bundle_list, allow_custom=True
                             ).serialize()
                         else:
                             self.helper.connector_logger.info("No new data to process")
 
-                        if bundle:
-                            self.helper.send_stix2_bundle(
-                                bundle=bundle,
-                                work_id=self.work_id,
-                                cleanup_inconsistent_bundle=True,
+                        if bundles:
+                            # Initiate new work
+                            self.work_id = self.helper.api.work.initiate_work(
+                                self.helper.connect_id, "RansomwareLive"
                             )
 
-                        self.helper.connector_logger.info(
-                            "Sending STIX objects to OpenCTI...",
-                            {"len_bundle_list": len(bundle_list)},
-                        )
+                            for bundle in bundles:
+                                self.helper.send_stix2_bundle(
+                                    bundle=bundle,
+                                    work_id=self.work_id,
+                                    cleanup_inconsistent_bundle=True,
+                                )
+
+                            self.helper.connector_logger.info(
+                                "Sending STIX objects to OpenCTI...",
+                                {"len_bundle_list": len(bundle_list)},
+                            )
 
                 except requests.exceptions.HTTPError as err:
                     self.helper.connector_logger.error(
@@ -539,9 +542,9 @@ class RansomwareAPIConnector:
                     )
 
         if nb_stix_objects:
-            self.last_run_datetime_with_ingested_data = datetime.now(tz=timezone.utc).isoformat(
-                timespec="seconds"
-            )
+            self.last_run_datetime_with_ingested_data = datetime.now(
+                tz=timezone.utc
+            ).isoformat(timespec="seconds")
 
     def collect_intelligence(self):
         """
@@ -576,7 +579,7 @@ class RansomwareAPIConnector:
             if response.status_code == 200:
                 response_json = response.json()
                 nb_stix_objects = 0
-                bundle = []
+                bundles = []
                 last_run_datetime = (
                     self.last_run_datetime_with_ingested_data or self.last_run
                 )
@@ -600,10 +603,10 @@ class RansomwareAPIConnector:
                         time_diff = 1
                     else:
                         time_diff = (
-                            created - (last_run_datetime - timedelta(1))
-                        ).days  # pushing all the data from the last 24 hours
+                            created - (last_run_datetime - timedelta(days=1))
+                        ).seconds  # pushing all the data from the last 24 hours
 
-                    if time_diff > 0:
+                    if time_diff < 86400:
 
                         bundle_list = self.stix_object_generator(
                             item, group_data
@@ -626,7 +629,7 @@ class RansomwareAPIConnector:
                             )
 
                             # Creating Bundle
-                            bundle.append(
+                            bundles.append(
                                 Bundle(
                                     objects=bundle_list, allow_custom=True
                                 ).serialize()
@@ -634,15 +637,15 @@ class RansomwareAPIConnector:
                         else:
                             self.helper.connector_logger.info("No new data to process")
 
-                if bundle:
+                if bundles:
                     # Initiate new work
                     self.work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, "RansomwareLive"
                     )
 
-                    for bun in bundle:
+                    for bundle in bundles:
                         self.helper.send_stix2_bundle(
-                            bundle=bun,
+                            bundle=bundle,
                             work_id=self.work_id,
                             cleanup_inconsistent_bundle=True,
                         )

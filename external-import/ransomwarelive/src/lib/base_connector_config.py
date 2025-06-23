@@ -4,13 +4,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from pydantic import (
-    BaseModel,
-    BeforeValidator,
-    Field,
-    HttpUrl,
-    PlainSerializer,
-)
+from pydantic import BaseModel, BeforeValidator, Field, HttpUrl, PlainSerializer
 from pydantic_core.core_schema import SerializationInfo
 from pydantic_settings import (
     BaseSettings,
