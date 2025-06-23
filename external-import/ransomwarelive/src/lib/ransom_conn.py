@@ -5,17 +5,6 @@ from datetime import datetime, timedelta, timezone
 import pycti
 import requests
 from pycti import OpenCTIConnectorHelper
-from stix2 import (
-    TLP_WHITE,
-    Bundle,
-    ExternalReference,
-    Identity,
-    IntrusionSet,
-    Location,
-    Report,
-    ThreatActor,
-)
-
 from ransomwarelive.config import ConnectorSettings
 from ransomwarelive.converter_to_stix import ConverterToStix
 from ransomwarelive.utils import (
@@ -28,6 +17,16 @@ from ransomwarelive.utils import (
     ransom_note_generator,
     safe_datetime,
     threat_description_generator,
+)
+from stix2 import (
+    TLP_WHITE,
+    Bundle,
+    ExternalReference,
+    Identity,
+    IntrusionSet,
+    Location,
+    Report,
+    ThreatActor,
 )
 
 
@@ -209,6 +208,8 @@ class RansomwareAPIConnector:
 
             else:
                 intrusion_set_name = item.get("group")
+                # Warning: IntrusionSet can have a name like "J".
+                # No error from Stix2 but in OCTI name must be at least 2 characters
                 intrusion_set = IntrusionSet(
                     id=pycti.IntrusionSet.generate_id(intrusion_set_name),
                     name=intrusion_set_name,
@@ -507,24 +508,23 @@ class RansomwareAPIConnector:
                                 bundle_list
                             )
 
-                            bundles = Bundle(
+                            bundle = Bundle(
                                 objects=bundle_list, allow_custom=True
                             ).serialize()
                         else:
                             self.helper.connector_logger.info("No new data to process")
 
-                        if bundles:
+                        if bundle:
                             # Initiate new work
                             self.work_id = self.helper.api.work.initiate_work(
                                 self.helper.connect_id, "RansomwareLive"
                             )
 
-                            for bundle in bundles:
-                                self.helper.send_stix2_bundle(
-                                    bundle=bundle,
-                                    work_id=self.work_id,
-                                    cleanup_inconsistent_bundle=True,
-                                )
+                            self.helper.send_stix2_bundle(
+                                bundle=bundle,
+                                work_id=self.work_id,
+                                cleanup_inconsistent_bundle=True,
+                            )
 
                             self.helper.connector_logger.info(
                                 "Sending STIX objects to OpenCTI...",

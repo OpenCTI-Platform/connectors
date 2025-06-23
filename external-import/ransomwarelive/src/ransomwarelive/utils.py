@@ -34,18 +34,20 @@ def fetch_country_domain(domain: str):
     :param domain:
     :return: string description of the domain with country, registrar, creation and expiration dates
     """
-    w = whois.whois(domain)
+    try:
+        w = whois.whois(domain)
 
-    description = f"Domain:{domain}  \n"
-    if w.get("country") is not None:
-        description += f" is registered in {w.get('country')}  \n"
-    if w.get("registrar") is not None:
-        description += f"registered with {w.get('registrar')}  \n"
-    if w.get("creation_date") is not None:
-        description += f" creation_date {w.get('creation_date')}  \n"
-    if w.get("expiration_date") is not None:
-        description += f" expiration_date {w.get('expiration_date')}  \n"
-
+        description = f"Domain:{domain}  \n"
+        if w.get("country") is not None:
+            description += f" is registered in {w.get('country')}  \n"
+        if w.get("registrar") is not None:
+            description += f"registered with {w.get('registrar')}  \n"
+        if w.get("creation_date") is not None:
+            description += f" creation_date {w.get('creation_date')}  \n"
+        if w.get("expiration_date") is not None:
+            description += f" expiration_date {w.get('expiration_date')}  \n"
+    except whois.parser.PywhoisError:
+        description = None
     return description
 
 
