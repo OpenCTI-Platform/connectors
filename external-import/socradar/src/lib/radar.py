@@ -4,12 +4,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict
 
 import pycti
-import requests
 import stix2
+from lib.api_client import RadarAPIClient, RadarAPIError, RadarFeedItem
+from lib.config_loader import ConfigLoader, FeedList
 
-from lib.config_loader import ConfigLoader, CollectionConfigVar
-
-BATCH_SIZE = 1000
+BATCH_MAX_SIZE = 10_000
 TLP_MARKING = stix2.TLP_WHITE.id
 
 
@@ -26,12 +25,12 @@ class RadarConnector:
         self.config = config
         self.helper = helper
 
+        self.api_client = RadarAPIClient(
+            api_base_url=self.config.radar.base_feed_url,
+            api_key=self.config.radar.socradar_key,
+        )
+
         self.identity_cache: dict[str, stix2.Identity] = {}
-
-        # Step 3.4: Set format type for API requests
-        self.format_type = ".json?key="
-
-        # Step 4.0: Initialize caches and patterns
         self.identity_cache: Dict[str, stix2.Identity] = {}
         self.regex_patterns = {
             "md5": r"^[a-fA-F\d]{32}$",
@@ -70,6 +69,56 @@ class RadarConnector:
         )
 
         self.work_id = None
+
+    def _send_bundle(self, stix_objects: list[stix2.Identity | stix2.Indicator]):
+        """
+        Create and send bundle to work queue.
+        :param stix_objects: List of STIX2 objects to send to ingestion
+        """
+        bundle = self.helper.stix2_create_bundle(stix_objects)
+        sent_bundles = self.helper.send_stix2_bundle(bundle, work_id=self.work_id)
+
+        self.helper.connector_logger.info(
+            "Sending STIX bundles to OpenCTI",
+            {"work_id": self.work_id, "bundles_count": len(sent_bundles)},
+        )
+
+    def _handle_batch(self, stix_objects: list[stix2.Identity | stix2.Indicator]):
+        """
+        Handle a batch of STIX objects (create work, create and send bundle, then close work).
+        :param stix_objects: STIX objects batch to handle (length must be lower than BATCH_MAX_SIZE)
+        """
+        if len(stix_objects) > BATCH_MAX_SIZE:
+            raise ValueError(
+                f"STIX objects count exceeds max batch size ({BATCH_MAX_SIZE})"
+            )
+
+        self._initiate_work()
+        self._send_bundle(stix_objects)
+        self._finalize_work()
+
+    def _collect_feed_items(self, feed_list: FeedList) -> list[RadarFeedItem]:
+        """
+        Collection feed items on SOCRadar API.
+        :param feed_list: Collection to get items from.
+        """
+        self.helper.connector_logger.info(
+            f"Collecting items for '{feed_list.name}' feed list",
+            {"feed_list_id": feed_list.id, "feed_list_name": feed_list.name},
+        )
+
+        feed_items = self.api_client.get_feed(feed_list.id)
+
+        self.helper.connector_logger.info(
+            f"{len(feed_items)} items found for '{feed_list.name}' feed list:",
+            {
+                "feed_list_id": feed_list.id,
+                "feed_list_name": feed_list.name,
+                "items_count": len(feed_items),
+            },
+        )
+
+        return items
 
     def _matches_pattern(self, value: str, pattern_name: str) -> bool:
         """Match value against regex pattern"""
@@ -223,62 +272,6 @@ class RadarConnector:
 
         return stix_objects
 
-    def _process_feed(self, work_id: str):
-        """
-        Batched feed ingestion in chunks of 1000 items
-        """
-        self.helper.connector_logger.info("RadarConnector: Starting feed collection...")
-
-        for collection_name, collection_data in self.collections.items():
-            try:
-                # Build feed URL
-                coll_id = collection_data["id"][0]
-                feed_url = (
-                    f"{self.base_url}{coll_id}{self.format_type}{self.socradar_key}&v=2"
-                )
-
-                self.helper.connector_logger.info(
-                    f"Fetching data from {collection_name} => {feed_url}"
-                )
-                resp = requests.get(feed_url, timeout=30)
-                resp.raise_for_status()
-                items = resp.json()
-                self.helper.connector_logger.info(
-                    f"Got {len(items)} items from {collection_name}"
-                )
-
-                stix_batch = []
-                total_sent = 0
-
-                for idx, item in enumerate(items, start=1):
-                    new_objs = self._process_feed_item(item)
-                    if new_objs:
-                        stix_batch.extend(new_objs)
-
-                    # If we reached a batch boundary
-                    if idx % BATCH_SIZE == 0:
-                        bundle = self.helper.stix2_create_bundle(stix_batch)
-                        self.helper.send_stix2_bundle(bundle, work_id=work_id)
-                        total_sent += len(stix_batch)
-                        self.helper.connector_logger.info(
-                            f"Sent batch of {len(stix_batch)} objects (total: {total_sent})"
-                        )
-                        stix_batch = []
-
-                # Final leftover
-                if stix_batch:
-                    bundle = self.helper.stix2_create_bundle(stix_batch)
-                    self.helper.send_stix2_bundle(bundle, work_id=work_id)
-                    total_sent += len(stix_batch)
-                    self.helper.connector_logger.info(
-                        f"Sent final batch of {len(stix_batch)} objects (total: {total_sent})"
-                    )
-
-            except Exception as err:
-                self.helper.connector_logger.error(
-                    f"Failed to process {collection_name}", {"error", err}
-                )
-
     def process(self):
         """
         Run main process to collect, process and send intelligence to OpenCTI.
@@ -289,11 +282,43 @@ class RadarConnector:
                 {"connector_name": self.helper.connect_name},
             )
 
-            self._initiate_work()
+            for feed_list in self.config.radar.feed_lists:
+                try:
+                    feed_items = self._collect_feed_items(feed_list)
+                except RadarAPIError as err:
+                    self.helper.connector_logger.error(
+                        f"Skipping '{feed_list.name}' feed list due to API client error",
+                        {"error": err},
+                    )
+                    continue
 
-            self._process_feed(self.work_id)
-            message = "Radar feed import complete"
-            self.helper.connector_logger.info(message)
+                stix_batch = []
+                stix_objects_count = 0
+
+                for feed_item in feed_items:
+                    stix_objects = self._process_feed_item(feed_item)
+                    stix_batch.extend(stix_objects)
+
+                    # If we reached a batch boundary
+                    if len(stix_batch) >= BATCH_MAX_SIZE:
+                        self._handle_batch(stix_batch)
+                        stix_objects_count += len(stix_batch)
+                        stix_batch = []  # Reset to create a new batch
+
+                # Final leftover
+                if stix_batch:
+                    self._handle_batch(stix_batch)
+                    stix_objects_count += len(stix_batch)
+
+                self.helper.connector_logger.info(
+                    f"Bundles for '{feed_list.name}' feed list successfully sent",
+                    {"work_id": self.work_id, "stix_objects_count": stix_objects_count},
+                )
+
+            self.helper.connector_logger.info(
+                "Connector successfully run",
+                {"connector_name": self.helper.connect_name},
+            )
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
@@ -308,7 +333,7 @@ class RadarConnector:
             )
 
         finally:
-            # If an error occured during collections iteration,
+            # If an error occured while iterating on feed lists,
             # close potential opened work gracefully.
             if self.work_id:
                 self._finalize_work()
