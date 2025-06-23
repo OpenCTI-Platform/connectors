@@ -7,8 +7,7 @@ import pycti
 import requests
 import stix2
 
-from stix2 import TLP_WHITE, Bundle
-from lib.config_loader import ConfigLoader
+from lib.config_loader import ConfigLoader, CollectionConfigVar
 
 BATCH_SIZE = 1000
 TLP_MARKING = stix2.TLP_WHITE.id
@@ -27,10 +26,7 @@ class RadarConnector:
         self.config = config
         self.helper = helper
 
-
-        # Step 1.1: Load configuration file
-        if os.path.isfile(config_path):
-            with open(config_path, "r") as f:
+        self.identity_cache: dict[str, stix2.Identity] = {}
 
         # Step 3.4: Set format type for API requests
         self.format_type = ".json?key="
@@ -48,6 +44,32 @@ class RadarConnector:
         }
 
         self.work_id: str | None = None
+
+    def _initiate_work(self):
+        """
+        Initiate a work on OpenCTI.
+        """
+        now = datetime.now(tz=timezone.utc)
+        friendly_name = f"SOCRadar Connector run @ {now.isoformat(timespec='seconds')}"
+        self.work_id = self.helper.api.work.initiate_work(
+            connector_id=self.helper.connector_id,
+            friendly_name=friendly_name,
+        )
+
+    def _finalize_work(self):
+        """
+        Finalize connector's run work on OpenCTI.
+        """
+        if self.work_id is None:
+            raise ValueError(
+                "No work_id to finalize work, call self._initiate_work first"
+            )
+
+        self.helper.api.work.to_processed(
+            work_id=self.work_id, message="Work gracefully closed."
+        )
+
+        self.work_id = None
 
     def _matches_pattern(self, value: str, pattern_name: str) -> bool:
         """Match value against regex pattern"""
@@ -261,61 +283,35 @@ class RadarConnector:
         """
         Run main process to collect, process and send intelligence to OpenCTI.
         """
-        error_flag = False
-
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Starting connector...",
-            {"connector_name": self.helper.connect_name},
-        )
-
         try:
-            current_state = self.helper.get_state() or {}
-            if current_state.get("last_run"):
-                last_run = datetime.fromisoformat(
-                    current_state.get("last_run")
-                ).replace(tzinfo=timezone.utc)
-
-                self.helper.connector_logger.info(
-                    "Connector last run:", {"last_run": last_run}
-                )
-            else:
-                self.helper.connector_logger.info("Connector has never run")
-
-            # TODO: init work only if data to ingest
-            now = datetime.now(tz=timezone.utc)
-            friendly_name = (
-                f"SOCRadar Connector run @ {now.isoformat(timespec='seconds')}"
+            self.helper.connector_logger.info(
+                "Starting connector",
+                {"connector_name": self.helper.connect_name},
             )
-            self.work_id = self.helper.api.work.initiate_work(
-                connector_id=self.helper.connector_id,
-                friendly_name=friendly_name,
-            )
+
+            self._initiate_work()
 
             self._process_feed(self.work_id)
             message = "Radar feed import complete"
             self.helper.connector_logger.info(message)
 
         except (KeyboardInterrupt, SystemExit):
-            error_flag = True
-            message = "Connector stopped by user or system"
             self.helper.connector_logger.info(
-                message, {"connector_name": self.helper.connect_name}
+                "Connector stopped by user or system",
+                {"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
         except Exception as err:
-            error_flag = True
-            self.helper.connector_logger.error("Unexpected error.", {"error": str(err)})
-            message = "Unexpected error. See connector's log for more details."
+            self.helper.connector_logger.error(
+                f"Unexpected error: {err}",
+                {"error": err},
+            )
 
         finally:
+            # If an error occured during collections iteration,
+            # close potential opened work gracefully.
             if self.work_id:
-                self.helper.api.work.to_processed(
-                    work_id=self.work_id,
-                    message=message,
-                    in_error=error_flag,
-                )
-
-            self.work_id = None
+                self._finalize_work()
 
     def run(self):
         """
