@@ -2,7 +2,7 @@ import datetime
 
 import stix2
 import stix2.exceptions
-from pycti import Identity, MarkingDefinition, StixCoreRelationship
+from pycti import Identity, StixCoreRelationship
 
 
 def handle_stix2_error(decorated_function):

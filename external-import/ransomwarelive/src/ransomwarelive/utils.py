@@ -1,7 +1,6 @@
 import ipaddress
 from datetime import datetime
 
-import pycti
 import requests
 import tldextract
 import validators
