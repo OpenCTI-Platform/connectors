@@ -487,6 +487,7 @@ class RansomwareAPIConnector:
         for year in range(year, current_year + 1):  # Looping through the years
             year_url = base_url + str(year)
             for month in range(1, 13):  # Looping through the months
+                bundles = []
                 url = year_url + "/" + str(month)
                 response = requests.get(url, headers=headers, timeout=(20000, 20000))
                 response.raise_for_status()
@@ -508,28 +509,32 @@ class RansomwareAPIConnector:
                                 bundle_list
                             )
 
-                            bundle = Bundle(
-                                objects=bundle_list, allow_custom=True
-                            ).serialize()
+                            bundles.append(
+                                Bundle(
+                                    objects=bundle_list, allow_custom=True
+                                ).serialize()
+                            )
                         else:
                             self.helper.connector_logger.info("No new data to process")
 
-                        if bundle:
-                            # Initiate new work
-                            self.work_id = self.helper.api.work.initiate_work(
-                                self.helper.connect_id, "RansomwareLive"
-                            )
+                    if bundles:
+                        # Initiate new work
+                        friendly_name = f"RansomwareLive - {year}/{month}"
+                        self.work_id = self.helper.api.work.initiate_work(
+                            self.helper.connect_id, friendly_name
+                        )
 
+                        for bundle in bundles:
                             self.helper.send_stix2_bundle(
                                 bundle=bundle,
                                 work_id=self.work_id,
                                 cleanup_inconsistent_bundle=True,
                             )
 
-                            self.helper.connector_logger.info(
-                                "Sending STIX objects to OpenCTI...",
-                                {"len_bundle_list": len(bundle_list)},
-                            )
+                        self.helper.connector_logger.info(
+                            "Sending STIX objects to OpenCTI...",
+                            {"len_bundle_list": len(bundle_list)},
+                        )
 
                 except requests.exceptions.HTTPError as err:
                     self.helper.connector_logger.error(

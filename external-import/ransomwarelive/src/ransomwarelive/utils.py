@@ -20,7 +20,12 @@ def threat_description_generator(group_name, group_data) -> str:
         item for item in group_data if item.get("name", None) == group_name
     ]
 
-    if matching_items[0].get("description") not in [None, "", " ", "null"]:
+    if matching_items and matching_items[0].get("description") not in [
+        None,
+        "",
+        " ",
+        "null",
+    ]:
         description = matching_items[0].get("description", "No description available")
     else:
         description = "No description available"
