@@ -1,7 +1,7 @@
 version: "3"
 services:
   connector-pan-cortex-xsoar-intel:
-    image: opencti/connector-pan-cortex-xsoar-intel:6.6.18
+    image: opencti/connector-pan-cortex-xsoar-intel:6.7.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

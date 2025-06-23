@@ -1,4 +1,4 @@
-pycti==6.6.18
+pycti==6.7.0
 stix2==3.0.1
 validators==0.35.0
 pydantic>=2.10, <3
