@@ -1,4 +1,4 @@
-from .api import ShadowserverAPI
-from .utils import remove_duplicates
+from shadowserver.api import ShadowserverAPI
+from shadowserver.utils import remove_duplicates
 
 __all__ = ["ShadowserverAPI", "remove_duplicates"]

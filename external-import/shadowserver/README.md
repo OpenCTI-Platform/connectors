@@ -1,5 +1,9 @@
 # Shadowserver Connector
 
+| Status            | Date | Comment |
+|-------------------|------|---------|
+| Filigran Verified |      | -       |
+
 The integration uses Shadowservers reports API to query the available Shadowserver reports and transform them into Stix
 objects making them available within OpenCTI. All available reports are downloaded and an `Artifact` object is created
 with the original file. Stix `Note` objects are added to both the `Report` and the `CustomObjectCaseIncident` with a
@@ -60,7 +64,7 @@ Priority: **YAML → .env → environment → defaults**.
 | Connector Name            | `name`            | `CONNECTOR_NAME`            | Shadowserver | ❌        | Display name                                                                                                                                                                      |
 | Connector Scope           | `scope`           | `CONNECTOR_SCOPE`           | stix2        | ❌        | Import label shown in jobs                                                                                                                                                        |
 | Log Level                 | `log_level`       | `CONNECTOR_LOG_LEVEL`       | error        | ❌        | `debug` \| `info` \| `warning` \| `error`                                                                                                                                         |
-| Polling Interval          | `duration_period` | `CONNECTOR_DURATION_PERIOD` | P1D          | ❌        | ISO‑8601 duration                                                                                                                                                                 |
+| Duration Period           | `duration_period` | `CONNECTOR_DURATION_PERIOD` | P1D          | ❌        | ISO‑8601 duration                                                                                                                                                                 |
 | ~~Interval~~ ⚠️Deprecated | ~~/~~             | ~~`CONNECTOR_RUN_EVERY`~~   | ~~1d~~       | ~~❌~~    | ~~The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day.~~ |
 
 #### Shadow Server Configuration
@@ -70,7 +74,7 @@ Priority: **YAML → .env → environment → defaults**.
 | API Key           | `shadowserver_api_key`           | `SHADOWSERVER_API_KEY`           | —         | ✅        | The API key for Shadowserver.                                                     |
 | API Secret        | `shadowserver_api_secret`        | `SHADOWSERVER_API_SECRET`        | —         | ✅        | The API secret for Shadowserver.                                                  |
 | Marking           | `shadowserver_marking`           | `SHADOWSERVER_MARKING`           | TLP:CLEAR | ❌        | The marking for the data, e.g., `TLP:CLEAR`, `TLP:GREEN`, `TLP:AMBER`, `TLP:RED`. |
-| Create Incident   | `shadowserver_create_incident`   | `SHADOWSERVER_CREATE_INCIDENT`   | true      | ❌        | Whether to create an incident (`true` or `false`).                                |
+| Create Incident   | `shadowserver_create_incident`   | `SHADOWSERVER_CREATE_INCIDENT`   | false     | ❌        | Whether to create an incident (`true` or `false`).                                |
 | Incident Severity | `shadowserver_incident_severity` | `SHADOWSERVER_INCIDENT_SEVERITY` | low       | ❌        | The severity of the incident.                                                     |
 | Incident Priority | `shadowserver_incident_priority` | `SHADOWSERVER_INCIDENT_PRIORITY` | P4        | ❌        | The priority of the incident.                                                     |
 

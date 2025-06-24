@@ -76,6 +76,7 @@ class ExternalImportConnector:
                             self.helper.send_stix2_bundle(
                                 bundle,
                                 work_id=work_id,
+                                cleanup_inconsistent_bundle=True,
                             )
                         else:
                             self.helper.connector_logger.info(
@@ -104,14 +105,23 @@ class ExternalImportConnector:
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.connector_logger.info(
                         "Last_run stored, next run in: "
-                        + str(round(self._get_interval() / 60 / 60, 2))
+                        + str(
+                            round(
+                                self.config.connector.duration_period.total_seconds()
+                                / 3600,
+                                2,
+                            )
+                        )
                         + " hours"
                     )
                 else:
-                    new_interval = self._get_interval() - (timestamp - last_run)
+                    new_interval = (
+                        self.config.connector.duration_period.total_seconds()
+                        - (timestamp - last_run)
+                    )
                     self.helper.connector_logger.info(
                         f"{self.helper.connect_name} connector will not run, next run in: "
-                        + str(round(new_interval / 60 / 60, 2))
+                        + str(round(new_interval / 3600, 2))
                         + " hours"
                     )
 

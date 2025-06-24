@@ -4,9 +4,8 @@ from datetime import datetime
 from typing import Dict, List, Optional, Union
 
 import pandas as pd
+from shadowserver.constants import REQUEST_DATE_FORMAT, SEVERITY_MAP, TLP_MAP
 from stix2.base import _Observable as Observable
-
-from .constants import REQUEST_DATE_FORMAT, SEVERITY_MAP, TLP_MAP
 
 
 # Function to calculate different hashes
