@@ -1,6 +1,6 @@
 services:
   connector-dragos:
-    image: opencti/connector-dragos:6.6.17
+    image: opencti/connector-dragos:6.7.0
     environment:
       - OPENCTI_URL=http://localhost:8080
       - OPENCTI_TOKEN=ChangeMe

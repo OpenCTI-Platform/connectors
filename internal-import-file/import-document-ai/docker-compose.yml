@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-import-document-ai:
-    image: opencti/connector-import-document-ai:6.6.17
+    image: opencti/connector-import-document-ai:6.7.0
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
