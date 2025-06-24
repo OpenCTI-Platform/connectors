@@ -1,0 +1,9 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+
+gti:
+  api_key: 'ChangeMe'
