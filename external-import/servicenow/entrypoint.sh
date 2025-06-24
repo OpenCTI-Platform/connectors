@@ -4,4 +4,4 @@
 cd /opt
 
 # Launch the worker
-python3 -m opencti-connector-servicenow
+python3 -m src
