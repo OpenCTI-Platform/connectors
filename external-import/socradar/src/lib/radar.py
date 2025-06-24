@@ -119,7 +119,7 @@ class RadarConnector:
                 author, indicator = self.converter_to_stix.process_on(feed_item)
 
                 self.helper.connector_logger.debug(
-                    f"Indicator successfully created",
+                    "Indicator successfully created",
                     {"author": author, "indicator": indicator},
                 )
 
