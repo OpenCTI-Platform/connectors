@@ -1,7 +1,7 @@
 version: "3"
 services:
-  connector:
-    image: opencti/connector-shadowserver:6.6.11
+  connector-shadowserver:
+    image: opencti/connector-shadowserver:6.7.1
     environment:
       # OpenCTI configuration
       OPENCTI_URL: ${OPENCTI_URL}
@@ -12,8 +12,6 @@ services:
       CONNECTOR_DURATION_PERIOD: ${CONNECTOR_DURATION_PERIOD}
       CONNECTOR_NAME: ${CONNECTOR_NAME}
       CONNECTOR_SCOPE: ${CONNECTOR_SCOPE}
-      # Deprecated configuration
-      CONNECTOR_RUN_EVERY: ${CONNECTOR_RUN_EVERY} # Deprecated, use CONNECTOR_DURATION_PERIOD instead
       # Connector configuration
       SHADOWSERVER_API_KEY: ${SHADOWSERVER_API_KEY}
       SHADOWSERVER_API_SECRET: ${SHADOWSERVER_API_SECRET}
