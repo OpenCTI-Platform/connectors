@@ -1,26 +1,24 @@
-import os
-import io
-import ssl
-import urllib.request
-import re
 import asyncio
-import threading
-import sys
+import io
+import os
+import re
 import signal
+import ssl
+import sys
+import threading
 import traceback
-from typing import Dict
+import urllib.request
 from asyncio import Queue
+from typing import Dict
 
 import cachetools
-import yaml
-
 import html2text
-from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+import yaml
 from pdfminer.converter import HTMLConverter
 from pdfminer.layout import LAParams
+from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
 from pdfminer.pdfpage import PDFPage
-
-from playwright.async_api import async_playwright, Page, BrowserContext
+from playwright.async_api import BrowserContext, Page, async_playwright
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 MAX_DOWNLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
@@ -98,9 +96,7 @@ class ImportExternalReferenceConnector:
         self._download_cache = cachetools.LRUCache(maxsize=cache_size)
         self._cache_lock = threading.Lock()
 
-        self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-        }
+        self.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
         self.helper.connector_logger.info(
             f"Config → import_as_pdf={self.import_as_pdf}, "
@@ -140,9 +136,7 @@ class ImportExternalReferenceConnector:
                 if len(data) > MAX_DOWNLOAD_SIZE:
                     raise ValueError("Downloaded data exceeds size limit")
         except Exception as e:
-            self.helper.log_warning(
-                f"Download failed ({url}): {e}"
-            )
+            self.helper.log_warning(f"Download failed ({url}): {e}")
             raise
 
         with self._cache_lock:
@@ -172,12 +166,8 @@ class ImportExternalReferenceConnector:
                     await page.route("**/*", self._block_resource)
                     try:
                         await asyncio.wait_for(
-                            page.goto(
-                                url,
-                                wait_until="networkidle",
-                                timeout=180000
-                            ),
-                            timeout=180
+                            page.goto(url, wait_until="networkidle", timeout=180000),
+                            timeout=180,
                         )
                         await page.wait_for_load_state("networkidle")
                     except asyncio.TimeoutError:
@@ -188,9 +178,7 @@ class ImportExternalReferenceConnector:
                             )
                         continue
                     except Exception as e:
-                        self.helper.log_warning(
-                            f"Page.goto failed for {url}: {e}"
-                        )
+                        self.helper.log_warning(f"Page.goto failed for {url}: {e}")
                         if not fut.done():
                             fut.set_exception(e)
                         continue
@@ -205,7 +193,7 @@ class ImportExternalReferenceConnector:
                             "top": "10mm",
                             "bottom": "10mm",
                             "left": "15mm",
-                            "right": "15mm"
+                            "right": "15mm",
                         },
                         scale=0.9,
                     )
@@ -216,14 +204,10 @@ class ImportExternalReferenceConnector:
                         fut.set_result((html, pdf_bytes))
 
                 except asyncio.CancelledError:
-                    self.helper.log_warning(
-                        f"Worker cancelled while processing {url}"
-                    )
+                    self.helper.log_warning(f"Worker cancelled while processing {url}")
                     if not fut.done():
                         fut.set_exception(
-                            asyncio.CancelledError(
-                                f"Worker cancelled for {url}"
-                            )
+                            asyncio.CancelledError(f"Worker cancelled for {url}")
                         )
                 except Exception as e:
                     self.helper.log_warning(f"Worker error ({url}): {e}")
@@ -233,16 +217,12 @@ class ImportExternalReferenceConnector:
                     await page.close()
                     await ctx.close()
                     self.task_queue.task_done()
-                    self.helper.log_info(
-                        f"Worker finished for {url}"
-                    )
+                    self.helper.log_info(f"Worker finished for {url}")
 
             except asyncio.CancelledError:
                 break
             except Exception as fatal:
-                self.helper.connector_logger.error(
-                    f"Fatal worker error: {fatal}"
-                )
+                self.helper.connector_logger.error(f"Fatal worker error: {fatal}")
 
     async def _cleanup(self):
         for w in self.workers:
@@ -269,9 +249,7 @@ class ImportExternalReferenceConnector:
     # ────────────────────────────────────────────────────────────────────────────────
     # ACTUAL IMPORT LOGIC (ASYNC)
     # ────────────────────────────────────────────────────────────────────────────────
-    async def _process_external_reference(
-                self, external_reference: Dict
-            ) -> str:
+    async def _process_external_reference(self, external_reference: Dict) -> str:
         try:
             self.helper.log_info("Processing external reference…")
             url = external_reference.get("url", "").strip()
@@ -288,8 +266,9 @@ class ImportExternalReferenceConnector:
             )
 
             # Pre-download PDF if needed
-            if is_pdf and (self.import_as_pdf or
-                           (self.import_as_md and self.import_pdf_as_md)):
+            if is_pdf and (
+                self.import_as_pdf or (self.import_as_md and self.import_pdf_as_md)
+            ):
                 pdf_data = self._download_url(url)
                 if not pdf_data.startswith(b"%PDF"):
                     raise RuntimeError("Downloaded file is not a valid PDF")
@@ -359,9 +338,7 @@ class ImportExternalReferenceConnector:
                         pdf_stream = io.BytesIO(pdf_data)
                         html_buf = io.StringIO()
                         rsrcmgr = PDFResourceManager(caching=True)
-                        device = HTMLConverter(
-                            rsrcmgr, html_buf, laparams=LAParams()
-                        )
+                        device = HTMLConverter(rsrcmgr, html_buf, laparams=LAParams())
                         interpreter = PDFPageInterpreter(rsrcmgr, device)
                         for page in PDFPage.get_pages(
                             pdf_stream, check_extractable=True
@@ -411,17 +388,11 @@ class ImportExternalReferenceConnector:
                             )
 
                 except asyncio.TimeoutError:
-                    self.helper.log_warning(
-                        f"Markdown import timed out for {url}"
-                    )
+                    self.helper.log_warning(f"Markdown import timed out for {url}")
                 except asyncio.CancelledError:
-                    self.helper.log_warning(
-                        f"Markdown import cancelled for {url}"
-                    )
+                    self.helper.log_warning(f"Markdown import cancelled for {url}")
                 except Exception as e:
-                    self.helper.log_error(
-                        f"Markdown import failed: {e}"
-                    )
+                    self.helper.log_error(f"Markdown import failed: {e}")
 
             return "Import complete."
         except asyncio.TimeoutError:
@@ -524,15 +495,11 @@ class ImportExternalReferenceConnector:
 
         # 3) register clean-shutdown on Ctrl-C or SIGTERM
         for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(
-                sig, lambda: loop.call_soon_threadsafe(loop.stop)
-            )
+            loop.add_signal_handler(sig, lambda: loop.call_soon_threadsafe(loop.stop))
 
         # 4) launch the OpenCTI listen() in its own thread
         def _listen_in_thread():
-            asyncio.run(
-                self.helper.listen(message_callback=self._on_message)
-            )
+            asyncio.run(self.helper.listen(message_callback=self._on_message))
 
         t = threading.Thread(target=_listen_in_thread, daemon=True)
         t.start()
