@@ -1,4 +1,4 @@
-pycti==6.7.0
+pycti==6.7.1
 dnstwist==20250130
 dnspython
 whois
