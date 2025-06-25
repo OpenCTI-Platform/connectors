@@ -169,7 +169,7 @@ class S3Connector:
                     "x_cvss_v2_temporal_score"
                 ]
             if "x_cvss_v2_vector" in obj:
-                obj["x_opencti_cvss_v2_vector"] = obj["x_cvss_v2_vector"]
+                obj["x_opencti_cvss_v2_vector_string"] = obj["x_cvss_v2_vector"]
 
             # CVSS3
             if "x_cvss_v3" in obj:
@@ -177,7 +177,7 @@ class S3Connector:
             if "x_cvss_v3_temporal_score" in obj:
                 obj["x_opencti_cvss_temporal_score"] = obj["x_cvss_v3_temporal_score"]
             if "x_cvss_v3_vector" in obj:
-                obj["x_opencti_cvss_vector"] = obj["x_cvss_v3_vector"]
+                obj["x_opencti_cvss_vector_string"] = obj["x_cvss_v3_vector"]
 
             # CWE
             if "x_cwe" in obj:
