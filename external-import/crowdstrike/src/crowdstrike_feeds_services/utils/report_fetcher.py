@@ -131,4 +131,6 @@ class ReportFetcher:
             self._info("No report PDF for id {0}", report_id)
             return None
         else:
-            return create_file_from_download(download, report_name, self.no_file_trigger_import)
+            return create_file_from_download(
+                download, report_name, self.no_file_trigger_import
+            )
