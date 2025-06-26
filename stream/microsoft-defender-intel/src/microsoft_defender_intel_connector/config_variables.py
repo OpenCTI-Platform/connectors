@@ -39,7 +39,7 @@ class ConfigConnector:
 
         # Connector extra parameters
         self.tenant_id = get_config_variable(
-            "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TENANT_ID",
+            "MICROSOFT_DEFENDER_INTEL_TENANT_ID",
             ["microsoft_defender_intel", "tenant_id"],
             self.load,
         )
@@ -82,6 +82,7 @@ class ConfigConnector:
             "MICROSOFT_DEFENDER_INTEL_ACTION",
             ["microsoft_defender_intel", "action"],
             self.load,
+            default="alert",
         )
         self.passive_only = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_PASSIVE_ONLY",

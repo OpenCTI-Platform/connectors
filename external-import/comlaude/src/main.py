@@ -177,12 +177,16 @@ def _create_stix_create_bundle(helper, domain_object, labels, score, author_iden
     end_time = _convert_timestamp_to_zero_millisecond_format(
         domain_object["updated_at"]
     )
+    expiration = _convert_timestamp_to_zero_millisecond_format(
+        domain_object["expires_at"]
+    )
 
     # Create Indicator object
     sdo_indicator = stix2.Indicator(
         id=Indicator.generate_id(f"[domain-name:value = '{domain_name}']"),
         created=start_time,
         modified=end_time,
+        valid_until=expiration,
         name=domain_name,
         description="This domain is known infrastructure managed by Comlaude.",
         pattern_type="stix",
@@ -323,7 +327,7 @@ class ComlaudeConnector:
         """
         Iterate through events from Comlaude, generate STIX bundles, and send them to OpenCTI.
         """
-        required_fields = ["name", "created_at", "updated_at"]
+        required_fields = ["name", "created_at", "updated_at", "expires_at"]
         data = self.comlaude_search.results.get("data", [])
         self.helper.log_info(f"Process ({len(data)}) events.")
         if data:

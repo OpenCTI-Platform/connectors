@@ -114,7 +114,7 @@ stix_object_mapping = {
         allow_custom=True,
     ),
     "Attack-Pattern.x_mitre_id": lambda value, object_markings, custom_properties: stix2.AttackPattern(
-        id=AttackPattern.generate_id(value),
+        id=AttackPattern.generate_id(name=value, x_mitre_id=value),
         name=value,
         object_markings=object_markings,
         custom_properties=custom_properties,

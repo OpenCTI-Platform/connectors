@@ -62,12 +62,22 @@ class UrlscanConfig:
             default="true",
         )
 
-        self.visibility = get_config_variable(
+        urlscan_enrichment_visibility = get_config_variable(
             "URLSCAN_ENRICHMENT_VISIBILITY",
             ["urlscan_enrichment", "visibility"],
             self.load,
             default="public",
         )
+        self.visibility = (
+            str(urlscan_enrichment_visibility).lower()
+            if urlscan_enrichment_visibility
+            else None
+        )
+        if self.visibility not in ["public", "unlisted", "private"]:
+            raise ValueError(
+                f"Invalid configuration: URLSCAN_ENRICHMENT_VISIBILITY={self.visibility}. "
+                "Must be one of 'public', 'unlisted', or 'private'."
+            )
 
         self.search_filtered_by_date = get_config_variable(
             "URLSCAN_ENRICHMENT_SEARCH_FILTERED_BY_DATE",

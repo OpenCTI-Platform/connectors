@@ -32,11 +32,6 @@ def validate_bool(*field_names):
 class ConnectorConfig(BaseSettings):
     """Connector config"""
 
-    update_existing_data: bool = Field(
-        description="Update existing data bundle flag",
-        env="CONNECTOR_UPDATE_EXISTING_DATA",
-        default=True,
-    )
     interval: int = Field(
         description="Interval in minutes between runs",
         env="CONNECTOR_INTERVAL",
@@ -49,8 +44,6 @@ class ConnectorConfig(BaseSettings):
         default=60,
         ge=1,
     )
-
-    _validate_bools = validate_bool("update_existing_data")
 
 
 class IronNetConfig(BaseSettings):

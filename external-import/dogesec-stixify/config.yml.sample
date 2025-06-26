@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'CHANGEME'
+
+connector:
+  id: 'CHANGEME'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Stixify'
+  scope: 'stixify'
+  confidence_level: 70
+  update_existing_data: false
+  log_level: 'info'
+  queue_protocol: 'api'
+
+stixify:
+  base_url: 'https://api.stixify.com/'
+  api_key: CHANGEME
+  dossier_ids: '' # comma separated dossier ids
+  interval_hours: 1 # interval in hours

@@ -1,7 +1,9 @@
 import base64
+from datetime import datetime
 
 import stix2
 from dateparser import parse
+from flashpoint_client.models import CompromisedCredentialSighting
 from pycti import (
     AttackPattern,
     Channel,
@@ -13,12 +15,15 @@ from pycti import (
     Location,
     Malware,
     MarkingDefinition,
+    OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
     ThreatActorGroup,
     ThreatActorIndividual,
     Tool,
 )
+
+from .utils import is_domain, is_ipv4, is_ipv6
 
 
 class ConverterToStix:
@@ -29,9 +34,9 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper):
+    def __init__(self, helper: OpenCTIConnectorHelper):
         self.helper = helper
-        self.author_id = self.create_author()
+        self.author_id = self._create_author()
         self.marking = stix2.MarkingDefinition(
             id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
             definition_type="statement",
@@ -43,7 +48,7 @@ class ConverterToStix:
             },
         )
 
-    def create_author(self) -> dict:
+    def _create_author(self) -> dict:
         """
         Create Author
         :return: Author ID
@@ -51,11 +56,14 @@ class ConverterToStix:
         identity = self.helper.api.identity.create(
             type="Organization",
             name="Flashpoint",
-            description="Flashpoint is a data and intelligence company that empowers our customers to take rapid, decisive action to stop threats and reduce risk.",
+            description="Flashpoint is a data and intelligence company that empowers our customers to take rapid, "
+            "decisive action to stop threats and reduce risk.",
         )
         return identity["standard_id"]
 
-    def create_relation(self, source_id, target_id, relation):
+    def create_relation(
+        self, source_id: str, target_id: str, relation: str
+    ) -> stix2.Relationship | None:
         """
         :param source_id:
         :param target_id:
@@ -76,8 +84,9 @@ class ConverterToStix:
         except Exception as ex:
             message = f"An error occurred while creating relation: {source_id} {relation} {target_id}, error: {ex}"
             self.helper.connector_logger.error(message)
+            return None
 
-    def _guess_knowledge_graph(self, tags):
+    def _guess_knowledge_graph(self, tags, guess_relationships_from_reports):
         """
         :param tags:
         :return:
@@ -207,51 +216,57 @@ class ConverterToStix:
                                 allow_custom=True,
                             )
                         )
+                if guess_relationships_from_reports:
+                    for attack_pattern in elements["attack_patterns"]:
+                        threats = (
+                            elements["threat_actors"]
+                            + elements["intrusion_sets"]
+                            + elements["malwares"]
+                        )
+                        for threat in threats:
+                            relationship_uses = self.create_relation(
+                                source_id=threat.id,
+                                target_id=attack_pattern.id,
+                                relation="uses",
+                            )
+                            report_objects.append(relationship_uses)
 
-                for attack_pattern in elements["attack_patterns"]:
-                    threats = (
-                        elements["threat_actors"]
-                        + elements["intrusion_sets"]
-                        + elements["malwares"]
+                    for malware in elements["malwares"]:
+                        threats = elements["threat_actors"] + elements["intrusion_sets"]
+                        for threat in threats:
+                            relationship_uses = self.create_relation(
+                                source_id=threat.id,
+                                target_id=malware.id,
+                                relation="uses",
+                            )
+                            report_objects.append(relationship_uses)
+
+                    for tool in elements["tools"]:
+                        threats = elements["threat_actors"] + elements["intrusion_sets"]
+                        for threat in threats:
+                            relationship_uses = self.create_relation(
+                                source_id=threat.id, target_id=tool.id, relation="uses"
+                            )
+                            report_objects.append(relationship_uses)
+
+                    victims = (
+                        elements["regions"]
+                        + elements["countries"]
+                        + elements["sectors"]
                     )
-                    for threat in threats:
-                        relationship_uses = self.create_relation(
-                            source_id=threat.id,
-                            target_id=attack_pattern.id,
-                            relation="uses",
+                    for victim in victims:
+                        threats = (
+                            elements["threat_actors"]
+                            + elements["intrusion_sets"]
+                            + elements["malwares"]
                         )
-                        report_objects.append(relationship_uses)
-
-                for malware in elements["malwares"]:
-                    threats = elements["threat_actors"] + elements["intrusion_sets"]
-                    for threat in threats:
-                        relationship_uses = self.create_relation(
-                            source_id=threat.id, target_id=malware.id, relation="uses"
-                        )
-                        report_objects.append(relationship_uses)
-
-                for tool in elements["tools"]:
-                    threats = elements["threat_actors"] + elements["intrusion_sets"]
-                    for threat in threats:
-                        relationship_uses = self.create_relation(
-                            source_id=threat.id, target_id=tool.id, relation="uses"
-                        )
-                        report_objects.append(relationship_uses)
-
-                victims = (
-                    elements["regions"] + elements["countries"] + elements["sectors"]
-                )
-                for victim in victims:
-                    threats = (
-                        elements["threat_actors"]
-                        + elements["intrusion_sets"]
-                        + elements["malwares"]
-                    )
-                    for threat in threats:
-                        relationship_uses = self.create_relation(
-                            source_id=threat.id, target_id=victim.id, relation="targets"
-                        )
-                        report_objects.append(relationship_uses)
+                        for threat in threats:
+                            relationship_uses = self.create_relation(
+                                source_id=threat.id,
+                                target_id=victim.id,
+                                relation="targets",
+                            )
+                            report_objects.append(relationship_uses)
                 report_objects = (
                     report_objects
                     + elements["regions"]
@@ -265,7 +280,7 @@ class ConverterToStix:
                 )
         return report_objects
 
-    def convert_flashpoint_report(self, report):
+    def convert_flashpoint_report(self, report, guess_relationships_from_reports):
         """
         :param report:
         :return:
@@ -274,7 +289,9 @@ class ConverterToStix:
         # Try to resolve
         tags = report["tags"]
         actors = report["actors"]
-        report_objects = self._guess_knowledge_graph(tags + actors)
+        report_objects = self._guess_knowledge_graph(
+            tags + actors, guess_relationships_from_reports
+        )
         object_refs = []
         for report_object in report_objects:
             objects.append(report_object)
@@ -332,41 +349,11 @@ class ConverterToStix:
         return channel
 
     @staticmethod
-    def convert_alert_to_markdown_content(alert):
+    def _generate_incident_name(alert: dict) -> str:
         """
-        :param alert:
-        :return:
-        """
-        markdown_content = f"""
-### Metadata
-- **Alert Id**: {alert.get("alert_id")}
-- **Created**: {alert.get("created_at")}
-- **Site**: {alert.get("channel_type")}
-- **Title**: {alert.get("channel_name")}
-- **Author**: {alert.get("author")}
-- **Status**: {alert.get("alert_status")}
-- **Source**: {alert.get("alert_source")}
-- **Reason**: {alert.get("alert_reason")}
-- **Flashpoint or Code repository URL**: {alert.get("flashpoint_url")}
-
-### Post
-```
-{alert.get("highlight_text")}
-```
-"""
-        if alert.get("media_content", None):
-            media_part = f"""
-### Media
-A media attachment ({alert.get("media_name")}) is available in Data section
-"""
-            markdown_content += media_part
-        return markdown_content
-
-    @staticmethod
-    def generate_incident_name(alert):
-        """
-        :param alert:
-        :return:
+        Create a STIX Incident's name from Flashpoint alert.
+        :param alert: A Flashpoint alert
+        :return: Incident's name
         """
         name = (
             "Alert: "
@@ -381,19 +368,94 @@ A media attachment ({alert.get("media_name")}) is available in Data section
         return name
 
     @staticmethod
-    def generate_incident_description(alert):
+    def _generate_incident_description(alert: dict) -> str:
         """
-        :param alert:
-        :return:
+        Create a STIX Incident's description from Flashpoint alert.
+        :param alert: A Flashpoint alert
+        :return: Incident's description
         """
         description = (
-            f"A potential data exposure has been detected in **{alert.get("channel_type")}**. "
+            f"A potential data exposure has been detected in **{alert.get('channel_type')}**. "
             f"The alert was triggered on "
-            f"**{parse(alert.get("created_at")).strftime('%B %d, %Y, at %I:%M %p UTC')}** "
-            f"by the rule **{alert.get("alert_reason").strip()}**. "
+            f"**{parse(alert.get('created_at')).strftime('%B %d, %Y, at %I:%M %p UTC')}** "
+            f"by the rule **{alert.get('alert_reason').strip()}**. "
             f"For more details about this alert, please consult the Content tab."
         )
         return description
+
+    @staticmethod
+    def _convert_alert_to_markdown_content(alert: dict) -> str:
+        """
+        Create a markdown content representing an Alert from Flashpoint.
+        :param alert: A Flashpoint alert to convert into markdown
+        :return: Markdown as string
+        """
+        markdown_content = (
+            "### Metadata"
+            f"- **Alert Id**: {alert.get('alert_id')}  \n"
+            f"- **Created**: {alert.get('created_at')}  \n"
+            f"- **Site**: {alert.get('channel_type')}  \n"
+            f"- **Title**: {alert.get('channel_name')}  \n"
+            f"- **Author**: {alert.get('author')}  \n"
+            f"- **Status**: {alert.get('alert_status')}  \n"
+            f"- **Source**: {alert.get('alert_source')}  \n"
+            f"- **Reason**: {alert.get('alert_reason')}  \n"
+            f"- **Flashpoint or Code repository URL**: {alert.get('flashpoint_url')}  \n"
+            "  \n"
+            "### Post"
+            "```"
+            f"{alert.get('highlight_text')}  \n"
+            "```"
+        )
+
+        if alert.get("media_content"):
+            markdown_content += (
+                "### Media"
+                f"A media attachment ({alert.get('media_name')}) is available in Data section"
+            )
+        return markdown_content
+
+    @staticmethod
+    def _convert_ccm_alert_to_markdown_content(
+        alert: CompromisedCredentialSighting,
+    ) -> str:
+        """
+        Create a markdown content representing a CCM Alert from Flashpoint.
+        :param alert: A Flashpoint CCM Alert to convert into markdown
+        :return: Markdown as string
+        """
+        markdown_content = (
+            "### Credential"
+            f"- **Username**: {alert.username}  \n"
+            f"- **Password**: {alert.password}  \n"
+            f"- **Domain**: {alert.domain or '-'}  \n"
+            f"- **Affected Domain**: {alert.affected_domain or '-'}  \n"
+            f"- **Affected Url**: {alert.affected_url or '-'}  \n"
+            "  \n"
+            "### Password Complexity"
+            f"- **Length**: {alert.password_complexity.length or '-'}  \n"
+            f"- **Lowercase Letter**: {alert.password_complexity.has_lowercase or '-'}  \n"
+            f"- **Uppercase Letter**: {alert.password_complexity.has_uppercase or '-'}  \n"
+            f"- **Number**: {alert.password_complexity.has_number or '-'}  \n"
+            f"- **Symbol**: {alert.password_complexity.has_symbol or '-'}  \n"
+            "  \n"
+            "### Breach"
+            f"- **Title**: {alert.breach.title or '-'}  \n"
+            f"- **Sourced From**: {alert.breach.source or '-'}  \n"
+            f"- **Source Type**: {alert.breach.source_type or '-'}  \n"
+            f"- **Breached At**: {datetime.isoformat(alert.breach.created_at, timespec='seconds') if alert.breach.created_at else '-'}  \n"
+            f"- **Discovered At**: {datetime.isoformat(alert.breach.first_observed_at, timespec='seconds') if alert.breach.first_observed_at else '-'}  \n"
+        )
+
+        if alert.infected_host and alert.infected_host.malware:
+            markdown_content += (
+                "  \n"
+                "### Infection / Malware Data"
+                f"- **Malware Family**: {alert.infected_host.malware.family or '-'}  \n"
+                f"- **Malware Version**: {alert.infected_host.malware.version or '-'}  \n"
+            )
+
+        return markdown_content
 
     def alert_to_incident(self, alert, create_related_entities):
         """
@@ -405,10 +467,10 @@ A media attachment ({alert.get("media_name")}) is available in Data section
         stix_objects = [self.marking]
 
         # generated incident name
-        incident_name = self.generate_incident_name(alert)
+        incident_name = self._generate_incident_name(alert)
 
         # generated incident description
-        incident_description = self.generate_incident_description(alert)
+        incident_description = self._generate_incident_description(alert)
 
         # generate octi incident id
         incident_id = Incident.generate_id(
@@ -422,7 +484,7 @@ A media attachment ({alert.get("media_name")}) is available in Data section
         ]
 
         # generate a content based on alert useful information
-        markdown_content = self.convert_alert_to_markdown_content(alert)
+        markdown_content = self._convert_alert_to_markdown_content(alert)
 
         # add the alert formatted content into a file attached to the incident
         files = []
@@ -449,7 +511,7 @@ A media attachment ({alert.get("media_name")}) is available in Data section
             )
 
         # generated incident name
-        incident_name = self.generate_incident_name(alert)
+        incident_name = self._generate_incident_name(alert)
 
         # alert flashpoint reference
         incident_external_reference = stix2.ExternalReference(
@@ -638,3 +700,171 @@ A media attachment ({alert.get("media_name")}) is available in Data section
             relationship_publishes,
         ]
         return stix_objects
+
+    def convert_ccm_alert_to_incident(
+        self, alert: CompromisedCredentialSighting
+    ) -> list[stix2.v21._STIXBase21]:
+        """
+        Convert a Flashpoint CCM Alert into STIX 2.1 objects.
+        :param alert: Flashpoint CCM alert to convert
+        :return: List of STIX 2.1 objects
+        """
+
+        stix_objects = []
+
+        incident_name = f"CCM Alert: {alert.username} - {alert.fpid}"
+        incident_description = (
+            f"A compromised credential has been detected for username:  **{alert.username}**"
+            f" on affected URL: **{alert.affected_url or '_unknown_'}**.  \n"
+            "The alert was triggered on "
+            f"**{alert.header.indexed_at.strftime('%B %d, %Y, at %I:%M %p UTC') if alert.header.indexed_at else '_unknown date_'}**.  \n"
+            "  \n"
+            "For more details about this alert, please consult the Content tab.  \n"
+        )
+        incident_created_at = alert.breach.created_at
+        incident_external_reference = stix2.ExternalReference(
+            source_name="Flashpoint",
+            url=f"https://app.flashpoint.io/cti/ato/credential/{alert.credential_record_fpid}::{alert.fpid}",
+        )
+
+        # Generate a markdown file gathering all Flashpoint useful information
+        # and attach it as a file to the incident
+        incident_markdown = self._convert_ccm_alert_to_markdown_content(alert)
+        incident_markdown_file_data = {
+            "name": "alert.md",
+            "data": base64.b64encode(incident_markdown.encode("utf-8")),
+            "mime_type": "text/markdown",
+            "no_trigger_import": False,
+        }
+
+        stix_incident = stix2.Incident(
+            id=Incident.generate_id(
+                name=incident_name,
+                created=incident_created_at,
+            ),
+            name=incident_name,
+            created=incident_created_at,
+            description=incident_description,
+            labels=[alert.breach.source_type],
+            external_references=[incident_external_reference],
+            object_marking_refs=[self.marking],
+            created_by_ref=self.author_id,
+            custom_properties={
+                "first_seen": incident_created_at,
+                "last_seen": alert.last_observed_at,
+                "source": "Flashpoint CCM",
+                "incident_type": "compromised credential",
+                "severity": "low",
+                "x_opencti_files": [incident_markdown_file_data],
+            },
+        )
+        stix_objects.append(stix_incident)
+
+        related_stix_objects = []  # STIX objects extracted from CCM Alert's attributes
+        if alert.email:
+            stix_email = stix2.EmailAddress(
+                value=alert.email,
+                object_marking_refs=[self.marking],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+            related_stix_objects.append(stix_email)
+        if alert.domain:
+            stix_domain = self.convert_ccm_alert_domain(alert.domain)
+            if stix_domain:
+                related_stix_objects.append(stix_domain)
+        if alert.affected_domain:
+            stix_affected_domain = self.convert_ccm_alert_domain(alert.affected_domain)
+            if stix_affected_domain:
+                related_stix_objects.append(stix_affected_domain)
+        if alert.affected_url:
+            stix_url = stix2.URL(
+                value=alert.affected_url,
+                object_marking_refs=[self.marking],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+            related_stix_objects.append(stix_url)
+        if alert.username and alert.password:
+            stix_account = stix2.UserAccount(
+                account_login=alert.username,
+                credential=alert.password,
+                object_marking_refs=[self.marking],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+            related_stix_objects.append(stix_account)
+        if alert.infected_host and alert.infected_host.malware:
+            malware_family = alert.infected_host.malware.family
+            if malware_family:
+                stix_malware = stix2.Malware(
+                    id=Malware.generate_id(malware_family),
+                    name=malware_family,
+                    is_family=True,
+                    object_marking_refs=[self.marking],
+                    created_by_ref=self.author_id,
+                )
+                related_stix_objects.append(stix_malware)
+
+        for related_stix_object in related_stix_objects:
+            related_to_relationship = self.create_relation(
+                source_id=related_stix_object.id,
+                target_id=stix_incident.id,
+                relation="related-to",
+            )
+            # self.create_relation currently handle exception internally and return None in case of error
+            # Exceptions should probably be handled in FlashpointConnector class in the future
+            if related_to_relationship:
+                stix_objects.append(related_stix_object)
+                stix_objects.append(related_to_relationship)
+
+        # Add self.marking to ensure a consistent bundle.
+        # Author is directly created through OpenCTI API in self.create_author()
+        stix_objects = [self.marking] + stix_objects
+
+        return stix_objects
+
+    def convert_ccm_alert_domain(
+        self, value: str
+    ) -> stix2.DomainName | stix2.IPv4Address | stix2.IPv6Address | None:
+        """
+        Convert a CCM Alert's domain or affected domain to its counterpart STIX observable.
+        CCM Alert's domain represents the domain of the user email.
+        CCM Alert's affected domain represents the domain of the website the credentials have leaked from.
+        :param value: Domain value
+        :return: Corresponding STIX Observable (DomainName, IPv4Address or IPv6Address)
+        """
+        stix_affected_domain = None
+        if is_domain(value):
+            stix_affected_domain = stix2.DomainName(
+                value=value,
+                object_marking_refs=[self.marking],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+        elif is_ipv4(value):
+            stix_affected_domain = stix2.IPv4Address(
+                value=value,
+                object_marking_refs=[self.marking],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+        elif is_ipv6(value):
+            stix_affected_domain = stix2.IPv6Address(
+                value=value,
+                object_marking_refs=[self.marking],
+                custom_properties={
+                    "created_by_ref": self.author_id,
+                },
+            )
+        else:
+            self.helper.connector_logger.warning(
+                f"Unable to convert 'domain' or 'affected_domain' value to a STIX observable, value: {value}"
+            )
+
+        return stix_affected_domain

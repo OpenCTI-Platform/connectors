@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'CATALYST'
+  scope: 'catalyst'
+  log_level: 'info'
+  duration_period: 'PT60M' # every 60 minutes  Interval given for scheduler process in ISO-8601 format
+
+
+catalyst:
+  base_url: 'https://prod.blindspot.prodaft.com/api'
+  api_key: 'ChangeMe'
+  tlp_filter: 'ALL'  # Comma-separated list of TLP levels to fetch (options: CLEAR, GREEN, AMBER, RED, ALL)
+  category_filter: 'ALL'  # Comma-separated list of categories to fetch (options: DISCOVERY, ATTRIBUTION, RESEARCH, FLASH_ALERT, ALL)
+  sync_days_back: 730  # Number of days to go back when no last_run is present
+  create_observables: true
+  create_indicators: false

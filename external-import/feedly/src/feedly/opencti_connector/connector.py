@@ -74,6 +74,13 @@ def _transform_threat_actors_to_intrusion_sets(bundle: dict) -> None:
             o["target_ref"] = o.get("target_ref").replace(
                 "threat-actor", "intrusion-set"
             )
+            if o["relationship_type"] == "located-at" and (
+                o["source_ref"].startswith("intrusion-set")
+                or o["target_ref"].startswith("intrusion-set")
+            ):
+                o["relationship_type"] = "originates-from"
+        for i, object_ref in enumerate(o.get("object_refs", [])):
+            o["object_refs"][i] = object_ref.replace("threat-actor", "intrusion-set")
 
 
 def _add_source_name_as_author_to_all_reports(bundle: dict) -> None:

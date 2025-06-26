@@ -1,0 +1,13 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'S3 Bucket'
+
+s3:
+  access_key_id: ''
+  secret_access_key: ''
+  bucket_name: ''

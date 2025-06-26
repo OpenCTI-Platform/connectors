@@ -105,7 +105,6 @@ class IronNetConnector:
                 objects=bundle_objects,
                 allow_custom=True,
             ).serialize(),
-            update=self._helper.config["connector"]["update_existing_data"],
             work_id=work_id,
         )
 

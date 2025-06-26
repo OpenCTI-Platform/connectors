@@ -1,3 +1,11 @@
+# Depreciation of RiskIQ connector
+
+> [!WARNING]  
+> **This connector is now obsolete.**  
+> Microsoft who acquired RiskIQ has decommissioned all RiskIQ's APIs and integrated RiskIQ data directly into their product. 
+> The Community version is no longer functional.
+> This connector will no longer be maintained. Please do not use it again.
+
 # OpenCTI RISKIQ Passive Total enrichment connector
 
 Table of Contents

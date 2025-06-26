@@ -9,8 +9,6 @@ connector:
   validate_before_import: true # Validate any bundle before import
   scope: 'application/pdf,text/plain,text/html,text/markdown'
   auto: false # Enable/disable auto-import of file
-  only_contextual: false # Only extract data related to an entity (a report, a threat actor, etc.)
-  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
 
 import_document:

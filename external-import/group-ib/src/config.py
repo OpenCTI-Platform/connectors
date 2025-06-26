@@ -158,12 +158,15 @@ class ConfigConnector:
     }
     STIX_MAIN_OBSERVABLE_TYPE_MAP = {
         "domain": "Domain-Name",
+        "domain-name": "Domain-Name",
         "file": "StixFile",
         "ipv4": "IPv4-Addr",
+        "ipv4-addr": "IPv4-Addr",
         "ipv6": "IPv6-Addr",
+        "ipv6-addr": "IPv6-Addr",
         "url": "Url",
-        "yara": "Unknown",
-        "suricata": "Unknown",
+        "yara": "StixFile",
+        "suricata": "Network-Traffic",
     }
     STIX_MALWARE_TYPE_MAP = {*MALWARE_TYPE}
     # ISO3166-1 https://www.iso.org/standard/72482.html

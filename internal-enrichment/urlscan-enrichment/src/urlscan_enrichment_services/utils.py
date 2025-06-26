@@ -18,6 +18,10 @@ class UrlscanUtils:
         :return: dict | None
         """
 
+        data_page_title = data.get("page", {}).get("title")
+        if not data_page_title:
+            return None
+
         data_screenshot = data["task"]["screenshotURL"]
         data_uuid = data["task"]["uuid"]
         data_title = data["page"]["title"].replace(" ", "-")

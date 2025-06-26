@@ -1,3 +1,11 @@
+# Depreciation of RiskIQ connector
+
+> [!WARNING]  
+> **This connector is now obsolete.**  
+> Microsoft who acquired RiskIQ has decommissioned all RiskIQ's APIs and integrated RiskIQ data directly into their product.
+> The Community version is no longer functional.
+> This connector will no longer be maintained. Please do not use it again.
+
 # OpenCTI RiskIQ Connector
 
 The OpenCTI RiskIQ connector can be used to import knowledge from the [RiskIQ API](https://api.riskiq.net).

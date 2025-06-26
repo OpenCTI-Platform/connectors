@@ -15,9 +15,10 @@ def fixture_data() -> dict[str, Any]:
     marking_definition_uuid = uuid.uuid4()
     return {
         "enrichment_entity": {
+            "entity_type": "ipv4-addr",
             "objectMarking": [
                 {"definition": "TLP:WHITE", "definition_type": "TLP"},
-            ]
+            ],
         },
         "stix_entity": {
             "id": f"ipv4-addr--{ipv4_addr_uuid}",
@@ -43,7 +44,6 @@ def fixture_data() -> dict[str, Any]:
                 "value": "123.122.12.12",
             },
         ],
-        "entity_type": "IPv4-Addr",
         "event_type": "INTERNAL_ENRICHMENT",
     }
 
@@ -102,7 +102,7 @@ def test_wrong_ip_v4(helper: OpenCTIConnectorHelper, data: dict[str, Any]) -> No
 @pytest.mark.usefixtures("mocked_requests")
 def test_wrong_scope(helper: OpenCTIConnectorHelper, data: dict[str, Any]) -> None:
     connector = ShodanInternetDBConnector(config=ConfigConnector(), helper=helper)
-    data["entity_type"] = "IPv6-Addr"
+    data["enrichment_entity"]["entity_type"] = "IPv6-Addr"
     assert (
         connector.process_message(data=data)
         == "[CONNECTOR] Failed to process observable, IPv6-Addr is not a supported entity type"
@@ -120,7 +120,11 @@ def test_api_error(
     )
 
 
-def test_api_error_404(helper: OpenCTIConnectorHelper, data: dict[str, Any]) -> None:
+def test_api_error_404(
+    mocker: MockerFixture, helper: OpenCTIConnectorHelper, data: dict[str, Any]
+) -> None:
+    mocked_get = mocker.patch("shodan_internetdb.client.requests.Session.get")
+    mocked_get.return_value.status_code = 404
     connector = ShodanInternetDBConnector(config=ConfigConnector(), helper=helper)
     assert (
         connector.process_message(data=data)

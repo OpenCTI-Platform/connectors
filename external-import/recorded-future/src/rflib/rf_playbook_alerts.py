@@ -576,6 +576,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         stix_url = stix2.DomainName(
             value=playbook_alert["data"]["panel_status"]["entity_name"],
             object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author["id"]},
         )
         stix_relationship = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
@@ -633,6 +634,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 stix_ipv4address = stix2.IPv4Address(
                     value=(str(ip["entity"])).replace("ip:", ""),
                     object_marking_refs=self.tlp,
+                    custom_properties={"x_opencti_created_by_ref": self.author["id"]},
                 )
                 stix_relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
@@ -667,6 +669,7 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 stix_domain = stix2.DomainName(
                     value=(str(ns["entity"])).replace("idn:", ""),
                     object_marking_refs=self.tlp,
+                    custom_properties={"x_opencti_created_by_ref": self.author["id"]},
                 )
                 stix_relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(

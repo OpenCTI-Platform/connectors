@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'CHANGEME'
+
+connector:
+  id: 'CHANGEME'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Vulmatch'
+  scope: 'vulmatch'
+  confidence_level: 70
+  update_existing_data: false
+  log_level: 'info'
+
+vulmatch:
+  base_url: 'https://api.vulmatch.com/'
+  api_key: CHANGEME
+  sbom_only: true
+  cvss_base_score_min: CHANGEME #-1 to not use filter
+  epss_score_min: CHANGEME #-1 to not use filter
+
+  days_to_backfill: 100 #max 356
+  interval_days: 1 # interval in days #how often to check for new data using filter

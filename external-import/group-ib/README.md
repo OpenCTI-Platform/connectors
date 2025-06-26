@@ -77,7 +77,9 @@ interface and that it covers the API endpoints you wish to reach. Documentation 
 
 Configuration parameters are set in the .env or config.yml file, depending on the type of integration run:
 - .env file is used when running with docker This file is included in the `.gitignore` (to avoid leaking sensitive data). 
-- config.yml is used when running locally without docker, as if you were running a regular python script.
+- ~~config.yml is used when running locally without docker, as if you were running a regular python script.~~
+/!\ Currently the connector cannot run with config.yml file, only with .env file because of ConnectorHelper instantiation and proxy settings code. /!\
+
 All integration values are duplicated between .env and config.yml
 
 Note that the values that follow can be grabbed within Python code using `self.helper.{PARAMETER}`, i. e., `self.helper.connector_name`.
@@ -85,11 +87,11 @@ Note that the values that follow can be grabbed within Python code using `self.h
 Expected environment variables to be set in the  `docker-compose.yml` that describe the connector itself.
 Most of the time, these values are NOT expected to be changed.
 
-| Parameter                | Mandatory | Description                                                       |
-|--------------------------|-----------|-------------------------------------------------------------------|
-| `CONNECTOR_NAME`         | Yes       | A connector name to be shown in OpenCTI.                          |
-| `CONNECTOR_SCOPE`        |  Yes       | Supported scope. E. g., `text/html`.                              |
-| `CONNECTOR_ID`           | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector. |
+| Parameter                  | Mandatory  | Description                                                        |
+|----------------------------|------------|--------------------------------------------------------------------|
+| `CONNECTOR_NAME`           | Yes        | A connector name to be shown in OpenCTI.                           |
+| `CONNECTOR_SCOPE`          | Yes        | Supported scope. E. g., `text/html`.                               |
+| `CONNECTOR_ID`             | Yes        | A valid arbitrary `UUIDv4` that must be unique for this connector. |
 
 However, there are other values which are expected to be configured by end users.
 The following values are expected to be defined in the `.env` file.
@@ -97,11 +99,10 @@ Note that the `.env.sample` file can be used as a reference.
 
 The ones that follow are connector's generic execution parameters expected to be added for export connectors.
 
-| Parameter                    | Mandatory | Description                                                                                                                                                                   |
-|------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `CONNECTOR_LOG_LEVEL`        | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                 |
-| `CONNECTOR__DURATION_PERIOD`            | Yes       | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day. |
-| `CONNECTOR_UPDATE_EXISTING_DATA`       | Yes       | Whether to update known existing data.                                                                                                                                        |
+| Parameter                      | Mandatory | Description                                                                                                                                                                   |
+|--------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `CONNECTOR_LOG_LEVEL`          | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                                                 |
+| `CONNECTOR__DURATION_PERIOD`   | Yes       | The time unit is represented by a single character at the end of the string: d for days, h for hours, m for minutes, and s for seconds. e.g., 30s is 30 seconds. 1d is 1 day. |
 
 
 ### OpenCTI environment variables
@@ -224,11 +225,8 @@ TI_API__COLLECTIONS__APT_THREAT__DEFAULT_DATE='2021-08-01'
 TI_API__COLLECTIONS__APT_THREAT__ENABLE=false
 TI_API__COLLECTIONS__APT_THREAT__LOCAL_CUSTOM_TAG=null
 TI_API__COLLECTIONS__APT_THREAT__TTL=90
-
 ...
 ```
-
-
 
 ### Date format
 

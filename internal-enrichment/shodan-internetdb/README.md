@@ -1,5 +1,10 @@
 # OpenCTI Shodan InternetDB Connector
 
+|       Status        |    Date    |  Comment  |
+|:-------------------:|:----------:|:---------:|
+|  Filigran Verified  | 2025-04-25 |     -     |
+
+
 ## Description
 
 The InternetDB API provides a lot less data than a regular Shodan IP lookup, however it's free for non-commercial use.

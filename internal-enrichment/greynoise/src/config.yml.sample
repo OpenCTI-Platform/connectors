@@ -8,12 +8,9 @@ connector:
   name: 'GreyNoise'
   scope: 'IPv4-Addr'
   auto: true # Enable/disable auto-enrichment of observables
-  log_level: 'info'
+  log_level: 'error'
 
 greynoise:
   key: 'ChangeMe'
   max_tlp: 'TLP:AMBER'
-  name: 'GreyNoise Internet Scanner'
-  description: 'GreyNoise collects and analyzes opportunistic scan and attack activity for devices connected directly to the Internet.'
   sighting_not_seen: false
-  default_score: 50 # Former confidence_level deprecated in OpenCTI version >= 6.0

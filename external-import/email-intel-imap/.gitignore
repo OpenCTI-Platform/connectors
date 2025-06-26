@@ -1,0 +1,2 @@
+# Ignore all .json files in any subdirectory especially for creds
+**/*.json

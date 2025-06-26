@@ -112,14 +112,13 @@ class ConnectorIBMXTI:
                     f"Sent {len(bundles_sent)} STIX bundles to OpenCTI"
                 )
 
-            # this would only happen if no STIX objects are found, but we still shouldn't update the state in debug mode
-            if not self.__config.debug:
-                with self.__state_lock:
-                    feed_state["added_after"] = new_added_after
-                    self.__helper.set_state(current_state)
-                    self.__helper.connector_logger.info(
-                        f"Updated 'added_after' to '{new_added_after}' for collection '{source.collection.title}'"
-                    )
+                if new_added_after:
+                    with self.__state_lock:
+                        feed_state["added_after"] = new_added_after
+                        self.__helper.set_state(current_state)
+                        self.__helper.connector_logger.info(
+                            f"Updated 'added_after' to '{new_added_after}' for collection '{source.collection.title}'"
+                        )
 
     def __ingest_feed(
         self, source: TAXIICollectionSource, current_state: ConnectorIBMXTIState

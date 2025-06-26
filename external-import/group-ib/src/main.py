@@ -28,7 +28,12 @@ class CustomConnector(ExternalImportConnector):
         super().__init__()
 
     def _collect_intelligence(
-        self, collection, ttl, event, mitre_mapper, flag=False
+        self,
+        collection,
+        ttl,
+        event,
+        mitre_mapper,
+        flag_instrusion_set_instead_of_threat_actor=False,
     ) -> []:
         """Collects intelligence from channels
 
@@ -63,6 +68,7 @@ class CustomConnector(ExternalImportConnector):
             "hi/threat",
             "apt/threat_actor",
             "hi/threat_actor",
+            "malware/malware",
         ]:
             url_is_ioc = True
             domain_is_ioc = True
@@ -78,7 +84,6 @@ class CustomConnector(ExternalImportConnector):
         elif collection in [
             "attacks/ddos",
             "attacks/deface",
-            "malware/malware",
             "osi/vulnerability",
             "suspicious_ip/open_proxy",
             "suspicious_ip/scanner",
@@ -135,28 +140,23 @@ class CustomConnector(ExternalImportConnector):
             json_date_obj=json_date_obj,
             json_cvss_obj=json_cvss_obj,
         )
+
         stix_intrusion_set = None
-        if flag:
-            stix_threat_actor, stix_threat_actor_location_list = (
-                report_adapter.generate_stix_threat_actor(
+        stix_intrusion_set_location_list = None
+        stix_threat_actor = None
+        stix_threat_actor_location_list = None
+
+        if flag_instrusion_set_instead_of_threat_actor:
+            stix_intrusion_set, stix_intrusion_set_location_list = (
+                report_adapter.generate_stix_intrusion_set(
                     obj=json_threat_actor_obj,
                     related_objects=[
-                        # stix_attack_pattern_list,
-                        # stix_malware_list,
-                        # stix_vulnerability_list,
+                        stix_attack_pattern_list,
+                        stix_malware_list,
+                        stix_vulnerability_list,
                     ],
                     json_date_obj=json_date_obj,
                 )
-            )
-            stix_intrusion_set = report_adapter.generate_stix_intrusion_set(
-                obj=json_threat_actor_obj,
-                related_objects=[
-                    stix_attack_pattern_list,
-                    stix_malware_list,
-                    stix_vulnerability_list,
-                    stix_threat_actor,
-                ],
-                json_date_obj=json_date_obj,
             )
             stix_domain_list, stix_url_list, stix_ip_list = (
                 report_adapter.generate_stix_network(
@@ -238,6 +238,8 @@ class CustomConnector(ExternalImportConnector):
             [x.extend(ob.stix_objects) for ob in stix_vulnerability_list]
         if stix_intrusion_set:
             x += stix_intrusion_set.stix_objects
+        if stix_intrusion_set_location_list:
+            [x.extend(ob.stix_objects) for ob in stix_intrusion_set_location_list]
         if stix_threat_actor:
             x += stix_threat_actor.stix_objects
         if stix_threat_actor_location_list:

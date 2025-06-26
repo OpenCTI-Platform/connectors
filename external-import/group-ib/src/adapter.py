@@ -10,6 +10,7 @@
 Author: Pavel Reshetnikov, Integration developer, 2024
 """
 
+import ipaddress
 from datetime import datetime, timedelta
 
 import data_to_stix2 as ds
@@ -20,13 +21,38 @@ class DataToSTIXAdapter:
 
     def __init__(self, mitre_mapper, collection, tlp_color, helper, is_ioc=False):
         # type: (dict, str, str, Any, bool) -> None
+
         self.mitre_mapper = mitre_mapper
         self.collection = collection
+        self.helper = helper
         self.ta_global_label = self._set_global_label(self.collection)
         self.tlp_color = tlp_color
         self.is_ioc = is_ioc
-        self.helper = helper
+        self.helper.connector_logger.info("Initializing DataToSTIXAdapter")
         self.author = ds.BaseEntity("", "", "white").author
+        self.helper.connector_logger.info(
+            f"DataToSTIXAdapter initialized with collection: {collection}, tlp_color: {tlp_color}, is_ioc: {is_ioc}"
+        )
+
+    @staticmethod
+    def is_ipv4(ipv4):
+        # type: (str) -> bool
+        """Determine whether the provided IP string is IPv4."""
+        try:
+            ipaddress.IPv4Address(ipv4)
+            return True
+        except ipaddress.AddressValueError:
+            return False
+
+    @staticmethod
+    def is_ipv6(ipv6):
+        # type: (str) -> bool
+        """Determine whether the provided IP string is IPv6."""
+        try:
+            ipaddress.IPv6Address(ipv6)
+            return True
+        except ipaddress.AddressValueError:
+            return False
 
     @staticmethod
     def _valid_hash(hash_value, hash_type):
@@ -37,10 +63,19 @@ class DataToSTIXAdapter:
             return False
 
     def _set_global_label(self, collection):
+        self.helper.connector_logger.info(
+            f"Setting global label for collection: {collection}"
+        )
         if collection in ["apt/threat", "apt/threat_actor"]:
+            self.helper.connector_logger.debug("Collection identified as nation-state")
             return "nation-state"
         elif collection in ["hi/threat", "hi/threat_actor"]:
+            self.helper.connector_logger.debug("Collection identified as criminal")
             return "criminal"
+        self.helper.connector_logger.warning(
+            f"No global label set for collection: {collection}"
+        )
+        return None
 
     @staticmethod
     def _retrieve_link(obj):
@@ -67,7 +102,9 @@ class DataToSTIXAdapter:
 
     def _retrieve_date(self, obj, key, alter_key=None):
         # type: (dict, str, str) -> datetime
-
+        self.helper.connector_logger.debug(
+            f"Retrieving date for key: {key}, alternate key: {alter_key}"
+        )
         date_raw = obj.get(key, "")
         if not date_raw and alter_key:
             date_raw = obj.get(alter_key, "")
@@ -75,28 +112,33 @@ class DataToSTIXAdapter:
         if date_raw:
             if date_raw.startswith("00"):
                 self.helper.connector_logger.warning(
-                    "Wrong format of date: {}".format(date_raw)
+                    f"Wrong format of date: {date_raw}"
                 )
                 return datetime.now()
 
         try:
             _datetime = datetime.fromisoformat(date_raw)
+            self.helper.connector_logger.debug(f"Successfully parsed date: {date_raw}")
         except (Exception,):
             self.helper.connector_logger.warning(
-                "Failed to format date: {}. Using default.".format(date_raw)
+                f"Failed to format date: {date_raw}. Using default."
             )
             _datetime = datetime.now()
 
         return _datetime
 
     def _retrieve_ttl_dates(self, obj):
-        # type: (dict) -> Tuple[datetime, datetime]
+        # type: (dict) -> Tuple[Optional[datetime], Optional[datetime]]
         """
         :returns: (valid_from, valid_until)
         """
+        self.helper.connector_logger.debug("Retrieving TTL dates")
         ttl = obj.get("ttl")
         if not ttl:
             ttl = 365
+            self.helper.connector_logger.debug(
+                "No TTL provided, using default: 365 days"
+            )
 
         # try to extract date-modified
         date_modified_raw = obj.get("date-modified", "")
@@ -105,20 +147,23 @@ class DataToSTIXAdapter:
         if date_modified_raw:
             if date_modified_raw.startswith("00"):
                 self.helper.connector_logger.warning(
-                    "Wrong format of date_modified: {}".format(date_modified_raw)
+                    f"Wrong format of date_modified: {date_modified_raw}"
                 )
                 date_modified_raw = None
 
         if date_created_raw:
             if date_created_raw.startswith("00"):
                 self.helper.connector_logger.warning(
-                    "Wrong format of date_created: {}".format(date_created_raw)
+                    f"Wrong format of date_created: {date_created_raw}"
                 )
                 date_created_raw = None
 
         if not date_modified_raw and not date_created_raw:
-            self.helper.connector_logger.warning("No correct date found. Using default")
-            base_ttl_datetime = datetime.now()
+            self.helper.connector_logger.warning(
+                "No correct date found. "
+                "'None' will be used to further set the value by the user or system"
+            )
+            base_ttl_datetime = None
         else:
             if date_modified_raw:
                 base_ttl_raw_date = date_modified_raw
@@ -127,21 +172,30 @@ class DataToSTIXAdapter:
 
             try:
                 base_ttl_datetime = datetime.fromisoformat(base_ttl_raw_date)
+                self.helper.connector_logger.debug(
+                    f"Successfully parsed base TTL date: {base_ttl_raw_date}"
+                )
             except (Exception,):
                 self.helper.connector_logger.warning(
-                    "Failed to format base_ttl_raw_date: {}. Using default.".format(
-                        base_ttl_raw_date
-                    )
+                    f"Failed to format base_ttl_raw_date: {base_ttl_raw_date}. "
+                    "'None' will be used to further set the value by the user or system."
                 )
-                base_ttl_datetime = datetime.now()
+                base_ttl_datetime = None
 
         valid_from = base_ttl_datetime
-        valid_until = base_ttl_datetime + timedelta(days=ttl)
+        valid_until = (
+            base_ttl_datetime + timedelta(days=ttl)
+            if base_ttl_datetime
+            else base_ttl_datetime
+        )
+        self.helper.connector_logger.info(
+            f"TTL dates set: valid_from={valid_from}, valid_until={valid_until}"
+        )
         return valid_from, valid_until
 
     @staticmethod
     def _generate_relations(
-        main_obj, related_objects, relation_type=None, is_ioc=False
+        main_obj, related_objects, helper, relation_type=None, is_ioc=False
     ):
         # type: (Any, List[Any], Union[None, str], bool) -> Any
 
@@ -160,6 +214,9 @@ class DataToSTIXAdapter:
                 "attack-pattern": "uses",
                 "malware": "uses",
                 "vulnerability": "targets",
+                # Common
+                "base-location": "originates-from",
+                "target-location": "targets",
                 # Threat
                 "threat-actor": "attributed-to",
             },
@@ -244,6 +301,9 @@ class DataToSTIXAdapter:
 
         _main_object = main_obj.stix_main_object
         _main_object_c_type = main_obj.c_type
+        helper.connector_logger.debug(
+            f"Generating relations for main object type: {_main_object_c_type}, is_ioc: {is_ioc}"
+        )
 
         # generate relationship: Indicator --based-on--> Observable
         if (
@@ -252,14 +312,26 @@ class DataToSTIXAdapter:
             and main_obj.c_type not in ["yara", "suricata"]
         ):
             _indicator = main_obj.stix_indicator
+            helper.connector_logger.debug(
+                f"Processing indicator relationships for {_main_object_c_type}"
+            )
 
             if isinstance(_indicator, list):
                 for _ind in _indicator:
+                    helper.connector_logger.debug(
+                        f"Generating relationship: {_ind.type} -> {_main_object_c_type}"
+                    )
                     _gen_rel(_ind, _ind.type, _main_object, _main_object_c_type)
             else:
+                helper.connector_logger.debug(
+                    f"Generating relationship: {_indicator.type} -> {_main_object_c_type}"
+                )
                 _gen_rel(_indicator, _indicator.type, _main_object, _main_object_c_type)
 
         if not related_objects:
+            helper.connector_logger.debug(
+                "No related objects provided for relationship generation"
+            )
             return main_obj
 
         for _rel_obj in related_objects:
@@ -275,6 +347,9 @@ class DataToSTIXAdapter:
                             _indicator = main_obj.stix_indicator
                             if isinstance(_indicator, list):
                                 for _ind in _indicator:
+                                    helper.connector_logger.debug(
+                                        f"Generating indicator-threat relationship: {_ind.type} -> {_ro.c_type}"
+                                    )
                                     _gen_rel(
                                         _ind,
                                         _ind.type,
@@ -282,6 +357,9 @@ class DataToSTIXAdapter:
                                         _ro.c_type,
                                     )
                             else:
+                                helper.connector_logger.debug(
+                                    f"Generating indicator-threat relationship: {_indicator.type} -> {_ro.c_type}"
+                                )
                                 _gen_rel(
                                     _indicator,
                                     _indicator.type,
@@ -292,6 +370,9 @@ class DataToSTIXAdapter:
                         # - Observable --related-to--> Threat
                         # - Observable/SDO/Threat/Common --any--> Any
                         else:
+                            helper.connector_logger.debug(
+                                f"Generating relationship: {_main_object_c_type} -> {_ro.c_type}"
+                            )
                             _gen_rel(
                                 _main_object,
                                 _main_object_c_type,
@@ -308,6 +389,9 @@ class DataToSTIXAdapter:
                         _indicator = main_obj.stix_indicator
                         if isinstance(_indicator, list):
                             for _ind in _indicator:
+                                helper.connector_logger.debug(
+                                    f"Generating indicator-threat relationship: {_ind.type} -> {_rel_obj.c_type}"
+                                )
                                 _gen_rel(
                                     _ind,
                                     _ind.type,
@@ -315,6 +399,9 @@ class DataToSTIXAdapter:
                                     _rel_obj.c_type,
                                 )
                         else:
+                            helper.connector_logger.debug(
+                                f"Generating indicator-threat relationship: {_indicator.type} -> {_rel_obj.c_type}"
+                            )
                             _gen_rel(
                                 _indicator,
                                 _indicator.type,
@@ -323,6 +410,9 @@ class DataToSTIXAdapter:
                             )
 
                     else:
+                        helper.connector_logger.debug(
+                            f"Generating relationship: {_main_object_c_type} -> {_rel_obj.c_type}"
+                        )
                         _gen_rel(
                             _main_object,
                             _main_object_c_type,
@@ -330,9 +420,13 @@ class DataToSTIXAdapter:
                             _rel_obj.c_type,
                         )
 
+        helper.connector_logger.info(
+            f"Completed generating relations for main object type: {_main_object_c_type}"
+        )
         return main_obj
 
     def _generate_mitre_matrix(self, obj_events):
+        self.helper.connector_logger.debug("Generating MITRE matrix")
         mitre_matrix = {
             _e.get("attack_pattern"): {
                 "kill_chain_phases": list(),
@@ -349,13 +443,19 @@ class DataToSTIXAdapter:
                 mitre_matrix[_e.get("attack_pattern")]["portal_links"] = (
                     self._retrieve_link(_e)
                 )
+        self.helper.connector_logger.debug(
+            f"MITRE matrix generated with {len(mitre_matrix)} attack patterns"
+        )
         return mitre_matrix
 
     def generate_kill_chain_phases(self, obj_types):
+        self.helper.connector_logger.debug(
+            f"Generating kill chain phases for types: {obj_types}"
+        )
         _name = "mitre-attack"
         _label = "mitre"
 
-        return [
+        kill_chain_phases = [
             ds.KillChainPhase(
                 name=_name,
                 c_type=_type,
@@ -366,47 +466,69 @@ class DataToSTIXAdapter:
             .stix_main_object
             for _type in obj_types
         ]
+        self.helper.connector_logger.info(
+            f"Generated {len(kill_chain_phases)} kill chain phases"
+        )
+        return kill_chain_phases
 
     def generate_stix_domain(self, name):
+        self.helper.connector_logger.debug(
+            f"Generating STIX domain object for name: {name}"
+        )
         _type = "domain-name"
         # _label = "domain"
 
-        return ds.Domain(
+        domain = ds.Domain(
             name=name,
             c_type=_type,
             tlp_color=self.tlp_color,
             labels=[self.collection],
         )
+        self.helper.connector_logger.info(f"STIX domain object generated for: {name}")
+        return domain
 
     def generate_stix_url(self, name):
+        self.helper.connector_logger.debug(
+            f"Generating STIX URL object for name: {name}"
+        )
         _type = "url"
         # _label = "url"
 
-        return ds.URL(
+        url = ds.URL(
             name=name,
             c_type=_type,
             tlp_color=self.tlp_color,
             labels=[self.collection],
         )
+        self.helper.connector_logger.info(f"STIX URL object generated for: {name}")
+        return url
 
     def generate_stix_ipv4(self, name):
+        self.helper.connector_logger.debug(
+            f"Generating STIX IPv4 object for name: {name}"
+        )
         _type = "ipv4-addr"
         # _label = "ipv4"
 
-        return ds.IPAddress(
+        ip = ds.IPAddress(
             name=name,
             c_type=_type,
             tlp_color=self.tlp_color,
             labels=[self.collection],
         )
+        self.helper.connector_logger.info(f"STIX IPv4 object generated for: {name}")
+        return ip
 
     def generate_locations(self, obj_country_codes, change_type_to=None):
+        self.helper.connector_logger.debug(
+            f"Generating locations for country codes: {obj_country_codes}, change_type_to: {change_type_to}"
+        )
         _type = "location"
         if change_type_to:
             _type = change_type_to
         # _label = "country"
 
-        return [
+        locations = [
             ds.Location(
                 name=_cc,
                 c_type=_type,
@@ -416,9 +538,17 @@ class DataToSTIXAdapter:
             for _cc in obj_country_codes
             if _cc
         ]
+        self.helper.connector_logger.info(
+            f"Generated {len(locations)} location objects"
+        )
+        return locations
 
     def generate_stix_malware(self, obj, json_date_obj=None):
+        self.helper.connector_logger.info("Starting generation of STIX malware objects")
         if not obj:
+            self.helper.connector_logger.warning(
+                "No object provided for malware generation"
+            )
             return list()
 
         _description = obj.get("__")
@@ -426,13 +556,16 @@ class DataToSTIXAdapter:
         # _label = "malware"
         _events = obj.get("malware_report_list", [])
 
-        _date_updated = self._retrieve_date(
-            json_date_obj, "date-updated", "date-modified"
-        )
+        # _date_updated = self._retrieve_date(
+        #    json_date_obj, "date-updated", "date-modified"
+        # )
 
         _stix_objects = list()
 
         if _events:
+            self.helper.connector_logger.debug(
+                f"Processing {len(_events)} malware events"
+            )
             for _e in _events:
                 _name = _e.get("name")
                 _malware_types = _e.get("category")
@@ -442,11 +575,14 @@ class DataToSTIXAdapter:
 
                 if _name:
                     if isinstance(_name, list):
+                        self.helper.connector_logger.debug(
+                            f"Processing list of malware names: {_name}"
+                        )
                         for n in _name:
                             malware = ds.Malware(
                                 name=n,
                                 aliases=_malware_aliases,
-                                last_seen=_date_updated,
+                                # last_seen=_date_updated,
                                 c_type=_type,
                                 malware_types=_malware_types or [],
                                 tlp_color="red",
@@ -455,13 +591,16 @@ class DataToSTIXAdapter:
                             malware.set_description(_description)
                             malware.generate_external_references(_portal_links)
                             malware.generate_stix_objects()
+                            self.helper.connector_logger.debug(
+                                f"Generated STIX malware object for name: {n}"
+                            )
 
                             _stix_objects.append(malware)
                     else:
                         malware = ds.Malware(
                             name=_name,
                             aliases=_malware_aliases,
-                            last_seen=_date_updated,
+                            # last_seen=_date_updated,
                             c_type=_type,
                             malware_types=_malware_types,
                             tlp_color="red",
@@ -470,6 +609,9 @@ class DataToSTIXAdapter:
                         malware.set_description(_description)
                         malware.generate_external_references(_portal_links)
                         malware.generate_stix_objects()
+                        self.helper.connector_logger.debug(
+                            f"Generated STIX malware object for name: {_name}"
+                        )
 
                         _stix_objects.append(malware)
 
@@ -484,7 +626,7 @@ class DataToSTIXAdapter:
                 malware = ds.Malware(
                     name=_name,
                     aliases=_malware_aliases,
-                    last_seen=_date_updated,
+                    # last_seen=_date_updated,
                     c_type=_type,
                     malware_types=_malware_types,
                     tlp_color="red",
@@ -493,15 +635,27 @@ class DataToSTIXAdapter:
                 malware.set_description(_description)
                 malware.generate_external_references(_portal_links)
                 malware.generate_stix_objects()
+                self.helper.connector_logger.debug(
+                    f"Generated STIX malware object for name: {_name}"
+                )
 
                 _stix_objects.append(malware)
 
+        self.helper.connector_logger.info(
+            f"Generated {len(_stix_objects)} STIX malware objects"
+        )
         return _stix_objects
 
     def generate_stix_vulnerability(
         self, obj, related_objects, json_date_obj=None, json_cvss_obj=None
     ):
+        self.helper.connector_logger.info(
+            "Starting generation of STIX vulnerability objects"
+        )
         if not obj:
+            self.helper.connector_logger.warning(
+                "No object provided for vulnerability generation"
+            )
             return list()
 
         _description = obj.get("__")
@@ -510,6 +664,9 @@ class DataToSTIXAdapter:
         if json_cvss_obj:
             _cvssv3_score = json_cvss_obj.get("score", None)
             _cvssv3_vector = json_cvss_obj.get("vector", None)
+            self.helper.connector_logger.debug(
+                f"CVSS score: {_cvssv3_score}, vector: {_cvssv3_vector}"
+            )
         else:
             _cvssv3_score = None
             _cvssv3_vector = None
@@ -520,12 +677,18 @@ class DataToSTIXAdapter:
         _stix_objects = list()
 
         if _events:
+            self.helper.connector_logger.debug(
+                f"Processing {len(_events)} vulnerability events"
+            )
             for _e in _events:
                 _name = _e.get("object_id")
                 _description = _e.get("description")
 
                 if _name:
                     if isinstance(_name, list):
+                        self.helper.connector_logger.debug(
+                            f"Processing list of vulnerability names: {_name}"
+                        )
                         for n in _name:
                             vulnerability = ds.Vulnerability(
                                 name=n,
@@ -538,8 +701,15 @@ class DataToSTIXAdapter:
                             )
                             vulnerability.set_description(_description)
                             vulnerability.generate_stix_objects()
+                            self.helper.connector_logger.debug(
+                                f"Generated STIX vulnerability object for name: {n}"
+                            )
 
-                            self._generate_relations(vulnerability, related_objects)
+                            self._generate_relations(
+                                main_obj=vulnerability,
+                                related_objects=related_objects,
+                                helper=self.helper,
+                            )
 
                             vulnerability.add_relationships_to_stix_objects()
 
@@ -556,8 +726,15 @@ class DataToSTIXAdapter:
                         )
                         vulnerability.set_description(_description)
                         vulnerability.generate_stix_objects()
+                        self.helper.connector_logger.debug(
+                            f"Generated STIX vulnerability object for name: {_name}"
+                        )
 
-                        self._generate_relations(vulnerability, related_objects)
+                        self._generate_relations(
+                            main_obj=vulnerability,
+                            related_objects=related_objects,
+                            helper=self.helper,
+                        )
 
                         vulnerability.add_relationships_to_stix_objects()
 
@@ -579,17 +756,33 @@ class DataToSTIXAdapter:
                 )
                 vulnerability.set_description(_description)
                 vulnerability.generate_stix_objects()
+                self.helper.connector_logger.debug(
+                    f"Generated STIX vulnerability object for name: {_name}"
+                )
 
-                self._generate_relations(vulnerability, related_objects)
+                self._generate_relations(
+                    main_obj=vulnerability,
+                    related_objects=related_objects,
+                    helper=self.helper,
+                )
 
                 vulnerability.add_relationships_to_stix_objects()
 
                 _stix_objects.append(vulnerability)
 
+        self.helper.connector_logger.info(
+            f"Generated {len(_stix_objects)} STIX vulnerability objects"
+        )
         return _stix_objects
 
     def generate_stix_attack_pattern(self, obj):
+        self.helper.connector_logger.info(
+            "Starting generation of STIX attack pattern objects"
+        )
         if not obj:
+            self.helper.connector_logger.warning(
+                "No object provided for attack pattern generation"
+            )
             return list()
 
         _description = obj.get("__")
@@ -617,13 +810,25 @@ class DataToSTIXAdapter:
                 attack_pattern.set_description(_description)
                 attack_pattern.generate_external_references(v["portal_links"])
                 attack_pattern.generate_stix_objects()
+                self.helper.connector_logger.debug(
+                    f"Generated STIX attack pattern object for MITRE ID: {k}"
+                )
 
                 _stix_objects.append(attack_pattern)
 
+        self.helper.connector_logger.info(
+            f"Generated {len(_stix_objects)} STIX attack pattern objects"
+        )
         return _stix_objects
 
     def generate_stix_threat_actor(self, obj, related_objects, json_date_obj=None):
+        self.helper.connector_logger.info(
+            "Starting generation of STIX threat actor objects"
+        )
         if not obj:
+            self.helper.connector_logger.warning(
+                "No object provided for threat actor generation"
+            )
             return None, None
 
         _type = "threat-actor"
@@ -639,15 +844,18 @@ class DataToSTIXAdapter:
         _threat_actor_goals = obj.get("goals")
         _threat_actor_roles = obj.get("roles")
 
-        _date_first_seen = self._retrieve_date(json_date_obj, "first-seen")
-        _date_last_seen = self._retrieve_date(json_date_obj, "last-seen")
+        # _date_first_seen = self._retrieve_date(json_date_obj, "first-seen")
+        # _date_last_seen = self._retrieve_date(json_date_obj, "last-seen")
 
         _portal_link = self._retrieve_link(obj)
 
         threat_actor = None
         locations = None
 
-        if _threat_actor_name:
+        if _threat_actor_name and len(_threat_actor_name) > 2:
+            self.helper.connector_logger.debug(
+                f"Generating threat actor for name: {_threat_actor_name}"
+            )
             threat_actor = ds.ThreatActor(
                 name=_threat_actor_name,
                 c_type=_type,
@@ -655,111 +863,196 @@ class DataToSTIXAdapter:
                 tlp_color="red",
                 labels=[self.collection],
                 aliases=_threat_actor_aliases,
-                first_seen=_date_first_seen,
-                last_seen=_date_last_seen,
+                # first_seen=_date_first_seen,
+                # last_seen=_date_last_seen,
                 goals=_threat_actor_goals,
                 roles=_threat_actor_roles,
             )
             threat_actor.set_description(_threat_actor_description)
             threat_actor.generate_external_references(_portal_link)
             threat_actor.generate_stix_objects()
+            self.helper.connector_logger.debug(
+                f"Generated STIX threat actor object for name: {_threat_actor_name}"
+            )
 
             base_locations = []
             if _threat_actor_country:
                 base_locations = self.generate_locations(
                     [_threat_actor_country], change_type_to="base-location"
                 )
+                self.helper.connector_logger.debug(
+                    f"Generated {len(base_locations)} base locations"
+                )
             target_locations = []
             if _threat_actor_targeted_countries:
                 target_locations = self.generate_locations(
                     _threat_actor_targeted_countries, change_type_to="target-location"
                 )
+                self.helper.connector_logger.debug(
+                    f"Generated {len(target_locations)} target locations"
+                )
 
             locations = base_locations + target_locations
 
             if _threat_actor_name and base_locations:
-                self._generate_relations(threat_actor, base_locations)
+                self._generate_relations(
+                    main_obj=threat_actor,
+                    related_objects=base_locations,
+                    helper=self.helper,
+                )
+                self.helper.connector_logger.debug(
+                    "Generated relations for base locations"
+                )
 
             if _threat_actor_name and target_locations:
-                self._generate_relations(threat_actor, target_locations)
+                self._generate_relations(
+                    main_obj=threat_actor,
+                    related_objects=target_locations,
+                    helper=self.helper,
+                )
+                self.helper.connector_logger.debug(
+                    "Generated relations for target locations"
+                )
 
-            self._generate_relations(threat_actor, related_objects)
+            self._generate_relations(
+                main_obj=threat_actor,
+                related_objects=related_objects,
+                helper=self.helper,
+            )
+            self.helper.connector_logger.debug(
+                "Generated relations for related objects"
+            )
 
             threat_actor.add_relationships_to_stix_objects()
+            self.helper.connector_logger.debug(
+                "Added relationships to STIX threat actor objects"
+            )
 
+        self.helper.connector_logger.info(
+            "Completed generation of STIX threat actor objects"
+        )
         return threat_actor, locations
 
     def generate_stix_intrusion_set(self, obj, related_objects, json_date_obj=None):
+        self.helper.connector_logger.info(
+            "Starting generation of STIX intrusion set objects"
+        )
         if not obj:
-            return None
+            self.helper.connector_logger.warning(
+                "No object provided for intrusion set generation"
+            )
+            return None, None
 
         _type = "intrusion-set"
         # _label = "threat_actor"
         _global_label = self.ta_global_label
         # _country_type = "country"
 
-        _threat_actor_name = obj.get("name")
-        # _threat_actor_country = obj.get("country")
-        # _threat_actor_targeted_countries = obj.get("targeted_countries")
-        _threat_actor_aliases = obj.get("aliases")
-        _threat_actor_description = obj.get("description")
-        _threat_actor_goals = obj.get("goals")
-        _threat_actor_roles = obj.get("roles")
+        _intrusion_set_name = obj.get("name")
+        _intrusion_set_country = obj.get("country")
+        _intrusion_set_targeted_countries = obj.get("targeted_countries")
+        _intrusion_set_aliases = obj.get("aliases")
+        _intrusion_set_description = obj.get("description")
+        _intrusion_set_goals = obj.get("goals")
+        _intrusion_set_roles = obj.get("roles")
 
-        _date_first_seen = self._retrieve_date(json_date_obj, "first-seen")
-        _date_last_seen = self._retrieve_date(json_date_obj, "last-seen")
+        # _date_first_seen = self._retrieve_date(json_date_obj, "first-seen")
+        # _date_last_seen = self._retrieve_date(json_date_obj, "last-seen")
 
         _portal_link = self._retrieve_link(obj)
 
         intrusion_set = None
-        # locations = None
+        locations = None
 
-        if _threat_actor_name:
+        if _intrusion_set_name and len(_intrusion_set_name) > 2:
+            self.helper.connector_logger.debug(
+                f"Generating intrusion set for name: {_intrusion_set_name}"
+            )
             intrusion_set = ds.IntrusionSet(
-                name=_threat_actor_name,
+                name=_intrusion_set_name,
                 c_type=_type,
                 global_label=_global_label,
                 tlp_color="red",
                 labels=[self.collection],
-                aliases=_threat_actor_aliases,
-                first_seen=_date_first_seen,
-                last_seen=_date_last_seen,
-                goals=_threat_actor_goals,
-                roles=_threat_actor_roles,
+                aliases=_intrusion_set_aliases,
+                # first_seen=_date_first_seen,
+                # last_seen=_date_last_seen,
+                goals=_intrusion_set_goals,
+                roles=_intrusion_set_roles,
             )
-            intrusion_set.set_description(_threat_actor_description)
+            intrusion_set.set_description(_intrusion_set_description)
             intrusion_set.generate_external_references(_portal_link)
             intrusion_set.generate_stix_objects()
+            self.helper.connector_logger.debug(
+                f"Generated STIX intrusion set object for name: {_intrusion_set_name}"
+            )
 
-            # base_locations = []
-            # if _threat_actor_country:
-            #     base_locations = self.generate_locations(
-            #         [_threat_actor_country], change_type_to="base-location"
-            #     )
-            # target_locations = []
-            # if _threat_actor_targeted_countries:
-            #     target_locations = self.generate_locations(
-            #         _threat_actor_targeted_countries, change_type_to="target-location"
-            #     )
+            base_locations = []
+            if _intrusion_set_country:
+                base_locations = self.generate_locations(
+                    [_intrusion_set_country], change_type_to="base-location"
+                )
+                self.helper.connector_logger.debug(
+                    f"Generated {len(base_locations)} base locations"
+                )
+            target_locations = []
+            if _intrusion_set_targeted_countries:
+                target_locations = self.generate_locations(
+                    _intrusion_set_targeted_countries, change_type_to="target-location"
+                )
+                self.helper.connector_logger.debug(
+                    f"Generated {len(target_locations)} target locations"
+                )
 
-            # locations = base_locations + target_locations
-            #
-            # if _threat_actor_name and base_locations:
-            #     self._generate_relations(intrusion_set, base_locations)
-            #
-            # if _threat_actor_name and target_locations:
-            #     self._generate_relations(intrusion_set, target_locations)
+            locations = base_locations + target_locations
 
-            self._generate_relations(intrusion_set, related_objects)
+            if _intrusion_set_name and base_locations:
+                self._generate_relations(
+                    main_obj=intrusion_set,
+                    related_objects=base_locations,
+                    helper=self.helper,
+                )
+                self.helper.connector_logger.debug(
+                    "Generated relations for base locations"
+                )
+
+            if _intrusion_set_name and target_locations:
+                self._generate_relations(
+                    main_obj=intrusion_set,
+                    related_objects=target_locations,
+                    helper=self.helper,
+                )
+                self.helper.connector_logger.debug(
+                    "Generated relations for target locations"
+                )
+
+            self._generate_relations(
+                main_obj=intrusion_set,
+                related_objects=related_objects,
+                helper=self.helper,
+            )
+            self.helper.connector_logger.debug(
+                "Generated relations for related objects"
+            )
 
             intrusion_set.add_relationships_to_stix_objects()
+            self.helper.connector_logger.debug(
+                "Added relationships to STIX intrusion set objects"
+            )
 
-        return intrusion_set  # , locations
+        self.helper.connector_logger.info(
+            "Completed generation of STIX intrusion set objects"
+        )
+        return intrusion_set, locations
 
     def generate_stix_file(
         self, obj, json_date_obj=None, related_objects=None, file_is_ioc=True
     ):
+        self.helper.connector_logger.info("Starting generation of STIX file objects")
         if not obj:
+            self.helper.connector_logger.warning(
+                "No object provided for file generation"
+            )
             return list()
 
         _description = obj.get("__")
@@ -772,6 +1065,7 @@ class DataToSTIXAdapter:
         _stix_objects = list()
 
         if _events:
+            self.helper.connector_logger.debug(f"Processing {len(_events)} file events")
             for _e in _events:
                 _md5 = _e.get("md5", None)
                 _sha1 = _e.get("sha1", None)
@@ -795,6 +1089,9 @@ class DataToSTIXAdapter:
                         )
                         _sha256 = None
                 hashes = [_md5, _sha1, _sha256]
+                self.helper.connector_logger.debug(
+                    f"Processing file hashes: MD5={_md5}, SHA1={_sha1}, SHA256={_sha256}"
+                )
 
                 if any(hashes):
                     file = ds.FileHash(
@@ -808,12 +1105,25 @@ class DataToSTIXAdapter:
                     file.set_valid_from(valid_from)
                     file.set_valid_until(valid_until)
                     file.generate_stix_objects()
+                    self.helper.connector_logger.debug("Generated STIX file object")
 
-                    self._generate_relations(file, related_objects, is_ioc=file_is_ioc)
+                    self._generate_relations(
+                        main_obj=file,
+                        related_objects=related_objects,
+                        is_ioc=file_is_ioc,
+                        helper=self.helper,
+                    )
+                    self.helper.connector_logger.debug(
+                        "Generated relations for file object"
+                    )
 
                     file.add_relationships_to_stix_objects()
+                    self.helper.connector_logger.debug(
+                        "Added relationships to STIX file object"
+                    )
 
                     _stix_objects.append(file)
+
         else:
             _md5 = obj.get("md5", None)
             _sha1 = obj.get("sha1", None)
@@ -837,6 +1147,9 @@ class DataToSTIXAdapter:
                     )
                     _sha256 = None
             hashes = [_md5, _sha1, _sha256]
+            self.helper.connector_logger.debug(
+                f"Processing file hashes: MD5={_md5}, SHA1={_sha1}, SHA256={_sha256}"
+            )
 
             if any(hashes):
                 file = ds.FileHash(
@@ -850,13 +1163,28 @@ class DataToSTIXAdapter:
                 file.set_valid_from(valid_from)
                 file.set_valid_until(valid_until)
                 file.generate_stix_objects()
+                self.helper.connector_logger.debug("Generated STIX file object")
 
-                self._generate_relations(file, related_objects, is_ioc=file_is_ioc)
+                self._generate_relations(
+                    main_obj=file,
+                    related_objects=related_objects,
+                    is_ioc=file_is_ioc,
+                    helper=self.helper,
+                )
+                self.helper.connector_logger.debug(
+                    "Generated relations for file object"
+                )
 
                 file.add_relationships_to_stix_objects()
+                self.helper.connector_logger.debug(
+                    "Added relationships to STIX file object"
+                )
 
                 _stix_objects.append(file)
 
+        self.helper.connector_logger.info(
+            f"Generated {len(_stix_objects)} STIX file objects"
+        )
         return _stix_objects
 
     def generate_stix_network(
@@ -868,42 +1196,97 @@ class DataToSTIXAdapter:
         domain_is_ioc=False,
         ip_is_ioc=False,
     ):
+        self.helper.connector_logger.info("Starting generation of STIX network objects")
         if not obj:
+            self.helper.connector_logger.warning(
+                "No object provided for network generation"
+            )
             return list(), list(), list()
 
         _description = obj.get("__")
         _events = obj.get("network_list", None)
+        self.helper.connector_logger.debug(
+            f"Processing network events: {len(_events) if _events else 0}"
+        )
 
         valid_from, valid_until = self._retrieve_ttl_dates(json_date_obj)
+        self.helper.connector_logger.debug(
+            f"TTL dates for network objects: valid_from={valid_from}, valid_until={valid_until}"
+        )
 
         _domain_stix_objects = list()
         _url_stix_objects = list()
         _ip_stix_objects = list()
 
         if _events:
+            self.helper.connector_logger.debug(
+                f"Processing {len(_events)} network events"
+            )
             for _e in _events:
                 _domain = _e.get("domain")
                 _url = _e.get("url")
                 _ips = _e.get("ip-address")
-
+                self.helper.connector_logger.debug(
+                    f"Processing event with domain: {_domain}, url: {_url}, ip-address: {_ips}"
+                )
                 domain = None
+
                 if _domain:
-                    domain = self.generate_stix_domain(_domain)
-                    domain.is_ioc = domain_is_ioc
-                    domain.set_valid_from(valid_from)
-                    domain.set_valid_until(valid_until)
-                    domain.generate_stix_objects()
-
-                    self._generate_relations(
-                        domain, related_objects, is_ioc=domain_is_ioc
-                    )
-
-                    domain.add_relationships_to_stix_objects()
-
-                    _domain_stix_objects.append(domain)
+                    self.helper.connector_logger.debug(f"Processing domain: {_domain}")
+                    if self.is_ipv4(_domain):
+                        self.helper.connector_logger.info(
+                            f"Domain {_domain} identified as IPv4"
+                        )
+                        ip = self.generate_stix_ipv4(_domain)
+                        ip.set_description(_description)
+                        ip.is_ioc = domain_is_ioc
+                        ip.set_valid_from(valid_from)
+                        ip.set_valid_until(valid_until)
+                        ip.generate_stix_objects()
+                        self.helper.connector_logger.debug(
+                            f"Generated STIX IPv4 object for: {_domain}"
+                        )
+                        self._generate_relations(
+                            main_obj=ip,
+                            related_objects=related_objects,
+                            is_ioc=domain_is_ioc,
+                            helper=self.helper,
+                        )
+                        self.helper.connector_logger.debug(
+                            f"Generated relations for IPv4: {_domain}"
+                        )
+                        ip.add_relationships_to_stix_objects()
+                        _ip_stix_objects.append(ip)
+                        self.helper.connector_logger.debug(
+                            "Added IPv4 object to IP list"
+                        )
+                    else:
+                        domain = self.generate_stix_domain(_domain)
+                        domain.is_ioc = domain_is_ioc
+                        domain.set_valid_from(valid_from)
+                        domain.set_valid_until(valid_until)
+                        domain.generate_stix_objects()
+                        self.helper.connector_logger.debug(
+                            f"Generated STIX domain object for: {_domain}"
+                        )
+                        self._generate_relations(
+                            main_obj=domain,
+                            related_objects=related_objects,
+                            is_ioc=domain_is_ioc,
+                            helper=self.helper,
+                        )
+                        self.helper.connector_logger.debug(
+                            f"Generated relations for domain: {_domain}"
+                        )
+                        domain.add_relationships_to_stix_objects()
+                        _domain_stix_objects.append(domain)
+                        self.helper.connector_logger.debug(
+                            "Added domain object to domain list"
+                        )
 
                 url = None
                 if _url:
+                    self.helper.connector_logger.debug(f"Processing URL: {_url}")
                     url = self.generate_stix_url(_url)
                     url.is_ioc = url_is_ioc
                     url.set_valid_from(valid_from)
@@ -915,55 +1298,126 @@ class DataToSTIXAdapter:
                         [(link_id, link_url, link_description)]
                     )
                     url.generate_stix_objects()
-
-                    self._generate_relations(url, related_objects, is_ioc=url_is_ioc)
-
+                    self.helper.connector_logger.debug(
+                        f"Generated STIX URL object for: {_url}"
+                    )
+                    self._generate_relations(
+                        main_obj=url,
+                        related_objects=related_objects,
+                        is_ioc=url_is_ioc,
+                        helper=self.helper,
+                    )
+                    self.helper.connector_logger.debug(
+                        f"Generated relations for URL: {_url}"
+                    )
                     url.add_relationships_to_stix_objects()
-
                     _url_stix_objects.append(url)
+                    self.helper.connector_logger.debug("Added URL object to URL list")
 
                 if _ips:
+                    self.helper.connector_logger.debug(f"Processing IPs: {_ips}")
                     for _ip in _ips:
                         ip = self.generate_stix_ipv4(_ip)
-
                         ip.set_description(_description)
                         ip.is_ioc = ip_is_ioc
                         ip.set_valid_from(valid_from)
                         ip.set_valid_until(valid_until)
                         ip.generate_stix_objects()
-
-                        self._generate_relations(ip, related_objects, is_ioc=ip_is_ioc)
-
+                        self.helper.connector_logger.debug(
+                            f"Generated STIX IPv4 object for: {_ip}"
+                        )
+                        self._generate_relations(
+                            main_obj=ip,
+                            related_objects=related_objects,
+                            is_ioc=ip_is_ioc,
+                            helper=self.helper,
+                        )
+                        self.helper.connector_logger.debug(
+                            f"Generated relations for IP: {_ip}"
+                        )
                         if domain:
-                            self._generate_relations(ip, [domain])
+                            self._generate_relations(
+                                main_obj=ip,
+                                related_objects=[domain],
+                                helper=self.helper,
+                            )
+                            self.helper.connector_logger.debug(
+                                f"Generated relations between IP: {_ip} and domain: {_domain}"
+                            )
                         if url:
-                            self._generate_relations(ip, [url])
-
+                            self._generate_relations(
+                                main_obj=ip, related_objects=[url], helper=self.helper
+                            )
+                            self.helper.connector_logger.debug(
+                                f"Generated relations between IP: {_ip} and URL: {_url}"
+                            )
                         ip.add_relationships_to_stix_objects()
-
                         _ip_stix_objects.append(ip)
+                        self.helper.connector_logger.debug("Added IP object to IP list")
 
         else:
             _domain = obj.get("domain")
             _url = obj.get("url")
             _ip = obj.get("ip-address")
-
+            self.helper.connector_logger.debug(
+                f"Processing single network object: domain={_domain}, url={_url}, ip={_ip}"
+            )
             domain = None
+
             if _domain:
-                domain = self.generate_stix_domain(_domain)
-                domain.is_ioc = domain_is_ioc
-                domain.set_valid_from(valid_from)
-                domain.set_valid_until(valid_until)
-                domain.generate_stix_objects()
-
-                self._generate_relations(domain, related_objects, is_ioc=domain_is_ioc)
-
-                domain.add_relationships_to_stix_objects()
-
-                _domain_stix_objects.append(domain)
+                self.helper.connector_logger.debug(f"Processing domain: {_domain}")
+                if self.is_ipv4(_domain):
+                    self.helper.connector_logger.info(
+                        f"Domain {_domain} identified as IPv4"
+                    )
+                    ip = self.generate_stix_ipv4(_domain)
+                    ip.set_description(_description)
+                    ip.is_ioc = domain_is_ioc
+                    ip.set_valid_from(valid_from)
+                    ip.set_valid_until(valid_until)
+                    ip.generate_stix_objects()
+                    self.helper.connector_logger.debug(
+                        f"Generated STIX IPv4 object for: {_domain}"
+                    )
+                    self._generate_relations(
+                        main_obj=ip,
+                        related_objects=related_objects,
+                        is_ioc=domain_is_ioc,
+                        helper=self.helper,
+                    )
+                    self.helper.connector_logger.debug(
+                        f"Generated relations for IPv4: {_domain}"
+                    )
+                    ip.add_relationships_to_stix_objects()
+                    _ip_stix_objects.append(ip)
+                    self.helper.connector_logger.debug("Added IPv4 object to IP list")
+                else:
+                    domain = self.generate_stix_domain(_domain)
+                    domain.is_ioc = domain_is_ioc
+                    domain.set_valid_from(valid_from)
+                    domain.set_valid_until(valid_until)
+                    domain.generate_stix_objects()
+                    self.helper.connector_logger.debug(
+                        f"Generated STIX domain object for: {_domain}"
+                    )
+                    self._generate_relations(
+                        main_obj=domain,
+                        related_objects=related_objects,
+                        is_ioc=domain_is_ioc,
+                        helper=self.helper,
+                    )
+                    self.helper.connector_logger.debug(
+                        f"Generated relations for domain: {_domain}"
+                    )
+                    domain.add_relationships_to_stix_objects()
+                    _domain_stix_objects.append(domain)
+                    self.helper.connector_logger.debug(
+                        "Added domain object to domain list"
+                    )
 
             url = None
             if _url:
+                self.helper.connector_logger.debug(f"Processing URL: {_url}")
                 url = self.generate_stix_url(_url)
                 url.is_ioc = url_is_ioc
                 url.set_valid_from(valid_from)
@@ -975,33 +1429,61 @@ class DataToSTIXAdapter:
                     [(link_id, link_url, link_description)]
                 )
                 url.generate_stix_objects()
-
-                self._generate_relations(url, related_objects, is_ioc=url_is_ioc)
-
+                self.helper.connector_logger.debug(
+                    f"Generated STIX URL object for: {_url}"
+                )
+                self._generate_relations(
+                    main_obj=url,
+                    related_objects=related_objects,
+                    is_ioc=url_is_ioc,
+                    helper=self.helper,
+                )
+                self.helper.connector_logger.debug(
+                    f"Generated relations for URL: {_url}"
+                )
                 url.add_relationships_to_stix_objects()
-
                 _url_stix_objects.append(url)
+                self.helper.connector_logger.debug("Added URL object to URL list")
 
             if _ip:
+                self.helper.connector_logger.debug(f"Processing IP: {_ip}")
                 ip = self.generate_stix_ipv4(_ip)
-
                 ip.set_description(_description)
                 ip.is_ioc = ip_is_ioc
                 ip.set_valid_from(valid_from)
                 ip.set_valid_until(valid_until)
                 ip.generate_stix_objects()
-
-                self._generate_relations(ip, related_objects, is_ioc=ip_is_ioc)
-
+                self.helper.connector_logger.debug(
+                    f"Generated STIX IPv4 object for: {_ip}"
+                )
+                self._generate_relations(
+                    main_obj=ip,
+                    related_objects=related_objects,
+                    is_ioc=ip_is_ioc,
+                    helper=self.helper,
+                )
+                self.helper.connector_logger.debug(f"Generated relations for IP: {_ip}")
                 if domain:
-                    self._generate_relations(ip, [domain])
+                    self._generate_relations(
+                        main_obj=ip, related_objects=[domain], helper=self.helper
+                    )
+                    self.helper.connector_logger.debug(
+                        f"Generated relations between IP: {_ip} and domain: {_domain}"
+                    )
                 if url:
-                    self._generate_relations(ip, [url])
-
+                    self._generate_relations(
+                        main_obj=ip, related_objects=[url], helper=self.helper
+                    )
+                    self.helper.connector_logger.debug(
+                        f"Generated relations between IP: {_ip} and URL: {_url}"
+                    )
                 ip.add_relationships_to_stix_objects()
-
                 _ip_stix_objects.append(ip)
+                self.helper.connector_logger.debug("Added IP object to IP list")
 
+        self.helper.connector_logger.info(
+            f"Generated STIX network objects: {len(_domain_stix_objects)} domains, {len(_url_stix_objects)} URLs, {len(_ip_stix_objects)} IPs"
+        )
         return _domain_stix_objects, _url_stix_objects, _ip_stix_objects
 
     def generate_stix_report(
@@ -1012,7 +1494,11 @@ class DataToSTIXAdapter:
         json_malware_report_obj,
         json_threat_actor_obj,
     ):
+        self.helper.connector_logger.info("Starting generation of STIX report object")
         if not obj:
+            self.helper.connector_logger.warning(
+                "No object provided for report generation"
+            )
             return None
 
         _description = obj.get("title")
@@ -1029,6 +1515,9 @@ class DataToSTIXAdapter:
         report_links = (
             _report_portal_links + _threat_actor_portal_links + _malware_portal_links
         )
+        self.helper.connector_logger.debug(
+            f"Retrieved {len(report_links)} portal links for report"
+        )
 
         ta_label = json_threat_actor_obj.get("name")
 
@@ -1043,13 +1532,21 @@ class DataToSTIXAdapter:
         report.set_description(f"Report {_id}: {_description}")
         report.generate_external_references(report_links)
         report.generate_stix_objects()
+        self.helper.connector_logger.debug(
+            f"Generated STIX report object for ID: {_id}"
+        )
 
+        self.helper.connector_logger.info("Completed generation of STIX report object")
         return report
 
     def generate_stix_yara(
         self, obj, json_date_obj=None, related_objects=None, yara_is_ioc=True
     ):
+        self.helper.connector_logger.info("Starting generation of STIX YARA object")
         if not obj:
+            self.helper.connector_logger.warning(
+                "No object provided for YARA generation"
+            )
             return None
 
         _yara = obj.get("yara")
@@ -1074,17 +1571,30 @@ class DataToSTIXAdapter:
         yara.set_valid_from(valid_from)
         yara.set_valid_until(valid_until)
         yara.generate_stix_objects()
+        self.helper.connector_logger.debug("Generated STIX YARA object")
 
-        self._generate_relations(yara, related_objects, is_ioc=yara_is_ioc)
+        self._generate_relations(
+            main_obj=yara,
+            related_objects=related_objects,
+            is_ioc=yara_is_ioc,
+            helper=self.helper,
+        )
+        self.helper.connector_logger.debug("Generated relations for YARA object")
 
         yara.add_relationships_to_stix_objects()
+        self.helper.connector_logger.debug("Added relationships to STIX YARA object")
 
+        self.helper.connector_logger.info("Completed generation of STIX YARA object")
         return yara
 
     def generate_stix_suricata(
         self, obj, json_date_obj=None, related_objects=None, suricata_is_ioc=True
     ):
+        self.helper.connector_logger.info("Starting generation of STIX Suricata object")
         if not obj:
+            self.helper.connector_logger.warning(
+                "No object provided for Suricata generation"
+            )
             return None
 
         _suricata = obj.get("signature")
@@ -1109,17 +1619,36 @@ class DataToSTIXAdapter:
         suricata.set_valid_from(valid_from)
         suricata.set_valid_until(valid_until)
         suricata.generate_stix_objects()
+        self.helper.connector_logger.debug("Generated STIX Suricata object")
 
-        self._generate_relations(suricata, related_objects, is_ioc=suricata_is_ioc)
+        self._generate_relations(
+            main_obj=suricata,
+            related_objects=related_objects,
+            is_ioc=suricata_is_ioc,
+            helper=self.helper,
+        )
+        self.helper.connector_logger.debug("Generated relations for Suricata object")
 
         suricata.add_relationships_to_stix_objects()
+        self.helper.connector_logger.debug(
+            "Added relationships to STIX Suricata object"
+        )
 
+        self.helper.connector_logger.info(
+            "Completed generation of STIX Suricata object"
+        )
         return suricata
 
     def generate_stix_ungrouped(
         self, obj, json_date_obj=None, related_objects=None, email_is_ioc=True
     ):
+        self.helper.connector_logger.info(
+            "Starting generation of STIX ungrouped (email) objects"
+        )
         if not obj:
+            self.helper.connector_logger.warning(
+                "No object provided for ungrouped generation"
+            )
             return None
 
         _emails = obj.get("emails")
@@ -1131,6 +1660,7 @@ class DataToSTIXAdapter:
         _stix_objects = list()
 
         for _email in _emails:
+            self.helper.connector_logger.debug(f"Processing email: {_email}")
             email = ds.Email(
                 name=_email,
                 c_type=_type,
@@ -1141,11 +1671,28 @@ class DataToSTIXAdapter:
             email.set_valid_from(valid_from)
             email.set_valid_until(valid_until)
             email.generate_stix_objects()
+            self.helper.connector_logger.debug(
+                f"Generated STIX email object for: {_email}"
+            )
 
-            self._generate_relations(email, related_objects, is_ioc=email_is_ioc)
+            self._generate_relations(
+                main_obj=email,
+                related_objects=related_objects,
+                is_ioc=email_is_ioc,
+                helper=self.helper,
+            )
+            self.helper.connector_logger.debug(
+                f"Generated relations for email: {_email}"
+            )
 
             email.add_relationships_to_stix_objects()
+            self.helper.connector_logger.debug(
+                f"Added relationships to STIX email object for: {_email}"
+            )
 
             _stix_objects.append(email)
 
+        self.helper.connector_logger.info(
+            f"Generated {len(_stix_objects)} STIX email objects"
+        )
         return _stix_objects

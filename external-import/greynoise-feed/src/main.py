@@ -44,6 +44,13 @@ class GreyNoiseFeed:
             isNumber=True,
             default=75,
         )
+        self.indicator_score_suspicious = get_config_variable(
+            "GREYNOISE_INDICATOR_SCORE_SUSPICIOUS",
+            ["greynoisefeed", "indicator_score_suspicious"],
+            config,
+            isNumber=True,
+            default=50,
+        )
         self.indicator_score_benign = get_config_variable(
             "GREYNOISE_INDICATOR_SCORE_BENIGN",
             ["greynoisefeed", "indicator_score_benign"],
@@ -76,6 +83,12 @@ class GreyNoiseFeed:
             config,
             default=False,
         )
+        self.greynoise_import_destination_sightings = get_config_variable(
+            "GREYNOISE_IMPORT_DESTINATION_SIGHTINGS",
+            ["greynoisefeed", "import_destination_sightings"],
+            config,
+            default=False,
+        )
         self.greynoise_interval = get_config_variable(
             "GREYNOISE_INTERVAL",
             ["greynoisefeed", "interval"],
@@ -87,6 +100,10 @@ class GreyNoiseFeed:
             type="Organization",
             name=self.greynoise_ent_name,
             description=self.greynoise_ent_desc,
+            custom_properties={
+                "x_opencti_reliability": "B - Usually reliable",
+                "x_opencti_organization_type": "vendor",
+            },
         )
 
         # Cache for label
@@ -94,17 +111,34 @@ class GreyNoiseFeed:
 
     def get_feed_query(self, feed_type):
         query = ""
-        if feed_type.lower() not in ["benign", "malicious", "benign+malicious", "all"]:
+        if feed_type.lower() not in [
+            "benign",
+            "malicious",
+            "suspicious",
+            "benign+malicious",
+            "benign+suspicious+malicious",
+            "malicious+suspicious",
+            "all",
+        ]:
             self.helper.log_error(
-                "Value for feed_type is not one of: benign, malicious, or all"
+                "Value for feed_type is not valid.  Valid options are: benign, malicious, suspicious, "
+                "benign+malicious, benign+suspicious+malicious, malicious+suspicious, all"
             )
             exit(1)
         elif feed_type.lower() == "benign":
             query = "last_seen:1d classification:benign"
         elif feed_type.lower() == "malicious":
             query = "last_seen:1d classification:malicious"
+        elif feed_type.lower() == "suspicious":
+            query = "last_seen:1d classification:suspicious"
         elif feed_type.lower() == "benign+malicious":
             query = "last_seen:1d (classification:malicious OR classification:benign)"
+        elif feed_type.lower() == "malicious+suspicious":
+            query = (
+                "last_seen:1d (classification:malicious OR classification:suspicious)"
+            )
+        elif feed_type.lower() == "benign+suspicious+malicious":
+            query = "last_seen:1d (-classification:unknown)"
         elif feed_type.lower() == "all":
             query = "last_seen:1d"
 
@@ -137,6 +171,10 @@ class GreyNoiseFeed:
             # Create label GreyNoise "malicious"
             self._create_custom_label("gn-classification: malicious", "#ff8178")
 
+        elif data["classification"] == "suspicious":
+            # Create label GreyNoise "suspicious"
+            self._create_custom_label("gn-classification: suspicious", "#e3d922")
+
         if data["bot"] is True:
             # Create label for "Known Bot Activity"
             self._create_custom_label("Known BOT Activity", "#7e4ec2")
@@ -145,24 +183,23 @@ class GreyNoiseFeed:
             # Create label for "Known Tor Exit Node"
             self._create_custom_label("Known TOR Exit Node", "#7e4ec2")
 
+        if data["vpn"] is True:
+            # Create label for "Known VPN"
+            self._create_custom_label("Known VPN", "#7e4ec2")
+
         # Create all Labels in entity_tags
         for tag in entity_tags:
             tag_details_matching = self._get_match(data_tags["metadata"], "name", tag)
             if tag_details_matching is not None:
                 tag_details = tag_details_matching
             else:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] The tag was created, but its details were not correctly recognized by GreyNoise,"
-                    " which is often related to a name problem.",
-                    {"Tag_name": tag},
-                )
                 self.all_labels.append(tag)
                 continue
 
             # Create red label when malicious intent and type not category worm and activity
             if tag_details["intention"] == "malicious" and tag_details[
                 "category"
-            ] not in ["worm", "activity"]:
+            ] not in ["worm"]:
                 self._create_custom_label(f"{tag}", "#ff8178")
 
             # If category is worm, prepare malware object
@@ -175,19 +212,12 @@ class GreyNoiseFeed:
                 all_malwares.append(malware_worm)
                 self.all_labels.append(tag)
 
-            # If category is malicious and activity, prepare malware object
-            elif (
-                tag_details["intention"] == "malicious"
-                and tag_details["category"] == "activity"
-            ):
-                malware_malicious_activity = {
-                    "name": f"{tag}",
-                    "description": f"{tag_details['description']}",
-                    "type": "malicious_activity",
-                }
-                all_malwares.append(malware_malicious_activity)
-                self.all_labels.append(tag)
-
+            elif tag_details["intention"] == "benign":
+                # Create green label for benign tags
+                self._create_custom_label(f"{tag_details['name']}", "#06c93a")
+            elif tag_details["intention"] == "suspicious":
+                # Create yellow label for suspicious tags
+                self._create_custom_label(f"{tag_details['name']}", "#e3d922")
             else:
                 # Create white label otherwise
                 self._create_custom_label(f"{tag}", "#ffffff")
@@ -223,6 +253,16 @@ class GreyNoiseFeed:
     def _get_match(data, key, value):
         return next((x for x in data if x[key] == value), None)
 
+    def _get_indicator_score(self, classification):
+        if classification == "malicious":
+            score = self.indicator_score_malicious
+        elif classification == "suspicious":
+            score = self.indicator_score_suspicious
+        else:
+            score = self.indicator_score_benign
+
+        return score
+
     def _process_data(self, work_id, session, ips_list):
         bundle_entities = []
         bundle_relationships = []
@@ -241,14 +281,15 @@ class GreyNoiseFeed:
 
             labels, malwares = self._process_labels(ip, json_data_tags)
 
-            first_seen = parse(ip["first_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
-            if ip["first_seen"] == ip["last_seen"]:
+            if "first_seen" in ip and ip["first_seen"]:
+                first_seen = parse(ip["first_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
+                last_seen = parse(ip["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
+            else:
+                first_seen = parse(ip["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
                 last_seen = datetime.strptime(ip["last_seen"], "%Y-%m-%d") + timedelta(
                     hours=23
                 )
                 last_seen = last_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
-            else:
-                last_seen = parse(ip["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
 
             # Generate ExternalReference
             external_reference = stix2.ExternalReference(
@@ -270,9 +311,7 @@ class GreyNoiseFeed:
                 created=first_seen,
                 custom_properties={
                     "x_opencti_score": (
-                        self.indicator_score_malicious
-                        if ip["classification"] == "malicious"
-                        else self.indicator_score_benign
+                        self._get_indicator_score(ip["classification"])
                     ),
                     "x_opencti_main_observable_type": "IPv4-Addr",
                 },
@@ -287,9 +326,7 @@ class GreyNoiseFeed:
                 custom_properties={
                     "x_opencti_description": description,
                     "x_opencti_score": (
-                        self.indicator_score_malicious
-                        if ip["classification"] == "malicious"
-                        else self.indicator_score_benign
+                        self._get_indicator_score(ip["classification"])
                     ),
                     "created_by_ref": self.identity["standard_id"],
                     "labels": labels,
@@ -509,7 +546,10 @@ class GreyNoiseFeed:
                                 object_marking_refs=[stix2.TLP_WHITE],
                             )
                             bundle_relationships.append(stix_relationship_city_country)
-                    if "destination_countries" in metadata:
+                    if (
+                        self.greynoise_import_destination_sightings
+                        and "destination_countries" in metadata
+                    ):
                         for country in metadata["destination_countries"]:
                             stix_country_destination = stix2.Location(
                                 id=Location.generate_id(country, "Country"),
@@ -539,26 +579,6 @@ class GreyNoiseFeed:
                                 object_marking_refs=[stix2.TLP_GREEN],
                             )
                             bundle_relationships.append(stix_sighting_indicator)
-
-                            # stix_sighting_observable = stix2.Sighting(
-                            #    id=StixSightingRelationship.generate_id(
-                            #        stix_observable.id,
-                            #        stix_country_destination.id,
-                            #        first_seen,
-                            #        last_seen,
-                            #    ),
-                            #    sighting_of_ref="indicator--7eac24ff-8131-4400-9e56-cc8fe2c65078",  # Fake ID
-                            #    where_sighted_refs=[stix_country_destination.id],
-                            #    count=1,
-                            #    first_seen=first_seen,
-                            #    last_seen=last_seen,
-                            #    created_by_ref=self.identity["standard_id"],
-                            #    object_marking_refs=[stix2.TLP_GREEN],
-                            #    custom_properties={
-                            #        "x_opencti_sighting_of_ref": stix_observable.id,
-                            #    },
-                            # )
-                            # bundle_objects.append(stix_sighting_observable)
 
         # Creating the bundle from the list
         if len(bundle_entities) > 0:
@@ -634,6 +654,10 @@ class GreyNoiseFeed:
                         for ip in response["data"]:
                             ips_list.append(ip)
 
+                    if len(ips_list) >= self.greynoise_limit:
+                        complete = True
+                        ips_list = ips_list[0 : self.greynoise_limit]
+
                     while not complete:
                         self.helper.log_info(
                             "Query GreyNoise API - Next Results Page (" + query + ")"
@@ -649,8 +673,9 @@ class GreyNoiseFeed:
                             for ip in response["data"]:
                                 ips_list.append(ip)
 
-                            if len(ips_list) > self.greynoise_limit:
+                            if len(ips_list) >= self.greynoise_limit:
                                 complete = True
+                                ips_list = ips_list[0 : self.greynoise_limit]
 
                     self.helper.log_info("Query GreyNoise API - Completed")
                     self.helper.log_info(
@@ -659,9 +684,7 @@ class GreyNoiseFeed:
 
                     # Process
                     friendly_name = (
-                        "GreyNoise Feed connector run ("
-                        + str(self.greynoise_limit)
-                        + " IPs)"
+                        "GreyNoise Feed connector run (" + str(len(ips_list)) + " IPs)"
                     )
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name

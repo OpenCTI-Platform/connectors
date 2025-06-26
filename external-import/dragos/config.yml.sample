@@ -1,0 +1,8 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+dragos:
+  api_base_url: 'https://portal.dragos.com'
+  api_token: 'ChangeMe'
+  api_secret: 'ChangeMe'
