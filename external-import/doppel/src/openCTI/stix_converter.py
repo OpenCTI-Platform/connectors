@@ -2,7 +2,6 @@ import json
 import uuid
 
 from stix2 import Bundle, Identity, Indicator
-
 from utils.state_handler import parse_iso_datetime
 
 DOPPEL_IDENTITY = Identity(
