@@ -1,6 +1,10 @@
 import requests
-from tenacity import (Retrying, retry, retry_if_exception_type,
-                      stop_after_attempt, wait_exponential)
+from tenacity import (
+    Retrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 
 def log_retry(retry_state, helper):
@@ -11,7 +15,9 @@ def log_retry(retry_state, helper):
     )
 
 
-def fetch_alerts(helper, api_url, api_key, last_activity_timestamp, max_retries, retry_delay):
+def fetch_alerts(
+    helper, api_url, api_key, last_activity_timestamp, max_retries, retry_delay
+):
     headers = {"x-api-key": api_key, "accept": "application/json"}
     page = 0
     all_alerts = []

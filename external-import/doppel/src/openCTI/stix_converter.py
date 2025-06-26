@@ -1,6 +1,5 @@
 import json
 import uuid
-from datetime import datetime
 
 from stix2 import Bundle, Identity, Indicator
 

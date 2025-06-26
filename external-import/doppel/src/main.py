@@ -1,6 +1,4 @@
-import json
 import time
-from datetime import datetime
 
 from pycti import OpenCTIConnectorHelper
 
@@ -35,7 +33,12 @@ if __name__ == "__main__":
 
             API_URL = DOPPEL_API_BASE_URL + DOPPEL_ALERTS_ENDPOINT
             alerts = fetch_alerts(
-                helper, API_URL, API_KEY, last_activity_timestamp, MAX_RETRIES, RETRY_DELAY
+                helper,
+                API_URL,
+                API_KEY,
+                last_activity_timestamp,
+                MAX_RETRIES,
+                RETRY_DELAY,
             )
             helper.log_info(f"Fetched {len(alerts)} alerts from Doppel")
 
