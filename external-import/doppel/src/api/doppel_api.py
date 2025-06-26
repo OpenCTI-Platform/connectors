@@ -15,6 +15,7 @@ def log_retry(retry_state, helper):
     )
 
 
+# pylint: disable=too-many-arguments, too-many-positional-arguments
 def fetch_alerts(
     helper, api_url, api_key, last_activity_timestamp, max_retries, retry_delay
 ):
@@ -38,19 +39,21 @@ def fetch_alerts(
             before_sleep=lambda retry_state: log_retry(retry_state, helper),
         ):
             with attempt:
-                response = requests.get(api_url, headers=headers, params=params)
+                response = requests.get(api_url, headers=headers, params=params, timeout=30)
 
                 if response.status_code == 400:
                     helper.log_error(
                         "The request sent to the Doppel API is invalid. Check query parameters and payload format."
                     )
                     return []
-                elif response.status_code == 401:
+
+                if response.status_code == 401:
                     helper.log_error(
                         "Authentication failed! Check your Doppel API key."
                     )
                     return []
-                elif response.status_code == 403:
+
+                if response.status_code == 403:
                     helper.log_error(
                         "Access denied! Your Doppel API key does not have the required permissions."
                     )

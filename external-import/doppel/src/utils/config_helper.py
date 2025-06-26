@@ -12,7 +12,7 @@ def load_config():
     config = {}
 
     if os.path.isfile(config_path):
-        with open(config_path, "r") as file:
+        with open(config_path, "r", encoding="utf-8") as file:
             config = yaml.safe_load(file) or {}
 
     # Validate CONNECTOR_LOG_LEVEL
@@ -51,11 +51,11 @@ def validate_required_positive_integer(value, name):
     try:
         int_value = int(value)
         if int_value <= 0:
-            raise ValueError()
-    except ValueError:
+            raise ValueError(f"Configuration '{name}' must be a positive integer. Got: {value}")
+    except ValueError as exc:
         raise ValueError(
             f"Configuration '{name}' must be a positive integer. Got: {value}"
-        )
+        ) from exc
     return int_value
 
 
