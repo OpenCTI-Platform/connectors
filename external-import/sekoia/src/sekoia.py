@@ -269,12 +269,7 @@ class Sekoia(object):
 
     @staticmethod
     def _field_to_ignore(field: str) -> bool:
-        to_ignore = [
-            "x_ic_impacted_locations",
-            "x_ic_impacted_sectors",
-        ]
-
-        return (field.startswith("x_ic")) or field in to_ignore
+        return field.startswith("x_ic")
 
     def _retrieve_related_objects_and_relationships(self, indicators: List[Dict]):
         all_related_objects = []
