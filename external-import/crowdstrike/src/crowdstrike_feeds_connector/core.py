@@ -50,7 +50,6 @@ class CrowdStrike:
     _DEFAULT_INDICATOR_LOW_SCORE = 40
     _DEFAULT_INDICATOR_MEDIUM_SCORE = 60
     _DEFAULT_INDICATOR_HIGH_SCORE = 80
-    _DEFAULT_NO_FILE_TRIGGER_IMPORT = True
 
     _STATE_LAST_RUN = "last_run"
 
@@ -171,10 +170,6 @@ class CrowdStrike:
             )
 
         no_file_trigger_import = self.config.no_file_trigger_import
-        if no_file_trigger_import is None:
-            no_file_trigger_import = self._DEFAULT_NO_FILE_TRIGGER_IMPORT
-        else:
-            no_file_trigger_import = bool(no_file_trigger_import)
 
         author = self._create_author()
 

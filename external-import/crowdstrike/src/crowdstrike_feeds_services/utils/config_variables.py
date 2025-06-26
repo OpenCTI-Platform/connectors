@@ -214,4 +214,5 @@ class ConfigCrowdstrike:
             "CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT",
             ["crowdstrike", "no_file_trigger_import"],
             self.load,
+            default=True
         )
