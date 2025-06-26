@@ -1,10 +1,9 @@
 import time
 
-from pycti import OpenCTIConnectorHelper
-
 from api.doppel_api import fetch_alerts
 from openCTI.client import send_to_opencti
 from openCTI.stix_converter import convert_alert_to_bundle
+from pycti import OpenCTIConnectorHelper
 from utils.config_helper import load_config, load_connector_config
 from utils.constants import DOPPEL_ALERTS_ENDPOINT, DOPPEL_API_BASE_URL
 from utils.state_handler import get_last_run, set_last_run
