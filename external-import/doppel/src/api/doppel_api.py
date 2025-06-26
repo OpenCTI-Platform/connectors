@@ -39,7 +39,9 @@ def fetch_alerts(
             before_sleep=lambda retry_state: log_retry(retry_state, helper),
         ):
             with attempt:
-                response = requests.get(api_url, headers=headers, params=params, timeout=30)
+                response = requests.get(
+                    api_url, headers=headers, params=params, timeout=30
+                )
 
                 if response.status_code == 400:
                     helper.log_error(
