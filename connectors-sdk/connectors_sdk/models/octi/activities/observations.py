@@ -1,7 +1,7 @@
 """Offer observations OpenCTI entities."""
 
 import ipaddress
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Any, Literal, Optional
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
@@ -16,7 +16,7 @@ from pydantic import AwareDatetime, Field, field_validator
 
 
 @MODEL_REGISTRY.register
-class Observable(BaseIdentifiedEntity):
+class Observable(ABC, BaseIdentifiedEntity):
     """Base class for OpenCTI Observables.
 
     This class must be subclassed to create specific observable types.
@@ -186,7 +186,7 @@ class Indicator(BaseIdentifiedEntity):
 
     create_observables: Optional[bool] = Field(
         None,
-        description="If True, observables and `based-on` relationships will be created for this indicator (Delegated to OpenCTI Platform). You can also manually define the Observable objects and use IndicatorBasedOnObservableRelationship for more granularity.",
+        description="If True, observables and `based-on` relationships will be created for this indicator (Delegated to OpenCTI Platform). You can also manually define the Observable objects and use BasedOnRelationship for more granularity.",
     )
 
     def to_stix2_object(self) -> stix2.v21.Indicator:
