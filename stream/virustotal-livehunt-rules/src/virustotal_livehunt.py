@@ -177,7 +177,7 @@ class VTConnector:
 
             extensions_data = data.get("extensions")
             for each_extenstion in extensions_data:
-                # try:
+                try:
                 detection_value = (
                     data.get("extensions").get(each_extenstion).get("detection")
                 )
