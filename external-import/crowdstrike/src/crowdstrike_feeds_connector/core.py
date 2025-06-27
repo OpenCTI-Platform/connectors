@@ -169,6 +169,8 @@ class CrowdStrike:
                 indicator_unwanted_labels_str
             )
 
+        no_file_trigger_import = self.config.no_file_trigger_import
+
         author = self._create_author()
 
         # Create OpenCTI connector helper.
@@ -216,6 +218,7 @@ class CrowdStrike:
                 report_type,
                 report_guess_malware,
                 indicator_config,
+                no_file_trigger_import,
             )
 
             importers.append(report_importer)
@@ -239,6 +242,7 @@ class CrowdStrike:
                 indicator_high_score=indicator_high_score,
                 indicator_high_score_labels=set(indicator_high_score_labels),
                 indicator_unwanted_labels=set(indicator_unwanted_labels),
+                no_file_trigger_import=no_file_trigger_import,
             )
 
             indicator_importer = IndicatorImporter(indicator_importer_config)
@@ -251,6 +255,7 @@ class CrowdStrike:
                 tlp_marking,
                 report_status,
                 report_type,
+                no_file_trigger_import,
             )
 
             importers.append(yara_master_importer)
@@ -262,6 +267,7 @@ class CrowdStrike:
                 tlp_marking,
                 report_status,
                 report_type,
+                no_file_trigger_import,
             )
 
             importers.append(snort_master_importer)

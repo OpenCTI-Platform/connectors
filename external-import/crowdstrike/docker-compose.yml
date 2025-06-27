@@ -34,4 +34,5 @@ services:
       - CROWDSTRIKE_INDICATOR_HIGH_SCORE=80
       - CROWDSTRIKE_INDICATOR_HIGH_SCORE_LABELS=MaliciousConfidence/High
       - CROWDSTRIKE_INDICATOR_UNWANTED_LABELS= # Can be used to filter low confidence indicators: "MaliciousConfidence/Low", "MaliciousConfidence/Medium"
+      - CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT=true
     restart: always

@@ -35,3 +35,4 @@ crowdstrike:
   indicator_high_score: 80
   indicator_high_score_labels: 'MaliciousConfidence/High'
   indicator_unwanted_labels: ''                                     # Can be used to filter low confidence indicators: "MaliciousConfidence/Low", "MaliciousConfidence/Medium"
+  no_file_trigger_import: true
