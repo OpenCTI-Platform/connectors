@@ -70,7 +70,7 @@ class VTConnector:
             default=False
         )
 
-        # Making  a list
+        # Parse shared owners from config
         if self.shared_owners:
             try:
             self.shared_owners = ast.literal_eval(self.shared_owners)
