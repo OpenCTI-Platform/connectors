@@ -1,23 +1,22 @@
-FROM python:3.12
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    libmagic1 \
-    libmagic-dev \
-    file \
-    && rm -rf /var/lib/apt/lists/*
+FROM python:3.12-alpine
 
 # Copy the connector
-COPY src /opt/opencti-connector-socradar/src/
-COPY requirements.txt /opt/opencti-connector-socradar/
+COPY src /opt/opencti-connector-socradar
 
-# Set the Python path
-ENV PYTHONPATH="/opt/opencti-connector-socradar/src"
+# Install Python modules
+# hadolint ignore=DL3003
+RUN apk update && apk upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
-# Install Python packages
-RUN pip3 install --no-cache-dir -r /opt/opencti-connector-socradar/requirements.txt
+COPY requirements.txt .
 
-# Expose and entrypoint
-COPY entrypoint.sh /
+RUN pip install -r requirements.txt --no-cache-dir --upgrade pip && \
+    rm requirements.txt && \
+    apk del git build-base
+
+# Expose entrypoint.sh
+COPY entrypoint.sh .
+
 RUN chmod +x /entrypoint.sh
+
 ENTRYPOINT ["/entrypoint.sh"]
