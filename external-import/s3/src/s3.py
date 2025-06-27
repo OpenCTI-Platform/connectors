@@ -205,17 +205,17 @@ class S3Connector:
                 new_bundle_objects.append(note)
 
             # Labels
-            if "x_wormable" in obj:
+            if "x_wormable" in obj and obj["x_wormable"]:
                 if "labels" in obj:
                     obj["labels"].append("wormable")
                 else:
                     obj["labels"] = ["wormable"]
-            if "x_zero_day" in obj:
+            if "x_zero_day" in obj and obj["x_zero_day"]:
                 if "labels" in obj:
                     obj["labels"].append("zero-day")
                 else:
                     obj["labels"] = ["zero-day"]
-            if "x_notable_vuln" in obj:
+            if "x_notable_vuln" in obj and obj["x_notable_vuln"]:
                 if "labels" in obj:
                     obj["labels"].append("notable-vuln")
                 else:
