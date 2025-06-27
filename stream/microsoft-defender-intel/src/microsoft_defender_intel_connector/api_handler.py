@@ -110,7 +110,7 @@ class DefenderApiHandler:
 
         except (RetryError, HTTPError, Timeout, ConnectionError) as err:
             raise DefenderApiHandlerError(
-                "[API] An error occured during request",
+                "[API] An error occurred during request",
                 {"url_path": f"{method.upper()} {url}"},
             ) from err
 
@@ -135,7 +135,7 @@ class DefenderApiHandler:
             body = {
                 "indicatorType": IOC_TYPES[observable["type"]],
                 "indicatorValue": observable["value"],
-                "application": "OpenCTI Microsoft Defender Intel Synchronizer",
+                "application": "OpenCTI Microsoft Defender Intel",
                 "action": self.config.action or get_action(observable),
                 "title": observable["value"],
                 "description": get_description(observable),
