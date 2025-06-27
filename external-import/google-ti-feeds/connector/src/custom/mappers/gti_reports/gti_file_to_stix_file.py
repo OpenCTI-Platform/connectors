@@ -62,6 +62,13 @@ class GTIFileToSTIXFile(BaseMapper):
         if self.file.attributes and self.file.attributes.size:
             file_size = self.file.attributes.size
 
+        ctime = None
+        if self.file.attributes:
+            if self.file.attributes.creation_date:
+                ctime = datetime.fromtimestamp(
+                    self.file.attributes.creation_date, tz=timezone.utc
+                )
+
         file_model = OctiFileModel.create(
             organization_id=self.organization.id,
             marking_ids=[self.tlp_marking.id],
@@ -70,6 +77,7 @@ class GTIFileToSTIXFile(BaseMapper):
             additional_names=additional_names,
             size=file_size,
             score=score,
+            ctime=ctime,
         )
 
         return file_model
@@ -158,13 +166,13 @@ class GTIFileToSTIXFile(BaseMapper):
         modified = datetime.now(timezone.utc)
 
         if self.file.attributes:
-            if self.file.attributes.creation_date:
+            if self.file.attributes.first_submission_date:
                 created = datetime.fromtimestamp(
-                    self.file.attributes.creation_date, tz=timezone.utc
+                    self.file.attributes.first_submission_date, tz=timezone.utc
                 )
-            if self.file.attributes.last_modification_date:
+            if self.file.attributes.last_submission_date:
                 modified = datetime.fromtimestamp(
-                    self.file.attributes.last_modification_date, tz=timezone.utc
+                    self.file.attributes.last_submission_date, tz=timezone.utc
                 )
 
         return {"created": created, "modified": modified}

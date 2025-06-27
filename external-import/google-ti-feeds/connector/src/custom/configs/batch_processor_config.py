@@ -105,7 +105,7 @@ def log_batch_completion(stix_objects: List[Any], work_id: str) -> None:
 
 BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
     batch_size=500,
-    work_name_template="Google Threat Intel - Batch #{batch_num} (0/0 reports)",
+    work_name_template="Google Threat Intel - Batch #{batch_num} (~ 0/0 reports)",
     state_key="next_cursor_start_date",
     entity_type="stix_objects",
     display_name="STIX objects",
