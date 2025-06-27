@@ -43,7 +43,7 @@ jobs:
           template: basic_fail_1
   base_linter:
     docker:
-      - image: alpine/flake8:7.2.0
+      - image: alpine/flake8:7.3.0
     working_directory: ~/repo
     steps:
       - checkout
