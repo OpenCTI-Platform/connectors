@@ -13,31 +13,47 @@ from connectors_sdk.models.octi.activities.observations import (
     Indicator,
     IPV4Address,
 )
-from connectors_sdk.models.octi.knowledge.entities import Organization
+from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
+from connectors_sdk.models.octi.knowledge.locations import Country
+from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
 from connectors_sdk.models.octi.relationships import (
-    AnyRelatedToAny,
-    IndicatorBasedOnObservable,
-    IndicatorDerivedFromIndicator,
+    BasedOn,
+    DerivedFrom,
+    LocatedAt,
+    RelatedTo,
+    Targets,
     based_on,
+    located_at,
     related_to,
+    targets,
 )
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
 
 __all__ = [
-    "AnyRelatedToAny",
+    # Models flat list
     "AssociatedFile",
-    "BaseEntity",  # for typing purpose.
+    "BasedOn",
+    "Country",
+    "DerivedFrom",
     "ExternalReference",
     "Indicator",
-    "IndicatorBasedOnObservable",
-    "IndicatorDerivedFromIndicator",
+    "IntrusionSet",
     "IPV4Address",
     "KillChainPhase",
+    "LocatedAt",
     "Organization",
     "OrganizationAuthor",
+    "RelatedTo",
+    "Sector",
+    "Targets",
     "TLPMarking",
-    "related_to",
+    # Relationship builders
     "based_on",
+    "located_at",
+    "related_to",
+    "targets",
+    # Typing purpose
+    "BaseEntity",
 ]
 
 
