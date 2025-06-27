@@ -1,0 +1,6 @@
+pycti==6.5.8  # OpenCTI API Client
+stix2~=3.0.1  # STIX 2.1 Object Creation
+requests==2.32.3  # HTTP Requests
+pyyaml==6.0.1  # Config Parsing
+tenacity==8.2.3  # Retry Mechanism
+python-dotenv==1.0.0  # Environment Variable Management
