@@ -1,5 +1,9 @@
 # Google Threat Intelligence Connector
 
+| Status            | Date       | Comment |
+| ----------------- |------------| ------- |
+| Filigran Verified | 2025-06-20 |    -    |
+
 ---
 
 ## Introduction
