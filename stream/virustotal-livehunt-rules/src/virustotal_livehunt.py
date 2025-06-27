@@ -25,31 +25,63 @@ class VTConnector:
             else {}
         )
 
+        # Initialize OpenCTI helper with SSL verification disabled
+        config['connector'] = config.get('connector', {})
+        config['connector']['ssl_verify'] = False
         self.helper = OpenCTIConnectorHelper(config)
+
+        # Configure logging
+        self.helper.log_debug("Initializing VT LiveHunt connector...")
+
         self.token = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_TOKEN", ["virustotal_livehunt", "token"], config
         )
-        self.notification_emails = get_config_variable(
+        notification_emails = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_NOTIFICATION_EMAILS",
             ["virustotal_livehunt", "notification_emails"],
             config,
         )
+        
+        # Handle notification emails format
+        try:
+            if isinstance(notification_emails, str):
+                self.notification_emails = ast.literal_eval(notification_emails.replace("'", '"'))
+            else:
+                self.notification_emails = notification_emails
+            
+            if not isinstance(self.notification_emails, list):
+                self.notification_emails = [self.notification_emails]
+        except Exception as e:
+            self.helper.log_error(f"Error parsing notification emails: {str(e)}")
+            self.helper.log_error(f"Raw notification_emails value: {notification_emails}")
+            self.notification_emails = []
+
+        self.helper.log_debug(f"Final notification emails: {self.notification_emails}")
+
         self.shared_owners = get_config_variable(
             "VIRUSTOTAL_LIVEHUNT_SHARED_OWNERS",
             ["virustotal_livehunt", "shared_owners"],
             config,
         )
+        self.new_files_only = get_config_variable(
+            "VIRUSTOTAL_LIVEHUNT_NEW_FILES_ONLY",
+            ["virustotal_livehunt", "new_files_only"],
+            config,
+            default=False
+        )
 
         # Making  a list
         if self.shared_owners:
+            try:
             self.shared_owners = ast.literal_eval(self.shared_owners)
+                self.helper.log_debug(f"Parsed shared owners: {self.shared_owners}")
+            except Exception as e:
+                self.helper.log_error(f"Error parsing shared owners: {str(e)}")
+                self.shared_owners = []
 
-        self.helper.log_debug("Printing email list" + str(self.notification_emails))
-        self.helper.log_debug(
-            "Printing email type list" + str(type(self.notification_emails))
-        )
-
+        self.helper.log_debug(f"Initializing client with token length: {len(self.token)}")
         self.client = VirusTotalClient(self.helper, self._API_URL, self.token)
+        self.client.new_files_only = self.new_files_only
 
         if (
             self.helper.connect_live_stream_id is None

@@ -153,7 +153,7 @@ class VirusTotalClient:
             Name of the rule.
         rule : str
             Yara Rule.
-        notification_emails : list
+        notification_emails : list or str
             List of the email to notify.
 
         Returns
@@ -161,24 +161,72 @@ class VirusTotalClient:
         dict
             File object, seehttps://developers.virustotal.com/reference/livehunt.
         """
+        # Handle notification_emails format
+        try:
+            if isinstance(notification_emails, str):
+                # Try to safely evaluate the string as a Python literal
+                emails = ast.literal_eval(notification_emails.replace("'", '"'))
+            else:
+                emails = notification_emails
+            
+            if not isinstance(emails, list):
+                emails = [emails]  # Convert single email to list
+        except Exception as e:
+            self.helper.log_error(f"Error processing notification emails: {str(e)}")
+            self.helper.log_error(f"Raw notification_emails value: {notification_emails}")
+            emails = []
 
-        payload = json.dumps(
-            {
-                "data": {
-                    "type": "hunting_ruleset",
-                    "attributes": {
-                        "name": name,
-                        "enabled": True,
-                        "limit": 100,
-                        "rules": rule,
-                        "notification_emails": ast.literal_eval(notification_emails),
-                    },
+        self.helper.log_debug(f"Processed notification emails for rule {name}: {emails}")
+
+        # If new_files_only is enabled, modify the rule to include new_file condition
+        if hasattr(self, 'new_files_only') and self.new_files_only:
+            try:
+                # Parse the rule to find the condition section
+                rule_lines = rule.split('\n')
+                condition_start = -1
+                for i, line in enumerate(rule_lines):
+                    if line.strip().startswith('condition:'):
+                        condition_start = i
+                        break
+                
+                if condition_start != -1:
+                    # Add new_file to the condition
+                    condition_line = rule_lines[condition_start].strip()
+                    if condition_line == 'condition:':
+                        # If condition is on its own line
+                        rule_lines.insert(condition_start + 1, '    new_file and')
+                    else:
+                        # If condition is inline
+                        rest_of_condition = condition_line[len('condition:'):].strip()
+                        rule_lines[condition_start] = f'condition: new_file and {rest_of_condition}'
+                    
+                    rule = '\n'.join(rule_lines)
+                    self.helper.log_debug(f"Modified rule with new_file condition for {name}")
+                else:
+                    self.helper.log_error(f"Could not find condition section in rule {name}")
+            except Exception as e:
+                self.helper.log_error(f"Error modifying rule with new_file condition: {str(e)}")
+
+        try:
+            payload = json.dumps(
+                {
+                    "data": {
+                        "type": "hunting_ruleset",
+                        "attributes": {
+                            "name": name,
+                            "enabled": True,
+                            "limit": 100,
+                            "rules": rule,
+                            "notification_emails": emails,
+                        },
+                    }
                 }
-            }
-        )
-
-        url = f"{self.url}/intelligence/hunting_rulesets"
-        return self._query("POST", url, payload)
+            )
+            self.helper.log_debug(f"Sending rule creation request for {name}")
+            return self._query("POST", url=f"{self.url}/intelligence/hunting_rulesets", payload=payload)
+        except Exception as e:
+            self.helper.log_error(f"Error creating rule {name}: {str(e)}")
+            return None
 
     def add_shared_owners(self, rule_id, shared_owners):
         """
@@ -208,3 +256,18 @@ class VirusTotalClient:
             f"{self.url}/intelligence/hunting_rulesets/{rule_id}/relationships/editors"
         )
         return self._query("POST", url, payload)
+
+    def list_all_rules(self):
+        """
+        List all livehunt rules.
+
+        Returns
+        -------
+        dict
+            All livehunt rules
+        """
+        url = f"{self.url}/intelligence/hunting_rulesets"
+        response = self._query("GET", url)
+        if response and response.status_code == 200:
+            return response.json()
+        return None
