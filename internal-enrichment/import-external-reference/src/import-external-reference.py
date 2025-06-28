@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import io
 import os
 import re
@@ -20,9 +21,6 @@ from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
 from pdfminer.pdfpage import PDFPage
 from playwright.async_api import BrowserContext, Page, async_playwright
 from pycti import OpenCTIConnectorHelper, get_config_variable
-
-MAX_DOWNLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
-DEFAULT_WORKERS = 4
 
 
 def is_valid_url(url: str) -> bool:
@@ -62,38 +60,39 @@ class ImportExternalReferenceConnector:
             False,
             True,
         )
-
-        # Cache size
-        raw_cache = os.environ.get(
-            "IMPORT_EXTERNAL_REFERENCE_CACHE_SIZE",
-            config.get("import_external_reference", {}).get("cache_size", 32),
+        self.timestamp_files = get_config_variable(
+            "IMPORT_EXTERNAL_REFERENCE_TIMESTAMP_FILES",
+            ["import_external_reference", "timestamp_files"],
+            config,
+            False,
+            False,  # Default to False
         )
-        try:
-            cache_size = int(raw_cache)
-            if cache_size <= 0:
-                raise ValueError
-        except ValueError:
-            self.helper.log_warning(
-                f"Invalid cache size '{raw_cache}', defaulting to 32"
-            )
-            cache_size = 32
+        self.cache_size = get_config_variable(
+            "IMPORT_EXTERNAL_REFERENCE_CACHE_SIZE",
+            ["import_external_reference", "cache_size"],
+            config,
+            True,
+            32,  # Default to 32 MB
+        )
+        self.worker_count = get_config_variable(
+            "IMPORT_EXTERNAL_REFERENCE_BROWSER_WORKER_COUNT",
+            ["import_external_reference", "browser_worker_count"],
+            config,
+            True,
+            4,  # Default to 4 workers
+        )
 
-        # Worker count
-        raw_workers = os.environ.get("BROWSER_WORKER_COUNT", DEFAULT_WORKERS)
-        try:
-            workers = int(raw_workers)
-            if workers <= 0:
-                raise ValueError
-        except ValueError:
-            self.helper.log_warning(
-                f"Invalid worker count '{raw_workers}', "
-                f"defaulting to {DEFAULT_WORKERS}"
-            )
-            workers = DEFAULT_WORKERS
-        self.worker_count = workers
+        # Max download size (in bytes)
+        self.max_download_size = get_config_variable(
+            "IMPORT_EXTERNAL_REFERENCE_MAX_DOWNLOAD_SIZE",
+            ["import_external_reference", "max_download_size"],
+            config,
+            True,
+            50 * 1024 * 1024,  # Default to 50 MB
+        )
 
         # Thread-safe LRU cache
-        self._download_cache = cachetools.LRUCache(maxsize=cache_size)
+        self._download_cache = cachetools.LRUCache(maxsize=self.cache_size)
         self._cache_lock = threading.Lock()
 
         self.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
@@ -102,7 +101,7 @@ class ImportExternalReferenceConnector:
             f"Config → import_as_pdf={self.import_as_pdf}, "
             f"import_as_md={self.import_as_md}, "
             f"import_pdf_as_md={self.import_pdf_as_md}, "
-            f"cache_size={cache_size}, workers={self.worker_count}"
+            f"cache_size={self.cache_size}, workers={self.worker_count}"
         )
 
         # Will be set in start()
@@ -128,12 +127,12 @@ class ImportExternalReferenceConnector:
                 req, context=ssl.create_default_context(), timeout=180
             ) as resp:
                 length = resp.headers.get("Content-Length")
-                if length and int(length) > MAX_DOWNLOAD_SIZE:
+                if length and int(length) > self.max_download_size:
                     raise ValueError(f"Content-Length {length} exceeds limit")
-                data = resp.read(MAX_DOWNLOAD_SIZE + 1)
+                data = resp.read(self.max_download_size + 1)
                 if not data:
                     raise ValueError("Downloaded data is empty")
-                if len(data) > MAX_DOWNLOAD_SIZE:
+                if len(data) > self.max_download_size:
                     raise ValueError("Downloaded data exceeds size limit")
         except Exception as e:
             self.helper.log_warning(f"Download failed ({url}): {e}")
@@ -457,6 +456,11 @@ class ImportExternalReferenceConnector:
         base = os.path.basename(path)
         if not base:
             base = parsed.netloc or "external-reference"
+        if self.timestamp_files:
+            ts = datetime.datetime.utcnow().strftime("_%Y%m%d_%H%M%S")
+            if suffix and base.endswith(suffix):
+                base = base[: -len(suffix)]
+            base += ts
         if suffix and not base.endswith(suffix):
             base += suffix
         return base
