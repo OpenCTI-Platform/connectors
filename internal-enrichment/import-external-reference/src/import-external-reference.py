@@ -279,7 +279,7 @@ class ImportExternalReferenceConnector:
                 try:
                     if is_pdf:
                         # Already downloaded above
-                        file_name = os.path.basename(url)
+                        file_name = self._safe_filename_from_url(url)
                         self.helper.log_info(
                             f"Attaching file '{file_name}' "
                             f"to {external_reference['id']}"
@@ -298,7 +298,7 @@ class ImportExternalReferenceConnector:
                     else:
                         # Render via Playwright
                         html, pdf_bytes = await self._fetch_with_browser(url)
-                        file_name = os.path.basename(url) + ".pdf"
+                        file_name = self._safe_filename_from_url(url, ".pdf")
                         self.helper.log_info(
                             f"Attaching file '{file_name}' "
                             f"to {external_reference['id']}"
@@ -370,7 +370,7 @@ class ImportExternalReferenceConnector:
                         md = text_maker.handle(html)
                         # Fix protocol-relative links
                         md = md.replace("](//", "](https://")
-                        file_name = os.path.basename(url) + ".md"
+                        file_name = self._safe_filename_from_url(url, ".md")
                         self.helper.log_info(
                             f"Attaching file '{file_name}' "
                             f"to {external_reference['id']}"
@@ -450,6 +450,16 @@ class ImportExternalReferenceConnector:
 
         future.add_done_callback(_log_done)
         return "OK"
+
+    def _safe_filename_from_url(self, url: str, suffix: str = "") -> str:
+        parsed = urllib.parse.urlparse(url)
+        path = parsed.path.rstrip("/")
+        base = os.path.basename(path)
+        if not base:
+            base = parsed.netloc or "external-reference"
+        if suffix and not base.endswith(suffix):
+            base += suffix
+        return base
 
     # ────────────────────────────────────────────────────────────────────────────────
     # START / STOP
