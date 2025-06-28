@@ -95,7 +95,13 @@ class ImportExternalReferenceConnector:
         self._download_cache = cachetools.LRUCache(maxsize=self.cache_size)
         self._cache_lock = threading.Lock()
 
-        self.headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        self.headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Sec-Ch-Ua": '"Microsoft Edge";v="137", "Chromium";v="137", "Not/A)Brand";v="24"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+        }
 
         self.helper.connector_logger.info(
             f"Config → import_as_pdf={self.import_as_pdf}, "
@@ -158,17 +164,130 @@ class ImportExternalReferenceConnector:
                 url, fut = await self.task_queue.get()
                 self.helper.log_debug(f"Dequeued task for: {url}")
                 ctx = await self.browser.new_context(
-                    user_agent=self.headers["User-Agent"]
+                    user_agent=self.headers["User-Agent"],
+                    ignore_https_errors=True,
+                    viewport={"width": 1280, "height": 800},
+                    extra_http_headers=self.headers,
+                )
+                await ctx.add_init_script(
+                    """
+                    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                    Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+                    Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
+                    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+                    window.chrome = { runtime: {}, loadTimes: () =>  { return null; }, csi: () => { return {}; } };
+                    """
                 )
                 page: Page = await ctx.new_page()
                 try:
+
+                    async def handle_response(response):
+                        try:
+                            if response.status in (403, 429, 503):
+                                text = await response.text()
+
+                                self.helper.log_info(
+                                    f"WAF-style block: {response.status} on {response.url}"
+                                )
+
+                                # Normalize content
+                                lower_text = text.lower()
+
+                                # General detections
+                                if "captcha" in lower_text:
+                                    self.helper.log_info("Detected CAPTCHA challenge")
+
+                                if (
+                                    "cloudflare" in lower_text
+                                    or "checking your browser" in text
+                                ):
+                                    self.helper.log_info(
+                                        "Detected Cloudflare JS challenge"
+                                    )
+
+                                if "__cf_bm" not in [
+                                    c["name"]
+                                    for c in await response.request.context.cookies()
+                                ]:
+                                    self.helper.log_info(
+                                        "Cloudflare cookie (__cf_bm) not present"
+                                    )
+
+                                # Akamai
+                                if "_abck" in text or "akamai" in lower_text:
+                                    self.helper.log_info(
+                                        "Possible Akamai Bot Manager block detected (_abck cookie or content match)"
+                                    )
+
+                                # Imperva
+                                if (
+                                    "incapsula" in lower_text
+                                    or "x-iinfo" in response.headers
+                                ):
+                                    self.helper.log_info(
+                                        "Possible Imperva/Incapsula block (x-iinfo header or content match)"
+                                    )
+
+                                # AWS WAF
+                                if (
+                                    "aws-waf" in lower_text
+                                    or "awsalb"
+                                    in response.headers.get("server", "").lower()
+                                ):
+                                    self.helper.log_info(
+                                        "Possible AWS WAF or ALB layer block"
+                                    )
+
+                                # F5
+                                if (
+                                    "f5" in lower_text
+                                    or "big-ip"
+                                    in response.headers.get("set-cookie", "").lower()
+                                ):
+                                    self.helper.log_info(
+                                        "Possible F5 BIG-IP block (cookie or content match)"
+                                    )
+
+                                # Fastly
+                                if (
+                                    "fastly" in lower_text
+                                    or "x-served-by" in response.headers
+                                    and "fastly"
+                                    in response.headers["x-served-by"].lower()
+                                ):
+                                    self.helper.log_info(
+                                        "Fastly block indicators found"
+                                    )
+
+                                # Generic automation block indicators
+                                if (
+                                    "access denied" in lower_text
+                                    or "request blocked" in lower_text
+                                ):
+                                    self.helper.log_info(
+                                        "Generic access denial or bot detection trigger"
+                                    )
+
+                        except Exception as e:
+                            self.helper.log_warning(f"Response diagnostics failed: {e}")
+
+                    # Add listener before navigation
+                    page.on("response", handle_response)
+
                     await page.route("**/*", self._block_resource)
                     try:
+
+                        async def _safe_navigate(page: Page, url: str):
+                            await page.goto(url, wait_until="domcontentloaded")
+                            await asyncio.sleep(3)  # let JS challenges resolve
+                            await page.wait_for_load_state(
+                                "load"
+                            )  # still useful for complete render
+
                         await asyncio.wait_for(
-                            page.goto(url, wait_until="networkidle", timeout=180000),
-                            timeout=180,
+                            asyncio.shield(_safe_navigate(page, url)), timeout=180
                         )
-                        await page.wait_for_load_state("networkidle")
+
                     except asyncio.TimeoutError:
                         self.helper.log_warning(f"Timeout loading {url}")
                         if not fut.done():
@@ -482,7 +601,11 @@ class ImportExternalReferenceConnector:
         self.helper.connector_logger.info("▶ launching browser…")
         self.browser = await pw.chromium.launch(
             headless=True,
-            args=["--disable-dev-shm-usage"],
+            args=[
+                "--disable-dev-shm-usage",
+                "--ignore-certificate-errors",
+                "--disable-blink-features=AutomationControlled",  # Disable WebDriver detection for WAF bypass
+            ],
         )
         self.helper.connector_logger.info("▶ browser launched")
 
