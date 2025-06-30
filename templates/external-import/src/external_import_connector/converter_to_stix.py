@@ -30,6 +30,13 @@ class ConverterToStix:
             name="Source Name",
             identity_class="organization",
             description="DESCRIPTION",
+            external_references=[
+                stix2.ExternalReference(
+                    source_name="External Source",
+                    url="CHANGEME",
+                    description="DESCRIPTION",
+                )
+            ],
         )
         return author
 
