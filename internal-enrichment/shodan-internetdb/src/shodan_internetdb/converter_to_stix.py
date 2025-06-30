@@ -18,7 +18,6 @@ class ConverterToStix:
     def __init__(self, helper: pycti.OpenCTIConnectorHelper):
         self.helper = helper
         self.author = self._create_author()
-        self.external_references = [self._create_external_reference()]
         self.tlp_marking = self._create_tlp_marking("white")
 
     def _create_author(
@@ -32,13 +31,6 @@ class ConverterToStix:
             id=pycti.Identity.generate_id(name="Shodan", identity_class="organization"),
             name="Shodan",
             identity_class="organization",
-            description="Shodan is a search engine for Internet-connected devices.",
-        )
-
-    def _create_external_reference(self) -> stix2.ExternalReference:
-        return stix2.ExternalReference(
-            source_name="Shodan",
-            url="https://internetdb.shodan.io/",
             description="Shodan is a search engine for Internet-connected devices.",
         )
 
@@ -82,7 +74,6 @@ class ConverterToStix:
                 resolves_to_refs=[observable_id],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author.id,
-                    "x_opencti_external_references": self.external_references,
                 },
             )
             for hostname in hostnames
@@ -104,7 +95,6 @@ class ConverterToStix:
                 name=f"{name}",
                 created_by_ref=self.author.id,
                 object_marking_refs=[self.tlp_marking.id],
-                external_references=self.external_references,
             )
             relationship = stix2.Relationship(
                 id=pycti.StixCoreRelationship.generate_id(
@@ -118,7 +108,6 @@ class ConverterToStix:
                 allow_custom=True,
                 start_time=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 stop_time=vuln_eol.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                external_references=self.external_references,
             )
             stix_objects.extend([stix_vuln, relationship])
         return stix_objects
@@ -162,7 +151,6 @@ class ConverterToStix:
             content=content,
             object_refs=[observable_id],
             allow_custom=True,
-            external_references=self.external_references,
         )
         return note
 

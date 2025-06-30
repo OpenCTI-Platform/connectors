@@ -443,7 +443,7 @@ class Misp:
                     if self.misp_import_keyword is not None:
                         kwargs["value"] = self.misp_import_keyword
                         kwargs["searchall"] = True
-                    if self.misp_enforce_warning_list is not None:
+                    if self.misp_enforce_warning_list:
                         kwargs["enforce_warninglist"] = self.misp_enforce_warning_list
                     self.helper.log_info(
                         "Fetching MISP events with args: " + json.dumps(kwargs)
