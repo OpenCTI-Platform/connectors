@@ -43,6 +43,7 @@ class ReportImporter(BaseImporter):
         report_type: str,
         guess_malware: bool,
         indicator_config: dict,
+        no_file_trigger_import: bool,
     ) -> None:
         """Initialize CrowdStrike report importer."""
         super().__init__(helper, author, tlp_marking)
@@ -56,6 +57,7 @@ class ReportImporter(BaseImporter):
         self.guess_malware = guess_malware
         self.indicators_api_cs = IndicatorsAPI(helper)
         self.indicator_config = indicator_config
+        self.no_file_trigger_import = no_file_trigger_import
 
         self.malware_guess_cache: Dict[str, str] = {}
 
@@ -199,7 +201,9 @@ class ReportImporter(BaseImporter):
             self._info("No report PDF for id {0}", report_id)
             return None
         else:
-            return create_file_from_download(download, report_name)
+            return create_file_from_download(
+                download, report_name, self.no_file_trigger_import
+            )
 
     def _get_related_iocs(self, report_name):
         try:
