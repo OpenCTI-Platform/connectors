@@ -8,7 +8,7 @@ from datetime import datetime
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import TLP_WHITE, URL, Bundle, ExternalReference
+from stix2 import TLP_WHITE, URL, Bundle
 
 
 class VXVault:
@@ -120,11 +120,6 @@ class VXVault:
                                 matchBlankLine = re.search(r"^\s*$", line)
                                 if matchBlankLine:
                                     continue
-                                external_reference = ExternalReference(
-                                    source_name="VX Vault",
-                                    url="http://vxvault.net",
-                                    description="VX Vault repository URL",
-                                )
                                 stix_observable = URL(
                                     value=line,
                                     object_marking_refs=[TLP_WHITE],
@@ -133,7 +128,6 @@ class VXVault:
                                         "x_opencti_score": 80,
                                         "created_by_ref": self.identity["standard_id"],
                                         "x_opencti_create_indicator": self.create_indicators,
-                                        "external_references": [external_reference],
                                     },
                                 )
                                 bundle_objects.append(stix_observable)

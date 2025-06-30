@@ -17,21 +17,7 @@ class ConverterToStix:
         self.helper = helper
         self.config = config
         self.author = self.create_author()
-        self.external_reference = self.create_external_reference()
         self.tlp_marking = self._create_tlp_marking(level=self.config.tlp_level.lower())
-
-    @staticmethod
-    def create_external_reference() -> list:
-        """
-        Create external reference
-        :return: External reference STIX2 list
-        """
-        external_reference = stix2.ExternalReference(
-            source_name="External Source",
-            url="CHANGEME",
-            description="DESCRIPTION",
-        )
-        return [external_reference]
 
     @staticmethod
     def create_author() -> dict:
@@ -85,7 +71,6 @@ class ConverterToStix:
             source_ref=source_id,
             target_ref=target_id,
             created_by_ref=self.author,
-            external_references=self.external_reference,
         )
         return relationship
 
@@ -144,7 +129,6 @@ class ConverterToStix:
                 value=value,
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.external_reference,
                 },
             )
             return stix_ipv6_address
@@ -153,7 +137,6 @@ class ConverterToStix:
                 value=value,
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.external_reference,
                 },
             )
             return stix_ipv4_address
@@ -162,7 +145,6 @@ class ConverterToStix:
                 value=value,
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_external_references": self.external_reference,
                 },
             )
             return stix_domain_name
