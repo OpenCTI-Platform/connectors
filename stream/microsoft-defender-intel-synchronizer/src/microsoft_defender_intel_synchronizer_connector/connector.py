@@ -1,5 +1,7 @@
 import json
+import sys
 import time
+from datetime import datetime, timedelta, timezone
 
 from pycti import OpenCTIConnectorHelper
 
@@ -48,7 +50,7 @@ class MicrosoftDefenderIntelSynchronizerConnector:
 
         # Load configuration file and connection helper
         self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.helper = self.config.helper
         self.api = DefenderApiHandler(self.helper, self.config)
 
     def _convert_indicator_to_observables(self, data) -> list[dict]:
@@ -85,7 +87,7 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                             observables.append(observable_data)
 
             return observables
-        except:
+        except Exception:
             indicator_opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
                 "id", data
             )
@@ -102,6 +104,22 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                 opencti_all_indicators = []
                 defender_indicators_to_delete = []
                 opencti_indicators_to_create = []
+
+                now_iso = (
+                    datetime.now(timezone.utc) + timedelta(minutes=10)
+                ).isoformat()
+
+                validity_filter = {
+                    "key": "valid_until",
+                    "operator": "gt",
+                    "values": [now_iso],
+                    "mode": "or",
+                }
+
+                # Prepare a mapping of collection to its rank (order in config)
+                collection_rank = {
+                    col: i for i, col in enumerate(self.config.taxii_collections)
+                }
 
                 # Get OpenCTI indicators
                 for collection in self.config.taxii_collections:
@@ -120,10 +138,13 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                         and "filters" in result["data"]["taxiiCollection"]
                     ):
                         filters = result["data"]["taxiiCollection"]["filters"]
+                        filters = json.loads(filters)
+                        # Temporarily disable the validity filter as it causes indicator.list() to timeout
+                        # filters["filters"].append(validity_filter)
                         opencti_indicators = self.helper.api.indicator.list(
                             order_by="modified",
                             orderMode="desc",
-                            filters=json.loads(filters),
+                            filters=filters,
                             first=10000,
                             toStix=True,
                         )
@@ -136,7 +157,11 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                             ]
                         state[collection]["last_count"] = len(opencti_indicators)
                         opencti_indicators = [
-                            json.loads(opencti_indicator["toStix"])
+                            {
+                                **json.loads(opencti_indicator["toStix"]),
+                                "_collection": collection,
+                                "_collection_rank": collection_rank[collection],
+                            }
                             for opencti_indicator in opencti_indicators
                         ]
                         opencti_all_indicators = (
@@ -147,7 +172,7 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                             "TAXII collection not found", {"id": collection}
                         )
 
-                self.helper.connector_logger.info(
+                self.helper.log_info(
                     "Found "
                     + str(len(opencti_all_indicators))
                     + " indicators in TAXII collections"
@@ -164,7 +189,12 @@ class MicrosoftDefenderIntelSynchronizerConnector:
 
                 # Cut at 15 000
                 opencti_all_indicators.sort(
-                    key=lambda item: item["modified"], reverse=True
+                    key=lambda item: (
+                        -int(item.get("confidence", sys.maxsize)),
+                        item.get("modified", datetime.min),
+                        -item.get("_collection_rank", sys.maxsize),
+                    ),
+                    reverse=True,
                 )
                 opencti_all_indicators = opencti_all_indicators[:15000]
 
@@ -252,11 +282,11 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                         opencti_indicators_to_create_chunk
                     ) in opencti_indicators_to_create_chunked:
                         try:
-                            self.api.post_indicators(opencti_indicators_to_create_chunk)
+                            data = self.api.post_indicators(
+                                opencti_indicators_to_create_chunk
+                            )
                             self.helper.connector_logger.info(
-                                "[CREATE] Created "
-                                + str(len(opencti_indicators_to_create_chunk))
-                                + " indicators"
+                                f"[CREATE] Created {data['total_count'] - data['failed_count']} of {data['total_count'] if 'total_count' in data else len(opencti_indicators_to_create_chunk)} indicators"
                             )
                         except Exception as e:
                             self.helper.connector_logger.error(

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from pycti import OpenCTIConnectorHelper
 
@@ -112,16 +112,25 @@ def get_severity(data: dict) -> str:
 def get_expiration_datetime(data: dict, expiration_time: int) -> str:
     """
     Get an expiration datetime for an observable.
+    Use the earlier of:
+      1. The indicator's valid_until field (if present)
+      2. now + expiration_time (in days)
     :param data: Observable data to calculate expiration with
-    :param expiration_time: Duration after which observable is considered as expired
-    :return: Datetime of observable expiration
+    :param expiration_time: Duration after which observable is considered as expired (in days)
+    :return: Datetime of observable expiration as ISO8601 string
     """
-    updated_at = OpenCTIConnectorHelper.get_attribute_in_extension("updated_at", data)
-    datetime_object = datetime.fromisoformat(updated_at)
-    age = timedelta(expiration_time)
-    expire_datetime = datetime_object + age
-    expiration_datetime = expire_datetime.isoformat()
-    return expiration_datetime
+    now = datetime.now(timezone.utc)
+    expire_datetime = now + timedelta(days=expiration_time)
+
+    # Get valid_until if present
+    valid_until = OpenCTIConnectorHelper.get_attribute_in_extension("valid_until", data)
+    if valid_until:
+        valid_until_datetime = datetime.fromisoformat(valid_until)
+        # Return the earliest of expire_datetime and valid_until_datetime
+        earliest = min(expire_datetime, valid_until_datetime)
+        return earliest.isoformat()
+
+    return expire_datetime.isoformat()
 
 
 def get_tags(data: dict) -> list[str]:
