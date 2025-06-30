@@ -1,8 +1,9 @@
+import json
 import os
 from pathlib import Path
 
 import yaml
-from pycti import get_config_variable
+from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
 class ConfigConnector:
@@ -13,6 +14,9 @@ class ConfigConnector:
 
         # Load configuration file
         self.load = self._load_config()
+
+        self.helper = OpenCTIConnectorHelper(self.load)
+
         self._initialize_configurations()
 
     @staticmethod
@@ -23,7 +27,7 @@ class ConfigConnector:
         """
         config_file_path = Path(__file__).parents[1].joinpath("config.yml")
         config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
+            yaml.load(open(config_file_path, encoding="utf-8"), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
             else {}
         )
@@ -100,4 +104,37 @@ class ConfigConnector:
             self.load,
             isNumber=True,
             default=300,
+        )
+        self.recommended_actions = get_config_variable(
+            "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RECOMMENDED_ACTIONS",
+            ["microsoft_defender_intel_synchronizer", "recommended_actions"],
+            self.load,
+            default="",
+        )
+        rbac_group_names_raw = get_config_variable(
+            "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RBAC_GROUP_NAMES",
+            ["microsoft_defender_intel_synchronizer", "rbac_group_names"],
+            self.load,
+            default="[]",
+        )
+        if isinstance(rbac_group_names_raw, str):
+            try:
+                self.rbac_group_names = json.loads(rbac_group_names_raw)
+                if not isinstance(self.rbac_group_names, list):
+                    raise ValueError
+            except (json.JSONDecodeError, ValueError):
+                self.helper.log_warning(
+                    "Warning: rbac_group_names is not a valid JSON array."
+                    " Using empty list."
+                )
+                self.rbac_group_names = []
+        elif isinstance(rbac_group_names_raw, list):
+            self.rbac_group_names = rbac_group_names_raw
+        else:
+            self.rbac_group_names = []
+        self.educate_url = get_config_variable(
+            "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EDUCATE_URL",
+            ["microsoft_defender_intel_synchronizer", "educate_url"],
+            self.load,
+            default="",
         )

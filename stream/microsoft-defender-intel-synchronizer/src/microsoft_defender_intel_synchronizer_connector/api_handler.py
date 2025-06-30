@@ -49,7 +49,7 @@ class DefenderApiHandler:
                 "grant_type": "client_credentials",
                 "scope": self.config.base_url + "/.default",
             }
-            response = requests.post(url, data=body)
+            response = requests.post(url, data=body, timeout=180)
             response_json = response.json()
             response.raise_for_status()
 
@@ -73,15 +73,26 @@ class DefenderApiHandler:
         """
         Configures the session's retry strategy for API requests.
 
-        Sets up the session to retry requests upon encountering specific HTTP status codes (429) using
+        Sets up the session to retry requests upon encountering specific HTTP status codes (429, 502, 503, 504) using
         exponential backoff. The retry mechanism will be applied for both HTTP and HTTPS requests.
-        This function uses the `Retry` and `HTTPAdapter` classes from the `requests.adapters` module.
-
-        - Retries up to 5 times with an increasing delay between attempts.
         """
-        retry_strategy = Retry(total=5, backoff_factor=2, status_forcelist=[429])
+        retry_strategy = Retry(
+            total=8,  # increase from 5
+            backoff_factor=3,  # increase from 2
+            status_forcelist=[429, 502, 503, 504],  # add common server errors
+            allowed_methods=[
+                "HEAD",
+                "GET",
+                "OPTIONS",
+                "POST",
+                "PUT",
+                "DELETE",
+                "PATCH",
+            ],
+        )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
 
     def _send_request(self, method: str, url: str, **kwargs) -> dict | None:
         """
@@ -151,6 +162,13 @@ class DefenderApiHandler:
                 "severity": get_severity(observable),
                 "generateAlert": True,
             }
+            # Add supported optional parameters if defined in config
+            if self.config.recommended_actions not in (None, ""):
+                body["recommendedActions"] = self.config.recommended_actions
+            if self.config.rbac_group_names:
+                body["rbacGroupNames"] = self.config.rbac_group_names
+            if self.config.educate_url not in (None, ""):
+                body["educateUrl"] = self.config.educate_url
         return body
 
     def get_indicators(self) -> list[dict] | None:
@@ -184,6 +202,31 @@ class DefenderApiHandler:
             f"{self.config.base_url}{self.config.resource_path}/import",
             json=request_body,
         )
+
+        # Count and log failed indicators
+        failed_count = 0
+        failed_reasons = []
+        if (
+            isinstance(data, dict)
+            and "value" in data
+            and isinstance(data["value"], list)
+        ):
+            for item in data["value"]:
+                if item.get("isFailed"):
+                    failed_count += 1
+                    reason = item.get("failureReason", "Unknown reason")
+                    failed_reasons.append(f"{reason}")
+        if failed_count > 0:
+            self.helper.log_warning(
+                f"[API] {failed_count} indicators failed to import. Example reasons:\n"
+                + "\n".join(failed_reasons[:10])
+                + ("\n... (truncated)" if failed_count > 10 else "")
+            )
+
+        # add the failed count to the data
+        data["failed_count"] = failed_count
+        data["total_count"] = len(request_body["Indicators"])
+
         return data
 
     def delete_indicators(self, indicators_ids: list[str]) -> bool:
