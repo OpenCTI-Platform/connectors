@@ -158,28 +158,128 @@ class ImportExternalReferenceConnector:
         else:
             await route.continue_()
 
+    async def _dismiss_cookies(self, page: Page) -> bool:
+        """
+        Attempts to dismiss cookies or consent banners/popups on a web page asynchronously.
+        Uses a broad set of selectors and strategies for robustness, but only clicks visible, enabled, interactive elements.
+        :param page: The Playwright Page object representing the current web page.
+        :return: bool: Returns True if any consent/banner element was successfully handled, otherwise False.
+        """
+        found = False
+        # Broader selectors: id/class, case-insensitive, more keywords
+        keywords = [
+            "accept",
+            "agree",
+            "allow",
+            "consent",
+            "continue",
+            "got it",
+            "understand",
+            "ok",
+            "yes",
+            "close",
+            "dismiss",
+        ]
+        selectors = []
+        for kw in keywords:
+            selectors.extend(
+                [
+                    f'button:has-text("{kw}")',
+                    f'a:has-text("{kw}")',
+                    f'[id*="{kw}"]',
+                    f'[class*="{kw}"]',
+                ]
+            )
+        # Try clicking only the first visible, enabled, interactive element for each selector
+        for selector in selectors:
+            try:
+                locs = page.locator(selector)
+                count = await locs.count()
+                if count == 0:
+                    continue
+                for i in range(count):
+                    el = locs.nth(i)
+                    try:
+                        # Only click if visible and enabled
+                        if not await el.is_visible() or not await el.is_enabled():
+                            continue
+                        # For generic id/class selectors, only click if tag is button or a
+                        tag = (await el.evaluate("el => el.tagName")).lower()
+                        if selector.startswith("[id*") or selector.startswith(
+                            "[class*"
+                        ):
+                            if tag not in ("button", "a"):
+                                continue
+                        await el.click(timeout=1000, force=True)
+                        found = True
+                        self.helper.connector_logger.debug(
+                            f"Clicked cookie/banner selector: {selector} (index {i})"
+                        )
+                        # After a successful click, break for this selector
+                        await asyncio.sleep(0.5)
+                        break
+                    except Exception as e:
+                        self.helper.connector_logger.debug(
+                            f"Failed to click {selector} (index {i}): {e}"
+                        )
+                if found:
+                    break
+            except Exception:
+                continue
+        # Fallback: try to hide/remove banners/popups via JS if nothing was clicked
+        if not found:
+            try:
+                await page.evaluate(
+                    """
+                    const keywords = ["cookie", "consent", "banner", "popup", "gdpr", "privacy", "notice", "modal", "alert", "dialog"];
+                    let removed = false;
+                    for (const kw of keywords) {
+                        const els = [
+                            ...document.querySelectorAll(`[id*='${kw}'], [class*='${kw}']`)
+                        ];
+                        for (const el of els) {
+                            if (el && el.style) {
+                                el.style.display = 'none';
+                                removed = true;
+                            }
+                        }
+                    }
+                    return removed;
+                    """
+                )
+                self.helper.connector_logger.debug(
+                    "Ran JS fallback to hide banners/popups."
+                )
+            except Exception as e:
+                self.helper.connector_logger.debug(
+                    f"JS fallback for hiding banners failed: {e}"
+                )
+        return found
+
     async def _browser_worker(self):
         while True:
             try:
                 url, fut = await self.task_queue.get()
                 self.helper.log_debug(f"Dequeued task for: {url}")
-                ctx = await self.browser.new_context(
-                    user_agent=self.headers["User-Agent"],
-                    ignore_https_errors=True,
-                    viewport={"width": 1280, "height": 800},
-                    extra_http_headers=self.headers,
-                )
-                await ctx.add_init_script(
-                    """
-                    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                    Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-                    Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
-                    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-                    window.chrome = { runtime: {}, loadTimes: () =>  { return null; }, csi: () => { return {}; } };
-                    """
-                )
-                page: Page = await ctx.new_page()
+                ctx = None
+                page = None
                 try:
+                    ctx = await self.browser.new_context(
+                        user_agent=self.headers["User-Agent"],
+                        ignore_https_errors=True,
+                        viewport={"width": 1280, "height": 800},
+                        extra_http_headers=self.headers,
+                    )
+                    await ctx.add_init_script(
+                        """
+                        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                        Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+                        Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
+                        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+                        window.chrome = { runtime: {}, loadTimes: () =>  { return null; }, csi: () => { return {}; } };
+                        """
+                    )
+                    page = await ctx.new_page()
 
                     async def handle_response(response):
                         try:
@@ -279,7 +379,7 @@ class ImportExternalReferenceConnector:
 
                         async def _safe_navigate(page: Page, url: str):
                             await page.goto(url, wait_until="domcontentloaded")
-                            await asyncio.sleep(3)  # let JS challenges resolve
+                            await asyncio.sleep(5)  # let JS challenges resolve
                             await page.wait_for_load_state(
                                 "load"
                             )  # still useful for complete render
@@ -287,6 +387,11 @@ class ImportExternalReferenceConnector:
                         await asyncio.wait_for(
                             asyncio.shield(_safe_navigate(page, url)), timeout=180
                         )
+
+                        # Wait a short time for banners/popups to appear
+                        await asyncio.sleep(1.5)
+                        # Dismiss cookies or consent banners
+                        await self._dismiss_cookies(page)
 
                     except asyncio.TimeoutError:
                         self.helper.log_warning(f"Timeout loading {url}")
@@ -332,8 +437,10 @@ class ImportExternalReferenceConnector:
                     if not fut.done():
                         fut.set_exception(e)
                 finally:
-                    await page.close()
-                    await ctx.close()
+                    if page is not None:
+                        await page.close()
+                    if ctx is not None:
+                        await ctx.close()
                     self.task_queue.task_done()
                     self.helper.log_info(f"Worker finished for {url}")
 
