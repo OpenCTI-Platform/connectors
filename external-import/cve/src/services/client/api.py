@@ -66,12 +66,6 @@ class CVEClient:
             return response
         elif response.status_code == 404:
             error_data = response.headers
-        if response.status_code == 200:
-            # It is recommended that users "sleep" their scripts for six seconds between requests (NIST)
-            time.sleep(6)
-            return response
-        elif response.status_code == 404:
-            error_data = response.headers
             if error_data.get("message") == "Invalid apiKey.":
                 raise Exception(
                     "[API] Invalid API Key provided. Please check your configuration."

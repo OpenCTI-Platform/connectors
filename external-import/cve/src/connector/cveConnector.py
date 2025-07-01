@@ -177,7 +177,9 @@ class CVEConnector:
         :param last_run: Last run date in float
         :param work_id: Work id in str
         """
-        self.helper.connector_logger.info("[CONNECTOR] Getting the last CVEs since the last run...")
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Getting the last CVEs since the last run..."
+        )
 
         last_run_ts = datetime.utcfromtimestamp(last_run)
 
