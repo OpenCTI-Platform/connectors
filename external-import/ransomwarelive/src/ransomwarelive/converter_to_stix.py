@@ -2,25 +2,14 @@ import datetime
 
 import stix2
 import stix2.exceptions
-from pycti import Identity, StixCoreRelationship
-
-
-def handle_stix2_error(decorated_function):
-    """
-    Decorate ConverterToStix instance method to handle STIX 2.1 exceptions.
-    In case of an exception, log the error and return None.
-    :param decorated_function: Method to decorate
-    :return: Decorated method
-    """
-
-    def decorator(self, *args, **kwargs):
-        try:
-            return decorated_function(self, *args, **kwargs)
-        except stix2.exceptions.STIXError as e:
-            self.helper.connector_logger.error(str(e))
-            return None
-
-    return decorator
+from pycti import (
+    Identity,
+    IntrusionSet,
+    Location,
+    Report,
+    StixCoreRelationship,
+    ThreatActorGroup,
+)
 
 
 class ConverterToStix:
@@ -35,10 +24,9 @@ class ConverterToStix:
         self.helper = helper
         self.config = config
         self.marking = stix2.TLP_WHITE
-        self.author = self.create_author(marking=self.marking)
+        self.author = self.create_author()
 
-    @staticmethod
-    def create_author(marking) -> dict:
+    def create_author(self) -> dict:
         """
         Create STIX 2.1 Identity object representing the author of STIX objects
         :return: Identity in STIX 2.1 format
@@ -50,7 +38,7 @@ class ConverterToStix:
             name="Ransomware.Live",
             identity_class="organization",
             type="identity",
-            object_marking_refs=[marking.get("id")],
+            object_marking_refs=[self.marking.get("id")],
             contact_information="https://www.ransomware.live/about#data",
             x_opencti_reliability="A - Completely reliable",
             allow_custom=True,
@@ -58,8 +46,125 @@ class ConverterToStix:
 
         return author
 
-    @handle_stix2_error
-    def relationship_generator(
+    def create_domain(self, domain_name: str, description="-"):
+        """
+        Create a STIX object for a domain
+        :param domain_name: name of the domain in string
+        :param description: description of the domain in string or "-"
+        :return: STIX2.1 DomainName
+        """
+        domain = stix2.DomainName(
+            value=domain_name,
+            type="domain-name",
+            object_marking_refs=[self.marking.get("id")],
+            custom_properties={
+                "x_opencti_description": description,
+                "x_opencti_created_by_ref": self.author.get("id"),
+            },
+        )
+        return domain
+
+    def create_external_reference(self, url: str, description: str):
+        """
+        Create a STIX object for an ExternalReference
+        :param url: url of the external refenrence in string
+        :param description: description of the external reference in string
+        :return: STIX2.1 ExternalReference
+        """
+        external_reference = stix2.ExternalReference(
+            source_name="ransomware.live",
+            url=url,
+            description=description,
+        )
+        return external_reference
+
+    def create_identity(self, victim_name: str, identity_class: str):
+        """
+        Create a STIX object for an Identity
+        :param victim_name: victim name in string
+        :param identity_class: "organization" or "individual" string
+        :return: STIX2.1 Identity
+        """
+        identity = stix2.Identity(
+            id=Identity.generate_id(victim_name, identity_class),
+            name=victim_name,
+            identity_class=identity_class,
+            type="identity",
+            created_by_ref=self.author.get("id"),
+            object_marking_refs=[self.marking.get("id")],
+        )
+        return identity
+
+    def create_ipv4(self, ip: str):
+        """
+        Create STIX 2.1 IPv4 Address object
+        :param ip: ip in string
+        :return: IPv4 Address in STIX 2.1 format
+        """
+        return stix2.IPv4Address(
+            value=ip,
+            type="ipv4-addr",
+            object_marking_refs=[self.marking.get("id")],
+            created_by_ref=self.author.get("id"),
+            allow_custom=True,
+        )
+
+    def create_ipv6(self, ip: str):
+        """
+        Create STIX 2.1 IPv6 Address object
+        :param ip: ip in string
+        :return: IPv6 Address in STIX 2.1 format
+        """
+        return stix2.IPv6Address(
+            value=ip,
+            type="ipv6-addr",
+            object_marking_refs=[self.marking.get("id")],
+            created_by_ref=self.author.get("id"),
+            allow_custom=True,
+        )
+
+    def create_intrusionset(
+        self,
+        name: str,
+        intrusion_description: str,
+        ransom_note_external_reference: stix2.ExternalReference,
+    ):
+        """
+        Create STIX 2.1 IntrusionSet object
+        :param name: name of the intrusion in string
+        :param intrusion_description: description in string
+        :param ransom_note_external_reference: ExternalReference in STIX2.1 format
+        :return: IntrusionSet in STIX 2.1 format
+        """
+        intrusionset = stix2.IntrusionSet(
+            id=IntrusionSet.generate_id(name),
+            name=name,
+            labels=["ransomware"],
+            created_by_ref=self.author.get("id"),
+            description=intrusion_description,
+            object_marking_refs=[self.marking.get("id")],
+            external_references=[ransom_note_external_reference],
+        )
+        return intrusionset
+
+    def create_location(self, country_stix_id: str, country_name: str):
+        """
+        Create STIX 2.1 Location object
+        :param country_stix_id: id of the country STIX2.1 object in string
+        :param country_name: description in string
+        :return: Location in STIX 2.1 format
+        """
+        location = stix2.Location(
+            id=country_stix_id or Location.generate_id(country_name, "Country"),
+            name=country_name,
+            country=country_name,
+            type="location",
+            created_by_ref=self.author.get("id"),
+            object_marking_refs=[self.marking.get("id")],
+        )
+        return location
+
+    def create_relationship(
         self,
         source_ref: str,
         target_ref: str,
@@ -68,13 +173,13 @@ class ConverterToStix:
         created: datetime = None,
     ) -> stix2.Relationship:
         """
-        Generates a relationship object
-        :param source_ref:
-        :param target_ref:
-        :param relationship_type:
-        :param start_time:
-        :param created:
-        :return:
+        Create STIX2.1 Relationship object
+        :param source_ref: source id in string
+        :param target_ref: target id in string
+        :param relationship_type: relation type in string
+        :param start_time: attack start date in datetime (optional)
+        :param created: discovered date in datetime (optional)
+        :return: STIX2.1 Relationship
         """
         relation = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
@@ -92,51 +197,60 @@ class ConverterToStix:
         )
         return relation
 
-    @handle_stix2_error
-    def domain_generator(self, domain_name: str, description="-"):
+    def create_report(
+        self,
+        name: str,
+        attack_date_iso: datetime,
+        description: str,
+        object_refs: list[str],
+        discovered_iso: datetime,
+        external_references: list[stix2.ExternalReference],
+    ):
         """
-        Generates a STIX object for a domain
-        :param domain_name:
-        :param description:
-        :return: DomainName object
+        Create STIX2.1 Report object
+        :param name: name of report in string
+        :param attack_date_iso: attack date in datetime
+        :param description: description in string
+        :param object_refs: list of ids (victim, instrusionset, relationship victim-intrusionset.
+            Optional: target_relation and relation_intrusion_threat_actor ids)
+        :param discovered_iso: discovered datetime
+        :param external_references: list of STIX2.1 Externalreference
+        :return: STIX2.1 Report
         """
-        domain = stix2.DomainName(
-            value=domain_name,
-            type="domain-name",
-            object_marking_refs=[self.marking.get("id")],
-            custom_properties={
-                "x_opencti_description": description,
-                "x_opencti_created_by_ref": self.author.get("id"),
-            },
-        )
-        return domain
-
-    @handle_stix2_error
-    def ipv4_generator(self, ip: str):
-        """
-        Create STIX 2.1 IPv4 Address object
-        :param ip:
-        :return: IPv4 Address in STIX 2.1 format
-        """
-        return stix2.IPv4Address(
-            value=ip,
-            type="ipv4-addr",
-            object_marking_refs=[self.marking.get("id")],
+        report = stix2.Report(
+            id=Report.generate_id(name, attack_date_iso),
+            report_types=["Ransomware-report"],
+            name=name,
+            description=description,
             created_by_ref=self.author.get("id"),
-            allow_custom=True,
-        )
-
-    @handle_stix2_error
-    def ipv6_generator(self, ip: str):
-        """
-        Create STIX 2.1 IPv6 Address object
-        :param ip:
-        :return: IPv6 Address in STIX 2.1 format
-        """
-        return stix2.IPv6Address(
-            value=ip,
-            type="ipv6-addr",
+            object_refs=object_refs,
+            published=attack_date_iso,
+            created=discovered_iso,
             object_marking_refs=[self.marking.get("id")],
-            created_by_ref=self.author.get("id"),
-            allow_custom=True,
+            external_references=external_references,
         )
+        return report
+
+    def create_threat_actor(
+        self,
+        threat_actor_name: str,
+        threat_description: str,
+        ransom_note_external_reference: stix2.Externalreference,
+    ):
+        """
+        Create STIX2.1 ThreatActor object
+        :param threat_actor_name: name of threat actor in string
+        :param threat_description: description in string
+        :param ransom_note_external_reference: STIX2.1 Externalreference
+        :return: STIX2.1 Report
+        """
+        threat_actor = stix2.ThreatActor(
+            id=ThreatActorGroup.generate_id(threat_actor_name),
+            name=threat_actor_name,
+            labels=["ransomware"],
+            created_by_ref=self.author.get("id"),
+            description=threat_description,
+            object_marking_refs=[self.marking.get("id")],
+            external_references=[ransom_note_external_reference],
+        )
+        return threat_actor
