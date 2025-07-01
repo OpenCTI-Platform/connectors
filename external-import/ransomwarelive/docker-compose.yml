@@ -23,10 +23,10 @@ services:
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
       # Connector's custom execution parameters
-      - RANSOMWARE_PULL_HISTORY=false # If true, the connector will pull the history of the data. But it is not recommended to set it to true as there will a large influx of data.
-      - RANSOMWARE_HISTORY_START_YEAR=2023 # Data only goes back till 2020
-      - RANSOMWARE_INTERVAL=10m # 10 minutes will be the ideal time
-      - RANSOMWARE_CREATE_THREAT_ACTOR=false
+      - CONNECTOR_PULL_HISTORY=false # If true, the connector will pull the history of the data. But it is not recommended to set it to true as there will a large influx of data.
+      - CONNECTOR_HISTORY_START_YEAR=2023 # Data only goes back till 2020
+      - CONNECTOR_RUN_EVERY=10m # 10 minutes will be the ideal time
+      - CONNECTOR_CREATE_THREAT_ACTOR=false
 
     restart: always
 networks:
