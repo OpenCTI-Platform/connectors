@@ -4,6 +4,7 @@ This module defines configuration for batch processing GTI STIX objects
 using the generic batch processor system.
 """
 
+from datetime import datetime, timezone
 from typing import Any, List, Optional
 
 from connector.src.custom.exceptions import GTIWorkProcessingError
@@ -39,17 +40,35 @@ def extract_stix_date(stix_object: Any) -> Optional[Any]:
     if object_type != "report":
         return None
 
-    for date_field in ["modified", "created"]:
-        date_value = getattr(
-            stix_object,
-            date_field,
-            stix_object.get(date_field) if hasattr(stix_object, "get") else None,
-        )
-        if date_value:
-            if isinstance(date_value, str):
-                return date_value
-            elif hasattr(date_value, "isoformat"):
-                return date_value.isoformat()
+    date_value = getattr(
+        stix_object,
+        "modified",
+        stix_object.get("modified") if hasattr(stix_object, "get") else None,
+    )
+    if date_value:
+        now_utc = datetime.now(timezone.utc)
+        if hasattr(date_value, "replace"):
+            date_with_tz = (
+                date_value.replace(tzinfo=timezone.utc)
+                if date_value.tzinfo is None
+                else date_value
+            )
+            if date_with_tz > now_utc:
+                return now_utc.isoformat()
+            return date_value.isoformat()
+        if isinstance(date_value, str):
+            try:
+                parsed_date = datetime.fromisoformat(date_value.replace("Z", "+00:00"))
+                date_with_tz = (
+                    parsed_date.replace(tzinfo=timezone.utc)
+                    if parsed_date.tzinfo is None
+                    else parsed_date
+                )
+                if date_with_tz > now_utc:
+                    return now_utc.isoformat()
+            except (ValueError, AttributeError):
+                pass
+            return date_value
 
     return None
 
