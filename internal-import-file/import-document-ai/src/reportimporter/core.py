@@ -572,10 +572,10 @@ class ReportImporter:
                                 )
                             )
 
-            observables = observables + relationships + [entity_stix]
+            observables = observables + [entity_stix]
 
         else:
-
+            # entity is None
             # ------------------------------------------------------------
             # 2. Relationships predicted by the ML model (no context entity)
             # Create relationships predicted by the ML model
@@ -646,11 +646,16 @@ class ReportImporter:
                         )
                     skipped_rels.add(sig)
 
-            # Add newly created objects (entities / observables) + rels
-            observables = observables + entities + relationships
+            # Add newly created objects (entities / observables)
+            observables = observables + entities
 
-            relationship_ids: list[str] = [rel["id"] for rel in relationships]
+        # Dedupe relationships before counting/report wrap
+        unique = {r.id: r for r in relationships}
+        relationships = list(unique.values())
+        relationship_ids: list[str] = [rel["id"] for rel in relationships]
 
+        # wrap in a Report if no context
+        if entity is None:
             # No context entity: wrap everything in a freshly created Report
             now = datetime.now(timezone.utc)
             report = stix2.Report(
@@ -663,14 +668,18 @@ class ReportImporter:
                 allow_custom=True,
                 custom_properties={"x_opencti_files": [self.file] if self.file else []},
             )
-            observables = observables + [report] + relationships
+            observables += [report]
+
+        # Final bundle: observables (incl. entities), relationships, report
+        bundle_objects = observables + relationships
 
         # ------------------------------------------------------------
         # (3) Deduplicate objects and send bundle
         # ------------------------------------------------------------
+        # dedupe final objects by id
         final_ids: list[str] = []
         final_objects: list[dict] = []
-        for obj in observables:
+        for obj in bundle_objects:
             # Keep only objects whose name field is OK
             bad_name = (
                 "name" in obj and isinstance(obj["name"], str) and len(obj["name"]) < 2
