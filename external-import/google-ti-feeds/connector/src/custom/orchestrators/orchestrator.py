@@ -9,7 +9,7 @@ import re
 from typing import Any, Dict, Optional
 
 from connector.src.custom.client_api import ClientAPI
-from connector.src.custom.configs import BATCH_PROCESSOR_CONFIG, GTIConfig
+from connector.src.custom.configs import REPORT_BATCH_PROCESSOR_CONFIG, GTIConfig
 from connector.src.custom.convert_to_stix import ConvertToSTIX
 from connector.src.octi.work_manager import WorkManager
 from connector.src.utils.batch_processors import GenericBatchProcessor
@@ -43,15 +43,15 @@ class Orchestrator:
 
         self.logger.info(f"{LOG_PREFIX} API URL: {self.config.api_url}")
         self.logger.info(
-            f"{LOG_PREFIX} Import start date: {self.config.import_start_date}"
+            f"{LOG_PREFIX} Import start date: {self.config.report_import_start_date}"
         )
 
         self.client_api = ClientAPI(config, logger)
         self.converter = ConvertToSTIX(config, logger, tlp_level)
-        self.batch_processor = self._create_batch_processor()
-        self.current: int = 0
+        self.report_batch_processor = self._create_report_batch_processor()
+        self.report_nb_current: int = 0
 
-    def _create_batch_processor(self) -> GenericBatchProcessor:
+    def _create_report_batch_processor(self) -> GenericBatchProcessor:
         """Create and configure the batch processor.
 
         Returns:
@@ -60,24 +60,36 @@ class Orchestrator:
         """
         return GenericBatchProcessor(
             work_manager=self.work_manager,
-            config=BATCH_PROCESSOR_CONFIG,
+            config=REPORT_BATCH_PROCESSOR_CONFIG,
             logger=self.logger,
         )
 
-    async def run(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def run_report(self, initial_state: Optional[Dict[str, Any]]) -> None:
         """Run the orchestrator.
 
         Args:
             initial_state: Initial state for the orchestrator
 
         """
+        subentity_types = [
+            "malware_families",
+            "threat_actors",
+            "attack_techniques",
+            "vulnerabilities",
+            "domains",
+            "files",
+            "urls",
+            "ip_addresses",
+        ]
         try:
             async for gti_reports in self.client_api.fetch_reports(initial_state):
                 total_reports = len(gti_reports)
                 for report_idx, report in enumerate(gti_reports):
                     report_entities = self.converter.convert_report_to_stix(report)
                     subentities_ids = await self.client_api.fetch_subentities_ids(
-                        report.id
+                        entity_name="report_id",
+                        entity_id=report.id,
+                        subentity_types=subentity_types,
                     )
                     rel_summary = ", ".join(
                         [f"{k}: {len(v)}" for k, v in subentities_ids.items()]
@@ -91,7 +103,9 @@ class Orchestrator:
                     )
                     subentity_stix = (
                         self.converter.convert_subentities_to_stix_with_linking(
-                            subentities_detailed, report_entities
+                            subentities=subentities_detailed,
+                            main_entity="report",
+                            main_entities=report_entities,
                         )
                     )
 
@@ -110,17 +124,17 @@ class Orchestrator:
                         f"{LOG_PREFIX} ({report_idx + 1}/{total_reports}) Converted to {len(all_entities)} STIX entities {{{entities_summary}}}"
                     )
                     if (
-                        self.batch_processor.get_current_batch_size()
+                        self.report_batch_processor.get_current_batch_size()
                         + len(all_entities)
-                    ) >= self.batch_processor.config.batch_size:
+                    ) >= self.report_batch_processor.config.batch_size:
                         self.logger.info(
                             f"{LOG_PREFIX} Need to Flush before adding next items to preserve consistency of the bundle"
                         )
-                        self.batch_processor.flush()
+                        self.report_batch_processor.flush()
                     self._update_report_index_inplace()
-                    self.batch_processor.add_item(self.converter.organization)
-                    self.batch_processor.add_item(self.converter.tlp_marking)
-                    self.batch_processor.add_items(all_entities)
+                    self.report_batch_processor.add_item(self.converter.organization)
+                    self.report_batch_processor.add_item(self.converter.tlp_marking)
+                    self.report_batch_processor.add_items(all_entities)
         finally:
             self._flush_batch_processor()
 
@@ -133,23 +147,23 @@ class Orchestrator:
             if actual_total == 0:
                 return "(~ 0/0 reports)"
 
-            self.current += 1
-            return f"(~ {self.current}/{actual_total} reports)"
+            self.report_nb_current += 1
+            return f"(~ {self.report_nb_current}/{actual_total} reports)"
 
         pattern = r"\(~ (\d+)/(\d+) reports\)"
-        template = self.batch_processor.config.work_name_template
-        self.batch_processor.config.work_name_template = re.sub(
+        template = self.report_batch_processor.config.work_name_template
+        self.report_batch_processor.config.work_name_template = re.sub(
             pattern, replacer, template
         )
 
     def _flush_batch_processor(self) -> None:
         """Flush any remaining items in the batch processor."""
         try:
-            work_id = self.batch_processor.flush()
+            work_id = self.report_batch_processor.flush()
             if work_id:
                 self.logger.info(
                     f"{LOG_PREFIX} Batch processor: Flushed remaining items"
                 )
-            self.batch_processor.update_final_state()
+            self.report_batch_processor.update_final_state()
         except Exception as e:
             self.logger.error(f"{LOG_PREFIX} Failed to flush batch processor: {str(e)}")

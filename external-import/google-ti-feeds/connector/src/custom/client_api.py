@@ -26,7 +26,7 @@ class ClientAPI:
         self.api_client = self._create_api_client()
         self.fetcher_factory = self._create_fetcher_factory()
 
-    def _build_filter_configurations(
+    def _build_report_filter_configurations(
         self, initial_state: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """Build filter configurations based on config settings.
@@ -39,7 +39,7 @@ class ClientAPI:
 
         """
         try:
-            start_date_iso_8601 = self.config.import_start_date
+            start_date_iso_8601 = self.config.report_import_start_date
             duration = isodate.parse_duration(start_date_iso_8601)
             past_date = datetime.now(timezone.utc) - duration
             start_date = past_date.strftime("%Y-%m-%dT%H:%M:%S")
@@ -63,17 +63,17 @@ class ClientAPI:
             )
 
             report_types = getattr(self.config, "report_types", ["All"])
-            origins = getattr(self.config, "origins", ["All"])
+            report_origins = getattr(self.config, "report_origins", ["All"])
 
             if "All" in report_types:
                 report_types = ["All"]
-            if "All" in origins:
-                origins = ["All"]
+            if "All" in report_origins:
+                report_origins = ["All"]
 
             filter_configs = []
 
             for report_type in report_types:
-                for origin in origins:
+                for origin in report_origins:
                     current_filter = base_filters
                     if report_type != "All":
                         current_filter += f" report_type:'{report_type}'"
@@ -334,7 +334,7 @@ class ClientAPI:
             AsyncGenerator[Dict[str, Any], None]: The fetched reports.
 
         """
-        filter_configs = self._build_filter_configurations(initial_state)
+        filter_configs = self._build_report_filter_configurations(initial_state)
         report_fetcher = self.fetcher_factory.create_fetcher_by_name(
             "reports", base_url=self.config.api_url
         )
@@ -351,27 +351,20 @@ class ClientAPI:
             ):
                 yield report_data
 
-    async def fetch_subentities_ids(self, report_id: str) -> Dict[str, List[str]]:
+    async def fetch_subentities_ids(
+        self, entity_name: str, entity_id: str, subentity_types: list[str]
+    ) -> Dict[str, List[str]]:
         """Fetch subentities IDs from the API.
 
         Args:
-            report_id (str): The ID of the report.
+            entity_name (str): The name of the entity.
+            entity_id (str): The ID of the entity.
+            subentity_types (list[str]): The type of subentities to fetch.
 
         Returns:
             Dict[str, List[str]]: The fetched subentities IDs.
 
         """
-        subentity_types = [
-            "malware_families",
-            "threat_actors",
-            "attack_techniques",
-            "vulnerabilities",
-            "domains",
-            "files",
-            "urls",
-            "ip_addresses",
-        ]
-
         subentities_ids = {}
 
         relationships_fetcher = self.fetcher_factory.create_fetcher_by_name(
@@ -381,7 +374,7 @@ class ClientAPI:
             for subentity_type in subentity_types:
                 all_ids = []
 
-                params = {"report_id": report_id, "entity_type": subentity_type}
+                params = {entity_name: entity_id, "entity_type": subentity_type}
 
                 try:
                     async for page_data in self._paginate_with_cursor(
@@ -413,23 +406,23 @@ class ClientAPI:
 
                 if all_ids:
                     self.logger.info(
-                        f"{LOG_PREFIX} Retrieved {len(all_ids)} {subentity_type} relationship IDs for report {report_id}"
+                        f"{LOG_PREFIX} Retrieved {len(all_ids)} {subentity_type} relationship IDs for {entity_name} {entity_id}"
                     )
                     subentities_ids[subentity_type] = all_ids
                 else:
                     self.logger.debug(
-                        f"{LOG_PREFIX} No {subentity_type} relationship IDs found for report {report_id}"
+                        f"{LOG_PREFIX} No {subentity_type} relationship IDs found for {entity_name} {entity_id}"
                     )
 
             return subentities_ids
         except Exception as e:
             self.logger.error(
-                f"{LOG_PREFIX} Failed to gather relationships for report {report_id}: {str(e)}"
+                f"{LOG_PREFIX} Failed to gather relationships for {entity_name} {entity_id}: {str(e)}"
             )
             return {entity_type: [] for entity_type in subentity_types}
         finally:
             self.logger.info(
-                f"{LOG_PREFIX} Finished gathering relationships for report {report_id}"
+                f"{LOG_PREFIX} Finished gathering relationships for {entity_name} {entity_id}"
             )
 
     async def fetch_subentity_details(

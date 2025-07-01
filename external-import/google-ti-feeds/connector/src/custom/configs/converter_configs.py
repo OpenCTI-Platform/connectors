@@ -190,7 +190,7 @@ GTI_REPORT_CONVERTER_CONFIG = GenericConverterConfig(
     validate_input=True,
 )
 
-GTI_MALWARE_CONVERTER_CONFIG = GenericConverterConfig(
+GTI_REPORT_MALWARE_CONVERTER_CONFIG = GenericConverterConfig(
     entity_type="malware_families",
     mapper_class=GTIMalwareFamilyToSTIXMalware,
     output_stix_type="malware",
@@ -202,7 +202,7 @@ GTI_MALWARE_CONVERTER_CONFIG = GenericConverterConfig(
     postprocessing_function=create_report_linking_postprocessor(),
 )
 
-GTI_THREAT_ACTOR_CONVERTER_CONFIG = GenericConverterConfig(
+GTI_REPORT_THREAT_ACTOR_CONVERTER_CONFIG = GenericConverterConfig(
     entity_type="threat_actors",
     mapper_class=GTIThreatActorToSTIXIntrusionSet,
     output_stix_type="intrusion-set",
@@ -214,7 +214,7 @@ GTI_THREAT_ACTOR_CONVERTER_CONFIG = GenericConverterConfig(
     postprocessing_function=create_report_linking_postprocessor(),
 )
 
-GTI_ATTACK_TECHNIQUE_CONVERTER_CONFIG = GenericConverterConfig(
+GTI_REPORT_ATTACK_TECHNIQUE_CONVERTER_CONFIG = GenericConverterConfig(
     entity_type="attack_techniques",
     mapper_class=GTIAttackTechniqueToSTIXAttackPattern,
     output_stix_type="attack-pattern",
@@ -226,7 +226,7 @@ GTI_ATTACK_TECHNIQUE_CONVERTER_CONFIG = GenericConverterConfig(
     postprocessing_function=create_report_linking_postprocessor(),
 )
 
-GTI_VULNERABILITY_CONVERTER_CONFIG = GenericConverterConfig(
+GTI_REPORT_VULNERABILITY_CONVERTER_CONFIG = GenericConverterConfig(
     entity_type="vulnerabilities",
     mapper_class=GTIVulnerabilityToSTIXVulnerability,
     output_stix_type="vulnerability",
@@ -238,7 +238,7 @@ GTI_VULNERABILITY_CONVERTER_CONFIG = GenericConverterConfig(
     postprocessing_function=create_report_linking_postprocessor(),
 )
 
-GTI_DOMAIN_CONVERTER_CONFIG = GenericConverterConfig(
+GTI_REPORT_DOMAIN_CONVERTER_CONFIG = GenericConverterConfig(
     entity_type="domains",
     mapper_class=GTIDomainToSTIXDomain,
     output_stix_type="domain",
@@ -250,7 +250,7 @@ GTI_DOMAIN_CONVERTER_CONFIG = GenericConverterConfig(
     postprocessing_function=create_report_linking_postprocessor(),
 )
 
-GTI_FILE_CONVERTER_CONFIG = GenericConverterConfig(
+GTI_REPORT_FILE_CONVERTER_CONFIG = GenericConverterConfig(
     entity_type="files",
     mapper_class=GTIFileToSTIXFile,
     output_stix_type="file",
@@ -262,7 +262,7 @@ GTI_FILE_CONVERTER_CONFIG = GenericConverterConfig(
     postprocessing_function=create_report_linking_postprocessor(),
 )
 
-GTI_URL_CONVERTER_CONFIG = GenericConverterConfig(
+GTI_REPORT_URL_CONVERTER_CONFIG = GenericConverterConfig(
     entity_type="urls",
     mapper_class=GTIUrlToSTIXUrl,
     output_stix_type="url",
@@ -274,7 +274,7 @@ GTI_URL_CONVERTER_CONFIG = GenericConverterConfig(
     postprocessing_function=create_report_linking_postprocessor(),
 )
 
-GTI_IP_CONVERTER_CONFIG = GenericConverterConfig(
+GTI_REPORT_IP_CONVERTER_CONFIG = GenericConverterConfig(
     entity_type="ip_addresses",
     mapper_class=GTIIPToSTIXIP,
     output_stix_type="ip_address",
@@ -290,12 +290,12 @@ CONVERTER_CONFIGS = {
     "reports": GTI_REPORT_CONVERTER_CONFIG,
     "report_locations": GTI_REPORT_LOCATION_CONVERTER_CONFIG,
     "report_identities": GTI_REPORT_IDENTITY_CONVERTER_CONFIG,
-    "malware_families": GTI_MALWARE_CONVERTER_CONFIG,
-    "threat_actors": GTI_THREAT_ACTOR_CONVERTER_CONFIG,
-    "attack_techniques": GTI_ATTACK_TECHNIQUE_CONVERTER_CONFIG,
-    "vulnerabilities": GTI_VULNERABILITY_CONVERTER_CONFIG,
-    "domains": GTI_DOMAIN_CONVERTER_CONFIG,
-    "files": GTI_FILE_CONVERTER_CONFIG,
-    "urls": GTI_URL_CONVERTER_CONFIG,
-    "ip_addresses": GTI_IP_CONVERTER_CONFIG,
+    "malware_families": GTI_REPORT_MALWARE_CONVERTER_CONFIG,
+    "threat_actors": GTI_REPORT_THREAT_ACTOR_CONVERTER_CONFIG,
+    "attack_techniques": GTI_REPORT_ATTACK_TECHNIQUE_CONVERTER_CONFIG,
+    "vulnerabilities": GTI_REPORT_VULNERABILITY_CONVERTER_CONFIG,
+    "domains": GTI_REPORT_DOMAIN_CONVERTER_CONFIG,
+    "files": GTI_REPORT_FILE_CONVERTER_CONFIG,
+    "urls": GTI_REPORT_URL_CONVERTER_CONFIG,
+    "ip_addresses": GTI_REPORT_IP_CONVERTER_CONFIG,
 }

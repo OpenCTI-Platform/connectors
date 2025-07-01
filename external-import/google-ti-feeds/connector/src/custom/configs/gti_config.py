@@ -30,7 +30,7 @@ ALLOWED_REPORT_TYPES = [
     "Weekly Vulnerability Exploitation Report",
 ]
 
-ALLOWED_ORIGINS = [
+ALLOWED_REPORT_ORIGINS = [
     "All",
     "partner",
     "crowdsourced",
@@ -45,11 +45,13 @@ class GTIConfig(BaseConfig):
     model_config = SettingsConfigDict(env_prefix="gti_")
 
     api_key: str
-    import_start_date: str = "P1D"
     api_url: str = "https://www.virustotal.com/api/v3"
+
+    # Reports
+    report_import_start_date: str = "P1D"
     import_reports: bool = True
     report_types: List[str] | str = "All"
-    origins: List[str] | str = "All"
+    report_origins: List[str] | str = "All"
 
     @field_validator("report_types", mode="before")
     @classmethod
@@ -80,9 +82,9 @@ class GTIConfig(BaseConfig):
                 f"Failed to validate report types: {str(e)}"
             ) from e
 
-    @field_validator("origins", mode="before")
+    @field_validator("report_origins", mode="before")
     @classmethod
-    def split_and_validate_origins(cls, v: str) -> List[str]:
+    def split_and_validate_report_origins(cls, v: str) -> List[str]:
         """Split and validate a comma-separated string into a list and validate its contents."""
         try:
             parts = None
@@ -91,16 +93,20 @@ class GTIConfig(BaseConfig):
                 parts = [item.strip() for item in v.split(",") if item.strip()]
 
             if not parts:
-                raise GTIConfigurationError("At least one origin must be specified.")
+                raise GTIConfigurationError(
+                    "At least one report origin must be specified."
+                )
 
-            invalid = set(parts) - set(ALLOWED_ORIGINS)
+            invalid = set(parts) - set(ALLOWED_REPORT_ORIGINS)
             if invalid:
                 raise GTIConfigurationError(
-                    f"Invalid origins: {', '.join(invalid)}. "
-                    f"Allowed values: {', '.join(ALLOWED_ORIGINS)}."
+                    f"Invalid report origins: {', '.join(invalid)}. "
+                    f"Allowed values: {', '.join(ALLOWED_REPORT_ORIGINS)}."
                 )
             return parts
         except GTIConfigurationError:
             raise
         except Exception as e:
-            raise GTIConfigurationError(f"Failed to validate origins: {str(e)}") from e
+            raise GTIConfigurationError(
+                f"Failed to validate report origins: {str(e)}"
+            ) from e

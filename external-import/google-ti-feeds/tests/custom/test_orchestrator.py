@@ -57,20 +57,20 @@ class DummyConfig:
     def __init__(
         self,
         api_key: str,
-        import_start_date: str,
+        report_import_start_date: str,
         api_url: str,
         import_reports: bool,
         report_types: list[str],
-        origins: list[str],
+        report_origins: list[str],
         tlp_level: str,
     ):
         """Initialize the DummyConfig object."""
         self.api_key = api_key
-        self.import_start_date = import_start_date
+        self.report_import_start_date = report_import_start_date
         self.api_url = api_url
         self.import_reports = import_reports
         self.report_types = report_types
-        self.origins = origins
+        self.report_origins = report_origins
         self.tlp_level = tlp_level
 
 
@@ -136,11 +136,11 @@ def gti_config() -> DummyConfig:
     """Fixture for GTI configuration."""
     return DummyConfig(
         api_key="fake-key",
-        import_start_date="P1D",
+        report_import_start_date="P1D",
         api_url="https://fake-gti.api",
         import_reports=True,
         report_types=["All"],
-        origins=["All"],
+        report_origins=["All"],
         tlp_level="white",
     )
 
@@ -238,7 +238,7 @@ def _given_orchestrator_with_test_setup(gti_config: DummyConfig, caplog: Any) ->
 # When the orchestration workflow is executed
 async def _when_orchestration_executed(orchestrator: Any) -> Any:
     """Execute the orchestration workflow."""
-    result = await orchestrator.run(initial_state=None)
+    result = await orchestrator.run_report(initial_state=None)
     return result
 
 

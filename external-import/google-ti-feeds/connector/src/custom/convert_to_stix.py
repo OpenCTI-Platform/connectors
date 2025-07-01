@@ -173,40 +173,46 @@ class ConvertToSTIX:
         return all_stix_entities
 
     def convert_subentities_to_stix_with_linking(
-        self, subentities: Dict[str, List[Any]], report_entities: List[Any]
+        self,
+        subentities: Dict[str, List[Any]],
+        main_entity: str,
+        main_entities: List[Any],
     ) -> Optional[List[Any]]:
         """Convert each subentity to STIX format with report linking.
 
         Args:
             subentities: Dictionary mapping entity types to lists of entities
-            report_entities: List containing the report STIX object
+            main_entity: The main entity type
+            main_entities: List containing the main entity STIX object
 
         Returns:
             List of converted STIX objects
 
         """
-        report_obj = None
-        for entity in report_entities:
-            if hasattr(entity, "type") and entity.type == "report":
-                report_obj = entity
+        main_obj = None
+        for entity in main_entities:
+            if hasattr(entity, "type") and entity.type == main_entity:
+                main_obj = entity
                 break
 
-        if not report_obj:
+        if not main_obj:
             self.logger.warning(
-                f"{LOG_PREFIX} No report object found for linking, falling back to standard conversion"
+                f"{LOG_PREFIX} No {main_entity} object found for linking, falling back to standard conversion"
             )
             return self.convert_subentities_to_stix(subentities)
 
         try:
-            set_report_context(report_obj)
+            if "report" == main_entity:
+                set_report_context(main_obj)
 
             all_stix_entities = self.convert_subentities_to_stix(subentities)
 
             self.logger.debug(
-                f"{LOG_PREFIX} Converted sub-entities with report linking to {getattr(report_obj, 'id', 'unknown')}"
+                f"{LOG_PREFIX} Converted sub-entities with {main_entity} linking to {getattr(main_obj, 'id', 'unknown')}"
             )
 
             return all_stix_entities
 
         finally:
-            clear_report_context()
+            if "report" == main_entity:
+                clear_report_context()
