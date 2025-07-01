@@ -42,6 +42,7 @@ OPENCTISTIX2 = {
     "domain": {"type": "domain-name", "path": ["value"]},
     "ipv4-addr": {"type": "ipv4-addr", "path": ["value"]},
     "ipv6-addr": {"type": "ipv6-addr", "path": ["value"]},
+    "network-traffic": {"type": "network-traffic", "path": ["value"]},
     "url": {"type": "url", "path": ["value"]},
     "link": {"type": "url", "path": ["value"]},
     "email-address": {"type": "email-addr", "path": ["value"]},
@@ -73,6 +74,48 @@ OPENCTISTIX2 = {
     "identity-individual": {"type": "identity", "identity_class": "individual"},
 }
 FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
+
+# ATTRIBUTE_TYPE = {
+#     "filename" : "File",
+#     "md5": "MD5",
+#     "sha1": "SHA-1",
+#     "sha256": "SHA-256",
+#     "ip-src": ["IPv4-Addr", "IPv6-Addr"],
+#     "ip-dst": ["IPv4-Addr", "IPv6-Addr"],
+#     "ip": ["IPv4-Addr", "IPv6-Addr"],
+#     "port": "Network-Traffic",
+#     "hostname": "Hostname",
+#     "domain": "Domain-Name",
+# }
+
+TYPES_MANAGEMENT = {
+    # Todo - Mapping not complete
+    # Managed
+    "filename" : {"octi_type": "File", "stix_type": "file", "path": ["name"]},
+    "md5" : {"octi_type": "MD5", "stix_type": "file", "path": ["hashes", "MD5"]},
+    "sha1" : {"octi_type": "SHA-1", "stix_type": "file", "path": ["hashes", "SHA-1"]},
+    "sha256" : {"octi_type": "SHA-256", "stix_type": "file", "path": ["hashes", "SHA-256"]},
+
+    # Unmanaged
+    "ip-src" : {"octi_type": ["IPv4-Addr", "IPv6-Addr"], "stix_type": ["ipv4-addr", "ipv6-addr"], "path": ["value"]},
+    "ip-dst" : {"octi_type": ["IPv4-Addr", "IPv6-Addr"], "stix_type": ["ipv4-addr", "ipv6-addr"], "path": ["value"]},
+    "ip" : {"octi_type": ["IPv4-Addr", "IPv6-Addr"], "stix_type": ["ipv4-addr", "ipv6-addr"], "path": ["value"]},
+    # Network-Traffic check path src or dst (according to ip)
+    "port" : {"octi_type": "Network-Traffic", "stix_type": "network-traffic", "path": []},
+
+    "hostname" : {"octi_type": "Hostname", "stix_type": "hostname", "path": ["value"]},
+    "domain" : {"octi_type": "Domain-Name", "stix_type": "domain-name", "path": ["value"]},
+}
+
+ATTRIBUTES_COMBINED = [
+    "filename|md5",
+    "filename|sha1",
+    "filename|sha256",
+    "ip-src|port",
+    "ip-dst|port",
+    "hostname|port",
+    "domain|ip",
+]
 
 marking_tlp_clear = stix2.MarkingDefinition(
     id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
@@ -570,7 +613,8 @@ class Misp:
         if self.import_threat_levels is not None:
             import_threat_levels = self.import_threat_levels.split(",")
 
-        for event in events:
+        # TODO - Remove [2:] test my investigation event (‘Event test for investigation’ in MISP)
+        for event in events[2:]:
             self.helper.log_info("Processing event " + event["Event"]["uuid"])
             event_timestamp = int(event["Event"][self.misp_datetime_attribute])
             # need to check if timestamp is more recent than the previous event since
@@ -1097,6 +1141,63 @@ class Misp:
             "no_trigger_import": True,
         }
 
+    def _build_indicator_pattern(self, attributes:list[dict], combined:bool=False) -> str | None:
+        try:
+
+            attribute_type_primary = attributes[0].get("obs_type")
+            attribute_value_primary = attributes[0].get("obs_value")
+
+            attribute_info_primary = TYPES_MANAGEMENT.get(attribute_type_primary)
+            if not attribute_info_primary:
+                self.helper.connector_logger.warning("")
+                return None
+
+            stix_type_name = attribute_info_primary.get("stix_type")
+            # TODO
+            # - Check if stix_type is a list for processing ip
+            # - Check if it's a valid ipv4 or ipv6
+            stix_property_path = attribute_info_primary.get("path")
+
+            # Builds a STIX equality comparison expression (ex: file:name = "...")
+            lhs_primary = stix2.ObjectPath(stix_type_name, stix_property_path)
+            expression_primary = stix2.EqualityComparisonExpression(lhs_primary, attribute_value_primary)
+
+            if combined:
+                attribute_type_secondary = attributes[1].get("obs_type")
+                attribute_value_secondary = attributes[1].get("obs_value")
+
+                attribute_info_secondary = TYPES_MANAGEMENT.get(attribute_type_secondary)
+                if not attribute_info_secondary:
+                    self.helper.connector_logger.warning("")
+                    return None
+
+                stix_type_name = attribute_info_secondary.get("stix_type")
+                stix_property_path = attribute_info_secondary.get("path")
+
+                # Builds a STIX equality comparison expression (ex: file:hashes.'SHA-256' = "...")
+                lhs_secondary = stix2.ObjectPath(stix_type_name, stix_property_path)
+                expression_secondary = stix2.EqualityComparisonExpression(lhs_secondary, attribute_value_secondary)
+
+                # Combines the two comparisons with a logical AND.
+                # (ex: "file:name = '...' AND file:hashes.'SHA-256' = '...'")
+                expression_combined = str(stix2.AndBooleanExpression([expression_primary, expression_secondary]))
+            else:
+                expression_combined = None
+
+            expression_final = expression_primary if expression_combined is None else expression_combined
+            # Then encapsulates them in a STIX observation expression.
+            # (ex: "[file:name = '...' AND file:hashes.'SHA-256' = '...']")
+            genuise_pattern = str(stix2.ObservationExpression(expression_final))
+
+            return genuise_pattern
+
+        except (ValueError, KeyError) as err:
+            self.helper.connector_logger.warning(
+                "An error occurred when building the pattern indicator.",
+                {"error": err}
+            )
+
+
     def process_attribute(
         self,
         author: stix2.Identity,
@@ -1109,11 +1210,55 @@ class Misp:
         event_threat_level,
         create_relationships,
     ):
-        if attribute["type"] == "link" and attribute["category"] == "External analysis":
+
+        attribute_type = attribute.get("type")
+        attribute_value = attribute.get("value")
+        attribute_category = attribute.get("category")
+
+        if (
+                not attribute_type
+                or not attribute_value
+                or attribute_type == "attachment"
+                or (attribute_type == "link" and attribute_category == "External analysis")
+        ):
+            self.helper.connector_logger.warning(
+                "The attribute creation process will be ignored because the type or category is not supported, "
+                "or the value or type fields are missing.",
+                {
+                    "attribute_type": attribute_type,
+                    "attribute_value": attribute_value,
+                    "attribute_category": attribute_category,
+                }
+            )
             return None
-        if attribute["type"] == "attachment":
-            return None
-        resolved_attributes = self.resolve_type(attribute["type"], attribute["value"])
+
+
+        attributes = []
+        # Management of combined attributes in MIPS.
+        if attribute_type in ATTRIBUTES_COMBINED:
+
+            # Split the attribute type combined and attribute value combined.
+            attribute_type_primary, attribute_type_secondary = attribute_type.split("|", 1)
+            attribute_value_primary, attribute_value_secondary = attribute_value.split("|", 1)
+
+            attributes.append({"obs_type": attribute_type_primary, "obs_value": attribute_value_primary})
+            attributes.append({"obs_type": attribute_type_secondary, "obs_value": attribute_value_secondary})
+
+            # Building the indicator pattern
+            indicator_pattern = self._build_indicator_pattern(attributes, combined=True)
+
+        else:
+            attributes.append({"obs_type": attribute_type, "obs_value": attribute_value})
+
+            # Building the indicator pattern
+            indicator_pattern = self._build_indicator_pattern(attributes)
+
+        # TODO - Condition to be modified (Test)
+        if indicator_pattern:
+            print(indicator_pattern)
+            return
+
+        resolved_attributes = self.resolve_type(attribute_type, attribute_value)
         if resolved_attributes is None:
             return None
         file_name = None
@@ -1433,11 +1578,11 @@ class Misp:
                                 sighted_by["id"],
                                 datetime.fromtimestamp(
                                     int(misp_sighting["date_sighting"]), tz=timezone.utc
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                ),
                                 datetime.fromtimestamp(
                                     int(misp_sighting["date_sighting"]) + 3600,
                                     tz=timezone.utc,
-                                ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                ),
                             ),
                             sighting_of_ref=indicator["id"],
                             first_seen=datetime.fromtimestamp(
