@@ -15,7 +15,6 @@ def load_allowed_relations(helper: OpenCTIConnectorHelper) -> None:
     Args:
         helper (OpenCTIConnectorHelper): The connector helper to query OpenCTI.
     """
-    global _ALLOWED
     q = """
     query LoadRelationMapping {
       schemaRelationsTypesMapping {
