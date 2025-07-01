@@ -1,5 +1,6 @@
 pycti==6.7.9
 antlr4-python3-runtime==4.9.3
+stix2-patterns==2.0.0
 requests==2.32.4
 stix2==3.0.1
 PyYAML==6.0.2
