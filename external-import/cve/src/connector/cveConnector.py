@@ -22,7 +22,7 @@ class CVEConnector:
         """
         Main execution loop procedure for CVE connector
         """
-        self.helper.log_info("[CONNECTOR] Fetching datasets...")
+        self.helper.connector_logger.info("[CONNECTOR] Fetching datasets...")
         get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
         if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
             self.process_data()
@@ -47,7 +47,7 @@ class CVEConnector:
         )
 
         info_msg = f"[CONNECTOR] New work '{work_id}' initiated..."
-        self.helper.log_info(info_msg)
+        self.helper.connector_logger.info(info_msg)
 
         return work_id
 
@@ -61,12 +61,12 @@ class CVEConnector:
             f"[CONNECTOR] Connector successfully run, storing last_run as "
             f"{datetime.utcfromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S')}"
         )
-        self.helper.log_info(msg)
+        self.helper.connector_logger.info(msg)
         self.helper.api.work.to_processed(work_id, msg)
         self.helper.set_state({"last_run": current_time})
 
         interval_in_hours = round(self.config.interval / 60 / 60, 2)
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "[CONNECTOR] Last_run stored, next run in: "
             + str(interval_in_hours)
             + " hours"
@@ -125,11 +125,11 @@ class CVEConnector:
                     f"[CONNECTOR] Connector retrieve CVE history for year {year}, "
                     f"{days_in_year} days left"
                 )
-                self.helper.log_info(info_msg)
+                self.helper.connector_logger.info(info_msg)
 
                 """
                 If retrieve history for this year and days_in_year left are less than 120 days
-                Retrieve CVEs from the rest of days                         
+                Retrieve CVEs from the rest of days
                 """
                 if year == end_date.year and days_in_year < MAX_AUTHORIZED:
                     end_date_current_year = start_date_current_year + timedelta(
@@ -168,7 +168,7 @@ class CVEConnector:
                     days_in_year = 0
 
             info_msg = f"[CONNECTOR] Importing CVE history for year {year} finished"
-            self.helper.log_info(info_msg)
+            self.helper.connector_logger.info(info_msg)
 
     def _maintain_data(self, now: datetime, last_run: float, work_id: str) -> None:
         """
@@ -177,7 +177,9 @@ class CVEConnector:
         :param last_run: Last run date in float
         :param work_id: Work id in str
         """
-        self.helper.log_info("[CONNECTOR] Getting the last CVEs since the last run...")
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Getting the last CVEs since the last run..."
+        )
 
         last_run_ts = datetime.utcfromtimestamp(last_run)
 
@@ -213,11 +215,11 @@ class CVEConnector:
                 msg = "[CONNECTOR] Connector last run: " + datetime.utcfromtimestamp(
                     last_run
                 ).strftime("%Y-%m-%d %H:%M:%S")
-                self.helper.log_info(msg)
+                self.helper.connector_logger.info(msg)
             else:
                 last_run = None
                 msg = "[CONNECTOR] Connector has never run..."
-                self.helper.log_info(msg)
+                self.helper.connector_logger.info(msg)
 
             """
             ======================================================
@@ -267,7 +269,7 @@ class CVEConnector:
             else:
                 new_interval = self.config.interval - (current_time - last_run)
                 new_interval_in_hours = round(new_interval / 60 / 60, 2)
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     "[CONNECTOR] Connector will not run, next run in: "
                     + str(new_interval_in_hours)
                     + " hours"
@@ -277,8 +279,8 @@ class CVEConnector:
 
         except (KeyboardInterrupt, SystemExit):
             msg = "[CONNECTOR] Connector stop..."
-            self.helper.log_info(msg)
+            self.helper.connector_logger.info(msg)
             sys.exit(0)
         except Exception as e:
             error_msg = f"[CONNECTOR] Error while processing data: {str(e)}"
-            self.helper.log_error(error_msg)
+            self.helper.connector_logger.error(error_msg, meta={"error": str(e)})
