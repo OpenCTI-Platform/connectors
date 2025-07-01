@@ -42,7 +42,7 @@ dev = [
     "mypy ~=1.13.0",          # Type validator
     "pip_audit ~=2.9.0",      # Security checker
     "pre-commit ~=4.1.0",     # Git hooks
-    "flake8 ~=7.1.1",         # Linter
+    "flake8 ~=7.3.0",         # Linter
     "types-PyYAML ~=6.0.12",  # stubs for untyped module
 ]
 all = ["GoogleTIFeeds[test,dev]"]
