@@ -1,3 +1,39 @@
+Metadata-Version: 2.4
+Name: GoogleTIFeeds
+Version: 0.0.0
+Summary: External Import connector to retrieve feeds from GoogleTI.
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: <3.13,>=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: PyYAML~=6.0.2
+Requires-Dist: aiohttp~=3.11.18
+Requires-Dist: pycti~=6.6.11
+Requires-Dist: pydantic~=2.11.4
+Requires-Dist: pydantic_settings~=2.9.1
+Requires-Dist: python-dotenv~=1.0.1
+Requires-Dist: stix2~=3.0.1
+Requires-Dist: isodate~=0.7.2
+Requires-Dist: dotenv~=0.9.9
+Provides-Extra: test
+Requires-Dist: pytest~=8.1.1; extra == "test"
+Requires-Dist: pytest-asyncio~=0.16; extra == "test"
+Requires-Dist: pytest-order~=1.3.0; extra == "test"
+Requires-Dist: polyfactory~=2.21.0; extra == "test"
+Provides-Extra: dev
+Requires-Dist: black~=25.1; extra == "dev"
+Requires-Dist: isort~=6.0.1; extra == "dev"
+Requires-Dist: ruff~=0.7.2; extra == "dev"
+Requires-Dist: mypy~=1.13.0; extra == "dev"
+Requires-Dist: pip_audit~=2.9.0; extra == "dev"
+Requires-Dist: pre-commit~=4.1.0; extra == "dev"
+Requires-Dist: flake8~=7.1.1; extra == "dev"
+Requires-Dist: types-PyYAML~=6.0.12; extra == "dev"
+Provides-Extra: all
+Requires-Dist: GoogleTIFeeds[dev,test]; extra == "all"
+
 # Google Threat Intelligence Connector
 
 | Status            | Date       | Comment |

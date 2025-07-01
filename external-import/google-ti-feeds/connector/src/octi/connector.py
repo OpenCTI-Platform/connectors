@@ -174,7 +174,7 @@ class Connector:
             self._logger.info(f"{LOG_PREFIX} Retrieved state: {initial_state}")
 
             self._logger.info(f"{LOG_PREFIX} Starting GTI full ingestion...")
-            await orchestrator.run(initial_state)
+            await orchestrator.run_report(initial_state)
 
         except Exception as e:
             self._logger.error(f"{LOG_PREFIX} GTI reports processing failed: {str(e)}")

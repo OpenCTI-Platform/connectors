@@ -15,7 +15,7 @@ from connector.src.utils.batch_processors.generic_batch_processor_config import 
 LOG_PREFIX = "[GenericBatchProcessor]"
 
 
-def extract_stix_date(stix_object: Any) -> Optional[Any]:
+def report_extract_stix_date(stix_object: Any) -> Optional[Any]:
     """Extract the latest date from a STIX object for state updates.
 
     Only extracts dates from report objects to track the latest processed report.
@@ -122,7 +122,7 @@ def log_batch_completion(stix_objects: List[Any], work_id: str) -> None:
     )
 
 
-BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
+REPORT_BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
     batch_size=500,
     work_name_template="Google Threat Intel - Batch #{batch_num} (~ 0/0 reports)",
     state_key="next_cursor_start_date",
@@ -131,7 +131,7 @@ BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
     exception_class=GTIWorkProcessingError,
     display_name_singular="STIX object",
     auto_process=True,
-    date_extraction_function=extract_stix_date,
+    date_extraction_function=report_extract_stix_date,
     postprocessing_function=log_batch_completion,
     validation_function=validate_stix_object,
     empty_batch_behavior="update_state",
