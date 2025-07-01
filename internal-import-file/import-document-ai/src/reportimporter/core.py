@@ -18,6 +18,11 @@ from reportimporter.constants import (
     RESULT_FORMAT_MATCH,
     RESULT_FORMAT_TYPE,
 )
+from reportimporter.relations_allowed import (
+    is_relation_allowed,
+    load_allowed_relations,
+    stix_lookup_type,
+)
 from reportimporter.util import create_stix_object
 from requests.exceptions import ConnectionError, HTTPError
 
@@ -63,6 +68,8 @@ class ReportImporter:
         )
         self.licence_key_base64 = base64.b64encode(license_key_pem.encode())
         # Retrieve the OpenCTI instance ID (used as a header for the ML service)
+        # TODO make the connector more resilient to OpenCTI being down at startup,
+        # by wraping the initial helper.api.query() in a try/except with retries and logging
         self.instance_id = (
             self.helper.api.query(
                 """
@@ -77,6 +84,10 @@ class ReportImporter:
             .get("settings", {})
             .get("id", "")
         )
+
+        # Loading this mapping costs one GraphQL call at startup,
+        # and subsequent lookups are constant time in Python dict.
+        load_allowed_relations(self.helper)
 
     @staticmethod
     def _sanitise_name(raw_text: str | None) -> str | None:
@@ -174,7 +185,7 @@ class ReportImporter:
             return "No information extracted from report"
 
         # Step 3: Parse and build STIX entities / observables, and map text to STIX id (for relationship linking)
-        observables, entities, text_to_id = self._process_parsing_results(
+        observables, entities, text_to_id, text_to_obj = self._process_parsing_results(
             parsed, entity
         )
         predicted_rels = parsed.get("relationships", [])
@@ -188,13 +199,18 @@ class ReportImporter:
             bypass_validation,
             file_name,
             text_to_id,
+            text_to_obj,
         )
 
         # Build an end‐user summary
         if all(v == 0 for v in counts.values()):
             return "No STIX objects sent — empty extraction or all filtered out."
+
+        skipped = counts.get("skipped_rels", [])
+        summary_lines = []
+
         if self.helper.get_validate_before_import() and not bypass_validation:
-            return (
+            summary_lines.append(
                 f"Generated STIX bundle (awaiting validation) with: "
                 f"{counts['observables']} observables, "
                 f"{counts['entities']} entities, "
@@ -202,7 +218,7 @@ class ReportImporter:
                 + (f", {counts['report']} report" if counts["report"] else "")
             )
         else:
-            return (
+            summary_lines.append(
                 f"Sent STIX bundle with: "
                 f"{counts['observables']} observables, "
                 f"{counts['entities']} entities, "
@@ -210,6 +226,12 @@ class ReportImporter:
                 + (f", {counts['report']} report" if counts["report"] else "")
                 + f" (total sent = {counts['total_sent']})"
             )
+        if skipped:
+            summary_lines.append(
+                f", and {len(skipped)} unauthorized relationships were skipped."
+            )
+
+        return "\n".join(summary_lines)
 
     def start(self) -> None:
         """Begin listening for messages on the queue. Each message will trigger `_process_message`."""
@@ -240,7 +262,7 @@ class ReportImporter:
 
     def _process_parsing_results(
         self, parsed: dict, context_entity: dict | None
-    ) -> tuple[list[dict], list[dict], dict[str, str]]:
+    ) -> tuple[list[dict], list[dict], dict[str, str], dict[str, dict]]:
         """Convert the JSON output of the ML service into two lists:
           - observables: STIX Cyber Observables (e.g., IPv4Address, DomainName, etc.)
           - entities: STIX Domain Objects (e.g., Malware, Identity, etc.)
@@ -251,11 +273,15 @@ class ReportImporter:
             context_entity (dict | None): Contextual entity (e.g., Report, Case, Threat Actor)
 
         Returns:
-            tuple[list[dict], list[dict], dict[str, str]]: _description_
+            tuple[ list[dict], list[dict], dict[tuple[str, str], str], dict[tuple[str, str], dict] ]:
+                observables, entities,
+                text_to_id: {(normalized_text, stix_id): stix_id},
+                text_to_obj: {(normalized_text, stix_id): full_stix_object}
         """
         observables = []
         entities = []
-        text_to_id = {}  # text value -> STIX id
+        text_to_id: dict[str, str] = {}
+        text_to_obj: dict[str, dict] = {}
 
         # Collect markings and author from the context entity, if any
         if context_entity is not None:
@@ -316,6 +342,8 @@ class ReportImporter:
                 if stix_object:
                     entities.append(stix_object)
                     if txt not in text_to_id:
+                        # store full object
+                        text_to_obj[txt] = stix_object
                         text_to_id[txt] = stix_object["id"]
                 else:
                     self.helper.connector_logger.debug(
@@ -336,13 +364,14 @@ class ReportImporter:
                 if stix_object:
                     observables.append(stix_object)
                     if txt not in text_to_id:
+                        text_to_obj[txt] = stix_object
                         text_to_id[txt] = stix_object["id"]
                 else:
                     self.helper.connector_logger.debug(
                         f"Unsupported observable category: {match}"
                     )
 
-        return observables, entities, text_to_id
+        return observables, entities, text_to_id, text_to_obj
 
     def _convert_id(self, type, standard_id):
         if type == "Case-Incident":
@@ -370,6 +399,7 @@ class ReportImporter:
         bypass_validation: bool,
         file_name: str,
         text_to_id: dict,
+        text_to_obj: dict,
     ) -> dict:
         """Build STIX bundle: includes observables, entities, and predicted relationships
         (either linked to a context entity or wrapped in a new Report object).
@@ -410,6 +440,7 @@ class ReportImporter:
         ids: list[str] = []
         observables_ids: list[str] = []
         entities_ids: list[str] = []
+        skipped_rels: set[tuple[str, str, str, str, str]] = set()
 
         for o in observables:
             if o["id"] not in ids:
@@ -544,6 +575,28 @@ class ReportImporter:
                     )
                     continue
 
+                # Look up the entity types from your already‐built STIX objects:
+                src_obj = text_to_obj.get(src_txt)
+                dst_obj = text_to_obj.get(dst_txt)
+                from_type = stix_lookup_type(src_obj)
+                to_type = stix_lookup_type(dst_obj)
+
+                if not is_relation_allowed(from_type, to_type, rel_type):
+                    rel_signature = (
+                        src_txt,
+                        from_type,
+                        rel_type.lower(),
+                        dst_txt,
+                        to_type,
+                    )
+
+                    self.helper.connector_logger.warning(
+                        f"Skipping incompatible relationship {rel_type} between {from_type} and {to_type}:: \n "
+                        f"{src_txt}[{from_type}] => {rel_type} => {dst_txt}[{to_type}]"
+                    )
+                    skipped_rels.add(rel_signature)
+                    continue
+
                 relationships.append(
                     stix2.Relationship(
                         id=StixCoreRelationship.generate_id(rel_type, src_id, dst_id),
@@ -615,4 +668,5 @@ class ReportImporter:
             "relationships": len(relationship_ids),
             "report": 0 if report_is_update else 1,
             "total_sent": actual_count,
+            "skipped_rels": skipped_rels,
         }
