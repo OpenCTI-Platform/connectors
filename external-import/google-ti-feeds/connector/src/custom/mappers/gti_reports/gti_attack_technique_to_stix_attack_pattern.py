@@ -12,7 +12,11 @@ from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
     KillChainPhaseModel,
 )
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import AttackPattern, Identity, MarkingDefinition  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
+from stix2.v21 import AttackPattern  # type: ignore
 
 
 class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):
@@ -21,15 +25,15 @@ class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):
     def __init__(
         self,
         attack_technique: GTIAttackTechniqueData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
     ) -> None:
         """Initialize the GTIAttackTechniqueToSTIXAttackPattern object.
 
         Args:
             attack_technique (GTIAttackTechniqueData): The GTI attack technique data to convert.
-            organization (Identity): The organization identity object.
-            tlp_marking (MarkingDefinition): The TLP marking definition.
+            organization (OrganizationAuthor): The organization author object.
+            tlp_marking (TLPMarking): The TLP marking definition.
 
         """
         self.attack_technique = attack_technique

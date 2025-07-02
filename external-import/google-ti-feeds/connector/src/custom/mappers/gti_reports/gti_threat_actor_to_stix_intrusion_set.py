@@ -12,7 +12,11 @@ from connector.src.stix.v21.models.ovs.attack_motivation_ov_enums import (
     AttackMotivationOV,
 )
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import Identity, IntrusionSet, MarkingDefinition  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
+from stix2.v21 import IntrusionSet  # type: ignore
 
 
 class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
@@ -21,15 +25,15 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
     def __init__(
         self,
         threat_actor: GTIThreatActorData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
     ) -> None:
         """Initialize the GTIThreatActorToSTIXIntrusionSet object.
 
         Args:
             threat_actor (GTIThreatActorData): The GTI threat actor data to convert.
-            organization (Identity): The organization identity object.
-            tlp_marking (MarkingDefinition): The TLP marking definition.
+            organization (OrganizationAuthor): The organization identity object.
+            tlp_marking (TLPMarking): The TLP marking definition.
 
         """
         self.threat_actor = threat_actor

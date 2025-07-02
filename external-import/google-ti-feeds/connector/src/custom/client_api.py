@@ -45,7 +45,9 @@ class ClientAPI:
             start_date = past_date.strftime("%Y-%m-%dT%H:%M:%S")
 
             last_mod_date = (
-                initial_state.get("next_cursor_start_date") if initial_state else None
+                initial_state.get("report_next_cursor_start_date")
+                if initial_state
+                else None
             )
 
             if last_mod_date:

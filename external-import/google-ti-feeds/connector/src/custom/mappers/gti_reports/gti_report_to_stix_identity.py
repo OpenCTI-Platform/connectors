@@ -5,7 +5,11 @@ from typing import Optional
 from connector.src.custom.models.gti_reports.gti_report_model import GTIReportData
 from connector.src.stix.octi.models.identity_author_model import OctiIdentityAuthorModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
+from stix2.v21 import Identity  # type: ignore
 
 
 class GTIReportToSTIXIdentity(BaseMapper):
@@ -14,14 +18,14 @@ class GTIReportToSTIXIdentity(BaseMapper):
     def __init__(
         self,
         report: GTIReportData,
-        organization: Identity,
-        tlp_marking: Optional[MarkingDefinition] = None,
+        organization: OrganizationAuthor,
+        tlp_marking: Optional[TLPMarking] = None,
     ):
         """Initialize the GTIReportToSTIXIdentity object.
 
         Args:
             report (GTIReportData): The GTI report data to convert.
-            organization (Identity): The organization identity object.
+            organization (OrganizationAuthor): The organization identity object.
             tlp_marking: The TLP marking definition (not used by this mapper).
 
         """

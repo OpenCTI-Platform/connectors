@@ -116,7 +116,9 @@ The connector is designed to be run in a Docker container. However, if you want 
 
 4/ Install the required dependencies:
 ```bash
-pip install -e .[all]
+pip install -e .[dev,test]
+# or better
+poetry install --with dev,test
 ```
 (for legacy purposes, you can also use `pip install -r requirements.txt` that is in editable mode.)
 

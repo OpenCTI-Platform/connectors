@@ -9,7 +9,10 @@ from connector.src.custom.configs.converter_configs import (
     set_report_context,
 )
 from connector.src.utils.converters import GenericConverterFactory
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
 
 LOG_PREFIX = "[Converters]"
 
@@ -51,18 +54,14 @@ class ConvertToSTIX:
 
         return factory
 
-    def _create_organization(self) -> Identity:
+    def _create_organization(self) -> OrganizationAuthor:
         """Create the organization identity object.
 
         Returns:
             Identity: The organization identity object
 
         """
-        from connector.src.stix.octi.models.identity_organization_model import (
-            OctiOrganizationModel,
-        )
-
-        organization_model = OctiOrganizationModel.create(
+        organization = OrganizationAuthor(
             name="Google Threat Intelligence",
             description="Google Threat Intelligence provides information on the latest threats.",
             contact_information="https://gtidocs.virustotal.com",
@@ -70,20 +69,17 @@ class ConvertToSTIX:
             reliability=None,
             aliases=["GTI"],
         )
-        organization = organization_model.to_stix2_object()
 
         self.logger.debug(f"{LOG_PREFIX} Created organization identity")
         return organization
 
-    def _create_tlp_marking(self) -> MarkingDefinition:
+    def _create_tlp_marking(self) -> TLPMarking:
         """Create the TLP marking definition object.
 
         Returns:
             MarkingDefinition: The TLP marking definition object
 
         """
-        from connector.src.stix.octi.models.tlp_marking_model import TLPMarkingModel
-
         tlp_level = self.tlp_level.lower()
         normalized_level = tlp_level.lower()
 
@@ -104,7 +100,7 @@ class ConvertToSTIX:
             normalized_level,
         )
 
-        tlp_marking = TLPMarkingModel(level=tlp_literal).to_stix2_object()
+        tlp_marking = TLPMarking(level=tlp_literal)
 
         self.logger.debug(
             f"{LOG_PREFIX} Created TLP marking with level: {normalized_level}"
