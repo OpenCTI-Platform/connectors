@@ -113,10 +113,7 @@ def test_connector_run(
     connector = CustomConnector(helper=mocked_helper, config=_ConnectorSettings())
     connector._collect_intelligence = MagicMock(return_value=data)
 
-    with pytest.raises(SystemExit) as exc_info:
-        connector.run()
-
-    assert exc_info.value.code == 0  # RUN_AND_TERMINATE
+    connector.run()
 
     # Logs
     assert mocked_helper.connector_logger.info.call_args_list == [
