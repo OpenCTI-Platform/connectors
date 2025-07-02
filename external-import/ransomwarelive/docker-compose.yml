@@ -25,7 +25,7 @@ services:
       # Connector's custom execution parameters
       - CONNECTOR_PULL_HISTORY=false # If true, the connector will pull the history of the data. But it is not recommended to set it to true as there will a large influx of data.
       - CONNECTOR_HISTORY_START_YEAR=2023 # Data only goes back till 2020
-      - CONNECTOR_RUN_EVERY=10m # 10 minutes will be the ideal time
+      - CONNECTOR_RUN_EVERY=10m # DEPRECATED, use CONNECTOR_DURATION_PERIOD instead
       - CONNECTOR_CREATE_THREAT_ACTOR=false
 
     restart: always

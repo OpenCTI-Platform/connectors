@@ -1,14 +1,15 @@
 import datetime
 import os
 
-from base_connector_config import (
+from pydantic import BaseModel, Field
+from pydantic_settings import SettingsConfigDict
+
+from .base_connector_config import (
     BaseConnectorSettings,
     ConnectorConfig,
     ListFromString,
     LogLevelType,
 )
-from pydantic import BaseModel, Field
-from pydantic_settings import SettingsConfigDict
 
 _FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -39,6 +40,7 @@ class _RansomwareConfig(BaseModel):
     create_threat_actor: bool = Field(
         default=False, description="Whether to create a Threat Actor object"
     )
+    interval: str = Field(default=None)  # Warning: Deprecated
 
 
 class ConnectorSettings(BaseConnectorSettings):

@@ -1,10 +1,10 @@
 import sys
 import traceback
 
-from lib.ransom_conn import RansomwareAPIConnector
 from pycti import OpenCTIConnectorHelper
 
 from ransomwarelive.config import ConnectorSettings
+from ransomwarelive.ransom_conn import RansomwareAPIConnector
 
 if __name__ == "__main__":
     try:
