@@ -1,5 +1,6 @@
 import sys
 import time
+import traceback
 from datetime import UTC, datetime
 
 import stix2
@@ -113,21 +114,26 @@ class ExternalImportConnector:
                 + " hours"
             )
 
+    def process(self):
+        meta = {"connector_name": self.helper.connect_name}
+        try:
+            self.helper.connector_logger.info("Running connector...", meta=meta)
+            self.process_message()
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info("Connector stopped by user.", meta=meta)
+            sys.exit(0)
+        except Exception as e:
+            traceback.print_exc()
+            meta["error"] = str(e)
+            self.helper.connector_logger.error(f"Unexpected error: {e}", meta=meta)
+
     def run(self) -> None:
         # Main procedure
         self.helper.connector_logger.info(
             f"Starting {self.helper.connect_name} connector..."
         )
         while True:
-            try:
-                self.process_message()
-            except (KeyboardInterrupt, SystemExit):
-                self.helper.connector_logger.info(
-                    f"{self.helper.connect_name} connector stopped"
-                )
-                sys.exit(0)
-            except Exception as e:
-                self.helper.connector_logger.error(str(e))
+            self.process()
 
             if self.helper.connect_run_and_terminate:
                 self.helper.connector_logger.info(
