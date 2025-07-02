@@ -3,8 +3,8 @@ import sys
 from datetime import datetime, timedelta, timezone
 
 import pycti
-import requests
 import stix2
+from api_client import RansomwareAPIClient
 from config import ConnectorSettings
 from converter_to_stix import ConverterToStix
 from pycti import OpenCTIConnectorHelper
@@ -19,6 +19,8 @@ from utils import (
     safe_datetime,
     threat_description_generator,
 )
+
+ONE_DAY_IN_SECONDS = 86400
 
 
 class RansomwareAPIConnector:
@@ -40,6 +42,7 @@ class RansomwareAPIConnector:
         self.last_run_datetime_with_ingested_data = None
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
         self.author = self.converter_to_stix.author
+        self.api_client = RansomwareAPIClient()
 
         interval = self.config.ransomware.interval
         if interval:
@@ -81,42 +84,36 @@ class RansomwareAPIConnector:
         for item in rubbish:
             sector = " ".join(sector.split(item))
 
-        try:
-            sector_out = self.helper.api.identity.read(
-                filters={
-                    "mode": "and",
-                    "filters": [
-                        {
-                            "key": "entity_type",
-                            "values": ["Sector"],
-                            "operator": "eq",
-                        },
-                    ],
-                    "filterGroups": [
-                        {
-                            "mode": "or",
-                            "filters": [
-                                {
-                                    "key": "name",
-                                    "values": sector,
-                                    "operator": "eq",
-                                },
-                                {
-                                    "key": "x_opencti_aliases",
-                                    "values": sector,
-                                    "operator": "eq",
-                                },
-                            ],
-                            "filterGroups": [],
-                        }
-                    ],
-                },
-            )
-        except Exception as e:
-            self.helper.connector_logger.error(
-                "Error fetching sector", {"sector": sector, "error": e}
-            )
-            return None
+        sector_out = self.helper.api.identity.read(
+            filters={
+                "mode": "and",
+                "filters": [
+                    {
+                        "key": "entity_type",
+                        "values": ["Sector"],
+                        "operator": "eq",
+                    },
+                ],
+                "filterGroups": [
+                    {
+                        "mode": "or",
+                        "filters": [
+                            {
+                                "key": "name",
+                                "values": sector,
+                                "operator": "eq",
+                            },
+                            {
+                                "key": "x_opencti_aliases",
+                                "values": sector,
+                                "operator": "eq",
+                            },
+                        ],
+                        "filterGroups": [],
+                    }
+                ],
+            },
+        )
 
         if sector_out and sector_out.get("standard_id").startswith("identity--"):
             return sector_out.get("standard_id")
@@ -426,25 +423,8 @@ class RansomwareAPIConnector:
         Collects historic intelligence from ransomware.live
         :return:
         """
-        base_url = "https://api.ransomware.live/v2/victims/"
-        groups_url = "https://api.ransomware.live/v2/groups"
-        headers = {"accept": "application/json", "User-Agent": "OpenCTI"}
-        group_data = []
-
         # fetching group information
-        try:
-            response = requests.get(groups_url, headers=headers, timeout=(20000, 20000))
-            response.raise_for_status()
-            group_data = response.json()
-        except requests.exceptions.HTTPError as err:
-            self.helper.connector_logger.error(
-                "Http error during collect of historic intelligence.",
-                {"error": err, "url": groups_url},
-            )
-        except Exception as e:
-            self.helper.connector_logger.error(
-                "Error while collecting historic intelligence", {"error": e}
-            )
+        group_data = self.api_client.get_feed("groups")
 
         # Checking if the historic year is less than 2020 as there is no data past 2020
         year = (
@@ -458,167 +438,34 @@ class RansomwareAPIConnector:
         nb_stix_objects = 0
 
         for year in range(year, current_year + 1):  # Looping through the years
-            year_url = base_url + str(year)
+            year_url = "victims/" + str(year)
             for month in range(1, 13):  # Looping through the months
                 bundles = []
-                url = year_url + "/" + str(month)
-                response = requests.get(url, headers=headers, timeout=(20000, 20000))
-                response.raise_for_status()
-                response_json = response.json()
-
-                try:
-                    for item in response_json:
-
-                        bundle_list = self.stix_object_generator(item, group_data)
-
-                        if bundle_list:
-                            # Add Author object
-                            bundle_list = [self.converter_to_stix.author] + bundle_list
-
-                            nb_stix_objects += len(bundle_list)
-
-                            # Deduplicate the objects
-                            bundle_list = self.helper.stix2_deduplicate_objects(
-                                bundle_list
-                            )
-
-                            bundles.append(
-                                stix2.Bundle(
-                                    objects=bundle_list, allow_custom=True
-                                ).serialize()
-                            )
-                        else:
-                            self.helper.connector_logger.info("No new data to process")
-
-                    if bundles:
-                        # Initiate new work
-                        friendly_name = f"RansomwareLive - {year}/{month}"
-                        self.work_id = self.helper.api.work.initiate_work(
-                            self.helper.connect_id, friendly_name
-                        )
-
-                        for bundle in bundles:
-                            self.helper.send_stix2_bundle(
-                                bundle=bundle,
-                                work_id=self.work_id,
-                                cleanup_inconsistent_bundle=True,
-                            )
-
-                        self.helper.connector_logger.info(
-                            "Sending STIX objects to OpenCTI...",
-                            {"len_bundle_list": len(bundle_list)},
-                        )
-
-                except requests.exceptions.HTTPError as err:
-                    self.helper.connector_logger.error(
-                        "Http error during collect of historic intelligence",
-                        {"error": err, "url": url},
-                    )
-                except Exception as e:
-                    self.helper.connector_logger.error(
-                        "Error while collecting historic intelligence", {"error": e}
-                    )
-
-        if nb_stix_objects:
-            self.last_run_datetime_with_ingested_data = datetime.now(
-                tz=timezone.utc
-            ).isoformat(timespec="seconds")
-
-    def collect_intelligence(self):
-        """
-        Collects intelligence from the last 24 on ransomware.live
-        """
-
-        url = "https://api.ransomware.live/v2/recentvictims"
-        groups_url = "https://api.ransomware.live/v2/groups"
-        headers = {"accept": "application/json"}
-        group_data = []
-
-        # fetching group information
-        try:
-            response = requests.get(groups_url, headers=headers, timeout=(20000, 20000))
-            response.raise_for_status()
-            group_data = response.json()
-        except requests.exceptions.HTTPError as err:
-            self.helper.connector_logger.error(
-                "Http error during collect intelligence",
-                {"error": err, "url": groups_url},
-            )
-        except Exception as e:
-            self.helper.connector_logger.error(
-                "Error while collecting intelligence", {"error": e}
-            )
-
-        # fetching recent requests
-        try:
-            response = requests.get(url, headers=headers, timeout=(20000, 20000))
-            response.raise_for_status()
-
-            if response.status_code == 200:
-                response_json = response.json()
-                nb_stix_objects = 0
-                bundles = []
-                last_run_datetime = (
-                    self.last_run_datetime_with_ingested_data or self.last_run
-                )
-
-                # Previous last_run was in seconds
-                if isinstance(last_run_datetime, int):
-                    last_run_datetime = datetime.fromtimestamp(
-                        last_run_datetime, tz=timezone.utc
-                    )
-                elif isinstance(last_run_datetime, str):
-                    last_run_datetime = datetime.strptime(
-                        last_run_datetime, "%Y-%m-%dT%H:%M:%S%z"
-                    )
+                path = year_url + "/" + str(month)
+                response_json = self.api_client.get_feed(path)
 
                 for item in response_json:
-                    created = datetime.strptime(
-                        item.get("discovered"), "%Y-%m-%d %H:%M:%S.%f"
-                    ).replace(tzinfo=timezone.utc)
 
-                    if not last_run_datetime:
-                        time_diff = 1
+                    bundle_list = self.stix_object_generator(item, group_data)
+
+                    if bundle_list:
+                        # Add Author object
+                        bundle_list = [self.converter_to_stix.author] + bundle_list
+
+                        nb_stix_objects += len(bundle_list)
+
+                        # Deduplicate the objects
+                        bundle_list = self.helper.stix2_deduplicate_objects(bundle_list)
+
+                        bundles.append(self.helper.stix2_create_bundle(bundle_list))
                     else:
-                        time_diff = (
-                            created - (last_run_datetime - timedelta(days=1))
-                        ).seconds  # pushing all the data from the last 24 hours
-
-                    if time_diff < 86400:
-
-                        bundle_list = self.stix_object_generator(
-                            item, group_data
-                        )  # calling the stix_object_generator method to create stix objects
-
-                        if bundle_list:
-                            # Add Author object at first
-                            bundle_list = [self.converter_to_stix.author] + bundle_list
-
-                            # Deduplicate the objects
-                            bundle_list = self.helper.stix2_deduplicate_objects(
-                                bundle_list
-                            )
-
-                            nb_stix_objects += len(bundle_list)
-
-                            self.helper.connector_logger.info(
-                                "Sending STIX objects to OpenCTI...",
-                                {"len_bundle_list": len(bundle_list)},
-                            )
-
-                            # Creating Bundle
-                            bundles.append(
-                                stix2.Bundle(
-                                    objects=bundle_list, allow_custom=True
-                                ).serialize()
-                            )
-                        else:
-                            self.helper.connector_logger.info("No new data to process")
+                        self.helper.connector_logger.info("No new data to process")
 
                 if bundles:
                     # Initiate new work
+                    friendly_name = f"RansomwareLive - {year}/{month}"
                     self.work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, "RansomwareLive"
+                        self.helper.connect_id, friendly_name
                     )
 
                     for bundle in bundles:
@@ -630,22 +477,100 @@ class RansomwareAPIConnector:
 
                     self.helper.connector_logger.info(
                         "Sending STIX objects to OpenCTI...",
-                        {"total_number_stix_objects": nb_stix_objects},
+                        {"len_bundle_list": len(bundle_list)},
                     )
 
-                if nb_stix_objects:
-                    self.last_run_datetime_with_ingested_data = datetime.now(
-                        tz=timezone.utc
-                    ).isoformat(timespec="seconds")
+        if nb_stix_objects:
+            self.last_run_datetime_with_ingested_data = datetime.now(
+                tz=timezone.utc
+            ).isoformat(timespec="seconds")
 
-        except requests.exceptions.HTTPError as err:
-            self.helper.connector_logger.error(
-                "Http error during collect intelligence", {"error": err, "url": url}
+    def collect_intelligence(self):
+        """
+        Collects intelligence from the last 24 on ransomware.live
+        """
+        # fetching group information
+        group_data = self.api_client.get_feed("groups")
+
+        # fetching recent requests
+        response_json = self.api_client.get_feed("recentvictims")
+
+        nb_stix_objects = 0
+        bundles = []
+        last_run_datetime = self.last_run_datetime_with_ingested_data or self.last_run
+
+        # Previous last_run was in seconds
+        if isinstance(last_run_datetime, int):
+            last_run_datetime = datetime.fromtimestamp(
+                last_run_datetime, tz=timezone.utc
             )
-        except Exception as e:
-            self.helper.connector_logger.error(
-                "Error while collecting intelligence", {"error": e}
+        elif isinstance(last_run_datetime, str):
+            last_run_datetime = datetime.strptime(
+                last_run_datetime, "%Y-%m-%dT%H:%M:%S%z"
             )
+
+        for item in response_json:
+            created = datetime.strptime(
+                item.get("discovered"), "%Y-%m-%d %H:%M:%S.%f"
+            ).replace(tzinfo=timezone.utc)
+
+            # We only retrieve the data from the last 24h.
+            # If no last_run, just put time_diff to 0.
+            # The result of created date - (last_run date - 1 day) has to be at most 24h/1 day.
+            if not last_run_datetime:
+                time_diff = 0
+            else:
+                time_diff = (
+                    created - (last_run_datetime - timedelta(days=1))
+                ).seconds  # pushing all the data from the last 24 hours
+
+            if time_diff < ONE_DAY_IN_SECONDS:
+
+                bundle_list = self.stix_object_generator(
+                    item, group_data
+                )  # calling the stix_object_generator method to create stix objects
+
+                if bundle_list:
+                    # Add Author object at first
+                    bundle_list = [self.converter_to_stix.author] + bundle_list
+
+                    # Deduplicate the objects
+                    bundle_list = self.helper.stix2_deduplicate_objects(bundle_list)
+
+                    nb_stix_objects += len(bundle_list)
+
+                    self.helper.connector_logger.info(
+                        "Sending STIX objects to OpenCTI...",
+                        {"len_bundle_list": len(bundle_list)},
+                    )
+
+                    # Creating Bundle
+                    bundles.append(self.helper.stix2_create_bundle(bundle_list))
+                else:
+                    self.helper.connector_logger.info("No new data to process")
+
+        if bundles:
+            # Initiate new work
+            self.work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, "RansomwareLive"
+            )
+
+            for bundle in bundles:
+                self.helper.send_stix2_bundle(
+                    bundle=bundle,
+                    work_id=self.work_id,
+                    cleanup_inconsistent_bundle=True,
+                )
+
+            self.helper.connector_logger.info(
+                "Sending STIX objects to OpenCTI...",
+                {"total_number_stix_objects": nb_stix_objects},
+            )
+
+        if nb_stix_objects:
+            self.last_run_datetime_with_ingested_data = datetime.now(
+                tz=timezone.utc
+            ).isoformat(timespec="seconds")
 
     def process_message(self) -> None:
         """
@@ -725,13 +650,6 @@ class RansomwareAPIConnector:
                 )
 
             self.helper.set_state(current_state)
-
-            message = "Connector successfully run, storing last_run as" + now.isoformat(
-                timespec="seconds"
-            )
-            if self.work_id:
-                self.helper.api.work.to_processed(self.work_id, message)
-            self.helper.connector_logger.info(message)
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "Connector stopped", {"connector_name": self.helper.connect_name}
@@ -739,6 +657,17 @@ class RansomwareAPIConnector:
             sys.exit(0)
         except Exception as e:
             self.helper.connector_logger.error("Connector error on run", {"error": e})
+
+        finally:
+            message = "Connector successfully run, storing last_run as" + now.isoformat(
+                timespec="seconds"
+            )
+
+            if self.work_id:
+                self.helper.api.work.to_processed(self.work_id, message)
+            self.helper.connector_logger.info(message)
+
+            self.work_id = None
 
     def run(self):
         if self.config.connector.duration_period:
