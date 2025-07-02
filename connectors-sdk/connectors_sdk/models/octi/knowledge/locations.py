@@ -15,18 +15,76 @@ class OCTIStixLocation(stix2.Location):  # type: ignore[misc]  # stix2 does not 
         """Override _check_object_constraints method."""
         location_type = (self.x_opencti_location_type or "").lower()
         if location_type in ["administrative-area", "city", "position"]:
-            if self.get("precision") is not None:
-                self._check_properties_dependency(
-                    ["longitude", "latitude"], ["precision"]
-                )
-
             self._check_properties_dependency(["latitude"], ["longitude"])
             self._check_properties_dependency(["longitude"], ["latitude"])
 
-            # Skip region/country/latitude/longitude presence check because all of them are optional on OpenCTI
-            # even though at least one of them is required in the STIX2.1 spec
+            # Skip (region OR country OR (latitude AND longitude)) check because all of them are optional on OpenCTI
+            # even though at least one of them is required in the STIX2.1 Location spec
+            #
+            # Skip (precision AND (latitude OR longitude)) check because OpenCTI does not handle precision at all
         else:
             super()._check_object_constraints()
+
+
+@MODEL_REGISTRY.register
+class City(BaseIdentifiedEntity):
+    """Represent a city entity."""
+
+    name: str = Field(
+        description="A name used to identify the City.",
+    )
+    description: Optional[str] = Field(
+        None,
+        description="A textual description of the City.",
+    )
+    latitude: Optional[float] = Field(
+        default=None,
+        description="The latitude of the City in decimal degrees.",
+    )
+    longitude: Optional[float] = Field(
+        default=None,
+        description="The longitude of the City in decimal degrees.",
+    )
+
+    def to_stix2_object(self) -> stix2.Location:
+        """Make stix object.
+
+        Notes:
+            - OpenCTI maps STIX Location SDO to OCTI City entity based on `x_opencti_location_type`.
+            - To create a City entity on OpenCTI, `x_opencti_location_type` MUST be 'City'.
+        """
+        location_type = "City"
+
+        return OCTIStixLocation(
+            id=pycti.Location.generate_id(
+                name=self.name,
+                x_opencti_location_type=location_type,
+                latitude=self.latitude,
+                longitude=self.longitude,
+            ),
+            name=self.name,
+            city=self.name,
+            description=self.description,
+            latitude=self.latitude,
+            longitude=self.longitude,
+            custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
+                x_opencti_location_type=location_type,
+            ),
+            region=None,
+            country=None,
+            administrative_area=None,
+            precision=None,
+            street_address=None,
+            postal_code=None,
+            created=None,
+            modified=None,
+            revoked=None,
+            labels=None,
+            confidence=None,
+            lang=None,
+            granular_markings=None,
+            extensions=None,
+        )
 
 
 @MODEL_REGISTRY.register
@@ -34,11 +92,11 @@ class Country(BaseIdentifiedEntity):
     """Represent a Country on OpenCTI."""
 
     name: str = Field(
-        description="A name used to identify the Location.",
+        description="A name used to identify the Country.",
     )
     description: Optional[str] = Field(
         None,
-        description="A textual description of the Location.",
+        description="A textual description of the Country.",
     )
 
     def to_stix2_object(self) -> stix2.Location:

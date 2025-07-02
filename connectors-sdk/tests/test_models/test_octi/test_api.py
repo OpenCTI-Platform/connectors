@@ -9,6 +9,7 @@ FEATURE_NAMES = [
     "AssociatedFile",
     "BasedOn",
     "BaseEntity",
+    "City",
     "Country",
     "DerivedFrom",
     "ExternalReference",

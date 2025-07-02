@@ -14,7 +14,7 @@ from connectors_sdk.models.octi.activities.observations import (
     IPV4Address,
 )
 from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
-from connectors_sdk.models.octi.knowledge.locations import Country
+from connectors_sdk.models.octi.knowledge.locations import City, Country
 from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
 from connectors_sdk.models.octi.relationships import (
     BasedOn,
@@ -33,6 +33,7 @@ __all__ = [
     # Models flat list
     "AssociatedFile",
     "BasedOn",
+    "City",
     "Country",
     "DerivedFrom",
     "ExternalReference",
