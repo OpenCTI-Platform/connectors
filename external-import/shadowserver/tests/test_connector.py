@@ -2,13 +2,18 @@ import os
 from unittest.mock import MagicMock
 
 import pytest
+from pydantic_settings import SettingsConfigDict
 from shadowserver.config import ConnectorSettings
 from shadowserver.connector import CustomConnector
 
 
+class _ConnectorSettings(ConnectorSettings):
+    model_config = SettingsConfigDict(env_file="", yaml_file="")
+
+
 @pytest.mark.usefixtures("mock_config")
 def test_connector_initialization() -> None:
-    connector = CustomConnector(helper=MagicMock(), config=ConnectorSettings())
+    connector = CustomConnector(helper=MagicMock(), config=_ConnectorSettings())
 
     assert connector.config.shadowserver.api_key == "CHANGEME"
     assert connector.config.shadowserver.api_secret == "CHANGEME"
@@ -25,7 +30,7 @@ def test_connector_initialization() -> None:
 def test_connector_initialization_create_incident(create_incident, expected) -> None:
     os.environ["SHADOWSERVER_CREATE_INCIDENT"] = create_incident
 
-    connector = CustomConnector(helper=MagicMock(), config=ConnectorSettings())
+    connector = CustomConnector(helper=MagicMock(), config=_ConnectorSettings())
 
     assert connector.config.shadowserver.create_incident == expected
     assert connector.config.shadowserver.incident_priority == "P1"
@@ -38,7 +43,7 @@ def test_connector_initialization_default_incident() -> None:
     os.environ.pop("SHADOWSERVER_INCIDENT_SEVERITY")
     os.environ.pop("SHADOWSERVER_INCIDENT_PRIORITY")
 
-    connector = CustomConnector(helper=MagicMock(), config=ConnectorSettings())
+    connector = CustomConnector(helper=MagicMock(), config=_ConnectorSettings())
 
     assert connector.config.shadowserver.create_incident == False
     assert connector.config.shadowserver.incident_priority == "P4"

@@ -61,7 +61,7 @@ class TestShadowserverAPI:
         assert shadow_server_api.marking_refs.name == "TLP:WHITE"
 
     def test_init_marking_refs_invalid(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(KeyError):
             ShadowserverAPI(
                 api_key="test_api_key",
                 api_secret="test_api_secret",

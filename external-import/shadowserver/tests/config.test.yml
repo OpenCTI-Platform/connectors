@@ -1,0 +1,17 @@
+opencti:
+  url: "http://test-opencti-url"
+  token: "test-opencti-token"
+
+connector:
+  id: "ChangeMe"
+  name: "Shadowserver config.test.yml"
+  scope: "stix2"
+  log_level: "info"
+  duration_period: "PT5M"
+shadowserver:
+  api_key: "CHANGEME"
+  api_secret: "CHANGEME"
+  marking: "TLP:CLEAR"
+  create_incident: "true"
+  incident_severity: "high"
+  incident_priority: "P1"
