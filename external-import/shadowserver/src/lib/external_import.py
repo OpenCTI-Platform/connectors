@@ -36,11 +36,13 @@ class ExternalImportConnector:
         self.helper.set_state(state={**self.state, **kwargs})
 
     def log_last_run(self) -> datetime | None:
-        # Get the current timestamp and check
         if last_run := self.state.get("last_run"):
-            message = (
-                f"last run @ {datetime.fromtimestamp(last_run, tz=UTC).isoformat()}"
+            last_run = (
+                datetime.fromtimestamp(last_run, tz=UTC)  # For retro compatibility
+                if isinstance(last_run, float | int)
+                else datetime.fromisoformat(last_run)
             )
+            message = f"last run @ {last_run.isoformat(timespec='seconds')}"
         else:
             message = "has never run"
         self.helper.connector_logger.info(
@@ -53,24 +55,17 @@ class ExternalImportConnector:
         # Store the current timestamp as a last run
         self.helper.connector_logger.info(message)
         self.helper.connector_logger.debug(
-            f"Grabbing current state and update it with last_run: {self.start_time.timestamp()}"
+            f"Grabbing current state and update it with last_run: {self.start_time.isoformat(timespec='seconds')}"
         )
-        self.update_state(last_run=self.start_time.timestamp())
+        self.update_state(last_run=self.start_time.isoformat(timespec="seconds"))
         self.helper.connector_logger.info(
-            "Last_run stored, next run in: "
-            + str(
-                round(
-                    self.config.connector.duration_period.total_seconds() / 3600,
-                    2,
-                )
-            )
-            + " hours"
+            f"Last_run stored, next run in: {str(self.config.connector.duration_period)}"
         )
 
     def process_data(self):
         self.work_id = self.helper.api.work.initiate_work(
             connector_id=self.helper.connect_id,
-            friendly_name=f"{self.helper.connect_name} run @ {self.start_time.isoformat()}",
+            friendly_name=f"{self.helper.connect_name} run @ {self.start_time.isoformat(timespec='seconds')}",
         )
 
         # Performing the collection of intelligence
@@ -94,7 +89,7 @@ class ExternalImportConnector:
         self.process_data()
         message = (
             f"{self.helper.connect_name} connector successfully run, storing last_run as "
-            + str(self.start_time.timestamp())
+            + str(self.start_time.isoformat(timespec="seconds"))
         )
         self.set_last_run(message)
         if self.work_id:
