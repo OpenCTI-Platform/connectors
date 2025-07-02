@@ -44,7 +44,7 @@ class IntrusionSet(BaseIdentifiedEntity):
         description="The primary reason, motivation, or purpose behind this Intrusion Set.",
         default=None,
     )
-    secondary_motivations: Optional[str] = Field(
+    secondary_motivations: Optional[list[str]] = Field(
         description="The secondary reasons, motivations, or purposes behind this Intrusion Set.",
         default=None,
     )
