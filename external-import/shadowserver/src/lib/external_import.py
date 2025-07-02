@@ -28,6 +28,91 @@ class ExternalImportConnector:
         """Collect intelligence from the source"""
         raise NotImplementedError
 
+    def process_message(self):
+        # Get the current timestamp and check
+        timestamp = int(time.time())
+        current_state = self.helper.get_state()
+        if current_state is not None and "last_run" in current_state:
+            last_run = current_state["last_run"]
+            self.helper.connector_logger.info(
+                f"{self.helper.connect_name} connector last run @ {datetime.fromtimestamp(last_run, tz=UTC).isoformat()}"
+            )
+        else:
+            last_run = None
+            self.helper.connector_logger.info(
+                f"{self.helper.connect_name} connector has never run"
+            )
+
+        # If the last_run is more than interval-1 day
+        if last_run is None or (
+            (timestamp - last_run)
+            >= self.config.connector.duration_period.total_seconds()
+        ):
+            self.helper.connector_logger.info(f"{self.helper.connect_name} will run!")
+            friendly_name = f"{self.helper.connect_name} run @ {datetime.fromtimestamp(timestamp, tz=UTC).isoformat()}"
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
+
+            try:
+                # Performing the collection of intelligence
+                bundle_objects = self._collect_intelligence()
+                if bundle_objects:
+                    bundle = stix2.Bundle(
+                        objects=bundle_objects, allow_custom=True
+                    ).serialize()
+
+                    self.helper.connector_logger.info(
+                        f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
+                    )
+                    self.helper.send_stix2_bundle(
+                        bundle,
+                        work_id=work_id,
+                        cleanup_inconsistent_bundle=True,
+                    )
+                else:
+                    self.helper.connector_logger.info("No data to send to OpenCTI.")
+            except Exception as e:
+                self.helper.connector_logger.error(str(e))
+
+            # Store the current timestamp as a last run
+            message = (
+                f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                + str(timestamp)
+            )
+            self.helper.connector_logger.info(message)
+
+            self.helper.connector_logger.debug(
+                f"Grabbing current state and update it with last_run: {timestamp}"
+            )
+            current_state = self.helper.get_state()
+            if current_state:
+                current_state["last_run"] = timestamp
+            else:
+                current_state = {"last_run": timestamp}
+            self.helper.set_state(current_state)
+
+            self.helper.api.work.to_processed(work_id, message)
+            self.helper.connector_logger.info(
+                "Last_run stored, next run in: "
+                + str(
+                    round(
+                        self.config.connector.duration_period.total_seconds() / 3600,
+                        2,
+                    )
+                )
+                + " hours"
+            )
+        else:
+            new_interval = self.config.connector.duration_period.total_seconds() - (
+                timestamp - last_run
+            )
+            self.helper.connector_logger.info(
+                f"{self.helper.connect_name} connector will not run, next run in: "
+                + str(round(new_interval / 3600, 2))
+                + " hours"
+            )
+
     def run(self) -> None:
         # Main procedure
         self.helper.connector_logger.info(
@@ -35,96 +120,7 @@ class ExternalImportConnector:
         )
         while True:
             try:
-                # Get the current timestamp and check
-                timestamp = int(time.time())
-                current_state = self.helper.get_state()
-                if current_state is not None and "last_run" in current_state:
-                    last_run = current_state["last_run"]
-                    self.helper.connector_logger.info(
-                        f"{self.helper.connect_name} connector last run @ {datetime.fromtimestamp(last_run, tz=UTC).isoformat()}"
-                    )
-                else:
-                    last_run = None
-                    self.helper.connector_logger.info(
-                        f"{self.helper.connect_name} connector has never run"
-                    )
-
-                # If the last_run is more than interval-1 day
-                if last_run is None or (
-                    (timestamp - last_run)
-                    >= self.config.connector.duration_period.total_seconds()
-                ):
-                    self.helper.connector_logger.info(
-                        f"{self.helper.connect_name} will run!"
-                    )
-                    friendly_name = f"{self.helper.connect_name} run @ {datetime.fromtimestamp(timestamp, tz=UTC).isoformat()}"
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
-
-                    try:
-                        # Performing the collection of intelligence
-                        bundle_objects = self._collect_intelligence()
-                        if bundle_objects:
-                            bundle = stix2.Bundle(
-                                objects=bundle_objects, allow_custom=True
-                            ).serialize()
-
-                            self.helper.connector_logger.info(
-                                f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
-                            )
-                            self.helper.send_stix2_bundle(
-                                bundle,
-                                work_id=work_id,
-                                cleanup_inconsistent_bundle=True,
-                            )
-                        else:
-                            self.helper.connector_logger.info(
-                                "No data to send to OpenCTI."
-                            )
-                    except Exception as e:
-                        self.helper.connector_logger.error(str(e))
-
-                    # Store the current timestamp as a last run
-                    message = (
-                        f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                        + str(timestamp)
-                    )
-                    self.helper.connector_logger.info(message)
-
-                    self.helper.connector_logger.debug(
-                        f"Grabbing current state and update it with last_run: {timestamp}"
-                    )
-                    current_state = self.helper.get_state()
-                    if current_state:
-                        current_state["last_run"] = timestamp
-                    else:
-                        current_state = {"last_run": timestamp}
-                    self.helper.set_state(current_state)
-
-                    self.helper.api.work.to_processed(work_id, message)
-                    self.helper.connector_logger.info(
-                        "Last_run stored, next run in: "
-                        + str(
-                            round(
-                                self.config.connector.duration_period.total_seconds()
-                                / 3600,
-                                2,
-                            )
-                        )
-                        + " hours"
-                    )
-                else:
-                    new_interval = (
-                        self.config.connector.duration_period.total_seconds()
-                        - (timestamp - last_run)
-                    )
-                    self.helper.connector_logger.info(
-                        f"{self.helper.connect_name} connector will not run, next run in: "
-                        + str(round(new_interval / 3600, 2))
-                        + " hours"
-                    )
-
+                self.process_message()
             except (KeyboardInterrupt, SystemExit):
                 self.helper.connector_logger.info(
                     f"{self.helper.connect_name} connector stopped"
