@@ -15,7 +15,10 @@ from connector.src.stix.v21.models.scos.url_model import URLModel
 from connector.src.stix.v21.models.sdos.indicator_model import IndicatorModel
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
 
 
 class GTIUrlToSTIXUrl(BaseMapper):
@@ -24,15 +27,15 @@ class GTIUrlToSTIXUrl(BaseMapper):
     def __init__(
         self,
         url: GTIURLData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
     ) -> None:
         """Initialize the GTIUrlToSTIXUrl object.
 
         Args:
         url (GTIURLData): The GTI URL data to convert.
-        organization (Identity): The organization identity object.
-        tlp_marking (MarkingDefinition): The TLP marking definition.
+        organization (OrganizationAuthor): The organization identity object.
+        tlp_marking (TLPMarking): The TLP marking definition.
 
         """
         self.url = url

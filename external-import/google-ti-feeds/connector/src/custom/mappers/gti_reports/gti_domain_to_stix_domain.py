@@ -15,7 +15,10 @@ from connector.src.stix.v21.models.scos.domain_name_model import DomainNameModel
 from connector.src.stix.v21.models.sdos.indicator_model import IndicatorModel
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
 
 
 class GTIDomainToSTIXDomain(BaseMapper):
@@ -24,15 +27,15 @@ class GTIDomainToSTIXDomain(BaseMapper):
     def __init__(
         self,
         domain: GTIDomainData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
     ) -> None:
         """Initialize the GTIDomainToSTIXDomain object.
 
         Args:
         domain (GTIDomainData): The GTI domain data to convert.
-        organization (Identity): The organization identity object.
-        tlp_marking (MarkingDefinition): The TLP marking definition.
+        organization (OrganizationAuthor): The organization author object.
+        tlp_marking (TLPMarking): The TLP marking object.
 
         """
         self.domain = domain

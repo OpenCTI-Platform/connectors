@@ -1,20 +1,19 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "GoogleTIFeeds"
+dynamic = ["version"]
 description = "External Import connector to retrieve feeds from GoogleTI."
 readme = "README.md"
-dynamic = ["version"]
+requires-python = ">=3.11,<3.13"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-
-requires-python = ">=3.11, <3.13"
 
 dependencies = [
     "PyYAML ~=6.0.2",
@@ -26,6 +25,7 @@ dependencies = [
     "stix2 ~=3.0.1",
     "isodate ~=0.7.2",
     "dotenv ~= 0.9.9",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.7.1#subdirectory=connectors-sdk",
 ]
 
 [project.optional-dependencies]
@@ -49,10 +49,6 @@ all = ["GoogleTIFeeds[test,dev]"]
 
 [project.scripts]
 GoogleTIFeeds = "connector.__main__:main"
-
-[tool.setuptools.packages.find]
-where = ["."]
-
 
 [tool.pytest.ini_options]
 testpaths = ["./tests"]
@@ -87,21 +83,9 @@ exclude = [
     "site-packages",
     "venv",
 ]
-
 target-version = "py312"
 
 [tool.ruff.lint]
-# Never enforce `I001` (unsorted import). Already handle with isort
-# Never enforce `E501` (line length violations). Already handle with black
-# Never enforce `F821` (Undefined name `null`). incorrect issue with notebook
-# Never enforce `D213` (Multi-line docstring summary should start at the second line) conflict with our docstring convention
-# Never enforce `D211` (NoBlankLinesBeforeClass)`
-# Never enforce `G004` (logging-f-string) Logging statement uses f-string
-# Never enforce `TRY003`() Avoid specifying long messages outside the exception class not useful
-# Never enforce `D104` (Missing docstring in public package)
-# Never enforce `D407` (Missing dashed underline after section)
-# Never enforce `D408` (Section underline should be in the line following the section’s name)
-# Never enforce `D409` (Section underline should match the length of its name)
 ignore = [
     "I001",
     "D203",

@@ -13,7 +13,11 @@ from connector.src.stix.v21.models.cdts.external_reference_model import (
 )
 from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import Identity, MarkingDefinition, Report  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
+from stix2.v21 import Report  # type: ignore
 
 
 class GTIReportToSTIXReport(BaseMapper):
@@ -22,15 +26,15 @@ class GTIReportToSTIXReport(BaseMapper):
     def __init__(
         self,
         report: GTIReportData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
     ) -> None:
         """Initialize the GTIReportToSTIXReport object.
 
         Args:
             report (GTIReportData): The GTI report data to convert.
-            organization (Identity): The organization identity object.
-            tlp_marking (MarkingDefinition): The TLP marking definition.
+            organization (OrganizationAuthor): The organization identity object.
+            tlp_marking (TLPMarking): The TLP marking definition.
 
         """
         self.report = report
@@ -83,7 +87,7 @@ class GTIReportToSTIXReport(BaseMapper):
 
         return report
 
-    def add_author_identity(self, author_identity: Identity) -> None:
+    def add_author_identity(self, author_identity: OrganizationAuthor) -> None:
         """Add or update the author identity for the report.
 
         Args:

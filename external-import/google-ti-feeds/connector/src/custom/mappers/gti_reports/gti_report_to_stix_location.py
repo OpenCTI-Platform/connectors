@@ -9,7 +9,11 @@ from connector.src.custom.models.gti_reports.gti_report_model import (
 from connector.src.stix.octi.models.location_model import OctiLocationModel
 from connector.src.stix.v21.models.ovs.region_ov_enums import RegionOV
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import Identity, Location, MarkingDefinition  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
+from stix2.v21 import Location  # type: ignore
 
 
 class GTIReportToSTIXLocation(BaseMapper):
@@ -18,15 +22,15 @@ class GTIReportToSTIXLocation(BaseMapper):
     def __init__(
         self,
         report: GTIReportData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
     ):
         """Initialize the GTIReportToSTIXLocation object.
 
         Args:
             report (GTIReportData): The GTI report data to convert.
-            organization (Identity): The organization identity object.
-            tlp_marking (MarkingDefinition): The TLP marking definition.
+            organization (OrganizationAuthor): The organization identity object.
+            tlp_marking (TLPMarking): The TLP marking definition.
 
         """
         self.report = report

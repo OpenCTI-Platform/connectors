@@ -6,7 +6,11 @@ from typing import Any, List, Optional
 from connector.src.custom.models.gti_reports.gti_report_model import GTIReportData
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
-from stix2.v21 import Identity, MarkingDefinition, Relationship  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
+from stix2.v21 import Relationship  # type: ignore
 
 
 class GTIReportRelationship:
@@ -15,16 +19,16 @@ class GTIReportRelationship:
     def __init__(
         self,
         report: GTIReportData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
         report_id: str,
     ):
         """Initialize the GTIReportRelationship object.
 
         Args:
             report (GTIReportData): The GTI report data to convert.
-            organization (Identity): The organization identity object.
-            tlp_marking (MarkingDefinition): The TLP marking definition.
+            organization (OrganizationAuthor): The organization identity object.
+            tlp_marking (TLPMarking): The TLP marking definition.
             report_id (str): The STIX ID of the report object.
 
         """
