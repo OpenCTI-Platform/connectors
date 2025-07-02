@@ -126,19 +126,20 @@ def test_connector_run(
         call("Test Connector will run!"),
         call(expected_data_log),
         call(
-            "Test Connector connector successfully run, storing last_run as 1751371200"
+            "Test Connector connector successfully run, storing last_run as 1751371200.0"
         ),
         call("Last_run stored, next run in: 48.0 hours"),
         call("Test Connector connector ended"),
     ]
 
     # State
-    assert mocked_helper.get_state.call_count == 3
-    mocked_helper.set_state.assert_called_once_with({"last_run": 1751371200})
+    assert mocked_helper.get_state.call_count == 2
+    mocked_helper.set_state.assert_called_once_with(state={"last_run": 1751371200})
 
     # Work initiation
     mocked_helper.api.work.initiate_work.assert_called_once_with(
-        mocked_helper.connect_id, "Test Connector run @ 2025-07-01T12:00:00+00:00"
+        connector_id=mocked_helper.connect_id,
+        friendly_name="Test Connector run @ 2025-07-01T12:00:00+00:00",
     )
 
     # send_stix2_bundle conditional
@@ -153,5 +154,5 @@ def test_connector_run(
     # Work processed
     mocked_helper.api.work.to_processed.assert_called_once_with(
         "work-id",
-        "Test Connector connector successfully run, storing last_run as 1751371200",
+        "Test Connector connector successfully run, storing last_run as 1751371200.0",
     )
