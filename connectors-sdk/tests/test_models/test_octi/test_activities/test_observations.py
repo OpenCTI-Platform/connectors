@@ -102,7 +102,7 @@ def test_indicator_should_not_accept_incoherent_dates():
 
 def test_indicator_to_stix2_object_returns_valid_stix_object(
     fake_valid_organization_author,
-    fake_valid_external_referencess,
+    fake_valid_external_references,
     fake_valid_tlp_markings,
 ):
     """Test that Indicator.to_stix2_object returns a valid STIX Indicator."""
@@ -125,7 +125,7 @@ def test_indicator_to_stix2_object_returns_valid_stix_object(
         "platforms": ["linux", "windows"],
         "main_observable_type": "Url",
         "author": fake_valid_organization_author,
-        "external_references": fake_valid_external_referencess,
+        "external_references": fake_valid_external_references,
         "markings": fake_valid_tlp_markings,
     }
     indicator = Indicator.model_validate(input_data)
