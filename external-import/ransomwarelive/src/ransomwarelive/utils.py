@@ -9,12 +9,12 @@ from pydantic import TypeAdapter
 from stix2 import ExternalReference
 
 
-def threat_description_generator(group_name, group_data) -> str:
+def threat_description_generator(group_name: str, group_data) -> str:
     """
-    Retrieve description of a group name via https://api.ransomware.live/v2/groups response
-    :param group_name: string
-    :param group_data: json response (from https://api.ransomware.live/v2/groups)
-    :return: description string
+    Retrieve description of a group name
+    :param group_name: group name in string
+    :param group_data: data json response
+    :return: description in string
     """
     matching_items = [
         item for item in group_data if item.get("name", None) == group_name
@@ -36,7 +36,7 @@ def threat_description_generator(group_name, group_data) -> str:
 def fetch_country_domain(domain: str):
     """
     Fetches the whois information of a domain
-    :param domain:
+    :param domain: domain in string
     :return: string description of the domain with country, registrar, creation and expiration dates
     """
     try:
@@ -59,7 +59,7 @@ def fetch_country_domain(domain: str):
 def ransom_note_generator(group_name: str):
     """
     Generates a ransom note external reference
-    :param group_name:
+    :param group_name: group name in string
     :return: ExternalReference object
     """
     if group_name in ("lockbit3", "lockbit2"):
@@ -97,7 +97,7 @@ def ip_fetcher(domain: str):
     """
     Fetches the IP address of a domain
     (Maybe possibility to improve with ipaddress.ip_address(item.get("data")).version)
-    :param domain:
+    :param domain: domain in string
     :return: IP of the given domain or None
     """
     params = {"name": domain, "type": "A"}
@@ -125,7 +125,7 @@ def ip_fetcher(domain: str):
 def is_ipv4(value: str) -> bool:
     """
     Determine whether the provided IP string is IPv4
-    :param value: Value in string
+    :param value: ip value in string
     :return: A boolean
     """
     try:
@@ -138,7 +138,7 @@ def is_ipv4(value: str) -> bool:
 def is_ipv6(value: str) -> bool:
     """
     Determine whether the provided IP string is IPv6
-    :param value: Value in string
+    :param value: ip value in string
     :return: A boolean
     """
     try:
@@ -151,7 +151,7 @@ def is_ipv6(value: str) -> bool:
 def is_domain(value: str) -> bool:
     """
     Valid domain name regex including internationalized domain name
-    :param value: Value in string
+    :param value: domain in string
     :return: A boolean
     """
     return validators.domain(value)
@@ -160,7 +160,7 @@ def is_domain(value: str) -> bool:
 def domain_extractor(url: str):
     """
     Extracts the domain from a URL
-    :param url:
+    :param url: url in string
     :return: domain from url or None
     """
     if validators.domain(url):

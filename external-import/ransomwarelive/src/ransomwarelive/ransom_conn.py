@@ -4,11 +4,12 @@ from datetime import datetime, timedelta, timezone
 
 import pycti
 import stix2
-from api_client import RansomwareAPIClient
-from config import ConnectorSettings
-from converter_to_stix import ConverterToStix
 from pycti import OpenCTIConnectorHelper
-from utils import (
+
+from .api_client import RansomwareAPIClient
+from .config import ConnectorSettings
+from .converter_to_stix import ConverterToStix
+from .utils import (
     domain_extractor,
     fetch_country_domain,
     ip_fetcher,
@@ -40,10 +41,11 @@ class RansomwareAPIConnector:
         self.marking = stix2.TLP_WHITE
         self.last_run = None
         self.last_run_datetime_with_ingested_data = None
-        self.converter_to_stix = ConverterToStix(self.helper, self.config)
+        self.converter_to_stix = ConverterToStix()
         self.author = self.converter_to_stix.author
         self.api_client = RansomwareAPIClient()
 
+        # Warning : interval is deprecated
         interval = self.config.ransomware.interval
         if interval:
             self.interval = interval if re.match(r"^\d+[dhms]$", interval) else None

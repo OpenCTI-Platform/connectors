@@ -1,7 +1,6 @@
 import datetime
 
 import stix2
-import stix2.exceptions
 from pycti import (
     Identity,
     IntrusionSet,
@@ -20,16 +19,14 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper, config):
-        self.helper = helper
-        self.config = config
+    def __init__(self):
         self.marking = stix2.TLP_WHITE
         self.author = self.create_author()
 
     def create_author(self) -> dict:
         """
         Create STIX 2.1 Identity object representing the author of STIX objects
-        :return: Identity in STIX 2.1 format
+        :return: Author Identity in STIX 2.1 format
         """
         author = stix2.Identity(
             id=Identity.generate_id(
@@ -51,7 +48,7 @@ class ConverterToStix:
         Create a STIX object for a domain
         :param domain_name: name of the domain in string
         :param description: description of the domain in string or "-"
-        :return: STIX2.1 DomainName
+        :return: DomainName in STIX 2.1 format
         """
         domain = stix2.DomainName(
             value=domain_name,
@@ -69,7 +66,7 @@ class ConverterToStix:
         Create a STIX object for an ExternalReference
         :param url: url of the external refenrence in string
         :param description: description of the external reference in string
-        :return: STIX2.1 ExternalReference
+        :return: ExternalReference in STIX 2.1 format
         """
         external_reference = stix2.ExternalReference(
             source_name="ransomware.live",
@@ -83,7 +80,7 @@ class ConverterToStix:
         Create a STIX object for an Identity
         :param victim_name: victim name in string
         :param identity_class: "organization" or "individual" string
-        :return: STIX2.1 Identity
+        :return: Identity in STIX 2.1 format
         """
         identity = stix2.Identity(
             id=Identity.generate_id(victim_name, identity_class),
@@ -179,7 +176,7 @@ class ConverterToStix:
         :param relationship_type: relation type in string
         :param start_time: attack start date in datetime (optional)
         :param created: discovered date in datetime (optional)
-        :return: STIX2.1 Relationship
+        :return: Relationship in STIX 2.1 format
         """
         relation = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
@@ -214,8 +211,8 @@ class ConverterToStix:
         :param object_refs: list of ids (victim, instrusionset, relationship victim-intrusionset.
             Optional: target_relation and relation_intrusion_threat_actor ids)
         :param discovered_iso: discovered datetime
-        :param external_references: list of STIX2.1 Externalreference
-        :return: STIX2.1 Report
+        :param external_references: list of STIX2.1 ExternalReference
+        :return: Report in STIX 2.1 format
         """
         report = stix2.Report(
             id=Report.generate_id(name, attack_date_iso),
@@ -235,14 +232,14 @@ class ConverterToStix:
         self,
         threat_actor_name: str,
         threat_description: str,
-        ransom_note_external_reference: stix2.Externalreference,
+        ransom_note_external_reference: stix2.ExternalReference,
     ):
         """
         Create STIX2.1 ThreatActor object
         :param threat_actor_name: name of threat actor in string
         :param threat_description: description in string
-        :param ransom_note_external_reference: STIX2.1 Externalreference
-        :return: STIX2.1 Report
+        :param ransom_note_external_reference: STIX2.1 ExternalReference
+        :return: ThreatActor in STIX 2.1 format
         """
         threat_actor = stix2.ThreatActor(
             id=ThreatActorGroup.generate_id(threat_actor_name),

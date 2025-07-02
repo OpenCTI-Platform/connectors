@@ -16,11 +16,9 @@ class RansomwareAPIClient:
 
     def _send_request(self, url: str):
         """
-        Send a request to SOCRansomware API.
-        :param method: Request HTTP method
-        :param url: Request URL
-        :param kwargs: Any arguments valid for session.request() method
-        :return: Any data returned by the API
+        Send a request to Ransomware API.
+        :param url: request URL in string
+        :return: response data returned by the API
         """
         try:
             response = requests.get(
@@ -40,7 +38,7 @@ class RansomwareAPIClient:
         """
         Get feed for given path.
         :param path: path to get feed from.
-        :return: Collection's feed items
+        :return: data's feed items
         """
         url = f"{self.api_base_url}{path}"
         data = self._send_request(url)

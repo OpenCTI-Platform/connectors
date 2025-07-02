@@ -82,7 +82,6 @@ class ConnectorConfig(BaseModel):
     duration_period: datetime.timedelta
     log_level: LogLevelType
 
-    auto: bool = Field(default=False)
     expose_metrics: bool = Field(default=False)
     metrics_port: int = Field(default=9095)
     only_contextual: bool = Field(default=False)
