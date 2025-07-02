@@ -113,7 +113,10 @@ def test_connector_run(
     connector = CustomConnector(helper=mocked_helper, config=_ConnectorSettings())
     connector._collect_intelligence = MagicMock(return_value=data)
 
-    connector.run()
+    with pytest.raises(SystemExit) as exc_info:
+        connector.run()
+
+    assert exc_info.value.code == 0  # RUN_AND_TERMINATE
 
     # Logs
     assert mocked_helper.connector_logger.info.call_args_list == [
@@ -121,7 +124,6 @@ def test_connector_run(
             f"Connector initialized. Lookback: {lookback_days} days. First run: {str(is_first_run)}"
         ),
         call("Starting Test Connector connector..."),
-        call("Running connector...", meta={"connector_name": "Test Connector"}),
         call(last_run_log),
         call("Test Connector will run!"),
         call(expected_data_log),
