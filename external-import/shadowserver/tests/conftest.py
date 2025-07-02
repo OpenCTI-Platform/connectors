@@ -2,12 +2,12 @@ import os
 import sys
 from copy import deepcopy
 from typing import Any
+from unittest.mock import MagicMock, Mock
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import pytest
 from pytest_mock import MockerFixture
-from shadowserver.config import ConnectorSettings
 
 
 @pytest.fixture(name="config_dict")
@@ -22,13 +22,14 @@ def fixture_config_dict() -> dict[str, dict[str, Any]]:
             "name": "Shadowserver",
             "scope": "stix2",
             "log_level": "info",
-            "duration_period": "2d",
+            "duration_period": "P2D",
+            "type": "EXTERNAL_IMPORT",
         },
         "shadowserver": {
             "api_key": "CHANGEME",
             "api_secret": "CHANGEME",
             "marking": "TLP:CLEAR",
-            "create_incident": "true",
+            "create_incident": True,
             "incident_severity": "high",
             "incident_priority": "P1",
         },
@@ -39,13 +40,20 @@ def fixture_config_dict() -> dict[str, dict[str, Any]]:
 def fixture_mock_config(
     mocker: MockerFixture, config_dict: dict[str, dict[str, Any]]
 ) -> None:
-    # Make sure the local config is not loaded in the tests
-    ConnectorSettings.model_config["yaml_file"] = ""
-    ConnectorSettings.model_config["env_file"] = ""
-
     environ = deepcopy(os.environ)
     for key, value in config_dict.items():
         for sub_key, sub_value in value.items():
             if sub_value:
                 environ[f"{key.upper()}_{sub_key.upper()}"] = str(sub_value)
     mocker.patch("os.environ", environ)
+
+
+@pytest.fixture(name="mocked_helper")
+def fixture_mocked_helper(mocker: MockerFixture) -> Mock:
+    helper = mocker.patch("pycti.OpenCTIConnectorHelper", MagicMock())
+    helper.connect_id = "test-connector-id"
+    helper.connect_name = "Test Connector"
+    helper.api.work.initiate_work.return_value = "work-id"
+    helper.get_state.return_value = {}
+    helper.stix2_create_bundle.return_value = "bundle"
+    return helper
