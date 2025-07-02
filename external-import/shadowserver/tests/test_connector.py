@@ -124,6 +124,7 @@ def test_connector_run(
             f"Connector initialized. Lookback: {lookback_days} days. First run: {str(is_first_run)}"
         ),
         call("Starting Test Connector connector..."),
+        call("Running connector...", meta={"connector_name": "Test Connector"}),
         call(last_run_log),
         call("Test Connector will run!"),
         call(expected_data_log),
