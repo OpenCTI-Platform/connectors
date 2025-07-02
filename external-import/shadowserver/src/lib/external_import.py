@@ -63,15 +63,14 @@ class ExternalImportConnector:
         )
 
     def process_data(self):
-        self.work_id = self.helper.api.work.initiate_work(
-            connector_id=self.helper.connect_id,
-            friendly_name=f"{self.helper.connect_name} run @ {self.start_time.isoformat(timespec='seconds')}",
-        )
-
         # Performing the collection of intelligence
         if not (bundle_objects := self._collect_intelligence()):
             self.helper.connector_logger.info("No data to send to OpenCTI.")
             return
+        self.work_id = self.helper.api.work.initiate_work(
+            connector_id=self.helper.connect_id,
+            friendly_name=f"{self.helper.connect_name} run @ {self.start_time.isoformat(timespec='seconds')}",
+        )
 
         bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
 

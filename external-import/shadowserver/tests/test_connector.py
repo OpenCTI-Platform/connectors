@@ -138,12 +138,6 @@ def test_connector_run(
         state={"last_run": "2025-07-01T12:00:00+00:00"}
     )
 
-    # Work initiation
-    mocked_helper.api.work.initiate_work.assert_called_once_with(
-        connector_id=mocked_helper.connect_id,
-        friendly_name="Test Connector run @ 2025-07-01T12:00:00+00:00",
-    )
-
     # send_stix2_bundle conditional
     if expect_send_bundle:
         assert mocked_helper.send_stix2_bundle.call_args.kwargs == {
@@ -153,8 +147,16 @@ def test_connector_run(
     else:
         mocked_helper.send_stix2_bundle.assert_not_called()
 
-    # Work processed
-    mocked_helper.api.work.to_processed.assert_called_once_with(
-        "work-id",
-        "Test Connector connector successfully run, storing last_run as 2025-07-01T12:00:00+00:00",
-    )
+    # Work
+    if data:
+        mocked_helper.api.work.initiate_work.assert_called_once_with(
+            connector_id=mocked_helper.connect_id,
+            friendly_name="Test Connector run @ 2025-07-01T12:00:00+00:00",
+        )
+        mocked_helper.api.work.to_processed.assert_called_once_with(
+            "work-id",
+            "Test Connector connector successfully run, storing last_run as 2025-07-01T12:00:00+00:00",
+        )
+    else:
+        mocked_helper.api.work.initiate_work.assert_not_called()
+        mocked_helper.api.work.to_processed.assert_not_called()
