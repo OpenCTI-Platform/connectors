@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: changeMe
+
+connector:
+  id: changeMe      #Valid UUIDv4
+  type: 'EXTERNAL_IMPORT'
+  name: 'Doppel Threat Intelligence'
+  scope: 'doppel' 
+  log_level: 'info'
+
+doppel:
+  api_key: changeMe
+  update_existing_data: true
+  polling_interval: 3600
+  historical_polling_days: 30
+  max_retries: 3
+  retry_delay: 30
