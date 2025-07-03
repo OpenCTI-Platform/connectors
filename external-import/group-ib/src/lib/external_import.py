@@ -411,7 +411,7 @@ class ExternalImportConnector:
                                 for event in parsed_portion:
                                     count += 1
                                     self.helper.connector_logger.info(
-                                        f"Parsing {count}/{size}"
+                                        f"Parsing {count}/{size}. Collection: {collection}"
                                     )
                                     self.helper.connector_logger.info(
                                         f"Processing event for collection: {collection}. All data from the received event: {event}"

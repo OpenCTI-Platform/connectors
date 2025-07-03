@@ -45,10 +45,21 @@ class _CommonUtils:
     def _extract_domain(url, suffix=""):
         # type: (str, str) -> str
         """Extract domain name from url"""
-        parsed_url = urlparse(url)
-        if parsed_url.path and parsed_url.path != "/":
-            return parsed_url.netloc + suffix
-        return parsed_url.netloc
+        try:
+            parsed_url = urlparse(url)
+            domain = parsed_url.netloc
+            path = parsed_url.path
+        except ValueError:
+            # The thing is that if urlparse has an obfuscated URL
+            # then we catch this error and take the domain ourselves.
+            # Example of an obfuscated URL - http://example.web[.]app/
+            rest = url.split("://", 1)[-1]
+            domain = rest.split("/", 1)[0]
+            path = "/" + rest.split("/", 1)[1] if "/" in rest else ""
+
+        if path and path != "/":
+            return domain + suffix
+        return domain
 
     @staticmethod
     def is_ipv4(ipv4):
@@ -155,6 +166,10 @@ class BaseEntity(_CommonUtils):
             name=ConfigConnector.AUTHOR,
             identity_class="organization",
         )
+
+    @staticmethod
+    def stix_escape(value: str) -> str:
+        return value.replace("\\", "\\\\").replace("'", "\\'")
 
     def _generate_indicator(self):
         return
@@ -479,7 +494,8 @@ class URL(_BaseIndicator):
         super().__init__(name, c_type, tlp_color, labels, risk_score)
 
     def _create_pattern(self, pattern_name):
-        return f"[url:value = '{pattern_name}']"
+        pattern = f"[url:value = '{self.stix_escape(pattern_name)}']"
+        return pattern
 
     def _generate_observable(self):
         self.stix_main_object = stix2.URL(
