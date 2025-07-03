@@ -1,0 +1,18 @@
+version: '3'
+services:
+  microsoft-defender-threat-intel:
+    image: opencti/connector-microsoft-defender-threat-intel:6.7.0
+    environment:
+      # OpenCTI configuration
+      OPENCTI_URL: http://localhost:PORT
+      OPENCTI_TOKEN: ChangeMe
+      # Common connector configuration
+      CONNECTOR_ID: ChangeMe
+#      CONNECTOR_NAME: Email Intel Microsoft
+#      CONNECTOR_SCOPE: email-intel-microsoft
+#      CONNECTOR_LOG_LEVEL: error
+#      CONNECTOR_DURATION_PERIOD: PT1H
+      # Connector configuration
+      MICROSOFT_DEFENDER_THREAT_INTEL_TENANT_ID: ChangeMe
+      MICROSOFT_DEFENDER_THREAT_INTEL_CLIENT_ID: ChangeMe
+      MICROSOFT_DEFENDER_THREAT_INTEL_CLIENT_SECRET: ChangeMe

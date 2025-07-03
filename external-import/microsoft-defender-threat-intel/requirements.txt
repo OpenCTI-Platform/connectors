@@ -1,0 +1,6 @@
+azure-identity==1.23.0
+msgraph-sdk~=1.35.0
+pycti~=6.7.0
+pydantic~=2.11.7
+pydantic-settings~=2.10.1
+stix2~=3.0.1
