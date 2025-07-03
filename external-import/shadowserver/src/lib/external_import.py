@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 from functools import cached_property
 from typing import Any
 
-import stix2
 from pycti import OpenCTIConnectorHelper
 from shadowserver.config import ConnectorSettings
 
@@ -75,7 +74,7 @@ class ExternalImportConnector:
             friendly_name=f"{self.helper.connect_name} run @ {self.start_time.isoformat(timespec='seconds')}",
         )
 
-        bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
+        bundle = self.helper.stix2_create_bundle(items=bundle_objects)
 
         self.helper.connector_logger.info(
             f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
