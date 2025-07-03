@@ -51,9 +51,12 @@ class ExternalImportConnector:
         self.helper.connector_logger.info(f"{self.helper.connect_name} will run!")
         return last_run
 
-    def set_last_run(self, message):
+    def set_last_run(self):
         # Store the current timestamp as a last run
-        self.helper.connector_logger.info(message)
+        self.helper.connector_logger.info(
+            f"{self.helper.connect_name} connector successfully run, storing last_run as "
+            + str(self.start_time.isoformat(timespec="seconds"))
+        )
         self.helper.connector_logger.debug(
             f"Grabbing current state and update it with last_run: {self.start_time.isoformat(timespec='seconds')}"
         )
@@ -86,13 +89,7 @@ class ExternalImportConnector:
     def process_message(self):
         self.log_last_run()
         self.process_data()
-        message = (
-            f"{self.helper.connect_name} connector successfully run, storing last_run as "
-            + str(self.start_time.isoformat(timespec="seconds"))
-        )
-        self.set_last_run(message)
-        if self.work_id:
-            self.helper.api.work.to_processed(self.work_id, message)
+        self.set_last_run()
 
     def process(self):
         self.start_time = datetime.now(UTC)
@@ -111,6 +108,11 @@ class ExternalImportConnector:
             traceback.print_exc()
             meta["error"] = str(e)
             self.helper.connector_logger.error(f"Unexpected error: {e}", meta=meta)
+        finally:
+            if self.work_id:
+                self.helper.api.work.to_processed(
+                    self.work_id, "Connector successfully run"
+                )
 
     def run(self) -> None:
         # Main procedure
