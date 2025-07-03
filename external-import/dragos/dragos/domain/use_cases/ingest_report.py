@@ -7,6 +7,7 @@ from dragos.domain.models import octi
 from dragos.domain.models.octi.enums import OrganizationType
 from dragos.domain.use_cases.common import BaseUseCase, UseCaseError
 from dragos.interfaces import Area, City, Country, Position, Region
+from markdownify import markdownify
 
 if TYPE_CHECKING:
     from dragos.interfaces import Geocoding, Indicator, Report, Tag
@@ -270,6 +271,8 @@ class ReportProcessor(BaseUseCase):
         self, report: "Report", related_objects: list["octi.BaseEntity"]
     ) -> octi.Report:
         """Make an OCTI Report from a Dragos report and the related entities."""
+        markdown_description = markdownify(report.summary)
+
         labels = []
         for related_tag in report.related_tags:
             tag_type = related_tag.type.lower()
@@ -289,7 +292,7 @@ class ReportProcessor(BaseUseCase):
         return octi.Report(
             name=report.title,
             publication_date=report.created_at,
-            description=report.summary,
+            description=markdown_description,
             labels=labels,
             objects=related_objects,
             files=[uploaded_file] if uploaded_file else None,
