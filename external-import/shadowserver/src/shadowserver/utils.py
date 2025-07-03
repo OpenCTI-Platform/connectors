@@ -4,9 +4,8 @@ from datetime import datetime
 from typing import Dict, List, Optional, Union
 
 import pandas as pd
+from shadowserver.constants import REQUEST_DATE_FORMAT, SEVERITY_MAP, TLP_MAP
 from stix2.base import _Observable as Observable
-
-from .constants import REQUEST_DATE_FORMAT, SEVERITY_MAP, TLP_MAP
 
 
 # Function to calculate different hashes
@@ -248,16 +247,6 @@ def find_stix_object_by_id(
         if obj.id == target_id:
             return obj.value
     return None
-
-
-def get_tlp_keys():
-    """
-    Get the TLP keys from the TLP_MAP dictionary.
-
-    Returns:
-        list: A list of TLP keys.
-    """
-    return list(TLP_MAP.keys())
 
 
 def compare_severity(severity1, severity2):
