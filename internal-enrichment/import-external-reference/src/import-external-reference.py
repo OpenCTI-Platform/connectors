@@ -326,7 +326,6 @@ class ImportExternalReferenceConnector:
                     status_code = None
 
                     async def handle_response(response):
-                        nonlocal status_code
                         try:
                             if response.status in (403, 429, 503):
                                 text = await response.text()
