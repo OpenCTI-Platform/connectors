@@ -8,13 +8,15 @@ import ssl
 import sys
 import threading
 import traceback
+import unicodedata
+import urllib.parse
 import urllib.request
 from asyncio import Queue
 from typing import Dict
 
-import cachetools
 import html2text
 import yaml
+from cachetools import TTLCache
 from pdfminer.converter import HTMLConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
@@ -22,9 +24,11 @@ from pdfminer.pdfpage import PDFPage
 from playwright.async_api import BrowserContext, Page, async_playwright
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
+_URL_RE = re.compile(r"^https?://", re.IGNORECASE)
+
 
 def is_valid_url(url: str) -> bool:
-    return bool(re.match(r"^https?://", url.strip()))
+    return bool(_URL_RE.match(url.strip()))
 
 
 class ImportExternalReferenceConnector:
@@ -74,6 +78,13 @@ class ImportExternalReferenceConnector:
             True,
             32,  # Default to 32 MB
         )
+        self.cache_ttl = get_config_variable(
+            "IMPORT_EXTERNAL_REFERENCE_CACHE_TTL",
+            ["import_external_reference", "cache_ttl"],
+            config,
+            True,
+            3600,  # Default to 1 hour
+        )
         self.worker_count = get_config_variable(
             "IMPORT_EXTERNAL_REFERENCE_BROWSER_WORKER_COUNT",
             ["import_external_reference", "browser_worker_count"],
@@ -91,9 +102,37 @@ class ImportExternalReferenceConnector:
             50 * 1024 * 1024,  # Default to 50 MB
         )
 
-        # Thread-safe LRU cache
-        self._download_cache = cachetools.LRUCache(maxsize=self.cache_size)
+        if not isinstance(self.cache_size, int) or self.cache_size <= 0:
+            raise ValueError(
+                f"cache_size must be a positive integer (got {self.cache_size!r})"
+            )
+        if not isinstance(self.cache_ttl, (int, float)) or self.cache_ttl <= 0:
+            raise ValueError(f"cache_ttl must be positive (got {self.cache_ttl!r})")
+        if not isinstance(self.worker_count, int) or self.worker_count <= 0:
+            raise ValueError(
+                f"browser_worker_count must be a positive integer (got {self.worker_count!r})"
+            )
+        if not isinstance(self.max_download_size, int) or self.max_download_size <= 0:
+            raise ValueError(
+                f"max_download_size must be a positive integer (got {self.max_download_size!r})"
+            )
+
+        for flag_name in (
+            "import_as_pdf",
+            "import_as_md",
+            "import_pdf_as_md",
+            "timestamp_files",
+        ):
+            val = getattr(self, flag_name)
+            if not isinstance(val, bool):
+                raise ValueError(f"{flag_name!r} must be a boolean (got {val!r})")
+
+        # Thread-safe size+time cache
+        self._download_cache = TTLCache(maxsize=self.cache_size, ttl=self.cache_ttl)
         self._cache_lock = threading.Lock()
+
+        # Limit concurrent fetches to worker count
+        self._semaphore = asyncio.Semaphore(self.worker_count)
 
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0",
@@ -103,7 +142,7 @@ class ImportExternalReferenceConnector:
             "Sec-Ch-Ua-Platform": '"Windows"',
         }
 
-        self.helper.connector_logger.info(
+        self.helper.log_info(
             f"Config → import_as_pdf={self.import_as_pdf}, "
             f"import_as_md={self.import_as_md}, "
             f"import_pdf_as_md={self.import_pdf_as_md}, "
@@ -116,17 +155,24 @@ class ImportExternalReferenceConnector:
         self.task_queue: Queue = None  # type: ignore
         self.workers = []
         self.loop: asyncio.AbstractEventLoop = None  # type: ignore
+        self.stop_event = threading.Event()
 
     # ────────────────────────────────────────────────────────────────────────────────
     # DOWNLOAD & CACHE
     # ────────────────────────────────────────────────────────────────────────────────
-    def _download_url(self, url: str) -> bytes:
+    async def _download_url(self, url: str) -> bytes:
+        """Download a URL asynchronously, using a thread-safe cache."""
+        loop = asyncio.get_running_loop()
+
+        return await loop.run_in_executor(None, self._download_url_sync, url)
+
+    def _download_url_sync(self, url: str) -> bytes:
         with self._cache_lock:
             if url in self._download_cache:
-                self.helper.connector_logger.debug(f"Cache hit: {url}")
+                self.helper.log_debug(f"Cache hit: {url}")
                 return self._download_cache[url]
 
-        self.helper.connector_logger.debug(f"Cache miss: {url}")
+        self.helper.log_debug(f"Cache miss: {url}")
         req = urllib.request.Request(url, headers=self.headers)
         try:
             with urllib.request.urlopen(
@@ -212,14 +258,14 @@ class ImportExternalReferenceConnector:
                                 continue
                         await el.click(timeout=1000, force=True)
                         found = True
-                        self.helper.connector_logger.debug(
+                        self.helper.log_debug(
                             f"Clicked cookie/banner selector: {selector} (index {i})"
                         )
                         # After a successful click, break for this selector
                         await asyncio.sleep(0.5)
                         break
                     except Exception as e:
-                        self.helper.connector_logger.debug(
+                        self.helper.log_debug(
                             f"Failed to click {selector} (index {i}): {e}"
                         )
                 if found:
@@ -247,17 +293,13 @@ class ImportExternalReferenceConnector:
                     return removed;
                     """
                 )
-                self.helper.connector_logger.debug(
-                    "Ran JS fallback to hide banners/popups."
-                )
+                self.helper.log_debug("Ran JS fallback to hide banners/popups.")
             except Exception as e:
-                self.helper.connector_logger.debug(
-                    f"JS fallback for hiding banners failed: {e}"
-                )
+                self.helper.log_debug(f"JS fallback for hiding banners failed: {e}")
         return found
 
     async def _browser_worker(self):
-        while True:
+        while not self.stop_event.is_set():
             try:
                 url, fut = await self.task_queue.get()
                 self.helper.log_debug(f"Dequeued task for: {url}")
@@ -281,7 +323,10 @@ class ImportExternalReferenceConnector:
                     )
                     page = await ctx.new_page()
 
+                    status_code = None
+
                     async def handle_response(response):
+                        nonlocal status_code
                         try:
                             if response.status in (403, 429, 503):
                                 text = await response.text()
@@ -378,13 +423,12 @@ class ImportExternalReferenceConnector:
                     try:
 
                         async def _safe_navigate(page: Page, url: str):
-                            await page.goto(url, wait_until="domcontentloaded")
-                            await asyncio.sleep(5)  # let JS challenges resolve
-                            await page.wait_for_load_state(
-                                "load"
-                            )  # still useful for complete render
+                            resp = await page.goto(url, wait_until="domcontentloaded")
+                            await asyncio.sleep(5)
+                            await page.wait_for_load_state("load")
+                            return resp.status if resp else None
 
-                        await asyncio.wait_for(
+                        status_code = await asyncio.wait_for(
                             asyncio.shield(_safe_navigate(page, url)), timeout=180
                         )
 
@@ -423,6 +467,17 @@ class ImportExternalReferenceConnector:
                     if not pdf_bytes.startswith(b"%PDF"):
                         raise RuntimeError("Invalid PDF binary")
 
+                    # skip if no status code or not 200
+                    if status_code is not None and status_code != 200:
+                        self.helper.log_warning(
+                            f"Navigation failed with status {status_code} for {url}"
+                        )
+                        if not fut.done():
+                            fut.set_result((None, None))
+                        continue
+
+                    # TODO: detect login form without information and skip
+
                     if not fut.done():
                         fut.set_result((html, pdf_bytes))
 
@@ -447,9 +502,20 @@ class ImportExternalReferenceConnector:
             except asyncio.CancelledError:
                 break
             except Exception as fatal:
-                self.helper.connector_logger.error(f"Fatal worker error: {fatal}")
+                tb = traceback.format_exception(type(fatal), fatal, fatal.__traceback__)
+                self.helper.log_error(f"Fatal worker error: {fatal}\n{''.join(tb)}")
 
     async def _cleanup(self):
+        # Signal listener to stop
+        self.helper.log_info("Signaling listener to stop…")
+        self.stop_event.set()
+
+        # Let pending tasks finish
+        self.helper.log_info("Waiting for pending tasks to finish…")
+        await self.task_queue.join()
+
+        # Cancel all workers
+        self.helper.log_info("Cancelling all browser workers…")
         for w in self.workers:
             w.cancel()
         await asyncio.gather(*self.workers, return_exceptions=True)
@@ -464,12 +530,16 @@ class ImportExternalReferenceConnector:
     # ────────────────────────────────────────────────────────────────────────────────
     async def _fetch_with_browser(self, url: str, timeout: int = 180):
         self.helper.log_debug(f"Queueing fetch task for: {url}")
-        fut = asyncio.get_running_loop().create_future()
-        await self.task_queue.put((url, fut))
-        self.helper.log_debug(
-            f"Task queued for: {url} (queue size: {self.task_queue.qsize()})"
-        )
-        return await asyncio.wait_for(fut, timeout=timeout)
+        await self._semaphore.acquire()
+        try:
+            fut = asyncio.get_running_loop().create_future()
+            await self.task_queue.put((url, fut))
+            self.helper.log_debug(
+                f"Task queued for: {url} (queue size: {self.task_queue.qsize()})"
+            )
+            return await asyncio.wait_for(fut, timeout=timeout)
+        finally:
+            self._semaphore.release()
 
     # ────────────────────────────────────────────────────────────────────────────────
     # ACTUAL IMPORT LOGIC (ASYNC)
@@ -483,6 +553,8 @@ class ImportExternalReferenceConnector:
 
             is_pdf = url.lower().endswith(".pdf")
             pdf_data = None
+            html = None
+            pdf_bytes = None
 
             self.helper.log_debug(
                 f"External reference details: "
@@ -490,13 +562,50 @@ class ImportExternalReferenceConnector:
                 f"url={url}, is_pdf={is_pdf}"
             )
 
-            # Pre-download PDF if needed
-            if is_pdf and (
-                self.import_as_pdf or (self.import_as_md and self.import_pdf_as_md)
-            ):
-                pdf_data = self._download_url(url)
-                if not pdf_data.startswith(b"%PDF"):
-                    raise RuntimeError("Downloaded file is not a valid PDF")
+            try:
+                # Pre-download PDF if needed
+                if is_pdf and (
+                    self.import_as_pdf or (self.import_as_md and self.import_pdf_as_md)
+                ):
+                    pdf_data = await self._download_url(url)
+                    if not pdf_data.startswith(b"%PDF"):
+                        pdf_data = None
+                        raise RuntimeError("Downloaded file is not a valid PDF")
+
+                # For non-PDFs, fetch the page once
+                # If PDF download failed, try the URL with the browser
+                if not is_pdf and pdf_data is None:
+                    html, pdf_bytes = await self._fetch_with_browser(url)
+
+                if html is None and pdf_bytes is None:
+                    return "Skipped: empty or protected page"
+
+            except asyncio.TimeoutError:
+                self.helper.log_warning(f"Fetch timed out for {url}")
+                self.helper.log_warning(
+                    f"Enrichment timed out for {external_reference.get('url')}"
+                )
+                return "Timeout"
+            except asyncio.CancelledError:
+                self.helper.log_warning(f"Fetch cancelled for {url}")
+                self.helper.log_warning(
+                    f"Enrichment cancelled for {external_reference.get('url')}"
+                )
+                return "Cancelled"
+            except Exception as e:
+                # Playwright navigation/network errors: treat as blocked, not as a hard error
+                err_str = str(e)
+                if "Page.goto" in err_str or "net::ERR_" in err_str:
+                    self.helper.log_warning(
+                        f"Blocked import for {external_reference.get('url')} due to browser navigation error: {err_str}"
+                    )
+                    return f"Browser navigation error: {err_str}"
+
+                self.helper.log_warning(f"Fetch failed for {url}: {e}")
+                self.helper.log_error(
+                    f"Enrichment failed for {external_reference.get('url')}: {e}"
+                )
+                return f"Failed: {e}"
 
             # Import as PDF
             if self.import_as_pdf:
@@ -521,8 +630,6 @@ class ImportExternalReferenceConnector:
                                 f"OpenCTI API file attach failed: {api_err}"
                             )
                     else:
-                        # Render via Playwright
-                        html, pdf_bytes = await self._fetch_with_browser(url)
                         file_name = self._safe_filename_from_url(url, ".pdf")
                         self.helper.log_info(
                             f"Attaching file '{file_name}' "
@@ -559,19 +666,10 @@ class ImportExternalReferenceConnector:
 
                 try:
                     if is_pdf and self.import_pdf_as_md:
-                        # Convert the downloaded PDF to HTML, then to Markdown
-                        pdf_stream = io.BytesIO(pdf_data)
-                        html_buf = io.StringIO()
-                        rsrcmgr = PDFResourceManager(caching=True)
-                        device = HTMLConverter(rsrcmgr, html_buf, laparams=LAParams())
-                        interpreter = PDFPageInterpreter(rsrcmgr, device)
-                        for page in PDFPage.get_pages(
-                            pdf_stream, check_extractable=True
-                        ):
-                            interpreter.process_page(page)
-                        device.close()
+                        html_context = await self._pdf_to_html(pdf_data)
+                        md = text_maker.handle(html_context)
+                        html_context.close()
 
-                        md = text_maker.handle(html_buf.getvalue())
                         file_name = os.path.basename(url) + ".md"
                         self.helper.log_info(
                             f"Attaching file '{file_name}' "
@@ -590,8 +688,6 @@ class ImportExternalReferenceConnector:
                             )
 
                     elif not is_pdf:
-                        # Render page, grab its HTML, and convert to Markdown
-                        html, _ = await self._fetch_with_browser(url)
                         md = text_maker.handle(html)
                         # Fix protocol-relative links
                         md = md.replace("](//", "](https://")
@@ -636,6 +732,22 @@ class ImportExternalReferenceConnector:
             )
             return f"Failed: {e}"
 
+    async def _pdf_to_html(self, pdf_bytes: bytes) -> str:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._pdf_to_html_sync, pdf_bytes)
+
+    def _pdf_to_html_sync(self, pdf_bytes: bytes) -> str:
+        pdf_stream = io.BytesIO(pdf_bytes)
+        html_buf = io.StringIO()
+        rsrcmgr = PDFResourceManager(caching=True)
+        device = HTMLConverter(rsrcmgr, html_buf, laparams=LAParams())
+        interpreter = PDFPageInterpreter(rsrcmgr, device)
+        for page in PDFPage.get_pages(pdf_stream, check_extractable=True):
+            interpreter.process_page(page)
+        device.close()
+        pdf_stream.close()
+        return html_buf.getvalue()
+
     # ────────────────────────────────────────────────────────────────────────────────
     # SYNC CALLBACK FOR OPENCTI
     # ────────────────────────────────────────────────────────────────────────────────
@@ -676,19 +788,39 @@ class ImportExternalReferenceConnector:
         future.add_done_callback(_log_done)
         return "OK"
 
-    def _safe_filename_from_url(self, url: str, suffix: str = "") -> str:
+    def _safe_filename_from_url(
+        self, url: str, suffix: str = "", max_length: int = 255
+    ) -> str:
         parsed = urllib.parse.urlparse(url)
         path = parsed.path.rstrip("/")
+        path = re.sub(r'[<>:"\\|?*\x00-\x1F\s]+', "_", path)  # sanitize illegal chars
+        path = path.rstrip(".-_")
+
         base = os.path.basename(path)
         if not base:
             base = parsed.netloc or "external-reference"
+
+        # Normalize to avoid Unicode compatibility issues (e.g., accents)
+        base = unicodedata.normalize("NFKD", base)
+        base = base.encode("ascii", "ignore").decode("ascii")
+
         if self.timestamp_files:
             ts = datetime.datetime.utcnow().strftime("_%Y%m%d_%H%M%S")
             if suffix and base.endswith(suffix):
                 base = base[: -len(suffix)]
             base += ts
+
+        # Ensure suffix is appended (but only once)
         if suffix and not base.endswith(suffix):
             base += suffix
+
+        # Truncate if too long (preserve suffix if present)
+        if len(base) > max_length:
+            if suffix and base.endswith(suffix):
+                base = base[: max_length - len(suffix)] + suffix
+            else:
+                base = base[:max_length]
+
         return base
 
     # ────────────────────────────────────────────────────────────────────────────────
@@ -699,13 +831,13 @@ class ImportExternalReferenceConnector:
         Launch Playwright, spin up the browser, set up the queue and workers.
         Does NOT start `listen()`.
         """
-        self.helper.connector_logger.info("▶ entering _init_async")
+        self.helper.log_info("▶ entering _init_async")
         self.loop = asyncio.get_running_loop()
 
         # 1) start Playwright and the browser
         pw = await async_playwright().start()
         self.playwright = pw
-        self.helper.connector_logger.info("▶ launching browser…")
+        self.helper.log_info("▶ launching browser…")
         self.browser = await pw.chromium.launch(
             headless=True,
             args=[
@@ -714,20 +846,18 @@ class ImportExternalReferenceConnector:
                 "--disable-blink-features=AutomationControlled",  # Disable WebDriver detection for WAF bypass
             ],
         )
-        self.helper.connector_logger.info("▶ browser launched")
+        self.helper.log_info("▶ browser launched")
 
         # 2) task queue and workers
         # Set task queue size to match worker count (prevents over-buffering)
         self.task_queue = Queue(maxsize=self.worker_count)
 
-        self.helper.connector_logger.info("▶ browser workers starting")
+        self.helper.log_info("▶ browser workers starting")
         self.workers = [
             asyncio.create_task(self._browser_worker())
             for _ in range(self.worker_count)
         ]
-        self.helper.connector_logger.info(
-            f"Started {self.worker_count} browser workers"
-        )
+        self.helper.log_info(f"Started {self.worker_count} browser workers")
 
     def start(self):
         # 1) new loop & set it
@@ -743,7 +873,7 @@ class ImportExternalReferenceConnector:
 
         # 4) launch the OpenCTI listen() in its own thread
         def _listen_in_thread():
-            asyncio.run(self.helper.listen(message_callback=self._on_message))
+            self.helper.listen(message_callback=self._on_message)
 
         t = threading.Thread(target=_listen_in_thread, daemon=True)
         t.start()
