@@ -1,5 +1,4 @@
 import json
-import os
 import re
 import sys
 import time
@@ -8,7 +7,7 @@ import uuid
 from datetime import datetime, timezone
 
 import stix2
-import yaml
+from connector.config_loader import ConfigLoader
 from pycti import (
     AttackPattern,
     CustomObservableHostname,
@@ -26,7 +25,6 @@ from pycti import (
     StixCoreRelationship,
     StixSightingRelationship,
     Tool,
-    get_config_variable,
 )
 from pymisp import PyMISP
 
@@ -142,210 +140,20 @@ def filter_event_attributes(event, **filters):
     return attributes
 
 
-def parse_filter_config(config):
-    filters = dict()
-
-    if not config:
-        return filters
-
-    for item in config.split(","):
-        key, value = item.split("=")
-        filters[key] = value
-
-    return filters
-
-
 class Misp:
     def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
-        # Extra config
-        self.misp_url = get_config_variable("MISP_URL", ["misp", "url"], config)
-        self.misp_reference_url = get_config_variable(
-            "MISP_REFERENCE_URL", ["misp", "reference_url"], config
-        )
-        self.misp_key = get_config_variable("MISP_KEY", ["misp", "key"], config)
-        self.misp_ssl_verify = get_config_variable(
-            "MISP_SSL_VERIFY", ["misp", "ssl_verify"], config
-        )
-        self.misp_client_cert = get_config_variable(
-            "MISP_CLIENT_CERT", ["misp", "client_cert"], config
-        )
-        self.misp_datetime_attribute = get_config_variable(
-            "MISP_DATETIME_ATTRIBUTE",
-            ["misp", "datetime_attribute"],
-            config,
-            default="timestamp",
-        )
-        self.misp_filter_date_attribute = get_config_variable(
-            "MISP_DATE_FILTER_FIELD",
-            ["misp", "date_filter_field"],
-            config,
-            default="timestamp",
-        )
-        self.misp_report_description_attribute_filter = parse_filter_config(
-            get_config_variable(
-                "MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER",
-                ["misp", "report_description_attribute_filter"],
-                config,
-                # "type=comment,category=Internal reference"
-            )
-        )
+        self.config = ConfigLoader()
+        self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
 
-        self.misp_create_reports = get_config_variable(
-            "MISP_CREATE_REPORTS", ["misp", "create_reports"], config
-        )
-        self.misp_create_indicators = get_config_variable(
-            "MISP_CREATE_INDICATORS", ["misp", "create_indicators"], config
-        )
-        self.misp_create_observables = get_config_variable(
-            "MISP_CREATE_OBSERVABLES", ["misp", "create_observables"], config
-        )
-        self.misp_create_object_observables = get_config_variable(
-            "MISP_CREATE_OBJECT_OBSERVABLES",
-            ["misp", "create_object_observables"],
-            config,
-            default=False,
-        )
-        self.misp_create_tags_as_labels = get_config_variable(
-            "MISP_CREATE_TAGS_AS_LABELS",
-            ["misp", "create_tags_as_labels"],
-            config,
-            default=True,
-        )
-        self.misp_guess_threats_from_tags = get_config_variable(
-            "MISP_GUESS_THREAT_FROM_TAGS",
-            ["misp", "guess_threats_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_author_from_tags = get_config_variable(
-            "MISP_AUTHOR_FROM_TAGS",
-            ["misp", "author_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_markings_from_tags = get_config_variable(
-            "MISP_MARKINGS_FROM_TAGS",
-            ["misp", "markings_from_tags"],
-            config,
-            default=False,
-        )
-        self.keep_original_tags_as_label = get_config_variable(
-            "MISP_KEEP_ORIGINAL_TAGS_AS_LABEL",
-            ["misp", "keep_original_tags_as_label"],
-            config,
-            default="",
-        ).split(",")
-        self.helper.log_info(
-            f"keep_original_tags_as_label: {self.keep_original_tags_as_label}"
-        )
-        self.misp_enforce_warning_list = get_config_variable(
-            "MISP_ENFORCE_WARNING_LIST",
-            ["misp", "enforce_warning_list"],
-            config,
-            default=False,
-        )
-        self.misp_report_type = get_config_variable(
-            "MISP_REPORT_TYPE", ["misp", "report_type"], config, False, "misp-event"
-        )
-        self.misp_import_from_date = get_config_variable(
-            "MISP_IMPORT_FROM_DATE", ["misp", "import_from_date"], config
-        )
-        self.misp_import_tags = get_config_variable(
-            "MISP_IMPORT_TAGS", ["misp", "import_tags"], config
-        )
-        self.misp_import_tags_not = get_config_variable(
-            "MISP_IMPORT_TAGS_NOT", ["misp", "import_tags_not"], config
-        )
-        self.misp_import_creator_orgs = get_config_variable(
-            "MISP_IMPORT_CREATOR_ORGS", ["misp", "import_creator_orgs"], config
-        )
-        self.misp_import_creator_orgs_not = get_config_variable(
-            "MISP_IMPORT_CREATOR_ORGS_NOT", ["misp", "import_creator_orgs_not"], config
-        )
-        self.misp_import_owner_orgs = get_config_variable(
-            "MISP_IMPORT_OWNER_ORGS", ["misp", "import_owner_orgs"], config
-        )
-        self.misp_import_owner_orgs_not = get_config_variable(
-            "MISP_IMPORT_OWNER_ORGS_NOT", ["misp", "import_owner_orgs_not"], config
-        )
-        self.misp_import_keyword = get_config_variable(
-            "MISP_IMPORT_KEYWORD", ["misp", "MISP_IMPORT_KEYWORD"], config
-        )
-        self.import_distribution_levels = get_config_variable(
-            "MISP_IMPORT_DISTRIBUTION_LEVELS",
-            ["misp", "import_distribution_levels"],
-            config,
-        )
-        self.import_threat_levels = get_config_variable(
-            "MISP_IMPORT_THREAT_LEVELS", ["misp", "import_threat_levels"], config
-        )
-        self.import_only_published = get_config_variable(
-            "MISP_IMPORT_ONLY_PUBLISHED", ["misp", "import_only_published"], config
-        )
-        self.import_with_attachments = bool(
-            get_config_variable(
-                "MISP_IMPORT_WITH_ATTACHMENTS",
-                ["misp", "import_with_attachments"],
-                config,
-                isNumber=False,
-                default=False,
-            )
-        )
-        self.import_to_ids_no_score = get_config_variable(
-            "MISP_IMPORT_TO_IDS_NO_SCORE",
-            ["misp", "import_to_ids_no_score"],
-            config,
-            isNumber=True,
-        )
-        self.import_unsupported_observables_as_text = bool(
-            get_config_variable(
-                "MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT",
-                ["misp", "import_unsupported_observables_as_text"],
-                config,
-                isNumber=False,
-                default=False,
-            )
-        )
-        self.import_unsupported_observables_as_text_transparent = bool(
-            get_config_variable(
-                "MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT",
-                ["misp", "import_unsupported_observables_as_text_transparent"],
-                config,
-                isNumber=False,
-                default=True,
-            )
-        )
-        self.misp_interval = get_config_variable(
-            "MISP_INTERVAL", ["misp", "interval"], config, isNumber=True
-        )
-
-        self.misp_propagate_labels = get_config_variable(
-            "MISP_PROPAGATE_LABELS",
-            ["misp", "propagate_labels"],
-            config,
-            default=False,
-        )
-
-        # Initialize MISP
+        # Initialize MISP client
         self.misp = PyMISP(
-            url=self.misp_url,
-            key=self.misp_key,
-            cert=self.misp_client_cert,
-            ssl=self.misp_ssl_verify,
+            url=self.config.misp.url,
+            key=self.config.misp.key,
+            cert=self.config.misp.client_cert,
+            ssl=self.config.misp.ssl_verify,
             debug=False,
             tool="OpenCTI MISP connector",
         )
-
-    def get_interval(self):
-        return int(self.misp_interval) * 60
 
     def run(self):
         while True:
@@ -373,7 +181,7 @@ class Misp:
                     self.helper.log_info(
                         "Connector latest event: " + current_state["last_event"]
                     )
-                elif current_state is not None and "last_run" in current_state:
+                elif current_state and "last_run" in current_state:
                     last_run = datetime.fromisoformat(current_state["last_run"])
                     last_event = last_run
                     last_event_timestamp = int(last_event.timestamp())
@@ -385,8 +193,8 @@ class Misp:
                         + current_state["last_run"]  # last_event == last_run
                     )
                 else:
-                    if self.misp_import_from_date is not None:
-                        last_event = datetime.fromisoformat(self.misp_import_from_date)
+                    if self.config.misp.import_from_date:
+                        last_event = self.config.misp.import_from_date
                         last_event_timestamp = int(last_event.timestamp())
                     else:
                         last_event = now
@@ -395,17 +203,17 @@ class Misp:
 
                 # If import with tags
                 complex_query_tag = None
-                if (self.misp_import_tags is not None) or (
-                    self.misp_import_tags_not is not None
+                if (self.config.misp.import_tags is not None) or (
+                    self.config.misp.import_tags_not is not None
                 ):
                     or_parameters = []
                     not_parameters = []
 
-                    if self.misp_import_tags:
-                        for tag in self.misp_import_tags.split(","):
+                    if self.config.misp.import_tags:
+                        for tag in self.config.misp.import_tags.split(","):
                             or_parameters.append(tag.strip())
-                    if self.misp_import_tags_not:
-                        for ntag in self.misp_import_tags_not.split(","):
+                    if self.config.misp.import_tags_not:
+                        for ntag in self.config.misp.import_tags_not.split(","):
                             not_parameters.append(ntag.strip())
 
                     complex_query_tag = self.misp.build_complex_query(
@@ -420,15 +228,17 @@ class Misp:
 
                 # Put the date
                 next_event_timestamp = last_event_timestamp + 1
-                kwargs[self.misp_filter_date_attribute] = next_event_timestamp
+                kwargs[self.config.misp.date_filter_field] = next_event_timestamp
 
                 # Complex query date
                 if complex_query_tag is not None:
                     kwargs["tags"] = complex_query_tag
 
                 # With attachments
-                if self.import_with_attachments:
-                    kwargs["with_attachments"] = self.import_with_attachments
+                if self.config.misp.import_with_attachments:
+                    kwargs["with_attachments"] = (
+                        self.config.misp.import_with_attachments
+                    )
 
                 # Query with pagination of 50
                 current_state = self.helper.get_state()
@@ -440,11 +250,13 @@ class Misp:
                 while True:
                     kwargs["limit"] = 10
                     kwargs["page"] = current_page
-                    if self.misp_import_keyword is not None:
-                        kwargs["value"] = self.misp_import_keyword
+                    if self.config.misp.import_keyword is not None:
+                        kwargs["value"] = self.config.misp.import_keyword
                         kwargs["searchall"] = True
-                    if self.misp_enforce_warning_list:
-                        kwargs["enforce_warninglist"] = self.misp_enforce_warning_list
+                    if self.config.misp.enforce_warning_list:
+                        kwargs["enforce_warninglist"] = (
+                            self.config.misp.enforce_warning_list
+                        )
                     self.helper.log_info(
                         "Fetching MISP events with args: " + json.dumps(kwargs)
                     )
@@ -546,41 +358,22 @@ class Misp:
 
             finally:
                 self.helper.metric.state("idle")
-                time.sleep(self.get_interval())
+                time.sleep(self.config.connector.duration_period.total_seconds())
 
     def process_events(self, work_id, events):
-        # Prepare filters
-        import_creator_orgs = None
-        import_creator_orgs_not = None
-        import_owner_orgs = None
-        import_owner_orgs_not = None
-        import_distribution_levels = None
-        import_threat_levels = None
         last_event_timestamp = None
-        if self.misp_import_creator_orgs is not None:
-            import_creator_orgs = self.misp_import_creator_orgs.split(",")
-        if self.misp_import_creator_orgs_not is not None:
-            import_creator_orgs_not = self.misp_import_creator_orgs_not.split(",")
-        if self.misp_import_owner_orgs is not None:
-            import_owner_orgs = self.misp_import_owner_orgs.split(",")
-        if self.misp_import_owner_orgs_not is not None:
-            import_owner_orgs_not = self.misp_import_owner_orgs_not.split(",")
-        if self.import_distribution_levels is not None:
-            import_distribution_levels = self.import_distribution_levels.split(",")
-        if self.import_threat_levels is not None:
-            import_threat_levels = self.import_threat_levels.split(",")
-
         for event in events:
             self.helper.log_info("Processing event " + event["Event"]["uuid"])
-            event_timestamp = int(event["Event"][self.misp_datetime_attribute])
+            event_timestamp = int(event["Event"][self.config.misp.datetime_attribute])
             # need to check if timestamp is more recent than the previous event since
             # events are not ordered by timestamp in API response
             if last_event_timestamp is None or event_timestamp > last_event_timestamp:
                 last_event_timestamp = event_timestamp
             # Check against filter
             if (
-                import_creator_orgs is not None
-                and event["Event"]["Orgc"]["name"] not in import_creator_orgs
+                self.config.misp.import_creator_orgs
+                and event["Event"]["Orgc"]["name"]
+                not in self.config.misp.import_creator_orgs
             ):
                 self.helper.log_info(
                     "Event creator organization "
@@ -589,8 +382,9 @@ class Misp:
                 )
                 continue
             if (
-                import_creator_orgs_not is not None
-                and event["Event"]["Orgc"]["name"] in import_creator_orgs_not
+                self.config.misp.import_creator_orgs_not
+                and event["Event"]["Orgc"]["name"]
+                in self.config.misp.import_creator_orgs_not
             ):
                 self.helper.log_info(
                     "Event creator organization "
@@ -599,8 +393,9 @@ class Misp:
                 )
                 continue
             if (
-                import_owner_orgs is not None
-                and event["Event"]["Org"]["name"] not in import_owner_orgs
+                self.config.misp.import_owner_orgs
+                and event["Event"]["Org"]["name"]
+                not in self.config.misp.import_owner_orgs
             ):
                 self.helper.log_info(
                     "Event owner organization "
@@ -609,8 +404,9 @@ class Misp:
                 )
                 continue
             if (
-                import_owner_orgs_not is not None
-                and event["Event"]["Org"]["name"] in import_owner_orgs_not
+                self.config.misp.import_owner_orgs_not
+                and event["Event"]["Org"]["name"]
+                in self.config.misp.import_owner_orgs_not
             ):
                 self.helper.log_info(
                     "Event owner organization "
@@ -619,8 +415,9 @@ class Misp:
                 )
                 continue
             if (
-                import_distribution_levels is not None
-                and event["Event"]["distribution"] not in import_distribution_levels
+                self.config.misp.import_distribution_levels
+                and event["Event"]["distribution"]
+                not in self.config.misp.import_distribution_levels
             ):
                 self.helper.log_info(
                     "Event distribution level "
@@ -629,8 +426,9 @@ class Misp:
                 )
                 continue
             if (
-                import_threat_levels is not None
-                and event["Event"]["threat_level_id"] not in import_threat_levels
+                self.config.misp.import_threat_levels
+                and event["Event"]["threat_level_id"]
+                not in self.config.misp.import_threat_levels
             ):
                 self.helper.log_info(
                     "Event threat level "
@@ -639,8 +437,7 @@ class Misp:
                 )
                 continue
             if (
-                self.import_only_published is not None
-                and self.import_only_published
+                self.config.misp.import_only_published
                 and not event["Event"]["published"]
             ):
                 self.helper.log_info(
@@ -660,7 +457,7 @@ class Misp:
             ### Pre-process
             # Author
             author = None
-            if self.misp_author_from_tags:
+            if self.config.misp.author_from_tags:
                 if "Tag" in event["Event"]:
                     event_tags = event["Event"]["Tag"]
                     for tag in event_tags:
@@ -700,10 +497,17 @@ class Misp:
             if "Tag" in event["Event"]:
                 event_tags = self.resolve_tags(event["Event"]["Tag"])
             # ExternalReference
-            if self.misp_reference_url is not None and len(self.misp_reference_url) > 0:
-                url = self.misp_reference_url + "/events/view/" + event["Event"]["uuid"]
+            if (
+                self.config.misp.reference_url is not None
+                and len(self.config.misp.reference_url) > 0
+            ):
+                url = (
+                    self.config.misp.reference_url
+                    + "/events/view/"
+                    + event["Event"]["uuid"]
+                )
             else:
-                url = self.misp_url + "/events/view/" + event["Event"]["uuid"]
+                url = self.config.misp.url + "/events/view/" + event["Event"]["uuid"]
             event_external_reference = stix2.ExternalReference(
                 source_name=self.helper.connect_name,
                 description=event["Event"]["info"],
@@ -776,8 +580,10 @@ class Misp:
                         added_files.append(pdf_file)
 
                 object_observable = None
-                if self.misp_create_object_observables:
-                    if self.import_unsupported_observables_as_text_transparent:
+                if self.config.misp.create_object_observables:
+                    if (
+                        self.config.misp.import_unsupported_observables_as_text_transparent
+                    ):
                         if len(object["Attribute"]) > 0:
                             value = object["Attribute"][0]["value"]
                             object_observable = CustomObservableText(
@@ -988,7 +794,7 @@ class Misp:
                     )
 
             # Create the report if needed
-            if self.misp_create_reports:
+            if self.config.misp.create_reports:
                 # Report in STIX lib must have at least one object_refs
                 if len(object_refs) == 0:
                     # Put a fake ID in the report
@@ -996,7 +802,7 @@ class Misp:
                         "intrusion-set--fc5ee88d-7987-4c00-991e-a863e9aa8a0e"
                     )
                 attributes = filter_event_attributes(
-                    event, **self.misp_report_description_attribute_filter
+                    event, **self.config.misp.report_description_attribute_filter
                 )
                 description = (
                     attributes[0]["value"] if attributes else event["Event"]["info"]
@@ -1019,7 +825,7 @@ class Misp:
                     modified=datetime.fromtimestamp(
                         int(event["Event"]["timestamp"]), tz=timezone.utc
                     ),
-                    report_types=[self.misp_report_type],
+                    report_types=[self.config.misp.report_type],
                     created_by_ref=author["id"],
                     object_marking_refs=event_markings,
                     labels=event_tags,
@@ -1061,7 +867,7 @@ class Misp:
         return last_event_timestamp
 
     def _get_pdf_file(self, attribute):
-        if not self.import_with_attachments:
+        if not self.config.misp.import_with_attachments:
             return None
 
         attr_type = attribute["type"]
@@ -1130,7 +936,7 @@ class Misp:
                     attribute["Tag"], with_default=False
                 )
 
-                if not self.misp_propagate_labels:
+                if not self.config.misp.propagate_labels:
                     attribute_tags = self.resolve_tags(attribute["Tag"])
                 else:
                     attribute_tags.extend(self.resolve_tags(attribute["Tag"]))
@@ -1200,11 +1006,11 @@ class Misp:
             to_ids = attribute["to_ids"]
 
             score = self.threat_level_to_score(event_threat_level)
-            if self.import_to_ids_no_score is not None and not to_ids:
-                score = self.import_to_ids_no_score
+            if self.config.misp.import_to_ids_no_score is not None and not to_ids:
+                score = self.config.misp.import_to_ids_no_score
 
             indicator = None
-            if self.misp_create_indicators and pattern is not None:
+            if self.config.misp.create_indicators and pattern is not None:
                 try:
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
@@ -1236,7 +1042,7 @@ class Misp:
                     self.helper.log_error(f"Error processing indicator {name}: {e}")
                     self.helper.metric.inc("error_count")
             observable = None
-            if self.misp_create_observables and observable_type is not None:
+            if self.config.misp.create_observables and observable_type is not None:
                 try:
                     custom_properties = {
                         "x_opencti_description": attribute["comment"],
@@ -1975,7 +1781,7 @@ class Misp:
 
         for tag in tags:
             # Try to guess from tags
-            if self.misp_guess_threats_from_tags:
+            if self.config.misp.guess_threats_from_tags:
                 tag_value_split = tag["name"].split("=")
                 if len(tag_value_split) == 1:
                     tag_value = tag_value_split[0]
@@ -2316,7 +2122,7 @@ class Misp:
                     )
                 return [{"resolver": resolver_0, "type": type_0, "value": value}]
         # If not found, return text observable as a fallback
-        if self.import_unsupported_observables_as_text:
+        if self.config.misp.import_unsupported_observables_as_text:
             return [
                 {
                     "resolver": "text",
@@ -2345,7 +2151,7 @@ class Misp:
         for tag in tags:
             tag_name = tag["name"]
             tag_name_lower = tag["name"].lower()
-            if self.misp_markings_from_tags:
+            if self.config.misp.markings_from_tags:
                 if (
                     ":" in tag_name
                     and "=" in tag_name
@@ -2422,7 +2228,7 @@ class Misp:
     def resolve_tags(self, tags):
         opencti_tags = []
 
-        if not self.misp_create_tags_as_labels:
+        if not self.config.misp.create_tags_as_labels:
             return opencti_tags
 
         for tag in tags:
@@ -2432,7 +2238,7 @@ class Misp:
             if any(
                 map(
                     lambda s: tag["name"].startswith(s),
-                    self.keep_original_tags_as_label,
+                    self.config.misp.keep_original_tags_as_label,
                 )
             ):
                 self.helper.log_info(f"keeping raw tag: {tag}")
