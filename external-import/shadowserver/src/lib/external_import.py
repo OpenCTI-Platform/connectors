@@ -49,26 +49,21 @@ class ExternalImportConnector:
             self.helper.connect_id, friendly_name
         )
 
-        try:
-            # Performing the collection of intelligence
-            bundle_objects = self._collect_intelligence()
-            if bundle_objects:
-                bundle = stix2.Bundle(
-                    objects=bundle_objects, allow_custom=True
-                ).serialize()
+        # Performing the collection of intelligence
+        bundle_objects = self._collect_intelligence()
+        if bundle_objects:
+            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
 
-                self.helper.connector_logger.info(
-                    f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
-                )
-                self.helper.send_stix2_bundle(
-                    bundle,
-                    work_id=work_id,
-                    cleanup_inconsistent_bundle=True,
-                )
-            else:
-                self.helper.connector_logger.info("No data to send to OpenCTI.")
-        except Exception as e:
-            self.helper.connector_logger.error(str(e))
+            self.helper.connector_logger.info(
+                f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
+            )
+            self.helper.send_stix2_bundle(
+                bundle,
+                work_id=work_id,
+                cleanup_inconsistent_bundle=True,
+            )
+        else:
+            self.helper.connector_logger.info("No data to send to OpenCTI.")
 
         # Store the current timestamp as a last run
         message = (
