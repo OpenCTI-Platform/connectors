@@ -1,4 +1,8 @@
+import re
+import unicodedata
+import urllib.parse
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 
 from pycti import OpenCTIConnectorHelper
 
@@ -21,6 +25,7 @@ IOC_TYPES = {
     "md5": "FileMd5",
     "sha1": "FileSha1",
     "sha256": "FileSha256",
+    "x509-certificate": "CertificateThumbprint",
 }
 
 FILE_HASH_TYPES_MAPPER = {
@@ -57,7 +62,7 @@ def get_ioc_type(data: dict) -> str | None:
     :return: IOC type if found, None otherwise
     """
     data_type = data["type"]
-    return IOC_TYPES.get(data_type.upper(), None)
+    return IOC_TYPES.get(data_type.lower(), None)
 
 
 def get_description(data: dict) -> str:
@@ -160,3 +165,111 @@ def get_hash_type(data: dict) -> str | None:
         hash_type = FILE_HASH_TYPES_MAPPER[key]
 
     return hash_type
+
+
+_URL_RE = re.compile(r'https?://[^\s"\'<>()]+', re.IGNORECASE)
+_AT_RE = re.compile(r"\[at\]|\(at\)", re.IGNORECASE)
+_TRAILING_PUNCT_RE = re.compile(r"[.,;!?]+$")
+_PLACEHOLDER_DOTS_RE = re.compile(r"\.\.\.+$")
+_WHITESPACE_RE = re.compile(r"\s+")
+_BRACKET_TRANS = str.maketrans("", "", "[]")
+
+
+@lru_cache(maxsize=20000)
+def indicator_value(value: str, max_length: int = 800) -> str | None:
+    """
+    Clean, refang, normalize, and truncate an indicator value for Defender API submission.
+
+    - Extracts and sanitizes URLs
+    - Refangs common obfuscations
+    - Encodes path/query safely
+    - Strips trailing garbage and punctuation
+    - Limits to Defender's max length
+    """
+    if not isinstance(value, str):
+        return None
+
+    # Normalize Unicode
+    value = unicodedata.normalize("NFKC", value)
+
+    value = value.strip()
+
+    # Refang common obfuscations
+    value = value.replace("[.]", ".").replace("(.)", ".")
+    value = value.replace("hxxp://", "http://").replace("hxxps://", "https://")
+    value = _AT_RE.sub("", value)
+    value = value.translate(_BRACKET_TRANS)
+    value = value.replace("\u2026", "")  # Remove literal ellipsis character
+
+    # Remove common placeholder endings
+    value = _PLACEHOLDER_DOTS_RE.sub("", value)
+
+    # Extract valid URL if present
+    match = _URL_RE.search(value)
+    if match:
+        try:
+            # We treat this as a URL and sanitize accordingly
+            extracted_url = match.group(0)
+
+            # Clean trailing punctuation early
+            extracted_url = extracted_url.rstrip(".,;!?…")
+
+            parsed = urllib.parse.urlparse(extracted_url)
+            if not parsed.scheme or not parsed.netloc:
+                return None
+
+            # Decode and normalize
+            decoded_path = _sanitize_url_component(
+                urllib.parse.unquote(parsed.path or "")
+            )
+            decoded_query = _sanitize_url_component(
+                urllib.parse.unquote(parsed.query or "")
+            )
+
+            safe_path = urllib.parse.quote(decoded_path, safe="/")
+            safe_query = urllib.parse.quote(decoded_query, safe="-=&")
+
+            value = urllib.parse.urlunparse(
+                (parsed.scheme, parsed.netloc, safe_path, "", safe_query, "")
+            )
+
+        except Exception:
+            return None
+
+    # Collapse trailing whitespace
+    value = _WHITESPACE_RE.sub("", value)
+
+    # Strip trailing punctuation Defender doesn't like
+    value = _TRAILING_PUNCT_RE.sub("", value)
+
+    # Final length enforcement
+    return value[:max_length]
+
+
+def _sanitize_url_component(text: str) -> str:
+    """
+    Remove unsafe characters from a decoded URL component.
+
+    Strips:
+    - ASCII control characters (< 32)
+    - DEL (0x7F)
+    - Unicode replacement character (\ufffd)
+    """
+    if not text:
+        return text
+
+    text = unicodedata.normalize("NFKC", text)
+
+    return "".join(c for c in text if 32 <= ord(c) <= 126 and ord(c) != 0xFFFD)
+
+
+def indicator_title(value: str, max_length: int = 4000) -> str:
+    """
+    Truncate the indicator title to the maximum allowed length for Defender API.
+    :param value: The indicator title string
+    :param max_length: Maximum allowed length (default 4000)
+    :return: Truncated title if needed
+    """
+    if value is not None and isinstance(value, str) and len(value) > max_length:
+        return value[:max_length]
+    return value

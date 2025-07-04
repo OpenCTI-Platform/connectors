@@ -12,6 +12,8 @@ from .utils import (
     get_description,
     get_expiration_datetime,
     get_severity,
+    indicator_title,
+    indicator_value,
 )
 
 
@@ -145,10 +147,10 @@ class DefenderApiHandler:
         if observable["type"] in IOC_TYPES:
             body = {
                 "indicatorType": IOC_TYPES[observable["type"]],
-                "indicatorValue": observable["value"],
+                "indicatorValue": indicator_value(observable["value"]),
                 "application": "OpenCTI Microsoft Defender Intel Synchronizer",
                 "action": self.config.action or get_action(observable),
-                "title": observable["value"],
+                "title": indicator_title(observable["value"]),
                 "description": get_description(observable),
                 "externalId": OpenCTIConnectorHelper.get_attribute_in_extension(
                     "id", observable

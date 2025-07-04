@@ -86,6 +86,7 @@ class ConfigConnector:
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_ACTION",
             ["microsoft_defender_intel_synchronizer", "action"],
             self.load,
+            default="Audit",
         )
         self.passive_only = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_PASSIVE_ONLY",
