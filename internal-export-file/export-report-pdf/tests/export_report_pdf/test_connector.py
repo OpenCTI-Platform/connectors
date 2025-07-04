@@ -1,10 +1,12 @@
 import pytest
-from main import ExportReportPdf
+
+from export_report_pdf.connector import Connector
+
 
 
 @pytest.mark.usefixtures("mock_config", "mocked_helper")
 def test_connector_config() -> None:
-    connector = ExportReportPdf()
+    connector = Connector()
     assert connector.company_address_line_1 == "Company Address Line 1"
     assert connector.company_address_line_2 == "Company Address Line 2"
     assert connector.company_address_line_3 == "Company Address Line 3"
@@ -19,5 +21,5 @@ def test_connector_config() -> None:
 
 @pytest.mark.usefixtures("mock_config", "mocked_helper")
 def test_connector_start() -> None:
-    connector = ExportReportPdf()
+    connector = Connector()
     connector.start()
