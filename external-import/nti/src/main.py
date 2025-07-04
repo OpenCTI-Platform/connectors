@@ -1,6 +1,6 @@
 import traceback
 
-from NTI import NTIConnector
+from nti import NTIConnector
 
 if __name__ == "__main__":
     """

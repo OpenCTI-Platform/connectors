@@ -126,7 +126,7 @@ See the [LICENSE](./LICENSE) file for the full license text.
 
 This project includes third-party libraries, each under their own respective license:
 
-| Package     | License               |
+| Package     | License                |
 |-------------|------------------------|
 | pycti       | Apache License 2.0     |
 | PyYAML      | MIT License            |

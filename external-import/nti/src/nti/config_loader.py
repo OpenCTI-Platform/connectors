@@ -14,13 +14,7 @@ class ConfigConnector:
         self.duration_period = "P1D"
         self.nti_base_url = "https://nti.nsfocusglobal.com/api/v2/"
         self.package_type = "updated"
-        self.create_tasks = {
-            "IOC": False,
-            "IP": False,
-            "Domain": False,
-            "URL": False,
-            "File": False,
-        }
+        self.create_tasks = []
         self.ns_nti_key = None
         self.tlp_level = "white"
 
@@ -54,35 +48,31 @@ class ConfigConnector:
                 self.load,
             )
             self.nti_base_url = get_config_variable(
-                "NTI_BASE_URL", ["NSFOCUS", "nti_base_url"], self.load
+                "NTI_BASE_URL", ["nti", "base_url"], self.load
             )
             self.package_type = get_config_variable(
-                "NTI_PACKAGE_TYPE", ["NSFOCUS", "nti_package_type"], self.load
+                "NTI_PACKAGE_TYPE", ["nti", "package_type"], self.load
             )
 
-            self.create_tasks["IOC"] = get_config_variable(
-                "NTI_CREATE_IOC", ["NSFOCUS", "nti_create_ioc"], self.load
-            )
-            self.create_tasks["IP"] = get_config_variable(
-                "NTI_CREATE_IP", ["NSFOCUS", "nti_create_ip"], self.load
-            )
-            self.create_tasks["Domain"] = get_config_variable(
-                "NTI_CREATE_DOMAIN", ["NSFOCUS", "nti_create_domain"], self.load
-            )
-            self.create_tasks["URL"] = get_config_variable(
-                "NTI_CREATE_URL", ["NSFOCUS", "nti_create_url"], self.load
-            )
-            self.create_tasks["File"] = get_config_variable(
-                "NTI_CREATE_FILE", ["NSFOCUS", "nti_create_file"], self.load
-            )
+            if get_config_variable("NTI_CREATE_IOC", ["nti", "create_ioc"], self.load):
+                self.create_tasks.append("data.NTI.API.V2.0.ioc-updated")
+            if get_config_variable("NTI_CREATE_IP", ["nti", "create_ip"], self.load):
+                self.create_tasks.append("data.NTI.API.V2.0.ip-basic-updated")
+            if get_config_variable("NTI_CREATE_DOMAIN", ["nti", "create_domain"], self.load):
+                self.create_tasks.append("data.NTI.API.V2.0.domain-basic-updated")
+            if get_config_variable("NTI_CREATE_URL", ["nti", "create_url"], self.load):
+                self.create_tasks.append("data.NTI.API.V2.0.url-basic-updated")
+            if get_config_variable("NTI_CREATE_FILE", ["nti", "create_file"], self.load):
+                self.create_tasks.append("data.NTI.API.V2.0.sample-updated")
 
             self.ns_nti_key = get_config_variable(
-                "NTI_API_KEY", ["NSFOCUS", "nti_api_key"], self.load
+                "NTI_API_KEY", ["nti", "api_key"], self.load
             )
             self.tlp_level = get_config_variable(
-                "NTI_TLP", ["NSFOCUS", "nti_tlp"], self.load
+                "NTI_TLP", ["nti", "tlp"], self.load
             ).lower()
         except:
             helper.connector_logger.error(
                 f"[init config] init config error: {traceback.format_exc()}"
             )
+            raise

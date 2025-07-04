@@ -1,7 +1,4 @@
 import ipaddress
-import os
-import shutil
-import sys
 from datetime import datetime, timezone
 
 from pycti import OpenCTIConnectorHelper
@@ -16,7 +13,7 @@ class NTIConnector:
         """
         Initialize the Connector with necessary configurations
         """
-        self.work_id = None
+        self.work_id = ''
         # read config file
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
@@ -25,28 +22,28 @@ class NTIConnector:
         self.package_type = self.config.package_type
         self.create_tasks = self.config.create_tasks
 
-        self.helper.log_info(f"Connector initialized with tasks: {self.create_tasks}")
+        self.helper.connector_logger.info("[CONNECTOR] tasks initialized.", {"initialized tasks": self.create_tasks})
         self.client = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
-    def _collect_intelligence(self, entity_type: str) -> None:
+    def _collect_intelligence(self) -> None:
         """
         Collect intelligence from the source and convert into STIX object
         """
-        # Get entities from external sources
         switcher = {
-            "IOC": self.create_ioc,
-            "IP": self.create_ip_basic,
-            "Domain": self.create_domain_basic,
-            "URL": self.create_url_basic,
-            "File": self.create_sample_basic,
+            "data.NTI.API.V2.0.ioc-updated": self.create_ioc,
+            "data.NTI.API.V2.0.ip-basic-updated": self.create_ip_basic,
+            "data.NTI.API.V2.0.domain-basic-updated": self.create_domain_basic,
+            "data.NTI.API.V2.0.url-basic-updated": self.create_url_basic,
+            "data.NTI.API.V2.0.sample-updated": self.create_sample_basic,
         }
-        # call corresponding functions
-        handler = switcher.get(entity_type)
-        object_count = handler()
-        self.helper.connector_logger.info(
-            f"{object_count} {entity_type} objects were sent to OpenCTI.",
-        )
+        for intelligence_data, entity_type in self.client.acquire_feed_packages(self.create_tasks):
+            # call corresponding functions
+            handler = switcher.get(entity_type)
+            object_count = handler(intelligence_data)
+            self.helper.connector_logger.info(
+                f"{object_count} {entity_type} objects were sent to OpenCTI.",
+            )
 
     def start_work(self, entity_type: str) -> None:
         """
@@ -110,11 +107,10 @@ class NTIConnector:
         else:
             raise ValueError("No STIX objects found")
 
-    def create_url_basic(self) -> int:
+    def create_url_basic(self, url_basics: list) -> int:
         # fetch url data from json file
         url_count = 0
         url_stix_objects = []
-        url_basics = self.client.get_url_basic()
         self.helper.connector_logger.info(
             f"[CONNECTOR] {len(url_basics)} url object were found"
         )
@@ -133,10 +129,8 @@ class NTIConnector:
         self.end_work()
         return url_count
 
-    def create_sample_basic(self) -> int:
+    def create_sample_basic(self, sample_basics: list) -> int:
         sample_stix_objects = []
-        # fetch sample data from json file
-        sample_basics = self.client.get_sample_basic()
         self.helper.connector_logger.info(
             f"[CONNECTOR] {len(sample_basics)} sample object were found"
         )
@@ -155,10 +149,8 @@ class NTIConnector:
         self.end_work()
         return sample_count
 
-    def create_domain_basic(self) -> int:
+    def create_domain_basic(self, domain_basics: list) -> int:
         domain_stix_objects = []
-        # fetch domain data from json file
-        domain_basics = self.client.get_domain_basic()
         self.helper.connector_logger.info(
             f"[CONNECTOR] {len(domain_basics)} domain object were found"
         )
@@ -168,6 +160,7 @@ class NTIConnector:
             self.start_work("Domain")
         else:
             return domain_count
+        relationship_list = []
         for domain_basic in domain_basics:
             # create stix2 domain-name object
             domain = self.converter_to_stix.create_obs(domain_basic)
@@ -202,15 +195,14 @@ class NTIConnector:
                     start_time=ip.get("first_seen"),
                     description=description,
                 )
-                domain_stix_objects.append(relationship)
+                relationship_list.append(relationship)
         self.send_stix2_bundle(domain_stix_objects)
+        self.send_stix2_bundle(relationship_list)
         self.end_work()
         return domain_count
 
-    def create_ip_basic(self) -> int:
+    def create_ip_basic(self, ip_basics: list) -> int:
         ip_stix_objects = []
-        # fetch ip data from json file
-        ip_basics = self.client.get_ip_basic()
         self.helper.connector_logger.info(
             f"[CONNECTOR] {len(ip_basics)} ip object were found"
         )
@@ -220,6 +212,7 @@ class NTIConnector:
             self.start_work("IP")
         else:
             return ip_count
+        relationship_list = []
         for ip_basic in ip_basics:
             # create stix2 ipv4-addr object
             observable = self.converter_to_stix.create_obs(ip_basic)
@@ -237,7 +230,7 @@ class NTIConnector:
                     start_time=ip_basic.get("modified"),
                     description="This relationship illustrates an ipv4 address is located at this location.",
                 )
-                ip_stix_objects.append(relationship)
+                relationship_list.append(relationship)
             ases = self.converter_to_stix.create_AutonomousSystem(
                 ip_basic.get("ases", [])
             )
@@ -250,15 +243,15 @@ class NTIConnector:
                     start_time=asn.get("first_seen"),
                     description="This relationship illustrates an ipv4 address belongs to an autonomous system.",
                 )
-                ip_stix_objects.append(relationship)
+                relationship_list.append(relationship)
         self.send_stix2_bundle(ip_stix_objects)
+        self.send_stix2_bundle(relationship_list)
         self.end_work()
         return ip_count
 
-    def create_ioc(self) -> int:
+    def create_ioc(self, indicators: list) -> int:
         ioc_stix_objects = []
         # fetch indicator data from json file
-        indicators = self.client.get_indicators()
         self.helper.connector_logger.info(
             f"[CONNECTOR] {len(indicators)} IOC object were found"
         )
@@ -269,9 +262,12 @@ class NTIConnector:
         else:
             return IOC_count
         # Convert into STIX2 object and add it on a list
+        relationship_list = []
         for indicator in indicators:
             # create stix2 indicator object
             indicator_object = self.converter_to_stix.create_indicator(indicator)
+            if not indicator_object:
+                continue
             ioc_stix_objects.append(indicator_object)
             IOC_count += 1
             observable = self.converter_to_stix.create_obs(indicator)
@@ -283,8 +279,10 @@ class NTIConnector:
                 start_time=indicator_object.modified,
                 description="This relationship demonstrates an indicator based on this observable.",
             )
-            ioc_stix_objects.append(relationship)
+            relationship_list.append(relationship)
         self.send_stix2_bundle(ioc_stix_objects)
+        # deal with MISSING_REFERENCE_ERROR
+        self.send_stix2_bundle(relationship_list)
         self.end_work()
         return IOC_count
 
@@ -327,35 +325,23 @@ class NTIConnector:
                 "[CONNECTOR] Fetching feed packages...",
                 {"feed package type": self.package_type},
             )
-            # download feed packages
-            zip_path = self.client.download_feed_packages()
-            if not zip_path:
-                # fetch feed package error
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Fetch feed package error."
-                )
-                return
+            # Performing the collection of intelligence
+            self._collect_intelligence()
 
-            # unzip feed packages
-            unzip_path = self.client.unzip_file(zip_path=zip_path, delete_after=True)
-            for entity_type, should_execute in self.create_tasks.items():
-                if not should_execute:
-                    continue
-                # Performing the collection of intelligence
-                self._collect_intelligence(entity_type)
-
-            # Remove today's package folder
-            if os.path.exists(unzip_path):
-                shutil.rmtree(unzip_path)
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",
                 {"NTIConnector": self.helper.connect_name},
             )
-            sys.exit(0)
+            raise
         except Exception as err:
-            self.helper.api.work.delete_work(self.work_id)
+            self.helper.api.work.to_processed(
+                self.work_id,
+                f"[CONNECTOR] Data collection failed: {str(err)}",
+                in_error=True
+            )
             self.helper.connector_logger.error(str(err))
+            raise
 
     def run(self) -> None:
         """

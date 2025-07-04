@@ -1,5 +1,3 @@
-import uuid
-
 import stix2
 from pycti import Identity, Indicator, MarkingDefinition, StixCoreRelationship
 
@@ -9,6 +7,7 @@ from .mapping import (
     INDUSTRY_OBJ,
     OBSERVABLE_TYPES,
     THREAT_TYPE,
+    HASH_ALGORITHMS,
 )
 
 
@@ -87,9 +86,7 @@ class ConverterToStix:
         :return: Relationship STIX2 object
         """
         relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                relationship_type, source_id, target_id
-            ),
+            id=StixCoreRelationship.generate_id(relationship_type, source_id, target_id),
             relationship_type=relationship_type,
             description=description,
             start_time=start_time,
@@ -111,7 +108,6 @@ class ConverterToStix:
         if indicator_type == "IPv6-Addr":
             value = self.get_obs_value(entity)
             return stix2.IPv6Address(
-                id="ipv6-addr--" + str(uuid.uuid5(uuid.NAMESPACE_OID, value)),
                 value=value,
                 object_marking_refs=[self.tlp_marking.id],
                 custom_properties={
@@ -121,7 +117,6 @@ class ConverterToStix:
         elif indicator_type == "IPv4-Addr":
             value = self.get_obs_value(entity)
             return stix2.IPv4Address(
-                id="ipv4-addr--" + str(uuid.uuid5(uuid.NAMESPACE_OID, value)),
                 value=value,
                 object_marking_refs=[self.tlp_marking.id],
                 custom_properties={
@@ -131,7 +126,6 @@ class ConverterToStix:
         elif indicator_type == "Domain-Name":
             value = self.get_obs_value(entity)
             return stix2.DomainName(
-                id="domain-name--" + str(uuid.uuid5(uuid.NAMESPACE_OID, value)),
                 value=value,
                 object_marking_refs=[self.tlp_marking.id],
                 custom_properties={
@@ -141,7 +135,6 @@ class ConverterToStix:
         elif indicator_type == "Url":
             value = self.get_obs_value(entity)
             return stix2.URL(
-                id="url--" + str(uuid.uuid5(uuid.NAMESPACE_OID, value)),
                 value=value,
                 object_marking_refs=self.tlp_marking.id,
                 custom_properties={
@@ -166,7 +159,6 @@ class ConverterToStix:
                 hashes.pop("1KHASH", None)
             file_hash = self.get_hash_name(hashes)
             return stix2.File(
-                id="file--" + str(uuid.uuid5(uuid.NAMESPACE_OID, file_hash)),
                 hashes=hashes,
                 name=entity.get("names")[0] if entity.get("names") else file_hash,
                 ctime=entity.get("modified"),
@@ -245,20 +237,8 @@ class ConverterToStix:
     def create_location(self, locations):
         location_object = []
         for location in locations:
-            location_id = "|".join(
-                [
-                    location.get("latitude") or "",
-                    location.get("longitude") or "",
-                    location.get("region") or "",
-                    location.get("country") or "",
-                    location.get("city") or "",
-                    location.get("street_address") or "",
-                    location.get("postal_code") or "",
-                ]
-            )
             location_object.append(
                 stix2.Location(
-                    id="location--" + str(uuid.uuid5(uuid.NAMESPACE_OID, location_id)),
                     latitude=location.get("latitude") or None,
                     longitude=location.get("longitude") or None,
                     region=location.get("region") or None,
@@ -301,8 +281,6 @@ class ConverterToStix:
                 )
             autonomous_object.append(
                 stix2.AutonomousSystem(
-                    id="autonomous-system--"
-                    + str(uuid.uuid5(uuid.NAMESPACE_OID, str(asn.get("number")))),
                     number=int(asn.get("number").replace("AS", "")),
                     name=asn.get("name"),
                     rir=asn.get("rir"),
@@ -391,38 +369,31 @@ class ConverterToStix:
             return 50
         return int(threat_level * 20 * (confidence / 100))
 
+    @staticmethod
+    def construct_file_pattern(hashes: dict) -> str:
+        """
+        Used to construct file pattern from ioc entity hashes
+        :param: hashes
+        :return: file pattern str
+        """
+        pattern = []
+        for hash_algo, file_hash in hashes.items():
+            hash_type = HASH_ALGORITHMS.get(hash_algo)
+            if hash_type:
+                condition = f"file:hashes.'{hash_type}' = '{file_hash}'"
+                pattern.append(condition)
+        return "[" + " OR ".join(pattern) + "]"
+
+
     def create_indicator(self, entity):
         """
         Create a stix2 indicator.
         :param entity: indicator data object
         :return: stix2 indicator
         """
-        if entity.get("type") == "sample":
-            # File obs create indicators
-            indicator_type = "File"
-            hashes = entity.get("metadata", {}).get("hashes")
-            if "MD5" in hashes:
-                name = hashes["MD5"]
-            elif "SHA1" in hashes:
-                name = hashes["SHA1"]
-            elif "SHA256" in hashes:
-                name = hashes["SHA256"]
-            elif "SHA3-256" in hashes:
-                name = hashes["SHA3-256"]
-            else:
-                name = "File indicator"
-            pattern = []
-            for hash_type, hash_value in hashes.items():
-                condition = f"file:hashes.'{hash_type}' = '{hash_value}'"
-                pattern.append(condition)
-            pattern = "[" + " OR ".join(pattern) + "]"
-            indicator_id = Indicator.generate_id(hashes)
-        else:
-            # IOC package create indicators
-            indicator_type = self.determine_indicator_type(entity)
-            pattern = entity.get("pattern")
-            name = self.get_obs_value(entity)
-            indicator_id = Indicator.generate_id(name)
+        # IOC package create indicators
+        indicator_type = self.determine_indicator_type(entity)
+        name = self.get_obs_value(entity)
         tags = []
         for tag in entity.get("tags", []):
             tag_type = tag.get("tag_type")
@@ -433,24 +404,26 @@ class ConverterToStix:
                         tags.append(f"{tag_type}: {t}")
                 else:
                     tags.append(f"{tag_type}: {', '.join(tag_values)}")
-        return stix2.Indicator(
-            id=indicator_id,
-            name=name,
-            pattern=pattern,
-            pattern_type="stix",
-            valid_from=entity.get("modified"),
-            valid_until=entity.get("valid_until"),
-            confidence=entity.get("confidence"),
-            revoked=bool(entity.get("revoked")),
-            labels=tags,
-            created_by_ref=self.author,
-            indicator_types=[THREAT_TYPE.get(i) for i in entity.get("threat_types")],
-            object_marking_refs=[self.tlp_marking.id],
-            custom_properties=dict(
-                x_opencti_score=self.calculate_score(
-                    entity.get("threat_level"), entity.get("confidence")
+        try:
+            return stix2.Indicator(
+                name=name,
+                pattern=entity.get("pattern"),
+                pattern_type="stix",
+                valid_from=entity.get("modified"),
+                valid_until=entity.get("valid_until"),
+                confidence=entity.get("confidence"),
+                revoked=bool(entity.get("revoked")),
+                labels=tags,
+                created_by_ref=self.author,
+                indicator_types=[THREAT_TYPE.get(i) for i in entity.get("threat_types")],
+                object_marking_refs=[self.tlp_marking.id],
+                custom_properties=dict(
+                    x_opencti_score=self.calculate_score(
+                        entity.get("threat_level"), entity.get("confidence")
+                    ),
+                    x_opencti_main_observable_type=indicator_type,
+                    x_opencti_detection=True,
                 ),
-                x_opencti_main_observable_type=indicator_type,
-                x_opencti_detection=True,
-            ),
-        )
+            )
+        except Exception:
+            return None
