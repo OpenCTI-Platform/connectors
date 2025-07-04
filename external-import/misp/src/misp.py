@@ -155,210 +155,211 @@ class Misp:
             tool="OpenCTI MISP connector",
         )
 
-    def run(self):
-        while True:
-            try:
-                now = datetime.now(tz=timezone.utc)
-                friendly_name = "MISP run @ " + now.isoformat()
-                self.helper.metric.inc("run_count")
-                self.helper.metric.state("running")
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
+    def process(self):
+        """Connector main process to collect intelligence."""
+        try:
+            now = datetime.now(tz=timezone.utc)
+            friendly_name = "MISP run @ " + now.isoformat()
+            self.helper.metric.inc("run_count")
+            self.helper.metric.state("running")
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
+            current_state = self.helper.get_state()
+            if (
+                current_state is not None
+                and "last_run" in current_state
+                and "last_event_timestamp" in current_state
+                and "last_event" in current_state
+            ):
+                last_run = datetime.fromisoformat(current_state["last_run"])
+                last_event = datetime.fromisoformat(current_state["last_event"])
+                last_event_timestamp = current_state["last_event_timestamp"]
+                self.helper.log_info("Connector last run: " + current_state["last_run"])
+                self.helper.log_info(
+                    "Connector latest event: " + current_state["last_event"]
                 )
-                current_state = self.helper.get_state()
-                if (
-                    current_state is not None
-                    and "last_run" in current_state
-                    and "last_event_timestamp" in current_state
-                    and "last_event" in current_state
-                ):
-                    last_run = datetime.fromisoformat(current_state["last_run"])
-                    last_event = datetime.fromisoformat(current_state["last_event"])
-                    last_event_timestamp = current_state["last_event_timestamp"]
-                    self.helper.log_info(
-                        "Connector last run: " + current_state["last_run"]
-                    )
-                    self.helper.log_info(
-                        "Connector latest event: " + current_state["last_event"]
-                    )
-                elif current_state and "last_run" in current_state:
-                    last_run = datetime.fromisoformat(current_state["last_run"])
-                    last_event = last_run
+            elif current_state and "last_run" in current_state:
+                last_run = datetime.fromisoformat(current_state["last_run"])
+                last_event = last_run
+                last_event_timestamp = int(last_event.timestamp())
+                self.helper.log_info("Connector last run: " + current_state["last_run"])
+                self.helper.log_info(
+                    "Connector latest event: "
+                    + current_state["last_run"]  # last_event == last_run
+                )
+            else:
+                if self.config.misp.import_from_date:
+                    last_event = self.config.misp.import_from_date
                     last_event_timestamp = int(last_event.timestamp())
-                    self.helper.log_info(
-                        "Connector last run: " + current_state["last_run"]
-                    )
-                    self.helper.log_info(
-                        "Connector latest event: "
-                        + current_state["last_run"]  # last_event == last_run
-                    )
                 else:
-                    if self.config.misp.import_from_date:
-                        last_event = self.config.misp.import_from_date
-                        last_event_timestamp = int(last_event.timestamp())
-                    else:
-                        last_event = now
-                        last_event_timestamp = int(now.timestamp())
-                    self.helper.log_info("Connector has never run")
+                    last_event = now
+                    last_event_timestamp = int(now.timestamp())
+                self.helper.log_info("Connector has never run")
 
-                # If import with tags
-                complex_query_tag = None
-                if (self.config.misp.import_tags is not None) or (
-                    self.config.misp.import_tags_not is not None
-                ):
-                    or_parameters = []
-                    not_parameters = []
+            # If import with tags
+            complex_query_tag = None
+            if (self.config.misp.import_tags is not None) or (
+                self.config.misp.import_tags_not is not None
+            ):
+                or_parameters = []
+                not_parameters = []
 
-                    if self.config.misp.import_tags:
-                        for tag in self.config.misp.import_tags.split(","):
-                            or_parameters.append(tag.strip())
-                    if self.config.misp.import_tags_not:
-                        for ntag in self.config.misp.import_tags_not.split(","):
-                            not_parameters.append(ntag.strip())
+                if self.config.misp.import_tags:
+                    for tag in self.config.misp.import_tags.split(","):
+                        or_parameters.append(tag.strip())
+                if self.config.misp.import_tags_not:
+                    for ntag in self.config.misp.import_tags_not.split(","):
+                        not_parameters.append(ntag.strip())
 
-                    complex_query_tag = self.misp.build_complex_query(
-                        or_parameters=or_parameters if len(or_parameters) > 0 else None,
-                        not_parameters=(
-                            not_parameters if len(not_parameters) > 0 else None
-                        ),
+                complex_query_tag = self.misp.build_complex_query(
+                    or_parameters=or_parameters if len(or_parameters) > 0 else None,
+                    not_parameters=(
+                        not_parameters if len(not_parameters) > 0 else None
+                    ),
+                )
+
+            # Prepare the query
+            kwargs = dict()
+
+            # Put the date
+            next_event_timestamp = last_event_timestamp + 1
+            kwargs[self.config.misp.date_filter_field] = next_event_timestamp
+
+            # Complex query date
+            if complex_query_tag is not None:
+                kwargs["tags"] = complex_query_tag
+
+            # With attachments
+            if self.config.misp.import_with_attachments:
+                kwargs["with_attachments"] = self.config.misp.import_with_attachments
+
+            # Query with pagination of 50
+            current_state = self.helper.get_state()
+            if current_state is not None and "current_page" in current_state:
+                current_page = current_state["current_page"]
+            else:
+                current_page = 1
+            number_events = 0
+            while True:
+                kwargs["limit"] = 10
+                kwargs["page"] = current_page
+                if self.config.misp.import_keyword is not None:
+                    kwargs["value"] = self.config.misp.import_keyword
+                    kwargs["searchall"] = True
+                if self.config.misp.enforce_warning_list:
+                    kwargs["enforce_warninglist"] = (
+                        self.config.misp.enforce_warning_list
                     )
-
-                # Prepare the query
-                kwargs = dict()
-
-                # Put the date
-                next_event_timestamp = last_event_timestamp + 1
-                kwargs[self.config.misp.date_filter_field] = next_event_timestamp
-
-                # Complex query date
-                if complex_query_tag is not None:
-                    kwargs["tags"] = complex_query_tag
-
-                # With attachments
-                if self.config.misp.import_with_attachments:
-                    kwargs["with_attachments"] = (
-                        self.config.misp.import_with_attachments
-                    )
-
-                # Query with pagination of 50
-                current_state = self.helper.get_state()
-                if current_state is not None and "current_page" in current_state:
-                    current_page = current_state["current_page"]
-                else:
-                    current_page = 1
-                number_events = 0
-                while True:
-                    kwargs["limit"] = 10
-                    kwargs["page"] = current_page
-                    if self.config.misp.import_keyword is not None:
-                        kwargs["value"] = self.config.misp.import_keyword
-                        kwargs["searchall"] = True
-                    if self.config.misp.enforce_warning_list:
-                        kwargs["enforce_warninglist"] = (
-                            self.config.misp.enforce_warning_list
-                        )
-                    self.helper.log_info(
-                        "Fetching MISP events with args: " + json.dumps(kwargs)
-                    )
-                    kwargs = json.loads(json.dumps(kwargs))
-                    events = []
+                self.helper.log_info(
+                    "Fetching MISP events with args: " + json.dumps(kwargs)
+                )
+                kwargs = json.loads(json.dumps(kwargs))
+                events = []
+                try:
+                    events = self.misp.search("events", **kwargs)
+                    if isinstance(events, dict):
+                        if "errors" in events:
+                            raise ValueError(events["message"])
+                except Exception as e:
+                    self.helper.log_error(f"Error fetching misp event: {e}")
+                    self.helper.metric.inc("client_error_count")
                     try:
                         events = self.misp.search("events", **kwargs)
                         if isinstance(events, dict):
                             if "errors" in events:
                                 raise ValueError(events["message"])
                     except Exception as e:
-                        self.helper.log_error(f"Error fetching misp event: {e}")
+                        self.helper.log_error(f"Error fetching misp event again: {e}")
                         self.helper.metric.inc("client_error_count")
-                        try:
-                            events = self.misp.search("events", **kwargs)
-                            if isinstance(events, dict):
-                                if "errors" in events:
-                                    raise ValueError(events["message"])
-                        except Exception as e:
-                            self.helper.log_error(
-                                f"Error fetching misp event again: {e}"
-                            )
-                            self.helper.metric.inc("client_error_count")
-                            break
-
-                    self.helper.log_info(
-                        "MISP returned " + str(len(events)) + " events."
-                    )
-                    number_events = number_events + len(events)
-
-                    # Break if no more result
-                    if len(events) == 0:
                         break
 
-                    # Process the event
-                    processed_events_last_timestamp = self.process_events(
-                        work_id, events
-                    )
-                    if (
-                        processed_events_last_timestamp is not None
-                        and processed_events_last_timestamp > last_event_timestamp
-                    ):
-                        last_event_timestamp = processed_events_last_timestamp
+                self.helper.log_info("MISP returned " + str(len(events)) + " events.")
+                number_events = number_events + len(events)
 
-                    # Next page
-                    current_page += 1
-                    if current_state is not None:
-                        current_state["current_page"] = current_page
-                    else:
-                        current_state = {"current_page": current_page}
-                    self.helper.set_state(current_state)
-                # Loop is over, storing the state
-                # We cannot store the state before, because MISP events are NOT ordered properly
-                # and there is NO WAY to order them using their library
-                message = (
-                    "Connector successfully run ("
-                    + str(number_events)
-                    + " events have been processed), storing state (last_run="
-                    + now.isoformat()
-                    + ", last_event="
-                    + datetime.fromtimestamp(
+                # Break if no more result
+                if len(events) == 0:
+                    break
+
+                # Process the event
+                processed_events_last_timestamp = self.process_events(work_id, events)
+                if (
+                    processed_events_last_timestamp is not None
+                    and processed_events_last_timestamp > last_event_timestamp
+                ):
+                    last_event_timestamp = processed_events_last_timestamp
+
+                # Next page
+                current_page += 1
+                if current_state is not None:
+                    current_state["current_page"] = current_page
+                else:
+                    current_state = {"current_page": current_page}
+                self.helper.set_state(current_state)
+            # Loop is over, storing the state
+            # We cannot store the state before, because MISP events are NOT ordered properly
+            # and there is NO WAY to order them using their library
+            message = (
+                "Connector successfully run ("
+                + str(number_events)
+                + " events have been processed), storing state (last_run="
+                + now.isoformat()
+                + ", last_event="
+                + datetime.fromtimestamp(
+                    last_event_timestamp, tz=timezone.utc
+                ).isoformat()
+                + ", last_event_timestamp="
+                + str(last_event_timestamp)
+                + ", current_page=1)"
+            )
+            self.helper.set_state(
+                {
+                    "last_run": now.isoformat(),
+                    "last_event": datetime.fromtimestamp(
                         last_event_timestamp, tz=timezone.utc
-                    ).isoformat()
-                    + ", last_event_timestamp="
-                    + str(last_event_timestamp)
-                    + ", current_page=1)"
-                )
-                self.helper.set_state(
-                    {
-                        "last_run": now.isoformat(),
-                        "last_event": datetime.fromtimestamp(
-                            last_event_timestamp, tz=timezone.utc
-                        ).isoformat(),
-                        "last_event_timestamp": last_event_timestamp,
-                        "current_page": 1,
-                    }
-                )
-                self.helper.log_info(message)
-                self.helper.api.work.to_processed(work_id, message)
+                    ).isoformat(),
+                    "last_event_timestamp": last_event_timestamp,
+                    "current_page": 1,
+                }
+            )
+            self.helper.log_info(message)
+            self.helper.api.work.to_processed(work_id, message)
 
-                if self.helper.connect_run_and_terminate:
-                    self.helper.log_info("Connector stop")
-                    self.helper.metric.state("stopped")
-                    self.helper.force_ping()
-                    sys.exit(0)
-
-            except (KeyboardInterrupt, SystemExit):
-                error_message = "Connector stopped by user or system"
-                self.helper.log_error(error_message)
+            if self.helper.connect_run_and_terminate:
+                self.helper.log_info("Connector stop")
+                self.helper.metric.state("stopped")
+                self.helper.force_ping()
                 sys.exit(0)
 
-            except Exception as err:
-                self.helper.log_error(
-                    "[CONNECTOR] Unexpected error.", {"error": str(err)}
-                )
-                self.helper.log_error(
-                    "Unexpected error. See connector's log for more details."
-                )
+        except (KeyboardInterrupt, SystemExit):
+            error_message = "Connector stopped by user or system"
+            self.helper.log_error(error_message)
+            sys.exit(0)
+        except Exception as err:
+            self.helper.log_error("[CONNECTOR] Unexpected error.", {"error": str(err)})
+            self.helper.log_error(
+                "Unexpected error. See connector's log for more details."
+            )
 
-            finally:
-                self.helper.metric.state("idle")
-                time.sleep(self.config.connector.duration_period.total_seconds())
+        finally:
+            self.helper.metric.state("idle")
+
+    def run(self) -> None:
+        """
+        Run the main process encapsulated in a scheduler
+        It allows you to schedule the process to run at a certain intervals
+        This specific scheduler from the pycti connector helper will also check the queue size of a connector
+        If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
+        the connector's main process will not run until the queue is ingested and reduced sufficiently,
+        allowing it to restart during the next scheduler check. (default is 500MB)
+        It requires the `duration_period` connector variable in ISO-8601 standard format
+        Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
+        :return: None
+        """
+        self.helper.schedule_process(
+            message_callback=self.process,
+            duration_period=self.config.connector.duration_period.total_seconds(),
+        )
 
     def process_events(self, work_id, events):
         last_event_timestamp = None
