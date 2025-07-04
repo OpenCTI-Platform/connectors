@@ -1,10 +1,12 @@
 import pytest
+from export_report_pdf.config import ConnectorConfig
 from export_report_pdf.connector import Connector
+from pycti import OpenCTIConnectorHelper
 
 
 @pytest.mark.usefixtures("mock_config", "mocked_helper")
-def test_connector_config() -> None:
-    connector = Connector()
+def test_connector_config(mocked_helper: OpenCTIConnectorHelper) -> None:
+    connector = Connector(config=ConnectorConfig(), helper=mocked_helper)
     assert connector.config.company_address_line_1 == "Company Address Line 1"
     assert connector.config.company_address_line_2 == "Company Address Line 2"
     assert connector.config.company_address_line_3 == "Company Address Line 3"
@@ -18,6 +20,7 @@ def test_connector_config() -> None:
 
 
 @pytest.mark.usefixtures("mock_config", "mocked_helper")
-def test_connector_start() -> None:
-    connector = Connector()
-    connector.start()
+def test_connector_start(mocked_helper: OpenCTIConnectorHelper) -> None:
+    connector = Connector(config=ConnectorConfig(), helper=mocked_helper)
+    connector.run()
+    mocked_helper.listen.assert_called_once()

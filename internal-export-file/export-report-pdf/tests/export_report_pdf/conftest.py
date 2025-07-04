@@ -49,7 +49,10 @@ def mock_config(mocker: MockerFixture, config_dict: dict[str, Any]) -> None:
 
 @pytest.fixture(name="mocked_helper")
 def fixture_mocked_helper(mocker: MockerFixture) -> Mock:
-    helper = mocker.patch(
-        "export_report_pdf.connector.OpenCTIConnectorHelper", MagicMock()
-    )
+    helper = mocker.patch("pycti.OpenCTIConnectorHelper", MagicMock())
+    # helper.connect_id = "test-connector-id"
+    # helper.connect_name = "Test Connector"
+    # helper.api.work.initiate_work.return_value = "work-id"
+    # helper.get_state.return_value = {}
+    # helper.stix2_create_bundle.return_value = "bundle"
     return helper

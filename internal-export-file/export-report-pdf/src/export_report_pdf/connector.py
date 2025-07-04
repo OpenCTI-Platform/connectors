@@ -23,10 +23,10 @@ CMARKGFM_OPTIONS = (
 
 
 class Connector:
-    def __init__(self):
+    def __init__(self, config: ConnectorConfig, helper: OpenCTIConnectorHelper) -> None:
         # Instantiate the connector helper from config
-        self.config = ConnectorConfig()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.config = config
+        self.helper = helper
 
         self.current_dir = os.path.abspath(os.path.dirname(__file__)) + "/../"
         self._set_colors()
@@ -878,5 +878,5 @@ class Connector:
         return reader.get(entity_type.lower(), None)
 
     # Start the main loop
-    def start(self):
+    def run(self):
         self.helper.listen(self._process_message)
