@@ -938,7 +938,7 @@ class ExportReportPdf:
         self.helper.listen(self._process_message)
 
 
-if __name__ == "__main__":
+def main() -> None:
     try:
         connector_export_report_pdf = ExportReportPdf()
         connector_export_report_pdf.start()
@@ -946,3 +946,7 @@ if __name__ == "__main__":
         print(e)
         time.sleep(10)
         sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
