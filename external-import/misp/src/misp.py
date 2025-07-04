@@ -289,12 +289,6 @@ class Misp:
             self.helper.log_info(message)
             self.helper.api.work.to_processed(work_id, message)
 
-            if self.helper.connect_run_and_terminate:
-                self.helper.log_info("Connector stop")
-                self.helper.metric.state("stopped")
-                self.helper.force_ping()
-                sys.exit(0)
-
         except (KeyboardInterrupt, SystemExit):
             error_message = "Connector stopped by user or system"
             self.helper.log_error(error_message)
