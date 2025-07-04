@@ -2,7 +2,10 @@ import os
 import sys
 import time
 import traceback
+import uuid
 from datetime import datetime
+import json
+
 
 import stix2
 import yaml
@@ -24,7 +27,7 @@ from pycti import (
     get_config_variable,
 )
 from thehive4py import TheHiveApi
-from thehive4py.query import Gt
+from thehive4py.query import Gt,Eq
 from thehive4py.query.page import Paginate
 from thehive4py.query.sort import Asc
 from thehive4py.types.alert import OutputAlert
@@ -122,7 +125,9 @@ class TheHive:
         for mapping in self.thehive_severity_mapping:
             self.severity_mapping[int(mapping.split(":")[0])] = mapping.split(":")[1]
 
+
         self.thehive_api = TheHiveApi(self.thehive_url, self.thehive_api_key)
+        self.thehive_api.session.verify = False
 
     def construct_query(self, type, last_date):
         """Construct query for alert or cases based on the last_date."""
@@ -133,14 +138,13 @@ class TheHive:
             return Gt("_updatedAt", int(last_date * 1000)) | Gt(
                 "_createdAt", int(last_date * 1000)
             )
-
         elif type == "alert":
             return Gt("_updatedAt", int(last_date * 1000)) | Gt(
                 "_createdAt", int(last_date * 1000)
             )
         else:
             raise ValueError(f"Unsupported type in construct_query: {type}")
-
+        
     def convert_observable(self, observable, markings):
         """Converts the Hive Observable to a STIX observable."""
         stix_observable = None
@@ -182,6 +186,7 @@ class TheHive:
 
     def generate_alert_bundle(self, alert):
         """Generate a STIX bundle from a given alert."""
+
         # Initial logging
         self.helper.log_info(f"Starting import for alert '{alert.get('title')}'")
 
@@ -194,7 +199,7 @@ class TheHive:
             bundle_objects.extend(markings)
         except Exception as e:
             self.helper.log_error(f"Error processing markings: {str(e)}")
-
+        
         # Extract and format alert creation and modification times.
         created_epoch = alert.get("_createdAt", 0) / 1000
         created = format_datetime(created_epoch, DEFAULT_UTC_DATETIME)
@@ -217,7 +222,7 @@ class TheHive:
             if stix_observable:
                 bundle_objects.append(stix_observable)
                 bundle_objects.append(stix_relation)
-
+        
         # Create STIX bundle
         try:
             bundle = self.helper.stix2_create_bundle(bundle_objects)
@@ -230,10 +235,8 @@ class TheHive:
             return {}
 
     def generate_case_bundle(self, case):
-        """Generate a stix bundle from a given case."""
-        self.helper.log_info(
-            f"Starting generation of STIX bundle for case: {case.get('title')}"
-        )
+        """Génère un STIX bundle à partir d'un cas TheHive (sans attachments)."""
+        self.helper.log_info(f"Starting generation of STIX bundle for case: {case.get('title')}")
         bundle_objects = []
 
         # Process markings
@@ -244,37 +247,40 @@ class TheHive:
             self.helper.log_error(f"Error processing markings: {str(e)}")
 
         # Process observables for current case.
-        processed_observables, case_object_refs = self.process_observables(
-            case, markings
-        )
+        processed_observables, case_object_refs = self.process_observables(case, markings)
         bundle_objects.extend(processed_observables)
 
         # Process main case and create CustomObjectCaseIncident.
         stix_case = self.process_main_case(case, markings, case_object_refs)
         bundle_objects.append(stix_case)
-
         # Process tasks
         bundle_objects.extend(self.process_tasks(case, stix_case))
+        
+        bundle_objects.extend(self.process_comments(case, stix_case))
 
         # Finalize bundle
         try:
             bundle = self.helper.stix2_create_bundle(bundle_objects)
-            self.helper.log_info(
-                f"Completed generation of STIX bundle for case: {case.get('title')}"
-            )
+            self.helper.log_info(f"Completed generation of STIX bundle for case: {case.get('title')}")
+            self.helper.send_stix2_bundle(bundle, update=self.update_existing_data)
             return bundle
         except Exception as e:
             self.helper.log_error(f"Error serializing STIX bundle for 'case': {str(e)}")
             return {}
 
+
+
+
+    
+
     def generate_sighting(self, observable, stix_observable):
-        """Generate a stix sighting from a provided observable and stix observable."""
+        """Generate a STIX sighting from a provided observable and stix observable."""
         if observable.get("sighted"):
             int_start_date = int(observable.get("startDate")) / 1000
             stix_sighting = stix2.Sighting(
                 id=StixSightingRelationship.generate_id(
-                    stix_observable.id,  # from sighting_of_ref
-                    self.identity.get("standard_id"),  # to where_sighted_refs
+                    stix_observable.id, # from sighting_of_ref
+                    self.identity.get("standard_id"), # to where_sighted_refs
                     format_datetime(int_start_date, DEFAULT_UTC_DATETIME),
                     format_datetime(int_start_date + 3600, DEFAULT_UTC_DATETIME),
                 ),
@@ -283,14 +289,14 @@ class TheHive:
                 where_sighted_refs=[self.identity.get("standard_id")],
                 # As SDO are not supported in official STIX, we use a fake ID in ref
                 # Worker will use custom_properties instead
-                sighting_of_ref="indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e",  # Fake
+                sighting_of_ref="indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e",
                 custom_properties={"x_opencti_sighting_of_ref": stix_observable.id},
             )
             return stix_sighting
         return None
 
     def get_interval(self):
-        """Get the intervale in seconds."""
+        """Get the interval in seconds."""
         return int(self.thehive_interval) * 60
 
     def get_last_date(self, date_key, default_date):
@@ -312,7 +318,7 @@ class TheHive:
         return mappings.get(key, mappings[0])
 
     def get_updated_date(self, item, last_date):
-        """Get the highest date observed within item and "last_date."""
+        """Get the highest date observed within item and last_date."""
         if "_updatedAt" in item and item["_updatedAt"] is not None:
             new_date = int(item["_updatedAt"] / 1000) + 1
             self.helper.log_debug(
@@ -335,7 +341,6 @@ class TheHive:
             + "> is not found and the API message error is: "
             + items["type"]
         )
-
         raise Exception({"message": api_error_msg})
 
     def process_items(self, type, items, process_func, last_date_key):
@@ -347,7 +352,6 @@ class TheHive:
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
-
         for item in items:
             self.helper.log_debug(f"item: {items}")
             if str(item.get("tlp")) in self.thehive_import_only_tlp:
@@ -371,7 +375,6 @@ class TheHive:
         self.helper.log_info(
             f"here the cureent state of the connector : {self.current_state}..."
         )
-
         last_date = self.get_last_date(last_date_key, self.thehive_import_from_date)
         self.helper.log_info(f"Last Date: {last_date}(s)...")
         query = self.construct_query(type, last_date)
@@ -386,7 +389,6 @@ class TheHive:
             )
             if not isinstance(items, list):
                 self.not_found_items(items, type)
-
         elif type == "alert":
             items: list["OutputAlert"] = self.thehive_api.alert.find(
                 filters=query,
@@ -397,7 +399,6 @@ class TheHive:
                 self.not_found_items(items, type)
         else:
             raise ValueError(f"Unsupported type in process_logic: {type}")
-
         updated_last_date = self.process_items(
             type=type,
             items=items,
@@ -418,21 +419,18 @@ class TheHive:
         created = format_datetime(
             int(case.get("_createdAt")) / 1000, DEFAULT_UTC_DATETIME
         )
-
         opencti_case_status = None
         if len(self.thehive_case_status_mapping) > 0:
             for case_status_mapping in self.thehive_case_status_mapping:
                 case_status_mapping_split = case_status_mapping.split(":")
                 if case.get("extendedStatus") == case_status_mapping_split[0]:
                     opencti_case_status = case_status_mapping_split[1]
-
         opencti_case_user = None
         if len(self.thehive_user_mapping) > 0:
             for user_mapping in self.thehive_user_mapping:
                 user_mapping_split = user_mapping.split(":")
                 if case.get("owner") == user_mapping_split[0]:
                     opencti_case_user = user_mapping_split[1]
-
         stix_case = CustomObjectCaseIncident(
             id=CaseIncident.generate_id(case.get("title"), created),
             name=case.get("title"),
@@ -441,18 +439,15 @@ class TheHive:
             object_marking_refs=markings,
             labels=case.get("tags") if case.get("tags") else None,
             created_by_ref=self.identity.get("standard_id"),
-            severity=(
-                self.severity_mapping[case.get("severity")]
-                if case.get("severity") in self.severity_mapping
-                else None
-            ),
+            severity=(self.severity_mapping[case.get("severity")]
+                      if case.get("severity") in self.severity_mapping
+                      else None),
             x_opencti_workflow_id=opencti_case_status,
-            x_opencti_assignee_ids=(
+            x_opencti_assignee_ids=( 
                 [opencti_case_user] if opencti_case_user is not None else None
             ),
             object_refs=object_refs if object_refs is not None else [],
         )
-
         return stix_case
 
     def process_markings(self, item):
@@ -468,33 +463,27 @@ class TheHive:
             case_id = case.get("_id")
             self.helper.log_info(f"!!! here the value of case_id : {case_id}")
             response = self.thehive_api.case.find_observables(case_id=case.get("_id"))
-
             if response and len(response) > 0:
                 observables = response
-
                 self.helper.log_info(
                     f"Processing {len(observables)} observables for case: {case.get('title')}"
                 )
-
                 processed_observables = []
                 object_refs = []
                 i = 1
                 for observable in observables:
-                    self.helper.log_info(f"!!! !!! observale n° {i}")
-                    i = i + 1
+                    self.helper.log_info(f"!!! !!! observable n° {i}")
+                    i += 1
                     stix_observable = self.convert_observable(observable, markings)
                     if stix_observable:
                         if hasattr(stix_observable, "id"):
                             processed_observables.append(stix_observable)
                             object_refs.append(stix_observable.id)
-
                             sighting = self.generate_sighting(
                                 observable, stix_observable
                             )
-
                             if sighting:
                                 processed_observables.append(sighting)
-
                 return processed_observables, object_refs
             else:
                 self.helper.log_error(
@@ -540,38 +529,32 @@ class TheHive:
     def process_tasks(self, case, stix_case):
         """Function to process all tasks within a case."""
         tasks = self.thehive_api.case.find_tasks(case_id=case.get("_id"))
-
         self.helper.log_info(
             f"Processing {len(tasks)} tasks for case: {case.get('title')}"
         )
-
         processed_tasks = []
-
         for task in tasks:
             created = format_datetime(
                 int(task.get("_createdAt")) / 1000, DEFAULT_UTC_DATETIME
             )
-
             opencti_task_status = None
             if len(self.thehive_task_status_mapping) > 0:
                 for task_status_mapping in self.thehive_task_status_mapping:
                     task_status_mapping_split = task_status_mapping.split(":")
                     if task.get("status") == task_status_mapping_split[0]:
                         opencti_task_status = task_status_mapping_split[1]
-
             opencti_task_user = None
             if len(self.thehive_user_mapping) > 0:
                 for user_mapping in self.thehive_user_mapping:
                     user_mapping_split = user_mapping.split(":")
                     if task.get("assignee") == user_mapping_split[0]:
                         opencti_task_user = user_mapping_split[1]
-
             stix_task = CustomObjectTask(
                 id=Task.generate_id(task.get("title"), created),
                 name=task.get("title"),
                 description=task.get("description"),
                 created=created,
-                due_date=(
+                due_date=( 
                     format_datetime(task.get("dueDate") / 1000, DEFAULT_UTC_DATETIME)
                     if "dueDate" in task
                     else None
@@ -583,17 +566,57 @@ class TheHive:
                 ),
             )
             processed_tasks.append(stix_task)
-
         return processed_tasks
 
+    def process_comments(self, case, stix_case):
+        """Function to process all comments within a case."""
+        case_comments = self.thehive_api.case.find_comments(
+            case_id=case.get("_id"),
+            #case_id = "~9204793528",
+            sortby=Asc("_createdAt"),
+            paginate=Paginate(start=0, end=10),
+        )
+        self.helper.log_info(
+            f"Processing {len(case_comments)} comments for case: {case.get('title')}"
+        )
+        processed_comments = []
+        for comment in case_comments:
+            created_at = comment.get("_createdAt")
+            if created_at is None:
+                self.helper.log_warning(
+                    f"Commentaire {comment.get('_id')} sans '_createdAt'. Utilisation de la date de création du cas."
+                )
+                created_at = case.get("_createdAt")
+                if created_at is None:
+                    created_at = int(time.time() * 1000)
+            created = format_datetime(int(created_at) / 1000, DEFAULT_UTC_DATETIME)
+            # Création d'un dictionnaire représentant un objet Note STIX
+            stix_comment = {
+                "type": "note",
+                "id": "note--" + str(uuid.uuid4()),
+                "content": comment.get("message", "No comment"),
+                "created": created,
+                "modified": created,
+                "object_refs": [stix_case.id],
+            }
+            processed_comments.append(stix_comment)
+        return processed_comments
+
+
+    
+
+
+
+
+
     def run(self):
-        """Function to process case, alerts, and pause based on provided interval."""
+        """Function to process cases, alerts, and pause based on provided interval."""
         while True:
-            self.helper.log_info("Starting TheHive Conncector run loop...")
+            self.helper.log_info("Starting TheHive Connector run loop...")
             try:
                 self.current_state = self.helper.get_state() or {}
                 self.helper.log_info(f"Current State: {self.current_state}")
-
+                
                 # Cases
                 self.process_logic("case", "last_case_date", self.generate_case_bundle)
                 # Alerts
@@ -607,18 +630,19 @@ class TheHive:
             except Exception as e:
                 self.helper.log_error(f"Error occurred: {str(e)}")
                 traceback.print_exc()
-
+            
             # Check run_and_terminate flag, exit if true.
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")
                 self.helper.force_ping()
                 sys.exit(0)
-
+            
             # pause connector until next scheduled interval.
             self.helper.log_info(
                 f"End of current run loop, running next interval in {self.get_interval()} second(s)."
             )
             time.sleep(self.get_interval())
+
 
 
 if __name__ == "__main__":
