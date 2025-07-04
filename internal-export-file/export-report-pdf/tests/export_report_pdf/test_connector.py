@@ -1,7 +1,5 @@
 import pytest
-
 from export_report_pdf.connector import Connector
-
 
 
 @pytest.mark.usefixtures("mock_config", "mocked_helper")
