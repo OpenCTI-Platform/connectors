@@ -131,12 +131,12 @@ def is_uuid(val):
         return False
 
 
-def filter_event_attributes(event, **filters):
+def filter_event_attributes(event: EventRestSearchListItem, **filters):
     if not filters:
         return None
 
     attributes = list()
-    for attribute in event["Event"]["Attribute"]:
+    for attribute in event.Event.Attribute:
         for key, value in filters.items():
             if attribute[key] != value:
                 break
