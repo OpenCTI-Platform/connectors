@@ -1,5 +1,5 @@
 -r ./base_connector/requirements.txt
-imap-tools==1.10.0
+imap-tools==1.11.0
 pycti==6.7.3
 pydantic~=2.11.3
 google-api-python-client>=2.169.0
