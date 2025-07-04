@@ -1,9 +1,10 @@
 import gzip
 import json
 import traceback
-from zipfile import ZipFile
 from io import BytesIO
-from urllib.request import urlopen, Request
+from urllib.request import Request, urlopen
+from zipfile import ZipFile
+
 
 class ConnectorClient:
     def __init__(self, helper, config):
@@ -22,7 +23,6 @@ class ConnectorClient:
         # type of feed package (updated or full)
         self.package_type = self.config.package_type
 
-
     def acquire_feed_packages(self, create_tasks: list) -> list:
         """
         Downloading and unzipping a .zip file without writing to disk
@@ -33,9 +33,9 @@ class ConnectorClient:
         try:
             req = Request(feed_url, headers=self.headers)
             with urlopen(req) as response:
-                encoding = response.headers.get('Content-Encoding')
+                encoding = response.headers.get("Content-Encoding")
                 raw_data = response.read()
-            if encoding == 'gzip':
+            if encoding == "gzip":
                 # unzip gzip
                 with gzip.GzipFile(fileobj=BytesIO(raw_data)) as gz:
                     raw_data = gz.read()
@@ -44,14 +44,14 @@ class ConnectorClient:
                 # filename: 'data.NTI.API.V2.0.ioc-updated.20250425.0001.json'
                 for filename in myzip.namelist():
                     # if create task set to true
-                    current_task = filename.rsplit('.', 3)[0]
+                    current_task = filename.rsplit(".", 3)[0]
                     # create_tasks: 'data.NTI.API.V2.0.ioc-updated'
                     if current_task in create_tasks:
                         self.helper.connector_logger.info(
                             f"[CLIENT] acquiring {filename}.",
                         )
                         intelligence_data = []
-                        with myzip.open(filename,"r") as f:
+                        with myzip.open(filename, "r") as f:
                             # skip header
                             f.readline()
                             for line in f:
@@ -60,6 +60,6 @@ class ConnectorClient:
         except Exception:
             self.helper.connector_logger.info(
                 "[CLIENT] acquire feed packages error.",
-                {"Error message": traceback.format_exc()}
+                {"Error message": traceback.format_exc()},
             )
             raise

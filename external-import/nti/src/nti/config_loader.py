@@ -58,11 +58,15 @@ class ConfigConnector:
                 self.create_tasks.append("data.NTI.API.V2.0.ioc-updated")
             if get_config_variable("NTI_CREATE_IP", ["nti", "create_ip"], self.load):
                 self.create_tasks.append("data.NTI.API.V2.0.ip-basic-updated")
-            if get_config_variable("NTI_CREATE_DOMAIN", ["nti", "create_domain"], self.load):
+            if get_config_variable(
+                "NTI_CREATE_DOMAIN", ["nti", "create_domain"], self.load
+            ):
                 self.create_tasks.append("data.NTI.API.V2.0.domain-basic-updated")
             if get_config_variable("NTI_CREATE_URL", ["nti", "create_url"], self.load):
                 self.create_tasks.append("data.NTI.API.V2.0.url-basic-updated")
-            if get_config_variable("NTI_CREATE_FILE", ["nti", "create_file"], self.load):
+            if get_config_variable(
+                "NTI_CREATE_FILE", ["nti", "create_file"], self.load
+            ):
                 self.create_tasks.append("data.NTI.API.V2.0.sample-updated")
 
             self.ns_nti_key = get_config_variable(

@@ -13,7 +13,7 @@ class NTIConnector:
         """
         Initialize the Connector with necessary configurations
         """
-        self.work_id = ''
+        self.work_id = ""
         # read config file
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
@@ -22,7 +22,9 @@ class NTIConnector:
         self.package_type = self.config.package_type
         self.create_tasks = self.config.create_tasks
 
-        self.helper.connector_logger.info("[CONNECTOR] tasks initialized.", {"initialized tasks": self.create_tasks})
+        self.helper.connector_logger.info(
+            "[CONNECTOR] tasks initialized.", {"initialized tasks": self.create_tasks}
+        )
         self.client = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
@@ -37,7 +39,9 @@ class NTIConnector:
             "data.NTI.API.V2.0.url-basic-updated": self.create_url_basic,
             "data.NTI.API.V2.0.sample-updated": self.create_sample_basic,
         }
-        for intelligence_data, entity_type in self.client.acquire_feed_packages(self.create_tasks):
+        for intelligence_data, entity_type in self.client.acquire_feed_packages(
+            self.create_tasks
+        ):
             # call corresponding functions
             handler = switcher.get(entity_type)
             object_count = handler(intelligence_data)
@@ -338,7 +342,7 @@ class NTIConnector:
             self.helper.api.work.to_processed(
                 self.work_id,
                 f"[CONNECTOR] Data collection failed: {str(err)}",
-                in_error=True
+                in_error=True,
             )
             self.helper.connector_logger.error(str(err))
             raise

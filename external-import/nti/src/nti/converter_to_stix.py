@@ -1,13 +1,13 @@
 import stix2
-from pycti import Identity, Indicator, MarkingDefinition, StixCoreRelationship
+from pycti import Identity, MarkingDefinition, StixCoreRelationship
 
 from .mapping import (
     BUSINESS_TYPE,
     CONTENT_TYPE,
+    HASH_ALGORITHMS,
     INDUSTRY_OBJ,
     OBSERVABLE_TYPES,
     THREAT_TYPE,
-    HASH_ALGORITHMS,
 )
 
 
@@ -86,7 +86,9 @@ class ConverterToStix:
         :return: Relationship STIX2 object
         """
         relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(relationship_type, source_id, target_id),
+            id=StixCoreRelationship.generate_id(
+                relationship_type, source_id, target_id
+            ),
             relationship_type=relationship_type,
             description=description,
             start_time=start_time,
@@ -384,7 +386,6 @@ class ConverterToStix:
                 pattern.append(condition)
         return "[" + " OR ".join(pattern) + "]"
 
-
     def create_indicator(self, entity):
         """
         Create a stix2 indicator.
@@ -415,7 +416,9 @@ class ConverterToStix:
                 revoked=bool(entity.get("revoked")),
                 labels=tags,
                 created_by_ref=self.author,
-                indicator_types=[THREAT_TYPE.get(i) for i in entity.get("threat_types")],
+                indicator_types=[
+                    THREAT_TYPE.get(i) for i in entity.get("threat_types")
+                ],
                 object_marking_refs=[self.tlp_marking.id],
                 custom_properties=dict(
                     x_opencti_score=self.calculate_score(
