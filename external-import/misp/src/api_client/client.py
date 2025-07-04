@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+from warnings import warn
 
 from pydantic import ValidationError
 from pymisp import PyMISP, PyMISPError
@@ -11,6 +12,8 @@ class MISPClientError(Exception):
 
 
 class MISPClient:
+    """Wrapper of PyMISP client."""
+
     def __init__(
         self,
         url: str,
@@ -18,6 +21,8 @@ class MISPClient:
         verify_ssl: bool = False,
         certificate: Optional[str] = None,
     ):
+        """Initialize and wrap a PyMISP instance."""
+
         self._client = PyMISP(
             url=url,
             key=key,
@@ -52,10 +57,6 @@ class MISPClient:
                     not_parameters=excluded_tags,
                 )
 
-                # self.helper.log_info(
-                #     "Fetching MISP events with args: " + json.dumps(kwargs)
-                # )
-
                 results = self._client.search(
                     controller="events",
                     return_format="json",
@@ -82,8 +83,11 @@ class MISPClient:
                     try:
                         events.append(EventRestSearchListItem(**result))
                     except ValidationError as err:
-                        # self.helper.log_error(str(err))
-                        print(f"Validation error: {err}")
+                        warn(
+                            f"MISP event data seems malformed, skipping it. Validation error: {err}",
+                            UserWarning,
+                            stacklevel=3,
+                        )
                         continue
 
                 current_page += 1
