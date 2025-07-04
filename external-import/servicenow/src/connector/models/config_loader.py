@@ -8,6 +8,7 @@ from pydantic import (
     HttpUrl,
     PlainSerializer,
     PositiveInt,
+    SecretStr,
     field_validator,
 )
 from pydantic_settings import (
@@ -25,11 +26,11 @@ TimedeltaInSeconds = Annotated[
 ]
 TLPToLower = Annotated[
     Literal["clear", "green", "amber", "amber+strict", "red"],
-    PlainSerializer(lambda v: ''.join(v), return_type=str),
+    PlainSerializer(lambda v: "".join(v), return_type=str),
 ]
 LogLevelToLower = Annotated[
     Literal["debug", "info", "warn", "error"],
-    PlainSerializer(lambda v: ''.join(v), return_type=str),
+    PlainSerializer(lambda v: "".join(v), return_type=str),
 ]
 
 
@@ -124,7 +125,7 @@ class _ConfigLoaderServiceNow(ConfigBaseSettings):
         alias="SERVICENOW_INSTANCE_NAME",
         description="Corresponds to server instance name (will be used for API requests).",
     )
-    api_key: str = Field(
+    api_key: SecretStr = Field(
         alias="SERVICENOW_API_KEY",
         description="Secure identifier used to validate access to ServiceNow APIs.",
     )

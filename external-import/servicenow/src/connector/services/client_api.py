@@ -28,7 +28,7 @@ class ServiceNowClient:
 
         # Define headers in session and update when needed
         self.headers = {
-            "x-sn-apikey": self.config.servicenow.api_key,
+            "x-sn-apikey": self.config.servicenow.api_key.get_secret_value(),
             "Content-Type": "application/json",
         }
 
