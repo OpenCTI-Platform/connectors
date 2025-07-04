@@ -177,18 +177,26 @@ class Misp:
                 last_run = datetime.fromisoformat(current_state["last_run"])
                 last_event = datetime.fromisoformat(current_state["last_event"])
                 last_event_timestamp = current_state["last_event_timestamp"]
-                self.helper.log_info("Connector last run: " + current_state["last_run"])
-                self.helper.log_info(
-                    "Connector latest event: " + current_state["last_event"]
+                self.helper.connector_logger.info(
+                    "Current state of the connector:",
+                    {
+                        "last_run": current_state["last_run"],
+                        "last_event": current_state["last_event"],
+                    },
                 )
+
             elif current_state and "last_run" in current_state:
                 last_run = datetime.fromisoformat(current_state["last_run"])
                 last_event = last_run
                 last_event_timestamp = int(last_event.timestamp())
-                self.helper.log_info("Connector last run: " + current_state["last_run"])
-                self.helper.log_info(
-                    "Connector latest event: "
-                    + current_state["last_run"]  # last_event == last_run
+                self.helper.connector_logger.info(
+                    "Current state of the connector:",
+                    {
+                        "last_run": current_state["last_run"],
+                        "last_event": current_state[
+                            "last_run"
+                        ],  # last_event == last_run
+                    },
                 )
             else:
                 if self.config.misp.import_from_date:
@@ -197,7 +205,7 @@ class Misp:
                 else:
                     last_event = now
                     last_event_timestamp = int(now.timestamp())
-                self.helper.log_info("Connector has never run")
+                self.helper.connector_logger.info("Connector has never run")
 
             # Put the date
             next_event_timestamp = last_event_timestamp + 1
@@ -222,6 +230,20 @@ class Misp:
                 },
             )
 
+            self.helper.connector_logger.info(
+                "Fetching MISP events with filters:",
+                {
+                    "date_attribute_filter": self.config.misp.date_filter_field,
+                    "date_value_filter": next_event_timestamp,
+                    "keyword": self.config.misp.import_keyword,
+                    "included_tags": self.config.misp.import_tags,
+                    "excluded_tags": self.config.misp.import_tags_not,
+                    "enforce_warning_list": self.config.misp.enforce_warning_list,
+                    "with_attachments": self.config.misp.import_with_attachments,
+                    # omit "limit" and "page" on purpose to avoid confusion about the number of expected results
+                },
+            )
+
             events = []
             try:
                 events = self.client.search_events(
@@ -236,7 +258,9 @@ class Misp:
                     page=current_page,
                 )
             except MISPClientError as err:
-                self.helper.log_error(f"Error fetching misp event: {err}")
+                self.helper.connector_logger.error(
+                    f"Error fetching misp event: {err}", {"error": err}
+                )
                 self.helper.metric.inc("client_error_count")
                 try:
                     # TODO: add a real retry mechanism
@@ -252,11 +276,15 @@ class Misp:
                         page=current_page,
                     )
                 except MISPClientError as err:
-                    self.helper.log_error(f"Error fetching misp event again: {err}")
+                    self.helper.connector_logger.error(
+                        f"Error fetching misp event again: {err}", {"error": err}
+                    )
                     self.helper.metric.inc("client_error_count")
                     raise err
 
-            self.helper.log_info("MISP returned " + str(len(events)) + " events.")
+            self.helper.connector_logger.info(
+                "MISP events found:", {"events_count": len(events)}
+            )
 
             # Process the event
             processed_events_last_timestamp = self.process_events(work_id, events)
@@ -266,6 +294,12 @@ class Misp:
             ):
                 last_event_timestamp = processed_events_last_timestamp
 
+            success_message = "Connector ran successfully"
+            self.helper.connector_logger.info(
+                success_message, {"processed_events_count": len(events)}
+            )
+            self.helper.api.work.to_processed(work_id, success_message)
+
             # Update state
             current_page = math.ceil(len(events) / 10)  # Each page contains 10 events
             if current_state is not None:
@@ -273,43 +307,33 @@ class Misp:
             else:
                 current_state = {"current_page": current_page}
             self.helper.set_state(current_state)
+
             # Loop is over, storing the state
             # We cannot store the state before, because MISP events are NOT ordered properly
             # and there is NO WAY to order them using their library
-            message = (
-                "Connector successfully run ("
-                + str(len(events))
-                + " events have been processed), storing state (last_run="
-                + now.isoformat()
-                + ", last_event="
-                + datetime.fromtimestamp(
+            current_state = {
+                "last_run": now.isoformat(),
+                "last_event": datetime.fromtimestamp(
                     last_event_timestamp, tz=timezone.utc
-                ).isoformat()
-                + ", last_event_timestamp="
-                + str(last_event_timestamp)
-                + ", current_page=1)"
+                ).isoformat(),
+                "last_event_timestamp": last_event_timestamp,
+                "current_page": 1,
+            }
+            self.helper.set_state(current_state)
+            self.helper.connector_logger.info(
+                "Updating connector state as:", current_state
             )
-            self.helper.set_state(
-                {
-                    "last_run": now.isoformat(),
-                    "last_event": datetime.fromtimestamp(
-                        last_event_timestamp, tz=timezone.utc
-                    ).isoformat(),
-                    "last_event_timestamp": last_event_timestamp,
-                    "current_page": 1,
-                }
-            )
-            self.helper.log_info(message)
-            self.helper.api.work.to_processed(work_id, message)
 
         except (KeyboardInterrupt, SystemExit):
-            error_message = "Connector stopped by user or system"
-            self.helper.log_error(error_message)
+            self.helper.connector_logger.info(
+                "Connector stopped by user or system",
+                {"connector_name": self.helper.connect_name},
+            )
             sys.exit(0)
         except Exception as err:
-            self.helper.log_error("[CONNECTOR] Unexpected error.", {"error": str(err)})
-            self.helper.log_error(
-                "Unexpected error. See connector's log for more details."
+            self.helper.connector_logger.error(
+                "Unexpected error. See connector's log for more details.",
+                {"error": err},
             )
 
         finally:
@@ -354,40 +378,36 @@ class Misp:
                 self.config.misp.import_creator_orgs
                 and event.Event.Orgc.name not in self.config.misp.import_creator_orgs
             ):
-                self.helper.log_info(
-                    "Event creator organization "
-                    + event.Event.Orgc.name
-                    + " not in import_creator_orgs, do not import"
+                self.helper.connector_logger.info(
+                    "Event creator Organization not in `MISP_IMPORT_CREATOR_ORGS`, skipping event",
+                    {"event_creator_organization": event.Event.Orgc.name},
                 )
                 continue
             if (
                 self.config.misp.import_creator_orgs_not
                 and event.Event.Orgc.name in self.config.misp.import_creator_orgs_not
             ):
-                self.helper.log_info(
-                    "Event creator organization "
-                    + event.Event.Orgc.name
-                    + " in import_creator_orgs_not, do not import"
+                self.helper.connector_logger.info(
+                    "Event creator Organization in `MISP_IMPORT_CREATOR_ORGS_NOT`, skipping event",
+                    {"event_creator_organization": event.Event.Orgc.name},
                 )
                 continue
             if (
                 self.config.misp.import_owner_orgs
                 and event.Event.Org.name not in self.config.misp.import_owner_orgs
             ):
-                self.helper.log_info(
-                    "Event owner organization "
-                    + event.Event.Org.name
-                    + " not in import_owner_orgs, do not import"
+                self.helper.connector_logger.info(
+                    "Event owner Organization not in `MISP_IMPORT_OWNER_ORGS`, skipping event",
+                    {"event_owner_organization": event.Event.Org.name},
                 )
                 continue
             if (
                 self.config.misp.import_owner_orgs_not
                 and event.Event.Org.name in self.config.misp.import_owner_orgs_not
             ):
-                self.helper.log_info(
-                    "Event owner organization "
-                    + event.Event.Org.name
-                    + " in import_owner_orgs_not, do not import"
+                self.helper.connector_logger.info(
+                    "Event owner Organization in `MISP_IMPORT_OWNER_ORGS_NOT`, skipping event",
+                    {"event_owner_organization": event.Event.Org.name},
                 )
                 continue
             if (
@@ -395,10 +415,9 @@ class Misp:
                 and event.Event.distribution
                 not in self.config.misp.import_distribution_levels
             ):
-                self.helper.log_info(
-                    "Event distribution level "
-                    + event.Event.distribution
-                    + " not in import_distribution_levels, do not import"
+                self.helper.connector_logger.info(
+                    "Event distribution level not in `MISP_IMPORT_DISTRIBUTION_LEVELS`, skipping event",
+                    {"event_distribution_level": event.Event.distribution},
                 )
                 continue
             if (
@@ -406,15 +425,15 @@ class Misp:
                 and event.Event.threat_level_id
                 not in self.config.misp.import_threat_levels
             ):
-                self.helper.log_info(
-                    "Event threat level "
-                    + event.Event.threat_level_id
-                    + " not in import_threat_levels, do not import"
+                self.helper.connector_logger.info(
+                    "Event threat level not in `MISP_IMPORT_THREAT_LEVELS`, skipping event",
+                    {"event_threat_level": event.Event.threat_level_id},
                 )
                 continue
             if self.config.misp.import_only_published and not event.Event.published:
-                self.helper.log_info(
-                    "Event is not published and import_only_published is set, do not import"
+                self.helper.connector_logger.info(
+                    "Event not published and `MISP_IMPORT_ONLY_PUBLISHED` enabled, skipping event",
+                    {"event_published": event.Event.published},
                 )
                 continue
 
@@ -460,8 +479,8 @@ class Misp:
                 author=author,
                 markings=event_markings,
             )
-            self.helper.log_info(
-                "This event contains " + str(len(event_elements)) + " related elements"
+            self.helper.connector_logger.info(
+                "Event related elements:", {"event_elements_count": len(event_elements)}
             )
             # Tags
             event_tags = []
@@ -488,10 +507,9 @@ class Misp:
             event_external_references = [event_external_reference]
             indicators = []
             # Get attributes of event
-            self.helper.log_info(
-                "This event contains "
-                + str(len(event.Event.Attribute))
-                + " attributes..."
+            self.helper.connector_logger.info(
+                "Event attributes:",
+                {"event_attributes_count": len(event.Event.Attribute)},
             )
             create_relationships = len(event.Event.Attribute) < 10000
             for attribute in event.Event.Attribute:
@@ -827,9 +845,12 @@ class Misp:
                     )
                     bundle_objects.append(note)
             bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
-            self.helper.log_info("Sending event STIX2 bundle")
+            self.helper.connector_logger.info("Sending event STIX2 bundle")
 
-            self.helper.send_stix2_bundle(bundle, work_id=work_id)
+            sent_bundles = self.helper.send_stix2_bundle(bundle, work_id=work_id)
+            self.helper.connector_logger.info(
+                "Sent STIX2 bundles:", {"sent_bundles_count", len(sent_bundles)}
+            )
             self.helper.metric.inc("record_send", len(bundle_objects))
         return last_event_timestamp
 
@@ -850,17 +871,24 @@ class Misp:
 
         attr_data = attribute.data
         if attr_data is None:
-            self.helper.log_error(
-                "No data for attribute: {0} ({1}:{2})".format(
-                    attr_uuid, attr_type, attr_category
-                )
+            self.helper.connector_logger.warning(
+                "No data for attribute",
+                {
+                    "attribute_uuid": attr_uuid,
+                    "attribute_type": attr_type,
+                    "attribute_category": attr_category,
+                },
             )
             return None
 
-        self.helper.log_info(
-            "Found PDF '{0}' for attribute: {1} ({2}:{3})".format(
-                attr_value, attr_uuid, attr_type, attr_category
-            )
+        self.helper.connector_logger.info(
+            "Found PDF for attribute",
+            {
+                "attribute_uuid": attr_uuid,
+                "attribute_type": attr_type,
+                "attribute_category": attr_category,
+                "attribute_value": attr_value,
+            },
         )
 
         return {
@@ -1005,8 +1033,17 @@ class Misp:
                         },
                         allow_custom=True,
                     )
-                except Exception as e:
-                    self.helper.log_error(f"Error processing indicator {name}: {e}")
+                except Exception as err:
+                    self.helper.connector_logger.error(
+                        "Error creating indicator",
+                        {
+                            "error": err,
+                            "indicator_name": name,
+                            "attribute_uuid": attribute.uuid,
+                            "attribute_type": attribute.type,
+                            "attribute_category": attribute.category,
+                        },
+                    )
                     self.helper.metric.inc("error_count")
             observable = None
             if self.config.misp.create_observables and observable_type is not None:
@@ -1175,9 +1212,14 @@ class Misp:
                             created_by_ref=author["id"],
                             external_references=attribute_external_references,
                         )
-                except Exception as e:
-                    self.helper.log_error(
-                        f"Error creating observable type {observable_type} with value {observable_value}: {e}"
+                except Exception as err:
+                    self.helper.connector_logger.error(
+                        "Error creating observable",
+                        {
+                            "type": observable_type,
+                            "value": observable_value,
+                            "error": err,
+                        },
                     )
                     self.helper.metric.inc("error_count")
             sightings = []
@@ -2190,7 +2232,10 @@ class Misp:
             return opencti_tags
 
         for tag in tags:
-            self.helper.log_info(f"found tag: {tag}")
+            self.helper.connector_logger.info(
+                "Found tag",
+                {"tag_id": tag.id, "tag_name": tag.name},
+            )
             tag_name_lower = tag.name.lower()
             # we take the tag as-is if it starts by a prefix stored in the keep_original_tags_as_label configuration
             if any(
@@ -2199,7 +2244,10 @@ class Misp:
                     self.config.misp.keep_original_tags_as_label,
                 )
             ):
-                self.helper.log_info(f"keeping raw tag: {tag}")
+                self.helper.connector_logger.info(
+                    "Keeping original tag",
+                    {"tag_id": tag.id, "tag_name": tag.name},
+                )
                 opencti_tags.append(tag.name)
 
             elif (
