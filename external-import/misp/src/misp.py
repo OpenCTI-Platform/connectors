@@ -1,19 +1,11 @@
-import json
+import math
 import re
 import sys
-import time
 import traceback
 import uuid
 from datetime import datetime, timezone
 
 import stix2
-from api_client.models import (
-    EventRestSearchListItem,
-    ExtendedAttributeItem,
-    GalaxyItem,
-    TagItem,
-)
-from connector.config_loader import ConfigLoader
 from pycti import (
     AttackPattern,
     CustomObservableHostname,
@@ -32,7 +24,14 @@ from pycti import (
     StixSightingRelationship,
     Tool,
 )
-from pymisp import PyMISP
+from connector.config_loader import ConfigLoader
+from api_client.client import MISPClient, MISPClientError
+from api_client.models import (
+    EventRestSearchListItem,
+    ExtendedAttributeItem,
+    GalaxyItem,
+    TagItem,
+)
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
 OPENCTISTIX2 = {
@@ -151,14 +150,11 @@ class Misp:
         self.config = ConfigLoader()
         self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
 
-        # Initialize MISP client
-        self.misp = PyMISP(
+        self.client = MISPClient(
             url=self.config.misp.url,
             key=self.config.misp.key,
-            cert=self.config.misp.client_cert,
-            ssl=self.config.misp.ssl_verify,
-            debug=False,
-            tool="OpenCTI MISP connector",
+            verify_ssl=self.config.misp.ssl_verify,
+            certificate=self.config.misp.client_cert,
         )
 
     def process(self):
@@ -203,42 +199,8 @@ class Misp:
                     last_event_timestamp = int(now.timestamp())
                 self.helper.log_info("Connector has never run")
 
-            # If import with tags
-            complex_query_tag = None
-            if (self.config.misp.import_tags is not None) or (
-                self.config.misp.import_tags_not is not None
-            ):
-                or_parameters = []
-                not_parameters = []
-
-                if self.config.misp.import_tags:
-                    for tag in self.config.misp.import_tags.split(","):
-                        or_parameters.append(tag.strip())
-                if self.config.misp.import_tags_not:
-                    for ntag in self.config.misp.import_tags_not.split(","):
-                        not_parameters.append(ntag.strip())
-
-                complex_query_tag = self.misp.build_complex_query(
-                    or_parameters=or_parameters if len(or_parameters) > 0 else None,
-                    not_parameters=(
-                        not_parameters if len(not_parameters) > 0 else None
-                    ),
-                )
-
-            # Prepare the query
-            kwargs = dict()
-
             # Put the date
             next_event_timestamp = last_event_timestamp + 1
-            kwargs[self.config.misp.date_filter_field] = next_event_timestamp
-
-            # Complex query date
-            if complex_query_tag is not None:
-                kwargs["tags"] = complex_query_tag
-
-            # With attachments
-            if self.config.misp.import_with_attachments:
-                kwargs["with_attachments"] = self.config.misp.import_with_attachments
 
             # Query with pagination of 50
             current_state = self.helper.get_state()
@@ -246,76 +208,64 @@ class Misp:
                 current_page = current_state["current_page"]
             else:
                 current_page = 1
-            number_events = 0
-            while True:
-                kwargs["limit"] = 10
-                kwargs["page"] = current_page
-                if self.config.misp.import_keyword is not None:
-                    kwargs["value"] = self.config.misp.import_keyword
-                    kwargs["searchall"] = True
-                if self.config.misp.enforce_warning_list:
-                    kwargs["enforce_warninglist"] = (
-                        self.config.misp.enforce_warning_list
-                    )
-                self.helper.log_info(
-                    "Fetching MISP events with args: " + json.dumps(kwargs)
+
+            events = []
+            try:
+                events = self.client.search_events(
+                    date_attribute_filter=self.config.misp.date_filter_field,
+                    date_value_filter=next_event_timestamp,
+                    keyword=self.config.misp.import_keyword,
+                    included_tags=self.config.misp.import_tags,
+                    excluded_tags=self.config.misp.import_tags_not,
+                    enforce_warning_list=self.config.misp.enforce_warning_list,
+                    with_attachments=self.config.misp.import_with_attachments,
+                    limit=10,
+                    page=current_page,
                 )
-                kwargs = json.loads(json.dumps(kwargs))
-                raw_events = []
+            except MISPClientError as err:
+                self.helper.log_error(f"Error fetching misp event: {err}")
+                self.helper.metric.inc("client_error_count")
                 try:
-                    raw_events = self.misp.search("events", **kwargs)
-                    if isinstance(raw_events, dict):
-                        if "errors" in raw_events:
-                            raise ValueError(raw_events["message"])
-                except Exception as e:
-                    self.helper.log_error(f"Error fetching misp event: {e}")
+                    # TODO: add a real retry mechanism
+                    events = self.client.search_events(
+                        date_attribute_filter=self.config.misp.date_filter_field,
+                        date_value_filter=next_event_timestamp,
+                        keyword=self.config.misp.import_keyword,
+                        included_tags=self.config.misp.import_tags,
+                        excluded_tags=self.config.misp.import_tags_not,
+                        enforce_warning_list=self.config.misp.enforce_warning_list,
+                        with_attachments=self.config.misp.import_with_attachments,
+                        limit=10,
+                        page=current_page,
+                    )
+                except MISPClientError as err:
+                    self.helper.log_error(f"Error fetching misp event again: {err}")
                     self.helper.metric.inc("client_error_count")
-                    try:
-                        raw_events = self.misp.search("events", **kwargs)
-                        if isinstance(raw_events, dict):
-                            if "errors" in raw_events:
-                                raise ValueError(raw_events["message"])
-                    except Exception as e:
-                        self.helper.log_error(f"Error fetching misp event again: {e}")
-                        self.helper.metric.inc("client_error_count")
-                        break
+                    raise err
 
-                events = []
-                for raw_event in raw_events:
-                    try:
-                        events.append(EventRestSearchListItem(**raw_event))
-                    except Exception as err:
-                        self.helper.log_error(str(err))
-                        continue
+            self.helper.log_info("MISP returned " + str(len(events)) + " events.")
 
-                self.helper.log_info("MISP returned " + str(len(events)) + " events.")
-                number_events = number_events + len(events)
+            # Process the event
+            processed_events_last_timestamp = self.process_events(work_id, events)
+            if (
+                processed_events_last_timestamp is not None
+                and processed_events_last_timestamp > last_event_timestamp
+            ):
+                last_event_timestamp = processed_events_last_timestamp
 
-                # Break if no more result
-                if len(events) == 0:
-                    break
-
-                # Process the event
-                processed_events_last_timestamp = self.process_events(work_id, events)
-                if (
-                    processed_events_last_timestamp is not None
-                    and processed_events_last_timestamp > last_event_timestamp
-                ):
-                    last_event_timestamp = processed_events_last_timestamp
-
-                # Next page
-                current_page += 1
-                if current_state is not None:
-                    current_state["current_page"] = current_page
-                else:
-                    current_state = {"current_page": current_page}
-                self.helper.set_state(current_state)
+            # Update state
+            current_page = math.ceil(len(events) / 10)  # Each page contains 10 events
+            if current_state is not None:
+                current_state["current_page"] = current_page
+            else:
+                current_state = {"current_page": current_page}
+            self.helper.set_state(current_state)
             # Loop is over, storing the state
             # We cannot store the state before, because MISP events are NOT ordered properly
             # and there is NO WAY to order them using their library
             message = (
                 "Connector successfully run ("
-                + str(number_events)
+                + str(len(events))
                 + " events have been processed), storing state (last_run="
                 + now.isoformat()
                 + ", last_event="
