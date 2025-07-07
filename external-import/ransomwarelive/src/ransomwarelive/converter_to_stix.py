@@ -124,13 +124,11 @@ class ConverterToStix:
         self,
         name: str,
         intrusion_description: str,
-        ransom_note_external_reference: stix2.ExternalReference,
     ):
         """
         Create STIX 2.1 IntrusionSet object
         :param name: name of the intrusion in string
         :param intrusion_description: description in string
-        :param ransom_note_external_reference: ExternalReference in STIX2.1 format
         :return: IntrusionSet in STIX 2.1 format
         """
         intrusionset = stix2.IntrusionSet(
@@ -140,7 +138,6 @@ class ConverterToStix:
             created_by_ref=self.author.get("id"),
             description=intrusion_description,
             object_marking_refs=[self.marking.get("id")],
-            external_references=[ransom_note_external_reference],
         )
         return intrusionset
 
@@ -232,13 +229,11 @@ class ConverterToStix:
         self,
         threat_actor_name: str,
         threat_description: str,
-        ransom_note_external_reference: stix2.ExternalReference,
     ):
         """
         Create STIX2.1 ThreatActor object
         :param threat_actor_name: name of threat actor in string
         :param threat_description: description in string
-        :param ransom_note_external_reference: STIX2.1 ExternalReference
         :return: ThreatActor in STIX 2.1 format
         """
         threat_actor = stix2.ThreatActor(
@@ -248,6 +243,5 @@ class ConverterToStix:
             created_by_ref=self.author.get("id"),
             description=threat_description,
             object_marking_refs=[self.marking.get("id")],
-            external_references=[ransom_note_external_reference],
         )
         return threat_actor

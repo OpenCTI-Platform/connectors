@@ -16,7 +16,6 @@ from .utils import (
     is_domain,
     is_ipv4,
     is_ipv6,
-    ransom_note_generator,
     safe_datetime,
     threat_description_generator,
 )
@@ -144,9 +143,6 @@ class RansomwareAPIConnector:
         )
         bundle_objects.append(victim)
 
-        # RansomNote External Reference
-        ransom_note_external_reference = ransom_note_generator(item.get("group"))
-
         # Attack Date sets the start_time of the relationship between a threat actor or intrusion set and a victim.
         # This value (attack_date_iso) will also be used in the report. (Report : Attack Date -> Published)
         attack_date = item.get("attackdate")
@@ -167,7 +163,6 @@ class RansomwareAPIConnector:
             threat_actor = self.converter_to_stix.create_threat_actor(
                 threat_actor_name=threat_actor_name,
                 threat_description=threat_description,
-                ransom_note_external_reference=ransom_note_external_reference,
             )
             bundle_objects.append(threat_actor)
 
@@ -189,7 +184,6 @@ class RansomwareAPIConnector:
                 intrusion_set = self.converter_to_stix.create_intrusionset(
                     name="lockbit",
                     intrusion_description=intrusion_description,
-                    ransom_note_external_reference=ransom_note_external_reference,
                 )
 
             else:
@@ -202,7 +196,6 @@ class RansomwareAPIConnector:
                 intrusion_set = self.converter_to_stix.create_intrusionset(
                     name=intrusion_set_name,
                     intrusion_description=intrusion_description,
-                    ransom_note_external_reference=ransom_note_external_reference,
                 )
 
             bundle_objects.append(intrusion_set)
@@ -229,7 +222,7 @@ class RansomwareAPIConnector:
             )
 
         # Creating External References Object if they have external references
-        external_references = [ransom_note_external_reference]
+        external_references = []
 
         for field in ["screenshot", "website", "post_url"]:
 
@@ -641,10 +634,7 @@ class RansomwareAPIConnector:
                 },
             )
 
-            if self.last_run:
-                current_state["last_run"] = now.isoformat(timespec="seconds")
-            else:
-                current_state = {"last_run": now.isoformat(timespec="seconds")}
+            current_state["last_run"] = now.isoformat(timespec="seconds")
 
             if self.last_run_datetime_with_ingested_data:
                 current_state["last_run_datetime_with_ingested_data"] = (
