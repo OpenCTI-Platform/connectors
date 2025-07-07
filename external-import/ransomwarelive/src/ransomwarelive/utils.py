@@ -6,7 +6,6 @@ import tldextract
 import validators
 import whois
 from pydantic import TypeAdapter
-from stix2 import ExternalReference
 
 
 def threat_description_generator(group_name: str, group_data) -> str:
