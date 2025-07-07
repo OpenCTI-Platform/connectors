@@ -2,6 +2,7 @@ import sys
 import traceback
 
 from pycti import OpenCTIConnectorHelper
+
 from ransomwarelive.config import ConnectorSettings
 from ransomwarelive.ransom_conn import RansomwareAPIConnector
 

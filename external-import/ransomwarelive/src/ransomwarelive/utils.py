@@ -56,24 +56,6 @@ def fetch_country_domain(domain: str):
     return description
 
 
-def ransom_note_generator(group_name: str):
-    """
-    Generates a ransom note external reference
-    :param group_name: group name in string
-    :return: ExternalReference object
-    """
-    if group_name in ("lockbit3", "lockbit2"):
-        url = "https://www.ransomware.live/ransomnotes/lockbit"
-    else:
-        url = f"https://www.ransomware.live/ransomnotes/{group_name}"
-
-    return ExternalReference(
-        source_name="Ransom Note",
-        url=url,
-        description="Sample Ransom Note",
-    )
-
-
 def safe_datetime(value: str | None) -> datetime | None:
     """Safely parses a string into a naive datetime object (without timezone).
     Returns None if the input is None or not a valid ISO 8601 datetime string.
