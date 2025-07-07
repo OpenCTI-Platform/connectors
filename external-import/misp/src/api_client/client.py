@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from warnings import warn
+import pickle
 
 from pydantic import ValidationError
 from pymisp import PyMISP, PyMISPError
@@ -69,6 +70,9 @@ class MISPClient:
                     page=current_page,
                     **{date_attribute_filter: date_value_filter},
                 )
+                # with open("results.pkl", "rb") as f:
+                #     results = pickle.load(f)  # deserialize using load()
+
                 if isinstance(results, dict) and results.get("errors"):
                     status_code, error_message = results.get("errors")
                     raise MISPClientError(
@@ -78,6 +82,9 @@ class MISPClient:
                 # Break if no more result
                 if len(results) == 0:
                     break
+
+                # with open("results.pkl", "wb") as f:  # open a text file
+                #     pickle.dump(results, f)  # serialize the list
 
                 for result in results:
                     try:
@@ -91,6 +98,8 @@ class MISPClient:
                         continue
 
                 current_page += 1
+
+                # break  # TODO: to remove - for dev purpose
             except PyMISPError as err:
                 raise MISPClientError(f"Error searching events in MISP: {err}") from err
             # TODO: add a retry mechanism
