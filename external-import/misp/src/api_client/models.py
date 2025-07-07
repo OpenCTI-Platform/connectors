@@ -1,17 +1,17 @@
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class AnalysisLevelId(Enum):
+class AnalysisLevelId(StrEnum):
     field_0 = "0"
     field_1 = "1"
     field_2 = "2"
 
 
-class AttributeType(Enum):
+class AttributeType(StrEnum):
     md5 = "md5"
     sha1 = "sha1"
     sha256 = "sha256"
@@ -202,7 +202,7 @@ class AttributeType(Enum):
     anonymised = "anonymised"
 
 
-class AttributeCategory(Enum):
+class AttributeCategory(StrEnum):
     Internal_reference = "Internal reference"
     Targeting_data = "Targeting data"
     Antivirus_detection = "Antivirus detection"
@@ -221,7 +221,7 @@ class AttributeCategory(Enum):
     Other = "Other"
 
 
-class DistributionLevelId(Enum):
+class DistributionLevelId(StrEnum):
     field_0 = "0"
     field_1 = "1"
     field_2 = "2"
@@ -230,23 +230,23 @@ class DistributionLevelId(Enum):
     field_5 = "5"
 
 
-class FeedSourceFormat(Enum):
+class FeedSourceFormat(StrEnum):
     field_1 = "1"
     csv = "csv"
     freetext = "freetext"
     misp = "misp"
 
 
-class FeedInputSource(Enum):
+class FeedInputSource(StrEnum):
     local = "local"
     network = "network"
 
 
-class Formula(Enum):
+class Formula(StrEnum):
     Polynomial = "Polynomial"
 
 
-class ThreatLevelId(Enum):
+class ThreatLevelId(StrEnum):
     field_1 = "1"
     field_2 = "2"
     field_3 = "3"
