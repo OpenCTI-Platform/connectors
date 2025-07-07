@@ -97,7 +97,7 @@ class ReportImporter:
         # Cache OpenCTI “allowed relationship” matrix
         # Loading this mapping costs one GraphQL call at startup,
         # and subsequent lookups are constant time in Python dict.
-        load_allowed_relations(self.helper)
+        self.allowed_relations = load_allowed_relations(self.helper)
 
     @staticmethod
     def _sanitise_name(raw_text: str | None) -> str | None:
@@ -302,7 +302,8 @@ class ReportImporter:
             object_markings = [
                 x["standard_id"] for x in context_entity.get("objectMarking", [])
             ]
-            author = context_entity.get("createdBy", {}).get("standard_id")
+            created_by = context_entity.get("createdBy")
+            author = created_by.get("standard_id") if created_by else None
         else:
             object_markings = []
             author = None
@@ -572,86 +573,85 @@ class ReportImporter:
                                 )
                             )
 
-            observables = observables + [entity_stix]
+            # Add entity back to observables for the bundle
+            observables.append(entity_stix)
 
-        else:
-            # entity is None
-            # ------------------------------------------------------------
-            # 2. Relationships predicted by the ML model (no context entity)
-            # Create relationships predicted by the ML model
-            for rel in predicted_rels:
-                src_txt = (rel.get("source_text") or rel.get("from") or "").strip()
-                dst_txt = (rel.get("target_text") or rel.get("to") or "").strip()
-                rel_type = rel.get("relation_type")
+        # Process predicted relationships (always)
+        # ------------------------------------------------------------
+        # 2. Relationships predicted by the ML model
+        # Create relationships predicted by the ML model
+        for rel in predicted_rels:
+            src_txt = (rel.get("source_text") or "").strip()
+            dst_txt = (rel.get("target_text") or "").strip()
+            rel_type = rel.get("relation_type")
 
-                if not src_txt or not dst_txt or not rel_type:
-                    self.helper.connector_logger.warning(
-                        "Skipped relation (missing data): %s", rel
-                    )
-                    continue
+            if not src_txt or not dst_txt or not rel_type:
+                self.helper.connector_logger.warning(
+                    "Skipped relation (missing data): %s", rel
+                )
+                continue
 
-                # Gather *all* entities that share the same surface string
-                # (text is stored lower-cased in the key)
-                src_candidates = [k for k in text_to_id if k[0] == src_txt.lower()]
-                dst_candidates = [k for k in text_to_id if k[0] == dst_txt.lower()]
+            # Gather *all* entities that share the same surface string
+            # (text is stored lower-cased in the key)
+            src_candidates = [k for k in text_to_id if k[0] == src_txt.lower()]
+            dst_candidates = [k for k in text_to_id if k[0] == dst_txt.lower()]
 
-                # If none found -> cannot build the relation
-                if not src_candidates or not dst_candidates:
-                    continue
+            # If none found -> cannot build the relation
+            if not src_candidates or not dst_candidates:
+                continue
 
-                # Pick the *first* couple that passes OpenCTI validation
-                # ---------------------------------------------------------
-                match_found = False
-                for src_key in src_candidates:
-                    for dst_key in dst_candidates:
-                        src_id = text_to_id[src_key]
-                        dst_id = text_to_id[dst_key]
-                        if src_id == dst_id:
-                            continue  # self-relation
+            # Pick the *first* couple that passes OpenCTI validation
+            # ---------------------------------------------------------
+            match_found = False
+            for src_key in src_candidates:
+                for dst_key in dst_candidates:
+                    src_id = text_to_id[src_key]
+                    dst_id = text_to_id[dst_key]
+                    if src_id == dst_id:
+                        continue  # self-relation
 
-                        from_type = stix_lookup_type(text_to_obj[src_key])
-                        to_type = stix_lookup_type(text_to_obj[dst_key])
+                    from_type = stix_lookup_type(text_to_obj[src_key])
+                    to_type = stix_lookup_type(text_to_obj[dst_key])
 
-                        if is_relation_allowed(from_type, to_type, rel_type):
-                            relationships.append(
-                                stix2.Relationship(
-                                    id=StixCoreRelationship.generate_id(
-                                        rel_type, src_id, dst_id
-                                    ),
-                                    relationship_type=rel_type,
-                                    source_ref=src_id,
-                                    target_ref=dst_id,
-                                    allow_custom=True,
-                                )
+                    if is_relation_allowed(
+                        self.allowed_relations, from_type, to_type, rel_type
+                    ):
+                        relationships.append(
+                            stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    rel_type, src_id, dst_id
+                                ),
+                                relationship_type=rel_type,
+                                source_ref=src_id,
+                                target_ref=dst_id,
+                                allow_custom=True,
                             )
-                            match_found = True
-                            break  # use first valid match
-                    if match_found:
-                        break
-
-                if not match_found:
-                    # Log *once* per unique (txt/category…) combination
-                    sig = (
-                        src_txt,
-                        "/".join({k[1] for k in src_candidates}).upper() or "?",
-                        rel_type.lower(),
-                        dst_txt,
-                        "/".join({k[1] for k in dst_candidates}).upper() or "?",
-                    )
-                    if sig not in skipped_rels:
-                        self.helper.connector_logger.warning(
-                            f"Skipping incompatible relationship {rel_type} between "
-                            f"{sig[1]} and {sig[4]}:\n"
-                            f"  {src_txt}[{sig[1]}]  =>  {rel_type}  =>  {dst_txt}[{sig[4]}]"
                         )
-                    skipped_rels.add(sig)
+                        match_found = True
+                        break  # use first valid match
+                if match_found:
+                    break
 
-            # Add newly created objects (entities / observables)
-            observables = observables + entities
+            if not match_found:
+                # Log *once* per unique (txt/category…) combination
+                sig = (
+                    src_txt,
+                    "/".join({k[1] for k in src_candidates}).upper() or "?",
+                    rel_type.lower(),
+                    dst_txt,
+                    "/".join({k[1] for k in dst_candidates}).upper() or "?",
+                )
+                if sig not in skipped_rels:
+                    self.helper.connector_logger.warning(
+                        f"Skipping incompatible relationship {rel_type} between "
+                        f"{sig[1]} and {sig[4]}:\n"
+                        f"  {src_txt}[{sig[1]}]  =>  {rel_type}  =>  {dst_txt}[{sig[4]}]"
+                    )
+                skipped_rels.add(sig)
 
+        # Final relationships deduplication
         # Dedupe relationships before counting/report wrap
-        unique = {r.id: r for r in relationships}
-        relationships = list(unique.values())
+        relationships = list({r.id: r for r in relationships}.values())
         relationship_ids: list[str] = [rel["id"] for rel in relationships]
 
         # wrap in a Report if no context
@@ -670,8 +670,8 @@ class ReportImporter:
             )
             observables += [report]
 
-        # Final bundle: observables (incl. entities), relationships, report
-        bundle_objects = observables + relationships
+        # Final bundle: observables,  entities, relationships, report
+        bundle_objects = observables + entities + relationships
 
         # ------------------------------------------------------------
         # (3) Deduplicate objects and send bundle
