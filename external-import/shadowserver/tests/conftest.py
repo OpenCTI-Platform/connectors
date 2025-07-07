@@ -1,7 +1,7 @@
 import os
 import sys
 from copy import deepcopy
-from typing import Any
+from typing import Any, Callable, Union
 from unittest.mock import MagicMock, Mock
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -50,7 +50,13 @@ def fixture_mock_config(
 
 @pytest.fixture(name="mocked_helper")
 def fixture_mocked_helper(mocker: MockerFixture) -> Mock:
+    def schedule_process(
+        message_callback: Callable[[], None], duration_period: Union[int, float]
+    ) -> None:
+        message_callback()
+
     helper = mocker.patch("pycti.OpenCTIConnectorHelper", MagicMock())
+    helper.schedule_process.side_effect = schedule_process
     helper.connect_id = "test-connector-id"
     helper.connect_name = "Test Connector"
     helper.api.work.initiate_work.return_value = "work-id"
