@@ -10,7 +10,14 @@ __all__ = [
     "ConfigConnector",
 ]
 
-TLP_MARKING_OPTIONS = ["TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED", "TLP:CLEAR"]
+TLP_MARKING_OPTIONS = [
+    "TLP:WHITE",
+    "TLP:GREEN",
+    "TLP:AMBER",
+    "TLP:RED",
+    "TLP:CLEAR",
+    "TLP:AMBER+STRICT",
+]
 
 
 class ConfigConnector:
@@ -40,7 +47,7 @@ class ConfigConnector:
         if self.shodan_max_tlp not in TLP_MARKING_OPTIONS:
             raise ValueError(
                 "Incorrect value for configuration parameter 'max_tlp'. "
-                "Permitted values are: 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:RED' or 'TLP:CLEAR'"
+                f"Permitted values are: {', '.join(TLP_MARKING_OPTIONS)}"
             )
 
     def _initialize_configurations(self) -> None:
