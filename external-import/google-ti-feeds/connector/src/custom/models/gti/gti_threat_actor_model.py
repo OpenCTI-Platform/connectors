@@ -314,12 +314,26 @@ class ThreatActorModel(BaseModel):
     )
 
 
+class Links(BaseModel):
+    """Model representing links to related resources."""
+
+    self: str
+    next: Optional[str] = Field(None, description="Link to the next page of results.")
+
+
+class GTIThreatActorMeta(BaseModel):
+    """Model representing metadata for a GTI threat actor."""
+
+    count: int
+    cursor: Optional[str] = Field(None, description="Cursor for pagination.")
+
+
 class GTIThreatActorData(BaseModel):
     """Model representing data for a GTI threat actor."""
 
     id: str
     type: Optional[str] = None
-    links: Optional[Dict[str, str]] = None
+    links: Optional[Links] = None
     attributes: Optional[ThreatActorModel] = None
     context_attributes: Optional[Dict[str, Any]] = None
 
@@ -328,3 +342,8 @@ class GTIThreatActorResponse(BaseModel):
     """Model representing a response containing GTI threat actor data."""
 
     data: Union[GTIThreatActorData, List[GTIThreatActorData]]
+    meta: Optional[GTIThreatActorMeta] = Field(
+        default=None,
+        description="Metadata for the response. May be absent when no data is returned.",
+    )
+    links: Links

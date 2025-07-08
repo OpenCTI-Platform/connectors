@@ -10,6 +10,7 @@ from connector.src.custom.configs.fetcher_configs import FETCHER_CONFIGS
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.api_engine.circuit_breaker import CircuitBreaker
+from connector.src.utils.api_engine.exceptions.api_http_error import ApiHttpError
 from connector.src.utils.api_engine.retry_request_strategy import RetryRequestStrategy
 from connector.src.utils.fetchers import GenericFetcherFactory
 
@@ -25,6 +26,114 @@ class ClientAPI:
         self.logger = logger
         self.api_client = self._create_api_client()
         self.fetcher_factory = self._create_fetcher_factory()
+        self.real_total_reports = 0
+        self.real_total_threat_actors = 0
+
+    def _parse_start_date(
+        self,
+        start_date_config: str,
+        initial_state: Optional[Dict[str, Any]] = None,
+        state_key: str = "next_cursor_start_date",
+    ) -> Any:
+        """Parse and calculate start date from configuration.
+
+        Args:
+            start_date_config: ISO 8601 duration string from config
+            initial_state: Optional initial state for resuming processing
+            state_key: Key to look for in initial_state for last modification date
+
+        Returns:
+            Formatted start date string
+
+        """
+        duration = isodate.parse_duration(start_date_config)
+        past_date = datetime.now(timezone.utc) - duration
+        start_date = past_date.strftime("%Y-%m-%dT%H:%M:%S")
+
+        last_mod_date = initial_state.get(state_key) if initial_state else None
+
+        if last_mod_date:
+            parsed_date = datetime.fromisoformat(last_mod_date) + timedelta(seconds=1)
+            start_date = parsed_date.astimezone(timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%S"
+            )
+
+        return start_date
+
+    def _build_filter_configurations(
+        self,
+        collection_type: str,
+        start_date: str,
+        initial_state: Optional[Dict[str, Any]] = None,
+        types: Optional[List[str]] = None,
+        origins: Optional[List[str]] = None,
+        entity_name: str = "items",
+        cursor_key: str = "cursor",
+    ) -> List[Dict[str, Any]]:
+        """Build filter configurations for a collection type.
+
+        Args:
+            collection_type: Type of collection (report, threat_actor, etc.)
+            start_date: Start date for filtering
+            initial_state: Optional initial state for resuming processing
+            types: Optional list of types to filter by
+            origins: Optional list of origins to filter by
+            entity_name: Name of entities for logging (reports, threat_actors, etc.)
+            cursor_key: Key to use for cursor in initial_state
+
+        Returns:
+            List of filter configurations with params and cursors
+
+        """
+        base_filters = (
+            f"collection_type:{collection_type} last_modification_date:{start_date}+"
+        )
+
+        types = types or ["All"]
+        origins = origins or ["All"]
+
+        if "All" in types:
+            types = ["All"]
+        if "All" in origins:
+            origins = ["All"]
+
+        filter_configs = []
+
+        for item_type in types:
+            for origin in origins:
+                current_filter = base_filters
+                if item_type != "All":
+                    current_filter += f" {collection_type}_type:'{item_type}'"
+                if origin != "All":
+                    current_filter += f" origin:'{origin}'"
+
+                if item_type == "All" and origin == "All":
+                    description = f"all {entity_name}"
+                elif item_type == "All":
+                    description = f"all types, origin={origin}"
+                elif origin == "All":
+                    description = f"type={item_type}, all origins"
+                else:
+                    description = f"type={item_type}, origin={origin}"
+
+                config = {
+                    "params": {
+                        "filter": current_filter,
+                        "limit": 40,
+                        "order": "last_modification_date+",
+                    },
+                    "cursor": (
+                        initial_state.get(cursor_key) if initial_state else None
+                    ),
+                    "description": description,
+                }
+                filter_configs.append(config)
+
+                self.logger.info(
+                    f"{LOG_PREFIX} Configured fetching {entity_name} with {description} (from {start_date})"
+                )
+
+        return filter_configs
 
     def _build_report_filter_configurations(
         self, initial_state: Optional[Dict[str, Any]] = None
@@ -39,76 +148,24 @@ class ClientAPI:
 
         """
         try:
-            start_date_iso_8601 = self.config.report_import_start_date
-            duration = isodate.parse_duration(start_date_iso_8601)
-            past_date = datetime.now(timezone.utc) - duration
-            start_date = past_date.strftime("%Y-%m-%dT%H:%M:%S")
-
-            last_mod_date = (
-                initial_state.get("report_next_cursor_start_date")
-                if initial_state
-                else None
-            )
-
-            if last_mod_date:
-                parsed_date = datetime.fromisoformat(last_mod_date) + timedelta(
-                    seconds=1
-                )
-                start_date = parsed_date.astimezone(timezone.utc).strftime(
-                    "%Y-%m-%dT%H:%M:%S"
-                )
-            else:
-                pass
-
-            base_filters = (
-                f"collection_type:report last_modification_date:{start_date}+"
+            start_date = self._parse_start_date(
+                self.config.report_import_start_date,
+                initial_state,
+                "report_next_cursor_start_date",
             )
 
             report_types = getattr(self.config, "report_types", ["All"])
             report_origins = getattr(self.config, "report_origins", ["All"])
 
-            if "All" in report_types:
-                report_types = ["All"]
-            if "All" in report_origins:
-                report_origins = ["All"]
-
-            filter_configs = []
-
-            for report_type in report_types:
-                for origin in report_origins:
-                    current_filter = base_filters
-                    if report_type != "All":
-                        current_filter += f" report_type:'{report_type}'"
-                    if origin != "All":
-                        current_filter += f" origin:'{origin}'"
-
-                    if report_type == "All" and origin == "All":
-                        description = "all reports"
-                    elif report_type == "All":
-                        description = f"all types, origin={origin}"
-                    elif origin == "All":
-                        description = f"type={report_type}, all origins"
-                    else:
-                        description = f"type={report_type}, origin={origin}"
-
-                    config = {
-                        "params": {
-                            "filter": current_filter,
-                            "limit": 40,
-                            "order": "last_modification_date+",
-                        },
-                        "cursor": (
-                            initial_state.get("cursor") if initial_state else None
-                        ),
-                        "description": description,
-                    }
-                    filter_configs.append(config)
-
-                    self.logger.info(
-                        f"{LOG_PREFIX} Configured fetching reports with {description} (from {start_date})"
-                    )
-
-            return filter_configs
+            return self._build_filter_configurations(
+                collection_type="report",
+                start_date=start_date,
+                initial_state=initial_state,
+                types=report_types,
+                origins=report_origins,
+                entity_name="reports",
+                cursor_key="cursor",
+            )
 
         except Exception as e:
             self.logger.error(
@@ -123,6 +180,53 @@ class ClientAPI:
                     },
                     "cursor": initial_state.get("cursor") if initial_state else None,
                     "description": "fallback all reports",
+                }
+            ]
+
+    def _build_threat_actor_filter_configurations(
+        self, initial_state: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """Build threat actor filter configurations based on config settings.
+
+        Args:
+            initial_state: Optional initial state for resuming processing
+
+        Returns:
+            List of filter configurations with params and cursors
+
+        """
+        try:
+            start_date = self._parse_start_date(
+                self.config.threat_actor_import_start_date,
+                initial_state,
+                "threat_actor_next_cursor_start_date",
+            )
+
+            threat_actor_origins = getattr(self.config, "threat_actor_origins", ["All"])
+
+            return self._build_filter_configurations(
+                collection_type="threat-actor",
+                start_date=start_date,
+                initial_state=initial_state,
+                types=None,
+                origins=threat_actor_origins,
+                entity_name="threat_actors",
+                cursor_key="cursor",
+            )
+
+        except Exception as e:
+            self.logger.error(
+                f"{LOG_PREFIX} Failed to build threat actor filter configurations: {str(e)}"
+            )
+            return [
+                {
+                    "params": {
+                        "filter": "collection_type:threat-actor",
+                        "limit": 40,
+                        "order": "last_modification_date+",
+                    },
+                    "cursor": initial_state.get("cursor") if initial_state else None,
+                    "description": "fallback all threat_actors",
                 }
             ]
 
@@ -251,7 +355,9 @@ class ClientAPI:
             page_info = f" (total of {total_items} items)"
 
         if entity_description == "reports":
-            self.real_total_reports = total_items
+            self.real_total_reports = total_items or 0
+        if entity_description == "threat_actors":
+            self.real_total_threat_actors = total_items or 0
 
         return f"{LOG_PREFIX} Fetched {data_count} {entity_description} from API{page_info}{cursor_info}"
 
@@ -298,6 +404,10 @@ class ClientAPI:
                 if total_items is None and count is not None:
                     total_items = count
                     total_pages = self._calculate_pagination_info(count, params)
+                    if entity_description == "reports":
+                        self.real_total_reports = total_items
+                    elif entity_description == "threat_actors":
+                        self.real_total_threat_actors = total_items
 
                 log_message = self._build_log_message(
                     data_count,
@@ -338,7 +448,7 @@ class ClientAPI:
         """
         filter_configs = self._build_report_filter_configurations(initial_state)
         report_fetcher = self.fetcher_factory.create_fetcher_by_name(
-            "reports", base_url=self.config.api_url
+            "main_reports", base_url=self.config.api_url
         )
 
         for filter_config in filter_configs:
@@ -352,6 +462,35 @@ class ClientAPI:
                 report_fetcher, endpoint_params, "reports"
             ):
                 yield report_data
+
+    async def fetch_threat_actors(
+        self, initial_state: Optional[Dict[str, Any]]
+    ) -> AsyncGenerator[Dict[Any, Any], None]:
+        """Fetch threat actors from the API.
+
+        Args:
+            initial_state (Optional[Dict[str, Any]]): The initial state of the fetcher.
+
+        Yields:
+            AsyncGenerator[Dict[str, Any], None]: The fetched threat actors.
+
+        """
+        filter_configs = self._build_threat_actor_filter_configurations(initial_state)
+        threat_actor_fetcher = self.fetcher_factory.create_fetcher_by_name(
+            "main_threat_actors", base_url=self.config.api_url
+        )
+
+        for filter_config in filter_configs:
+            endpoint_params = filter_config.get("params", {})
+
+            self.logger.info(
+                f"{LOG_PREFIX} Fetching threat actors from endpoint 'threat_actors' with filters: {endpoint_params}"
+            )
+
+            async for threat_actor_data in self._paginate_with_cursor(
+                threat_actor_fetcher, endpoint_params, "threat_actors"
+            ):
+                yield threat_actor_data
 
     async def fetch_subentities_ids(
         self, entity_name: str, entity_id: str, subentity_types: list[str]
@@ -462,6 +601,17 @@ class ClientAPI:
                     f"{LOG_PREFIX} Fetched {len(entities)} {entity_type} entities"
                 )
 
+            except ApiHttpError as e:
+                if e.status_code == 404 and entity_type == "files":
+                    self.logger.info(
+                        f"{LOG_PREFIX} 404 errors expected for files (files may no longer exist in VirusTotal). Treating as normal behavior."
+                    )
+                    subentities[entity_type] = []
+                else:
+                    self.logger.error(
+                        f"{LOG_PREFIX} HTTP {e.status_code} error fetching {entity_type} details: {str(e)}"
+                    )
+                    subentities[entity_type] = []
             except Exception as e:
                 self.logger.error(
                     f"{LOG_PREFIX} Failed to fetch {entity_type} details: {str(e)}"
