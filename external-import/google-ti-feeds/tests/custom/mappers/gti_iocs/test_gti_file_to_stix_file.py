@@ -265,6 +265,7 @@ def file_with_invalid_timestamps() -> GTIFileData:
 
 
 # Scenario: Convert GTI file with minimal data to STIX objects
+@pytest.mark.order(1)
 def test_gti_file_to_stix_minimal_data(
     minimal_file_data: GTIFileData,
     mock_organization: Identity,
@@ -289,6 +290,7 @@ def test_gti_file_to_stix_minimal_data(
 
 
 # Scenario: Convert GTI file with timestamps to STIX objects
+@pytest.mark.order(1)
 def test_gti_file_to_stix_with_timestamps(
     file_with_timestamps: GTIFileData,
     mock_organization: Identity,
@@ -310,6 +312,7 @@ def test_gti_file_to_stix_with_timestamps(
 
 
 # Scenario: Convert GTI file with hashes to STIX objects
+@pytest.mark.order(1)
 def test_gti_file_to_stix_with_hashes(
     file_with_hashes: GTIFileData,
     mock_organization: Identity,
@@ -332,6 +335,7 @@ def test_gti_file_to_stix_with_hashes(
 
 
 # Scenario: Convert GTI file with Mandiant confidence score to STIX objects
+@pytest.mark.order(1)
 def test_gti_file_to_stix_with_mandiant_score(
     file_with_mandiant_score: GTIFileData,
     mock_organization: Identity,
@@ -353,6 +357,7 @@ def test_gti_file_to_stix_with_mandiant_score(
 
 
 # Scenario: Convert GTI file with threat score fallback to STIX objects
+@pytest.mark.order(1)
 def test_gti_file_to_stix_with_threat_score(
     file_with_threat_score: GTIFileData,
     mock_organization: Identity,
@@ -374,6 +379,7 @@ def test_gti_file_to_stix_with_threat_score(
 
 
 # Scenario: Convert GTI file with malicious verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_file_to_stix_with_malicious_verdict(
     file_with_malicious_verdict: GTIFileData,
     mock_organization: Identity,
@@ -395,6 +401,7 @@ def test_gti_file_to_stix_with_malicious_verdict(
 
 
 # Scenario: Convert GTI file with benign verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_file_to_stix_with_benign_verdict(
     file_with_benign_verdict: GTIFileData,
     mock_organization: Identity,
@@ -416,6 +423,7 @@ def test_gti_file_to_stix_with_benign_verdict(
 
 
 # Scenario: Convert GTI file with suspicious verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_file_to_stix_with_suspicious_verdict(
     file_with_suspicious_verdict: GTIFileData,
     mock_organization: Identity,
@@ -437,6 +445,7 @@ def test_gti_file_to_stix_with_suspicious_verdict(
 
 
 # Scenario: Convert GTI file with all data populated to STIX objects
+@pytest.mark.order(1)
 def test_gti_file_to_stix_with_all_data(
     file_with_all_data: GTIFileData,
     mock_organization: Identity,
@@ -464,6 +473,7 @@ def test_gti_file_to_stix_with_all_data(
 
 
 # Scenario: Convert GTI file without attributes to STIX objects
+@pytest.mark.order(1)
 def test_gti_file_to_stix_without_attributes(
     file_without_attributes: GTIFileData,
     mock_organization: Identity,
@@ -485,6 +495,7 @@ def test_gti_file_to_stix_without_attributes(
 
 
 # Scenario: Convert GTI file with empty verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_file_to_stix_with_empty_verdict(
     file_with_empty_verdict: GTIFileData,
     mock_organization: Identity,
@@ -506,6 +517,7 @@ def test_gti_file_to_stix_with_empty_verdict(
 
 
 # Scenario: Convert GTI file with invalid timestamps to STIX objects
+@pytest.mark.order(1)
 def test_gti_file_to_stix_with_invalid_timestamps(
     file_with_invalid_timestamps: GTIFileData,
     mock_organization: Identity,
@@ -525,6 +537,7 @@ def test_gti_file_to_stix_with_invalid_timestamps(
 
 
 # Scenario: Extract timestamps from GTI file with valid timestamp data
+@pytest.mark.order(1)
 def test_get_timestamps_with_valid_data(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -551,6 +564,7 @@ def test_get_timestamps_with_valid_data(
 
 
 # Scenario: Extract timestamps from GTI file without timestamp data
+@pytest.mark.order(1)
 def test_get_timestamps_without_data(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -575,6 +589,7 @@ def test_get_timestamps_without_data(
 
 
 # Scenario: Extract score with mandiant confidence score available
+@pytest.mark.order(1)
 def test_get_score_with_mandiant_score(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -599,6 +614,7 @@ def test_get_score_with_mandiant_score(
 
 
 # Scenario: Extract score with threat score fallback
+@pytest.mark.order(1)
 def test_get_score_with_threat_score_fallback(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -624,6 +640,7 @@ def test_get_score_with_threat_score_fallback(
 
 
 # Scenario: Extract score without any score data available
+@pytest.mark.order(1)
 def test_get_score_without_data(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -642,6 +659,7 @@ def test_get_score_without_data(
 
 
 # Scenario: Build hashes with all hash types
+@pytest.mark.order(1)
 def test_build_hashes_with_all_hashes(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -669,6 +687,7 @@ def test_build_hashes_with_all_hashes(
 
 
 # Scenario: Build hashes without attributes
+@pytest.mark.order(1)
 def test_build_hashes_without_attributes(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -685,6 +704,7 @@ def test_build_hashes_without_attributes(
 
 
 # Scenario: Build STIX pattern with hashes
+@pytest.mark.order(1)
 def test_build_stix_pattern_with_hashes(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -713,6 +733,7 @@ def test_build_stix_pattern_with_hashes(
 
 
 # Scenario: Build STIX pattern fallback
+@pytest.mark.order(1)
 def test_build_stix_pattern_fallback(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -737,6 +758,7 @@ def test_build_stix_pattern_fallback(
 
 
 # Scenario: Test determine indicator types method
+@pytest.mark.order(1)
 def test_determine_indicator_types_with_verdict(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -759,6 +781,7 @@ def test_determine_indicator_types_with_verdict(
 
 
 # Scenario: Test determine indicator types method without verdict
+@pytest.mark.order(1)
 def test_determine_indicator_types_without_verdict(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -777,6 +800,7 @@ def test_determine_indicator_types_without_verdict(
 
 
 # Scenario: Test create STIX file method
+@pytest.mark.order(1)
 def test_create_stix_file_method(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -809,6 +833,7 @@ def test_create_stix_file_method(
 
 
 # Scenario: Test create STIX indicator method
+@pytest.mark.order(1)
 def test_create_stix_indicator_method(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -833,6 +858,7 @@ def test_create_stix_indicator_method(
     assert hasattr(indicator, "indicator_types")  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_file_observable_ctime_property(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -853,6 +879,7 @@ def test_file_observable_ctime_property(
     _then_stix_file_has_correct_ctime(file_observable, file_data)
 
 
+@pytest.mark.order(1)
 def test_file_observable_without_creation_date(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:

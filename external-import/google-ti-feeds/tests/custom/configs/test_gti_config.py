@@ -155,6 +155,7 @@ def invalid_gti_report_origins(request) -> dict[str, str]:
 
 
 # Scenario: Create a connector with minimum required configuration for GTI
+@pytest.mark.order(0)
 def test_gti_connector_min_required_config(  # type: ignore
     capfd, min_required_config: Dict[str, str]
 ) -> None:
@@ -170,6 +171,7 @@ def test_gti_connector_min_required_config(  # type: ignore
 
 
 # Scenario: Create a connector with all optional configuration for GTI
+@pytest.mark.order(0)
 def test_gti_connector_all_optional_config(  # type: ignore
     capfd, min_required_config: Dict[str, str], all_optional_config: Dict[str, str]
 ) -> None:
@@ -184,6 +186,7 @@ def test_gti_connector_all_optional_config(  # type: ignore
 
 
 # Scenario: Ensure that all defaulted configuration values are set correctly
+@pytest.mark.order(0)
 def test_gti_connector_all_defaulted_config(  # type: ignore
     capfd, min_required_config: Dict[str, str], all_defaulted_config: Dict[str, str]
 ) -> None:
@@ -199,6 +202,7 @@ def test_gti_connector_all_defaulted_config(  # type: ignore
 
 # noinspection DuplicatedCode
 # Scenario: Create a connector with valid GTI report types
+@pytest.mark.order(0)
 def test_gti_connector_valid_gti_report_types(  # type: ignore
     capfd, min_required_config: Dict[str, str], valid_gti_report_types: Dict[str, str]
 ) -> None:
@@ -213,6 +217,7 @@ def test_gti_connector_valid_gti_report_types(  # type: ignore
 
 
 # Scenario: Create a connector with invalid GTI report types
+@pytest.mark.order(0)
 def test_gti_connector_invalid_gti_report_types(  # type: ignore
     min_required_config: Dict[str, str], invalid_gti_report_types: Dict[str, str]
 ) -> None:
@@ -228,6 +233,7 @@ def test_gti_connector_invalid_gti_report_types(  # type: ignore
 
 # noinspection DuplicatedCode
 # Scenario: Create a connector with valid GTI report origins
+@pytest.mark.order(0)
 def test_gti_connector_valid_gti_report_origins(  # type: ignore
     capfd, min_required_config: Dict[str, str], valid_gti_report_origins: Dict[str, str]
 ) -> None:
@@ -242,6 +248,7 @@ def test_gti_connector_valid_gti_report_origins(  # type: ignore
 
 
 # Scenario: Create a connector with invalid GTI report origins
+@pytest.mark.order(0)
 def test_gti_connector_invalid_gti_report_origins(  # type: ignore
     min_required_config: Dict[str, str], invalid_gti_report_origins: Dict[str, str]
 ) -> None:

@@ -264,6 +264,7 @@ def ip_with_invalid_timestamps() -> GTIIPData:
 
 
 # Scenario: Convert GTI IPv4 with minimal data to STIX objects
+@pytest.mark.order(1)
 def test_gti_ipv4_to_stix_minimal_data(
     minimal_ipv4_data: GTIIPData,
     mock_organization: Identity,
@@ -288,6 +289,7 @@ def test_gti_ipv4_to_stix_minimal_data(
 
 
 # Scenario: Convert GTI IPv6 with minimal data to STIX objects
+@pytest.mark.order(1)
 def test_gti_ipv6_to_stix_minimal_data(
     minimal_ipv6_data: GTIIPData,
     mock_organization: Identity,
@@ -312,6 +314,7 @@ def test_gti_ipv6_to_stix_minimal_data(
 
 
 # Scenario: Convert GTI IP with timestamps to STIX objects
+@pytest.mark.order(1)
 def test_gti_ip_to_stix_with_timestamps(
     ipv4_with_timestamps: GTIIPData,
     mock_organization: Identity,
@@ -333,6 +336,7 @@ def test_gti_ip_to_stix_with_timestamps(
 
 
 # Scenario: Convert GTI IP with Mandiant confidence score to STIX objects
+@pytest.mark.order(1)
 def test_gti_ip_to_stix_with_mandiant_score(
     ip_with_mandiant_score: GTIIPData,
     mock_organization: Identity,
@@ -354,6 +358,7 @@ def test_gti_ip_to_stix_with_mandiant_score(
 
 
 # Scenario: Convert GTI IP with threat score fallback to STIX objects
+@pytest.mark.order(1)
 def test_gti_ip_to_stix_with_threat_score(
     ip_with_threat_score: GTIIPData,
     mock_organization: Identity,
@@ -375,6 +380,7 @@ def test_gti_ip_to_stix_with_threat_score(
 
 
 # Scenario: Convert GTI IP with malicious verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_ip_to_stix_with_malicious_verdict(
     ip_with_malicious_verdict: GTIIPData,
     mock_organization: Identity,
@@ -396,6 +402,7 @@ def test_gti_ip_to_stix_with_malicious_verdict(
 
 
 # Scenario: Convert GTI IP with benign verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_ip_to_stix_with_benign_verdict(
     ip_with_benign_verdict: GTIIPData,
     mock_organization: Identity,
@@ -417,6 +424,7 @@ def test_gti_ip_to_stix_with_benign_verdict(
 
 
 # Scenario: Convert GTI IP with suspicious verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_ip_to_stix_with_suspicious_verdict(
     ip_with_suspicious_verdict: GTIIPData,
     mock_organization: Identity,
@@ -438,6 +446,7 @@ def test_gti_ip_to_stix_with_suspicious_verdict(
 
 
 # Scenario: Convert GTI IP with all data populated to STIX objects
+@pytest.mark.order(1)
 def test_gti_ip_to_stix_with_all_data(
     ip_with_all_data: GTIIPData,
     mock_organization: Identity,
@@ -462,6 +471,7 @@ def test_gti_ip_to_stix_with_all_data(
 
 
 # Scenario: Convert GTI IP without attributes to STIX objects
+@pytest.mark.order(1)
 def test_gti_ip_to_stix_without_attributes(
     ip_without_attributes: GTIIPData,
     mock_organization: Identity,
@@ -483,6 +493,7 @@ def test_gti_ip_to_stix_without_attributes(
 
 
 # Scenario: Convert GTI IP with empty verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_ip_to_stix_with_empty_verdict(
     ip_with_empty_verdict: GTIIPData,
     mock_organization: Identity,
@@ -504,6 +515,7 @@ def test_gti_ip_to_stix_with_empty_verdict(
 
 
 # Scenario: Convert GTI IP with invalid timestamps to STIX objects
+@pytest.mark.order(1)
 def test_gti_ip_to_stix_with_invalid_timestamps(
     ip_with_invalid_timestamps: GTIIPData,
     mock_organization: Identity,
@@ -523,6 +535,7 @@ def test_gti_ip_to_stix_with_invalid_timestamps(
 
 
 # Scenario: Test IP version detection for IPv4
+@pytest.mark.order(1)
 def test_detect_ip_version_ipv4(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -539,6 +552,7 @@ def test_detect_ip_version_ipv4(
 
 
 # Scenario: Test IP version detection for IPv6
+@pytest.mark.order(1)
 def test_detect_ip_version_ipv6(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -555,6 +569,7 @@ def test_detect_ip_version_ipv6(
 
 
 # Scenario: Test IP version detection with invalid IP
+@pytest.mark.order(1)
 def test_detect_ip_version_invalid(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -570,6 +585,7 @@ def test_detect_ip_version_invalid(
 
 
 # Scenario: Extract timestamps from GTI IP with valid timestamp data
+@pytest.mark.order(1)
 def test_get_timestamps_with_valid_data(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -594,6 +610,7 @@ def test_get_timestamps_with_valid_data(
 
 
 # Scenario: Extract timestamps from GTI IP without timestamp data
+@pytest.mark.order(1)
 def test_get_timestamps_without_data(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -618,6 +635,7 @@ def test_get_timestamps_without_data(
 
 
 # Scenario: Extract score with mandiant confidence score available
+@pytest.mark.order(1)
 def test_get_score_with_mandiant_score(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -642,6 +660,7 @@ def test_get_score_with_mandiant_score(
 
 
 # Scenario: Extract score with threat score fallback
+@pytest.mark.order(1)
 def test_get_score_with_threat_score_fallback(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -667,6 +686,7 @@ def test_get_score_with_threat_score_fallback(
 
 
 # Scenario: Extract score without any score data available
+@pytest.mark.order(1)
 def test_get_score_without_data(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -685,6 +705,7 @@ def test_get_score_without_data(
 
 
 # Scenario: Build STIX pattern for IPv4
+@pytest.mark.order(1)
 def test_build_stix_pattern_ipv4(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -701,6 +722,7 @@ def test_build_stix_pattern_ipv4(
 
 
 # Scenario: Build STIX pattern for IPv6
+@pytest.mark.order(1)
 def test_build_stix_pattern_ipv6(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -719,6 +741,7 @@ def test_build_stix_pattern_ipv6(
 
 
 # Scenario: Test determine indicator types method
+@pytest.mark.order(1)
 def test_determine_indicator_types_with_verdict(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -741,6 +764,7 @@ def test_determine_indicator_types_with_verdict(
 
 
 # Scenario: Test determine indicator types method without verdict
+@pytest.mark.order(1)
 def test_determine_indicator_types_without_verdict(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -759,6 +783,7 @@ def test_determine_indicator_types_without_verdict(
 
 
 # Scenario: Test create STIX IPv4 method
+@pytest.mark.order(1)
 def test_create_stix_ipv4_method(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -786,6 +811,7 @@ def test_create_stix_ipv4_method(
 
 
 # Scenario: Test create STIX IPv6 method
+@pytest.mark.order(1)
 def test_create_stix_ipv6_method(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -815,6 +841,7 @@ def test_create_stix_ipv6_method(
 
 
 # Scenario: Test create STIX indicator method
+@pytest.mark.order(1)
 def test_create_stix_indicator_method(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:

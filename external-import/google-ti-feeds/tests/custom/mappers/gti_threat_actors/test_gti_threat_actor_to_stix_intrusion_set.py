@@ -263,6 +263,7 @@ def threat_actor_with_empty_collections() -> GTIThreatActorData:
 
 
 # Scenario: Create STIX intrusion set with minimal required data
+@pytest.mark.order(1)
 def test_gti_threat_actor_to_stix_minimal_data(
     minimal_threat_actor_data: GTIThreatActorData,
     mock_organization: Identity,
@@ -285,6 +286,7 @@ def test_gti_threat_actor_to_stix_minimal_data(
 
 
 # Scenario: Create STIX intrusion set with aliases
+@pytest.mark.order(1)
 def test_gti_threat_actor_to_stix_with_aliases(
     threat_actor_with_aliases: GTIThreatActorData,
     mock_organization: Identity,
@@ -308,6 +310,7 @@ def test_gti_threat_actor_to_stix_with_aliases(
 
 
 # Scenario: Create STIX intrusion set with seen dates
+@pytest.mark.order(1)
 def test_gti_threat_actor_to_stix_with_seen_dates(
     threat_actor_with_seen_dates: GTIThreatActorData,
     mock_organization: Identity,
@@ -333,6 +336,7 @@ def test_gti_threat_actor_to_stix_with_seen_dates(
 
 
 # Scenario: Create STIX intrusion set with motivations
+@pytest.mark.order(1)
 def test_gti_threat_actor_to_stix_with_motivations(
     threat_actor_with_motivations: GTIThreatActorData,
     mock_organization: Identity,
@@ -358,6 +362,7 @@ def test_gti_threat_actor_to_stix_with_motivations(
 
 
 # Scenario: Create STIX intrusion set with tags/labels
+@pytest.mark.order(1)
 def test_gti_threat_actor_to_stix_with_tags(
     threat_actor_with_tags: GTIThreatActorData,
     mock_organization: Identity,
@@ -380,6 +385,7 @@ def test_gti_threat_actor_to_stix_with_tags(
 
 
 # Scenario: Create STIX intrusion set with goals
+@pytest.mark.order(1)
 def test_gti_threat_actor_to_stix_with_goals(
     threat_actor_with_goals: GTIThreatActorData,
     mock_organization: Identity,
@@ -402,6 +408,7 @@ def test_gti_threat_actor_to_stix_with_goals(
 
 
 # Scenario: Create STIX intrusion set with all optional data
+@pytest.mark.order(1)
 def test_gti_threat_actor_to_stix_with_all_data(
     threat_actor_with_all_data: GTIThreatActorData,
     mock_organization: Identity,
@@ -436,6 +443,7 @@ def test_gti_threat_actor_to_stix_with_all_data(
 
 
 # Scenario: Handle threat actor without attributes
+@pytest.mark.order(1)
 def test_gti_threat_actor_to_stix_without_attributes(
     threat_actor_without_attributes: GTIThreatActorData,
     mock_organization: Identity,
@@ -454,6 +462,7 @@ def test_gti_threat_actor_to_stix_without_attributes(
 
 
 # Scenario: Handle None threat actor object
+@pytest.mark.order(1)
 def test_gti_threat_actor_none_object(
     mock_organization: Identity,
     mock_tlp_marking: MarkingDefinition,
@@ -469,6 +478,7 @@ def test_gti_threat_actor_none_object(
 
 
 # Scenario: Handle threat actor with invalid date formats
+@pytest.mark.order(1)
 def test_gti_threat_actor_invalid_dates(
     threat_actor_with_invalid_dates: GTIThreatActorData,
     mock_organization: Identity,
@@ -486,6 +496,7 @@ def test_gti_threat_actor_invalid_dates(
 
 
 # Scenario: Handle threat actor with unmapped motivations
+@pytest.mark.order(1)
 def test_gti_threat_actor_unmapped_motivations(
     threat_actor_with_unmapped_motivations: GTIThreatActorData,
     mock_organization: Identity,
@@ -503,6 +514,7 @@ def test_gti_threat_actor_unmapped_motivations(
 
 
 # Scenario: Handle threat actor with empty collections
+@pytest.mark.order(1)
 def test_gti_threat_actor_empty_collections(
     threat_actor_with_empty_collections: GTIThreatActorData,
     mock_organization: Identity,
@@ -532,6 +544,7 @@ def test_gti_threat_actor_empty_collections(
         "Custom Motivation",
     ],
 )
+@pytest.mark.order(1)
 def test_motivation_mapping_variations(
     gti_motivation: str,
     mock_organization: Identity,
@@ -556,6 +569,7 @@ def test_motivation_mapping_variations(
 
 
 # Scenario: Test multiple motivations
+@pytest.mark.order(1)
 def test_multiple_motivations(
     mock_organization: Identity,
     mock_tlp_marking: MarkingDefinition,
@@ -727,6 +741,7 @@ def _then_stix_intrusion_set_handles_empty_collections(stix_intrusion_set: Any) 
 
 
 # Scenario: Test extract aliases method
+@pytest.mark.order(1)
 def test_extract_aliases() -> None:
     """Test extracting aliases from threat actor attributes."""
     # Given threat actor attributes with aliases
@@ -743,6 +758,7 @@ def test_extract_aliases() -> None:
 
 
 # Scenario: Test extract aliases with empty collection
+@pytest.mark.order(1)
 def test_extract_aliases_empty() -> None:
     """Test extracting aliases with empty collection."""
     # Given threat actor attributes without aliases
@@ -754,6 +770,7 @@ def test_extract_aliases_empty() -> None:
 
 
 # Scenario: Test extract seen dates method
+@pytest.mark.order(1)
 def test_extract_seen_dates() -> None:
     """Test extracting seen dates from threat actor attributes."""
     # Given threat actor attributes with seen dates
@@ -768,6 +785,7 @@ def test_extract_seen_dates() -> None:
 
 
 # Scenario: Test extract motivations method
+@pytest.mark.order(1)
 def test_extract_motivations() -> None:
     """Test extracting motivations from threat actor attributes."""
     # Given threat actor attributes with motivations
@@ -871,6 +889,7 @@ def _then_motivations_extracted_correctly(
 
 
 # Scenario: Test threat actor with missing hasattr conditions
+@pytest.mark.order(1)
 def test_threat_actor_missing_hasattr() -> None:
     """Test threat actor without hasattr conditions."""
     # Given a threat actor object without attributes property
@@ -895,6 +914,7 @@ def test_threat_actor_missing_hasattr() -> None:
 
 
 # Scenario: Test edge case with empty string values
+@pytest.mark.order(1)
 def test_threat_actor_empty_string_values(
     mock_organization: Identity,
     mock_tlp_marking: MarkingDefinition,
@@ -922,6 +942,7 @@ def test_threat_actor_empty_string_values(
 
 
 # Scenario: Test unicode characters in threat actor data
+@pytest.mark.order(1)
 def test_threat_actor_unicode_characters(
     mock_organization: Identity,
     mock_tlp_marking: MarkingDefinition,
@@ -952,6 +973,7 @@ def test_threat_actor_unicode_characters(
 
 
 # Scenario: Test very long strings
+@pytest.mark.order(1)
 def test_threat_actor_long_strings(
     mock_organization: Identity,
     mock_tlp_marking: MarkingDefinition,
@@ -986,6 +1008,7 @@ def test_threat_actor_long_strings(
         (2147483647, 2147483647),  # 32-bit max timestamp
     ],
 )
+@pytest.mark.order(1)
 def test_threat_actor_boundary_timestamps(
     creation_date: int,
     modification_date: int,
