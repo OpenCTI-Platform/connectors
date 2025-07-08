@@ -6,7 +6,7 @@ import pytest
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_identity import (
     GTIReportToSTIXIdentity,
 )
-from connector.src.custom.models.gti_reports.gti_report_model import (
+from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
     Links,
     ReportModel,

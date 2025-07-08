@@ -148,7 +148,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 try:
                     return self.api_req.model.model_validate(data)
                 except Exception as validation_err:
-                    self._logger.error(
+                    self._logger.warning(
                         f"{LOG_PREFIX} Response validation failed: {validation_err}",
                     )
                     raise ApiValidationError(
@@ -175,7 +175,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
             )
             raise other_api_err
         except Exception as generic_err:
-            self._logger.error(
+            self._logger.warning(
                 f"{LOG_PREFIX} Unexpected error during single attempt for {self.api_req.url}",
             )
             raise ApiError(
@@ -250,7 +250,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
 
         """
         if not isinstance(request, ApiRequestModel):
-            self._logger.error(
+            self._logger.warning(
                 f"{LOG_PREFIX} RetryRequestStrategy only supports ApiRequestModel",
             )
             raise TypeError("RetryRequestStrategy only supports ApiRequestModel")
@@ -293,7 +293,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
         self.breaker.record_failure()
 
         if network_error_count >= max_network_errors:
-            self._logger.error(
+            self._logger.warning(
                 f"{LOG_PREFIX} Persistent network connectivity issues detected after {network_error_count} consecutive failures for {self.api_req.url}.",
             )
             raise ApiNetworkError(
@@ -334,7 +334,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
         if not (isinstance(error, ApiHttpError) and error.status_code == 404):
             self.breaker.record_failure()
 
-            self._logger.error(
+            self._logger.warning(
                 f"{LOG_PREFIX} Failure recorded for circuit breaker due to error on {self.api_req.url}.",
             )
         else:
@@ -343,7 +343,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
             )
 
         if isinstance(error, ApiHttpError) and error.status_code < 500:
-            self._logger.error(
+            self._logger.warning(
                 f"{LOG_PREFIX} Non-retryable HTTP error {error.status_code} for {self.api_req.url}. Not retrying.",
             )
             raise
@@ -382,7 +382,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
             error: The unrecoverable API error.
 
         """
-        self._logger.error(
+        self._logger.warning(
             f"{LOG_PREFIX} Unrecoverable API error for {self.api_req.url}: {type(error).__name__} - {error}",
         )
 

@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import List, Tuple
 
-from connector.src.custom.models.gti_reports.gti_report_model import (
+from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
     ReportModel,
 )

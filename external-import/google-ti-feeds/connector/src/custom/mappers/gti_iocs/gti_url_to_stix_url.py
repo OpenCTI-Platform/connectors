@@ -3,10 +3,11 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from connector.src.custom.models.gti_reports.gti_url_model import (
+from connector.src.custom.models.gti.gti_url_model import (
     GTIURLData,
 )
 from connector.src.stix.octi.models.indicator_model import OctiIndicatorModel
+from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.stix.octi.models.url_model import OctiUrlModel
 from connector.src.stix.octi.observable_type_ov_enum import ObservableTypeOV
 from connector.src.stix.octi.pattern_type_ov_enum import PatternTypeOV
@@ -23,6 +24,47 @@ from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
 
 class GTIUrlToSTIXUrl(BaseMapper):
     """Converts a GTI URL to a STIX URL object and indicator."""
+
+    @staticmethod
+    def create_relationship(
+        src_entity: Any, relation_type: str, target_entity: Any
+    ) -> Any:
+        """Create a relationship between entities.
+
+        For indicators: creates 'indicates' relationship from indicator to target
+        For observables: creates the specified relationship type from source to target
+
+        Args:
+            src_entity: The source entity (intrusion set or indicator/observable)
+            relation_type: The relationship type (e.g., "related-to")
+            target_entity: The target entity (URL or intrusion set)
+
+        Returns:
+            OctiRelationshipModel: The relationship object
+
+        """
+        if isinstance(target_entity, IndicatorModel):
+            return OctiRelationshipModel.create(
+                relationship_type="indicates",
+                source_ref=target_entity.id,
+                target_ref=src_entity.id,
+                organization_id=src_entity.created_by_ref,
+                marking_ids=src_entity.object_marking_refs,
+                created=datetime.now(),
+                modified=datetime.now(),
+                description=f"Indicator indicates {src_entity.__class__.__name__}",
+            )
+        else:
+            return OctiRelationshipModel.create(
+                relationship_type=relation_type,
+                source_ref=src_entity.id,
+                target_ref=target_entity.id,
+                organization_id=src_entity.created_by_ref,
+                marking_ids=src_entity.object_marking_refs,
+                created=datetime.now(),
+                modified=datetime.now(),
+                description=f"{src_entity.__class__.__name__} {relation_type} {target_entity.__class__.__name__}",
+            )
 
     def __init__(
         self,
@@ -46,7 +88,7 @@ class GTIUrlToSTIXUrl(BaseMapper):
         """Create the STIX URL observable object.
 
         Returns:
-        URLModel: The STIX URL observable model object.
+        OctiUrlModel: The STIX URL observable model object.
 
         """
         score = self._get_score()
