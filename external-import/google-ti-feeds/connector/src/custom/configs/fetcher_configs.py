@@ -16,34 +16,38 @@ from connector.src.custom.exceptions import (
     GTIUrlFetchError,
     GTIVulnerabilityFetchError,
 )
-from connector.src.custom.models.gti_reports.gti_attack_technique_model import (
+from connector.src.custom.models.gti.gti_attack_technique_model import (
     GTIAttackTechniqueData,
 )
-from connector.src.custom.models.gti_reports.gti_domain_model import (
+from connector.src.custom.models.gti.gti_domain_model import (
     GTIDomainData,
 )
-from connector.src.custom.models.gti_reports.gti_file_model import (
+from connector.src.custom.models.gti.gti_file_model import (
     GTIFileData,
 )
-from connector.src.custom.models.gti_reports.gti_ip_addresses_model import (
+from connector.src.custom.models.gti.gti_ip_addresses_model import (
     GTIIPData,
 )
-from connector.src.custom.models.gti_reports.gti_malware_family_model import (
+from connector.src.custom.models.gti.gti_malware_family_model import (
     GTIMalwareFamilyData,
 )
-from connector.src.custom.models.gti_reports.gti_report_model import GTIReportResponse
-from connector.src.custom.models.gti_reports.gti_threat_actor_model import (
-    GTIThreatActorData,
+from connector.src.custom.models.gti.gti_report_model import (
+    GTIReportData,
+    GTIReportResponse,
 )
-from connector.src.custom.models.gti_reports.gti_url_model import (
+from connector.src.custom.models.gti.gti_threat_actor_model import (
+    GTIThreatActorData,
+    GTIThreatActorResponse,
+)
+from connector.src.custom.models.gti.gti_url_model import (
     GTIURLData,
 )
-from connector.src.custom.models.gti_reports.gti_vulnerability_model import (
+from connector.src.custom.models.gti.gti_vulnerability_model import (
     GTIVulnerabilityData,
 )
 from connector.src.utils.fetchers.generic_fetcher_config import GenericFetcherConfig
 
-GTI_REPORT_FETCHER_CONFIG = GenericFetcherConfig(
+GTI_MAIN_REPORT_FETCHER_CONFIG = GenericFetcherConfig(
     entity_type="reports",
     endpoint="/collections",
     display_name="reports",
@@ -107,7 +111,7 @@ GTI_VULNERABILITY_FETCHER_CONFIG = GenericFetcherConfig(
 
 GTI_RELATIONSHIP_FETCHER_CONFIG = GenericFetcherConfig(
     entity_type="relationships",
-    endpoint="/collections/{report_id}/relationships/{entity_type}",
+    endpoint="/collections/{entity_id}/relationships/{entity_type}",
     display_name="relationships",
     exception_class=GTIRelationshipFetchError,
     response_model=None,
@@ -166,8 +170,32 @@ GTI_IP_FETCHER_CONFIG = GenericFetcherConfig(
     response_key="data",
 )
 
+GTI_MAIN_THREAT_ACTOR_FETCHER_CONFIG = GenericFetcherConfig(
+    entity_type="threat_actors",
+    endpoint="/collections",
+    display_name="Threat Actors",
+    exception_class=GTIActorFetchError,
+    response_model=GTIThreatActorResponse,
+    method="GET",
+    headers={"accept": "application/json"},
+    timeout=60.0,
+    response_key=None,
+)
+
+GTI_REPORT_FETCHER_CONFIG = GenericFetcherConfig(
+    entity_type="reports",
+    endpoint="/collections/{entity_id}",
+    display_name="reports",
+    exception_class=GTIReportFetchError,
+    response_model=GTIReportData,
+    method="GET",
+    headers={"accept": "application/json"},
+    timeout=60.0,
+    response_key="data",
+)
+
 FETCHER_CONFIGS = {
-    "reports": GTI_REPORT_FETCHER_CONFIG,
+    "main_reports": GTI_MAIN_REPORT_FETCHER_CONFIG,
     "malware_families": GTI_MALWARE_FETCHER_CONFIG,
     "threat_actors": GTI_THREAT_ACTOR_FETCHER_CONFIG,
     "attack_techniques": GTI_ATTACK_TECHNIQUE_FETCHER_CONFIG,
@@ -177,4 +205,6 @@ FETCHER_CONFIGS = {
     "files": GTI_FILE_FETCHER_CONFIG,
     "urls": GTI_URL_FETCHER_CONFIG,
     "ip_addresses": GTI_IP_FETCHER_CONFIG,
+    "main_threat_actors": GTI_MAIN_THREAT_ACTOR_FETCHER_CONFIG,
+    "reports": GTI_REPORT_FETCHER_CONFIG,
 }
