@@ -268,6 +268,7 @@ def report_with_long_strings():
     )
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_minimal_data(
     minimal_report_data, mock_organization, mock_tlp_marking
 ):
@@ -287,6 +288,7 @@ def test_gti_report_to_stix_minimal_data(
     _then_stix_report_has_basic_properties(result, minimal_report_data)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_with_all_data(
     report_with_all_data, mock_organization, mock_tlp_marking
 ):
@@ -306,6 +308,7 @@ def test_gti_report_to_stix_with_all_data(
     _then_stix_report_has_comprehensive_data(result, report_with_all_data)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_with_author_identity(
     minimal_report_data, mock_organization, mock_tlp_marking, mock_author_identity
 ):
@@ -325,6 +328,7 @@ def test_gti_report_to_stix_with_author_identity(
     _then_stix_report_has_author_identity(result, mock_author_identity)
 
 
+@pytest.mark.order(1)
 def test_gti_report_without_attributes(
     report_without_attributes, mock_organization, mock_tlp_marking
 ):
@@ -341,6 +345,7 @@ def test_gti_report_without_attributes(
     _when_convert_to_stix_raises_error(mapper, ValueError, "Invalid GTI report data")
 
 
+@pytest.mark.order(1)
 def test_gti_report_with_empty_name(
     report_with_empty_attributes, mock_organization, mock_tlp_marking
 ):
@@ -359,6 +364,7 @@ def test_gti_report_with_empty_name(
     )
 
 
+@pytest.mark.order(1)
 def test_different_report_types_mapping(
     report_with_different_types, mock_organization, mock_tlp_marking
 ):
@@ -382,6 +388,7 @@ def test_different_report_types_mapping(
         _then_stix_report_has_open_vocab_report_type(result, expected_report_types[i])
 
 
+@pytest.mark.order(1)
 def test_extract_labels_from_report_data(
     report_with_all_data, mock_organization, mock_tlp_marking
 ):
@@ -400,6 +407,7 @@ def test_extract_labels_from_report_data(
     _then_stix_report_has_extracted_labels(result, report_with_all_data)
 
 
+@pytest.mark.order(1)
 def test_create_external_references_with_links(
     report_with_external_links, mock_organization, mock_tlp_marking
 ):
@@ -418,6 +426,7 @@ def test_create_external_references_with_links(
     _then_stix_report_has_external_references(result, report_with_external_links)
 
 
+@pytest.mark.order(1)
 def test_timestamp_extraction_and_conversion(
     minimal_report_data, mock_organization, mock_tlp_marking
 ):
@@ -436,6 +445,7 @@ def test_timestamp_extraction_and_conversion(
     _then_stix_report_has_proper_timestamps(result, minimal_report_data)
 
 
+@pytest.mark.order(1)
 def test_add_object_refs_to_existing_report(
     minimal_report_data, mock_organization, mock_tlp_marking
 ):
@@ -459,6 +469,7 @@ def test_add_object_refs_to_existing_report(
     _then_report_has_object_refs(updated_report, new_object_ids)
 
 
+@pytest.mark.order(1)
 def test_add_object_refs_preserves_existing_refs(
     minimal_report_data, mock_organization, mock_tlp_marking
 ):
@@ -482,6 +493,7 @@ def test_add_object_refs_preserves_existing_refs(
     _then_report_has_all_object_refs(updated_report, initial_refs + new_refs)
 
 
+@pytest.mark.order(1)
 def test_add_duplicate_object_refs(
     minimal_report_data, mock_organization, mock_tlp_marking
 ):
@@ -504,6 +516,7 @@ def test_add_duplicate_object_refs(
     _then_report_has_no_duplicate_refs(updated_report, object_id)
 
 
+@pytest.mark.order(1)
 def test_gti_report_with_invalid_timestamps(
     report_with_invalid_timestamps, mock_organization, mock_tlp_marking
 ):
@@ -522,6 +535,7 @@ def test_gti_report_with_invalid_timestamps(
     _then_stix_report_created_successfully(result)
 
 
+@pytest.mark.order(1)
 def test_gti_report_with_unicode_characters(
     report_with_unicode_content, mock_organization, mock_tlp_marking
 ):
@@ -540,6 +554,7 @@ def test_gti_report_with_unicode_characters(
     _then_stix_report_preserves_unicode_content(result, report_with_unicode_content)
 
 
+@pytest.mark.order(1)
 def test_gti_report_with_long_strings(
     report_with_long_strings, mock_organization, mock_tlp_marking
 ):
@@ -558,6 +573,7 @@ def test_gti_report_with_long_strings(
     _then_stix_report_preserves_long_strings(result, report_with_long_strings)
 
 
+@pytest.mark.order(1)
 def test_determine_report_type_with_none_type(mock_organization, mock_tlp_marking):
     """Test report type determination when report_type is None."""
     # GIVEN: A GTI report with report_type field set to None
@@ -580,6 +596,7 @@ def test_determine_report_type_with_none_type(mock_organization, mock_tlp_markin
     _then_stix_report_has_open_vocab_report_type(result, "unknown")
 
 
+@pytest.mark.order(1)
 def test_extract_labels_with_empty_fields(mock_organization, mock_tlp_marking):
     """Test label extraction when fields are empty or None."""
     # GIVEN: A GTI report with label-contributing fields set to empty lists or None
@@ -604,6 +621,7 @@ def test_extract_labels_with_empty_fields(mock_organization, mock_tlp_marking):
     _then_stix_report_has_empty_or_minimal_labels(result)
 
 
+@pytest.mark.order(1)
 def test_build_external_references_with_none_values(
     mock_organization, mock_tlp_marking
 ):

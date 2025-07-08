@@ -257,6 +257,7 @@ def url_with_invalid_timestamps() -> GTIURLData:
 
 
 # Scenario: Convert GTI URL with minimal data to STIX objects
+@pytest.mark.order(1)
 def test_gti_url_to_stix_minimal_data(
     minimal_url_data: GTIURLData,
     mock_organization: Identity,
@@ -281,6 +282,7 @@ def test_gti_url_to_stix_minimal_data(
 
 
 # Scenario: Convert GTI URL with timestamps to STIX objects
+@pytest.mark.order(1)
 def test_gti_url_to_stix_with_timestamps(
     url_with_timestamps: GTIURLData,
     mock_organization: Identity,
@@ -302,6 +304,7 @@ def test_gti_url_to_stix_with_timestamps(
 
 
 # Scenario: Convert GTI URL with specific URL value to STIX objects
+@pytest.mark.order(1)
 def test_gti_url_to_stix_with_url_value(
     url_with_url_value: GTIURLData,
     mock_organization: Identity,
@@ -326,6 +329,7 @@ def test_gti_url_to_stix_with_url_value(
 
 
 # Scenario: Convert GTI URL with Mandiant confidence score to STIX objects
+@pytest.mark.order(1)
 def test_gti_url_to_stix_with_mandiant_score(
     url_with_mandiant_score: GTIURLData,
     mock_organization: Identity,
@@ -347,6 +351,7 @@ def test_gti_url_to_stix_with_mandiant_score(
 
 
 # Scenario: Convert GTI URL with threat score fallback to STIX objects
+@pytest.mark.order(1)
 def test_gti_url_to_stix_with_threat_score(
     url_with_threat_score: GTIURLData,
     mock_organization: Identity,
@@ -368,6 +373,7 @@ def test_gti_url_to_stix_with_threat_score(
 
 
 # Scenario: Convert GTI URL with malicious verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_url_to_stix_with_malicious_verdict(
     url_with_malicious_verdict: GTIURLData,
     mock_organization: Identity,
@@ -389,6 +395,7 @@ def test_gti_url_to_stix_with_malicious_verdict(
 
 
 # Scenario: Convert GTI URL with benign verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_url_to_stix_with_benign_verdict(
     url_with_benign_verdict: GTIURLData,
     mock_organization: Identity,
@@ -410,6 +417,7 @@ def test_gti_url_to_stix_with_benign_verdict(
 
 
 # Scenario: Convert GTI URL with suspicious verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_url_to_stix_with_suspicious_verdict(
     url_with_suspicious_verdict: GTIURLData,
     mock_organization: Identity,
@@ -431,6 +439,7 @@ def test_gti_url_to_stix_with_suspicious_verdict(
 
 
 # Scenario: Convert GTI URL with all data populated to STIX objects
+@pytest.mark.order(1)
 def test_gti_url_to_stix_with_all_data(
     url_with_all_data: GTIURLData,
     mock_organization: Identity,
@@ -458,6 +467,7 @@ def test_gti_url_to_stix_with_all_data(
 
 
 # Scenario: Convert GTI URL without attributes to STIX objects
+@pytest.mark.order(1)
 def test_gti_url_to_stix_without_attributes(
     url_without_attributes: GTIURLData,
     mock_organization: Identity,
@@ -479,6 +489,7 @@ def test_gti_url_to_stix_without_attributes(
 
 
 # Scenario: Convert GTI URL with empty verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_url_to_stix_with_empty_verdict(
     url_with_empty_verdict: GTIURLData,
     mock_organization: Identity,
@@ -500,6 +511,7 @@ def test_gti_url_to_stix_with_empty_verdict(
 
 
 # Scenario: Convert GTI URL with invalid timestamps to STIX objects
+@pytest.mark.order(1)
 def test_gti_url_to_stix_with_invalid_timestamps(
     url_with_invalid_timestamps: GTIURLData,
     mock_organization: Identity,
@@ -519,6 +531,7 @@ def test_gti_url_to_stix_with_invalid_timestamps(
 
 
 # Scenario: Extract timestamps from GTI URL with valid timestamp data
+@pytest.mark.order(1)
 def test_get_timestamps_with_valid_data(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -543,6 +556,7 @@ def test_get_timestamps_with_valid_data(
 
 
 # Scenario: Extract timestamps from GTI URL without timestamp data
+@pytest.mark.order(1)
 def test_get_timestamps_without_data(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -567,6 +581,7 @@ def test_get_timestamps_without_data(
 
 
 # Scenario: Extract score with mandiant confidence score available
+@pytest.mark.order(1)
 def test_get_score_with_mandiant_score(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -591,6 +606,7 @@ def test_get_score_with_mandiant_score(
 
 
 # Scenario: Extract score with threat score fallback
+@pytest.mark.order(1)
 def test_get_score_with_threat_score_fallback(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -616,6 +632,7 @@ def test_get_score_with_threat_score_fallback(
 
 
 # Scenario: Extract score without any score data available
+@pytest.mark.order(1)
 def test_get_score_without_data(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -634,6 +651,7 @@ def test_get_score_without_data(
 
 
 # Scenario: Get URL value with url attribute
+@pytest.mark.order(1)
 def test_get_url_value_with_url_attribute(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -656,6 +674,7 @@ def test_get_url_value_with_url_attribute(
 
 
 # Scenario: Get URL value with final URL fallback
+@pytest.mark.order(1)
 def test_get_url_value_with_final_url_fallback(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -678,6 +697,7 @@ def test_get_url_value_with_final_url_fallback(
 
 
 # Scenario: Get URL value with ID fallback
+@pytest.mark.order(1)
 def test_get_url_value_with_id_fallback(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -700,6 +720,7 @@ def test_get_url_value_with_id_fallback(
 
 
 # Scenario: Build STIX pattern with URL
+@pytest.mark.order(1)
 def test_build_stix_pattern_with_url(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -720,6 +741,7 @@ def test_build_stix_pattern_with_url(
 
 
 # Scenario: Test determine indicator types method
+@pytest.mark.order(1)
 def test_determine_indicator_types_with_verdict(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -742,6 +764,7 @@ def test_determine_indicator_types_with_verdict(
 
 
 # Scenario: Test determine indicator types method without verdict
+@pytest.mark.order(1)
 def test_determine_indicator_types_without_verdict(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -760,6 +783,7 @@ def test_determine_indicator_types_without_verdict(
 
 
 # Scenario: Test create STIX URL method
+@pytest.mark.order(1)
 def test_create_stix_url_method(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -787,6 +811,7 @@ def test_create_stix_url_method(
 
 
 # Scenario: Test create STIX indicator method
+@pytest.mark.order(1)
 def test_create_stix_indicator_method(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:

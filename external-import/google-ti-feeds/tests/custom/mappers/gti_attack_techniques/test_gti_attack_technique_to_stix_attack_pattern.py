@@ -97,6 +97,7 @@ def attack_technique_with_duplicate_link() -> GTIAttackTechniqueData:
     )
 
 
+@pytest.mark.order(1)
 def test_gti_attack_technique_to_stix_minimal_data(
     minimal_attack_technique_data, mock_organization, mock_tlp_marking
 ):
@@ -119,6 +120,7 @@ def test_gti_attack_technique_to_stix_minimal_data(
     )
 
 
+@pytest.mark.order(1)
 def test_gti_attack_technique_to_stix_with_external_refs(
     attack_technique_with_external_refs, mock_organization, mock_tlp_marking
 ):
@@ -136,6 +138,7 @@ def test_gti_attack_technique_to_stix_with_external_refs(
     _then_stix_attack_pattern_has_external_references(attack_pattern)
 
 
+@pytest.mark.order(1)
 def test_gti_attack_technique_to_stix_without_attributes(
     attack_technique_without_attributes, mock_organization, mock_tlp_marking
 ):
@@ -152,6 +155,7 @@ def test_gti_attack_technique_to_stix_without_attributes(
     )
 
 
+@pytest.mark.order(1)
 def test_gti_attack_technique_to_stix_with_duplicate_link(
     attack_technique_with_duplicate_link, mock_organization, mock_tlp_marking
 ):
@@ -169,6 +173,7 @@ def test_gti_attack_technique_to_stix_with_duplicate_link(
     _then_stix_attack_pattern_has_unique_external_references(attack_pattern)
 
 
+@pytest.mark.order(1)
 def test_extract_aliases_method():
     """Test _extract_aliases static method."""
     # Given attack technique attributes
@@ -181,6 +186,7 @@ def test_extract_aliases_method():
     assert aliases is None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_extract_aliases_with_none_attributes():
     """Test _extract_aliases static method with None attributes."""
     # Given None attributes
@@ -191,6 +197,7 @@ def test_extract_aliases_with_none_attributes():
     assert aliases is None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_extract_kill_chain_phases_method():
     """Test _extract_kill_chain_phases static method."""
     # Given attack technique attributes
@@ -205,6 +212,7 @@ def test_extract_kill_chain_phases_method():
     assert phases is None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_extract_kill_chain_phases_with_none_attributes():
     """Test _extract_kill_chain_phases static method with None attributes."""
     # Given None attributes
@@ -215,6 +223,7 @@ def test_extract_kill_chain_phases_with_none_attributes():
     assert phases is None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_normalize_tactic_name_method():
     """Test _normalize_tactic_name static method."""
     # Given test cases for tactic name normalization
@@ -234,6 +243,7 @@ def test_normalize_tactic_name_method():
         assert result == expected_output  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_create_external_references_with_all_data(mock_organization, mock_tlp_marking):
     """Test _create_external_references method with all external reference data."""
     # Given a GTI attack technique with all external reference data
@@ -274,6 +284,7 @@ def test_create_external_references_with_all_data(mock_organization, mock_tlp_ma
     assert stix_ref["external_id"] == "attack-pattern--abc123"  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_create_external_references_minimal_data(mock_organization, mock_tlp_marking):
     """Test _create_external_references method with minimal data."""
     # Given a GTI attack technique with minimal data
@@ -304,6 +315,7 @@ def test_create_external_references_minimal_data(mock_organization, mock_tlp_mar
     )
 
 
+@pytest.mark.order(1)
 def test_create_external_references_with_none_attributes(
     mock_organization, mock_tlp_marking
 ):

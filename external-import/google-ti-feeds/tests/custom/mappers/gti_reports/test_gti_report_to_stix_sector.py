@@ -217,6 +217,7 @@ def report_with_special_characters() -> GTIReportData:
     )
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_sector_single_industry(
     report_with_single_industry, mock_organization, mock_tlp_marking
 ):
@@ -238,6 +239,7 @@ def test_gti_report_to_stix_sector_single_industry(
     )
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_sector_multiple_industries(
     report_with_multiple_industries, mock_organization, mock_tlp_marking
 ):
@@ -261,6 +263,7 @@ def test_gti_report_to_stix_sector_multiple_industries(
         )
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_sector_without_industries(
     report_without_industries, mock_organization, mock_tlp_marking
 ):
@@ -277,6 +280,7 @@ def test_gti_report_to_stix_sector_without_industries(
     _then_stix_sectors_created_successfully(sectors, 0)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_sector_empty_industries(
     report_with_empty_industries, mock_organization, mock_tlp_marking
 ):
@@ -295,6 +299,7 @@ def test_gti_report_to_stix_sector_empty_industries(
     _then_stix_sectors_created_successfully(sectors, 0)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_sector_without_attributes(
     report_without_attributes, mock_organization, mock_tlp_marking
 ):
@@ -311,6 +316,7 @@ def test_gti_report_to_stix_sector_without_attributes(
     _when_convert_to_stix_raises_error(mapper, ValueError, "Invalid report attributes")
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_sector_industry_without_group(
     report_with_industry_without_group, mock_organization, mock_tlp_marking
 ):
@@ -329,6 +335,7 @@ def test_gti_report_to_stix_sector_industry_without_group(
     _then_stix_sectors_created_successfully(sectors, 0)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_sector_industry_with_none_group(
     report_with_industry_with_none_group, mock_organization, mock_tlp_marking
 ):
@@ -347,6 +354,7 @@ def test_gti_report_to_stix_sector_industry_with_none_group(
     _then_stix_sectors_created_successfully(sectors, 0)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_sector_mixed_valid_invalid_industries(
     report_with_mixed_valid_invalid_industries, mock_organization, mock_tlp_marking
 ):
@@ -370,6 +378,7 @@ def test_gti_report_to_stix_sector_mixed_valid_invalid_industries(
         )
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_sector_long_industry_names(
     report_with_long_industry_names, mock_organization, mock_tlp_marking
 ):
@@ -389,6 +398,7 @@ def test_gti_report_to_stix_sector_long_industry_names(
     _then_stix_sector_preserves_long_names(sectors[0])
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_sector_special_characters(
     report_with_special_characters, mock_organization, mock_tlp_marking
 ):
@@ -408,6 +418,7 @@ def test_gti_report_to_stix_sector_special_characters(
     _then_stix_sector_preserves_special_characters(sectors[0])
 
 
+@pytest.mark.order(1)
 def test_process_industry_with_valid_data(mock_organization, mock_tlp_marking):
     """Test _process_industry method with valid industry data."""
     # GIVEN: A mapper instance and a valid TargetedIndustry object
@@ -431,6 +442,7 @@ def test_process_industry_with_valid_data(mock_organization, mock_tlp_marking):
     assert sector.name == "Technology"  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_process_industry_with_empty_group(mock_organization, mock_tlp_marking):
     """Test _process_industry method with empty industry_group."""
     # GIVEN: A mapper instance and a TargetedIndustry object
@@ -453,6 +465,7 @@ def test_process_industry_with_empty_group(mock_organization, mock_tlp_marking):
     assert sector is None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_process_industry_with_none_group(mock_organization, mock_tlp_marking):
     """Test _process_industry method with empty industry_group (simulating None)."""
     # GIVEN: A mapper instance and a TargetedIndustry object
@@ -475,6 +488,7 @@ def test_process_industry_with_none_group(mock_organization, mock_tlp_marking):
     assert sector is None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_create_sector_with_description(mock_organization, mock_tlp_marking):
     """Test _create_sector method includes description when available."""
     # GIVEN: A mapper instance and a TargetedIndustry object
@@ -501,6 +515,7 @@ def test_create_sector_with_description(mock_organization, mock_tlp_marking):
     )
 
 
+@pytest.mark.order(1)
 def test_create_sector_without_description(mock_organization, mock_tlp_marking):
     """Test _create_sector method when description is None."""
     # GIVEN: A mapper instance and a TargetedIndustry object

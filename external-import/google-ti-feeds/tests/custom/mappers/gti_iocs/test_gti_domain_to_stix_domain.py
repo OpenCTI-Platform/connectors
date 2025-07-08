@@ -239,6 +239,7 @@ def domain_with_invalid_timestamps() -> GTIDomainData:
 
 
 # Scenario: Convert GTI domain with minimal data to STIX objects
+@pytest.mark.order(1)
 def test_gti_domain_to_stix_minimal_data(
     minimal_domain_data: GTIDomainData,
     mock_organization: Identity,
@@ -263,6 +264,7 @@ def test_gti_domain_to_stix_minimal_data(
 
 
 # Scenario: Convert GTI domain with timestamps to STIX objects
+@pytest.mark.order(1)
 def test_gti_domain_to_stix_with_timestamps(
     domain_with_timestamps: GTIDomainData,
     mock_organization: Identity,
@@ -284,6 +286,7 @@ def test_gti_domain_to_stix_with_timestamps(
 
 
 # Scenario: Convert GTI domain with Mandiant confidence score to STIX objects
+@pytest.mark.order(1)
 def test_gti_domain_to_stix_with_mandiant_score(
     domain_with_mandiant_score: GTIDomainData,
     mock_organization: Identity,
@@ -305,6 +308,7 @@ def test_gti_domain_to_stix_with_mandiant_score(
 
 
 # Scenario: Convert GTI domain with threat score fallback to STIX objects
+@pytest.mark.order(1)
 def test_gti_domain_to_stix_with_threat_score(
     domain_with_threat_score: GTIDomainData,
     mock_organization: Identity,
@@ -326,6 +330,7 @@ def test_gti_domain_to_stix_with_threat_score(
 
 
 # Scenario: Convert GTI domain with malicious verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_domain_to_stix_with_malicious_verdict(
     domain_with_malicious_verdict: GTIDomainData,
     mock_organization: Identity,
@@ -347,6 +352,7 @@ def test_gti_domain_to_stix_with_malicious_verdict(
 
 
 # Scenario: Convert GTI domain with benign verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_domain_to_stix_with_benign_verdict(
     domain_with_benign_verdict: GTIDomainData,
     mock_organization: Identity,
@@ -368,6 +374,7 @@ def test_gti_domain_to_stix_with_benign_verdict(
 
 
 # Scenario: Convert GTI domain with suspicious verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_domain_to_stix_with_suspicious_verdict(
     domain_with_suspicious_verdict: GTIDomainData,
     mock_organization: Identity,
@@ -389,6 +396,7 @@ def test_gti_domain_to_stix_with_suspicious_verdict(
 
 
 # Scenario: Convert GTI domain with all data populated to STIX objects
+@pytest.mark.order(1)
 def test_gti_domain_to_stix_with_all_data(
     domain_with_all_data: GTIDomainData,
     mock_organization: Identity,
@@ -415,6 +423,7 @@ def test_gti_domain_to_stix_with_all_data(
 
 
 # Scenario: Convert GTI domain without attributes to STIX objects
+@pytest.mark.order(1)
 def test_gti_domain_to_stix_without_attributes(
     domain_without_attributes: GTIDomainData,
     mock_organization: Identity,
@@ -436,6 +445,7 @@ def test_gti_domain_to_stix_without_attributes(
 
 
 # Scenario: Convert GTI domain with empty verdict to STIX objects
+@pytest.mark.order(1)
 def test_gti_domain_to_stix_with_empty_verdict(
     domain_with_empty_verdict: GTIDomainData,
     mock_organization: Identity,
@@ -457,6 +467,7 @@ def test_gti_domain_to_stix_with_empty_verdict(
 
 
 # Scenario: Convert GTI domain with invalid timestamps to STIX objects
+@pytest.mark.order(1)
 def test_gti_domain_to_stix_with_invalid_timestamps(
     domain_with_invalid_timestamps: GTIDomainData,
     mock_organization: Identity,
@@ -476,6 +487,7 @@ def test_gti_domain_to_stix_with_invalid_timestamps(
 
 
 # Scenario: Extract timestamps from GTI domain with valid timestamp data
+@pytest.mark.order(1)
 def test_get_timestamps_with_valid_data(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -500,6 +512,7 @@ def test_get_timestamps_with_valid_data(
 
 
 # Scenario: Extract timestamps from GTI domain without timestamp data
+@pytest.mark.order(1)
 def test_get_timestamps_without_data(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -524,6 +537,7 @@ def test_get_timestamps_without_data(
 
 
 # Scenario: Extract score with mandiant confidence score available
+@pytest.mark.order(1)
 def test_get_score_with_mandiant_score(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -548,6 +562,7 @@ def test_get_score_with_mandiant_score(
 
 
 # Scenario: Extract score with threat score fallback
+@pytest.mark.order(1)
 def test_get_score_with_threat_score_fallback(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -573,6 +588,7 @@ def test_get_score_with_threat_score_fallback(
 
 
 # Scenario: Extract score without any score data available
+@pytest.mark.order(1)
 def test_get_score_without_data(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -591,6 +607,7 @@ def test_get_score_without_data(
 
 
 # Scenario: Test determine indicator types method
+@pytest.mark.order(1)
 def test_determine_indicator_types_with_verdict(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -613,6 +630,7 @@ def test_determine_indicator_types_with_verdict(
 
 
 # Scenario: Test determine indicator types method without verdict
+@pytest.mark.order(1)
 def test_determine_indicator_types_without_verdict(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -631,6 +649,7 @@ def test_determine_indicator_types_without_verdict(
 
 
 # Scenario: Test create STIX domain method
+@pytest.mark.order(1)
 def test_create_stix_domain_method(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
@@ -658,6 +677,7 @@ def test_create_stix_domain_method(
 
 
 # Scenario: Test create STIX indicator method
+@pytest.mark.order(1)
 def test_create_stix_indicator_method(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:

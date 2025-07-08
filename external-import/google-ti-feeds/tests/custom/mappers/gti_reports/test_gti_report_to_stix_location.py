@@ -245,6 +245,7 @@ def report_with_empty_region_data() -> GTIReportData:
     )
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_location_country_region(
     report_with_country_region, mock_organization, mock_tlp_marking
 ):
@@ -266,6 +267,7 @@ def test_gti_report_to_stix_location_country_region(
     )
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_location_multiple_regions(
     report_with_multiple_regions, mock_organization, mock_tlp_marking
 ):
@@ -289,6 +291,7 @@ def test_gti_report_to_stix_location_multiple_regions(
         )
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_location_without_regions(
     report_without_regions, mock_organization, mock_tlp_marking
 ):
@@ -307,6 +310,7 @@ def test_gti_report_to_stix_location_without_regions(
     _then_stix_locations_created_successfully(locations, 0)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_location_empty_regions(
     report_with_empty_regions, mock_organization, mock_tlp_marking
 ):
@@ -325,6 +329,7 @@ def test_gti_report_to_stix_location_empty_regions(
     _then_stix_locations_created_successfully(locations, 0)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_location_without_attributes(
     report_without_attributes, mock_organization, mock_tlp_marking
 ):
@@ -341,6 +346,7 @@ def test_gti_report_to_stix_location_without_attributes(
     _when_convert_to_stix_raises_error(mapper, ValueError, "Invalid report attributes")
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_location_region_only(
     report_with_region_only, mock_organization, mock_tlp_marking
 ):
@@ -362,6 +368,7 @@ def test_gti_report_to_stix_location_region_only(
     )
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_location_sub_region_only(
     report_with_sub_region_only, mock_organization, mock_tlp_marking
 ):
@@ -383,6 +390,7 @@ def test_gti_report_to_stix_location_sub_region_only(
     )
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_location_country_without_iso(
     report_with_country_without_iso, mock_organization, mock_tlp_marking
 ):
@@ -401,6 +409,7 @@ def test_gti_report_to_stix_location_country_without_iso(
     _then_stix_locations_created_successfully(locations, 1)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_location_invalid_region(
     report_with_invalid_region, mock_organization, mock_tlp_marking
 ):
@@ -419,6 +428,7 @@ def test_gti_report_to_stix_location_invalid_region(
     _then_stix_locations_created_successfully(locations, 0)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_location_mixed_valid_invalid_regions(
     report_with_mixed_valid_invalid_regions, mock_organization, mock_tlp_marking
 ):
@@ -438,6 +448,7 @@ def test_gti_report_to_stix_location_mixed_valid_invalid_regions(
     _then_stix_locations_created_successfully(locations, 2)
 
 
+@pytest.mark.order(1)
 def test_gti_report_to_stix_location_empty_region_data(
     report_with_empty_region_data, mock_organization, mock_tlp_marking
 ):
@@ -456,6 +467,7 @@ def test_gti_report_to_stix_location_empty_region_data(
     _then_stix_locations_created_successfully(locations, 0)
 
 
+@pytest.mark.order(1)
 def test_process_region_with_country_data(mock_organization, mock_tlp_marking):
     """Test _process_region method with country data."""
     # GIVEN: A mapper instance and a TargetedRegion object with complete country information
@@ -479,6 +491,7 @@ def test_process_region_with_country_data(mock_organization, mock_tlp_marking):
     assert location is not None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_process_region_with_region_only(mock_organization, mock_tlp_marking):
     """Test _process_region method with region-only data."""
     # GIVEN: A mapper instance and a TargetedRegion object with only regional classification (asia)
@@ -503,6 +516,7 @@ def test_process_region_with_region_only(mock_organization, mock_tlp_marking):
     assert location is not None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_process_region_with_empty_data(mock_organization, mock_tlp_marking):
     """Test _process_region method with empty region data."""
     # GIVEN: A mapper instance and a TargetedRegion object with all location fields set to None
@@ -527,6 +541,7 @@ def test_process_region_with_empty_data(mock_organization, mock_tlp_marking):
     assert location is None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_create_country_with_valid_data(mock_organization, mock_tlp_marking):
     """Test _create_country method with valid country data."""
     # GIVEN: A mapper instance and a TargetedRegion object with complete country identification
@@ -549,6 +564,7 @@ def test_create_country_with_valid_data(mock_organization, mock_tlp_marking):
     assert location is not None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_create_country_without_country(mock_organization, mock_tlp_marking):
     """Test _create_country method without country data."""
     # GIVEN: A mapper instance and a TargetedRegion object with ISO2 code (CA)
@@ -571,6 +587,7 @@ def test_create_country_without_country(mock_organization, mock_tlp_marking):
     assert location is None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_create_country_without_iso_code(mock_organization, mock_tlp_marking):
     """Test _create_country method without ISO code."""
     # GIVEN: A mapper instance and a TargetedRegion object with country name (Canada)
@@ -593,6 +610,7 @@ def test_create_country_without_iso_code(mock_organization, mock_tlp_marking):
     assert location is None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_create_region_with_valid_region(mock_organization, mock_tlp_marking):
     """Test _create_region method with valid region data."""
     # GIVEN: A mapper instance and a TargetedRegion object with valid region classification (europe)
@@ -615,6 +633,7 @@ def test_create_region_with_valid_region(mock_organization, mock_tlp_marking):
     assert location is not None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_create_region_with_valid_sub_region(mock_organization, mock_tlp_marking):
     """Test _create_region method with valid sub-region data."""
     # GIVEN: A mapper instance and a TargetedRegion object with valid sub-region classification (western-europe)
@@ -637,6 +656,7 @@ def test_create_region_with_valid_sub_region(mock_organization, mock_tlp_marking
     assert location is not None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_create_region_with_invalid_region(mock_organization, mock_tlp_marking):
     """Test _create_region method with invalid region name."""
     # GIVEN: A mapper instance and a TargetedRegion object with an invalid region name (invalid-region)
@@ -659,6 +679,7 @@ def test_create_region_with_invalid_region(mock_organization, mock_tlp_marking):
     assert location is None  # noqa: S101
 
 
+@pytest.mark.order(1)
 def test_create_region_without_region_name(mock_organization, mock_tlp_marking):
     """Test _create_region method without region name."""
     # GIVEN: A mapper instance and a TargetedRegion object with both region and sub_region set to None
