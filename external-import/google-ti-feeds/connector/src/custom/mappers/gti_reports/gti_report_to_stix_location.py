@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from connector.src.custom.models.gti_reports.gti_report_model import (
+from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
     TargetedRegion,
 )
@@ -125,10 +125,8 @@ class GTIReportToSTIXLocation(BaseMapper):
         if not region_name:
             return None
 
-        # Normalize the region name for comparison
         normalized_name = region_name.lower().replace(" ", "-")
 
-        # Check if the normalized name exists in the predefined RegionOV values
         predefined_values = [member.value for member in RegionOV]
         if normalized_name not in predefined_values:
             return None

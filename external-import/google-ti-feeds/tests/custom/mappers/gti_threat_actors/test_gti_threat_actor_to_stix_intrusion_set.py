@@ -5,10 +5,10 @@ from typing import Any, List, Optional
 from uuid import uuid4
 
 import pytest
-from connector.src.custom.mappers.gti_reports.gti_threat_actor_to_stix_intrusion_set import (
+from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_intrusion_set import (
     GTIThreatActorToSTIXIntrusionSet,
 )
-from connector.src.custom.models.gti_reports.gti_threat_actor_model import (
+from connector.src.custom.models.gti.gti_threat_actor_model import (
     AltNameDetail,
     GTIThreatActorData,
     Motivation,

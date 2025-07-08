@@ -3,10 +3,10 @@
 from uuid import uuid4
 
 import pytest
-from connector.src.custom.mappers.gti_reports.gti_attack_technique_to_stix_attack_pattern import (
+from connector.src.custom.mappers.gti_attack_techniques.gti_attack_technique_to_stix_attack_pattern import (
     GTIAttackTechniqueToSTIXAttackPattern,
 )
-from connector.src.custom.models.gti_reports.gti_attack_technique_model import (
+from connector.src.custom.models.gti.gti_attack_technique_model import (
     AttackTechniqueModel,
     GTIAttackTechniqueData,
     Info,

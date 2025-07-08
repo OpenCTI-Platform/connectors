@@ -3,11 +3,12 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from connector.src.custom.models.gti_reports.gti_file_model import (
+from connector.src.custom.models.gti.gti_file_model import (
     GTIFileData,
 )
 from connector.src.stix.octi.models.file_model import OctiFileModel
 from connector.src.stix.octi.models.indicator_model import OctiIndicatorModel
+from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.stix.octi.observable_type_ov_enum import ObservableTypeOV
 from connector.src.stix.octi.pattern_type_ov_enum import PatternTypeOV
 from connector.src.stix.v21.models.ovs.indicator_type_ov_enums import IndicatorTypeOV
@@ -23,6 +24,47 @@ from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
 
 class GTIFileToSTIXFile(BaseMapper):
     """Converts a GTI file to a STIX file object and indicator."""
+
+    @staticmethod
+    def create_relationship(
+        src_entity: Any, relation_type: str, target_entity: Any
+    ) -> Any:
+        """Create a relationship between entities.
+
+        For indicators: creates 'indicates' relationship from indicator to target
+        For observables: creates the specified relationship type from source to target
+
+        Args:
+            src_entity: The source entity (intrusion set or indicator/observable)
+            relation_type: The relationship type (e.g., "related-to")
+            target_entity: The target entity (file or intrusion set)
+
+        Returns:
+            OctiRelationshipModel: The relationship object
+
+        """
+        if isinstance(target_entity, IndicatorModel):
+            return OctiRelationshipModel.create(
+                relationship_type="indicates",
+                source_ref=target_entity.id,
+                target_ref=src_entity.id,
+                organization_id=src_entity.created_by_ref,
+                marking_ids=src_entity.object_marking_refs,
+                created=datetime.now(),
+                modified=datetime.now(),
+                description=f"Indicator indicates {src_entity.__class__.__name__}",
+            )
+        else:
+            return OctiRelationshipModel.create(
+                relationship_type=relation_type,
+                source_ref=src_entity.id,
+                target_ref=target_entity.id,
+                organization_id=src_entity.created_by_ref,
+                marking_ids=src_entity.object_marking_refs,
+                created=datetime.now(),
+                modified=datetime.now(),
+                description=f"{src_entity.__class__.__name__} {relation_type} {target_entity.__class__.__name__}",
+            )
 
     def __init__(
         self,

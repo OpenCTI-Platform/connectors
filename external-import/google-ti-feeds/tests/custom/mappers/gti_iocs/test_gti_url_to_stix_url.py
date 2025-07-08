@@ -5,10 +5,10 @@ from typing import Any, List
 from uuid import uuid4
 
 import pytest
-from connector.src.custom.mappers.gti_reports.gti_url_to_stix_url import (
+from connector.src.custom.mappers.gti_iocs.gti_url_to_stix_url import (
     GTIUrlToSTIXUrl,
 )
-from connector.src.custom.models.gti_reports.gti_url_model import (
+from connector.src.custom.models.gti.gti_url_model import (
     ContributingFactors,
     GTIAssessment,
     GTIURLData,

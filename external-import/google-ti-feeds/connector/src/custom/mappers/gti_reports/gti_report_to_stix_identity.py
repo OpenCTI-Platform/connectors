@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from connector.src.custom.models.gti_reports.gti_report_model import GTIReportData
+from connector.src.custom.models.gti.gti_report_model import GTIReportData
 from connector.src.stix.octi.models.identity_author_model import OctiIdentityAuthorModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
 from connectors_sdk.models.octi import (  # type: ignore[import-untyped]

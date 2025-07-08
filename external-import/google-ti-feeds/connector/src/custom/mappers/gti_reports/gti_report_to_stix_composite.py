@@ -14,7 +14,7 @@ from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import (
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_sector import (
     GTIReportToSTIXSector,
 )
-from connector.src.custom.models.gti_reports.gti_report_model import GTIReportData
+from connector.src.custom.models.gti.gti_report_model import GTIReportData
 from connector.src.utils.converters.generic_converter_config import BaseMapper
 from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
     OrganizationAuthor,
