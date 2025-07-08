@@ -30,7 +30,7 @@ ALLOWED_REPORT_TYPES = [
     "Weekly Vulnerability Exploitation Report",
 ]
 
-ALLOWED_REPORT_ORIGINS = [
+ALLOWED_ORIGINS = [
     "All",
     "partner",
     "crowdsourced",
@@ -97,11 +97,45 @@ class GTIConfig(BaseConfig):
                     "At least one report origin must be specified."
                 )
 
-            invalid = set(parts) - set(ALLOWED_REPORT_ORIGINS)
+            invalid = set(parts) - set(ALLOWED_ORIGINS)
             if invalid:
                 raise GTIConfigurationError(
                     f"Invalid report origins: {', '.join(invalid)}. "
-                    f"Allowed values: {', '.join(ALLOWED_REPORT_ORIGINS)}."
+                    f"Allowed values: {', '.join(ALLOWED_ORIGINS)}."
+                )
+            return parts
+        except GTIConfigurationError:
+            raise
+        except Exception as e:
+            raise GTIConfigurationError(
+                f"Failed to validate report origins: {str(e)}"
+            ) from e
+
+    # Threat Actors
+    threat_actor_import_start_date: str = "P1D"
+    import_threat_actors: bool = False
+    threat_actor_origins: List[str] | str = "All"
+
+    @field_validator("threat_actor_origins", mode="before")
+    @classmethod
+    def split_and_validate_threat_actor_origins(cls, v: str) -> List[str]:
+        """Split and validate a comma-separated string into a list and validate its contents."""
+        try:
+            parts = None
+
+            if isinstance(v, str):
+                parts = [item.strip() for item in v.split(",") if item.strip()]
+
+            if not parts:
+                raise GTIConfigurationError(
+                    "At least one threat actor origin must be specified."
+                )
+
+            invalid = set(parts) - set(ALLOWED_ORIGINS)
+            if invalid:
+                raise GTIConfigurationError(
+                    f"Invalid threat actor origins: {', '.join(invalid)}. "
+                    f"Allowed values: {', '.join(ALLOWED_ORIGINS)}."
                 )
             return parts
         except GTIConfigurationError:
