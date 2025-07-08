@@ -82,9 +82,11 @@ class Connector:
             self._process_threat_actor_group(entity_id, file_name, file_markings)
         elif entity_type == "Threat-Actor-Individual":
             self._process_threat_actor_individual(entity_id, file_name, file_markings)
+        elif entity_type == "Vulnerability":
+            self._process_vulnerability(entity_id, file_name, file_markings)
         else:
             raise ValueError(
-                f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor-Group", "Threat-Actor-Individual", "Case-Incident", "Case-Rfi", "Case-Rft", not "{entity_type}".'
+                f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor-Group", "Threat-Actor-Individual", "Case-Incident", "Case-Rfi", "Case-Rft", Vulnerability, not "{entity_type}".'
             )
 
         return "Export done"
@@ -788,6 +790,97 @@ class Connector:
 
         # Upload the output pdf
         self.helper.log_info(f"Uploading: {file_name}")
+        self.helper.api.stix_domain_object.push_entity_export(
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
+        )
+
+    def _process_vulnerability(self, entity_id, file_name, file_markings):
+        """
+        Process a Vulnerability entity and upload as pdf.
+        """
+        now_date = datetime.datetime.now().strftime("%b %d %Y")
+        # Prepare our context
+        context = {
+            "report_date": now_date,
+            "company_address_line_1": self.config.company_address_line_1,
+            "company_address_line_2": self.config.company_address_line_2,
+            "company_address_line_3": self.config.company_address_line_3,
+            "company_phone_number": self.config.company_phone_number,
+            "company_email": self.config.company_email,
+            "company_website": self.config.company_website,
+            # these will be filled in:
+            "vulnerability": None,
+            "softwares_impacted": [],
+            "softwares_resolved": [],
+            "courses_of_action": [],
+            "infrastructures": [],
+        }
+
+        # Retrieve the full STIX bundle
+        bundle = (
+            self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type="Vulnerability", entity_id=entity_id, mode="full"
+            )
+        )
+
+        entities_grouped_by_type_and_id = {
+            entity_type: {
+                entity["id"]: entity
+                for entity in bundle["objects"]
+                if entity["type"] == entity_type
+            }
+            for entity_type in {entity["type"] for entity in bundle["objects"]}
+        }
+
+        # We have only one vulnerability in the bundle
+        _vulnerability = next(
+            iter(entities_grouped_by_type_and_id["vulnerability"].values())
+        )
+
+        context["vulnerability"] = _vulnerability
+        context["marking_definitions"] = [
+            entities_grouped_by_type_and_id["marking-definition"][marking_ref]["name"]
+            for marking_ref in _vulnerability["object_marking_refs"]
+        ]
+
+        # Process each relationship in the bundle
+        for relationship in entities_grouped_by_type_and_id.get(
+            "relationship", {}
+        ).values():
+            source_ref_type = relationship["source_ref"].split("--")[0]
+            source_ref = entities_grouped_by_type_and_id[source_ref_type][
+                relationship["source_ref"]
+            ]
+            match relationship["relationship_type"], source_ref_type:
+                case "has", "software":
+                    context["softwares_impacted"].append(
+                        f"{source_ref['vendor']}-{source_ref['name']}-{source_ref['version']}"
+                    )
+                case "remediates", "software":
+                    context["softwares_resolved"].append(
+                        f"{source_ref['vendor']}-{source_ref['name']}-{source_ref['version']}"
+                    )
+                case "remediates", "course_of_action":
+                    context["courses_of_action"].append(f"{source_ref['name']}")
+                case "has", "infrastructure":
+                    context["infrastructures"].append(f"{source_ref['name']}")
+
+        # Render HTML and generate the PDF
+        env = Environment(
+            loader=FileSystemLoader(self.current_dir), finalize=self._finalize
+        )
+        template = env.get_template("resources/vulnerability.html")
+        html_string = template.render(context)
+        pdf_contents = HTML(
+            string=html_string, base_url=f"{self.current_dir}/resources"
+        ).write_pdf()
+
+        # Push it back into OpenCTI
+        self.helper.log_info(f"Uploading Vulnerability PDF: {file_name}")
         self.helper.api.stix_domain_object.push_entity_export(
             entity_id=entity_id,
             file_name=file_name,
