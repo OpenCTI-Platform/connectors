@@ -24,20 +24,22 @@ class Connector:
         self.config = config
         self.client = client
 
-    def _prepare_stix_objects(self, indicator: dict) -> list[dict]:
+    def _prepare_stix_object(self, stix_object: dict) -> dict:
         if self.config.microsoft_sentinel_intel.delete_extensions:
-            del indicator["extensions"]
+            del stix_object["extensions"]
 
         if extra_labels := self.config.microsoft_sentinel_intel.extra_labels:
-            indicator["labels"] = list(set(indicator.get("labels", []) + extra_labels))
+            stix_object["labels"] = list(
+                set(stix_object.get("labels", []) + extra_labels)
+            )
 
-        return [indicator]
+        return stix_object
 
     def _process_event(self, event_type: str, indicator: dict) -> None:
         match event_type:
             case "create" | "update":
                 self.client.upload_stix_objects(
-                    stix_objects=self._prepare_stix_objects(indicator),
+                    stix_objects=[self._prepare_stix_object(indicator)],
                     source_system=self.config.microsoft_sentinel_intel.source_system,
                 )
             case "delete":
