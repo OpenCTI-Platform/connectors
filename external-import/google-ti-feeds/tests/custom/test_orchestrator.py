@@ -227,7 +227,7 @@ def expected_threat_actor_log_messages() -> list[str]:
         "[GenericBatchProcessor] Sent batch #1 to OpenCTI",
         "[GenericBatchProcessor] Batch None completed successfully: 77 objects (identity: 24, marking-definition: 1, location: 17, intrusion-set: 1, relationship: 30, malware: 1, report: 1, attack-pattern: 1, vulnerability: 1)",
         "[GenericBatchProcessor] Successfully processed batch #1. Total STIX objects sent: 77",
-        "[GenericBatchProcessor] State update: Setting next_cursor_date to 2025-06-03T05:03:32",
+        "[GenericBatchProcessor] State update: Setting next_cursor_date to 2025-06-03T03:03:32",
     ]
 
 

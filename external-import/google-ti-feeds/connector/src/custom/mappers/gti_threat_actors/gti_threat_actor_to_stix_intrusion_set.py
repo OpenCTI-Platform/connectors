@@ -1,6 +1,6 @@
 """Converts a GTI threat actor to a STIX intrusion set object."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from connector.src.custom.models.gti.gti_threat_actor_model import (
@@ -59,8 +59,10 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
 
         attributes = self.threat_actor.attributes
 
-        created = datetime.fromtimestamp(attributes.creation_date)
-        modified = datetime.fromtimestamp(attributes.last_modification_date)
+        created = datetime.fromtimestamp(attributes.creation_date, tz=timezone.utc)
+        modified = datetime.fromtimestamp(
+            attributes.last_modification_date, tz=timezone.utc
+        )
 
         aliases = self._extract_aliases(attributes)
 
