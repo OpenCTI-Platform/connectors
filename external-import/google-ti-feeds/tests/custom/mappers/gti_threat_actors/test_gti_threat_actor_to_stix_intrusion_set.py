@@ -1,6 +1,6 @@
 """Module to test the GTI threat actor to STIX intrusion set mapper."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Optional
 from uuid import uuid4
 
@@ -650,9 +650,11 @@ def _then_stix_intrusion_set_created_successfully(
     assert stix_intrusion_set.created_by_ref == organization.id  # noqa: S101
     assert tlp_marking.id in stix_intrusion_set.object_marking_refs  # noqa: S101
 
-    expected_created = datetime.fromtimestamp(gti_threat_actor.attributes.creation_date)
+    expected_created = datetime.fromtimestamp(
+        gti_threat_actor.attributes.creation_date, tz=timezone.utc
+    )
     expected_modified = datetime.fromtimestamp(
-        gti_threat_actor.attributes.last_modification_date
+        gti_threat_actor.attributes.last_modification_date, tz=timezone.utc
     )
     assert stix_intrusion_set.created == expected_created  # noqa: S101
     assert stix_intrusion_set.modified == expected_modified  # noqa: S101
@@ -1031,7 +1033,7 @@ def test_threat_actor_boundary_timestamps(
     stix_intrusion_set = _when_convert_to_stix(mapper)
 
     # Then should handle boundary timestamps
-    expected_created = datetime.fromtimestamp(creation_date)
-    expected_modified = datetime.fromtimestamp(modification_date)
+    expected_created = datetime.fromtimestamp(creation_date, tz=timezone.utc)
+    expected_modified = datetime.fromtimestamp(modification_date, tz=timezone.utc)
     assert stix_intrusion_set.created == expected_created  # noqa: S101
     assert stix_intrusion_set.modified == expected_modified  # noqa: S101
