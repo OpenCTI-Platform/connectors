@@ -4,7 +4,7 @@ import re
 import ssl
 import sys
 import time
-import urllib.request
+import requests
 from datetime import datetime
 from typing import Optional
 
@@ -225,20 +225,16 @@ class MispFeed:
             A string with the content or None in case of failure.
         """
         try:
-            return (
-                urllib.request.urlopen(
-                    url,
-                    context=ssl.create_default_context(),
-                )
-                .read()
-                .decode("utf-8")
-            )
+            response = requests.get(url, verify=self.misp_feed_ssl_verify)
+            response.raise_for_status()
+            return response.text
         except (
-            urllib.error.URLError,
-            urllib.error.HTTPError,
-            urllib.error.ContentTooShortError,
-        ) as urllib_error:
-            self.helper.log_error(f"Error retrieving url {url}: {urllib_error}")
+            requests.exceptions.HTTPError,
+            requests.ConnectionError,
+            requests.HTTPError,
+            requests.ConnectTimeout,
+        ) as requests_error:
+            self.helper.log_error(f"Error retrieving url {url}: {requests_error}")
         return None
 
     def _send_bundle(self, work_id: str, serialized_bundle: str) -> None:
