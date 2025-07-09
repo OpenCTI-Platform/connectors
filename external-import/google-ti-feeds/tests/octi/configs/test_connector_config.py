@@ -20,7 +20,7 @@ from tests.conftest import mock_env_vars
 @pytest.fixture(
     params=[
         {
-            "opencti_url": "http://localhost:8080",
+            "opencti_url": "http://fake:8080",
             "opencti_token": f"{uuid4()}",
             "connector_id": f"{uuid4()}",
         }

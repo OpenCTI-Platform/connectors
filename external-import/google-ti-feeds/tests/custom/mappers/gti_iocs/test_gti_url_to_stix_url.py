@@ -225,7 +225,7 @@ def url_with_all_data() -> GTIURLData:
 @pytest.fixture
 def url_without_attributes() -> GTIURLData:
     """Fixture for URL data without attributes."""
-    return GTIURLDataFactory.build(id="https://localhost", attributes=None)
+    return GTIURLDataFactory.build(id="https://fake", attributes=None)
 
 
 @pytest.fixture
