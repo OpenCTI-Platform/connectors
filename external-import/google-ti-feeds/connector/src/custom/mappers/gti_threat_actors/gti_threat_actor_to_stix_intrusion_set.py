@@ -9,6 +9,9 @@ from connector.src.custom.models.gti.gti_threat_actor_model import (
 )
 from connector.src.stix.octi.models.intrusion_set_model import OctiIntrusionSetModel
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
+from connector.src.stix.v21.models.cdts.external_reference_model import (
+    ExternalReferenceModel,
+)
 from connector.src.stix.v21.models.ovs.attack_motivation_ov_enums import (
     AttackMotivationOV,
 )
@@ -67,6 +70,8 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             attributes
         )
 
+        external_references = self._build_external_references()
+
         name = attributes.name
         description = attributes.description
 
@@ -85,6 +90,9 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             labels=labels,
             created=created,
             modified=modified,
+            external_references=[
+                ref.model_dump(exclude_none=True) for ref in external_references
+            ],
         )
 
         return intrusion_set_model
@@ -269,3 +277,20 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             modified=modified,
             description=description,
         )
+
+    def _build_external_references(self) -> List[ExternalReferenceModel]:
+        """Build external references from Threat Actor attributes.
+
+        Returns:
+            list: External references
+
+        """
+        external_references = []
+        if self.threat_actor.id:
+            external_reference = ExternalReferenceModel(
+                source_name="Google Threat Intelligence Platform",
+                description="Google Threat Intelligence Report Link",
+                url=f"https://www.virustotal.com/gui/collection/{self.threat_actor.id}",
+            )
+            external_references.append(external_reference)
+        return external_references
