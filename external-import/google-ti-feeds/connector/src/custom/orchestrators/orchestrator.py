@@ -172,10 +172,10 @@ class Orchestrator:
             "reports",
             "attack_techniques",
             "vulnerabilities",
-            "domains",
-            "files",
-            "urls",
-            "ip_addresses",
+            #            "domains",
+            #            "files",
+            #            "urls",
+            #            "ip_addresses",
         ]
         try:
             async for gti_threat_actors in self.client_api.fetch_threat_actors(
