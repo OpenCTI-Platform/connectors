@@ -1,6 +1,7 @@
 """Connector to enrich IOCs with Recorded Future data"""
 
 import os
+from pathlib import Path
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -12,14 +13,16 @@ class RFEnrichmentConnector:
 
     def __init__(self):
         """Instantiate the connector with config variables"""
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        config_file_path = Path(__file__).parents[1].joinpath("config.yml")
         config = (
             yaml.load(open(config_file_path), Loader=yaml.FullLoader)
             if os.path.isfile(config_file_path)
             else {}
         )
+        # Hardcode connector's type - not configurable anymore
+        config["connector"] = config.get("connector", {})
+        config["connector"]["type"] = "INTERNAL_ENRICHMENT"
 
-        self.work_id = None
         self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
 
         self.token = get_config_variable(
@@ -41,11 +44,7 @@ class RFEnrichmentConnector:
             0,
         )
 
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
+        self.work_id = None
 
     @staticmethod
     def map_stix2_type_to_rf(entity_type):
@@ -142,9 +141,7 @@ class RFEnrichmentConnector:
             self.helper.log_info("Sending bundle...")
             indicator_bundle = indicator.to_json_bundle()
             if indicator_bundle:
-                bundles_sent = self.helper.send_stix2_bundle(
-                    indicator_bundle, update=self.update_existing_data
-                )
+                bundles_sent = self.helper.send_stix2_bundle(indicator_bundle)
                 return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
             else:
                 return "No Stix bundle(s) imported."
@@ -154,8 +151,3 @@ class RFEnrichmentConnector:
     def start(self):
         """Start the main loop"""
         self.helper.listen(message_callback=self._process_message)
-
-
-if __name__ == "__main__":
-    RF = RFEnrichmentConnector()
-    RF.start()
