@@ -108,17 +108,17 @@ class RFEnrichmentConnector:
 
         if not self.helper.check_max_tlp(tlp, self.max_tlp):
             msg = f"Do not send any data, TLP of the observable is ({tlp}), which is greater than MAX TLP: ({self.max_tlp})"
-            self.helper.log_warning(msg)
+            self.helper.connector_logger.warning(msg)
             return msg
 
         # Convert to RF types
         rf_type = self.map_stix2_type_to_rf(entity_type)
         if rf_type is None:
             message = f"Recorded Future enrichment does not support type {entity_type}"
-            self.helper.log_error(message)
+            self.helper.connector_logger.error(message)
             return [message]
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "enriching observable {} with ID {}".format(observable_value, observable_id)
         )
         rf_client = RFClient(self.token, self.helper, APP_VERSION)
@@ -138,7 +138,7 @@ class RFEnrichmentConnector:
                 evidenceDetails=data["risk"]["evidenceDetails"],
                 links=data["links"],
             )
-            self.helper.log_info("Sending bundle...")
+            self.helper.connector_logger.info("Sending bundle...")
             indicator_bundle = indicator.to_json_bundle()
             if indicator_bundle:
                 bundles_sent = self.helper.send_stix2_bundle(indicator_bundle)
