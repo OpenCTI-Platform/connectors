@@ -5,10 +5,25 @@ services:
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
+
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
       - "CONNECTOR_NAME=Microsoft Sentinel Intel"
+      - CONNECTOR_SCOPE=sentinel # MIME type or Stix Object - Not used
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+
       - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe # Azure Tenant ID
       - MICROSOFT_SENTINEL_INTEL_CLIENT_ID=ChangeMe # Azure App Client ID
       - MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET=ChangeMe # Azure App Client Secret
+      - MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID=ChangeMe
+      - MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME=ChangeMe # For deletion
+      - MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID=ChangeMe # For deletion
+#      - MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP=default # For deletion
+#      - "MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM=Opencti Stream Connector"
+#      - MICROSOFT_SENTINEL_INTEL_DELETE_EXTENSIONS=True
+#      - MICROSOFT_SENTINEL_INTEL_EXTRA_LABELS=label1,label2,...
+#      - MICROSOFT_SENTINEL_INTEL_WORKSPACE_API_VERSION=2024-02-01-preview
+#      - MICROSOFT_SENTINEL_INTEL_MANAGEMENT_API_VERSION=2025-03-01
     restart: unless-stopped

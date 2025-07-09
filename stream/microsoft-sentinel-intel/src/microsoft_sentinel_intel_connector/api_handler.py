@@ -1,24 +1,11 @@
 from datetime import datetime, timedelta
 
 import requests
-from pycti import OpenCTIConnectorHelper
+from azure.core.exceptions import AzureError
+from azure.identity import ClientSecretCredential, DefaultAzureCredential
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
-
-from .utils import (
-    NETWORK_ATTRIBUTES_LIST,
-    get_action,
-    get_description,
-    get_expiration_datetime,
-    get_hash_type,
-    get_hash_value,
-    get_ioc_type,
-    get_severity,
-    get_tags,
-    get_threat_type,
-    get_tlp_level,
-)
 
 
 class SentinelApiHandlerError(Exception):
@@ -41,57 +28,68 @@ class SentinelApiHandler:
         self.session = requests.Session()
         self.retries_builder()
         self._expiration_token_date = None
+        self.workspace_url = f"https://api.ti.sentinel.azure.com/workspaces/{self.config.workspace_id}/threat-intelligence-stix-objects:upload?api-version={self.config.workspace_api_version}"
+        self.management_url = f"https://management.azure.com/subscriptions/{self.config.subscription_id}/resourceGroups/{self.config.resource_group}/providers/Microsoft.OperationalInsights/workspaces/{self.config.workspace_name}/providers/Microsoft.SecurityInsights/threatIntelligence/main"
+        self.extra_labels = (
+            self.config.extra_labels.split(",") if self.config.extra_labels else None
+        )
 
-    def _get_authorization_header(self):
+    def _get_authorization_token(self):
         """
-        Get an OAuth access token and set it as Authorization header in headers.
+        Get an OAuth token using azure-identity SDK based.
         """
-        response_json = {}
+
+        if all(
+            {self.config.tenant_id, self.config.client_id, self.config.client_secret}
+        ):
+            credential = ClientSecretCredential(
+                self.config.tenant_id, self.config.client_id, self.config.client_secret
+            )
+        else:
+            credential = DefaultAzureCredential()
         try:
-            url = f"https://login.microsoftonline.com/{self.config.tenant_id}/oauth2/v2.0/token"
-            body = {
-                "client_id": self.config.client_id,
-                "client_secret": self.config.client_secret,
-                "grant_type": "client_credentials",
-                "scope": "https://graph.microsoft.com/.default",
-            }
-            response = requests.post(url, data=body)
-            response_json = response.json()
-            response.raise_for_status()
+            token = credential.get_token("https://management.azure.com/.default")
+            return {"access_token": token.token, "expires_on": token.expires_on}
+        except AzureError as e:
+            self.helper.connector_logger.error(
+                f"[ERROR] Azure Identity failed: {str(e)}"
+            )
+            raise
 
-            oauth_token = response_json["access_token"]
-            oauth_expired = float(response_json["expires_in"])  # time in seconds
-            self.session.headers.update({"Authorization": oauth_token})
+    def _update_authorization_header(self):
+        response = {}
+
+        token = self._get_authorization_token()
+        try:
+            oauth_token = token["access_token"]
+            oauth_expired = float(token["expires_on"])  # time in seconds
+            self.session.headers.update({"Authorization": f"Bearer {oauth_token}"})
             self._expiration_token_date = datetime.now() + timedelta(
                 seconds=int(oauth_expired * 0.9)
             )
         except (requests.exceptions.HTTPError, KeyError) as e:
-            error_description = response_json.get("error_description", "Unknown error")
-            error_message = (
-                f"[ERROR] Failed generating oauth token: {error_description}"
-            )
-            self.helper.connector_logger.error(
-                error_message, {"response": response_json}
-            )
+            error_description = response.get("error_description", "Unknown error")
+            error_message = f"[ERROR] Failed generating oauth token (managed identity): {error_description}"
+            self.helper.connector_logger.error(error_message, {"response": response})
             raise e
 
     def retries_builder(self) -> None:
         """
         Configures the session's retry strategy for API requests.
 
-        Sets up the session to retry requests upon encountering specific HTTP status codes (429) using
+        Sets up the session to retry requests upon encountering specific HTTP status codes (429 and 401) using
         exponential backoff. The retry mechanism will be applied for both HTTP and HTTPS requests.
         This function uses the `Retry` and `HTTPAdapter` classes from the `requests.adapters` module.
 
         - Retries up to 5 times with an increasing delay between attempts.
         """
-        retry_strategy = Retry(total=5, backoff_factor=2, status_forcelist=[429])
+        retry_strategy = Retry(total=5, backoff_factor=2, status_forcelist=[429, 401])
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("https://", adapter)
 
     def _send_request(self, method: str, url: str, **kwargs) -> dict | None:
         """
-        Send a request to Sentinel API.
+        Send a request to Sentinel API. Refresh auth token if it is expired
         :param method: Request HTTP method
         :param url: Request URL
         :param kwargs: Any arguments valid for session.requests() method
@@ -102,151 +100,91 @@ class SentinelApiHandler:
                 self._expiration_token_date is None
                 or datetime.now() > self._expiration_token_date
             ):
-                self._get_authorization_header()
+                self._update_authorization_header()
 
             response = self.session.request(method, url, **kwargs)
             response.raise_for_status()
 
             self.helper.connector_logger.debug(
                 "[API] HTTP Request to endpoint",
-                {"url_path": f"{method.upper()} {url}"},
+                {"url_path": f"{method.upper()} {url} {response.status_code}"},
             )
 
             if response.content:
-                return response.json()
+                res = response.json()
+                if errors := res.get("errors"):
+                    raise SentinelApiHandlerError(
+                        "[API] Error in response from Sentinel",
+                        {"url_path": f"{method.upper()} {url}", "errors": errors},
+                    )
 
         except (RetryError, HTTPError, Timeout, ConnectionError) as err:
             raise SentinelApiHandlerError(
-                "[API] An error occured during request",
-                {"url_path": f"{method.upper()} {url}"},
+                "[API] An error occurred during request",
+                {"url_path": f"{method.upper()} {url} {str(err)}"},
             ) from err
 
-    def _build_request_body(self, observable: dict) -> dict:
+    def _build_request_body(self, indicator: dict) -> dict:
         """
-        Build Sentinel POST/PATCH request's body from an observable.
-        :param observable: Observable to build body from
-        :return: Dict containing keys/values required for POST/PATCH requests on Sentinel.
-        """
-        body = {
-            "threatType": get_threat_type(observable),
-            "description": get_description(observable),
-            "tags": get_tags(observable),
-            "confidence": observable.get("confidence", 50),
-            "externalId": OpenCTIConnectorHelper.get_attribute_in_extension(
-                "id", observable
-            ),
-            "lastReportedDateTime": OpenCTIConnectorHelper.get_attribute_in_extension(
-                "updated_at", observable
-            ),
-            "expirationDateTime": get_expiration_datetime(
-                observable, int(self.config.expire_time)
-            ),
-            "action": self.config.action or get_action(observable),
-            "severity": get_severity(observable),
-            "tlpLevel": self.config.tlp_level or get_tlp_level(observable),
-            "passiveOnly": "true" if self.config.passive_only else "false",
-            "targetProduct": self.config.target_product,
-            "additionalInformation": OpenCTIConnectorHelper.get_attribute_in_extension(
-                "score", observable
-            ),
-        }
-        if (
-            observable["type"] in NETWORK_ATTRIBUTES_LIST
-            and observable["type"] == "email-addr"
-        ):
-            body["emailSenderAddress"] = observable.get("value", None)
-        elif observable["type"] in NETWORK_ATTRIBUTES_LIST:
-            ioc_type = get_ioc_type(observable)
-            body[ioc_type] = observable.get("value", None)
-        elif observable["type"] == "file":
-            body["fileHashType"] = get_hash_type(observable)
-            body["fileHashValue"] = get_hash_value(observable)
-        else:
-            body = {}
-        return body
+        Builds a request body dictionary by modifying the provided indicator.
 
-    def get_indicators(self) -> list[dict] | None:
-        """
-        Get Threat Intelligence Indicators from Sentinel.
-        :return: List of Threat Intelligence Indicators if request is successful, None otherwise
-        """
-        data = self._send_request(
-            "get", f"{self.config.base_url}{self.config.resource_path}"
-        )
-        return data["value"]
+        This function checks for the presence of configuration options like `delete_extensions`
+        and `extra_labels` and updates the indicator accordingly. It then creates a dictionary
+        containing the source system and the indicator as part of the request body.
 
-    def search_indicators(self, observable: dict) -> list | None:
+        :params: indicator (dict): A dictionary representing a STIX indicator.
+        :return dict: A dictionary with the keys "sourcesystem" and "stixobjects",
+                  where "stixobjects" contains the modified indicator.
         """
-        Search a Threat Intelligence Indicator on Sentinel that corresponds to an OpenCTI observable.
-        :param opencti_id: OpenCTI ID of the observable or the indicator to get Threat Intelligence Indicator for
-        :return: Threat Intelligence Indicator if request is successful, None otherwise
-        """
-        opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", observable)
-        params = f"$filter=externalId eq '{opencti_id}'"
-        data = self._send_request(
-            "get", f"{self.config.base_url}{self.config.resource_path}", params=params
-        )
-        if len(data["value"]) == 0:
-            if (
-                observable["type"] in NETWORK_ATTRIBUTES_LIST
-                and observable["type"] == "email-addr"
-            ):
-                params = (
-                    f"$filter=emailSenderAddress eq '{observable.get("value", None)}'"
+
+        if self.config.delete_extensions:
+            del indicator["extensions"]
+
+        if self.extra_labels:
+            if "labels" in indicator:
+                indicator["labels"] = list(
+                    set(indicator["labels"].append(self.extra_labels))
                 )
-            elif observable["type"] in NETWORK_ATTRIBUTES_LIST:
-                ioc_type = get_ioc_type(observable)
-                params = f"$filter={ioc_type} eq '{observable.get("value", None)}'"
-            elif observable["type"] == "file":
-                params = f"$filter=fileHashValue eq '{get_hash_value(observable)}'"
             else:
-                return data["value"]
-            data = self._send_request(
-                "get",
-                f"{self.config.base_url}{self.config.resource_path}",
-                params=params,
-            )
-        return data["value"]
+                indicator["labels"] = self.extra_labels
 
-    def post_indicator(self, observable: dict) -> dict | None:
-        """
-        Create a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
-        :param observable: OpenCTI observable to create Threat Intelligence Indicator for
-        :return: Threat Intelligence Indicator if request is successful, None otherwise
-        """
-        request_body = self._build_request_body(observable)
-        if not request_body:
-            return None
-
-        data = self._send_request(
-            "post",
-            f"{self.config.base_url}{self.config.resource_path}",
-            json=request_body,
-        )
+        data = {"sourcesystem": self.config.source_system, "stixobjects": [indicator]}
         return data
 
-    def patch_indicator(self, observable: dict, sentinel_indicator_id: str) -> bool:
+    def post_indicator(self, indicator: dict) -> None:
         """
-        Update a Threat Intelligence Indicator on Sentinel from an OpenCTI observable.
-        :param observable: OpenCTI observable to update Threat Intelligence Indicator from
-        :param sentinel_indicator_id: identifier of the corresponding azure indicator
-        :return: True if request is successful, False otherwise
+        Create a Threat Intelligence Indicator on Sentinel from an OpenCTI indicator.
+        :param indicator: OpenCTI indicator
         """
-        self._send_request(
-            "patch",
-            f"{self.config.base_url}{self.config.resource_path}/{sentinel_indicator_id}",
-            json=self._build_request_body(observable),
-        )
-        return True
 
-    def delete_indicator(self, indicator_id: str) -> bool:
-        """
-        Delete a Threat Intelligence Indicator on Sentinel corresponding to an OpenCTI observable.
-        :param indicator_id: OpenCTI observable to delete Threat Intelligence Indicator for
-        :return: True if request is successful, False otherwise
-        """
+        request_body = self._build_request_body(indicator)
         self._send_request(
-            "delete",
-            f"{self.config.base_url}{self.config.resource_path}/{indicator_id}",
+            "post",
+            self.workspace_url,
+            json=request_body,
         )
-        return True
+
+    def delete_indicator(self, indicator_id: str):
+        """
+        Delete a Threat Intelligence Indicator on Sentinel corresponding to an OpenCTI indicator.
+        :param indicator_id: OpenCTI indicator to delete Threat Intelligence Indicator for
+        """
+        name = self._search_indicator_name(indicator_id)
+        url = f"{self.management_url}/indicators/{name}?api-version={self.config.management_api_version}"
+
+        self._send_request("delete", url)
+
+    def _search_indicator_name(self, indicator_id: str) -> str:
+        """
+        Search a Threat Intelligence Indicator name based on the Opencti ID
+        :param indicator_id: OpenCTI indicator to search Threat Intelligence Indicator for
+        """
+        url = f"{self.management_url}/queryIndicators?api-version={self.config.management_api_version}"
+        data = {"keywords": indicator_id}
+        resp = self._send_request("post", url, json=data)
+        if resp is not None and len(resp["value"]) == 1:
+            return resp["value"][0]["name"]
+        else:
+            self.helper.connector_logger.error(
+                f"[SEARCH] Indicator not found in Sentinel: {indicator_id}"
+            )
