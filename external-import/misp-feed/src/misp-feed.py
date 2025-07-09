@@ -1,15 +1,14 @@
 import json
 import os
 import re
-import ssl
 import sys
 import time
-import requests
 from datetime import datetime
 from typing import Optional
 
 import boto3
 import pytz
+import requests
 import stix2
 import yaml
 from dateutil.parser import parse
