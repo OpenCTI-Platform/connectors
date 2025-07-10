@@ -46,6 +46,25 @@ class RFClient:
                 enrichment["links"] = None
         return reason, enrichment
 
+    def get_vulnerability_enrichment(self, vulnerability_name: dict):
+        enrichment_fields = [
+            "commonNames",
+            "cvss",
+            "cvssv3",
+            "cvssv4",
+            "intelCard",
+            "lifecycleStage",
+        ]
+
+        url = f"{CONNECT_BASE}/vulnerability/{urllib.parse.quote(vulnerability_name, safe='')}"
+
+        try:
+            res = self.session.get(url, params={"fields": ",".join(enrichment_fields)})
+            return self._handle_response(res)
+        except requests.exceptions.RequestException as e:
+            LOGGER.error(f"Error making request: {e}")
+            return None, None
+
     def _enrich(self, entity, type_):
         """Enrich entity and get its risk score."""
         fields = "entity,risk"
