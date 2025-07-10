@@ -15,6 +15,7 @@ from .rf_client import RFClient
 from .rf_to_stix2 import (
     TTP,
     URL,
+    ConversionError,
     Domain,
     EnrichedIndicator,
     EnrichedVulnerability,
@@ -28,6 +29,7 @@ __all__ = [
     "RFClient",
     "TTP",
     "URL",
+    "ConversionError",
     "Domain",
     "EnrichedIndicator",
     "EnrichedVulnerability",
