@@ -1,4 +1,4 @@
-pycti==6.7.3
+pycti==6.7.4
 urllib3==2.5.0
 requests==2.32.3
 stix2==3.0.1

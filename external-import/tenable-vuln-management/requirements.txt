@@ -1,6 +1,6 @@
 pyTenable==1.5.3
 python-dateutil==2.9.0.post0
-pycti==6.7.3
+pycti==6.7.4
 validators==0.35.0
 pydantic>=2.8.2, <3.0.0
 stix2~=3.0.1

@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-microsoft-defender-intel-synchronizer:
-    image: opencti/connector-microsoft-defender-intel-synchronizer:6.7.3
+    image: opencti/connector-microsoft-defender-intel-synchronizer:6.7.4
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

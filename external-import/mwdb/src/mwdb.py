@@ -22,7 +22,7 @@ from pycti import (
 from stix2 import URL, Bundle, File, IPv4Address, Relationship
 from stix2.v21.vocab import HASHING_ALGORITHM_SHA_256
 
-__version__ = "6.7.3"
+__version__ = "6.7.4"
 BANNER = f"""
 
  ██████   ██████ █████   ███   █████ ██████████   ███████████

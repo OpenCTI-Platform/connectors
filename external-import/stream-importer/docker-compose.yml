@@ -1,6 +1,6 @@
 services:
   connector-stream-importer:
-    image: opencti/connector-stream-importer:6.7.3
+    image: opencti/connector-stream-importer:6.7.4
     environment:
       # Connector's definition parameters:
       - CONNECTOR_NAME=StreamImporterConnector

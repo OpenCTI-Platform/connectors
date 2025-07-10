@@ -1,7 +1,7 @@
 version: '3'
 services:
   spycloud:
-    image: opencti/connector-spycloud:6.7.3
+    image: opencti/connector-spycloud:6.7.4
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost

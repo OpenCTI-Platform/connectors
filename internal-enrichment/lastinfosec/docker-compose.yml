@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-lastinfosec-enrichment:
-    image: opencti/connector-lastinfosec-enrichment:6.7.3
+    image: opencti/connector-lastinfosec-enrichment:6.7.4
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-servicenow:
-    image: opencti/connector-servicenow:6.7.3
+    image: opencti/connector-servicenow:6.7.4
     environment:
       # OpenCTI parameters - REQUIRED
       - OPENCTI_URL=CHANGEME

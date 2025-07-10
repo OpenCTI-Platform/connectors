@@ -1,6 +1,6 @@
 services:
   connector-stream-exporter:
-    image: opencti/connector-stream-exporter:6.7.3
+    image: opencti/connector-stream-exporter:6.7.4
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
