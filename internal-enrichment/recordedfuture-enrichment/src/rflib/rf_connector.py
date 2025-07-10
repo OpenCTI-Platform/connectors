@@ -47,25 +47,26 @@ class RFEnrichmentConnector:
         self.work_id = None
 
     @staticmethod
-    def map_stix2_type_to_rf(entity_type):
+    def map_octi_type_to_rf_type(entity_type: str) -> str:
         """
-        Translates a STIX2 indicator type to its RF equivalent
+        Translates an OCTI entity type to its RF equivalent
 
         Args:
-            entity_type (str): A STIX2 observable type
+            entity_type (str): An OCTI entity type
 
-        Returns a Recorded Future IOC type as string
+        Returns:
+            Recorded Future object type as string
         """
 
-        if entity_type in ("IPv4-Addr", "IPv6-Addr"):
-            return "ip"
-        elif entity_type == "Domain-Name":
-            return "domain"
-        elif entity_type == "Url":
-            return "url"
-        if entity_type == "StixFile":
-            return "hash"
-        return None
+        match entity_type:
+            case "IPv4-Addr" | "IPv6-Addr":
+                return "ip"
+            case "Domain-Name":
+                return "domain"
+            case "Url":
+                return "url"
+            case "StixFile":
+                return "hash"
 
     @staticmethod
     def generate_pattern(ioc, data_type, algorithm=None):
@@ -83,6 +84,37 @@ class RFEnrichmentConnector:
         if data_type == "StixFile":
             return f"[file:hashes.'{algorithm.lower()}' = '{ioc}']"
         return f"[{data_type.lower()}:value = '{ioc}']"
+
+    def enrich_observable(self, rf_type: str, octi_entity: dict) -> EnrichedIndicator:
+        # Extract IOC from entity data
+        observable_value = octi_entity["observable_value"]
+        observable_id = octi_entity["standard_id"]
+
+        self.helper.connector_logger.info(
+            "enriching observable {} with ID {}".format(observable_value, observable_id)
+        )
+        rf_client = RFClient(self.token, self.helper, APP_VERSION)
+        reason, enrichment_data = rf_client.full_enrichment(observable_value, rf_type)
+
+        if enrichment_data:
+            create_indicator = (
+                enrichment_data["risk"]["score"] >= self.create_indicator_threshold
+            )
+            indicator = EnrichedIndicator(
+                type_=enrichment_data["entity"]["type"],
+                observable_id=observable_id,
+                opencti_helper=self.helper,
+                create_indicator=create_indicator,
+            )
+            indicator.from_json(
+                name=enrichment_data["entity"]["name"],
+                risk=enrichment_data["risk"]["score"],
+                evidenceDetails=enrichment_data["risk"]["evidenceDetails"],
+                links=enrichment_data["links"],
+            )
+            return indicator
+        else:
+            return f"No Stix bundle(s) imported, request message returned ({reason})."
 
     def _process_message(self, data):
         """
@@ -112,41 +144,22 @@ class RFEnrichmentConnector:
             return msg
 
         # Convert to RF types
-        rf_type = self.map_stix2_type_to_rf(entity_type)
+        rf_type = self.map_octi_type_to_rf_type(entity_type)
         if rf_type is None:
             message = f"Recorded Future enrichment does not support type {entity_type}"
             self.helper.connector_logger.error(message)
+            # Returned value should always be a string but a string is never displayed as an error in the UI.
+            # But a list is displayed as en arror because it raises a BAD_USER_INPUT on OpenCTI... 🥲
             return [message]
 
-        self.helper.connector_logger.info(
-            "enriching observable {} with ID {}".format(observable_value, observable_id)
-        )
-        rf_client = RFClient(self.token, self.helper, APP_VERSION)
-        reason, data = rf_client.full_enrichment(observable_value, rf_type)
-
-        if data:
-            create_indicator = data["risk"]["score"] >= self.create_indicator_threshold
-            indicator = EnrichedIndicator(
-                type_=data["entity"]["type"],
-                observable_id=observable_id,
-                opencti_helper=self.helper,
-                create_indicator=create_indicator,
-            )
-            indicator.from_json(
-                name=data["entity"]["name"],
-                risk=data["risk"]["score"],
-                evidenceDetails=data["risk"]["evidenceDetails"],
-                links=data["links"],
-            )
+        enriched_object = self.enrich_observable(rf_type, data=observable)
+        if isinstance(enriched_object, EnrichedIndicator):
             self.helper.connector_logger.info("Sending bundle...")
-            indicator_bundle = indicator.to_json_bundle()
-            if indicator_bundle:
-                bundles_sent = self.helper.send_stix2_bundle(indicator_bundle)
-                return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
-            else:
-                return "No Stix bundle(s) imported."
+            bundle = enriched_object.to_json_bundle()
+            bundles_sent = self.helper.send_stix2_bundle(bundle)
+            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         else:
-            return f"No Stix bundle(s) imported, request message returned ({reason})."
+            return "No Stix bundle(s) imported."
 
     def start(self):
         """Start the main loop"""
