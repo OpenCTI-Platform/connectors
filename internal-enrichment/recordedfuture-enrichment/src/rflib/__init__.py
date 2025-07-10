@@ -17,8 +17,22 @@ from .rf_to_stix2 import (
     URL,
     Domain,
     EnrichedIndicator,
+    EnrichedVulnerability,
     FileHash,
     Identity,
     IPAddress,
     Malware,
 )
+
+__all__ = [
+    "RFClient",
+    "TTP",
+    "URL",
+    "Domain",
+    "EnrichedIndicator",
+    "EnrichedVulnerability",
+    "FileHash",
+    "Identity",
+    "IPAddress",
+    "Malware",
+]
