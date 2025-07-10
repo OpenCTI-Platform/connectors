@@ -2,11 +2,10 @@ import json
 from typing import Any
 
 from azure.core import PipelineClient
-from azure.core.credentials import TokenCredential
 from azure.core.exceptions import HttpResponseError
 from azure.core.pipeline.policies import BearerTokenCredentialPolicy, RetryPolicy
 from azure.core.pipeline.transport._base import HttpRequest, HttpResponse
-from azure.identity import ClientSecretCredential, DefaultAzureCredential
+from azure.identity import ClientSecretCredential
 from microsoft_sentinel_intel.config import ConnectorSettings
 from microsoft_sentinel_intel.errors import ConnectorClientError
 from pycti import OpenCTIConnectorHelper
@@ -24,14 +23,14 @@ class ConnectorClient:
             f"/providers/Microsoft.SecurityInsights/threatIntelligence/main"
         )
 
-        credential = self._make_credential(
-            tenant_id=config.microsoft_sentinel_intel.tenant_id,
-            client_id=config.microsoft_sentinel_intel.client_id,
-            client_secret=config.microsoft_sentinel_intel.client_secret,
-        )
         policies = [
             BearerTokenCredentialPolicy(
-                credential, "https://management.azure.com/.default"
+                ClientSecretCredential(
+                    tenant_id=config.microsoft_sentinel_intel.tenant_id,
+                    client_id=config.microsoft_sentinel_intel.client_id,
+                    client_secret=config.microsoft_sentinel_intel.client_secret,
+                ),
+                "https://management.azure.com/.default",
             ),
             RetryPolicy(),
         ]
@@ -42,21 +41,6 @@ class ConnectorClient:
         self.management_client = PipelineClient(
             base_url="https://management.azure.com", policies=policies
         )
-
-    @staticmethod
-    def _make_credential(
-        tenant_id: str | None,
-        client_id: str | None,
-        client_secret: str | None,
-    ) -> TokenCredential:
-        if tenant_id and client_id and client_secret:
-            return ClientSecretCredential(
-                tenant_id=tenant_id,
-                client_id=client_id,
-                client_secret=client_secret,
-            )
-        # Fallback chain: Managed Identity → Azure CLI …
-        return DefaultAzureCredential(exclude_shared_token_cache_credential=True)
 
     @staticmethod
     def _send_request(client: PipelineClient, request: HttpRequest) -> HttpResponse:

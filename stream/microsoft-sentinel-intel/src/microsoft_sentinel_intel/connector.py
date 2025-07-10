@@ -35,15 +35,21 @@ class Connector:
 
         return stix_object
 
-    def _process_event(self, event_type: str, indicator: dict) -> None:
+    def _process_event(self, event_type: str, stix_object: dict) -> None:
+        """
+        This method can handle any type of event with the same logic (_prepare_stix_object)
+
+        The API used (upload_stix_objects) to upload the stix objects to Sentinel can handle
+          Indicators, AttackPatterns, Identity, ThreatActors and Relationships.
+        """
         match event_type:
             case "create" | "update":
                 self.client.upload_stix_objects(
-                    stix_objects=[self._prepare_stix_object(indicator)],
+                    stix_objects=[self._prepare_stix_object(stix_object)],
                     source_system=self.config.microsoft_sentinel_intel.source_system,
                 )
             case "delete":
-                self.client.delete_indicator_by_id(indicator["id"])
+                self.client.delete_indicator_by_id(stix_object["id"])
             case _:
                 raise ConnectorWarning(
                     message=f"Unsupported event type: {event_type}, Skipping..."
@@ -63,7 +69,7 @@ class Connector:
                 message=f"[{event.event.upper()}] Processing message",
                 meta={"data": data, "event": event.event},
             )
-            self._process_event(event_type=event.event, indicator=data)
+            self._process_event(event_type=event.event, stix_object=data)
 
             self.helper.connector_logger.info(
                 message=f"[{event.event.upper()}] Indicator processed",
