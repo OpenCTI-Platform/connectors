@@ -9,16 +9,7 @@ from pycti import OpenCTIConnectorHelper
 from .api_client import RansomwareAPIClient
 from .config import ConnectorSettings
 from .converter_to_stix import ConverterToStix
-from .utils import (
-    domain_extractor,
-    fetch_country_domain,
-    ip_fetcher,
-    is_domain,
-    is_ipv4,
-    is_ipv6,
-    safe_datetime,
-    threat_description_generator,
-)
+from .utils import domain_extractor, is_domain, safe_datetime
 
 ONE_DAY_IN_SECONDS = 86400
 
@@ -44,18 +35,14 @@ class RansomwareAPIConnector:
         self.author = self.converter_to_stix.author
         self.api_client = RansomwareAPIClient()
 
-        # Warning : interval is deprecated
-        interval = self.config.ransomware.interval
-        if interval:
-            self.interval = interval if re.match(r"^\d+[dhms]$", interval) else None
-        else:
-            self.interval = None
-
     def location_fetcher(self, country: str):
         """
         Fetches the location object from OpenCTI
-        :param country: country code format ISO 3166-1 alpha-2
-        :return: country stix id if retrieve else None
+
+        Param:
+            country: country code format ISO 3166-1 alpha-2
+        Return:
+            country stix id if retrieve else None
         """
         country_id = pycti.Location.generate_id(country, "Country")
         try:
@@ -74,8 +61,11 @@ class RansomwareAPIConnector:
         Fetch the sector object related to param by searching with conditions:
             - entity_type is "sector"
             - name is egual to sector string OR x_opencti_aliases is egual to sector string
-        :param sector: sector in string
-        :return: sector id or None
+
+        Param:
+            sector: sector in string
+        Return:
+            sector id or None
         """
         if sector == "":
             return None
@@ -121,26 +111,21 @@ class RansomwareAPIConnector:
 
         return None
 
-    # pylint:disable=too-many-branches,too-many-statements
-    def stix_object_generator(self, item, group_data):
+    def create_bundle_list(self, item, group_data):
         """
-        Generates STIX objects from the ransomware.live API data
-        :param item: dict of data from api call
-        :param group_data: results from ransomware api /group in json
-        :return:
+        Retrieve STIX objects from the ransomware.live API data and add it in bundle list
+
+        Params:
+            item: dict of data from api call
+            group_data: results from ransomware api /group in json
+        Return:
+            bundle_objects: list of stix2 objects
         """
         bundle_objects = []
 
         # Creating Victim object
-        post_title = item.get("victim")
-        victim_name, identity_class = (
-            (post_title, "organization")
-            if len(post_title) > 2
-            else ((post_title + ":<)"), "individual")
-        )
-        victim = self.converter_to_stix.create_identity(
-            victim_name=victim_name, identity_class=identity_class
-        )
+        victim_name = item.get("victim")
+        victim = self.converter_to_stix.process_victim(victim_name=victim_name)
         bundle_objects.append(victim)
 
         # Attack Date sets the start_time of the relationship between a threat actor or intrusion set and a victim.
@@ -155,83 +140,42 @@ class RansomwareAPIConnector:
 
         # Creating Threat Actor object
         threat_actor = None
-        if self.config.ransomware.create_threat_actor:
-            threat_actor_name = item.get("group")
-            threat_description = threat_description_generator(
-                threat_actor_name, group_data
-            )
-            threat_actor = self.converter_to_stix.create_threat_actor(
-                threat_actor_name=threat_actor_name,
-                threat_description=threat_description,
+        if self.config.connector.create_threat_actor:
+            threat_actor, target_relation = self.converter_to_stix.process_threat_actor(
+                threat_actor_name=item.get("group"),
+                group_data=group_data,
+                victim=victim,
+                attack_date_iso=attack_date_iso,
+                discovered_iso=discovered_iso,
             )
             bundle_objects.append(threat_actor)
-
-            target_relation = self.converter_to_stix.create_relationship(
-                source_ref=threat_actor.get("id"),
-                target_ref=victim.get("id"),
-                relationship_type="targets",
-                start_time=attack_date_iso,
-                created=discovered_iso,
-            )
             bundle_objects.append(target_relation)
 
         # Creating Intrusion Set object
-        try:
-            if item.get("group") in ["lockbit3", "lockbit2"]:
-                intrusion_description = threat_description_generator(
-                    item.get("lockbit3"), group_data
-                )
-                intrusion_set = self.converter_to_stix.create_intrusionset(
-                    name="lockbit",
-                    intrusion_description=intrusion_description,
-                )
-
-            else:
-                intrusion_set_name = item.get("group")
-                intrusion_description = threat_description_generator(
-                    item.get("group"), group_data
-                )
-                # Warning: IntrusionSet can have a name like "J".
-                # No error from Stix2 but in OCTI name must be at least 2 characters
-                intrusion_set = self.converter_to_stix.create_intrusionset(
-                    name=intrusion_set_name,
-                    intrusion_description=intrusion_description,
-                )
-
-            bundle_objects.append(intrusion_set)
-
-            relation_victim_intrusion = self.converter_to_stix.create_relationship(
-                source_ref=intrusion_set.get("id"),
-                target_ref=victim.get("id"),
-                relationship_type="targets",
-                start_time=attack_date_iso,
-                created=discovered_iso,
+        intrusion_set_name = item.get("group")
+        intrusion_set, relation_victim_intrusion = (
+            self.converter_to_stix.process_intrusion_set(
+                intrusion_set_name=intrusion_set_name,
+                group_data=group_data,
+                group_name_lockbit=item.get("lockbit3"),
+                victim=victim,
+                attack_date_iso=attack_date_iso,
+                discovered_iso=discovered_iso,
             )
-            bundle_objects.append(relation_victim_intrusion)
+        )
+        bundle_objects.append(intrusion_set)
+        bundle_objects.append(relation_victim_intrusion)
 
-            if self.config.ransomware.create_threat_actor:
-                relation_intrusion_threat_actor = (
-                    self.converter_to_stix.create_relationship(
-                        intrusion_set.get("id"), threat_actor.get("id"), "attributed-to"
-                    )
+        if self.config.connector.create_threat_actor:
+            relation_intrusion_threat_actor = (
+                self.converter_to_stix.create_relationship(
+                    intrusion_set.get("id"), threat_actor.get("id"), "attributed-to"
                 )
-                bundle_objects.append(relation_intrusion_threat_actor)
-        except stix2.exceptions.STIXError as e:
-            self.helper.connector_logger.error(
-                "Error while creating intrusion set object", {"error": e}
             )
+            bundle_objects.append(relation_intrusion_threat_actor)
 
         # Creating External References Object if they have external references
-        external_references = []
-
-        for field in ["screenshot", "website", "post_url"]:
-
-            if item.get(field):
-                external_reference = self.converter_to_stix.create_external_reference(
-                    url=item[field],
-                    description=f"This is the {field} for the ransomware campaign.",
-                )
-                external_references.append(external_reference)
+        external_references = self.converter_to_stix.process_external_references(item)
 
         # Creating Report object
         object_refs = [
@@ -239,13 +183,13 @@ class RansomwareAPIConnector:
             intrusion_set.get("id"),
             relation_victim_intrusion.get("id"),
         ]
-        if self.config.ransomware.create_threat_actor:
+        if self.config.connector.create_threat_actor:
             object_refs.append(target_relation.get("id"))
             object_refs.append(relation_intrusion_threat_actor.get("id"))
 
-        report_name = item.get("group") + " has published a new victim: " + post_title
-        report = self.converter_to_stix.create_report(
-            name=report_name,
+        report = self.converter_to_stix.process_report(
+            report_name=item.get("group"),
+            victim_name=victim_name,
             attack_date_iso=attack_date_iso,
             description=item.get("description"),
             object_refs=object_refs,
@@ -254,53 +198,36 @@ class RansomwareAPIConnector:
         )
 
         # Creating Sector object
-        try:
-            if item.get("activity"):
-                sector_id = self.sector_fetcher(item.get("activity"))
-                if sector_id:
-                    report.get("object_refs").append(sector_id)
+        if item.get("activity"):
+            sector_id = self.sector_fetcher(item.get("activity"))
+            if sector_id:
+                report.get("object_refs").append(sector_id)
 
-                    relation_sector_victim = self.converter_to_stix.create_relationship(
-                        source_ref=victim.get("id"),
-                        target_ref=sector_id,
-                        relationship_type="part-of",
-                    )
-                    bundle_objects.append(relation_sector_victim)
+                (
+                    relation_sector_victim,
+                    relation_sector_threat_actor,
+                    relation_intrusion_sector,
+                ) = self.converter_to_stix.process_sector(
+                    victim=victim,
+                    create_threat_actor=self.config.connector.create_threat_actor,
+                    intrusion_set=intrusion_set,
+                    threat_actor=threat_actor,
+                    sector_id=sector_id,
+                    attack_date_iso=attack_date_iso,
+                    discovered_iso=discovered_iso,
+                )
 
-                    if self.config.ransomware.create_threat_actor:
-                        relation_sector_threat_actor = (
-                            self.converter_to_stix.create_relationship(
-                                threat_actor.get("id"),
-                                sector_id,
-                                "targets",
-                                attack_date_iso,
-                                discovered_iso,
-                            )
-                        )
-                        bundle_objects.append(relation_sector_threat_actor)
-                        report.get("object_refs").append(
-                            relation_sector_threat_actor.get("id")
-                        )
+                bundle_objects.append(relation_sector_victim)
 
-                    report.get("object_refs").append(relation_sector_victim.get("id"))
-
-                    relation_intrusion_sector = (
-                        self.converter_to_stix.create_relationship(
-                            intrusion_set.get("id"),
-                            sector_id,
-                            "targets",
-                            attack_date_iso,
-                            discovered_iso,
-                        )
-                    )
-                    bundle_objects.append(relation_intrusion_sector)
+                if self.config.connector.create_threat_actor:
+                    bundle_objects.append(relation_sector_threat_actor)
                     report.get("object_refs").append(
-                        relation_intrusion_sector.get("id")
+                        relation_sector_threat_actor.get("id")
                     )
-        except Exception as e:
-            self.helper.connector_logger.error(
-                "Error while creating Sector object", {"error": e}
-            )
+
+                report.get("object_refs").append(relation_sector_victim.get("id"))
+                bundle_objects.append(relation_intrusion_sector)
+                report.get("object_refs").append(relation_intrusion_sector.get("id"))
 
         domain_name = None
 
@@ -321,33 +248,16 @@ class RansomwareAPIConnector:
 
         # Create domain object
         if domain_name:
-            description = fetch_country_domain(domain_name)
-
-            domain = self.converter_to_stix.create_domain(
-                domain_name=domain_name, description=description
+            domain, relation_victim_domain, ip_object, relation_domain_ip = (
+                self.converter_to_stix.process_domain(
+                    domain_name=domain_name, victim=victim
+                )
             )
+
             bundle_objects.append(domain)
-
-            relation_victim_domain = self.converter_to_stix.create_relationship(
-                domain.get("id"), victim.get("id"), "belongs-to"
-            )
             bundle_objects.append(relation_victim_domain)
 
-            # Fetching IP address of the domain
-            resolved_ip = ip_fetcher(domain_name)
-            if is_ipv4(resolved_ip):
-                ip_object = self.converter_to_stix.create_ipv4(resolved_ip)
-            elif is_ipv6(resolved_ip):
-                ip_object = self.converter_to_stix.create_ipv6(resolved_ip)
-            else:
-                ip_object = None
-
             if ip_object and ip_object.get("id"):
-                relation_domain_ip = self.converter_to_stix.create_relationship(
-                    source_ref=domain.get("id"),
-                    target_ref=ip_object.get("id"),
-                    relationship_type="resolves-to",
-                )
                 bundle_objects.append(ip_object)
                 bundle_objects.append(relation_domain_ip)
                 report.get("object_refs").append(ip_object.get("id"))
@@ -358,44 +268,33 @@ class RansomwareAPIConnector:
 
         # Creating Location object
         if item.get("country") and len(item.get("country", "Four")) < 4:
-
             country_name = item.get("country")
             country_stix_id = self.location_fetcher(country_name)
 
-            location = self.converter_to_stix.create_location(
-                country_stix_id=country_stix_id, country_name=country_name
+            (
+                location,
+                location_relation,
+                relation_intrusion_location,
+                relation_threat_actor_location,
+            ) = self.converter_to_stix.process_location(
+                country_name=country_name,
+                victim=victim,
+                intrusion_set=intrusion_set,
+                create_threat_actor=self.config.connector.create_threat_actor,
+                threat_actor=threat_actor,
+                country_stix_id=country_stix_id,
+                attack_date_iso=attack_date_iso,
+                discovered_iso=discovered_iso,
             )
 
             # If country not yet available, add it in the bundle_objects for creation
             if country_stix_id is None:
                 bundle_objects.append(location)
 
-            location_relation = self.converter_to_stix.create_relationship(
-                source_ref=victim.get("id"),
-                target_ref=location.get("id"),
-                relationship_type="located-at",
-            )
             bundle_objects.append(location_relation)
-
-            relation_intrusion_location = self.converter_to_stix.create_relationship(
-                source_ref=intrusion_set.get("id"),
-                target_ref=location.get("id"),
-                relationship_type="targets",
-                start_time=attack_date_iso,
-                created=discovered_iso,
-            )
             bundle_objects.append(relation_intrusion_location)
 
-            if self.config.ransomware.create_threat_actor:
-                relation_threat_actor_location = (
-                    self.converter_to_stix.create_relationship(
-                        source_ref=threat_actor.get("id"),
-                        target_ref=location.get("id"),
-                        relationship_type="targets",
-                        start_time=attack_date_iso,
-                        created=discovered_iso,
-                    )
-                )
+            if self.config.connector.create_threat_actor:
                 bundle_objects.append(relation_threat_actor_location)
                 report.get("object_refs").append(
                     relation_threat_actor_location.get("id")
@@ -414,17 +313,14 @@ class RansomwareAPIConnector:
         return bundle_objects
 
     def collect_historic_intelligence(self):
-        """
-        Collects historic intelligence from ransomware.live
-        :return:
-        """
+        """Collects historic intelligence from ransomware.live"""
         # fetching group information
         group_data = self.api_client.get_feed("groups")
 
         # Checking if the historic year is less than 2020 as there is no data past 2020
         year = (
-            self.config.ransomware.history_start_year
-            if self.config.ransomware.history_start_year >= 2020
+            self.config.connector.history_start_year
+            if self.config.connector.history_start_year >= 2020
             else 2020
         )
 
@@ -441,7 +337,9 @@ class RansomwareAPIConnector:
 
                 for item in response_json:
 
-                    bundle_list = self.stix_object_generator(item, group_data)
+                    bundle_list = self.create_bundle_list(
+                        item=item, group_data=group_data
+                    )
 
                     if bundle_list:
                         # Add Author object
@@ -481,9 +379,7 @@ class RansomwareAPIConnector:
             ).isoformat(timespec="seconds")
 
     def collect_intelligence(self):
-        """
-        Collects intelligence from the last 24 on ransomware.live
-        """
+        """Collects intelligence from the last 24 on ransomware.live"""
         # fetching group information
         group_data = self.api_client.get_feed("groups")
 
@@ -521,8 +417,9 @@ class RansomwareAPIConnector:
 
             if time_diff < ONE_DAY_IN_SECONDS:
 
-                bundle_list = self.stix_object_generator(
-                    item, group_data
+                bundle_list = self.create_bundle_list(
+                    item=item,
+                    group_data=group_data,
                 )  # calling the stix_object_generator method to create stix objects
 
                 if bundle_list:
@@ -568,10 +465,7 @@ class RansomwareAPIConnector:
             ).isoformat(timespec="seconds")
 
     def process_message(self) -> None:
-        """
-        Connector main process to collect intelligence
-        :return: None
-        """
+        """Connector main process to collect intelligence"""
         # Main procedure
         self.helper.connector_logger.info(
             "Starting connector...", {"connector_name": self.helper.connect_name}
@@ -616,7 +510,7 @@ class RansomwareAPIConnector:
 
             # Perform the collect of intelligence
             try:
-                if not self.last_run and self.config.ransomware.pull_history:
+                if not self.last_run and self.config.connector.pull_history:
                     self.collect_historic_intelligence()
                 else:
                     self.collect_intelligence()
@@ -662,14 +556,24 @@ class RansomwareAPIConnector:
             self.work_id = None
 
     def run(self):
+        """Run the main process encapsulated in a scheduler"""
         if self.config.connector.duration_period:
             self.helper.schedule_iso(
                 message_callback=self.process_message,
                 duration_period=self.config.connector.duration_period,
             )
         else:
+            # Warning : run_every is deprecated
+            self.helper.connector_logger.warning(
+                "[Warning] 'run_every' is deprecated. Please use 'duration_period' instead"
+            )
+            run_every = self.config.connector.run_every
+            if run_every:
+                run_every = run_every if re.match(r"^\d+[dhms]$", run_every) else None
+            else:
+                run_every = None
             self.helper.schedule_unit(
                 message_callback=self.process_message,
-                duration_period=self.interval,
+                duration_period=run_every,
                 time_unit=self.helper.TimeUnit.MINUTES,
             )

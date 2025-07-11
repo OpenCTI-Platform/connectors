@@ -10,6 +10,32 @@ from pycti import (
     ThreatActorGroup,
 )
 
+from .utils import (
+    fetch_country_domain,
+    ip_fetcher,
+    is_ipv4,
+    is_ipv6,
+    threat_description_generator,
+)
+
+
+def handle_stix2_error(decorated_function):
+    """
+    Decorate ConverterToStix instance method to handle STIX 2.1 exceptions.
+    In case of an exception, log the error and return None.
+    :param decorated_function: Method to decorate
+    :return: Decorated method
+    """
+
+    def decorator(self, *args, **kwargs):
+        try:
+            return decorated_function(self, *args, **kwargs)
+        except stix2.exceptions.STIXError as e:
+            self.helper.connector_logger.error(str(e))
+            return None
+
+    return decorator
+
 
 class ConverterToStix:
     """
@@ -26,7 +52,9 @@ class ConverterToStix:
     def create_author(self) -> dict:
         """
         Create STIX 2.1 Identity object representing the author of STIX objects
-        :return: Author Identity in STIX 2.1 format
+
+        Return:
+            Author Identity in STIX 2.1 format
         """
         author = stix2.Identity(
             id=Identity.generate_id(
@@ -43,12 +71,15 @@ class ConverterToStix:
 
         return author
 
+    @handle_stix2_error
     def create_domain(self, domain_name: str, description="-"):
         """
         Create a STIX object for a domain
-        :param domain_name: name of the domain in string
-        :param description: description of the domain in string or "-"
-        :return: DomainName in STIX 2.1 format
+        Params:
+            domain_name: name of the domain in string
+            description: description of the domain in string or "-"
+        Return:
+            DomainName in STIX 2.1 format
         """
         domain = stix2.DomainName(
             value=domain_name,
@@ -61,12 +92,16 @@ class ConverterToStix:
         )
         return domain
 
+    @handle_stix2_error
     def create_external_reference(self, url: str, description: str):
         """
         Create a STIX object for an ExternalReference
-        :param url: url of the external refenrence in string
-        :param description: description of the external reference in string
-        :return: ExternalReference in STIX 2.1 format
+
+        Params:
+            url: url of the external refenrence in string
+            description: description of the external reference in string
+        Return:
+            ExternalReference in STIX 2.1 format
         """
         external_reference = stix2.ExternalReference(
             source_name="ransomware.live",
@@ -75,12 +110,16 @@ class ConverterToStix:
         )
         return external_reference
 
+    @handle_stix2_error
     def create_identity(self, victim_name: str, identity_class: str):
         """
         Create a STIX object for an Identity
-        :param victim_name: victim name in string
-        :param identity_class: "organization" or "individual" string
-        :return: Identity in STIX 2.1 format
+
+        Params:
+            victim_name: victim name in string
+            identity_class: "organization" or "individual" string
+        Return:
+            Identity in STIX 2.1 format
         """
         identity = stix2.Identity(
             id=Identity.generate_id(victim_name, identity_class),
@@ -92,11 +131,15 @@ class ConverterToStix:
         )
         return identity
 
+    @handle_stix2_error
     def create_ipv4(self, ip: str):
         """
         Create STIX 2.1 IPv4 Address object
-        :param ip: ip in string
-        :return: IPv4 Address in STIX 2.1 format
+
+        Param:
+            ip: ip in string
+        Return:
+            IPv4 Address in STIX 2.1 format
         """
         return stix2.IPv4Address(
             value=ip,
@@ -106,11 +149,15 @@ class ConverterToStix:
             allow_custom=True,
         )
 
+    @handle_stix2_error
     def create_ipv6(self, ip: str):
         """
         Create STIX 2.1 IPv6 Address object
-        :param ip: ip in string
-        :return: IPv6 Address in STIX 2.1 format
+
+        Param:
+            ip: ip in string
+        Return:
+            IPv6 Address in STIX 2.1 format
         """
         return stix2.IPv6Address(
             value=ip,
@@ -120,6 +167,7 @@ class ConverterToStix:
             allow_custom=True,
         )
 
+    @handle_stix2_error
     def create_intrusionset(
         self,
         name: str,
@@ -127,9 +175,12 @@ class ConverterToStix:
     ):
         """
         Create STIX 2.1 IntrusionSet object
-        :param name: name of the intrusion in string
-        :param intrusion_description: description in string
-        :return: IntrusionSet in STIX 2.1 format
+
+        Params:
+            name: name of the intrusion in string
+            intrusion_description: description in string
+        Return:
+            IntrusionSet in STIX 2.1 format
         """
         intrusionset = stix2.IntrusionSet(
             id=IntrusionSet.generate_id(name),
@@ -141,12 +192,16 @@ class ConverterToStix:
         )
         return intrusionset
 
+    @handle_stix2_error
     def create_location(self, country_stix_id: str, country_name: str):
         """
         Create STIX 2.1 Location object
-        :param country_stix_id: id of the country STIX2.1 object in string
-        :param country_name: description in string
-        :return: Location in STIX 2.1 format
+
+        Params:
+            country_stix_id: id of the country STIX2.1 object in string
+            country_name: description in string
+        Return:
+            Location in STIX 2.1 format
         """
         location = stix2.Location(
             id=country_stix_id or Location.generate_id(country_name, "Country"),
@@ -158,6 +213,7 @@ class ConverterToStix:
         )
         return location
 
+    @handle_stix2_error
     def create_relationship(
         self,
         source_ref: str,
@@ -168,12 +224,15 @@ class ConverterToStix:
     ) -> stix2.Relationship:
         """
         Create STIX2.1 Relationship object
-        :param source_ref: source id in string
-        :param target_ref: target id in string
-        :param relationship_type: relation type in string
-        :param start_time: attack start date in datetime (optional)
-        :param created: discovered date in datetime (optional)
-        :return: Relationship in STIX 2.1 format
+
+        Params:
+            source_ref: source id in string
+            target_ref: target id in string
+            relationship_type: relation type in string
+            start_time: attack start date in datetime (optional)
+            created: discovered date in datetime (optional)
+        Return:
+            Relationship in STIX 2.1 format
         """
         relation = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
@@ -191,6 +250,7 @@ class ConverterToStix:
         )
         return relation
 
+    @handle_stix2_error
     def create_report(
         self,
         name: str,
@@ -202,14 +262,17 @@ class ConverterToStix:
     ):
         """
         Create STIX2.1 Report object
-        :param name: name of report in string
-        :param attack_date_iso: attack date in datetime
-        :param description: description in string
-        :param object_refs: list of ids (victim, instrusionset, relationship victim-intrusionset.
-            Optional: target_relation and relation_intrusion_threat_actor ids)
-        :param discovered_iso: discovered datetime
-        :param external_references: list of STIX2.1 ExternalReference
-        :return: Report in STIX 2.1 format
+
+        Params:
+            name: name of report in string
+            attack_date_iso: attack date in datetime
+            description: description in string
+            object_refs: list of ids (victim, instrusionset, relationship victim-intrusionset.
+                        Optional: target_relation and relation_intrusion_threat_actor ids)
+            discovered_iso: discovered datetime
+            external_references: list of STIX2.1 ExternalReference
+        Return:
+            Report in STIX 2.1 format
         """
         report = stix2.Report(
             id=Report.generate_id(name, attack_date_iso),
@@ -225,6 +288,7 @@ class ConverterToStix:
         )
         return report
 
+    @handle_stix2_error
     def create_threat_actor(
         self,
         threat_actor_name: str,
@@ -232,9 +296,12 @@ class ConverterToStix:
     ):
         """
         Create STIX2.1 ThreatActor object
-        :param threat_actor_name: name of threat actor in string
-        :param threat_description: description in string
-        :return: ThreatActor in STIX 2.1 format
+
+        Params:
+            threat_actor_name: name of threat actor in string
+            threat_description: description in string
+        Return:
+            ThreatActor in STIX 2.1 format
         """
         threat_actor = stix2.ThreatActor(
             id=ThreatActorGroup.generate_id(threat_actor_name),
@@ -245,3 +312,328 @@ class ConverterToStix:
             object_marking_refs=[self.marking.get("id")],
         )
         return threat_actor
+
+    def process_domain(self, domain_name: str, victim: stix2.Identity):
+        """
+        Process domain to stix2 and create stix2 relationship linked
+
+        Params:
+            domain_name (str): name of the domain
+            victim (Identity): stix2 Identity object of victim
+        Returns:
+            domain: stix2 Domain object
+            relation_victim_domain: stix2 Relationship between victim and domain
+            ip_object: stix2 IPv4 or IPv6 linked to the domain name
+            relation_domain_ip: stix2 Relationship between domain and ip
+        """
+        description = fetch_country_domain(domain_name)
+
+        domain = self.create_domain(domain_name=domain_name, description=description)
+
+        relation_victim_domain = self.create_relationship(
+            domain.get("id"), victim.get("id"), "belongs-to"
+        )
+
+        # Fetching IP address of the domain
+        resolved_ip = ip_fetcher(domain_name)
+        if is_ipv4(resolved_ip):
+            ip_object = self.create_ipv4(resolved_ip)
+        elif is_ipv6(resolved_ip):
+            ip_object = self.create_ipv6(resolved_ip)
+        else:
+            ip_object = None
+
+        relation_domain_ip = None
+        if ip_object and ip_object.get("id"):
+            relation_domain_ip = self.create_relationship(
+                source_ref=domain.get("id"),
+                target_ref=ip_object.get("id"),
+                relationship_type="resolves-to",
+            )
+
+        return domain, relation_victim_domain, ip_object, relation_domain_ip
+
+    def process_external_references(self, item: dict):
+        """
+        Process external references to stix2
+
+        Params:
+            item (dict): dict of data from api call
+        Returns:
+            external_references: stix2 ExternalReference object
+        """
+        external_references = []
+
+        for field in ["screenshot", "website", "post_url"]:
+
+            if item.get(field):
+                external_reference = self.create_external_reference(
+                    url=item[field],
+                    description=f"This is the {field} for the ransomware campaign.",
+                )
+                external_references.append(external_reference)
+
+        return external_references
+
+    def process_intrusion_set(
+        self,
+        intrusion_set_name: str,
+        group_data: dict,
+        group_name_lockbit: str,
+        victim: stix2.Identity,
+        attack_date_iso: datetime = None,
+        discovered_iso: datetime = None,
+    ):
+        """
+        Process intrusion set to stix2 and create stix2 relationship linked
+
+        Params:
+            intrusion_set_name (str): name of the intrusion set
+            group_data (dict): result from ransomware api /group
+            group_name_lockbit (str): group name if intrusionset is lockbit type
+            victim (Identity): stix2 Identity of the victim
+            attack_date_iso (datetime): attack date in datetime
+            discovered_iso (datetime): discovered datetime
+        Returns:
+            intrusion_set: stix2 IntrusionSet object
+            relation_victim_intrusion: stix2 Relationship between victim and intrusionset
+        """
+        if intrusion_set_name in ["lockbit3", "lockbit2"]:
+            intrusion_description = threat_description_generator(
+                group_name_lockbit, group_data
+            )
+            intrusion_set = self.create_intrusionset(
+                name="lockbit",
+                intrusion_description=intrusion_description,
+            )
+
+        else:
+            intrusion_description = threat_description_generator(
+                intrusion_set_name, group_data
+            )
+            # Warning: IntrusionSet can have a name like "J".
+            # No error from Stix2 but in OCTI name must be at least 2 characters
+            intrusion_set = self.create_intrusionset(
+                name=intrusion_set_name,
+                intrusion_description=intrusion_description,
+            )
+
+        relation_victim_intrusion = self.create_relationship(
+            source_ref=intrusion_set.get("id"),
+            target_ref=victim.get("id"),
+            relationship_type="targets",
+            start_time=attack_date_iso,
+            created=discovered_iso,
+        )
+        return intrusion_set, relation_victim_intrusion
+
+    def process_location(
+        self,
+        country_name: str,
+        victim: stix2.Identity,
+        intrusion_set: stix2.IntrusionSet,
+        create_threat_actor: bool,
+        threat_actor: stix2.ThreatActor = None,
+        country_stix_id: str = None,
+        attack_date_iso: datetime = None,
+        discovered_iso: datetime = None,
+    ):
+        """
+        Process location to stix2 and create stix2 relationship linked
+
+        Params:
+            country_name (str): name of the country
+            victim (Identity): stix2 Identity of the victim
+            intrusion_set (IntrusionSet): stix2 IntrusionSet object
+            create_threat_actor (bool): env variable to create a Threat Actor object
+            threat_actor (ThreatActor): stix2 ThreatActor object
+            country_stix_id (str): Location id retrieve from country_name value
+            attack_date_iso (datetime): attack date in datetime
+            discovered_iso (datetime): discovered datetime
+        Returns:
+            location: stix2 Location object
+            location_relation: stix2 Relationship between location and victim
+            relation_intrusion_location: stix2 Relationship between location and intrusionset
+            relation_threat_actor_location: stix2 Relationship between location and threatactor
+        """
+        location = self.create_location(
+            country_stix_id=country_stix_id, country_name=country_name
+        )
+
+        location_relation = self.create_relationship(
+            source_ref=victim.get("id"),
+            target_ref=location.get("id"),
+            relationship_type="located-at",
+        )
+
+        relation_intrusion_location = self.create_relationship(
+            source_ref=intrusion_set.get("id"),
+            target_ref=location.get("id"),
+            relationship_type="targets",
+            start_time=attack_date_iso,
+            created=discovered_iso,
+        )
+
+        relation_threat_actor_location = None
+        if create_threat_actor:
+            relation_threat_actor_location = self.create_relationship(
+                source_ref=threat_actor.get("id"),
+                target_ref=location.get("id"),
+                relationship_type="targets",
+                start_time=attack_date_iso,
+                created=discovered_iso,
+            )
+        return (
+            location,
+            location_relation,
+            relation_intrusion_location,
+            relation_threat_actor_location,
+        )
+
+    def process_report(
+        self,
+        report_name: str,
+        victim_name: str,
+        description: str,
+        object_refs: list[str],
+        external_references: list[stix2.ExternalReference],
+        attack_date_iso: datetime = None,
+        discovered_iso: datetime = None,
+    ):
+        """
+        Process Report to stix2
+
+        Params:
+            report_name (str): name of the report
+            victim_name (str): name of the victim
+            description (str): description of the report
+            object_refs (list[str]): list of ids (victim, instrusionset, relationship victim-intrusionset.
+                                    Optional: target_relation and relation_intrusion_threat_actor ids)
+            attack_date_iso (datetime): attack date in datetime
+            discovered_iso (datetime): discovered datetime
+            external_references (list[ExternalReference]): list of stix2 ExternalReference objects
+        Returns:
+            report: stix2 Report object
+        """
+        report_name = report_name + " has published a new victim: " + victim_name
+        report = self.create_report(
+            name=report_name,
+            attack_date_iso=attack_date_iso,
+            description=description,
+            object_refs=object_refs,
+            discovered_iso=discovered_iso,
+            external_references=external_references,
+        )
+        return report
+
+    def process_sector(
+        self,
+        victim: stix2.Identity,
+        create_threat_actor: bool,
+        intrusion_set: stix2.IntrusionSet,
+        threat_actor: stix2.ThreatActor = None,
+        sector_id: str = None,
+        attack_date_iso: datetime = None,
+        discovered_iso: datetime = None,
+    ):
+        """
+        Create stix2 relationship linked to the given sector
+
+        Params:
+            victim (Identity): stix2 Identity object of victim
+            create_threat_actor (bool): env variable to create a Threat Actor object
+            intrusion_set (IntrusionSet): stix2 IntrusionSet object
+            threat_actor (ThreatActor): stix2 ThreatActor object or None
+            sector_id (str): Location id from sector activity or None
+            attack_date_iso (datetime): attack date in datetime
+            discovered_iso (datetime): discovered datetime
+        Returns:
+            relation_sector_victim: stix2 Relationship between sector and victim
+            relation_sector_threat_actor: stix2 Relationship between sector and threatactor or None
+            relation_intrusion_sector: stix2 Relationship between sector and intrusionset
+        """
+        relation_sector_victim = self.create_relationship(
+            source_ref=victim.get("id"),
+            target_ref=sector_id,
+            relationship_type="part-of",
+        )
+
+        relation_sector_threat_actor = None
+        if create_threat_actor:
+            relation_sector_threat_actor = self.create_relationship(
+                source_ref=threat_actor.get("id"),
+                target_ref=sector_id,
+                relationship_type="targets",
+                start_time=attack_date_iso,
+                created=discovered_iso,
+            )
+
+        relation_intrusion_sector = self.create_relationship(
+            intrusion_set.get("id"),
+            sector_id,
+            "targets",
+            attack_date_iso,
+            discovered_iso,
+        )
+
+        return (
+            relation_sector_victim,
+            relation_sector_threat_actor,
+            relation_intrusion_sector,
+        )
+
+    def process_threat_actor(
+        self,
+        threat_actor_name: str,
+        group_data: dict,
+        victim: stix2.Identity,
+        attack_date_iso: datetime = None,
+        discovered_iso: datetime = None,
+    ):
+        """
+        Process threat actor to stix2 and create stix2 relationship linked
+
+        Params:
+            threat_actor_name (str): name of the domain
+            group_data (dict): result from ransomware api /group
+            victim (Identity): stix2 Identity object of victim
+            attack_date_iso (datetime): attack date in datetime
+            discovered_iso (datetime): discovered datetime
+
+        Returns:
+            threat_actor: stix2 TreatActor object
+            target_relation: stix2 Relationship between threatactor and victim
+        """
+        threat_description = threat_description_generator(threat_actor_name, group_data)
+        threat_actor = self.create_threat_actor(
+            threat_actor_name=threat_actor_name,
+            threat_description=threat_description,
+        )
+
+        target_relation = self.create_relationship(
+            source_ref=threat_actor.get("id"),
+            target_ref=victim.get("id"),
+            relationship_type="targets",
+            start_time=attack_date_iso,
+            created=discovered_iso,
+        )
+        return threat_actor, target_relation
+
+    def process_victim(self, victim_name):
+        """
+        Process victim to stix2
+
+        Params:
+            victim_name (str): name of the victim
+        Returns:
+            domain: stix2 Identity object
+        """
+        victim_name, identity_class = (
+            (victim_name, "organization")
+            if len(victim_name) > 2
+            else ((victim_name + ":<)"), "individual")
+        )
+        victim = self.create_identity(
+            victim_name=victim_name, identity_class=identity_class
+        )
+        return victim
