@@ -5,7 +5,13 @@ from pathlib import Path
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import APP_VERSION, EnrichedIndicator, EnrichedVulnerability, RFClient
+from rflib import (
+    APP_VERSION,
+    EnrichedIndicator,
+    EnrichedVulnerability,
+    ConversionError,
+    RFClient,
+)
 
 
 class RFEnrichmentConnector:
@@ -150,47 +156,62 @@ class RFEnrichmentConnector:
         else:
             return f"No Stix bundle(s) imported, request message returned ({reason})."
 
-    def _process_message(self, data):
+    def _process_message(self, data: dict) -> str | list[str]:
         """
-        Listener that is triggered when someone enriches an Observable
-        in the OpenCTI platform
+        Listener that is triggered when someone enriches an Observable or a Vulnerability on OpenCTI.
+
+        Notes:
+            - In case of success, return a success message a string
+            - In case of error, return an error message **in a list**, e.g. ["An error occured"] (backward compatibility)
         """
 
-        enrichment_entity = data["enrichment_entity"]
+        try:
+            enrichment_entity = data["enrichment_entity"]
 
-        tlp = "TLP:CLEAR"
-        for marking_definition in enrichment_entity["objectMarking"]:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
+            tlp = "TLP:CLEAR"
+            for marking_definition in enrichment_entity["objectMarking"]:
+                if marking_definition["definition_type"] == "TLP":
+                    tlp = marking_definition["definition"]
 
-        if not self.helper.check_max_tlp(tlp, self.max_tlp):
-            msg = f"Do not send any data, TLP of the observable is ({tlp}), which is greater than MAX TLP: ({self.max_tlp})"
-            self.helper.connector_logger.warning(msg)
-            return msg
+            if not self.helper.check_max_tlp(tlp, self.max_tlp):
+                msg = f"Do not send any data, TLP of the observable is ({tlp}), which is greater than MAX TLP: ({self.max_tlp})"
+                self.helper.connector_logger.warning(msg)
+                return msg
 
-        entity_type = enrichment_entity["entity_type"]
+            entity_type = enrichment_entity["entity_type"]
 
-        enriched_object = None
-        if entity_type == "Vulnerability":
-            enriched_object = self.enrich_vulnerability(data=enrichment_entity)
-        elif rf_type := self.to_rf_type(entity_type):
-            enriched_object = self.enrich_observable(rf_type, data=enrichment_entity)
-        else:
-            message = f"Recorded Future enrichment does not support type {entity_type}"
-            self.helper.connector_logger.error(message)
-            # Returned value should always be a string but a string is never displayed as an error in the UI.
-            # But a list is displayed as en arror because it raises a BAD_USER_INPUT on OpenCTI... 🥲
-            return [message]
+            enriched_object = None
+            try:
+                if entity_type == "Vulnerability":
+                    enriched_object = self.enrich_vulnerability(enrichment_entity)
+                elif rf_type := self.to_rf_type(entity_type):
+                    enriched_object = self.enrich_observable(rf_type, enrichment_entity)
+                else:
+                    message = f"Recorded Future enrichment does not support type {entity_type}"
+                    self.helper.connector_logger.error(message)
+                    return [message]
+            except ConversionError as err:
+                self.helper.connector_logger.error(err)
+                return [repr(err)]
 
-        if isinstance(enriched_object, (EnrichedIndicator, EnrichedVulnerability)):
-            bundle = enriched_object.to_json_bundle()
-        else:
-            return "No Stix bundle(s) imported."
+            if isinstance(enriched_object, (EnrichedIndicator, EnrichedVulnerability)):
+                bundle = enriched_object.to_json_bundle()
+            else:
+                return "No Stix bundle(s) imported."
 
-        self.helper.connector_logger.info("Sending bundle...")
-        bundles_sent = self.helper.send_stix2_bundle(bundle)
+            self.helper.connector_logger.info("Sending bundle...")
+            bundles_sent = self.helper.send_stix2_bundle(bundle)
 
-        return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "An unexpected error occured", {"error": err}
+            )
+            return [
+                f"An unexpected error occured: {repr(err)}. "
+                "See connector's log for more details."
+            ]
 
     def start(self):
         """Start the main loop"""
