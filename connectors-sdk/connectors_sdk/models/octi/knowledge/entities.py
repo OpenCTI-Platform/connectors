@@ -1,13 +1,11 @@
 """Offer OpenCTI entities."""
 
-from typing import Literal, Optional
+from typing import Optional
 
 import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
 import stix2  # type: ignore[import-untyped]  # stix2 does not provide stubs
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from pydantic import Field
-
-# from connectors_sdk.models.octi._common import TLPMarking, ExternalReference
 
 
 @MODEL_REGISTRY.register
@@ -55,16 +53,19 @@ class Organization(BaseIdentifiedEntity):
     )
 
     def to_stix2_object(self) -> stix2.v21.Identity:
-        """Make stix object."""
-        # OpenCTI maps STIX Identity SDO to OCTI Organization entity based on `identity_class`.
-        # To create an Organization entity on OpenCTI, `identity_class` MUST be 'organization'.
-        _identity_class: Literal["organization"] = "organization"
+        """Make stix object.
+
+        Notes:
+            - OpenCTI maps STIX Identity SDO to OCTI Organization entity based on `identity_class`.
+            - To create an Organization entity on OpenCTI, `identity_class` MUST be 'organization'.
+        """
+        identity_class = "organization"
 
         return stix2.Identity(
             id=pycti.Identity.generate_id(
-                identity_class=_identity_class, name=self.name
+                identity_class=identity_class, name=self.name
             ),
-            identity_class=_identity_class,
+            identity_class=identity_class,
             name=self.name,
             description=self.description,
             contact_information=self.contact_information,
@@ -93,12 +94,83 @@ class Organization(BaseIdentifiedEntity):
         )
 
 
+@MODEL_REGISTRY.register
+class Sector(BaseIdentifiedEntity):
+    """Represents a Sector on OpenCTI."""
+
+    name: str = Field(
+        description="Name of the sector.",
+        min_length=1,
+    )
+    description: Optional[str] = Field(
+        description="Description of the sector.",
+        default=None,
+    )
+    sectors: Optional[list[str]] = Field(
+        description="The list of industry sectors that this Identity belongs to.",
+        default=None,
+    )
+    reliability: Optional[str] = Field(
+        None,
+        description="OpenCTI Reliability of the sector. By default, OpenCTI handles: "
+        "'A - Completely reliable', "
+        "'B - Usually reliable', "
+        "'C - Fairly reliable', "
+        "'D - Not usually reliable', "
+        "'E - Unreliable', "
+        "'F - Reliability cannot be judged'. "
+        "See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts",
+    )
+    aliases: Optional[list[str]] = Field(
+        description="Aliases of the sector.",
+        default=None,
+    )
+
+    def to_stix2_object(self) -> stix2.Identity:
+        """Make stix object.
+
+        Notes:
+            - OpenCTI maps STIX Identity SDO to OCTI Sector entity based on `identity_class`.
+            - To create a Sector entity on OpenCTI, `identity_class` MUST be 'class'.
+        """
+        identity_class = "class"
+
+        return stix2.Identity(
+            id=pycti.Identity.generate_id(
+                identity_class=identity_class, name=self.name
+            ),
+            identity_class=identity_class,
+            name=self.name,
+            description=self.description,
+            sectors=self.sectors,
+            external_references=[
+                external_reference.to_stix2_object()
+                for external_reference in self.external_references or []
+            ],
+            object_marking_refs=[marking.id for marking in self.markings or []],
+            created_by_ref=self.author.id if self.author else None,
+            custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
+                x_opencti_reliability=self.reliability,
+                x_opencti_aliases=self.aliases,
+            ),
+            # unused
+            created=None,
+            modified=None,
+            roles=None,
+            contact_information=None,
+            revoked=None,
+            labels=None,
+            confidence=None,
+            lang=None,
+            granular_markings=None,
+            extensions=None,
+        )
+
+
 # See https://docs.pydantic.dev/latest/errors/usage_errors/#class-not-fully-defined (consulted on 2025-06-10)
 MODEL_REGISTRY.rebuild_all()
 
-if (
-    __name__ == "__main__"
-):  # pragma: no cover  # Do not compute coverage on doctest examples
+if __name__ == "__main__":  # pragma: no cover  # Do not run coverage on doctest
     import doctest
 
     doctest.testmod()
