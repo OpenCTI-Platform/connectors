@@ -1,0 +1,19 @@
+version: '3'
+services:
+  connector-doppel:
+    image: doppel-connector:latest
+    environment:
+      - DOPPEL_API_KEY=changeMe
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=changeMe
+      - CONNECTOR_ID=changeMe
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Doppel Threat Intelligence
+      - CONNECTOR_SCOPE=doppel
+      - CONNECTOR_LOG_LEVEL=info
+      - UPDATE_EXISTING_DATA=true
+      - POLLING_INTERVAL=3600 
+      - HISTORICAL_POLLING_DAYS=30
+      - MAX_RETRIES=3
+      - RETRY_DELAY=30
+    restart: always
