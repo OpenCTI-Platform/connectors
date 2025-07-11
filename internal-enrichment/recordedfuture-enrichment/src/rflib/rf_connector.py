@@ -118,9 +118,9 @@ class RFEnrichmentConnector:
         else:
             return f"No Stix bundle(s) imported, request message returned ({reason})."
 
-    def enrich_vulnerability(self, data: dict) -> object:
-        vulnerability_id = data["standard_id"]
-        vulnerability_name = data["name"]
+    def enrich_vulnerability(self, octi_entity: dict) -> object:
+        vulnerability_id = octi_entity["standard_id"]
+        vulnerability_name = octi_entity["name"]
 
         self.helper.connector_logger.info(
             "enriching vulnerability {} with ID {}".format(
@@ -128,20 +128,23 @@ class RFEnrichmentConnector:
             )
         )
         rf_client = RFClient(self.token, self.helper, APP_VERSION)
-        reason, data = rf_client.get_vulnerability_enrichment(vulnerability_name)
+        reason, enrichment_data = rf_client.get_vulnerability_enrichment(
+            vulnerability_name
+        )
 
-        if data:
+        if enrichment_data:
             vulnerability = EnrichedVulnerability(
                 opencti_helper=self.helper,
-                vulnerability_name=vulnerability_name,
+                name=vulnerability_name,
+                description=octi_entity["description"],
             )
             vulnerability.from_json(
-                commonNames=data["commonNames"],
-                cvss=data["cvss"],
-                cvssv3=data["cvssv3"],
-                cvssv4=data["cvssv4"],
-                intelCard=data["intelCard"],
-                lifecycleStage=data["lifecycleStage"],
+                commonNames=enrichment_data["commonNames"],
+                cvss=enrichment_data["cvss"],
+                cvssv3=enrichment_data["cvssv3"],
+                cvssv4=enrichment_data["cvssv4"],
+                intelCard=enrichment_data["intelCard"],
+                lifecycleStage=enrichment_data["lifecycleStage"],
             )
             return vulnerability
         else:
