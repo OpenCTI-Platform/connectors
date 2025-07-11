@@ -116,6 +116,36 @@ class RFEnrichmentConnector:
         else:
             return f"No Stix bundle(s) imported, request message returned ({reason})."
 
+    def enrich_vulnerability(self, octi_entity: dict) -> object:
+        vulnerability_id = octi_entity["standard_id"]
+        vulnerability_name = octi_entity["name"]
+
+        self.helper.connector_logger.info(
+            "enriching vulnerability {} with ID {}".format(
+                vulnerability_name, vulnerability_id
+            )
+        )
+        rf_client = RFClient(self.token, self.helper, APP_VERSION)
+        reason, data = rf_client.get_vulnerability_enrichment(vulnerability_name)
+
+        if data:
+            vulnerability = EnrichedVulnerability(
+                name=vulnerability_name,
+                description=octi_entity["description"],
+                opencti_helper=self.helper,
+            )
+            vulnerability.from_json(
+                commonNames=data["commonNames"],
+                cvss=data["cvss"],
+                cvssv3=data["cvssv3"],
+                cvssv4=data["cvssv4"],
+                intelCard=data["intelCard"],
+                lifecycleStage=data["lifecycleStage"],
+            )
+            return vulnerability
+        else:
+            return f"No Stix bundle(s) imported, request message returned ({reason})."
+
     def _process_message(self, data):
         """
         Listener that is triggered when someone enriches an Observable
