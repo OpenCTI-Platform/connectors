@@ -179,7 +179,7 @@ class Indicator(RFStixEntity):
             allow_custom=True,
         )
 
-    def map_data(self, rf_indicator, tlp, risklist_related_entities):
+    def map_data(self, rf_indicator, risklist_related_entities):
         handled_related_entities_types = risklist_related_entities
         try:
             self.risk_score = int(rf_indicator["Risk"])
@@ -203,7 +203,7 @@ class Indicator(RFStixEntity):
                             type_ = rf_related_element["type"]
                             name_ = rf_related_element["name"]
                             related_element = ENTITY_TYPE_MAPPER[type_](
-                                name_, type_, self.author, tlp
+                                name_, type_, self.author, self.tlp
                             )
                             stix_objs = related_element.to_stix_objects()
                             self.related_entities.extend(stix_objs)
@@ -460,7 +460,7 @@ class IntrusionSet(RFStixEntity):
             object_marking_refs=self.tlp,
         )
 
-    def map_data(self, actor, tlp):
+    def map_data(self, actor):
         # Get related entities
         related_entities_links = actor["links"]
 
@@ -493,7 +493,7 @@ class IntrusionSet(RFStixEntity):
                                 and risk_attribute["value"] > RISK_SCORE_MIN
                             ):
                                 related_element = ENTITY_TYPE_MAPPER[_type](
-                                    _name, _type, self.author, tlp
+                                    _name, _type, self.author, self.tlp
                                 )
 
                                 related_element.risk_score = risk_attribute["value"]
@@ -518,7 +518,7 @@ class IntrusionSet(RFStixEntity):
                                 display_name = display_name[idx1 + len(sub1) : idx2]
 
                                 related_element = TTP(
-                                    _name, _type, self.author, tlp, display_name
+                                    _name, _type, self.author, self.tlp, display_name
                                 )
 
                                 stix_objs = related_element.to_stix_objects()
@@ -526,7 +526,7 @@ class IntrusionSet(RFStixEntity):
                         continue
                     else:
                         related_element = ENTITY_TYPE_MAPPER[_type](
-                            _name, _type, self.author, tlp
+                            _name, _type, self.author, self.tlp
                         )
                         stix_objs = related_element.to_stix_objects()
                         self.related_entities.extend(stix_objs)
@@ -635,7 +635,7 @@ class Malware(RFStixEntity):
                                 and risk_attribute["value"] > RISK_SCORE_MIN
                             ):
                                 related_element = ENTITY_TYPE_MAPPER[_type](
-                                    _name, _type, self.author, tlp
+                                    _name, _type, self.author, self.tlp
                                 )
 
                                 related_element.risk_score = risk_attribute["value"]
@@ -653,7 +653,7 @@ class Malware(RFStixEntity):
                                 and risk_attribute["value"] is True
                             ):
                                 related_element = IntrusionSet(
-                                    _name, _type, self.author, tlp
+                                    _name, _type, self.author, self.tlp
                                 )
                                 stix_objs = related_element.to_stix_objects()
                                 self.related_entities.extend(stix_objs)
@@ -662,7 +662,7 @@ class Malware(RFStixEntity):
                                 and risk_attribute["value"] is False
                             ):
                                 related_element = ENTITY_TYPE_MAPPER[_type](
-                                    _name, _type, self.author, tlp
+                                    _name, _type, self.author, self.tlp
                                 )
                                 stix_objs = related_element.to_stix_objects()
                                 self.related_entities.extend(stix_objs)
@@ -686,7 +686,7 @@ class Malware(RFStixEntity):
                                 display_name = display_name[idx1 + len(sub1) : idx2]
 
                                 related_element = TTP(
-                                    _name, _type, self.author, tlp, display_name
+                                    _name, _type, self.author, self.tlp, display_name
                                 )
 
                                 stix_objs = related_element.to_stix_objects()
@@ -694,7 +694,7 @@ class Malware(RFStixEntity):
                         continue
                     else:
                         related_element = ENTITY_TYPE_MAPPER[_type](
-                            _name, _type, self.author, tlp
+                            _name, _type, self.author, self.tlp
                         )
                         stix_objs = related_element.to_stix_objects()
                         self.related_entities.extend(stix_objs)
@@ -974,6 +974,7 @@ class StixNote:
         ta_to_intrusion_set=False,
         risk_as_score=False,
         risk_threshold=None,
+        tlp=stix2.TLP_RED
     ):
         self.author = self._create_author()
         self.name = None
@@ -989,7 +990,7 @@ class StixNote:
         self.ta_to_intrusion_set = ta_to_intrusion_set
         self.risk_as_score = risk_as_score
         self.risk_threshold = risk_threshold
-        self.tlp = stix2.TLP_RED
+        self.tlp = tlp
         self.rfapi = rfapi
         self.attachments = None
 
@@ -1012,7 +1013,7 @@ class StixNote:
             refs.append({"source_name": source_name, "url": external_url})
         return refs
 
-    def from_json(self, note, tlp):
+    def from_json(self, note):
         """Converts to STIX Bundle from JSON objects"""
         # TODO: catch errors in for loop here
         attr = note["attributes"]
@@ -1029,15 +1030,15 @@ class StixNote:
             type_ = entity["type"]
             name = entity["name"]
             if self.person_to_ta and type_ == "Person":
-                stix_objs = ThreatActor(name, type_, self.author, tlp).to_stix_objects()
+                stix_objs = ThreatActor(name, type_, self.author, self.tlp).to_stix_objects()
             elif entity["id"] in self.tas:
                 if self.ta_to_intrusion_set and type_ != "Person":
                     stix_objs = IntrusionSet(
-                        name, type_, self.author, tlp
+                        name, type_, self.author, self.tlp
                     ).to_stix_objects()
                 else:
                     stix_objs = ThreatActor(
-                        name, type_, self.author, tlp
+                        name, type_, self.author, self.tlp
                     ).to_stix_objects()
             elif type_ == "Source":
                 external_reference = {"source_name": name, "url": name}
@@ -1048,7 +1049,7 @@ class StixNote:
                 self.helper.connector_logger.warning(msg)
                 continue
             else:
-                rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, tlp)
+                rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, self.tlp)
                 if type_ in [
                     "IpAddress",
                     "InternetDomainName",
