@@ -13,11 +13,6 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-from reportimporter.constants import (
-    RESULT_FORMAT_CATEGORY,
-    RESULT_FORMAT_MATCH,
-    RESULT_FORMAT_TYPE,
-)
 from reportimporter.relations_allowed import (
     is_relation_allowed,
     load_allowed_relations,
@@ -28,12 +23,9 @@ from requests.exceptions import ConnectionError, HTTPError
 
 # ---------------------------------------------------------------------------
 # Helper aliases (typing)
-Text = str
-Category = str
-StixID = str
-StixObject = dict[str, object]
 
-Key = tuple[Text, Category]  # key for text_to_id / text_to_obj
+UUID = str  # Orion entity UUID
+UuidToStix = dict[UUID, str]  # quick lookup when building relations
 
 
 class ReportImporter:
@@ -172,7 +164,6 @@ class ReportImporter:
         try:
             response = requests.post(
                 url=self.web_service_url + "/extract_entities_relations",
-                params={"with_relations": "true"},
                 files={
                     "file": (data["file_id"], file_content_buffered, data["file_mime"])
                 },
@@ -195,8 +186,8 @@ class ReportImporter:
             return "No information extracted from report"
 
         # Step 3: Parse and build STIX entities / observables, and map text to STIX id (for relationship linking)
-        observables, entities, text_to_id, text_to_obj = self._process_parsing_results(
-            parsed, entity
+        observables, entities, uuid_to_stix, uuid_to_text = (
+            self._process_parsing_results(parsed, entity)
         )
         predicted_rels = parsed.get("relationships", [])
 
@@ -208,8 +199,8 @@ class ReportImporter:
             predicted_rels,
             bypass_validation,
             file_name,
-            text_to_id,
-            text_to_obj,
+            uuid_to_stix,
+            uuid_to_text,
         )
 
         # Build an end‐user summary
@@ -272,30 +263,39 @@ class ReportImporter:
 
     def _process_parsing_results(
         self, parsed: dict, context_entity: dict | None
-    ) -> tuple[list[dict], list[dict], dict[Key, StixID], dict[Key, StixObject]]:
-        """Build SDO / SCO lists **keeping one entry per (text, category)**.
+    ) -> tuple[list[dict], list[dict], UuidToStix, dict[str, str]]:
+        """Convert Model output to STIX objects and build lookup tables.
 
-        Convert the JSON output of the ML service into two lists:
-          - observables: STIX Cyber Observables (e.g., IPv4Address, DomainName, etc.)
-          - entities: STIX Domain Objects (e.g., Malware, Identity, etc.)
-        Also builds a text_to_id / text_to_obj mapping that use a (norm_text, category) tuple
-        as key, so the same text can map to several STIX objects.
+        The function iterates over ``parsed["metadata"]["span_based_entities"]`` and
+        creates **one** STIX object (observable *or* domain entity) for each unique
+        couple *(surface_string, label)*. Deduplication is performed on a
+        lower-cased key, so the first occurrence wins — this guarantees that offsets
+        returned by the web-service still match the object kept in STIX.
+
+        Besides returning the newly created objects, the function builds three
+        look-up maps used later when wiring relationships:
+
+            * **uuid_to_stix** Mapping **Orion UUID → STIX ID**.
+            * **uuid_to_text** Mapping **Orion UUID → original surface string**.
 
         Args:
-            parsed (dict): Json output of the ML service
-            context_entity (dict | None): Contextual entity (e.g., Report, Case, Threat Actor)
+            parsed (dict): Full JSON payload returned by the Import-Document-AI web-service.
+            context_entity (dict | None): Optional STIX object from OpenCTI used as import context
+                (e.g. an existing *Report* or *Incident*).
+                Markings / author are copied from it when present.
 
         Returns:
-            tuple[ list[dict], list[dict], dict[tuple[str, str], str], dict[tuple[str, str], dict] ]:
-                observables, entities,
-                text_to_id: {(normalized_text, stix_id): stix_id},
-                text_to_obj: {(normalized_text, stix_id): full_stix_object}
+            tuple[ list[dict], list[dict], dict[Key, StixID], dict[Key, StixObject],
+            UuidToStix, dict[str, str], ]:
+            Tuple with:
+
+                * **observables** (list[dict]): New SCOs (IPv4, domain-name…).
+                * **entities** (list[dict]): New SDOs (Malware, Vulnerability…).
+                * **uuid_to_stix** (dict): Orion UUID ➜ STIX ID.
+                * **uuid_to_text** (dict): Orion UUID ➜ surface string.
         """
         observables: list[dict] = []
         entities: list[dict] = []
-
-        text_to_id: dict[Key, StixID] = {}
-        text_to_obj: dict[Key, StixObject] = {}
 
         # Collect markings and author from the context entity, if any
         if context_entity is not None:
@@ -309,23 +309,22 @@ class ReportImporter:
             author = None
 
         # Iterate over entities/observables extracted by the ML model
-        for match in parsed.get("entities", []):
-            category: str = match[RESULT_FORMAT_CATEGORY]
-            txt: str | None = self._sanitise_name(match[RESULT_FORMAT_MATCH])
+        span_entities = parsed["metadata"]["span_based_entities"]
+        uuid_to_stix: UuidToStix = {}
+        uuid_to_text: dict[str, str] = {}
+
+        for match in span_entities:
+            category: str = match["label"]
+            txt: str | None = self._sanitise_name(match["text"])
             if not txt:
                 # text must be at least 2 characters in length
                 # Skip objects like "." or empty strings: they would break GraphQL
                 self.helper.connector_logger.debug(
-                    f"Skip object with invalid name: {match[RESULT_FORMAT_MATCH]!r}"
+                    f"Skip object with invalid name: {match["text"]!r}"
                 )
                 assert txt is not None
 
-            key: Key = (txt.lower(), category.lower())
-            if key in text_to_id:
-                # Already created => nothing else to do
-                continue
-
-            if match[RESULT_FORMAT_TYPE] == "entity":
+            if match["type"] == "entity":
                 # Create a STIX Domain Object (Malware, Identity, etc.)
                 stix_object = create_stix_object(
                     category,
@@ -358,16 +357,15 @@ class ReportImporter:
                         stix_object = stix_ttp
                 if stix_object:
                     entities.append(stix_object)
-                    if key not in text_to_id:
-                        # store full object
-                        text_to_obj[key] = stix_object
-                        text_to_id[key] = stix_object["id"]
+                    # store full object
+                    uuid_to_stix[match["id"]] = stix_object["id"]
+                    uuid_to_text[match["id"]] = txt
                 else:
                     self.helper.connector_logger.debug(
                         f"Unsupported entity category: {match}"
                     )
 
-            if match[RESULT_FORMAT_TYPE] == "observable":
+            if match["type"] == "observable":
                 # Create a STIX Cyber Observable (IPv4Address, DomainName, etc.)
                 stix_object = create_stix_object(
                     category,
@@ -380,15 +378,19 @@ class ReportImporter:
                 )
                 if stix_object:
                     observables.append(stix_object)
-                    if key not in text_to_id:
-                        text_to_obj[key] = stix_object
-                        text_to_id[key] = stix_object["id"]
+                    uuid_to_stix[match["id"]] = stix_object["id"]
+                    uuid_to_text[match["id"]] = txt
                 else:
                     self.helper.connector_logger.debug(
                         f"Unsupported observable category: {match}"
                     )
 
-        return observables, entities, text_to_id, text_to_obj
+        return (
+            observables,
+            entities,
+            uuid_to_stix,
+            uuid_to_text,
+        )
 
     def _convert_id(self, type, standard_id):
         if type == "Case-Incident":
@@ -415,34 +417,38 @@ class ReportImporter:
         predicted_rels: list,
         bypass_validation: bool,
         file_name: str,
-        text_to_id: dict[Key, StixID],
-        text_to_obj: dict[Key, StixObject],
+        uuid_to_stix: UuidToStix,
+        uuid_to_text: dict[str, str],
     ) -> dict:
-        """Build STIX bundle: includes observables, entities, and predicted relationships
-        (either linked to a context entity or wrapped in a new Report object).
+        """Create relationships, wrap in Report if needed, and push the bundle.
 
         Args:
-            entity (dict | None): A context STIX object (e.g., Report, Case, Threat Actor). If present,
-                parsed content is linked to this entity. If None, a new Report is created.
-            observables (list): A list of STIX Cyber Observables (e.g., IPv4, domain names).
-            entities (list): A list of STIX Domain Objects (e.g., attack patterns, malware).
-            predicted_rels (list): A list of predicted relationships (dicts with source/target text and relation type).
-            bypass_validation (bool): If True, skips OpenCTI bundle validation before import.
-            file_name (str): Name of the input file used for building the Report (if no context entity).
-            text_to_id (dict): Mapping of matched text spans to their corresponding STIX IDs.
+            entity (dict | None): Contextual STIX object coming from OpenCTI, or ``None`` when
+                the import should create a brand-new *Report*.
+            observables (list): STIX Cyber Observables (SCOs) created from the file.
+            entities (list): STIX Domain Objects (SDOs) created from the file.
+            predicted_rels (list): Raw relations predicted by Orion
+                (each item has ``from_id``, ``to_id`` and ``type``).
+            bypass_validation (bool): If *True*, the connector skips OpenCTI
+                GraphQL validation when sending the bundle.
+            file_name (str): Original file name (used for the generated Report bundle).
+            uuid_to_stix (UuidToStix): Map Orion UUID → STIX ID (used to resolve relations).
+            uuid_to_text (dict[str, str]): Map Orion UUID → surface string (for logging only).
 
         Raises:
-            ValueError: Raised if the context entity was expected but could not be found in OpenCTI.
+            ValueError: If the context *entity* cannot be fetched/exported.
 
         Returns:
-            dict: A dictionary containing the number of objects sent:
-                {
-                    "observables": int,     # Count of observables
-                    "entities": int,        # Count of STIX domain entities
-                    "relationships": int,   # Count of relationships
-                    "report": int,          # 1 if a report was created, 0 otherwise
-                    "total_sent": int       # Actual number of objects sent to OpenCTI
-                }
+            dict: Counters of what was finally sent to OpenCTI, e.g.::
+
+            {
+                "observables": 17,
+                "entities": 9,
+                "relationships": 6,
+                "report": 1,          # 0 if context entity was used
+                "total_sent": 33,
+                "skipped_rels": [ ... ]  # list of 5-tuples logged & skipped
+            }
         """
         # If no objects at all, return zeros
         if len(observables) == 0 and len(entities) == 0:
@@ -581,73 +587,45 @@ class ReportImporter:
         # 2. Relationships predicted by the ML model
         # Create relationships predicted by the ML model
         for rel in predicted_rels:
-            src_txt = (rel.get("source_text") or "").strip()
-            dst_txt = (rel.get("target_text") or "").strip()
-            rel_type = rel.get("relation_type")
 
-            if not src_txt or not dst_txt or not rel_type:
+            rel_type = rel.get("type")
+
+            src_id = uuid_to_stix.get(rel.get("from_id"))
+            tgt_id = uuid_to_stix.get(rel.get("to_id"))
+            src_txt = uuid_to_text.get(rel.get("from_id"), "<unknown>")
+            tgt_txt = uuid_to_text.get(rel.get("to_id"), "<unknown>")
+
+            if not src_id or not tgt_id or src_id == tgt_id or not rel_type:
                 self.helper.connector_logger.warning(
                     "Skipped relation (missing data): %s", rel
                 )
                 continue
 
-            # Gather *all* entities that share the same surface string
-            # (text is stored lower-cased in the key)
-            src_candidates = [k for k in text_to_id if k[0] == src_txt.lower()]
-            dst_candidates = [k for k in text_to_id if k[0] == dst_txt.lower()]
+            from_type = stix_lookup_type(
+                next(o for o in observables + entities if o["id"] == src_id)
+            )
+            to_type = stix_lookup_type(
+                next(o for o in observables + entities if o["id"] == tgt_id)
+            )
 
-            # If none found -> cannot build the relation
-            if not src_candidates or not dst_candidates:
-                continue
-
-            # Pick the *first* couple that passes OpenCTI validation
-            # ---------------------------------------------------------
-            match_found = False
-            for src_key in src_candidates:
-                for dst_key in dst_candidates:
-                    src_id = text_to_id[src_key]
-                    dst_id = text_to_id[dst_key]
-                    if src_id == dst_id:
-                        continue  # self-relation
-
-                    from_type = stix_lookup_type(text_to_obj[src_key])
-                    to_type = stix_lookup_type(text_to_obj[dst_key])
-
-                    if is_relation_allowed(
-                        self.allowed_relations, from_type, to_type, rel_type
-                    ):
-                        relationships.append(
-                            stix2.Relationship(
-                                id=StixCoreRelationship.generate_id(
-                                    rel_type, src_id, dst_id
-                                ),
-                                relationship_type=rel_type,
-                                source_ref=src_id,
-                                target_ref=dst_id,
-                                allow_custom=True,
-                            )
-                        )
-                        match_found = True
-                        break  # use first valid match
-                if match_found:
-                    break
-
-            if not match_found:
-                # Log *once* per unique (txt/category…) combination
-                sig = (
-                    src_txt,
-                    "/".join({k[1] for k in src_candidates}).upper() or "?",
-                    rel_type.lower(),
-                    dst_txt,
-                    "/".join({k[1] for k in dst_candidates}).upper() or "?",
-                )
-                if sig not in skipped_rels:
-                    self.helper.connector_logger.warning(
-                        f"Skipping incompatible relationship {rel_type} between "
-                        f"{sig[1]} and {sig[4]}:\n"
-                        f"  {src_txt}[{sig[1]}]  =>  {rel_type}  =>  {dst_txt}[{sig[4]}]"
+            if is_relation_allowed(
+                self.allowed_relations, from_type, to_type, rel_type
+            ):
+                relationships.append(
+                    stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(rel_type, src_id, tgt_id),
+                        relationship_type=rel_type,
+                        source_ref=src_id,
+                        target_ref=tgt_id,
+                        allow_custom=True,
                     )
-                skipped_rels.add(sig)
+                )
+            else:
+                self.helper.connector_logger.warning(
+                    f"Skipping incompatible relationship {rel_type} between "
+                    f"{src_txt} ({src_id}) and {tgt_txt} ({tgt_id})"
+                )
+                skipped_rels.add((src_txt, from_type, rel_type, tgt_txt, to_type))
 
         # Final relationships deduplication
         # Dedupe relationships before counting/report wrap
