@@ -11,9 +11,12 @@ from pydantic import TypeAdapter
 def threat_description_generator(group_name: str, group_data) -> str:
     """
     Retrieve description of a group name
-    :param group_name: group name in string
-    :param group_data: data json response
-    :return: description in string
+
+    Params:
+        group_name: group name in string
+        group_data: data json response
+    Return:
+        description in string
     """
     matching_items = [
         item for item in group_data if item.get("name", None) == group_name
@@ -35,8 +38,11 @@ def threat_description_generator(group_name: str, group_data) -> str:
 def fetch_country_domain(domain: str):
     """
     Fetches the whois information of a domain
-    :param domain: domain in string
-    :return: string description of the domain with country, registrar, creation and expiration dates
+
+    Param:
+        domain: domain in string
+    Return:
+        string description of the domain with country, registrar, creation and expiration dates
     """
     try:
         w = whois.whois(domain)
@@ -59,9 +65,12 @@ def safe_datetime(value: str | None) -> datetime | None:
     """Safely parses a string into a naive datetime object (without timezone).
     Returns None if the input is None or not a valid ISO 8601 datetime string.
     Can avoid errors where fields are missing or incorrectly formed.
-    :params value: The input string to validate and convert to datetime.
-    :returns: datetime | None : A naive datetime object if the input is valid, otherwise None.
-    :examples:
+
+    Param:
+        value: The input string to validate and convert to datetime.
+    Return:
+        datetime | None : A naive datetime object if the input is valid, otherwise None.
+    Examples:
         self.safe_datetime("2025-01-01 07:20:50.000000", "attack_date")
         > datetime.datetime(2025, 1, 1, 7, 20, 50, 0)
 
@@ -78,8 +87,11 @@ def ip_fetcher(domain: str):
     """
     Fetches the IP address of a domain
     (Maybe possibility to improve with ipaddress.ip_address(item.get("data")).version)
-    :param domain: domain in string
-    :return: IP of the given domain or None
+
+    Param:
+        domain: domain in string
+    Return:
+        IP of the given domain or None
     """
     params = {"name": domain, "type": "A"}
 
@@ -106,8 +118,11 @@ def ip_fetcher(domain: str):
 def is_ipv4(value: str) -> bool:
     """
     Determine whether the provided IP string is IPv4
-    :param value: ip value in string
-    :return: A boolean
+
+    Param:
+        value: ip value in string
+    Return:
+        A boolean
     """
     try:
         ipaddress.IPv4Address(value)
@@ -119,8 +134,11 @@ def is_ipv4(value: str) -> bool:
 def is_ipv6(value: str) -> bool:
     """
     Determine whether the provided IP string is IPv6
-    :param value: ip value in string
-    :return: A boolean
+
+    Param:
+        value: ip value in string
+    Return:
+        A boolean
     """
     try:
         ipaddress.IPv6Address(value)
@@ -132,8 +150,11 @@ def is_ipv6(value: str) -> bool:
 def is_domain(value: str) -> bool:
     """
     Valid domain name regex including internationalized domain name
-    :param value: domain in string
-    :return: A boolean
+
+    Param:
+        value: domain in string
+    Return:
+        A boolean
     """
     return validators.domain(value)
 
@@ -141,8 +162,11 @@ def is_domain(value: str) -> bool:
 def domain_extractor(url: str):
     """
     Extracts the domain from a URL
-    :param url: url in string
-    :return: domain from url or None
+
+    Param:
+        url: url in string
+    Return:
+        domain from url or None
     """
     if validators.domain(url):
         return url
