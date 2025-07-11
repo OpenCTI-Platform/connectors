@@ -87,30 +87,32 @@ class RFEnrichmentConnector:
             return f"[file:hashes.'{algorithm.lower()}' = '{ioc}']"
         return f"[{data_type.lower()}:value = '{ioc}']"
 
-    def enrich_observable(self, rf_type: str, data: dict) -> EnrichedIndicator:
+    def enrich_observable(self, rf_type: str, octi_entity: dict) -> EnrichedIndicator:
         # Extract IOC from entity data
-        observable_value = data["observable_value"]
-        observable_id = data["standard_id"]
+        observable_value = octi_entity["observable_value"]
+        observable_id = octi_entity["standard_id"]
 
         self.helper.connector_logger.info(
             "enriching observable {} with ID {}".format(observable_value, observable_id)
         )
         rf_client = RFClient(self.token, self.helper, APP_VERSION)
-        reason, data = rf_client.full_enrichment(observable_value, rf_type)
+        reason, enrichment_data = rf_client.full_enrichment(observable_value, rf_type)
 
-        if data:
-            create_indicator = data["risk"]["score"] >= self.create_indicator_threshold
+        if enrichment_data:
+            create_indicator = (
+                enrichment_data["risk"]["score"] >= self.create_indicator_threshold
+            )
             indicator = EnrichedIndicator(
-                type_=data["entity"]["type"],
+                type_=enrichment_data["entity"]["type"],
                 observable_id=observable_id,
                 opencti_helper=self.helper,
                 create_indicator=create_indicator,
             )
             indicator.from_json(
-                name=data["entity"]["name"],
-                risk=data["risk"]["score"],
-                evidenceDetails=data["risk"]["evidenceDetails"],
-                links=data["links"],
+                name=enrichment_data["entity"]["name"],
+                risk=enrichment_data["risk"]["score"],
+                evidenceDetails=enrichment_data["risk"]["evidenceDetails"],
+                links=enrichment_data["links"],
             )
             return indicator
         else:
