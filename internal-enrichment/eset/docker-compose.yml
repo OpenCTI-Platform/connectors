@@ -1,0 +1,20 @@
+version: '3'
+services:
+  connector-template:
+    image: opencti/eset-enrichment-connector:6.5.1
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGEME
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=ESET ETI Report Enrichment Connector
+      - CONNECTOR_SCOPE=report
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      # ESET Threat Intelligence platform API key and secret - REQUIRED
+      - ESET_API_KEY=CHANGEME
+      - ESET_API_SECRET=CHANGEME
+      - ESET_API_HOST=https://eti.eset.com/
+    restart: always
