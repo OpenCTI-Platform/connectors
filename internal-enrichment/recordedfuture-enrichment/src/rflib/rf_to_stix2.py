@@ -13,6 +13,7 @@ from datetime import datetime
 
 import pycti
 import stix2
+import stix2.exceptions
 
 from .rf_utils import validate_ip_or_cidr, validate_mitre_attack_pattern
 
@@ -673,14 +674,16 @@ class EnrichedIndicator:
 class EnrichedVulnerability:
     """Class for converting Vulnerability + risk score + links to OpenCTI bundle"""
 
-    def __init__(self, vulnerability_name, opencti_helper):
+    def __init__(self, name, opencti_helper, description):
         """
-        vulnerability_name (str): Name of the OpenCTI Vulnerability being enriched
+        name (str): Name of the OpenCTI Vulnerability being enriched
         opencti_helper (pycti.OpenCTIConnectorHelper): OpenCTI helper class
+        description (str): Original description of the OpenCTI vulnerability
         """
         self.helper = opencti_helper
         self.author = self._create_author()
-        self.vulnerability_name = vulnerability_name
+        self._vulnerability_name = name
+        self._vulnerability_description = description
 
     def _create_author(self):
         """Creates Recorded Future Author"""
@@ -701,95 +704,149 @@ class EnrichedVulnerability:
         lifecycleStage: str,
     ):
         """Creates STIX objects from enriched entity json"""
-        vulnerability_description = (
-            ""  # TODO: append CVSS sources to existing description
-        )
 
-        self.vulnerability = stix2.Vulnerability(
-            id=pycti.Vulnerability.generate_id(name=self.vulnerability_name),
-            name=self.vulnerability_name,
-            description=vulnerability_description,
-            labels=[lifecycleStage],
-            external_references=[
-                {
-                    "source_name": "RecordedFuture",
-                    "url": intelCard,
-                }
-            ],
-            created_by_ref=self.author.id if self.author else None,
-            custom_properties=dict(
-                x_opencti_aliases=commonNames,
-                # On OpenCTI, CVSS are v3 by default
-                x_opencti_cvss_base_score=cvssv3["score"],
-                x_opencti_cvss_base_severity=cvssv3["severity"],
-                x_opencti_cvss_attack_vector=cvssv3["attack_vector"],
-                x_opencti_cvss_integrity_impact=cvssv3["integrity_impact"],
-                x_opencti_cvss_availability_impact=cvssv3["availability_impact"],
-                x_opencti_cvss_confidentiality_impact=cvssv3["confidentiality_impact"],
-                # On RecordedFuture, CVSS are v2 by default
-                x_opencti_cvss2_base_score=cvss["score"],
-                x_opencti_cvss2_base_severity=cvss["severity"],
-                x_opencti_cvss2_attack_vector=cvss["attack_vector"],
-                x_opencti_cvss2_integrity_impact=cvss["integrity_impact"],
-                x_opencti_cvss2_availability_impact=cvss["availability_impact"],
-                x_opencti_cvss2_confidentiality_impact=cvss["confidentiality_impact"],
-                # CVSS v4
-                x_opencti_cvss4_base_score=cvssv4["score"],
-                x_opencti_cvss4_base_severity=cvssv4["severity"],
-                x_opencti_cvss4_attack_vector=cvssv4["attack_vector"],
-                x_opencti_cvss4_integrity_impact=cvssv4["integrity_impact"],
-                x_opencti_cvss4_availability_impact=cvssv4["availability_impact"],
-                x_opencti_cvss4_confidentiality_impact=cvssv4["confidentiality_impact"],
-            ),
-        )
+        vulnerability_description = self._vulnerability_description
+        for cvss_data in [cvss, cvssv3, cvssv4]:
+            cvss_source_name = cvss_data.get("source")
+            cvss_version = cvss_data.get("version", "")
+            if cvss_source_name:
+                source_description = f"CVSS {cvss_version} Source: {cvss_source_name}"
+                if source_description not in vulnerability_description:
+                    vulnerability_description += f"  \n{source_description}"
+
+        try:
+            self.vulnerability = stix2.Vulnerability(
+                id=pycti.Vulnerability.generate_id(name=self._vulnerability_name),
+                name=self._vulnerability_name,
+                description=vulnerability_description,
+                labels=[lifecycleStage],
+                external_references=[
+                    {
+                        "source_name": "RecordedFuture",
+                        "url": intelCard,
+                    }
+                ],
+                created_by_ref=self.author.id if self.author else None,
+                custom_properties=dict(
+                    x_opencti_aliases=commonNames,
+                    # On OpenCTI, CVSS are v3 by default
+                    x_opencti_cvss_vector_string=cvssv3.get("vectorString"),
+                    x_opencti_cvss_base_score=cvssv3.get("baseScore"),
+                    x_opencti_cvss_base_severity=cvssv3.get("baseSeverity"),
+                    x_opencti_cvss_attack_vector=cvssv3.get("attackVector"),
+                    x_opencti_cvss_attack_complexity=cvssv3.get("attackComplexity"),
+                    x_opencti_cvss_attack_requirements=cvssv3.get("attackRequirements"),
+                    x_opencti_cvss_privileges_required=cvssv3.get("privilegesRequired"),
+                    x_opencti_cvss_user_interaction=cvssv3.get("userInteraction"),
+                    x_opencti_cvss_exploit_maturity=cvssv3.get("exploitMaturity"),
+                    x_opencti_cvss_integrity_impact_v=cvssv3.get(
+                        "vulnerableSystemIntegrity"
+                    ),
+                    x_opencti_cvss_integrity_impact_s=cvssv3.get(
+                        "subsequentSystemIntegrity"
+                    ),
+                    x_opencti_cvss_availability_impact_v=cvssv3.get(
+                        "vulnerableSystemAvailability"
+                    ),
+                    x_opencti_cvss_availability_impact_s=cvssv3.get(
+                        "subsequentSystemAvailability"
+                    ),
+                    x_opencti_cvss_confidentiality_impact_v=cvssv3.get(
+                        "vulnerableSystemConfidentiality"
+                    ),
+                    x_opencti_cvss_confidentiality_impact_s=cvssv3.get(
+                        "subsequentSystemConfidentiality"
+                    ),
+                    # On RecordedFuture, CVSS are v2 by default
+                    x_opencti_cvss_v2_vector_string=cvss.get("vectorString"),
+                    x_opencti_cvss_v2_base_score=cvss.get("baseScore"),
+                    x_opencti_cvss_v2_base_severity=cvss.get("baseSeverity"),
+                    x_opencti_cvss_v2_attack_vector=cvss.get("attackVector"),
+                    x_opencti_cvss_v2_attack_complexity=cvss.get("attackComplexity"),
+                    x_opencti_cvss_v2_attack_requirements=cvss.get(
+                        "attackRequirements"
+                    ),
+                    x_opencti_cvss_v2_privileges_required=cvss.get(
+                        "privilegesRequired"
+                    ),
+                    x_opencti_cvss_v2_user_interaction=cvss.get("userInteraction"),
+                    x_opencti_cvss_v2_exploit_maturity=cvss.get("exploitMaturity"),
+                    x_opencti_cvss_v2_integrity_impact_v=cvss.get(
+                        "vulnerableSystemIntegrity"
+                    ),
+                    x_opencti_cvss_v2_integrity_impact_s=cvss.get(
+                        "subsequentSystemIntegrity"
+                    ),
+                    x_opencti_cvss_v2_availability_impact_v=cvss.get(
+                        "vulnerableSystemAvailability"
+                    ),
+                    x_opencti_cvss_v2_availability_impact_s=cvss.get(
+                        "subsequentSystemAvailability"
+                    ),
+                    x_opencti_cvss_v2_confidentiality_impact_v=cvss.get(
+                        "vulnerableSystemConfidentiality"
+                    ),
+                    x_opencti_cvss_v2_confidentiality_impact_s=cvss.get(
+                        "subsequentSystemConfidentiality"
+                    ),
+                    # CVSS v4
+                    x_opencti_cvss_v4_vector_string=cvssv4.get("vectorString"),
+                    x_opencti_cvss_v4_base_score=cvssv4.get("baseScore"),
+                    x_opencti_cvss_v4_base_severity=cvssv4.get("baseSeverity"),
+                    x_opencti_cvss_v4_attack_vector=cvssv4.get("attackVector"),
+                    x_opencti_cvss_v4_attack_complexity=cvssv4.get("attackComplexity"),
+                    x_opencti_cvss_v4_attack_requirements=cvssv4.get(
+                        "attackRequirements"
+                    ),
+                    x_opencti_cvss_v4_privileges_required=cvssv4.get(
+                        "privilegesRequired"
+                    ),
+                    x_opencti_cvss_v4_user_interaction=cvssv4.get("userInteraction"),
+                    x_opencti_cvss_v4_exploit_maturity=cvssv4.get("exploitMaturity"),
+                    x_opencti_cvss_v4_integrity_impact_v=cvssv4.get(
+                        "vulnerableSystemIntegrity"
+                    ),
+                    x_opencti_cvss_v4_integrity_impact_s=cvssv4.get(
+                        "subsequentSystemIntegrity"
+                    ),
+                    x_opencti_cvss_v4_availability_impact_v=cvssv4.get(
+                        "vulnerableSystemAvailability"
+                    ),
+                    x_opencti_cvss_v4_availability_impact_s=cvssv4.get(
+                        "subsequentSystemAvailability"
+                    ),
+                    x_opencti_cvss_v4_confidentiality_impact_v=cvssv4.get(
+                        "vulnerableSystemConfidentiality"
+                    ),
+                    x_opencti_cvss_v4_confidentiality_impact_s=cvssv4.get(
+                        "subsequentSystemConfidentiality"
+                    ),
+                ),
+            )
+        except stix2.exceptions.STIXError as err:
+            raise ConversionError(
+                "Error while converting RecordedFuture vulnerability to STIX"
+            ) from err
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
         self.helper.connector_logger.info("Return Stix Object(s).")
-        objects = [self.author]
-        # self.helper.connector_logger.debug("linked_sdos: {}".format(str(self.linked_sdos)))
-        for sdo in self.linked_sdos:
-            self.helper.connector_logger.debug(
-                "Creating relationship for {}".format(sdo)
-            )
-            if sdo:
-                objects.extend(self._create_relationships(sdo))
-        if self.linked_sdos:
-            objects.extend(self.linked_sdos)
-        if self.notes:
-            objects.extend(self.notes)
-        if self.chained_objects:
-            objects.extend(self.chained_objects)
-        return objects
+        return [self.author, self.vulnerability]
 
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
         self.helper.connector_logger.info("Return STIX objects as a Bundle.")
         stix_objects = self.to_stix_objects()
-        if isinstance(stix_objects, list) and len(stix_objects) > 0:
-            # Remove all None type from the list.
-            # Check for None and remove them, log a warning if None exists
-            filtered_list = []
-            none_found = False
-            for item in stix_objects:
-                if item is None:
-                    none_found = True
-                else:
-                    filtered_list.append(item)
-            if none_found:
-                self.helper.connector_logger.warning(
-                    "NoneType values found in the list and removed."
-                )
+        if stix_objects:
+            return stix2.Bundle(objects=stix_objects, allow_custom=True)
 
-            # If filtered list contains objects return a bundle.
-            if filtered_list:
-                return stix2.Bundle(objects=filtered_list, allow_custom=True)
         self.helper.connector_logger.warn("No Object(s) Returned.")
         return None
 
     def to_json_bundle(self):
         """Returns STIX Bundle as JSON"""
         stix_bundle = self.to_stix_bundle()
+
         self.helper.connector_logger.info("Convert to Stix Bundle and Serialize.")
         if stix_bundle and isinstance(stix_bundle, stix2.Bundle):
             return self.to_stix_bundle().serialize()
