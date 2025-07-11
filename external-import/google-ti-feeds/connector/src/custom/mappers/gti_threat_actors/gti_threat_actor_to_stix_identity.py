@@ -1,9 +1,9 @@
-"""Converts a GTI report's targeted industries to STIX Identity objects as sectors."""
+"""Converts a GTI threat actor's targeted industries to STIX Identity objects as sectors."""
 
 from typing import List, Optional
 
-from connector.src.custom.models.gti.gti_report_model import (
-    GTIReportData,
+from connector.src.custom.models.gti.gti_threat_actor_model import (
+    GTIThreatActorData,
     TargetedIndustry,
 )
 from connector.src.stix.octi.models.identity_sector_model import OctiIdentitySectorModel
@@ -15,39 +15,43 @@ from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
 from stix2.v21 import Identity  # type: ignore
 
 
-class GTIReportToSTIXSector(BaseMapper):
-    """Converts a GTI report's targeted industries to STIX Identity objects as sectors."""
+class GTIThreatActorToSTIXIdentity(BaseMapper):
+    """Converts a GTI Threat Actor's targeted industries to STIX Identity objects as sectors."""
 
     def __init__(
         self,
-        report: GTIReportData,
+        threat_actor: GTIThreatActorData,
         organization: OrganizationAuthor,
         tlp_marking: TLPMarking,
     ):
-        """Initialize the GTIReportToSTIXSector object.
+        """Initialize the GTIThreatActorToSTIXIdentity object.
 
         Args:
-            report (GTIReportData): The GTI report data to convert.
+            threat_actor (GTIThreatActorData): The GTI threat actor data to convert.
             organization (OrganizationAuthor): The organization identity object.
             tlp_marking (TLPMarking): The TLP marking definition.
 
         """
-        self.report = report
+        self.threat_actor = threat_actor
         self.organization = organization
         self.tlp_marking = tlp_marking
 
     def to_stix(self) -> List[Identity]:
-        """Convert the GTI report targeted industries to STIX Identity objects.
+        """Convert the GTI threat actor targeted industries to STIX Identity objects.
 
         Returns:
             List[Identity]: The list of STIX Identity objects representing sectors.
 
         """
         result: List[Identity] = []
-        if not hasattr(self.report, "attributes") or not self.report.attributes:
-            raise ValueError("Invalid report attributes")
 
-        targeted_industries = self.report.attributes.targeted_industries_tree
+        if (
+            not hasattr(self.threat_actor, "attributes")
+            or not self.threat_actor.attributes
+        ):
+            raise ValueError("Invalid threat actor attributes")
+
+        targeted_industries = self.threat_actor.attributes.targeted_industries_tree
         if not targeted_industries:
             return result
 
@@ -68,7 +72,7 @@ class GTIReportToSTIXSector(BaseMapper):
             Optional[Identity]: The STIX Identity object, or None if no valid industry group found.
 
         """
-        if not industry_data.industry_group:
+        if not industry_data.industry_group or not industry_data.industry_group.strip():
             return None
 
         return self._create_sector(industry_data)
@@ -92,6 +96,4 @@ class GTIReportToSTIXSector(BaseMapper):
             marking_ids=[self.tlp_marking.id],
         )
 
-        sector_stix = sector
-
-        return sector_stix
+        return sector

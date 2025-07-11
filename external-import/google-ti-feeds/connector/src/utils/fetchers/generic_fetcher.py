@@ -249,12 +249,12 @@ class GenericFetcher:
         """
         if entity_id:
             error_msg = f"Error fetching {self.config.display_name_singular} {entity_id}: {str(e)}"
-            self.logger.error(
+            self.logger.warning(
                 f"{LOG_PREFIX} Failed to fetch {self.config.entity_type} {entity_id} from {endpoint}: {str(e)}"
             )
         else:
             error_msg = f"Error fetching {self.config.display_name}: {str(e)}"
-            self.logger.error(
+            self.logger.warning(
                 f"{LOG_PREFIX} Failed to fetch {self.config.entity_type} from {endpoint}: {str(e)}"
             )
 
@@ -317,7 +317,7 @@ class GenericFetcher:
 
         except ValueError as e:
             error_msg = f"{LOG_PREFIX} Invalid endpoint parameters for {self.config.display_name}: {str(e)}"
-            self.logger.error(error_msg)
+            self.logger.warning(error_msg)
             raise self.config.create_exception(error_msg) from e
 
         try:

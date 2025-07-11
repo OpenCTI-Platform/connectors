@@ -57,20 +57,23 @@ class DummyConfig:
     def __init__(
         self,
         api_key: str,
-        import_start_date: str,
+        report_import_start_date: str,
         api_url: str,
         import_reports: bool,
         report_types: list[str],
-        origins: list[str],
+        report_origins: list[str],
         tlp_level: str,
     ):
         """Initialize the DummyConfig object."""
         self.api_key = api_key
-        self.import_start_date = import_start_date
+        self.report_import_start_date = report_import_start_date
+        self.threat_actor_import_start_date = "P1D"
         self.api_url = api_url
         self.import_reports = import_reports
+        self.import_threat_actors = True
         self.report_types = report_types
-        self.origins = origins
+        self.report_origins = report_origins
+        self.threat_actor_origins = ["All"]
         self.tlp_level = tlp_level
 
 
@@ -104,12 +107,35 @@ def patch_perform_single_attempt(monkeypatch: Any) -> Any:
             "GTIFileData": "files",
             "GTIURLData": "urls",
             "GTIIPData": "ip_addresses",
+            "GTIReportResponse": "main_reports",
+            "GTIThreatActorResponse": "main_threat_actors",
+            "GTIReportData": "reports",
         }
 
         if "relationship" in self.api_req.url:
             response_key = "relationships"
+        elif (
+            "/collections" in self.api_req.url
+            and hasattr(self.api_req, "model")
+            and self.api_req.model
+        ):
+            # Check if this is a main collection fetch or a specific collection entity fetch
+            url_parts = self.api_req.url.split("/")
+            if len(url_parts) > 4 and url_parts[4]:  # /collections/specific-id
+                # This is a specific collection entity fetch (subentity)
+                model_name = self.api_req.model.__name__
+                response_key = model_mapping.get(model_name, "reports")
+            else:
+                # This is a main collection fetch
+                model_name = self.api_req.model.__name__
+                response_key = model_mapping.get(model_name, "main_reports")
         else:
-            model_name = self.api_req.model.__name__
+            # Other subentity fetches
+            model_name = (
+                self.api_req.model.__name__
+                if hasattr(self.api_req, "model") and self.api_req.model
+                else None
+            )
             response_key = model_mapping.get(model_name, "reports")
 
         raw_response = response_data[response_key]
@@ -136,18 +162,18 @@ def gti_config() -> DummyConfig:
     """Fixture for GTI configuration."""
     return DummyConfig(
         api_key="fake-key",
-        import_start_date="P1D",
+        report_import_start_date="P1D",
         api_url="https://fake-gti.api",
         import_reports=True,
         report_types=["All"],
-        origins=["All"],
+        report_origins=["All"],
         tlp_level="white",
     )
 
 
 @pytest.fixture
-def expected_log_messages() -> list[str]:
-    """Fixture for expected log messages in orchestration."""
+def expected_report_log_messages() -> list[str]:
+    """Fixture for expected log messages in report orchestration."""
     return [
         "[Fetchers] Fetched 1 reports from API (total of 1 items)",
         "[Orchestrator] (1/1) Found relationships {malware_families: 1, threat_actors: 1, attack_techniques: 1, vulnerabilities: 1, domains: 1, files: 1, urls: 1, ip_addresses: 1}",
@@ -179,6 +205,32 @@ def expected_log_messages() -> list[str]:
     ]
 
 
+@pytest.fixture
+def expected_threat_actor_log_messages() -> list[str]:
+    """Fixture for expected log messages in threat actor orchestration."""
+    return [
+        "[Fetchers] Fetched 1 threat_actors from API (total of 1 items)",
+        "[Orchestrator] (1/1) Found relationships {malware_families: 1, reports: 1, attack_techniques: 1, vulnerabilities: 1}",
+        "[Fetchers] Fetching details for 4 subentities...",
+        "[GenericFetcher] Fetched 1 malware families",
+        "[GenericFetcher] Fetched 1 reports",
+        "[GenericFetcher] Fetched 1 attack techniques",
+        "[GenericFetcher] Fetched 1 vulnerabilities",
+        "[Fetchers] Fetched details {malware_families: 1, reports: 1, attack_techniques: 1, vulnerabilities: 1}",
+        "[GenericConverter] Converted 2 malware families to STIX format",
+        "[GenericConverter] Converted 16 reports to STIX format",
+        "[GenericConverter] Converted 2 attack techniques to STIX format",
+        "[GenericConverter] Converted 2 vulnerabilities to STIX format",
+        "[Orchestrator] (1/1) Converted to 75 STIX entities {location: 17, identity: 23, intrusion-set: 1, relationship: 30, malware: 1, report: 1, attack-pattern: 1, vulnerability: 1}",
+        "[GenericBatchProcessor] Flushing remaining 77 STIX objects",
+        "[GenericBatchProcessor] Processing batch #1 with 77 STIX objects (Total processed: 77)",
+        "[GenericBatchProcessor] Sent batch #1 to OpenCTI",
+        "[GenericBatchProcessor] Batch None completed successfully: 77 objects (identity: 24, marking-definition: 1, location: 17, intrusion-set: 1, relationship: 30, malware: 1, report: 1, attack-pattern: 1, vulnerability: 1)",
+        "[GenericBatchProcessor] Successfully processed batch #1. Total STIX objects sent: 77",
+        "[GenericBatchProcessor] State update: Setting next_cursor_date to 2025-06-03T03:03:32",
+    ]
+
+
 # =====================
 # Test Cases
 # =====================
@@ -186,10 +238,11 @@ def expected_log_messages() -> list[str]:
 
 # Scenario: Full orchestration workflow processes reports and entities successfully
 @pytest.mark.asyncio
-async def test_full_orchestration_all(
-    caplog: Any, gti_config: DummyConfig, expected_log_messages: list[str]
+@pytest.mark.order(2)
+async def test_full_orchestration_reports(
+    caplog: Any, gti_config: DummyConfig, expected_report_log_messages: list[str]
 ) -> None:
-    """Test the full orchestration workflow from A to Z using stubs.
+    """Test the full report orchestration workflow from A to Z using stubs.
 
     - Uses exactly the stubs under tests/custom/debug_responses/:
       •   reports_*.json
@@ -204,7 +257,33 @@ async def test_full_orchestration_all(
     await _when_orchestration_executed(orchestrator)
 
     # Then the orchestration should complete successfully with expected results and logs
-    _then_orchestration_completed_successfully(caplog, expected_log_messages)
+    _then_orchestration_completed_successfully(caplog, expected_report_log_messages)
+
+
+# Scenario: Full orchestration workflow processes threat actors and entities successfully
+@pytest.mark.asyncio
+@pytest.mark.order(2)
+async def test_full_orchestration_threat_actors(
+    caplog: Any, gti_config: DummyConfig, expected_threat_actor_log_messages: list[str]
+) -> None:
+    """Test the full threat actor orchestration workflow from A to Z using stubs.
+
+    - Uses exactly the stubs under tests/custom/debug_responses/:
+      •   threat_actors_*.json
+      •   relationships_*.json
+      •   <entity_type>_*.json
+    - Verifies the expected log messages and orchestration results.
+    """
+    # Given an orchestrator with test configuration and logging setup
+    orchestrator = _given_orchestrator_with_test_setup(gti_config, caplog)
+
+    # When the threat actor orchestration workflow is executed
+    await _when_threat_actor_orchestration_executed(orchestrator)
+
+    # Then the orchestration should complete successfully with expected results and logs
+    _then_orchestration_completed_successfully(
+        caplog, expected_threat_actor_log_messages
+    )
 
 
 # =====================
@@ -238,7 +317,14 @@ def _given_orchestrator_with_test_setup(gti_config: DummyConfig, caplog: Any) ->
 # When the orchestration workflow is executed
 async def _when_orchestration_executed(orchestrator: Any) -> Any:
     """Execute the orchestration workflow."""
-    result = await orchestrator.run(initial_state=None)
+    result = await orchestrator.run_report(initial_state=None)
+    return result
+
+
+# When the threat actor orchestration workflow is executed
+async def _when_threat_actor_orchestration_executed(orchestrator: Any) -> Any:
+    """Execute the threat actor orchestration workflow."""
+    result = await orchestrator.run_threat_actor(initial_state=None)
     return result
 
 
@@ -267,6 +353,8 @@ def _then_orchestration_completed_successfully(
 def _load_debug_responses(debug_folder: Path) -> Dict[str, Any]:
     """Load all debug response files and return as dictionary."""
     response_types = [
+        "main_reports",
+        "main_threat_actors",
         "reports",
         "relationships",
         "attack_techniques",

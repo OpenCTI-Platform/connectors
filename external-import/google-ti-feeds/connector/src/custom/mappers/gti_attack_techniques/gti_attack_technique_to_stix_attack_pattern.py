@@ -1,35 +1,66 @@
 """Converts a GTI attack technique to a STIX attack pattern object."""
 
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from connector.src.custom.models.gti_reports.gti_attack_technique_model import (
+from connector.src.custom.models.gti.gti_attack_technique_model import (
     AttackTechniqueModel,
     GTIAttackTechniqueData,
 )
 from connector.src.stix.octi.models.attack_pattern_model import OctiAttackPatternModel
+from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
     KillChainPhaseModel,
 )
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import AttackPattern, Identity, MarkingDefinition  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
+from stix2.v21 import AttackPattern  # type: ignore
 
 
 class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):
     """Converts a GTI attack technique to a STIX attack pattern object."""
 
+    @staticmethod
+    def create_relationship(
+        src_entity: Any, relation_type: str, target_entity: Any
+    ) -> Any:
+        """Create a relationship between an intrusion set and attack pattern.
+
+        Args:
+            src_entity: The source entity (intrusion set)
+            relation_type: The relationship type (should be "uses")
+            target_entity: The target entity (attack pattern)
+
+        Returns:
+            OctiRelationshipModel: The relationship object
+
+        """
+        return OctiRelationshipModel.create(
+            relationship_type=relation_type,
+            source_ref=src_entity.id,
+            target_ref=target_entity.id,
+            organization_id=src_entity.created_by_ref,
+            marking_ids=src_entity.object_marking_refs,
+            created=datetime.now(),
+            modified=datetime.now(),
+            description=f"Intrusion set {relation_type} attack pattern",
+        )
+
     def __init__(
         self,
         attack_technique: GTIAttackTechniqueData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
     ) -> None:
         """Initialize the GTIAttackTechniqueToSTIXAttackPattern object.
 
         Args:
             attack_technique (GTIAttackTechniqueData): The GTI attack technique data to convert.
-            organization (Identity): The organization identity object.
-            tlp_marking (MarkingDefinition): The TLP marking definition.
+            organization (OrganizationAuthor): The organization author object.
+            tlp_marking (TLPMarking): The TLP marking definition.
 
         """
         self.attack_technique = attack_technique

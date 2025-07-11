@@ -95,17 +95,17 @@ class ApiClient:
                 else "Known API error"
             )
 
-            self._logger.error(
+            self._logger.warning(
                 f"{LOG_PREFIX} {error_prefix} during call_api for {method} {url}: {error_type} - {known_api_err}",
             )
             raise known_api_err
         except ApiError as api_err:
-            self._logger.error(
+            self._logger.warning(
                 f"{LOG_PREFIX} API error during call_api for {method} {url}: {api_err}",
             )
             raise api_err
         except Exception as e:
-            self._logger.error(
+            self._logger.warning(
                 f"{LOG_PREFIX} Unexpected failure in call_api for {method} {url}: {e}",
             )
             raise ApiError(f"Failed to call API {method} {url}: {e}") from e

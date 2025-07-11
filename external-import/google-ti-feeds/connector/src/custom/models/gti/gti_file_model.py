@@ -334,7 +334,7 @@ class FileModel(BaseModel):
     times_submitted: Optional[int] = Field(
         None, description="Number of times submitted to Google TI."
     )
-    total_votes: Optional[Dict[str, int]] = Field(
+    total_votes: Optional[Dict[str, Optional[int]]] = Field(
         None, description="Total community votes (harmless vs malicious)."
     )
     type_description: Optional[str] = Field(
