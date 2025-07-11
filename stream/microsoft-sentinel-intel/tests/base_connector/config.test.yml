@@ -1,0 +1,10 @@
+opencti:
+  url: "http://test-opencti-url"
+  token: "test-opencti-token"
+
+connector:
+  id: "test-connector-id"
+  name: "Stream Connector"
+  scope: "ChangeMe"
+  log_level: "info"
+  live_stream_id: "live-stream-id"
