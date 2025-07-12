@@ -32,18 +32,6 @@ logger = logging.getLogger(__name__)
 class ActorBundleBuilder:
     """Actor bundle builder."""
 
-    _CS_MOTIVATION_CRIMINAL = "Criminal"
-    _CS_MOTIVATION_HACKTIVIST = "Hacktivism"
-    _CS_MOTIVATION_STATE_SPONSORED = "State-Sponsored"
-    _CS_MOTIVATION_DEFACEMENT = "defacement"
-
-    _CS_MOTIVATION_TO_STIX_MOTIVATION = {
-        _CS_MOTIVATION_CRIMINAL: "personal-gain",
-        _CS_MOTIVATION_STATE_SPONSORED: "organizational-gain",
-        _CS_MOTIVATION_HACKTIVIST: "ideology",
-        _CS_MOTIVATION_DEFACEMENT: "ideology",
-    }
-
     def __init__(
         self,
         actor: dict,
@@ -141,32 +129,16 @@ class ActorBundleBuilder:
         return aliases
 
     def _get_motivations(self) -> Tuple[Optional[str], Optional[List[str]]]:
-        actor = self.actor
-
-        actor_motivations = actor["motivations"]
-        if actor_motivations is None:
-            return None, None
-
-        motivations = []
-
-        for actor_motivation in actor_motivations:
-            value = actor_motivation["value"]
-            if not value:
-                continue
-
-            motivation = self._CS_MOTIVATION_TO_STIX_MOTIVATION.get(value)
-            if motivation is None:
-                logger.warning("Unsupported actor motivation: %s", value)
-                continue
-
-            motivations.append(motivation)
-
-        if len(motivations) == 0:
-            return None, None
-        elif len(motivations) == 1:
-            return motivations[0], None
-        else:
-            return motivations[0], motivations[1:]
+        """Get actor motivations.
+        
+        Returns empty values as CrowdStrike does not provide STIX-compatible
+        motivation data through their API. Method preserved for potential
+        future upstream support.
+        
+        Returns:
+            Tuple of (primary_motivation, secondary_motivations) - always (None, None)
+        """
+        return None, None
 
     def _create_intrusion_sets(self) -> List[IntrusionSet]:
         return [self._create_intrusion_set()]
