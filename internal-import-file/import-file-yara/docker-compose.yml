@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-import-file-yara:
-    image: opencti/connector-import-file-yara:6.7.3
+    image: opencti/connector-import-file-yara:6.7.4
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

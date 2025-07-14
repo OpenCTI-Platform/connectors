@@ -1,7 +1,7 @@
 version: '3'
 services:
   email-intel-microsoft:
-    image: opencti/connector-email-intel-microsoft:6.7.3
+    image: opencti/connector-email-intel-microsoft:6.7.4
     environment:
       # OpenCTI configuration
       OPENCTI_URL: http://localhost:PORT
