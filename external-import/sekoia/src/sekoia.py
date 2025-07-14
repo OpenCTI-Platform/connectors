@@ -46,7 +46,13 @@ class Sekoia(object):
 
         self.base_url = self.get_config("base_url", config, "https://api.sekoia.io")
         self.start_date: str = self.get_config("start_date", config, None)
-        self.limit = self.get_config("limit", config, 200)
+        self.limit = get_config_variable(
+            "SEKOIA_LIMIT",
+            ["sekoia", "limit"],
+            config,
+            isNumber=True,
+            default=200,
+        )
         self.collection = self.get_config(
             "collection", config, "d6092c37-d8d7-45c3-8aff-c4dc26030608"
         )

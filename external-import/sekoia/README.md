@@ -5,7 +5,7 @@ Collect Sekoia.io CTI data in an existing OpenCTI instance for any operational p
 
 ## Prerequisites
 - An operational OpenCTI on-prem instance with administrator privileges or an OpenCTI Saas version
-- An active Sekoia CTI subscription (Sekoia Intelligence) : https://www.sekoia.io/en/product/cti/. If you want to test Sekoia CTI please contact : contact@sekoia.io 
+- An active Sekoia CTI subscription (Sekoia Intelligence) : https://www.sekoia.io/en/product/cti/. If you want to test Sekoia CTI please contact : contact@sekoia.io
 - [Creating a Sekoia.io API KEY](https://docs.sekoia.io/getting_started/manage_api_keys/) with the "View intelligence" premission (at least)
 
 ## OpenCTI on-prem version configuration
@@ -78,13 +78,13 @@ On this page, you can find the following information:
 2. Navigate the Sekoia Intelligence Feed
 Here are the elements of the Sekoia feed that can be found on OpenCTI after export:
 
-| **OpenCTI**    | 	**Sekoia.io** |
-|----------------|----------------|
-| Reports        | Threat-reports |
-| Observables    | Sightings      |
-| Malwares	      | Malwares       |
-| Intrusion Set	 | Intrusion-sets |
-| Indicators	    | Indicators     |
+| **OpenCTI**   | **Sekoia.io**  |
+|---------------|----------------|
+| Reports       | Threat-reports |
+| Observables   | Sightings      |
+| Malwares      | Malwares       |
+| Intrusion Set | Intrusion-sets |
+| Indicators    | Indicators     |
 
 ## Known behavior
 
