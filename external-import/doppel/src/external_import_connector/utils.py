@@ -1,10 +1,7 @@
-# src/utils/state_handler.py
-
 from datetime import datetime, timedelta, timezone
 
 
 def parse_iso_datetime(timestamp_str, field_name, alert_id, helper):
-    """Safely parse datetime strings to ISO format with UTC Z suffix."""
     if not timestamp_str:
         return ""
     try:
@@ -20,7 +17,6 @@ def parse_iso_datetime(timestamp_str, field_name, alert_id, helper):
 
 
 def get_last_run(helper, historical_days):
-    """Retrieve the last run timestamp from OpenCTI state. If not set, use historical window."""
     state = helper.get_state()
     if state and "last_run" in state:
         helper.log_info(f"Resuming from last run timestamp: {state['last_run']}")
@@ -35,7 +31,6 @@ def get_last_run(helper, historical_days):
 
 
 def set_last_run(helper):
-    """Save the current UTC timestamp as last run."""
     current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     helper.set_state({"last_run": current_time})
     helper.log_info(f"Updated last run timestamp to: {current_time}")
