@@ -1,0 +1,7 @@
+pycti==6.7.4              # OpenCTI Python client (latest stable)
+pyyaml~=6.0.2             # YAML config file support
+requests~=2.32.3          # HTTP requests
+stix2~=3.0.1              # STIX 2.1 object creation
+validators==0.35.0        # For domain/IP validation (used in converter)
+tenacity==8.2.3           # Retry logic (used in older implementation, optional now)
+python-dotenv==1.0.0 
