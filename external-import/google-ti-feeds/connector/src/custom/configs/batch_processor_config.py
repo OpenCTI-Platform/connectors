@@ -1,16 +1,11 @@
 """GTI batch processor configuration using the new generic batch processor system.
 
-This module defines configuration for batch processing GTI STIX objects
+This module defines common utilities for batch processing GTI STIX objects
 using the generic batch processor system.
 """
 
 from datetime import datetime, timezone
 from typing import Any, List, Optional
-
-from connector.src.custom.exceptions import GTIWorkProcessingError
-from connector.src.utils.batch_processors.generic_batch_processor_config import (
-    GenericBatchProcessorConfig,
-)
 
 LOG_PREFIX = "[GenericBatchProcessor]"
 
@@ -88,54 +83,6 @@ def extract_stix_date_for_type(target_object_type: str) -> Any:
     return extract_stix_date
 
 
-def report_extract_stix_date(stix_object: Any) -> Optional[Any]:
-    """Extract the latest date from a STIX object for state updates.
-
-    Only extracts dates from report objects to track the latest processed report.
-    Ignores all other object types (identity, malware, etc.).
-
-    Args:
-        stix_object: STIX object to extract date from
-
-    Returns:
-        ISO format date string with timezone information or None
-
-    """
-    return extract_stix_date_for_type("report")(stix_object)
-
-
-def threat_actor_extract_stix_date(stix_object: Any) -> Optional[Any]:
-    """Extract the latest date from a STIX object for state updates.
-
-    Only extracts dates from intrusion-set objects to track the latest processed.
-    Ignores all other object types (identity, malware, etc.).
-
-    Args:
-        stix_object: STIX object to extract date from
-
-    Returns:
-        ISO format date string with timezone information or None
-
-    """
-    return extract_stix_date_for_type("intrusion-set")(stix_object)
-
-
-def malware_family_extract_stix_date(stix_object: Any) -> Optional[Any]:
-    """Extract the latest date from a STIX object for state updates.
-
-    Only extracts dates from malware family objects to track the latest processed.
-    Ignores all other object types (identity, malware, etc.).
-
-    Args:
-        stix_object: STIX object to extract date from
-
-    Returns:
-        ISO format date string with timezone information or None
-
-    """
-    return extract_stix_date_for_type("malware")(stix_object)
-
-
 def validate_stix_object(stix_obj: Any) -> bool:
     """Validate STIX object before adding to batch.
 
@@ -196,49 +143,3 @@ def log_batch_completion(stix_objects: List[Any], work_id: str) -> None:
     logger.info(
         f"{LOG_PREFIX} Batch {work_id} completed successfully: {total_count} objects ({type_summary})"
     )
-
-
-REPORT_BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
-    batch_size=500,
-    work_name_template="Google Threat Intel - Batch #{batch_num} (~ 0/0 reports)",
-    state_key="report_next_cursor_start_date",
-    entity_type="stix_objects",
-    display_name="STIX objects",
-    exception_class=GTIWorkProcessingError,
-    display_name_singular="STIX object",
-    auto_process=False,
-    date_extraction_function=report_extract_stix_date,
-    postprocessing_function=log_batch_completion,
-    validation_function=validate_stix_object,
-    empty_batch_behavior="update_state",
-)
-
-THREAT_ACTOR_BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
-    batch_size=9999,
-    work_name_template="Google Threat Intel - Batch #{batch_num} (~ 0/0 threat actors)",
-    state_key="threat_actor_next_cursor_start_date",
-    entity_type="stix_objects",
-    display_name="STIX objects",
-    exception_class=GTIWorkProcessingError,
-    display_name_singular="STIX object",
-    auto_process=False,
-    date_extraction_function=threat_actor_extract_stix_date,
-    postprocessing_function=log_batch_completion,
-    validation_function=validate_stix_object,
-    empty_batch_behavior="update_state",
-)
-
-MALWARE_FAMILY_BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
-    batch_size=9999,
-    work_name_template="Google Threat Intel - Batch #{batch_num} (~ 0/0 malware families)",
-    state_key="malware_family_next_cursor_start_date",
-    entity_type="stix_objects",
-    display_name="STIX objects",
-    exception_class=GTIWorkProcessingError,
-    display_name_singular="STIX object",
-    auto_process=False,
-    date_extraction_function=malware_family_extract_stix_date,
-    postprocessing_function=log_batch_completion,
-    validation_function=validate_stix_object,
-    empty_batch_behavior="update_state",
-)

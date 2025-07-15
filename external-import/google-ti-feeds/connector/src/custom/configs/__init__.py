@@ -5,13 +5,18 @@ including API configuration, fetcher configurations, converter configurations,
 and batch processor configurations.
 """
 
-from .batch_processor_config import (
+from connector.src.custom.configs.malware.batch_processor_config_malware import (
     MALWARE_FAMILY_BATCH_PROCESSOR_CONFIG,
+)
+from connector.src.custom.configs.report.batch_processor_config_report import (
     REPORT_BATCH_PROCESSOR_CONFIG,
+)
+from connector.src.custom.configs.threat_actor.batch_processor_config_threat_actor import (
     THREAT_ACTOR_BATCH_PROCESSOR_CONFIG,
 )
-from .converter_configs import CONVERTER_CONFIGS
-from .fetcher_configs import FETCHER_CONFIGS
+
+from .converter_config import CONVERTER_CONFIGS
+from .fetcher_config import FETCHER_CONFIGS
 from .gti_config import GTIConfig
 
 __all__ = [

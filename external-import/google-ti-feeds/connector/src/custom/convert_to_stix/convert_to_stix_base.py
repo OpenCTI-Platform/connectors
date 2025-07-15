@@ -1,9 +1,9 @@
-"""Convert to STIX - Extracted convert-related methods from orchestrator."""
+"""Base converter class with common functionality."""
 
 import logging
 from typing import Any, Dict, List, Literal, Optional, cast
 
-from connector.src.custom.configs.converter_configs import (
+from connector.src.custom.configs.converter_config import (
     CONVERTER_CONFIGS,
 )
 from connector.src.utils.converters import GenericConverterFactory
@@ -12,14 +12,14 @@ from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
     TLPMarking,
 )
 
-LOG_PREFIX = "[Converters]"
+LOG_PREFIX = "[BaseConverter]"
 
 
-class ConvertToSTIX:
-    """Convert to STIX for handling conversion operations."""
+class BaseConvertToSTIX:
+    """Base converter class with common functionality."""
 
     def __init__(self, config: Any, logger: logging.Logger, tlp_level: str):
-        """Initialize Convert to STIX."""
+        """Initialize Base Convert to STIX."""
         self.config = config
         self.logger = logger
         self.tlp_level = tlp_level.lower()
@@ -105,92 +105,6 @@ class ConvertToSTIX:
         )
         return tlp_marking
 
-    def convert_report_to_stix(self, report_data: Any) -> List[Any]:
-        """Convert report to location, identity, and report STIX objects.
-
-        Args:
-            report_data: GTIReportData object from fetcher
-
-        Returns:
-            List of STIX entities (location, identity, report)
-
-        """
-        try:
-            converter = self.converter_factory.create_converter_by_name("reports")
-            stix_entities = converter.convert_single(report_data)
-
-            if not isinstance(stix_entities, list):
-                stix_entities = [stix_entities]
-
-            self.logger.debug(
-                f"{LOG_PREFIX} Converted report to {len(stix_entities)} STIX entities"
-            )
-            return stix_entities
-
-        except Exception as e:
-            self.logger.error(
-                f"{LOG_PREFIX} Failed to convert report to STIX: {str(e)}"
-            )
-            return []
-
-    def convert_threat_actor_to_stix(self, threat_actor_data: Any) -> List[Any]:
-        """Convert threat actor to location, identity, and threat actor STIX objects.
-
-        Args:
-            threat_actor_data: GTIThreatActorData object from fetcher
-
-        Returns:
-            List of STIX entities (location, identity, threat_actor)
-
-        """
-        try:
-            converter = self.converter_factory.create_converter_by_name("threat_actor")
-            stix_entities = converter.convert_single(threat_actor_data)
-
-            if not isinstance(stix_entities, list):
-                stix_entities = [stix_entities]
-
-            self.logger.debug(
-                f"{LOG_PREFIX} Converted threat actor to {len(stix_entities)} STIX entities"
-            )
-            return stix_entities
-
-        except Exception as e:
-            self.logger.error(
-                f"{LOG_PREFIX} Failed to convert threat actor to STIX: {str(e)}"
-            )
-            return []
-
-    def convert_malware_family_to_stix(self, malware_family_data: Any) -> List[Any]:
-        """Convert malware family to location, identity, and malware STIX objects.
-
-        Args:
-            malware_family_data: GTIMalwareFamilyData object from fetcher
-
-        Returns:
-            List of STIX entities (location, identity, malware)
-
-        """
-        try:
-            converter = self.converter_factory.create_converter_by_name(
-                "malware_family"
-            )
-            stix_entities = converter.convert_single(malware_family_data)
-
-            if not isinstance(stix_entities, list):
-                stix_entities = [stix_entities]
-
-            self.logger.debug(
-                f"{LOG_PREFIX} Converted malware family to {len(stix_entities)} STIX entities"
-            )
-            return stix_entities
-
-        except Exception as e:
-            self.logger.error(
-                f"{LOG_PREFIX} Failed to convert malware family to STIX: {str(e)}"
-            )
-            return []
-
     def convert_subentities_to_stix(
         self, subentities: Dict[str, List[Any]], main_entity: Optional[str] = None
     ) -> List[Any]:
@@ -236,7 +150,7 @@ class ConvertToSTIX:
         main_entity: str,
         main_entities: List[Any],
     ) -> Optional[List[Any]]:
-        """Convert each subentity to STIX format with report linking.
+        """Convert each subentity to STIX format with linking.
 
         Args:
             subentities: Dictionary mapping entity types to lists of entities
