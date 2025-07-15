@@ -6,7 +6,7 @@
   "short_description": "IpInfo enrichment connector",
   "use_cases": [
     "Incident Response & Ticketing",
-    "enrichment"
+    "Enrichment"
   ],
   "manager_supported": true,
   "container_image": "opencti/connector-ipinfo",

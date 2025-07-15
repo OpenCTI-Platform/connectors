@@ -30,7 +30,13 @@ else:
 
             # Add in manifest if and only if manager_supported=true
             if connector_contract_schema["manager_supported"]:
+                # Remove unnecessary configs as XTM Composer will handle it
+                del connector_contract_schema["default"]["CONNECTOR_TYPE"]
+                connector_contract_schema["required"].remove("OPENCTI_URL")
+                connector_contract_schema["required"].remove("OPENCTI_TOKEN")
+
                 manifest["contracts"].append(connector_contract_schema)
+
 
 # Format manifest
 manifest = json.dumps(manifest, indent=2)
