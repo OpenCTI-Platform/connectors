@@ -2,28 +2,44 @@
 *Contact: support@recordedfuture.com*
 ## Description
 
-This connector enriches individual OpenCTI Observables with Recorded Future Information. Currently enrichment of IP Address (ipv4 and ipv6), URLs, Domains, and Hashes (MD5, SHA1, and SHA256) is supported.
+This connector enriches individual OpenCTI Observables and Vulnerabilities with Recorded Future Information.  
+For observables, currently enrichment of IP Address (ipv4 and ipv6), URLs, Domains, and Hashes (MD5, SHA1, and SHA256) only is supported.
 
 ## Dependency
 - `external-import/mitre` - Maps TTPs to Existing Mitre Att&ck IDs. If the ID does not exist the relationship does not occur. 
 
 ## Data Model
-Each enrichment pulls down an Indicator's Recorded Future Risk Score, any triggered Risk Rules, and Strings of Evidence to justify a rule being triggered. Their equivalents in OpenCTI's STIX2 model is
+
+### Observables
+
+Each enrichment pulls down an Indicator's Recorded Future Risk Score, any triggered Risk Rules, and Strings of Evidence to justify a rule being triggered.
+Their equivalent OpenCTI models are
 
 - Indicator -> Indicator
 - Risk Score -> Note attached to Indicator
 - Risk Rule:
-    - Attack Pattern, the relationship defined as Indicator "indicates" Attack Pattern
-    - Risk Rules are added as notes and attached to Observable
+  - Attack Pattern, the relationship defined as Indicator "indicates" Attack Pattern
+  - Risk Rules are added as notes and attached to Observable
 - Evidence String -> Note Attached to Indicator
 - Links:
-    - Mitre T codes-> Attack Patterns
-    - Indicators -> Indicators and Observables
-    - Malware -> Malware
-    - Threat Actors -> Threat Actors
-    - Organization-> Organization
+  - Mitre T codes-> Attack Patterns
+  - Indicators -> Indicators and Observables
+  - Malware -> Malware
+  - Threat Actors -> Threat Actors
+  - Organization-> Organization
 
 Please note that not every link type from Recorded Future is supported at this time
+
+### Vulnerabilities
+
+Each vulnerability pulls down a RecordedFuture's Enriched Vulnerability with its common names, its lifecycle stage, a reference to the vulnerability's page on RecordedFuture and its CVSS properties.
+Their equivalent OpenCTI models are
+
+- Vulnerability:
+  - common names are added as aliases
+  - lifecycle stage is added as label
+  - reference to RecordedFuture's page is added as external reference
+  - CVSS properties are added as CVSS properties, depending on CVSS version
 
 ## Configuration variables
 
@@ -50,6 +66,10 @@ Build a Docker Image using the provided `Dockerfile`. Make sure to replace the e
 ### Manual/VM Deployment
 Create a file `config.yml` based off the provided `config.yml.sample`. Replace the configuration variables (especially the "ChangeMe" variables) with the appropriate configurations for you environment. The `id` attribute of the `connector` should be a freshly generated UUID. Install the required python dependencies (preferably in a virtual environment) with `pip3 install -r requirements.txt` Then, run the `python3 rf_enrichment.py` command to start the connector
 
+Create a file `config.yml` based off the provided `config.yml.sample`. Replace the configuration variables (especially the "ChangeMe" variables) with the appropriate configurations for you environment.
+The `id` attribute of the `connector` should be a freshly generated UUID.
+Install the required python dependencies (preferably in a virtual environment) with `pip3 install -r src/requirements.txt`
+Then, run the `python3 src/main.py` command to start the connector
 
 ## Usage
 To enrich an observable, first click on it in the Observations->Observables tab of the OpenCTI platform (or navigate to an observable another way). Click on the cloud in the upper right, and under "Enrichment Connectors", select the Recorded Future Enrichment connector. Depending on your configuraiton, the connector may have already run automatically. If not (or if you want to re-enrich the indicator), click on the refresh button next to the indicator to enrich
