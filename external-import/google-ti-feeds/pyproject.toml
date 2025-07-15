@@ -19,7 +19,7 @@ requires-python = ">=3.11, <3.13"
 
 dependencies = [
     "PyYAML ~=6.0.2",
-    "aiohttp ~=3.12.13",
+    "aiohttp ~=3.12.14",
     "pycti ~=6.7.3",
     "pydantic ~=2.11.7",
     "pydantic_settings ~=2.10.1",

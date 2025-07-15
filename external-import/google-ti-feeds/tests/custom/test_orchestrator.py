@@ -68,12 +68,15 @@ class DummyConfig:
         self.api_key = api_key
         self.report_import_start_date = report_import_start_date
         self.threat_actor_import_start_date = "P1D"
+        self.malware_family_import_start_date = "P1D"
         self.api_url = api_url
         self.import_reports = import_reports
         self.import_threat_actors = True
+        self.import_malware_families = True
         self.report_types = report_types
         self.report_origins = report_origins
         self.threat_actor_origins = ["All"]
+        self.malware_family_origins = ["All"]
         self.tlp_level = tlp_level
 
 
@@ -109,6 +112,7 @@ def patch_perform_single_attempt(monkeypatch: Any) -> Any:
             "GTIIPData": "ip_addresses",
             "GTIReportResponse": "main_reports",
             "GTIThreatActorResponse": "main_threat_actors",
+            "GTIMalwareFamilyResponse": "main_malware_families",
             "GTIReportData": "reports",
         }
 
@@ -187,20 +191,20 @@ def expected_report_log_messages() -> list[str]:
         "[GenericFetcher] Fetched 1 URLs",
         "[GenericFetcher] Fetched 1 IP addresses",
         "[Fetchers] Fetched details {malware_families: 1, threat_actors: 1, attack_techniques: 1, vulnerabilities: 1, domains: 1, files: 1, urls: 1, ip_addresses: 1}",
-        "[GenericConverter] Converted 1 malware families to STIX format",
-        "[GenericConverter] Converted 1 threat actors to STIX format",
+        "[GenericConverter] Converted 33 malware families to STIX format",
+        "[GenericConverter] Converted 53 threat actors to STIX format",
         "[GenericConverter] Converted 1 attack techniques to STIX format",
         "[GenericConverter] Converted 1 vulnerabilities to STIX format",
         "[GenericConverter] Converted 3 domains to STIX format",
         "[GenericConverter] Converted 3 files to STIX format",
         "[GenericConverter] Converted 3 URLs to STIX format",
         "[GenericConverter] Converted 3 IP addresses to STIX format",
-        "[Orchestrator] (1/1) Converted to 31 STIX entities {identity: 14, report: 1, malware: 1, intrusion-set: 1, attack-pattern: 1, vulnerability: 1, domain-name: 1, indicator: 4, relationship: 4, file: 1, url: 1, ipv4-addr: 1}",
-        "[GenericBatchProcessor] Flushing remaining 33 STIX objects",
-        "[GenericBatchProcessor] Processing batch #1 with 33 STIX objects (Total processed: 33)",
+        "[Orchestrator] (1/1) Converted to 115 STIX entities {identity: 39, report: 1, malware: 1, relationship: 46, location: 17, intrusion-set: 1, attack-pattern: 1, vulnerability: 1, domain-name: 1, indicator: 4, file: 1, url: 1, ipv4-addr: 1}",
+        "[GenericBatchProcessor] Flushing remaining 117 STIX objects",
+        "[GenericBatchProcessor] Processing batch #1 with 117 STIX objects (Total processed: 117)",
         "[GenericBatchProcessor] Sent batch #1 to OpenCTI",
-        "[GenericBatchProcessor] Batch None completed successfully: 33 objects (identity: 15, marking-definition: 1, report: 1, malware: 1, intrusion-set: 1, attack-pattern: 1, vulnerability: 1, domain-name: 1, indicator: 4, relationship: 4, file: 1, url: 1, ipv4-addr: 1)",
-        "[GenericBatchProcessor] Successfully processed batch #1. Total STIX objects sent: 33",
+        "[GenericBatchProcessor] Batch None completed successfully: 117 objects (identity: 40, marking-definition: 1, report: 1, malware: 1, relationship: 46, location: 17, intrusion-set: 1, attack-pattern: 1, vulnerability: 1, domain-name: 1, indicator: 4, file: 1, url: 1, ipv4-addr: 1)",
+        "[GenericBatchProcessor] Successfully processed batch #1. Total STIX objects sent: 117",
         "[GenericBatchProcessor] State update: Setting next_cursor_date to 2024-07-11T20:05:01+00:00",
     ]
 
@@ -217,17 +221,43 @@ def expected_threat_actor_log_messages() -> list[str]:
         "[GenericFetcher] Fetched 1 attack techniques",
         "[GenericFetcher] Fetched 1 vulnerabilities",
         "[Fetchers] Fetched details {malware_families: 1, reports: 1, attack_techniques: 1, vulnerabilities: 1}",
-        "[GenericConverter] Converted 2 malware families to STIX format",
+        "[GenericConverter] Converted 34 malware families to STIX format",
         "[GenericConverter] Converted 16 reports to STIX format",
         "[GenericConverter] Converted 2 attack techniques to STIX format",
         "[GenericConverter] Converted 2 vulnerabilities to STIX format",
-        "[Orchestrator] (1/1) Converted to 75 STIX entities {location: 17, identity: 23, intrusion-set: 1, relationship: 30, malware: 1, report: 1, attack-pattern: 1, vulnerability: 1}",
-        "[GenericBatchProcessor] Flushing remaining 77 STIX objects",
-        "[GenericBatchProcessor] Processing batch #1 with 77 STIX objects (Total processed: 77)",
+        "[Orchestrator] (1/1) Converted to 107 STIX entities {location: 17, identity: 39, intrusion-set: 1, relationship: 46, malware: 1, report: 1, attack-pattern: 1, vulnerability: 1}",
+        "[GenericBatchProcessor] Flushing remaining 109 STIX objects",
+        "[GenericBatchProcessor] Processing batch #1 with 109 STIX objects (Total processed: 109)",
         "[GenericBatchProcessor] Sent batch #1 to OpenCTI",
-        "[GenericBatchProcessor] Batch None completed successfully: 77 objects (identity: 24, marking-definition: 1, location: 17, intrusion-set: 1, relationship: 30, malware: 1, report: 1, attack-pattern: 1, vulnerability: 1)",
-        "[GenericBatchProcessor] Successfully processed batch #1. Total STIX objects sent: 77",
+        "[GenericBatchProcessor] Batch None completed successfully: 109 objects (identity: 40, marking-definition: 1, location: 17, intrusion-set: 1, relationship: 46, malware: 1, report: 1, attack-pattern: 1, vulnerability: 1)",
+        "[GenericBatchProcessor] Successfully processed batch #1. Total STIX objects sent: 109",
         "[GenericBatchProcessor] State update: Setting next_cursor_date to 2025-06-03T03:03:32",
+    ]
+
+
+@pytest.fixture
+def expected_malware_family_log_messages() -> list[str]:
+    """Fixture for expected log messages in malware family orchestration."""
+    return [
+        "[Fetchers] Fetched 1 malware_families from API (total of 1 items)",
+        "[Orchestrator] (1/1) Found relationships {threat_actors: 1, reports: 1, attack_techniques: 1, vulnerabilities: 1}",
+        "[Fetchers] Fetching details for 4 subentities...",
+        "[GenericFetcher] Fetched 1 threat actors",
+        "[GenericFetcher] Fetched 1 reports",
+        "[GenericFetcher] Fetched 1 attack techniques",
+        "[GenericFetcher] Fetched 1 vulnerabilities",
+        "[Fetchers] Fetched details {threat_actors: 1, reports: 1, attack_techniques: 1, vulnerabilities: 1}",
+        "[GenericConverter] Converted 54 threat actors to STIX format",
+        "[GenericConverter] Converted 16 reports to STIX format",
+        "[GenericConverter] Converted 2 attack techniques to STIX format",
+        "[GenericConverter] Converted 2 vulnerabilities to STIX format",
+        "[Orchestrator] (1/1) Converted to 107 STIX entities {identity: 39, malware: 1, relationship: 46, location: 17, intrusion-set: 1, report: 1, attack-pattern: 1, vulnerability: 1}",
+        "[GenericBatchProcessor] Flushing remaining 109 STIX objects",
+        "[GenericBatchProcessor] Processing batch #1 with 109 STIX objects (Total processed: 109)",
+        "[GenericBatchProcessor] Sent batch #1 to OpenCTI",
+        "[GenericBatchProcessor] Batch None completed successfully: 109 objects (identity: 40, marking-definition: 1, malware: 1, relationship: 46, location: 17, intrusion-set: 1, report: 1, attack-pattern: 1, vulnerability: 1)",
+        "[GenericBatchProcessor] Successfully processed batch #1. Total STIX objects sent: 109",
+        "[GenericBatchProcessor] State update: Setting next_cursor_date to 2025-05-09T17:11:12+00:00",
     ]
 
 
@@ -286,6 +316,34 @@ async def test_full_orchestration_threat_actors(
     )
 
 
+# Scenario: Full orchestration workflow processes malware families and entities successfully
+@pytest.mark.asyncio
+@pytest.mark.order(2)
+async def test_full_orchestration_malware_families(
+    caplog: Any,
+    gti_config: DummyConfig,
+    expected_malware_family_log_messages: list[str],
+) -> None:
+    """Test the full malware family orchestration workflow from A to Z using stubs.
+
+    - Uses exactly the stubs under tests/custom/debug_responses/:
+      •   malware_families_*.json
+      •   relationships_*.json
+      •   <entity_type>_*.json
+    - Verifies the expected log messages and orchestration results.
+    """
+    # Given an orchestrator with test configuration and logging setup
+    orchestrator = _given_orchestrator_with_test_setup(gti_config, caplog)
+
+    # When the malware family orchestration workflow is executed
+    await _when_malware_family_orchestration_executed(orchestrator)
+
+    # Then the orchestration should complete successfully with expected results and logs
+    _then_orchestration_completed_successfully(
+        caplog, expected_malware_family_log_messages
+    )
+
+
 # =====================
 # GWT Gherkin-style functions
 # =====================
@@ -328,6 +386,13 @@ async def _when_threat_actor_orchestration_executed(orchestrator: Any) -> Any:
     return result
 
 
+# When the malware family orchestration workflow is executed
+async def _when_malware_family_orchestration_executed(orchestrator: Any) -> Any:
+    """Execute the malware family orchestration workflow."""
+    result = await orchestrator.run_malware_family(initial_state=None)
+    return result
+
+
 # Then the orchestration should complete successfully with expected results and logs
 def _then_orchestration_completed_successfully(
     caplog: Any, expected_log_messages: list[str]
@@ -355,6 +420,7 @@ def _load_debug_responses(debug_folder: Path) -> Dict[str, Any]:
     response_types = [
         "main_reports",
         "main_threat_actors",
+        "main_malware_families",
         "reports",
         "relationships",
         "attack_techniques",
