@@ -918,7 +918,7 @@ def create_regions_and_countries_from_entities(
 
 
 def create_file_from_download(
-    download, report_name: str
+    download, report_name: str, no_file_trigger_import: bool
 ) -> Mapping[str, Union[str, bool]]:
 
     converted_report_pdf = BytesIO(download)
@@ -934,7 +934,7 @@ def create_file_from_download(
         "name": filename,
         "data": base64_data.decode("utf-8"),
         "mime_type": "application/pdf",
-        "no_trigger_import": True,
+        "no_trigger_import": no_file_trigger_import,
     }
 
 

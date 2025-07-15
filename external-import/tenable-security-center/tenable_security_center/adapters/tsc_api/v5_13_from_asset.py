@@ -855,7 +855,11 @@ class _ScanResultsAPI:
             json_data = resp_scan_result.json()["response"]
             if not json_data["progress"]:  # could be an empty list, empty dict or null
                 return "", ""
-            return json_data["progress"]["scannedIPs"], json_data["repository"]["id"]
+            # explicit casting because of inconsitent return types.
+            # see : https://github.com/OpenCTI-Platform/connectors/issues/3564
+            ips = json_data["progress"]["scannedIPs"]
+            repository_id = json_data["repository"]["id"]
+            return str(ips) if ips else "", str(repository_id) if repository_id else ""
 
         except (HTTPError, IndexError) as e:
             self.logger.error(

@@ -14,7 +14,7 @@ class Intel471ReportsStream(Intel471Stream):
         kwargs = {
             "last_updated_from": self.initial_history,
             "sort": "earliest",
-            "count": 100,
+            "count": 10,
         }
         if cursor:
             kwargs["last_updated_from"] = cursor
@@ -24,3 +24,6 @@ class Intel471ReportsStream(Intel471Stream):
         return str(
             getattr(api_response, self.api_payload_objects_key)[-1].last_updated + 1
         )
+
+    def _get_offsets(self) -> list[Union[None, int]]:
+        return list(range(0, 1100, 10))

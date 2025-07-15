@@ -1,0 +1,17 @@
+version: '3'
+services:
+  connector-dogesec-stixify:
+    image: opencti/connector-dogesec-stixify:6.7.4
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=Stixify
+      - CONNECTOR_SCOPE=stixify
+      - CONNECTOR_CONFIDENCE_LEVEL=70
+      - CONNECTOR_LOG_LEVEL=error
+      - STIXIFY_BASE_URL=http://api.stixify.com/
+      - STIXIFY_API_KEY=
+      - STIXIFY_DOSSIER_IDS=
+      - STIXIFY_INTERVAL_HOURS=1
+    restart: always

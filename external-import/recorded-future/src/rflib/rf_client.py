@@ -23,13 +23,15 @@ DETECTION_SEARCH = API_BASE + "/detection-rule/search"
 CONNECT_IP_SEARCH = CONNECT_BASE + "/ip/search"
 CONNECT_DOMAIN_SEARCH = CONNECT_BASE + "/domain/search"
 CONNECT_URL_SEARCH = CONNECT_BASE + "/url/search"
-NOTES_BASE = CONNECT_BASE + "/analystnote"
-NOTES_SEARCH = NOTES_BASE + "/search"
 FUSION_FILE_BASE = CONNECT_BASE + "/fusion/files"
 THREAT_ACTOR_PATH = "/public/opencti/threat_actors.json"
 INSIKT_SOURCE = "VKz42X"
 THREAT_MAPS_PATH = API_BASE + "/threat/maps"
 LINKS_PATH = API_BASE + "/links/search"
+
+ANALYST_NOTES_ENDPOINT = API_BASE + "/analyst-note"
+ANALYST_NOTES_SEARCH_ENDPOINT = API_BASE + "/analyst-note/search"
+ANALYST_NOTES_ATTACHMENT_ENDPOINT = API_BASE + "/analyst-note/attachment"
 
 
 class RFClient:
@@ -43,58 +45,98 @@ class RFClient:
         self.session.headers.update(self.headers)
         self.helper = helper
 
-    def get_notes(
+    def get_analyst_notes(
         self,
         published: int,
         pull_signatures: bool = False,
         insikt_only: bool = True,
         topic: str = None,
-        limit: int = 10000,
     ):
-        """Pulls Insikt Notes from API
-        Args:
-            * published: in hours, how far back to fetch notes
-            * pull_signatures - boolean value whether to fetch hunting package
-            * insikt_only - pull only notes from Insikt group or also client written notes
-            * topic - filter for a specific set of notes
-
-        Returns:
-            a list of dicts of notes
-        #TODO: add pagination for notes
         """
-        note_params = {"published": f"-{published}h", "limit": limit}
+        Pulls Analyst Notes from API
+        :param published:
+        :param pull_signatures:
+        :param insikt_only:
+        :param topic:
+        :param limit:
+        :return: a list of dicts of notes
+        """
+        note_params = {
+            "published": f"-{published}h",
+        }
         if insikt_only:
             note_params["source"] = INSIKT_SOURCE
         if topic:
             note_params["topic"] = topic
-        res = self.session.get(NOTES_SEARCH, params=note_params)
-        res.raise_for_status()
+
         notes = []
-        for note in res.json()["data"]["results"]:
-            attributes = note["attributes"]
-            msg = f'[ANALYST NOTES] Processing note "{attributes["title"]}"'
-            self.helper.connector_logger.info(msg)
-            if pull_signatures and "attachment" in attributes:
-                try:
-                    result = self.get_attachment(note["id"])
-                    if result:
-                        attributes["attachment_content"] = result["rules"][0]["content"]
-                        attributes["attachment_type"] = result["type"]
-                    else:
-                        msg = "[ANALYST NOTES] No attachment found"
+        has_more = True
+        while has_more:
+            res = self.session.post(ANALYST_NOTES_SEARCH_ENDPOINT, json=note_params)
+            res.raise_for_status()
+            data = res.json()
+            total = data.get("counts").get("total")
+            for note in data["data"]:
+                attributes = note["attributes"]
+                msg = f'[ANALYST NOTES] Processing note "{attributes["title"]}"'
+                self.helper.connector_logger.info(msg)
+
+                attributes["attachments"] = []
+                if "attachment" in attributes and attributes.get("attachment").endswith(
+                    ".pdf"
+                ):
+                    try:
+                        result = self.get_analyst_note_attachment(note["id"])
+                        if result:
+                            attachment = {
+                                "name": attributes.get("attachment"),
+                                "content": result,
+                                "type": "pdf",
+                            }
+                            attributes["attachments"].append(attachment)
+                        else:
+                            msg = f'[ANALYST NOTES] No attachment found for note: {attributes["title"]}'
+                            self.helper.connector_logger.error(msg)
+                    except requests.exceptions.HTTPError as err:
+                        msg = f'[ANALYST NOTES] An exception occurred while retrieving PDF attachment of note: {attributes["title"]}, {str(err)}'
                         self.helper.connector_logger.error(msg)
-                except requests.exceptions.HTTPError as err:
-                    if "403" in str(err):
-                        msg = "[ANALYST NOTES] Your API token does not have permission to pull Detection Rules"
-                        self.helper.connector_logger.error(msg)
-                    else:
-                        raise err
-                except (KeyError, IndexError):
-                    self.helper.connector_logger.error(
-                        "[ANALYST NOTES] Problem with API response for detection"
-                        "rule for note {}. Rule will not be added".format(note["id"])
-                    )
-            notes.append(note)
+
+                elif (
+                    pull_signatures
+                    and "attachment" in attributes
+                    and attributes.get("attachment")
+                ):
+                    try:
+                        result = self.get_attachment(note["id"])
+                        if result:
+                            attachment = {
+                                "name": attributes.get("attachment"),
+                                "content": result["rules"][0]["content"],
+                                "type": result["type"],
+                            }
+                            attributes["attachments"].append(attachment)
+                        else:
+                            msg = "[ANALYST NOTES] No attachment found"
+                            self.helper.connector_logger.error(msg)
+                    except requests.exceptions.HTTPError as err:
+                        if "403" in str(err):
+                            msg = "[ANALYST NOTES] Your API token does not have permission to pull Detection Rules"
+                            self.helper.connector_logger.error(msg)
+                        else:
+                            raise err
+                    except (KeyError, IndexError):
+                        self.helper.connector_logger.error(
+                            "[ANALYST NOTES] Problem with API response for detection"
+                            "rule for note {}. Rule will not be added".format(
+                                note["id"]
+                            )
+                        )
+
+                notes.append(note)
+            if total == len(notes):
+                has_more = False
+            else:
+                note_params["from"] = data.get("next_offset")
         return notes
 
     def get_risk_ip_addresses(self, limit: int = 1000, risk_threshold=65):
@@ -116,18 +158,29 @@ class RFClient:
             ip_addresses.append(ip_address)
         return ip_addresses
 
-    def get_attachment(self, doc_id: str) -> str:
+    def get_attachment(self, doc_id: str) -> dict:
         """Pulls a hunting package from the detection rules API
         Args:
             * doc_id: ID of analyst note
         Returns:
             The string of the detection rule
         """
-        query = {"filter": {"doc_id": f"doc:{doc_id}"}, "limit": 1}
+        query = {"filter": {"doc_id": f"{doc_id}"}, "limit": 1}
 
         res = self.session.post(DETECTION_SEARCH, json=query)
         res.raise_for_status()
         return res.json()["result"][0] if len(res.json()["result"]) > 0 else None
+
+    def get_analyst_note_attachment(self, doc_id: str) -> str:
+        """
+        Returns the attachment associated with an analyst note
+        :param doc_id:
+        :return:
+        """
+        url = ANALYST_NOTES_ATTACHMENT_ENDPOINT + "/" + doc_id
+        res = self.session.get(url)
+        res.raise_for_status()
+        return res.content
 
     def get_fusion_file(self, path: str) -> str:
         """Gets a fusion file provided a path

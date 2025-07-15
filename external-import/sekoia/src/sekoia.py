@@ -25,8 +25,6 @@ gbl_scriptDir: str = os.path.dirname(os.path.realpath(__file__))
 
 
 class Sekoia(object):
-    limit = 200
-
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
@@ -48,6 +46,7 @@ class Sekoia(object):
 
         self.base_url = self.get_config("base_url", config, "https://api.sekoia.io")
         self.start_date: str = self.get_config("start_date", config, None)
+        self.limit = self.get_config("limit", config, 200)
         self.collection = self.get_config(
             "collection", config, "d6092c37-d8d7-45c3-8aff-c4dc26030608"
         )
@@ -58,16 +57,22 @@ class Sekoia(object):
             config,
             default=False,
         )
+        self.import_ioc_relationships = get_config_variable(
+            "SEKOIA_IMPORT_IOC_RELATIONSHIPS",
+            ["sekoia", "import_ioc_relationships"],
+            config,
+            default=True,
+        )
         self.all_labels = []
 
-        self.helper.log_info("Setting up api key")
+        self.helper.connector_logger.info("Setting up api key")
         self.api_key = self.get_config("api_key", config)
         if not self.api_key:
-            self.helper.log_error("API key is Missing")
+            self.helper.connector_logger.error("API key is Missing")
             raise ValueError("API key is Missing")
 
         self._load_data_sets()
-        self.helper.log_info("All datasets has been loaded")
+        self.helper.connector_logger.info("All datasets has been loaded")
 
         self.helper.api.identity.create(
             stix_id="identity--357447d7-9229-4ce1-b7fa-f1b83587048e",
@@ -86,10 +91,10 @@ class Sekoia(object):
         return self.helper.connect_scope
 
     def process_message(self):
-        self.helper.log_info("Starting SEKOIA.IO connector")
+        self.helper.connector_logger.info("Starting SEKOIA.IO connector")
         state = self.helper.get_state() or {}
         cursor = state.get("last_cursor", self.generate_first_cursor())
-        self.helper.log_info(f"Starting with {cursor}")
+        self.helper.connector_logger.info(f"Starting with {cursor}")
 
         friendly_name = "SEKOIA run @ " + datetime.now(timezone.utc).isoformat()
         try:
@@ -98,10 +103,10 @@ class Sekoia(object):
             )
             cursor = self._run(cursor, work_id)
             message = f"Connector successfully run, cursor updated to {cursor}"
-            self.helper.log_info(message)
+            self.helper.connector_logger.info(message)
             self.helper.api.work.to_processed(work_id, message)
         except (KeyboardInterrupt, SystemExit):
-            self.helper.log_info("Connector stop")
+            self.helper.connector_logger.info("Connector stop")
             self.helper.api.work.to_processed(work_id, "Connector is stopping")
             sys.exit(0)
         except Exception as ex:
@@ -109,7 +114,7 @@ class Sekoia(object):
             # since `_run` updates it after every successful request
             state = self.helper.get_state() or {}
             cursor = state.get("last_cursor", cursor)
-            self.helper.log_error(str(ex))
+            self.helper.connector_logger.error(str(ex))
             message = f"Connector encountered an error, cursor updated to {cursor}"
             self.helper.api.work.to_processed(work_id, message)
 
@@ -150,15 +155,15 @@ class Sekoia(object):
         Generate the first cursor to interrogate the API
         so we don't start at the beginning.
         """
-        start = f"{(datetime.utcnow() - timedelta(hours=1)).isoformat()}Z"
+        start = f"{(datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()}Z"
         if self.start_date:
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"Using date provided to the connector: {self.start_date}"
             )
             try:
                 start = f"{parse(self.start_date).isoformat()}Z"
             except ParserError:
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     f"Impossible to parse the date provided: {self.start_date}. Starting from one hour ago"
                 )
 
@@ -197,23 +202,30 @@ class Sekoia(object):
         self._clean_external_references_fields(items)
         items = self._clean_ic_fields(items)
         self._add_files_to_items(items)
-        [all_related_objects, all_relationships] = (
-            self._retrieve_related_objects_and_relationships(items)
-        )
 
-        if self.import_source_list:
-            all_related_objects = self._add_sources_to_items(all_related_objects)
+        # Getting source refs and add as labels in entity
+        self._add_sources_to_items(items)
 
-        items += all_related_objects + all_relationships
+        if self.import_ioc_relationships:
+            # Retrieve all related object to IOC and relationship
+            [all_related_objects, all_relationships] = (
+                self._retrieve_related_objects_and_relationships(items)
+            )
+
+            if self.import_source_list:
+                all_related_objects = self._add_sources_to_items(all_related_objects)
+
+            items += all_related_objects + all_relationships
+
         bundle = self.helper.stix2_create_bundle(items)
         try:
             self.helper.send_stix2_bundle(bundle, work_id=work_id)
         except RecursionError:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 "A recursion error occured, circular dependencies detected in the Sekoia bundle, sending the whole "
                 "bundle but please fix it "
             )
-            self.helper.send_stix2_bundle(bundle, work_id=work_id, bypass_split=True)
+            self.helper.send_stix2_bundle(bundle, work_id=work_id)
 
         self.helper.set_state({"last_cursor": cursor})
         if len(items) < self.limit:
@@ -257,14 +269,7 @@ class Sekoia(object):
 
     @staticmethod
     def _field_to_ignore(field: str) -> bool:
-        to_ignore = [
-            "x_ic_impacted_locations",
-            "x_ic_impacted_sectors",
-        ]
-        return (
-            (field.startswith("x_ic") or field.startswith("x_inthreat"))
-            and (field.endswith("ref") or field.endswith("refs"))
-        ) or field in to_ignore
+        return field.startswith("x_ic")
 
     def _retrieve_related_objects_and_relationships(self, indicators: List[Dict]):
         all_related_objects = []
@@ -457,7 +462,7 @@ class Sekoia(object):
             param_string = (
                 "&".join(f"{k}={v}" for k, v in params.items()) if params else ""
             )
-            self.helper.log_debug(
+            self.helper.connector_logger.debug(
                 f"Sending request to: {url} with params {param_string}"
             )
             res = requests.get(url, params=params, headers=headers)
@@ -468,9 +473,9 @@ class Sekoia(object):
         except RequestException as ex:
             if ex.response:
                 error = f"Request failed with status: {ex.response.status_code}"
-                self.helper.log_error(error)
+                self.helper.connector_logger.error(error)
             else:
-                self.helper.log_error(str(ex))
+                self.helper.connector_logger.error(str(ex))
             return None
 
     def _load_data_sets(self):
@@ -478,24 +483,24 @@ class Sekoia(object):
         ## MODIFICATION BY CYRILYXE
         #   Use of the global variable : gbl_scriptDir
         #   For using absolute path and not relative ones
-        global gbl_scriptDir
+        global gbl_scriptDir  # noqa: F824
 
-        self.helper.log_info("Loading locations mapping")
+        self.helper.connector_logger.info("Loading locations mapping")
         with open(gbl_scriptDir + "/data/geography_mapping.json") as fp:
             self._geography_mapping: Dict = json.load(fp)
 
-        self.helper.log_info("Loading sectors mapping")
+        self.helper.connector_logger.info("Loading sectors mapping")
         with open(gbl_scriptDir + "/data/sectors_mapping.json") as fp:
             self._sectors_mapping: Dict = json.load(fp)
 
         # Adds OpenCTI sectors/locations to cache
-        self.helper.log_info("Loading OpenCTI sectors")
+        self.helper.connector_logger.info("Loading OpenCTI sectors")
         with open(gbl_scriptDir + "/data/sectors.json") as fp:
             objects = json.load(fp)["objects"]
             for sector in objects:
                 self._clean_and_add_to_cache(sector)
 
-        self.helper.log_info("Loading OpenCTI locations")
+        self.helper.connector_logger.info("Loading OpenCTI locations")
         with open(gbl_scriptDir + "/data/geography.json") as fp:
             for geography in json.load(fp)["objects"]:
                 self._clean_and_add_to_cache(geography)

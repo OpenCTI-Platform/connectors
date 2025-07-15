@@ -38,6 +38,7 @@ class KVStore:
         self,
         splunk_url: str,
         splunk_token: str,
+        splunk_auth_type: str,
         splunk_app: str,
         splunk_owner: str,
         splunk_kv_store_name: str,
@@ -45,6 +46,7 @@ class KVStore:
     ) -> None:
         self.splunk_url = splunk_url
         self.splunk_token = splunk_token
+        self.splunk_auth_type = splunk_auth_type
         self.splunk_app = splunk_app
         self.splunk_owner = splunk_owner
         self.splunk_kv_store_name = splunk_kv_store_name
@@ -57,7 +59,7 @@ class KVStore:
     @property
     def headers(self) -> dict:
         return {
-            "Authorization": f"Bearer {self.splunk_token}",
+            "Authorization": f"{self.splunk_auth_type} {self.splunk_token}",
             "Content-Type": "application/json",
         }
 
@@ -232,6 +234,7 @@ class SplunkConnector:
                     "labels",
                     "is_inferred",
                     "main_observable_type",
+                    "description",
                 ]:
                     attribute_value = extension_definition.get(attribute_name)
                     if attribute_value:
@@ -356,6 +359,9 @@ if __name__ == "__main__":
         ).split(",")
         splunk_url = get_config_variable("SPLUNK_URL", ["splunk", "url"], config)
         splunk_token = get_config_variable("SPLUNK_TOKEN", ["splunk", "token"], config)
+        splunk_auth_type: str = get_config_variable(
+            "SPLUNK_AUTH_TYPE", ["splunk", "auth_type"], config, default="Bearer"
+        )
         splunk_owner = get_config_variable("SPLUNK_OWNER", ["splunk", "owner"], config)
         splunk_ssl_verify = get_config_variable(
             "SPLUNK_SSL_VERIFY", ["splunk", "ssl_verify"], config, False, True
@@ -389,6 +395,7 @@ if __name__ == "__main__":
         kvstore = KVStore(
             splunk_url,
             splunk_token,
+            splunk_auth_type,
             splunk_app,
             splunk_owner,
             splunk_kv_store_name,

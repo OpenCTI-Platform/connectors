@@ -1,0 +1,159 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "connectors-sdk"
+dynamic = ["version"]
+description = "Connectors SDK for Octi Connectors."
+requires-python = ">=3.11, <3.13"
+
+[tool.poetry]
+version = "0.0.0" # unused as the vrsion is dynamically set by project.dynamic but needed for poetry to work
+packages = [{include = "connectors_sdk"}]
+
+
+[tool.poetry.dependencies]
+pydantic = ">=2.11, <3"
+pycti = "6.7.4"
+stix2 = ">=3.0.1, <4"
+
+# Optional dependencies
+# octi-connectors = {path = "../.", extras = ["dev"], optional=true}
+# This could be a project used to defined the common linter, prettifier and other rules in the future
+black = {version = "25.1.0", optional=true}  # Aligned with ci-requirements
+isort = {version = "6.0.1", optional=true}  # Aligned with ci-requirements
+mypy = {version = "^1.15.0", optional=true}
+ruff = {version = "^0.12.0", optional=true}
+pytest = {version = ">=8.3.5, <9", optional=true}
+pytest-cov = {version = ">=6.2.1, <7", optional=true}
+pydocstyle = {version = ">=6.3.0, <7", optional=true}
+pip-audit = {version = "2.9.0", optional=true}
+sphinx = {version = ">=7.0", optional=true}
+sphinx-autodoc-typehints = {version = ">=1.24", optional=true}
+sphinx-rtd-theme = {version = ">=2.0", optional=true}
+
+
+[tool.poetry.extras]
+dev = [
+    # "octi-connectors", 
+    "black",
+    "isort",
+]
+test = [
+    "pytest",
+    "pip-audit",
+    "pytest-cov",
+    "mypy",
+    "ruff",
+]
+doc = [
+    "sphinx",
+    "sphinx-autodoc-typehints",
+    "sphinx-rtd-theme",
+]
+
+
+[tool.pytest.ini_options]
+testpaths = [
+    "./tests",
+]
+pythonpath = [
+    "./connectors_sdk",
+]
+addopts = [
+    "--cov=connectors_sdk",
+    "--cov-fail-under=100",
+]
+
+[tool.coverage.path]
+source = [
+    "./connectors_sdk",
+    "*/site-packages/connectors_sdk", # CI | ../run_tests.sh specific
+]
+
+[tool.ruff]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "tests",
+    "venv",
+]
+
+target-version = "py312"
+
+[tool.ruff.lint]
+# Never enforce `I001` (unsorted imports) as we use `isort` directly to sort imports
+# Never enforce `E501` (line length violations). Already handle with black
+# Never enforce `F821` (Undefined name `null`). incorrect issue with notebook
+# Never enforce `D213` (Multi-line docstring summary should start at the second line) conflict with our docstring convention
+# Never enforce `D211` (NoBlankLinesBeforeClass)`
+# Never enforce `G004` (logging-f-string) Logging statement uses f-string
+# Never enforce `TRY003`() Avoid specifying long messages outside the exception class not useful
+# Never enforce `D407` (Missing dashed underline after section) 
+# Never enforce `D408` (Section underline should be in the line following the section’s name) 
+# Never enforce `D409` (Section underline should match the length of its name)
+ignore = ["S101", "I001", "D203", "E501", "F821", "D205", "D213" , "D211", "G004", "TRY003", "D407", "D408", "D409"]
+select = ["E", "F", "W", "D", "G", "T", "B", "C", "N", "I", "S"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+
+[tool.mypy]
+strict = true
+exclude = [
+    '^.bzr',
+    '^.direnv',
+    '^.eggs',
+    '^.git',
+    '^.git-rewrite',
+    '^.hg',
+    '^.ipynb_checkpoints',
+    '^.mypy_cache',
+    '^.nox',
+    '^.pants.d',
+    '^.pyenv',
+    '^.pytest_cache',
+    '^.pytype',
+    '^.ruff_cache',
+    '^.tox',
+    '^.vscode',
+    '^__pypackages__',
+    '^_build',
+    '^buck-out',
+    '^build',
+    '^dist',
+    '^docs',
+    '^node_modules',
+    '^site-packages',
+    '^tests',
+    '^venv',
+]
+plugins = ['pydantic.mypy']
+
+[tool.sphinx]
+project = "Connectors SDK"
+author = "Filigran"

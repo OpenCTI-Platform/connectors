@@ -1,0 +1,17 @@
+services:
+  connector-dragos:
+    image: opencti/connector-dragos:6.7.4
+    environment:
+      - OPENCTI_URL=http://localhost:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - DRAGOS_API_BASE_URL=https://portal.dragos.com
+      - DRAGOS_API_TOKEN=ChangeMe
+      - DRAGOS_API_SECRET=ChangeMe
+    restart: unless-stopped
+    networks:
+      - docker_default
+
+networks:
+  default:
+    external: true
+    name: docker_default

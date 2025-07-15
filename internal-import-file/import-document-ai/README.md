@@ -20,21 +20,18 @@ OpenCTI data is coming from *import* connectors.
 
 ### Configuration
 
-| Parameter                            | Docker envvar                       | Mandatory    | Description                                                                                                                                                |
-| ------------------------------------ | ----------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `opencti_url`                        | `OPENCTI_URL`                       | Yes          | The URL of the OpenCTI platform.                                                                                                                           |
-| `opencti_token`                      | `OPENCTI_TOKEN`                     | Yes          | The default admin token configured in the OpenCTI platform parameters file.                                                                                |
-| `connector_id`                       | `CONNECTOR_ID`                      | Yes          | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                         |
-| `connector_name`                     | `CONNECTOR_NAME`                    | Yes          | Option `ImportDocumentAI`                                                                                                                          |
-| `connector_only_contextual`          | `CONNCETOR_ONLY_CONTEXTUAL`         | Yes          | `true` Only extract data related to an entity (a report, a threat actor, etc.)                                                                             |
-| `connector_auto`                     | `CONNCETOR_AUTO`                    | Yes          | `false` Enable/disable auto import of report file                                                                                                          |
-| `connector_scope`                    | `CONNECTOR_SCOPE`                   | Yes          | Supported file types: `'application/pdf','text/plain','text/html','text/markdown'`                                                                                                     |
-| `connector_confidence_level`         | `CONNECTOR_CONFIDENCE_LEVEL`        | Yes          | The default confidence level for created sightings (a number between 1 and 100).                                                                             |
-| `connector_log_level`                | `CONNECTOR_LOG_LEVEL`               | Yes          | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                                              |
-| `connector_create_indicator`   | `CONNECTOR_CREATE_INDICATOR`    | Yes          | Create an indicator for each extracted observable                                                                                                         |
-| `connector_web_service_url`   | `CONNECTOR_WEB_SERVICE_URL`    | Yes          | The url to access to the extraction service (provided by Filigran to Enterprise Edition users)                                                                                                         |
-| `connector_licence_key_pem`   | `CONNECTOR_LICENCE_KEY_PEM`    | Yes          | The url certificacte authenticating an allowed user, in a PEM format (provided by Filigran to Enterprise Edition users)                                                                                                         |
-After adding the connector, you should be able to extract information from a report.
+| Parameter                        | Docker envvar                           | Default                                | Mandatory | Description                                                                                   |
+|----------------------------------|-----------------------------------------|----------------------------------------|-----------|-----------------------------------------------------------------------------------------------|
+| `opencti_url`                    | `OPENCTI_URL`                           |                                        | Yes       | The URL of the OpenCTI platform.                                                              |
+| `opencti_token`                  | `OPENCTI_TOKEN`                         |                                        | Yes       | The default admin token configured in the OpenCTI platform parameters file.                   |
+| `connector_id`                   | `CONNECTOR_ID`                          |                                        | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                            |
+| `connector_name`                 | `CONNECTOR_NAME`                        |                                        | Yes       | Option `ImportDocumentAI`                                                                     |
+| `connector_auto`                 | `CONNECTOR_AUTO`                        | `false`                                | No        | Enable/disable auto import of report file                                                     |
+| `connector_scope`                | `CONNECTOR_SCOPE`                       |                                        | Yes       | Supported file types: `'application/pdf','text/plain','text/html','text/markdown'`            |
+| `connector_log_level`            | `CONNECTOR_LOG_LEVEL`                   | error                                  | No        | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose). |
+| `connector_create_indicator`     | `CONNECTOR_CREATE_INDICATOR`            | `false`                                | No        | Create an indicator for each extracted observable                                             |
+| `connector_web_service_url`      | `CONNECTOR_WEB_SERVICE_URL`             | `https://importdoc.ariane.filigran.io` | No        | The URL of the extraction service running the AI model (                                      |
+| `connector_licence_key_pem`      | `CONNECTOR_LICENCE_KEY_PEM`             |                                        | Yes       | The license certificate in a PEM format (provided by Filigran to Enterprise Edition users)    |
 
 ### Debugging ###
 
@@ -74,41 +71,39 @@ Example
 
 **Extractable Entities/Stix Domain Objects**
 
-| Extractable Entity | Based on | Example | Stix entity type and field | Note |
-|-------------|-------------------------|------------------|------|----|
-| Attack Pattern | MITRE ATT&CK Technique | T1234.001| AttackPattern.x_mitre_id |  |
-| Country      | Occurrence in the original text |France |Location.name, Location.aliases|  |
-| Intrusion Set | Occurrence in the original text | APT29| IntrusionSet.name, IntrusionSet.aliases| |
-| Malware          | Occurrence in the original text |BadPatch| Malware.name, Malware.aliases|  |
-| Vulnerability | CVE Numbers             | CVE-2020-0688 | Vulnerability.name |  |
+| Extractable Entity | Based on                        | Example       | Stix entity type and field              | Note |
+|--------------------|---------------------------------|---------------|-----------------------------------------|------|
+| Attack Pattern     | MITRE ATT&CK Technique          | T1234.001     | AttackPattern.x_mitre_id                |      |
+| Country            | Occurrence in the original text | France        | Location.name, Location.aliases         |      |
+| Intrusion Set      | Occurrence in the original text | APT29         | IntrusionSet.name, IntrusionSet.aliases |      |
+| Malware            | Occurrence in the original text | BadPatch      | Malware.name, Malware.aliases           |      |
+| Vulnerability      | CVE Numbers                     | CVE-2020-0688 | Vulnerability.name                      |      |
 
 **Extractable Observables/Stix Cyber Observables**
 
-| Extractable Observable/SCO | Stix Reference fields | Supported | Note |
-|-----------------------------|------------------|------|---|
-| Artifact | - | :x: | |
-| AutonomousSystem        | AutonomousSystem.number| :heavy_check_mark: | |
-| Directory | - | :x: | |
-| Domain Name | DomainName.value| :heavy_check_mark: | |
-| EMail Address | EMail-Addr.value | :heavy_check_mark: ||
-| EMail Message | - | :x: | |
-| File | File.name, File.hashes (MD5, SHA-1, SHA-256) | :heavy_plus_sign: | |
-| IPv4 Address | IPv4-Addr.value| :heavy_check_mark: ||
-| IPv6 Address | IPv6-Addr.value| :heavy_check_mark: ||
-| MAC Address | Mac-Addr.value| :heavy_check_mark: | |
-| Mutex | - |:x: | |
-| Network Traffic | - | :x: | |
-| Process | - | :x: | |
-| Software | - | :x: | |
-| URL | Url.value | :heavy_check_mark: | |
-| User Account | - | :x: | |
-| Windows Registry Key | WindowsRegistryKey.key | :heavy_plus_sign: | |
-| X.509 Certificate | - | :x: | |
+| Extractable Observable/SCO | Stix Reference fields                        | Supported          | Note |
+|----------------------------|----------------------------------------------|--------------------|------|
+| Artifact                   | -                                            | :x:                |      |
+| AutonomousSystem           | AutonomousSystem.number                      | :heavy_check_mark: |      |
+| Directory                  | -                                            | :x:                |      |
+| Domain Name                | DomainName.value                             | :heavy_check_mark: |      |
+| EMail Address              | EMail-Addr.value                             | :heavy_check_mark: |      |
+| EMail Message              | -                                            | :x:                |      |
+| File                       | File.name, File.hashes (MD5, SHA-1, SHA-256) | :heavy_plus_sign:  |      |
+| IPv4 Address               | IPv4-Addr.value                              | :heavy_check_mark: |      |
+| IPv6 Address               | IPv6-Addr.value                              | :heavy_check_mark: |      |
+| MAC Address                | Mac-Addr.value                               | :heavy_check_mark: |      |
+| Mutex                      | -                                            | :x:                |      |
+| Network Traffic            | -                                            | :x:                |      |
+| Process                    | -                                            | :x:                |      |
+| Software                   | -                                            | :x:                |      |
+| URL                        | Url.value                                    | :heavy_check_mark: |      |
+| User Account               | -                                            | :x:                |      |
+| Windows Registry Key       | WindowsRegistryKey.key                       | :heavy_plus_sign:  |      |
+| X.509 Certificate          | -                                            | :x:                |      |
 
 :heavy_check_mark: = Fully implemented
-
 :heavy_plus_sign: = Not entirely implemented
-
 :x: = Not implemented
 
 *Reference: https://docs.oasis-open.org/cti/stix/v2.1/cs01/stix-v2.1-cs01.html*

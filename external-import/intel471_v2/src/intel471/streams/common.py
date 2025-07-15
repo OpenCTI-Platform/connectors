@@ -10,6 +10,8 @@ from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle
 from titan_client.titan_stix import STIXMapperSettings
 from titan_client.titan_stix.exceptions import EmptyBundle
+from urllib3 import make_headers
+from urllib3.util import parse_url
 
 from .. import HelperRequest
 
@@ -64,6 +66,8 @@ class Intel471Stream(ABC):
             username=api_username, password=api_key
         )
         self.api_config.proxy = proxy_url
+        if proxy_auth := parse_url(proxy_url).auth:
+            self.api_config.proxy_headers = make_headers(proxy_basic_auth=proxy_auth)
         self.ioc_score = ioc_score
         self.update_existing_data = update_existing_data
         if initial_history:

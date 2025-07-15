@@ -98,6 +98,12 @@ class VirusTotalConnector:
             default=True,
         )
         self.url_indicator_config = IndicatorConfig.load_indicator_config(config, "URL")
+        self.include_attributes_in_note = get_config_variable(
+            "VIRUSTOTAL_INCLUDE_ATTRIBUTES_IN_NOTE",
+            ["virustotal", "include_attributes_in_note"],
+            config,
+            default=False,
+        )
 
     def resolve_default_value(self, stix_entity):
         if "hashes" in stix_entity and "SHA-256" in stix_entity["hashes"]:
@@ -190,6 +196,7 @@ class VirusTotalConnector:
             stix_entity,
             opencti_entity,
             json_data["data"],
+            include_attributes_in_note=self.include_attributes_in_note,
         )
         builder.update_hashes()
 
@@ -279,6 +286,11 @@ class VirusTotalConnector:
                         + str(result.get("result") or "N/A")
                         + " | \n"
                     )
+                content += (
+                    builder.create_notes_attributes_content()
+                    if self.include_attributes_in_note
+                    else ""
+                )
                 builder.create_note("VirusTotal Report", content)
         return builder.send_bundle()
 
@@ -298,6 +310,7 @@ class VirusTotalConnector:
             stix_entity,
             opencti_entity,
             json_data["data"],
+            include_attributes_in_note=self.include_attributes_in_note,
         )
 
         if self.ip_add_relationships:
@@ -327,6 +340,7 @@ class VirusTotalConnector:
             stix_entity,
             opencti_entity,
             json_data["data"],
+            include_attributes_in_note=self.include_attributes_in_note,
         )
 
         if self.domain_add_relationships:
@@ -380,6 +394,15 @@ class VirusTotalConnector:
             raise ValueError(json_data["error"]["message"])
         if "data" not in json_data or "attributes" not in json_data["data"]:
             raise ValueError("An error has occurred.")
+        get_url_related_object = self.client.get_url_related_objects(
+            url=opencti_entity["observable_value"],
+            relationship="last_serving_ip_address",
+        )
+        url_related_object_data = (
+            get_url_related_object.get("data", {})
+            if isinstance(get_url_related_object, dict)
+            else {}
+        )
 
         builder = VirusTotalBuilder(
             self.helper,
@@ -389,6 +412,8 @@ class VirusTotalConnector:
             stix_entity,
             opencti_entity,
             json_data["data"],
+            include_attributes_in_note=self.include_attributes_in_note,
+            url_related_object_data=url_related_object_data,
         )
 
         builder.create_indicator_based_on(

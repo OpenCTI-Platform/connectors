@@ -1,0 +1,13 @@
+version: '3'
+services:
+  connector-s3:
+    image: opencti/connector-s3:6.7.4
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - "CONNECTOR_NAME=S3 Bucket"
+      - S3_ACCESS_KEY_ID=
+      - S3_SECRET_ACCESS_KEY=
+      - S3_BUCKET_NAME=
+    restart: always

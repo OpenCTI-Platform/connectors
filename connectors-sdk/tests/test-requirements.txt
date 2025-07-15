@@ -1,0 +1,2 @@
+# hack to be detected as a tested module by connectors/run_tests.sh script used in circleCI 
+./connectors-sdk/.[test]

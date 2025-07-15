@@ -90,6 +90,15 @@ Configuration parameters are provided using environment variables as described b
 
 ---
 
+## Generic Config Settings for File, Artifact IP, Domain, URL
+
+| Parameter `virustotal`         | config.yml                       | Docker environment variable                 | Default | Mandatory | Description                                                                           |
+|--------------------------------|----------------------------------|---------------------------------------------|---------|-----------|---------------------------------------------------------------------------------------|
+| Include Attributes in Note              | `include_attributes_in_note`              | `VIRUSTOTAL_INCLUDE_ATTRIBUTES_IN_NOTE`              | `False`  | No        | Whether or not to include the attributes info in Note                 |
+
+
+---
+
 ### Debugging
 
 Set the appropriate log level for debugging. Use `self.helper.log_{LOG_LEVEL}("Message")` for logging, e.g., `self.helper.log_error("Error message")`.

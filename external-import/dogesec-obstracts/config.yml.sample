@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'CHANGEME'
+
+connector:
+  id: 'CHANGEME'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Obstracts'
+  scope: 'obstracts'
+  confidence_level: 70
+  update_existing_data: false
+  log_level: 'info'
+
+obstracts:
+  base_url: 'https://api.obstracts.com/'
+  api_key: CHANGEME
+  feed_ids: '' # comma separated feed ids
+  interval_hours: 1 # interval in hours
+  days_to_backfill: 7 # Number of days to back fill for new streams

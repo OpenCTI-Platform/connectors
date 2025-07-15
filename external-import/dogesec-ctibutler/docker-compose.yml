@@ -1,0 +1,17 @@
+version: '3'
+services:
+  connector-dogesec-ctibutler:
+    image: opencti/connector-dogesec-ctibutler:6.7.4
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=CTIBUTLER
+      - CONNECTOR_SCOPE=ctibutler
+      - CONNECTOR_LOG_LEVEL=error
+      - CTIBUTLER_BASE_URL=https://api.ctibutler.com/
+      - CTIBUTLER_API_KEY=CHANGEME
+      - CTIBUTLER_INTERVAL_DAYS=1
+      - CTIBUTLER_KNOWLEDGEBASES=""
+      - VERIFY_SSL=true
+    restart: always

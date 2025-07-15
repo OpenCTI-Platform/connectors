@@ -1,0 +1,15 @@
+version: '3'
+services:
+  connector-first-epss-bulk:
+    image: opencti/connector-first-epss-bulk:6.7.4
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME="External Import First EPSS Connector"
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT24H
+      # Connector's custom execution parameters
+      - FIRST_EPSS_API_BASE_URL=https://epss.cyentia.com
+    restart: always

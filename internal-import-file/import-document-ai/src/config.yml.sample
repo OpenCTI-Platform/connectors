@@ -3,13 +3,13 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'changeMeInUUID'
+  id: 'ChangeMe'
   type: 'INTERNAL_IMPORT_FILE'
   name: 'ImportDocumentAI'
+  validate_before_import: true # Validate any bundle before import
   scope: 'application/pdf,text/plain,text/html,text/markdown'
-  validate_before_import: true 
+  auto: false # Enable/disable auto-import of file
   log_level: 'info'
-  web_service_url: 'http://localhost:PORT'
   licence_key_pem: |
     -----BEGIN CERTIFICATE-----
     ...

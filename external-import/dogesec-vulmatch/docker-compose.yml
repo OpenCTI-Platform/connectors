@@ -1,0 +1,20 @@
+version: '3'
+services:
+  connector-dogesec-vulmatch:
+    image: opencti/connector-dogesec-vulmatch:6.7.4
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=VULMATCH
+      - CONNECTOR_SCOPE=vulmatch
+      - CONNECTOR_LOG_LEVEL=error
+      - VULMATCH_BASE_URL=https://api.vulmatch.com/
+      - VULMATCH_API_KEY=CHANGEME
+      - VULMATCH_SBOM_ONLY=true
+      - VULMATCH_CVSS_BASE_SCORE_MIN=CHANGEME
+      - VULMATCH_EPSS_SCORE_MIN=CHANGEME
+      - VULMATCH_DAYS_TO_BACKFILL=100
+      - VULMATCH_INTERVAL_DAYS=1
+      - VERIFY_SSL=true
+    restart: always

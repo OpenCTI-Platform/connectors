@@ -44,7 +44,7 @@ Configuration options can be set as environment variables, and in `docker-compos
 | INTEL471_INITIAL_HISTORY_CVES       | initial_history_cves       | Same as INTEL471_INITIAL_HISTORY_INDICATORS variable, but for CVE reports.
 | INTEL471_INTERVAL_YARA              | interval_yara              | Same as INTEL471_INTERVAL_INDICATORS variable, but for YARA rules.
 | INTEL471_INITIAL_HISTORY_YARA       | initial_history_yara       | Same as INTEL471_INITIAL_HISTORY_INDICATORS variable, but for YARA rules.
-| INTEL471_PROXY                      | proxy                      | Optional Proxy URL, for example `http://user@pass:localhost:3128`
+| INTEL471_PROXY                      | proxy                      | Optional Proxy URL, for example `http://user:pass@localhost:3128`
 | INTEL471_IOC_SCORE                      | ioc_score                      | Indicator [score](https://docs.opencti.io/latest/usage/indicators-lifecycle/). Defaults to `70`.
 
 _The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.

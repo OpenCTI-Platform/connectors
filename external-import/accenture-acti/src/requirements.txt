@@ -1,0 +1,7 @@
+pycti==6.7.4
+pyyaml~=6.0.2
+requests~=2.32.3
+validators==0.35.0
+html-to-markdown
+pycognito
+isodate

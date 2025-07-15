@@ -1,5 +1,9 @@
 # OpenCTI External Ingestion Connector Wiz
 
+| Status            | Date       | Comment |
+| ----------------- |------------| ------- |
+| Filigran Verified | 2025-04-09 |    -    |
+
 Table of Contents
 
 - [OpenCTI External Ingestion Connector Wiz](#opencti-external-ingestion-connector-wiz)

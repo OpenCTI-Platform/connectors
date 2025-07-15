@@ -32,6 +32,9 @@ If you are using it independently, remember that the connector will try to conne
 | `greynoise_description`                | `GREYNOISE_DESCRIPTION`                | Yes        | The GreyNoise organization description                                                                                    |
 | `greynoise_sighting_not_seen`          | `GREYNOISE_SIGHTING_NOT_SEEN`          | Yes        | Must be `true` or `false` to enable or disable the creation of a sighting with `count=0` when an IP has not been seen.    |
 | `greynoise_default_score`              | `GREYNOISE_DEFAULT_SCORE`              | Yes        | Default_score allows you to add a default score for an indicator and its observable (a number between 1 and 100)          | 
+| `greynoise_indicator_score_malicious` | `GREYNOISE_INDICATOR_SCORE_MALICIOUS=90` | No | Indicator score applied when GreyNoise classification is malicious (a number between 1 and 100) |
+| `greynoise_indicator_score_suspicious` | `GREYNOISE_INDICATOR_SCORE_SUSPICIOUS=70`| No | Indicator score applied when GreyNoise classification is suspicious (a number between 1 and 100) |
+| `greynoise_indicator_score_benign` | `GREYNOISE_INDICATOR_SCORE_BENIGN=20`| No | Indicator score applied when GreyNoise classification is benign (a number between 1 and 100) |
 
 
 ## Behavior

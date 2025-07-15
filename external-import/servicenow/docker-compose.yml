@@ -1,0 +1,56 @@
+version: '3'
+services:
+  connector-servicenow:
+    image: opencti/connector-servicenow:6.7.4
+    environment:
+      # OpenCTI parameters - REQUIRED
+      - OPENCTI_URL=CHANGEME
+      - OPENCTI_TOKEN=CHANGEME
+
+      # Connector's definition parameters - REQUIRED
+      - CONNECTOR_ID=CHANGEME
+
+      # Connector's definition parameters - OPTIONAL
+      #- CONNECTOR_NAME=ServiceNow
+      #- CONNECTOR_SCOPE=ServiceNow
+      #- CONNECTOR_LOG_LEVEL=error
+      #- CONNECTOR_DURATION_PERIOD=PT24H
+      #- CONNECTOR_QUEUE_THRESHOLD=500
+      #- CONNECTOR_RUN_AND_TERMINATE=False
+      #- CONNECTOR_SEND_TO_QUEUE=True
+      #- CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7
+      #- CONNECTOR_SEND_TO_DIRECTORY=False
+      # (if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path for CONNECTOR_SEND_TO_DIRECTORY_PATH)
+      #- CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME
+
+      # ServiceNow definition parameters - REQUIRED
+      - SERVICENOW_INSTANCE_NAME=CHANGEME
+      - SERVICENOW_API_KEY=CHANGEME
+
+      # ServiceNow definition parameters - OPTIONAL
+      #- SERVICENOW_IMPORT_START_DATE=P30D
+      #- SERVICENOW_API_VERSION=v2
+      #- SERVICENOW_API_LEAKY_BUCKET_RATE=10
+      #- SERVICENOW_API_LEAKY_BUCKET_CAPACITY=10
+      #- SERVICENOW_API_RETRY=5
+      #- SERVICENOW_API_BACKOFF=PT30S
+      #- SERVICENOW_STATE_TO_EXCLUDE=
+      #- SERVICENOW_SEVERITY_TO_EXCLUDE=
+      #- SERVICENOW_PRIORITY_TO_EXCLUDE=
+      #- SERVICENOW_COMMENT_TO_EXCLUDE=
+      #- SERVICENOW_TLP_LEVEL=red
+      #- SERVICENOW_OBSERVABLES_DEFAULT_SCORE=50
+      #- SERVICENOW_PROMOTE_OBSERVABLES_AS_INDICATORS=True
+
+      # Add proxy parameters below if needed
+      # - HTTP_PROXY=CHANGEME
+      # - HTTPS_PROXY=CHANGEME
+      # - NO_PROXY=CHANGEME
+    restart: always
+    # networks:
+    #   - docker_default
+
+# networks:
+#   default:
+#     external: true
+#     name: docker_default

@@ -1,0 +1,23 @@
+version: '3'
+services:
+  email-intel-microsoft:
+    image: opencti/connector-email-intel-microsoft:6.7.4
+    environment:
+      # OpenCTI configuration
+      OPENCTI_URL: http://localhost:PORT
+      OPENCTI_TOKEN: ChangeMe
+      # Common connector configuration
+      CONNECTOR_ID: ChangeMe
+#      CONNECTOR_NAME: Email Intel Microsoft
+#      CONNECTOR_SCOPE: email-intel-microsoft
+#      CONNECTOR_LOG_LEVEL: error
+#      CONNECTOR_DURATION_PERIOD: PT1H
+      # Connector configuration
+#      EMAIL_INTEL_MICROSOFT_TLP_LEVEL: amber+strict
+#      EMAIL_INTEL_MICROSOFT_RELATIVE_IMPORT_START_DATE: P30D
+      EMAIL_INTEL_MICROSOFT_TENANT_ID: ChangeMe
+      EMAIL_INTEL_MICROSOFT_CLIENT_ID: ChangeMe
+      EMAIL_INTEL_MICROSOFT_CLIENT_SECRET: ChangeMe
+      EMAIL_INTEL_MICROSOFT_EMAIL: ChangeMe
+#      EMAIL_INTEL_MICROSOFT_MAILBOX: INBOX
+#      EMAIL_INTEL_MICROSOFT_ATTACHMENTS_MIME_TYPES: application/pdf,text/csv,text/plain
