@@ -37,9 +37,7 @@ class DoppelConnector:
             alerts = self._collect_alerts()
             if alerts:
                 bundle = self.converter.convert_alerts_to_stix(alerts)
-                bundle_sent = self.helper.send_stix2_bundle(
-                    bundle, update=self.config.update_existing_data
-                )
+                bundle_sent = self.helper.send_stix2_bundle(bundle)
                 self.helper.connector_logger.info(
                     "STIX bundle sent", {"objects": len(bundle_sent)}
                 )

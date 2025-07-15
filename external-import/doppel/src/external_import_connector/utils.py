@@ -19,7 +19,7 @@ def parse_iso_datetime(timestamp_str, field_name, alert_id, helper):
 def get_last_run(helper, historical_days):
     state = helper.get_state()
     if state and "last_run" in state:
-        helper.log_info(f"Resuming from last run timestamp: {state['last_run']}")
+        helper.log_info("Resuming from last run timestamp")
         return state["last_run"]
 
     default_start = datetime.now(timezone.utc) - timedelta(days=historical_days)

@@ -19,9 +19,26 @@ class ConnectorClient:
             self.helper.connector_logger.info("[API] Requesting data", {"url": api_url})
             response.raise_for_status()
             return response
+        except requests.HTTPError as http_err:
+            error_msg = ""
+            try:
+                error_json = http_err.response.json()
+                error_msg = error_json.get("message", http_err.response.text)
+            except Exception:
+                error_msg = http_err.response.text or str(http_err)
+
+            self.helper.connector_logger.error(
+                "[API] HTTP error during fetch",
+                {
+                    "url": api_url,
+                    "status_code": http_err.response.status_code,
+                    "error": error_msg,
+                },
+            )
+            raise
         except requests.RequestException as err:
             self.helper.connector_logger.error(
-                "[API] Error during fetch",
+                "[API] Request error during fetch",
                 {
                     "url": api_url,
                     "error": str(err),
