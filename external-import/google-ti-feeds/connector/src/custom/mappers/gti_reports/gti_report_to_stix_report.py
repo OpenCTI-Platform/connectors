@@ -157,12 +157,13 @@ class GTIReportToSTIXReport(BaseMapper):
             )
             external_references.append(external_reference)
 
-        if self.report.id:
-            external_reference = ExternalReferenceModel(
-                source_name="Google Threat Intelligence Platform",
-                description="Google Threat Intelligence Report Link",
-                url=f"https://www.virustotal.com/gui/collection/{self.report.id}",
-            )
+        if self.report.id and self.report.attributes:
+            if hasattr(self.report.attributes, "name") and self.report.attributes.name:
+                external_reference = ExternalReferenceModel(
+                    source_name=f"[GTI] Report {self.report.attributes.name}",
+                    description="Google Threat Intelligence Report Link",
+                    url=f"https://www.virustotal.com/gui/collection/{self.report.id}",
+                )
             external_references.append(external_reference)
         return external_references
 

@@ -1,7 +1,7 @@
 """Converts a GTI threat actor to a STIX intrusion set object."""
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     GTIThreatActorData,
@@ -20,11 +20,43 @@ from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
 )
-from stix2.v21 import IntrusionSet, Relationship  # type: ignore
+from stix2.v21 import IntrusionSet  # type: ignore
 
 
 class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
     """Converts a GTI threat actor to a STIX intrusion set object."""
+
+    @staticmethod
+    def create_relationship(
+        src_entity: Any, relation_type: str, target_entity: Any
+    ) -> Any:
+        """Create a relationship between an intrusion set and target entity.
+
+        Args:
+            src_entity: The source entity
+            relation_type: The relationship type
+            target_entity: The target entity
+
+        Returns:
+            OctiRelationshipModel: The relationship object
+
+        """
+        if not any(
+            "IntrusionSet" in str(type(entity).__name__)
+            for entity in [src_entity, target_entity]
+        ):
+            return None
+
+        return OctiRelationshipModel.create(
+            relationship_type=relation_type,
+            source_ref=src_entity.id,
+            target_ref=target_entity.id,
+            organization_id=src_entity.created_by_ref,
+            marking_ids=src_entity.object_marking_refs,
+            created=datetime.now(),
+            modified=datetime.now(),
+            description=f"{type(src_entity).__name__} {relation_type} {type(target_entity).__name__}",
+        )
 
     def __init__(
         self,
@@ -234,52 +266,6 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
 
         return labels if labels else None
 
-    @staticmethod
-    def create_relationship(
-        source_entity: IntrusionSet,
-        relationship_type: str,
-        target_entity: object,
-        description: Optional[str] = None,
-    ) -> Relationship:
-        """Create a STIX relationship between intrusion set and target entity.
-
-        Args:
-            source_entity (IntrusionSet): The source intrusion set object.
-            relationship_type (str): The type of relationship (e.g., 'related-to').
-            target_entity (object): The target entity object.
-            description (Optional[str]): Custom description for the relationship.
-
-        Returns:
-            Relationship: The STIX relationship object.
-
-        """
-        if not hasattr(source_entity, "id"):
-            raise ValueError("Source entity must have an id attribute")
-        if not hasattr(target_entity, "id"):
-            raise ValueError("Target entity must have an id attribute")
-
-        created = source_entity.created
-        modified = source_entity.modified
-
-        created_by_ref = source_entity.created_by_ref
-        object_marking_refs = getattr(source_entity, "object_marking_refs", [])
-
-        if not description:
-            source_name = getattr(source_entity, "name", "Intrusion Set")
-            target_name = getattr(target_entity, "name", "Target")
-            description = f"{source_name} {relationship_type} {target_name}"
-
-        return OctiRelationshipModel.create(
-            relationship_type=relationship_type,
-            source_ref=source_entity.id,
-            target_ref=target_entity.id,
-            organization_id=created_by_ref,
-            marking_ids=object_marking_refs,
-            created=created,
-            modified=modified,
-            description=description,
-        )
-
     def _build_external_references(self) -> List[ExternalReferenceModel]:
         """Build external references from Threat Actor attributes.
 
@@ -288,11 +274,15 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
 
         """
         external_references = []
-        if self.threat_actor.id:
-            external_reference = ExternalReferenceModel(
-                source_name="Google Threat Intelligence Platform",
-                description="Google Threat Intelligence Report Link",
-                url=f"https://www.virustotal.com/gui/collection/{self.threat_actor.id}",
-            )
+        if self.threat_actor.id and self.threat_actor.attributes:
+            if (
+                hasattr(self.threat_actor.attributes, "name")
+                and self.threat_actor.attributes.name
+            ):
+                external_reference = ExternalReferenceModel(
+                    source_name=f"[GTI] Threat Actor {self.threat_actor.attributes.name}",
+                    description="Google Threat Intelligence Threat Actor Link",
+                    url=f"https://www.virustotal.com/gui/collection/{self.threat_actor.id}",
+                )
             external_references.append(external_reference)
         return external_references

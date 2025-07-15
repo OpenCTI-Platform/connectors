@@ -161,6 +161,36 @@ class ConvertToSTIX:
             )
             return []
 
+    def convert_malware_family_to_stix(self, malware_family_data: Any) -> List[Any]:
+        """Convert malware family to location, identity, and malware STIX objects.
+
+        Args:
+            malware_family_data: GTIMalwareFamilyData object from fetcher
+
+        Returns:
+            List of STIX entities (location, identity, malware)
+
+        """
+        try:
+            converter = self.converter_factory.create_converter_by_name(
+                "malware_family"
+            )
+            stix_entities = converter.convert_single(malware_family_data)
+
+            if not isinstance(stix_entities, list):
+                stix_entities = [stix_entities]
+
+            self.logger.debug(
+                f"{LOG_PREFIX} Converted malware family to {len(stix_entities)} STIX entities"
+            )
+            return stix_entities
+
+        except Exception as e:
+            self.logger.error(
+                f"{LOG_PREFIX} Failed to convert malware family to STIX: {str(e)}"
+            )
+            return []
+
     def convert_subentities_to_stix(
         self, subentities: Dict[str, List[Any]], main_entity: Optional[str] = None
     ) -> List[Any]:

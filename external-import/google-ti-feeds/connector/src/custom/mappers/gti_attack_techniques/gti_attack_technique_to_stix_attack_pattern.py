@@ -30,14 +30,20 @@ class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):
         """Create a relationship between an intrusion set and attack pattern.
 
         Args:
-            src_entity: The source entity (intrusion set)
-            relation_type: The relationship type (should be "uses")
-            target_entity: The target entity (attack pattern)
+            src_entity: The source entity
+            relation_type: The relationship type
+            target_entity: The target entity
 
         Returns:
             OctiRelationshipModel: The relationship object
 
         """
+        if not any(
+            "AttackPattern" in str(type(entity).__name__)
+            for entity in [src_entity, target_entity]
+        ):
+            return None
+
         return OctiRelationshipModel.create(
             relationship_type=relation_type,
             source_ref=src_entity.id,
@@ -46,7 +52,7 @@ class GTIAttackTechniqueToSTIXAttackPattern(BaseMapper):
             marking_ids=src_entity.object_marking_refs,
             created=datetime.now(),
             modified=datetime.now(),
-            description=f"Intrusion set {relation_type} attack pattern",
+            description=f"{type(src_entity).__name__} {relation_type} {type(target_entity).__name__}",
         )
 
     def __init__(
