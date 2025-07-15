@@ -1,0 +1,16 @@
+services:
+  teamt5-external-import:
+    image: opencti/teamt5-external-import:6.7.4
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=CHANGEME
+      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=CHANGEME # ISO8601 format in String, start with 'P...' for Period
+      - CONNECTOR_API_BASE_URL=CHANGEME
+      - CONNECTOR_API_KEY=CHANGEME
+      - CONNECTOR_TLP_LEVEL=CHANGEME # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
+
+    restart: always
