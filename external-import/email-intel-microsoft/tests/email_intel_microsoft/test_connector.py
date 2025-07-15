@@ -43,8 +43,14 @@ def test_connector_process_data(
     email1 = message("message1", [])
     email2 = message("message2", [])
 
-    connector.client._messages = messages_builder(
+    connector.client._client = MagicMock()
+
+    messages = messages_builder(
         [SimpleNamespace(value=[email1, email2], odata_next_link=None)]
+    )
+
+    connector.client._client.users.by_user_id.return_value.mail_folders.by_mail_folder_id.return_value.messages = (
+        messages
     )
 
     stix_objects = connector.process_data()

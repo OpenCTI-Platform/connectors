@@ -5,6 +5,7 @@ from typing import Any
 
 from azure.identity.aio import ClientSecretCredential
 from base_connector import BaseClient
+from base_connector.errors import ConnectorError
 from kiota_abstractions.base_request_configuration import RequestConfiguration
 from msgraph import GraphServiceClient
 from msgraph.generated.models.attachment import (
@@ -21,6 +22,9 @@ from msgraph.generated.models.message_collection_response import (
 )
 from msgraph.generated.users.item.mail_folders.item.messages.messages_request_builder import (
     MessagesRequestBuilder,
+)
+from msgraph.generated.users.item.mail_folders.mail_folders_request_builder import (
+    MailFoldersRequestBuilder,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,6 +43,7 @@ class ConnectorClient(BaseClient):
     ) -> None:
         super().__init__()
         self._email = email
+        self._mailbox = mailbox
         self._attachments_mime_types = attachments_mime_types
 
         # Azure credential (aio flavour → must be closed)
@@ -49,20 +54,36 @@ class ConnectorClient(BaseClient):
         )
 
         # Root Graph client
-        self._messages = (
-            GraphServiceClient(credentials=self._credentials)
-            .users.by_user_id(self._email)
-            .mail_folders.by_mail_folder_id(mailbox)
-            .messages
-        )
+        self._client = GraphServiceClient(credentials=self._credentials)
 
     async def __aenter__(self) -> "ConnectorClient":
         """Opens Azure credential with async context manager."""
+        self._folder_id = await self.get_folder_id_by_name(self._mailbox)
         return self
 
     async def __aexit__(self, *_exc: Any) -> None:
         """Closes the underlying Azure credential when the ConnectorClient is used as an async context manager."""
         await self._credentials.close()
+
+    async def get_folder_id_by_name(self, mailbox: str) -> str:
+        """Retrieve the folder ID for a given mailbox name."""
+        if mailbox == "INBOX":
+            return "inbox"
+
+        query_params = (
+            MailFoldersRequestBuilder.MailFoldersRequestBuilderGetQueryParameters(
+                filter=f"displayName eq '{mailbox}'"
+            )
+        )
+        folders_response = await self._client.users.by_user_id(
+            self._email
+        ).mail_folders.get(
+            request_configuration=RequestConfiguration(query_parameters=query_params)
+        )
+        for folder in folders_response.value:
+            if folder.display_name == mailbox:
+                return folder.id
+        raise ConnectorError(f"Folder '{mailbox}' not found for user '{self._email}'.")
 
     async def _load_file_attachments(self, message: Message) -> None:
         """Download *FileAttachment* concurrently via `asyncio.gather`."""
@@ -82,7 +103,9 @@ class ConnectorClient(BaseClient):
 
         async def _download(file_attachment: FileAttachment) -> None:
             attachment: Attachment = await (
-                self._messages.by_message_id(message.id)
+                self._client.users.by_user_id(self._email)
+                .mail_folders.by_mail_folder_id(self._folder_id)
+                .messages.by_message_id(message.id)
                 .attachments.by_attachment_id(file_attachment.id)
                 .get()
             )
@@ -128,9 +151,13 @@ class ConnectorClient(BaseClient):
             )
         )
 
-        page: MessageCollectionResponse = await self._messages.get(
-            request_configuration=RequestConfiguration(
-                query_parameters=query_parameters
+        page: MessageCollectionResponse = await (
+            self._client.users.by_user_id(self._email)
+            .mail_folders.by_mail_folder_id(self._folder_id)
+            .messages.get(
+                request_configuration=RequestConfiguration(
+                    query_parameters=query_parameters
+                )
             )
         )
         messages = []
@@ -141,7 +168,12 @@ class ConnectorClient(BaseClient):
 
             if not page.odata_next_link:
                 break
-            page = await self._messages.with_url(raw_url=page.odata_next_link).get()
+            page = await (
+                self._client.users.by_user_id(self._email)
+                .mail_folders.by_mail_folder_id(self._folder_id)
+                .messages.with_url(raw_url=page.odata_next_link)
+                .get()
+            )
         return messages
 
     def fetch_from_relative_import_start_date(
