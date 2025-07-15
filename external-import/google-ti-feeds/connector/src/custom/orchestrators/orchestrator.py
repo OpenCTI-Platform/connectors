@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 
 from connector.src.custom.client_api import ClientAPI
 from connector.src.custom.configs import (
+    MALWARE_FAMILY_BATCH_PROCESSOR_CONFIG,
     REPORT_BATCH_PROCESSOR_CONFIG,
     THREAT_ACTOR_BATCH_PROCESSOR_CONFIG,
     GTIConfig,
@@ -59,6 +60,10 @@ class Orchestrator:
         self.report_nb_current: int = 0
         self.threat_actor_batch_processor = self._create_threat_actor_batch_processor()
         self.threat_actor_nb_current: int = 0
+        self.malware_family_batch_processor = (
+            self._create_malware_family_batch_processor()
+        )
+        self.malware_family_nb_current: int = 0
 
     def _create_report_batch_processor(self) -> GenericBatchProcessor:
         """Create and configure the batch processor.
@@ -83,6 +88,19 @@ class Orchestrator:
         return GenericBatchProcessor(
             work_manager=self.work_manager,
             config=THREAT_ACTOR_BATCH_PROCESSOR_CONFIG,
+            logger=self.logger,
+        )
+
+    def _create_malware_family_batch_processor(self) -> GenericBatchProcessor:
+        """Create and configure the malware family batch processor.
+
+        Returns:
+            Configured GenericBatchProcessor instance
+
+        """
+        return GenericBatchProcessor(
+            work_manager=self.work_manager,
+            config=MALWARE_FAMILY_BATCH_PROCESSOR_CONFIG,
             logger=self.logger,
         )
 
@@ -242,6 +260,90 @@ class Orchestrator:
         finally:
             self._flush_threat_actor_batch_processor()
 
+    async def run_malware_family(self, initial_state: Optional[Dict[str, Any]]) -> None:
+        """Run the malware family orchestrator.
+
+        Args:
+            initial_state: Initial state for the orchestrator
+
+        """
+        subentity_types = [
+            "threat_actors",
+            "reports",
+            "attack_techniques",
+            "vulnerabilities",
+            #            "domains",
+            #            "files",
+            #            "urls",
+            #            "ip_addresses",
+        ]
+        try:
+            async for gti_malware_families in self.client_api.fetch_malware_families(
+                initial_state
+            ):
+                total_malware_families = len(gti_malware_families)
+                for malware_family_idx, malware_family in enumerate(
+                    gti_malware_families
+                ):
+                    malware_family_entities = (
+                        self.converter.convert_malware_family_to_stix(malware_family)
+                    )
+                    subentities_ids = await self.client_api.fetch_subentities_ids(
+                        entity_name="entity_id",
+                        entity_id=malware_family.id,
+                        subentity_types=subentity_types,
+                    )
+                    rel_summary = ", ".join(
+                        [f"{k}: {len(v)}" for k, v in subentities_ids.items()]
+                    )
+                    if len(rel_summary) > 0:
+                        self.logger.info(
+                            f"{LOG_PREFIX} ({malware_family_idx + 1}/{total_malware_families}) Found relationships {{{rel_summary}}}"
+                        )
+                    subentities_detailed = (
+                        await self.client_api.fetch_subentity_details(subentities_ids)
+                    )
+                    subentity_stix = (
+                        self.converter.convert_subentities_to_stix_with_linking(
+                            subentities=subentities_detailed,
+                            main_entity="malware_family",
+                            main_entities=malware_family_entities,
+                        )
+                    )
+
+                    all_entities = malware_family_entities + (subentity_stix or [])
+                    entity_types: Dict[str, int] = {}
+                    for entity in all_entities:
+                        entity_type = getattr(entity, "type", None)
+                        if entity_type:
+                            entity_types[entity_type] = (
+                                entity_types.get(entity_type, 0) + 1
+                            )
+                    entities_summary = ", ".join(
+                        [f"{k}: {v}" for k, v in entity_types.items()]
+                    )
+                    self.logger.info(
+                        f"{LOG_PREFIX} ({malware_family_idx + 1}/{total_malware_families}) Converted to {len(all_entities)} STIX entities {{{entities_summary}}}"
+                    )
+                    if (
+                        self.malware_family_batch_processor.get_current_batch_size()
+                        + len(all_entities)
+                    ) >= self.malware_family_batch_processor.config.batch_size:
+                        self.logger.info(
+                            f"{LOG_PREFIX} Need to Flush before adding next items to preserve consistency of the bundle"
+                        )
+                        self.malware_family_batch_processor.flush()
+                    self._update_malware_family_index_inplace()
+                    self.malware_family_batch_processor.add_item(
+                        self.converter.organization
+                    )
+                    self.malware_family_batch_processor.add_item(
+                        self.converter.tlp_marking
+                    )
+                    self.malware_family_batch_processor.add_items(all_entities)
+        finally:
+            self._flush_malware_family_batch_processor()
+
     def _update_report_index_inplace(self) -> None:
         """Update the work message to reflect current report progress."""
 
@@ -278,6 +380,26 @@ class Orchestrator:
             pattern, replacer, template
         )
 
+    def _update_malware_family_index_inplace(self) -> None:
+        """Update the work message to reflect current malware family progress."""
+
+        def replacer(match: Any) -> str:
+            actual_total = self.client_api.real_total_malware_families or 0
+
+            if actual_total == 0:
+                return "(~ 0/0 malware families)"
+
+            self.malware_family_nb_current += 1
+            return (
+                f"(~ {self.malware_family_nb_current}/{actual_total} malware families)"
+            )
+
+        pattern = r"\(~ (\d+)/(\d+) malware families\)"
+        template = self.malware_family_batch_processor.config.work_name_template
+        self.malware_family_batch_processor.config.work_name_template = re.sub(
+            pattern, replacer, template
+        )
+
     def _flush_batch_processor(self) -> None:
         """Flush any remaining items in the batch processor."""
         try:
@@ -302,4 +424,18 @@ class Orchestrator:
         except Exception as e:
             self.logger.error(
                 f"{LOG_PREFIX} Failed to flush threat actor batch processor: {str(e)}"
+            )
+
+    def _flush_malware_family_batch_processor(self) -> None:
+        """Flush any remaining items in the malware family batch processor."""
+        try:
+            work_id = self.malware_family_batch_processor.flush()
+            if work_id:
+                self.logger.info(
+                    f"{LOG_PREFIX} Malware family batch processor: Flushed remaining items"
+                )
+            self.malware_family_batch_processor.update_final_state()
+        except Exception as e:
+            self.logger.error(
+                f"{LOG_PREFIX} Failed to flush malware family batch processor: {str(e)}"
             )

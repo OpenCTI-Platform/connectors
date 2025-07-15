@@ -28,6 +28,7 @@ class ClientAPI:
         self.fetcher_factory = self._create_fetcher_factory()
         self.real_total_reports = 0
         self.real_total_threat_actors = 0
+        self.real_total_malware_families = 0
 
     def _parse_start_date(
         self,
@@ -230,6 +231,55 @@ class ClientAPI:
                 }
             ]
 
+    def _build_malware_family_filter_configurations(
+        self, initial_state: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """Build malware family filter configurations based on config settings.
+
+        Args:
+            initial_state: Optional initial state for resuming processing
+
+        Returns:
+            List of filter configurations with params and cursors
+
+        """
+        try:
+            start_date = self._parse_start_date(
+                self.config.malware_family_import_start_date,
+                initial_state,
+                "malware_family_next_cursor_start_date",
+            )
+
+            malware_family_origins = getattr(
+                self.config, "malware_family_origins", ["All"]
+            )
+
+            return self._build_filter_configurations(
+                collection_type="malware-family",
+                start_date=start_date,
+                initial_state=initial_state,
+                types=None,
+                origins=malware_family_origins,
+                entity_name="malware_families",
+                cursor_key="cursor",
+            )
+
+        except Exception as e:
+            self.logger.error(
+                f"{LOG_PREFIX} Failed to build malware family filter configurations: {str(e)}"
+            )
+            return [
+                {
+                    "params": {
+                        "filter": "collection_type:malware-family",
+                        "limit": 40,
+                        "order": "last_modification_date+",
+                    },
+                    "cursor": initial_state.get("cursor") if initial_state else None,
+                    "description": "fallback all malware_families",
+                }
+            ]
+
     def _create_fetcher_factory(self) -> GenericFetcherFactory:
         """Create and configure the fetcher factory with all configurations.
 
@@ -358,6 +408,8 @@ class ClientAPI:
             self.real_total_reports = total_items or 0
         if entity_description == "threat_actors":
             self.real_total_threat_actors = total_items or 0
+        if entity_description == "malware_families":
+            self.real_total_malware_families = total_items or 0
 
         return f"{LOG_PREFIX} Fetched {data_count} {entity_description} from API{page_info}{cursor_info}"
 
@@ -491,6 +543,35 @@ class ClientAPI:
                 threat_actor_fetcher, endpoint_params, "threat_actors"
             ):
                 yield threat_actor_data
+
+    async def fetch_malware_families(
+        self, initial_state: Optional[Dict[str, Any]]
+    ) -> AsyncGenerator[Dict[Any, Any], None]:
+        """Fetch malware families from the API.
+
+        Args:
+            initial_state (Optional[Dict[str, Any]]): The initial state of the fetcher.
+
+        Yields:
+            AsyncGenerator[Dict[str, Any], None]: The fetched malware families.
+
+        """
+        filter_configs = self._build_malware_family_filter_configurations(initial_state)
+        malware_family_fetcher = self.fetcher_factory.create_fetcher_by_name(
+            "main_malware_families", base_url=self.config.api_url
+        )
+
+        for filter_config in filter_configs:
+            endpoint_params = filter_config.get("params", {})
+
+            self.logger.info(
+                f"{LOG_PREFIX} Fetching malware families from endpoint 'collections' with filters: {endpoint_params}"
+            )
+
+            async for malware_family_data in self._paginate_with_cursor(
+                malware_family_fetcher, endpoint_params, "malware_families"
+            ):
+                yield malware_family_data
 
     async def fetch_subentities_ids(
         self, entity_name: str, entity_id: str, subentity_types: list[str]
