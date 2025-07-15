@@ -144,3 +144,37 @@ class GTIConfig(BaseConfig):
             raise GTIConfigurationError(
                 f"Failed to validate report origins: {str(e)}"
             ) from e
+
+    # Malware Families
+    malware_family_import_start_date: str = "P1D"
+    import_malware_families: bool = False
+    malware_family_origins: List[str] | str = "All"
+
+    @field_validator("malware_family_origins", mode="before")
+    @classmethod
+    def split_and_validate_malware_family_origins(cls, v: str) -> List[str]:
+        """Split and validate a comma-separated string into a list and validate its contents."""
+        try:
+            parts = None
+
+            if isinstance(v, str):
+                parts = [item.strip() for item in v.split(",") if item.strip()]
+
+            if not parts:
+                raise GTIConfigurationError(
+                    "At least one malware family origin must be specified."
+                )
+
+            invalid = set(parts) - set(ALLOWED_ORIGINS)
+            if invalid:
+                raise GTIConfigurationError(
+                    f"Invalid malware family origins: {', '.join(invalid)}. "
+                    f"Allowed values: {', '.join(ALLOWED_ORIGINS)}."
+                )
+            return parts
+        except GTIConfigurationError:
+            raise
+        except Exception as e:
+            raise GTIConfigurationError(
+                f"Failed to validate report origins: {str(e)}"
+            ) from e

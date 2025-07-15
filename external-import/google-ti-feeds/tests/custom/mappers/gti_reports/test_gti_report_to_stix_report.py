@@ -748,9 +748,7 @@ def _then_stix_report_has_external_references(result, original_data):
             )
 
         gti_refs = [
-            ref
-            for ref in refs
-            if _get_ref_source_name(ref) == "Google Threat Intelligence Platform"
+            ref for ref in refs if _get_ref_source_name(ref).startswith("[GTI]")
         ]
         assert len(gti_refs) > 0  # noqa: S101
         expected_url = f"https://www.virustotal.com/gui/collection/{original_data.id}"
@@ -816,9 +814,7 @@ def _then_stix_report_has_minimal_external_references(result, original_data):
         assert isinstance(refs, list)  # noqa: S101
 
         gti_refs = [
-            ref
-            for ref in refs
-            if _get_ref_source_name(ref) == "Google Threat Intelligence Platform"
+            ref for ref in refs if _get_ref_source_name(ref).startswith("[GTI]")
         ]
         assert len(gti_refs) > 0  # noqa: S101
         expected_url = f"https://www.virustotal.com/gui/collection/{original_data.id}"

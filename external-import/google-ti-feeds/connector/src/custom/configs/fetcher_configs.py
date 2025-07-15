@@ -30,6 +30,7 @@ from connector.src.custom.models.gti.gti_ip_addresses_model import (
 )
 from connector.src.custom.models.gti.gti_malware_family_model import (
     GTIMalwareFamilyData,
+    GTIMalwareFamilyResponse,
 )
 from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
@@ -194,6 +195,18 @@ GTI_REPORT_FETCHER_CONFIG = GenericFetcherConfig(
     response_key="data",
 )
 
+GTI_MAIN_MALWARE_FAMILY_FETCHER_CONFIG = GenericFetcherConfig(
+    entity_type="malware_families",
+    endpoint="/collections",
+    display_name="Malware Families",
+    exception_class=GTIMalwareFetchError,
+    response_model=GTIMalwareFamilyResponse,
+    method="GET",
+    headers={"accept": "application/json"},
+    timeout=60.0,
+    response_key=None,
+)
+
 FETCHER_CONFIGS = {
     "main_reports": GTI_MAIN_REPORT_FETCHER_CONFIG,
     "malware_families": GTI_MALWARE_FETCHER_CONFIG,
@@ -207,4 +220,5 @@ FETCHER_CONFIGS = {
     "ip_addresses": GTI_IP_FETCHER_CONFIG,
     "main_threat_actors": GTI_MAIN_THREAT_ACTOR_FETCHER_CONFIG,
     "reports": GTI_REPORT_FETCHER_CONFIG,
+    "main_malware_families": GTI_MAIN_MALWARE_FAMILY_FETCHER_CONFIG,
 }
