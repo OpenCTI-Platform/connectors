@@ -1,0 +1,134 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "GoogleTIFeeds"
+description = "External Import connector to retrieve feeds from GoogleTI."
+readme = "README.md"
+dynamic = ["version"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+requires-python = ">=3.11, <3.13"
+
+dependencies = [
+    "PyYAML ~=6.0.2",
+    "aiohttp ~=3.12.14",
+    "pycti ~=6.6.11",
+    "pydantic ~=2.11.4",
+    "pydantic_settings ~=2.9.1",
+    "python-dotenv ~=1.0.1",
+    "stix2 ~=3.0.1",
+    "isodate ~=0.7.2",
+    "dotenv ~= 0.9.9",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest ~=8.1.1",
+    "pytest-asyncio ~=0.16",
+    "pytest-order ~=1.3.0",
+    "polyfactory ~=2.21.0",
+]
+dev = [
+    "black ~=25.1",           # Code formatter
+    "isort ~=6.0.1",          # Import sorter
+    "ruff ~=0.7.2",           # linter
+    "mypy ~=1.13.0",          # Type validator
+    "pip_audit ~=2.9.0",      # Security checker
+    "pre-commit ~=4.1.0",     # Git hooks
+    "flake8 ~=7.3.0",         # Linter
+    "types-PyYAML ~=6.0.12",  # stubs for untyped module
+]
+all = ["GoogleTIFeeds[test,dev]"]
+
+[project.scripts]
+GoogleTIFeeds = "connector.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+
+[tool.pytest.ini_options]
+testpaths = ["./tests"]
+asyncio_default_fixture_loop_scope = "function"
+asyncio_mode = "auto"
+
+[tool.ruff]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+target-version = "py312"
+
+[tool.ruff.lint]
+# Never enforce `I001` (unsorted import). Already handle with isort
+# Never enforce `E501` (line length violations). Already handle with black
+# Never enforce `F821` (Undefined name `null`). incorrect issue with notebook
+# Never enforce `D213` (Multi-line docstring summary should start at the second line) conflict with our docstring convention
+# Never enforce `D211` (NoBlankLinesBeforeClass)`
+# Never enforce `G004` (logging-f-string) Logging statement uses f-string
+# Never enforce `TRY003`() Avoid specifying long messages outside the exception class not useful
+# Never enforce `D104` (Missing docstring in public package)
+# Never enforce `D407` (Missing dashed underline after section)
+# Never enforce `D408` (Section underline should be in the line following the section’s name)
+# Never enforce `D409` (Section underline should match the length of its name)
+ignore = [
+    "I001",
+    "D203",
+    "E501",
+    "F821",
+    "D205",
+    "D213",
+    "D211",
+    "G004",
+    "TRY003",
+    "D104",
+    "D407",
+    "D408",
+    "D409",
+]
+select = ["E", "F", "W", "D", "G", "T", "B", "C", "N", "I", "S"]
+
+[tool.mypy]
+strict = true
+exclude = [
+    '^tests',
+    '^docs',
+    '^build',
+    '^dist',
+    '^venv',
+    '^site-packages',
+    '^__pypackages__',
+    '^.venv',
+]
+plugins = ["pydantic.mypy"]

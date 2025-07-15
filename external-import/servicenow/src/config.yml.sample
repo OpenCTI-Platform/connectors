@@ -26,6 +26,8 @@ servicenow:
   # ServiceNow definition parameters - OPTIONAL
   #import_start_date: 'ChangeMe' # Format 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS+HH:MM' or ISO 8601 duration - Default: "P30D"
   #api_version: 'ChangeMe' # Default: "v2"
+  #api_leaky_bucket_rate: ChangeMe # Default: 10
+  #api_leaky_bucket_capacity: ChangeMe # Default: 10
   #api_retry: ChangeMe # Default: 5
   #api_backoff: 'ChangeMe' # Default: 'PT30S'
   #state_to_exclude: 'ChangeMe' # Example: "eradicate,analysis,closed,cancelled,draft,contain,review,recover"
@@ -33,3 +35,5 @@ servicenow:
   #priority_to_exclude: 'ChangeMe' # Example: "critical,high,moderate,low,planning"
   #comment_to_exclude: 'ChangeMe' # Example: "private,public,auto"
   #tlp_level: 'ChangeMe' # Default: 'red' (available: clear, green, amber, amber+strict, red)
+  #observables_default_score: ChangeMe # Default: 50
+  #promote_observables_as_indicators: ChangeMe # Default: True

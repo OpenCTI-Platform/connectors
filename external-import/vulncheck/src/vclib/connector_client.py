@@ -136,7 +136,9 @@ class ConnectorClient:
             response = session.get(endpoint)
             response.raise_for_status()
         except requests.RequestException as e:
-            self.helper.connector_logger.error(f"[API] Failed to get entitlements: {e}")
+            self.helper.connector_logger.error(
+                f"[API] Failed to get entitlements: {e}", meta={"error": str(e)}
+            )
             return []
 
         entitlements = response.json().get("data", {}).get("entitlements", [])

@@ -15,5 +15,7 @@ sekoia:
   collection: 'd6092c37-d8d7-45c3-8aff-c4dc26030608'
   api_key: 'ChangeMe'
   start_date: '2022-01-01'  # Optional, the date to start consuming data from. Maybe in the formats YYYY-MM-DD or YYYY-MM-DDT00:00:00
+  limit: 100                # Optional, the number of elements to fetch in each request. Defaults to 200, maximum 2000
   create_observables: true  # Create observables from indicators
   import_source_list: false # Create the list of sources observed by Sekoia as label
+  import_ioc_relationships: true # Optional, Import IOCs relationships and related objects - Default: true

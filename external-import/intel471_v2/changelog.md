@@ -1,3 +1,9 @@
+# v2.1.2
+
+  + Upgrade `Titan-Client` to version [1.20.0.12](https://github.com/intel471/titan-client-python/releases/tag/v1.20.0.12)
+  + Improve handling of special characters in URLs
+  + Make STIX IDs deterministic in TheatActor, Identity (organization) and in Relationships
+
 # v2.1.1
 
   + Decrease page number in Reports stream for better performance 

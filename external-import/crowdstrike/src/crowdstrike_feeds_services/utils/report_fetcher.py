@@ -24,10 +24,11 @@ class ReportFetcher:
 
     _NOT_FOUND = object()
 
-    def __init__(self, helper) -> None:
+    def __init__(self, helper, no_file_trigger_import: bool) -> None:
         """Initialize CrowdStrike report fetcher."""
         self.helper = helper
         self.reports_api_cs = ReportsAPI(helper)
+        self.no_file_trigger_import = no_file_trigger_import
 
         self.fetched_report_cache: Dict[str, Union[FetchedReport, object]] = {}
 
@@ -130,4 +131,6 @@ class ReportFetcher:
             self._info("No report PDF for id {0}", report_id)
             return None
         else:
-            return create_file_from_download(download, report_name)
+            return create_file_from_download(
+                download, report_name, self.no_file_trigger_import
+            )
