@@ -27,7 +27,6 @@
       "type": "object",
       "additionalProperties": true,
       "default": {
-        "CONNECTOR_TYPE": "EXTERNAL_IMPORT",
         "CONNECTOR_NAME": "ServiceNow",
         "CONNECTOR_SCOPE": "ServiceNow",
         "CONNECTOR_LOG_LEVEL": "error",
@@ -43,8 +42,6 @@
         "SERVICENOW_PROMOTE_OBSERVABLES_AS_INDICATORS": true
       },
       "required": [
-        "OPENCTI_URL",
-        "OPENCTI_TOKEN",
         "CONNECTOR_ID",
         "SERVICENOW_INSTANCE_NAME",
         "SERVICENOW_API_KEY"
@@ -206,7 +203,7 @@
       "short_description": "IpInfo enrichment connector",
       "use_cases": [
         "Incident Response & Ticketing",
-        "enrichment"
+        "Enrichment"
       ],
       "manager_supported": true,
       "container_image": "opencti/connector-ipinfo",
@@ -222,7 +219,6 @@
       "type": "object",
       "additionalProperties": true,
       "default": {
-        "CONNECTOR_TYPE": "INTERNAL_ENRICHMENT",
         "CONNECTOR_NAME": "IPInfo",
         "CONNECTOR_SCOPE": "IPv4-Addr,IPv6-Addr",
         "CONNECTOR_LOG_LEVEL": "error",
@@ -231,8 +227,6 @@
         "IPINFO_USE_ASN_NAME": true
       },
       "required": [
-        "OPENCTI_URL",
-        "OPENCTI_TOKEN",
         "CONNECTOR_ID",
         "IPINFO_TOKEN"
       ],
