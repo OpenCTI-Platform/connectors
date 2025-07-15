@@ -2,6 +2,7 @@ from collections import deque
 from datetime import datetime, timezone
 
 from pycti import OpenCTIConnectorHelper
+from pycti import Report as pyctiReport
 from stix2 import ExternalReference, Identity, Report, parse
 
 
@@ -244,8 +245,10 @@ class ReportHandler:
 
                 # Create the Report Object,
                 published = datetime.fromtimestamp(report.get("date"), tz=TIME_ZONE)
+                name = report.get("title", "")
                 report_obj = Report(
-                    name=report.get("title", ""),
+                    id=pyctiReport.generate_id(name, published),
+                    name=name,
                     description=report.get("digest", ""),
                     published=published,
                     object_refs=[obj.get("id", "") for obj in stix_content],
