@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   name: 'Recorded Future Enrichment'
-  scope: 'ipv4-addr,ipv6-addr,domain-name,url,stixfile'
+  scope: 'ipv4-addr,ipv6-addr,domain-name,url,stixfile,vulnerability'
   log_level: 'info'
 
 recordedfuture-enrichment:
