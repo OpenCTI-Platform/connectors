@@ -8,7 +8,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=ExportReportPdf
       - CONNECTOR_SCOPE=application/pdf
-      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - EXPORT_REPORT_PDF_PRIMARY_COLOR=#ff8c00 # The primary color for the output pdf
       - EXPORT_REPORT_PDF_SECONDARY_COLOR=#000000 # The secondary color for the output pdf
