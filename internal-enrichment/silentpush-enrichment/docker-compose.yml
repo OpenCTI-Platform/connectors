@@ -1,0 +1,33 @@
+services:
+  connector-silentpush:
+    image: opencti/connector-silentpush-enrichment:6.6.15
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=silentpush
+      - CONNECTOR_NAME=SilentPush
+      - CONNECTOR_SCOPE=Indicator,URL,IPv4-Addr,IPv6-Addr,Domain-Name
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_AUTO=false
+
+      # Connector's custom execution parameters
+      - SILENTPUSH_API_BASE_URL=https://app.silentpush.com/api/v1/
+      - SILENTPUSH_API_KEY=${SILENTPUSH_API_KEY}
+      - SILENTPUSH_VERIFY_CERT=true
+      - SILENTPUSH_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+
+      # Add proxy parameters below if needed
+      # - HTTP_PROXY=CHANGEME
+      # - HTTPS_PROXY=CHANGEME
+      # - NO_PROXY=CHANGEME
+    restart: always
+#    network_mode: "host"
+#    networks:
+#      - external
+
+#networks:
+# default:
+#   external: true
+#   name: external

@@ -120,7 +120,11 @@ def test_api_error(
     )
 
 
-def test_api_error_404(helper: OpenCTIConnectorHelper, data: dict[str, Any]) -> None:
+def test_api_error_404(
+    mocker: MockerFixture, helper: OpenCTIConnectorHelper, data: dict[str, Any]
+) -> None:
+    mocked_get = mocker.patch("shodan_internetdb.client.requests.Session.get")
+    mocked_get.return_value.status_code = 404
     connector = ShodanInternetDBConnector(config=ConfigConnector(), helper=helper)
     assert (
         connector.process_message(data=data)

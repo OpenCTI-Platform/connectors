@@ -209,3 +209,10 @@ class ConfigCrowdstrike:
             isNumber=True,
             default=1800,
         )
+
+        self.no_file_trigger_import: bool = get_config_variable(
+            "CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT",
+            ["crowdstrike", "no_file_trigger_import"],
+            self.load,
+            default=True,
+        )

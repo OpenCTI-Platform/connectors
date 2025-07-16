@@ -76,12 +76,14 @@ class RuleParser:
     def _parse_snort_rule(cls, snort_rule: str, logger) -> Optional[Rule]:
         name = cls._get_name(snort_rule)
         if name is None:
-            logger.error(f"No name for rule: {snort_rule}")
+            logger.error(f"No name for rule: {snort_rule}", meta={"rule": snort_rule})
             return None
 
         description = cls._get_description(snort_rule)
         if description is None:
-            logger.error(f"No description for rule: {snort_rule}")
+            logger.error(
+                f"No description for rule: {snort_rule}", meta={"rule": snort_rule}
+            )
             return None
 
         logger.debug(f"Creating rule: {snort_rule}")

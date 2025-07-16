@@ -3,4 +3,4 @@
 cd /opt/opencti-connector-dogesec-vulmatch
 
 # Start the connector
-python src/connector.py
+python connector.py

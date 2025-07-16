@@ -1,5 +1,5 @@
-pycti==6.6.9
-weasyprint==65.0
-html2text==2024.2.26
-pdfminer.six==20250327
+pycti==6.7.4
+weasyprint==65.1
+html2text==2025.4.15
+pdfminer.six==20250506
 playwright==1.52.0

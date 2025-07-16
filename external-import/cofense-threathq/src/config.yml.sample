@@ -1,0 +1,37 @@
+opencti:
+  # OpenCTI definition parameters - REQUIRED
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  # Connector definition parameters - REQUIRED
+  id: 'ChangeMe'
+
+  # Connector definition parameters - OPTIONAL
+  #name: 'ChangeMe' # Default: 'Cofense ThreatHQ'
+  #scope: 'ChangeMe' # Default: 'Cofense ThreatHQ'
+  #log_level: 'ChangeMe' # Default: 'info'
+  #duration_period: 'ChangeMe' # Default: 'PT5H' (ISO8601 format in String, start with P...)
+  #queue_threshold: ChangeMe # Default: 500 MBytes, Float accepted
+  #run_and_terminate: ChangeMe # Default: False, True run connector once
+  #send_to_queue: ChangeMe # Default: True
+  #send_to_directory: ChangeMe # Default: False
+  #send_to_directory_path: 'ChangeMe' # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+  #send_to_directory_retention: ChangeMe # Default: 7, in days
+
+cofense_threathq:
+  # Cofense-ThreatHQ definition parameters - REQUIRED
+  token_user: 'ChangeMe'
+  token_password: 'ChangeMe'
+
+  # Cofense-ThreatHQ definition parameters - OPTIONAL
+  #import_start_date: 'ChangeMe' # Format 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS+HH:MM' or ISO 8601 duration - Default: "P30D"
+  #api_base_url: 'ChangeMe' # Default: "https://www.threathq.com/apiv1/"
+  #api_leaky_bucket_rate: ChangeMe # Default: 10
+  #api_leaky_bucket_capacity: ChangeMe # Default: 10
+  #api_retry: ChangeMe # Default: 5
+  #api_backoff: 'ChangeMe' # Default: 'PT30S'
+  #impact_to_exclude: 'ChangeMe' # Available values are: none, moderate, major - Example: "None,Moderate"
+  #import_report_pdf: 'ChangeMe' # Default: True
+  #tlp_level: 'ChangeMe' # Available values are: clear, white, green, amber, amber+strict, red - Default: "amber+strict"
+  #promote_observables_as_indicators: 'ChangeMe' # Default: True

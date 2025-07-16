@@ -1,0 +1,10 @@
+-r ./base_connector/requirements.txt
+imap-tools==1.11.0
+pycti==6.7.4
+pydantic~=2.11.3
+google-api-python-client>=2.169.0
+google-api-core==2.25.0
+google-auth==2.40.3
+google-auth-oauthlib==1.2.2  # prefered to default one by google-auth 
+google-auth-httplib2==0.2.0  # prefered to default one by google-auth see https://github.com/googleapis/google-auth-library-python-httplib2?tab=readme-ov-file#introduction
+stix2~=3.0.1

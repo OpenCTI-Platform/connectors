@@ -115,11 +115,6 @@ class abuseipdbipblacklistimport:
                         data_json = json.loads(image)
 
                         # preparing the bundle to be sent to OpenCTI worker
-                        external_reference = stix2.ExternalReference(
-                            source_name="AbuseIPDB database",
-                            url="https://www.abuseipdb.com/",
-                            description="AbuseIPDB database URL",
-                        )
                         bundle_objects = []
 
                         # Filling the bundle
@@ -142,7 +137,6 @@ class abuseipdbipblacklistimport:
                                     created_by_ref=self.identity["standard_id"],
                                     pattern_type="stix",
                                     pattern=pattern,
-                                    external_references=[external_reference],
                                     object_marking_refs=[stix2.TLP_WHITE],
                                     custom_properties={
                                         "x_opencti_score": d["abuseConfidenceScore"],
@@ -164,7 +158,6 @@ class abuseipdbipblacklistimport:
                                         + str(d["lastReportedAt"]),
                                         "x_opencti_score": d["abuseConfidenceScore"],
                                         "created_by_ref": self.identity["standard_id"],
-                                        "external_references": [external_reference],
                                     },
                                 )
                             else:
@@ -182,7 +175,6 @@ class abuseipdbipblacklistimport:
                                     created_by_ref=self.identity["standard_id"],
                                     pattern_type="stix",
                                     pattern=pattern,
-                                    external_references=[external_reference],
                                     object_marking_refs=[stix2.TLP_WHITE],
                                     custom_properties={
                                         "x_opencti_score": d["abuseConfidenceScore"],
@@ -204,7 +196,6 @@ class abuseipdbipblacklistimport:
                                         + str(d["lastReportedAt"]),
                                         "x_opencti_score": d["abuseConfidenceScore"],
                                         "created_by_ref": self.identity["standard_id"],
-                                        "external_references": [external_reference],
                                     },
                                 )
                             # Adding the IP to the list

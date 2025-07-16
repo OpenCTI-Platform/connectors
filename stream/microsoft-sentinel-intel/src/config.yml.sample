@@ -14,10 +14,14 @@ connector:
 
 microsoft_sentinel_intel:
   tenant_id: 'ChangeMe'
-  client_id: 'ChangeMe' 
-  client_secret: 'ChangeMe' 
-  login_url: 'https://login.microsoft.com'
-  base_url: 'https://graph.microsoft.com'
-  resource_path: '/beta/security/tiIndicators'
-  expire_time: 30
-  target_product: 'Azure Sentinel'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  workspace_id: 'ChangeMe'
+  workspace_name: 'ChangeMe' # For deletion
+  subscription_id: 'ChangeMe' # For deletion
+#  resource_group: 'default' # For deletion
+#  source_system: 'Opencti Stream Connector'
+#  delete_extensions: True
+#  extra_labels: 'label1,label2'
+#  workspace_api_version: '2024-02-01-preview'
+#  management_api_version: '2025-03-01'

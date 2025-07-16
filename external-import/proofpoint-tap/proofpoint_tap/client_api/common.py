@@ -206,6 +206,7 @@ class BaseClient(  # noqa: B024 # Even though there is no abstract method, it is
             auth=self.auth,
             timeout=self._timeout,
             trace_configs=[trace_config],
+            trust_env=True,
         ) as session:
             async with RetryClient(
                 client_session=session,

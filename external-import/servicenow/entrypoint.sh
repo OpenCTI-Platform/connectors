@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Go to the right directory
-cd /opt/opencti-connector-servicenow
+cd /opt
 
 # Launch the worker
-python3 main.py
+python3 -m src
