@@ -11,7 +11,7 @@
 """
 
 from ._version import __version__ as APP_VERSION
-from .rf_client import RFClient
+from .rf_client import RFClient, RFClientError
 from .rf_to_stix2 import (
     TTP,
     URL,
@@ -27,6 +27,7 @@ from .rf_to_stix2 import (
 
 __all__ = [
     "RFClient",
+    "RFClientError",
     "TTP",
     "URL",
     "ConversionError",
