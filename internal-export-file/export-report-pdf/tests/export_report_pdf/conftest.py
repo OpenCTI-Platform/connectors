@@ -19,7 +19,6 @@ def fixture_config_dict() -> dict[str, Any]:
             "type": "INTERNAL_EXPORT_FILE",
             "name": "ExportReportPdf",
             "scope": "application/pdf",
-            "confidence_level": 100,
             "log_level": "info",
         },
         "export_report_pdf": {
