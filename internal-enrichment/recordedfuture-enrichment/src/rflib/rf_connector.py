@@ -11,6 +11,7 @@ from rflib import (
     EnrichedIndicator,
     EnrichedVulnerability,
     RFClient,
+    RFClientError,
 )
 
 
@@ -50,7 +51,7 @@ class RFEnrichmentConnector:
             0,
         )
 
-        self.work_id = None
+        self.rf_client = RFClient(self.token, APP_VERSION)
 
     @staticmethod
     def to_rf_type(observable_type: str) -> str:
@@ -77,7 +78,7 @@ class RFEnrichmentConnector:
                 return None
 
     @staticmethod
-    def generate_pattern(ioc, data_type, algorithm=None):
+    def generate_pattern(ioc: str, data_type: str, algorithm: str = None) -> str:
         """
         Generates the appropiate STIX2 pattern for an IOC
 
@@ -91,6 +92,7 @@ class RFEnrichmentConnector:
 
         if data_type == "StixFile":
             return f"[file:hashes.'{algorithm.lower()}' = '{ioc}']"
+
         return f"[{data_type.lower()}:value = '{ioc}']"
 
     def enrich_observable(self, rf_type: str, octi_entity: dict) -> EnrichedIndicator:
@@ -99,60 +101,57 @@ class RFEnrichmentConnector:
         observable_id = octi_entity["standard_id"]
 
         self.helper.connector_logger.info(
-            "enriching observable {} with ID {}".format(observable_value, observable_id)
+            "Enriching observable...",
+            {"observable_id": observable_id, "observable_value": observable_value},
         )
-        rf_client = RFClient(self.token, self.helper, APP_VERSION)
-        reason, enrichment_data = rf_client.full_enrichment(observable_value, rf_type)
 
-        if enrichment_data:
-            create_indicator = (
-                enrichment_data["risk"]["score"] >= self.create_indicator_threshold
-            )
-            indicator = EnrichedIndicator(
-                type_=enrichment_data["entity"]["type"],
-                observable_id=observable_id,
-                opencti_helper=self.helper,
-                create_indicator=create_indicator,
-            )
-            indicator.from_json(
-                name=enrichment_data["entity"]["name"],
-                risk=enrichment_data["risk"]["score"],
-                evidenceDetails=enrichment_data["risk"]["evidenceDetails"],
-                links=enrichment_data["links"],
-            )
-            return indicator
-        else:
-            return f"No Stix bundle(s) imported, request message returned ({reason})."
+        data = self.rf_client.get_observable_enrichment(rf_type, observable_value)
+
+        create_indicator = data["risk"]["score"] >= self.create_indicator_threshold
+        indicator = EnrichedIndicator(
+            type_=data["entity"]["type"],
+            observable_id=observable_id,
+            opencti_helper=self.helper,
+            create_indicator=create_indicator,
+        )
+        indicator.from_json(
+            name=data["entity"]["name"],
+            risk=data["risk"]["score"],
+            evidenceDetails=data["risk"]["evidenceDetails"],
+            links=data["links"],
+        )
+
+        return indicator
 
     def enrich_vulnerability(self, octi_entity: dict) -> object:
         vulnerability_id = octi_entity["standard_id"]
         vulnerability_name = octi_entity["name"]
 
         self.helper.connector_logger.info(
-            "enriching vulnerability {} with ID {}".format(
-                vulnerability_name, vulnerability_id
-            )
+            "Enriching vulnerability...",
+            {
+                "vulnerability_id": vulnerability_id,
+                "vulnerability_name": vulnerability_name,
+            },
         )
-        rf_client = RFClient(self.token, self.helper, APP_VERSION)
-        reason, data = rf_client.get_vulnerability_enrichment(vulnerability_name)
 
-        if data:
-            vulnerability = EnrichedVulnerability(
-                name=vulnerability_name,
-                description=octi_entity["description"],
-                opencti_helper=self.helper,
-            )
-            vulnerability.from_json(
-                commonNames=data["commonNames"],
-                cvss=data["cvss"],
-                cvssv3=data["cvssv3"],
-                cvssv4=data["cvssv4"],
-                intelCard=data["intelCard"],
-                lifecycleStage=data["lifecycleStage"],
-            )
-            return vulnerability
-        else:
-            return f"No Stix bundle(s) imported, request message returned ({reason})."
+        data = self.rf_client.get_vulnerability_enrichment(vulnerability_name)
+
+        vulnerability = EnrichedVulnerability(
+            name=vulnerability_name,
+            description=octi_entity["description"],
+            opencti_helper=self.helper,
+        )
+        vulnerability.from_json(
+            commonNames=data["commonNames"],
+            cvss=data["cvss"],
+            cvssv3=data["cvssv3"],
+            cvssv4=data["cvssv4"],
+            intelCard=data["intelCard"],
+            lifecycleStage=data["lifecycleStage"],
+        )
+
+        return vulnerability
 
     def _process_message(self, data: dict) -> str | list[str]:
         """
@@ -172,9 +171,9 @@ class RFEnrichmentConnector:
                     tlp = marking_definition["definition"]
 
             if not self.helper.check_max_tlp(tlp, self.max_tlp):
-                msg = f"Do not send any data, TLP of the observable is ({tlp}), which is greater than MAX TLP: ({self.max_tlp})"
-                self.helper.connector_logger.warning(msg)
-                return msg
+                message = f"Do not send any data, TLP of the observable is ({tlp}), which is greater than MAX TLP: ({self.max_tlp})"
+                self.helper.connector_logger.warning(message)
+                return message
 
             entity_type = enrichment_entity["entity_type"]
 
@@ -187,20 +186,20 @@ class RFEnrichmentConnector:
                 else:
                     message = f"Recorded Future enrichment does not support type {entity_type}"
                     self.helper.connector_logger.error(message)
-                    return [message]
-            except ConversionError as err:
-                self.helper.connector_logger.error(err)
-                return [repr(err)]
+                    return [message]  # error message MUST be returned as a list
 
-            if isinstance(enriched_object, (EnrichedIndicator, EnrichedVulnerability)):
-                bundle = enriched_object.to_json_bundle()
-            else:
-                return "No Stix bundle(s) imported."
+            except (RFClientError, ConversionError) as err:
+                self.helper.connector_logger.error(err)
+                return [repr(err)]  # error message MUST be returned as a list
 
             self.helper.connector_logger.info("Sending bundle...")
+
+            bundle = enriched_object.to_json_bundle()
             bundles_sent = self.helper.send_stix2_bundle(bundle)
 
-            return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+            message = f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+            self.helper.connector_logger.info(message)
+            return message
 
         except Exception as err:
             self.helper.connector_logger.error(
@@ -209,7 +208,7 @@ class RFEnrichmentConnector:
             return [
                 f"An unexpected error occured: {repr(err)}. "
                 "See connector's log for more details."
-            ]
+            ]  # error message MUST be returned as a list
 
     def start(self):
         """Start the main loop"""

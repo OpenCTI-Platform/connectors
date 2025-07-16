@@ -9,7 +9,6 @@
 ################################################################################
 """
 
-import logging
 import urllib.parse
 
 import requests
@@ -17,36 +16,82 @@ import requests
 from .rf_utils import extract_and_combine_links
 
 API_BASE = "https://api.recordedfuture.com"
-CONNECT_BASE = urllib.parse.urljoin(API_BASE, "/v2")
-LINK_SEARCH = urllib.parse.urljoin(API_BASE, "/links/search")
+API_BASE_V2 = urllib.parse.urljoin(API_BASE, "/v2")
 
-LOGGER = logging.getLogger("name")
+
+class RFClientError(Exception):
+    """Wrapper of errors raised in RFClient"""
 
 
 class RFClient:
     """class for talking to the RF API, specifically for enriching indicators"""
 
-    def __init__(self, token, helper, header="OpenCTI-Enrichment/2.0"):
+    def __init__(self, token, header="OpenCTI-Enrichment/2.0"):
         """Initialize the RFClient with API token and session settings."""
-        self.token = token
-        headers = {"X-RFToken": token, "User-Agent": header}
         self.session = requests.Session()
-        self.session.headers.update(headers)
-        self.helper = helper
+        self.session.headers.update(
+            {
+                "X-RFToken": token,
+                "User-Agent": header,
+            }
+        )
 
-    def full_enrichment(self, entity, type_):
+    def _get_observable_enrichment(self, type_: str, value: str):
+        """Enrich entity and get its risk score."""
+
+        enrichment_fields = ["entity", "risk"]
+        if type_.lower() == "hash":
+            enrichment_fields.append("hashAlgorithm")
+
+        url = f"{API_BASE_V2}/{type_}/{urllib.parse.quote(value, safe='')}"
+        query_params = {"fields": ",".join(enrichment_fields)}
+
+        response = self.session.get(url, params=query_params)
+        response.raise_for_status()
+
+        response_json = response.json()
+        data = response_json.get("data")
+        if not data:
+            raise RFClientError("RecordedFuture API response does not include data")
+
+        return data
+
+    def _get_observable_links(self, rfid: str) -> list:
+        """Retrieve links for a given entity ID."""
+
+        url = urllib.parse.urljoin(API_BASE, "/links/search")
+        body = {
+            "entities": [rfid],
+            "limits": {"search_scope": "medium", "per_entity_type": 100},
+        }
+
+        response = self.session.post(url, json=body)
+        response.raise_for_status()
+
+        response_json = response.json()
+        data = response_json.get("data")
+        if not data:
+            raise RFClientError("RecordedFuture API response does not include data")
+
+        return extract_and_combine_links(data)
+
+    def get_observable_enrichment(self, type_: str, value: str) -> dict:
         """Enrich an individual IOC with additional links."""
-        reason, enrichment = self._enrich(entity, type_)
-        if enrichment:
-            links_reason, links = self._get_links(enrichment["entity"]["id"])
-            if links:
-                enrichment["links"] = links
-            else:
-                LOGGER.warning(f"Failed to return links: {links_reason}")
-                enrichment["links"] = None
-        return reason, enrichment
+        try:
+            enrichment_data = self._get_observable_enrichment(type_, value)
+            links = self._get_observable_links(enrichment_data["entity"]["id"])
 
-    def get_vulnerability_enrichment(self, vulnerability_name: dict):
+            enrichment_data["links"] = links or None
+
+            return enrichment_data
+        except requests.exceptions.HTTPError as err:
+            raise RFClientError("An HTTP error occurred") from err
+        except requests.exceptions.RequestException as err:
+            raise RFClientError(
+                "Unexpected error while fetching RecordedFuture API"
+            ) from err
+
+    def get_vulnerability_enrichment(self, name: str) -> dict:
         enrichment_fields = [
             "commonNames",
             "cvss",
@@ -56,59 +101,25 @@ class RFClient:
             "lifecycleStage",
         ]
 
-        url = f"{CONNECT_BASE}/vulnerability/{urllib.parse.quote(vulnerability_name, safe='')}"
+        url = f"{API_BASE_V2}/vulnerability/{urllib.parse.quote(name, safe='')}"
+        query_params = {"fields": ",".join(enrichment_fields)}
 
         try:
-            res = self.session.get(url, params={"fields": ",".join(enrichment_fields)})
-            return self._handle_response(res)
-        except requests.exceptions.RequestException as e:
-            LOGGER.error(f"Error making request: {e}")
-            return None, None
+            response = self.session.get(url, params=query_params)
+            response.raise_for_status()
 
-    def _enrich(self, entity, type_):
-        """Enrich entity and get its risk score."""
-        fields = "entity,risk"
-        if type_.lower() == "hash":
-            fields += ",hashAlgorithm"
+            response_json = response.json()
+            warnings = response_json.get("warnings")
+            if warnings:
+                raise RFClientError("RecordedFuture API returned warnings", warnings)
+            data = response_json.get("data")
+            if not data:
+                raise RFClientError("RecordedFuture API response does not include data")
 
-        url = f"{CONNECT_BASE}/{type_}/{urllib.parse.quote(entity, safe='')}"
-
-        try:
-            res = self.session.get(url, params={"fields": fields})
-            return self._handle_response(res)
-        except requests.exceptions.RequestException as e:
-            LOGGER.error(f"Error making request: {e}")
-            return None, None
-
-    def _get_links(self, rfid):
-        """Retrieve links for a given entity ID."""
-        query = {
-            "entities": [f"{rfid}"],
-            "limits": {"search_scope": "medium", "per_entity_type": 100},
-        }
-        try:
-            res = self.session.post(LINK_SEARCH, json=query)
-            LOGGER.debug(f"Response: {res.json()}")
-            return self._handle_response(res, expected_key="links")
-        except requests.exceptions.RequestException as e:
-            LOGGER.error(f"Error making request: {e}")
-            return "Error making Request", None
-
-    def _handle_response(self, response, expected_key=None):
-        """Handle API response, returning the relevant part if successful."""
-        if response.status_code == 200:
-            json_data = response.json().get("data", None)
-            if json_data:
-                if expected_key == "links":
-                    joined_lists = extract_and_combine_links(json_data)
-                    return response.reason, joined_lists
-                else:
-                    return response.reason, json_data
-            else:
-                LOGGER.warning('Response does not include the key: "data".')
-                return response.reason, None
-        else:
-            LOGGER.warning(
-                f"Status Code: {response.status_code}, Response: {response.reason}"
-            )
-            return response.reason, None
+            return data
+        except requests.exceptions.HTTPError as err:
+            raise RFClientError("An HTTP error occurred") from err
+        except requests.exceptions.RequestException as err:
+            raise RFClientError(
+                "Unexpected error while fetching RecordedFuture API"
+            ) from err
