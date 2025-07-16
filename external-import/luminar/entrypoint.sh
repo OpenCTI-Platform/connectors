@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-luminar
 
 # Start the connector
-python3 luminar.py
+python3 main.py
