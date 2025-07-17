@@ -96,7 +96,7 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             attributes.last_modification_date, tz=timezone.utc
         )
 
-        aliases = self._extract_aliases(attributes)
+        # aliases = self._extract_aliases(attributes)
 
         first_seen, last_seen = self._extract_seen_dates(attributes)
 
@@ -116,7 +116,7 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             organization_id=self.organization.id,
             marking_ids=[self.tlp_marking.id],
             description=description,
-            aliases=aliases,
+            #  aliases=aliases,
             first_seen=first_seen,
             last_seen=last_seen,
             primary_motivation=primary_motivation,
