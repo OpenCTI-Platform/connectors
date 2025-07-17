@@ -124,7 +124,7 @@ GTI_REPORT_MALWARE_CONVERTER_CONFIG = GenericConverterConfig(
     input_model=GTIMalwareFamilyData,
     display_name_singular="malware family",
     validate_input=True,
-    postprocessing_function=link_to_report(),
+    postprocessing_function=link_to_report(["malware"]),
 )
 
 GTI_REPORT_THREAT_ACTOR_CONVERTER_CONFIG = GenericConverterConfig(
@@ -136,7 +136,7 @@ GTI_REPORT_THREAT_ACTOR_CONVERTER_CONFIG = GenericConverterConfig(
     input_model=GTIThreatActorData,
     display_name_singular="threat actor",
     validate_input=True,
-    postprocessing_function=link_to_report(),
+    postprocessing_function=link_to_report(["intrusion-set"]),
 )
 
 GTI_REPORT_ATTACK_TECHNIQUE_CONVERTER_CONFIG = GenericConverterConfig(

@@ -5,7 +5,7 @@ to STIX format using the generic converter system.
 """
 
 import logging
-from typing import Any, Optional, Protocol
+from typing import Any, List, Optional, Protocol
 
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import (
     GTIReportToSTIXReport,
@@ -74,12 +74,17 @@ def clear_all_contexts() -> None:
     _contexts.clear()
 
 
-def add_to_refs(context_key: str, linking_method: Any) -> Any:
+def add_to_refs(
+    context_key: str,
+    linking_method: Any,
+    entity_type_filter: Optional[List[str]] = None,
+) -> Any:
     """Add objects to parent's object_refs.
 
     Args:
         context_key: Context key to get parent from (e.g. 'report')
         linking_method: Method to call (e.g. GTIReportToSTIXReport.add_object_refs)
+        entity_type_filter: Optional list of STIX types to filter for (e.g. ['intrusion-set', 'malware'])
 
     """
 
@@ -91,9 +96,23 @@ def add_to_refs(context_key: str, linking_method: Any) -> Any:
         try:
             object_ids = []
             if isinstance(stix_output, list):
-                object_ids = [obj.id for obj in stix_output if hasattr(obj, "id")]
+                if entity_type_filter:
+                    filtered_objects = [
+                        obj
+                        for obj in stix_output
+                        if hasattr(obj, "type")
+                        and obj.type in entity_type_filter
+                        and hasattr(obj, "id")
+                    ]
+                    object_ids = [obj.id for obj in filtered_objects]
+                else:
+                    object_ids = [obj.id for obj in stix_output if hasattr(obj, "id")]
             elif hasattr(stix_output, "id"):
-                object_ids = [stix_output.id]
+                if not entity_type_filter or (
+                    hasattr(stix_output, "type")
+                    and stix_output.type in entity_type_filter
+                ):
+                    object_ids = [stix_output.id]
 
             if object_ids:
                 linking_method(object_ids, parent)
@@ -236,9 +255,16 @@ def manage_context(operation: str, context_key: Optional[str] = None) -> Any:
     return postprocess
 
 
-def link_to_report() -> Any:
+def link_to_report(entity_type_filter: Optional[List[str]] = None) -> Any:
     """Add objects to report's object_refs."""
-    return add_to_refs("report", GTIReportToSTIXReport.add_object_refs)
+    return add_to_refs(
+        "report", GTIReportToSTIXReport.add_object_refs, entity_type_filter
+    )
+
+
+def link_main_entity_to_report(entity_types: List[str]) -> Any:
+    """Add only main entities (by type) to report's object_refs."""
+    return add_to_refs("report", GTIReportToSTIXReport.add_object_refs, entity_types)
 
 
 def uses_relationship(
@@ -362,11 +388,7 @@ def entity_to_report(
     """Create relationship + add ref from entity to report (mutualized function)."""
 
     def postprocess(stix_output: Any) -> Any:
-        result = context_to_report_relationship(context_key, relationship_creator)(
-            stix_output
-        )
-
-        result = add_context_to_report_refs(context_key)(result)
+        result = add_context_to_report_refs(context_key)(stix_output)
 
         return result
 
@@ -375,16 +397,9 @@ def entity_to_report(
 
 def intrusion_set_to_report() -> Any:
     """Create relationship + add ref from intrusion set to report."""
-    from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_intrusion_set import (
-        GTIThreatActorToSTIXIntrusionSet,
-    )
 
     def postprocess(stix_output: Any) -> Any:
-        result = context_to_report_relationship(
-            "intrusion_set", GTIThreatActorToSTIXIntrusionSet
-        )(stix_output)
-
-        result = add_context_to_report_refs("intrusion_set")(result)
+        result = add_context_to_report_refs("intrusion_set")(stix_output)
 
         return result
 
@@ -393,16 +408,9 @@ def intrusion_set_to_report() -> Any:
 
 def malware_family_to_report() -> Any:
     """Create relationship + add ref from malware family to report."""
-    from connector.src.custom.mappers.gti_malwares.gti_malware_family_to_stix_malware import (
-        GTIMalwareFamilyToSTIXMalware,
-    )
 
     def postprocess(stix_output: Any) -> Any:
-        result = context_to_report_relationship(
-            "malware", GTIMalwareFamilyToSTIXMalware
-        )(stix_output)
-
-        result = add_context_to_report_refs("malware")(result)
+        result = add_context_to_report_refs("malware")(stix_output)
 
         return result
 
