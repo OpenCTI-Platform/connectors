@@ -2,7 +2,7 @@ import json
 
 from pycti import Identity as PyCTIIdentity
 from pycti import Indicator as PyCTIIndicator
-from stix2 import Bundle, Identity, Indicator
+from stix2 import Identity, Indicator
 
 from .utils import parse_iso_datetime
 

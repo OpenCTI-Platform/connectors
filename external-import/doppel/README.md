@@ -63,7 +63,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Historical polling days| doppel.historical_polling_days  | `DOPPEL_HISTORICAL_POLLING_DAYS`      | 30      | No        | Days of data to fetch on first run     |
 | Max retries            | doppel.max_retries              | `DOPPEL_MAX_RETRIES`                  | 3       | No        | Retry attempts on API errors           |
 | Retry delay (seconds) | doppel.retry_delay              | `DOPPEL_RETRY_DELAY`                  | 30      | No        | Delay between retry attempts           |
-| TLP Level            | tlp_level         | `DOPPELTLP_LEVEL`  | clear   | No        | TLP marking for created STIX objects. |
+| TLP Level            | tlp_level         | `DOPPEL_TLP_LEVEL`  | clear   | No        | TLP marking for created STIX objects. |
 
 ## Deployment
 
