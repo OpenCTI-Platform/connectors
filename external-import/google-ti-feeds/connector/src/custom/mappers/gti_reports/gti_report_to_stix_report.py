@@ -17,6 +17,7 @@ from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
 )
+from markdown import markdown  # type: ignore[import-untyped]
 from stix2.v21 import Report  # type: ignore
 
 
@@ -67,6 +68,10 @@ class GTIReportToSTIXReport(BaseMapper):
             if hasattr(self, "author_identity") and self.author_identity
             else self.organization.id
         )
+        if hasattr(attributes, "content") and attributes.content is not None:
+            html_content = markdown(attributes.content)
+        else:
+            html_content = ""
 
         report = OctiReportModel.create(
             name=name,
@@ -82,7 +87,7 @@ class GTIReportToSTIXReport(BaseMapper):
             external_references=[
                 ref.model_dump(exclude_none=True) for ref in external_references
             ],
-            content=attributes.content,
+            content=html_content,
         )
 
         return report

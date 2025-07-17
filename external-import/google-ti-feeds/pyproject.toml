@@ -20,6 +20,7 @@ requires-python = ">=3.11, <3.13"
 dependencies = [
     "PyYAML ~=6.0.2",
     "aiohttp ~=3.12.14",
+    "Markdown ~=3.8.2",
     "pycti ~=6.7.3",
     "pydantic ~=2.11.7",
     "pydantic_settings ~=2.10.1",
@@ -38,14 +39,14 @@ test = [
     "polyfactory ~=2.21.0",
 ]
 dev = [
-    "black ~=25.1",           # Code formatter
-    "isort ~=6.0.1",          # Import sorter
-    "ruff ~=0.12.1",           # linter
-    "mypy ~=1.16.1",          # Type validator
-    "pip_audit ~=2.9.0",      # Security checker
-    "pre-commit ~=4.2.0",     # Git hooks
-    "flake8 ~=7.3.0",         # Linter
-    "types-PyYAML ~=6.0.12",  # stubs for untyped module
+    "black ~=25.1",          # Code formatter
+    "isort ~=6.0.1",         # Import sorter
+    "ruff ~=0.12.1",         # linter
+    "mypy ~=1.16.1",         # Type validator
+    "pip_audit ~=2.9.0",     # Security checker
+    "pre-commit ~=4.2.0",    # Git hooks
+    "flake8 ~=7.3.0",        # Linter
+    "types-PyYAML ~=6.0.12", # stubs for untyped module
 ]
 all = ["GoogleTIFeeds[test,dev]"]
 
