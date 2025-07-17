@@ -1,7 +1,6 @@
-import math
 import sys
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import stix2
 from api_client.client import MISPClient, MISPClientError
@@ -52,22 +51,17 @@ class Misp:
         """Connector main process to collect intelligence."""
         try:
             now = datetime.now(tz=timezone.utc)
-            friendly_name = "MISP run @ " + now.isoformat()
+
             self.helper.metric.inc("run_count")
             self.helper.metric.state("running")
             work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
+                self.helper.connect_id, friendly_name="MISP run @ " + now.isoformat()
             )
-            current_state = self.helper.get_state()
-            if (
-                current_state is not None
-                and "last_run" in current_state
-                and "last_event_timestamp" in current_state
-                and "last_event" in current_state
-            ):
+
+            current_state = self.helper.get_state() or {}
+            if "last_run" in current_state and "last_event" in current_state:
                 last_run = datetime.fromisoformat(current_state["last_run"])
                 last_event = datetime.fromisoformat(current_state["last_event"])
-                last_event_timestamp = current_state["last_event_timestamp"]
                 self.helper.connector_logger.info(
                     "Current state of the connector:",
                     {
@@ -76,37 +70,26 @@ class Misp:
                     },
                 )
 
-            elif current_state and "last_run" in current_state:
+            elif "last_run" in current_state:
                 last_run = datetime.fromisoformat(current_state["last_run"])
                 last_event = last_run
-                last_event_timestamp = int(last_event.timestamp())
                 self.helper.connector_logger.info(
                     "Current state of the connector:",
                     {
                         "last_run": current_state["last_run"],
-                        "last_event": current_state[
-                            "last_run"
-                        ],  # last_event == last_run
+                        "last_event": current_state["last_run"],
                     },
                 )
             else:
                 if self.config.misp.import_from_date:
                     last_event = self.config.misp.import_from_date
-                    last_event_timestamp = int(last_event.timestamp())
                 else:
                     last_event = now
-                    last_event_timestamp = int(now.timestamp())
                 self.helper.connector_logger.info("Connector has never run")
 
             # Put the date
-            next_event_timestamp = last_event_timestamp + 1
+            next_event_date = last_event + timedelta(seconds=1)
 
-            # Query with pagination of 10
-            current_state = self.helper.get_state()
-            if current_state is not None and "current_page" in current_state:
-                current_page = current_state["current_page"]
-            else:
-                current_page = 1
             # Query all events
             self.helper.connector_logger.info(
                 "Fetching MISP events with filters:",
@@ -121,20 +104,6 @@ class Misp:
                 },
             )
 
-            self.helper.connector_logger.info(
-                "Fetching MISP events with filters:",
-                {
-                    "date_attribute_filter": self.config.misp.date_filter_field,
-                    "date_value_filter": next_event_timestamp,
-                    "keyword": self.config.misp.import_keyword,
-                    "included_tags": self.config.misp.import_tags,
-                    "excluded_tags": self.config.misp.import_tags_not,
-                    "enforce_warning_list": self.config.misp.enforce_warning_list,
-                    "with_attachments": self.config.misp.import_with_attachments,
-                    # omit "limit" and "page" on purpose to avoid confusion about the number of expected results
-                },
-            )
-
             events = []
             try:
                 events = self.client.search_events(
@@ -145,8 +114,6 @@ class Misp:
                     excluded_tags=self.config.misp.import_tags_not,
                     enforce_warning_list=self.config.misp.enforce_warning_list,
                     with_attachments=self.config.misp.import_with_attachments,
-                    limit=10,
-                    page=current_page,
                 )
             except MISPClientError as err:
                 self.helper.connector_logger.error(
@@ -157,14 +124,12 @@ class Misp:
                     # TODO: add a real retry mechanism
                     events = self.client.search_events(
                         date_attribute_filter=self.config.misp.date_filter_field,
-                        date_value_filter=next_event_timestamp,
+                        date_value_filter=next_event_date,
                         keyword=self.config.misp.import_keyword,
                         included_tags=self.config.misp.import_tags,
                         excluded_tags=self.config.misp.import_tags_not,
                         enforce_warning_list=self.config.misp.enforce_warning_list,
                         with_attachments=self.config.misp.import_with_attachments,
-                        limit=10,
-                        page=current_page,
                     )
                 except MISPClientError as err:
                     self.helper.connector_logger.error(
@@ -178,6 +143,7 @@ class Misp:
             )
 
             # Process the event
+            last_event_timestamp = int(last_event.timestamp())
             processed_events_last_timestamp = self.process_events(work_id, events)
             if (
                 processed_events_last_timestamp is not None
@@ -191,14 +157,6 @@ class Misp:
             )
             self.helper.api.work.to_processed(work_id, success_message)
 
-            # Update state
-            current_page = math.ceil(len(events) / 10)  # Each page contains 10 events
-            if current_state is not None:
-                current_state["current_page"] = current_page
-            else:
-                current_state = {"current_page": current_page}
-            self.helper.set_state(current_state)
-
             # Loop is over, storing the state
             # We cannot store the state before, because MISP events are NOT ordered properly
             # and there is NO WAY to order them using their library
@@ -207,8 +165,6 @@ class Misp:
                 "last_event": datetime.fromtimestamp(
                     last_event_timestamp, tz=timezone.utc
                 ).isoformat(),
-                "last_event_timestamp": last_event_timestamp,
-                "current_page": 1,
             }
             self.helper.set_state(current_state)
             self.helper.connector_logger.info(
