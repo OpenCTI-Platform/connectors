@@ -42,9 +42,8 @@ def test_config_run_every_deprecated(recwarn: pytest.WarningsRecorder) -> None:
 
     os.environ["CONNECTOR_RUN_EVERY"] = "3d"
 
-    # Assert run_every and duration_period are mutually exclusive
-    with pytest.raises(ConfigRetrievalError):
-        _ConnectorSettings().model_dump()
+    # Assert warning when run_every and duration_period are both set
+    _ConnectorSettings().model_dump()
 
     os.environ.pop("CONNECTOR_DURATION_PERIOD")
     config = _ConnectorSettings().model_dump()
@@ -53,6 +52,10 @@ def test_config_run_every_deprecated(recwarn: pytest.WarningsRecorder) -> None:
     assert recwarn[0].category == UserWarning
     assert recwarn[0].message.args == (
         "CONNECTOR_RUN_EVERY is deprecated. Use CONNECTOR_DURATION_PERIOD instead.",
+    )
+    assert recwarn[1].category == UserWarning
+    assert recwarn[1].message.args == (
+        "Cannot set both run_every and duration_period... Using duration_period.",
     )
 
     assert config["connector"]["duration_period"] == datetime.timedelta(days=3)

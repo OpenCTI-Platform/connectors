@@ -1,6 +1,5 @@
 import base64
 import copy
-import uuid
 from datetime import datetime
 
 import magic
@@ -17,7 +16,6 @@ from shadowserver.utils import (
     note_timestamp_to_datetime,
     string_to_datetime,
 )
-from stix2.canonicalization import Canonicalize
 
 
 class ShadowserverStixTransformation:
@@ -584,45 +582,26 @@ class ShadowserverStixTransformation:
                 dst_str = f"{dst_str}:{dst_port}"
             description.append(dst_str)
 
-        # Generate custom ID for network traffic
-        custom_id = str(
-            uuid.uuid5(
-                uuid.UUID("8cd73e6c-ae14-4c43-bbeb-33b44084a18c"),
-                f"{Canonicalize.canonicalize(f'{kwargs}-{description}', utf8=False)}",
-            )
-        )
-        self.helper.connector_logger.debug(f"{custom_id} - {kwargs} - {description}")
-        kwargs["id"] = f"network-traffic--{custom_id}"
+        # Add description to custom properties
+        description_str = f"Shadowserver Network Traffic: {', '.join(description)}"
+        self.extend_stix_object(kwargs, labels)
+        if "custom_properties" not in kwargs:
+            kwargs["custom_properties"] = {}
+        kwargs["custom_properties"].update({"x_opencti_description": description_str})
+        stix_object = stix2.NetworkTraffic(**kwargs)
 
-        # Check for existing STIX object with the same ID
-        if self.stix_object_exists(kwargs["id"]):
-            self.helper.connector_logger.error(
-                f"STIX object with ID {kwargs['id']} already exists. Aborting creation."
+        if stix_object:
+            self.helper.connector_logger.debug(
+                f"Created network traffic STIX object: {stix_object.id}"
             )
+            stix_object_id = stix_object.get("id", str())
+            self.object_refs.append(stix_object.id)
+            self.stix_objects.append(stix_object)
         else:
-            # Add description to custom properties
-            description_str = f"Shadowserver Network Traffic: {', '.join(description)}"
-            self.extend_stix_object(kwargs, labels)
-            if "custom_properties" not in kwargs:
-                kwargs["custom_properties"] = {}
-            kwargs["custom_properties"].update(
-                {"x_opencti_description": description_str}
+            self.helper.connector_logger.warning(
+                "Failed to create network traffic STIX object",
+                {"stix_object_id": stix_object.id},
             )
-
-            stix_object = stix2.NetworkTraffic(**kwargs)
-
-            if stix_object:
-                self.helper.connector_logger.debug(
-                    f"Created network traffic STIX object: {stix_object.id}"
-                )
-                stix_object_id = stix_object.get("id", str())
-                self.object_refs.append(stix_object.id)
-                self.stix_objects.append(stix_object)
-            else:
-                self.helper.connector_logger.warning(
-                    "Failed to create network traffic STIX object",
-                    {"stix_object_id": stix_object.id},
-                )
         return stix_object_id
 
     def create_x509_certificate(self, data: dict, labels: list = []):

@@ -105,8 +105,10 @@ class _ConnectorConfig(_BaseModel):
                 "CONNECTOR_RUN_EVERY is deprecated. Use CONNECTOR_DURATION_PERIOD instead."
             )
             if data.get("duration_period"):
-                raise ValueError("Cannot set both run_every and duration_period.")
-            if run_every[-1] in ["H", "M", "S"]:
+                warnings.warn(
+                    "Cannot set both run_every and duration_period... Using duration_period."
+                )
+            elif run_every[-1] in ["H", "M", "S"]:
                 data["duration_period"] = (
                     f"PT{int(float(run_every[:-1]))}{run_every[-1]}"
                 )
