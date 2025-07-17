@@ -1,5 +1,5 @@
 import stix2
-from pycti import Identity, MarkingDefinition, Location, AttackPattern
+from pycti import AttackPattern, Identity, Location, MarkingDefinition
 
 
 class ConverterToStix:
