@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:8080' # The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`
+  token: 'ChangeMe' # The default admin token configured in the OpenCTI platform parameters file.
+
+connector:
+  id: 'ChangeMe' # A valid arbitrary `UUIDv4` that must be unique for this connector.
+  name: 'ANY.RUN TI Feed' # A connector name to be shown in OpenCTI.
+  scope: 'stix2' # Supported scope. E. g., `text/html`.
+  log_level: 'info' # The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).
+  type: 'EXTERNAL_IMPORT' # A connector type.
+  update_existing_data: false # Update data already ingested into the platform.
+
+anyrun:
+  token: 'ChangeMe' # ANY.RUN TI Feeds Basic token. See "Generate Basic auth token" section in the README file. Example: Basic askAs...s31==
+  feed_fetch_interval: 120 # Specify feed fetch interval in minutes.
+  feed_fetch_depth: 90 # Specify feed fetch depth in days.

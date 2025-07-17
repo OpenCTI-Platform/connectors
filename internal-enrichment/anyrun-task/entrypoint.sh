@@ -3,4 +3,4 @@
 
 cd /opt/connector-anyrun-task
 
-python3 anyrun_task.py
+python3 opencti_client.py

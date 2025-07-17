@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:8080' # The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`
+  token: 'ChangeMe' # The default admin token configured in the OpenCTI platform parameters file.
+
+connector:
+  id: 'ChangeMe' # A valid arbitrary `UUIDv4` that must be unique for this connector.
+  type: 'INTERNAL_ENRICHMENT' # A connector type.
+  name: 'ANY.RUN TI Lookup' # A connector name to be shown in OpenCTI.
+  scope: 'StixFile,Artifact,Domain-Name,Hostname,IPv4-Addr,Url' # Supported scope. E. g., `text/html`.
+  auto: false # Enable/disable auto-enrichment of observables
+  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info' # The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).
+
+anyrun:
+  token: 'ChangeMe' # ANY.RUN Lookup API-KEY. See "Generate API token" section in the README file.
+  lookup_depth: 90 # Specify the number of days from the current date for which you want to lookup.
