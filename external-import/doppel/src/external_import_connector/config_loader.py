@@ -43,13 +43,13 @@ class ConfigDoppel:
 
     def _initialize_configurations(self):
         self.api_base_url = get_config_variable(
-            "CONNECTOR_TEMPLATE_API_BASE_URL",
+            "DOPPEL_API_BASE_URL",
             ["connector_template", "api_base_url"],
             self.load,
         )
 
         self.api_key = get_config_variable(
-            "CONNECTOR_TEMPLATE_API_KEY", ["connector_template", "api_key"], self.load
+            "DOPPEL_API_KEY", ["connector_template", "api_key"], self.load
         )
 
         self.alerts_endpoint = get_config_variable(
@@ -87,7 +87,7 @@ class ConfigDoppel:
         )
 
         self.tlp_level = get_config_variable(
-            "CONNECTOR_TEMPLATE_TLP_LEVEL",
+            "DOPPEL_TLP_LEVEL",
             ["connector_template", "tlp_level"],
             self.load,
             default="clear",

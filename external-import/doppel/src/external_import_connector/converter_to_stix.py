@@ -65,12 +65,13 @@ class ConverterToStix:
             severity = f"{raw_severity} severity"
 
             description = (
-                f"Platform: {platform},\n"
-                f"Entity State: {entity_state},\n"
-                f"Queue State: {queue_state},\n"
-                f"Severity: {severity},\n"
-                f"Entity Content:\n{formatted_entity_content}"
-            )
+                 f"**Platform**: {platform}  \n"
+                 f"**Entity State**: {entity_state}  \n"
+                 f"**Queue State**: {queue_state}  \n"
+                 f"**Severity**: {severity}  \n"
+                 f"**Entity Content**:  \n"
+                 f"{formatted_entity_content}"
+             )
 
             raw_score = alert.get("score")
             try:
@@ -106,4 +107,4 @@ class ConverterToStix:
             )
             stix_objects.append(indicator)
 
-        return Bundle(objects=stix_objects, allow_custom=True).serialize()
+        return self.helper.stix2_create_bundle(stix_objects)

@@ -12,7 +12,7 @@ if __name__ == "__main__":
         connector.run()
 
     except ValueError as ve:
-        print(f"[Config Error] {ve}")
+        print(f"[Error] {ve}")
         exit(1)
 
     except Exception:

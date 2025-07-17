@@ -51,19 +51,19 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Name       | name              | `CONNECTOR_NAME`                |         | Yes       | Name of the connector.                                                                   |
 | Connector Scope      | scope             | `CONNECTOR_SCOPE`               |         | Yes       | The scope or type of data the connector is importing (e.g., `Indicator`).                |
 | Log Level            | log_level         | `CONNECTOR_LOG_LEVEL`           | info    | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.                   |
-| Polling Interval     | duration_period   | `CONNECTOR_DURATION_PERIOD`     | PT1H    | Yes       | ISO-8601 interval string (e.g., `PT5M`, `PT1H`) for the polling schedule.                |
-| TLP Level            | tlp_level         | `CONNECTOR_TEMPLATE_TLP_LEVEL`  | clear   | No        | TLP marking for created STIX objects.                                                    |
+| Polling Interval     | duration_period   | `CONNECTOR_DURATION_PERIOD`     | PT1H    | Yes       | ISO-8601 interval string (e.g., `PT5M`, `PT1H`) for the polling schedule.                |                                                   |
 
 ### Connector extra parameters environment variables
 
 | Parameter               | config.yml                      | Docker environment variable           | Default | Mandatory | Description                            |
 |------------------------|----------------------------------|----------------------------------------|---------|-----------|----------------------------------------|
-| API base URL           | connector_template.api_base_url | `CONNECTOR_TEMPLATE_API_BASE_URL`     |         | Yes       | Doppel API base URL                    |
-| API key                | connector_template.api_key      | `CONNECTOR_TEMPLATE_API_KEY`          |         | Yes       | Doppel API key                         |
+| API base URL           | connector_template.api_base_url | `DOPPEL_API_BASE_URL`     |         | Yes       | Doppel API base URL                    |
+| API key                | connector_template.api_key      | `DOPPEL_API_KEY`          |         | Yes       | Doppel API key                         |
 | Alerts endpoint        | doppel.alerts_endpoint          | `DOPPEL_ALERTS_ENDPOINT`              |         | Yes       | API endpoint for fetching alerts       |
 | Historical polling days| doppel.historical_polling_days  | `DOPPEL_HISTORICAL_POLLING_DAYS`      | 30      | No        | Days of data to fetch on first run     |
 | Max retries            | doppel.max_retries              | `DOPPEL_MAX_RETRIES`                  | 3       | No        | Retry attempts on API errors           |
 | Retry delay (seconds) | doppel.retry_delay              | `DOPPEL_RETRY_DELAY`                  | 30      | No        | Delay between retry attempts           |
+| TLP Level            | tlp_level         | `DOPPELTLP_LEVEL`  | clear   | No        | TLP marking for created STIX objects. |
 
 ## Deployment
 
@@ -90,13 +90,13 @@ docker build -t opencti/connector-doppel:6.7.4 .
       - CONNECTOR_SCOPE=Indicator
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT1H
-      - CONNECTOR_TEMPLATE_API_BASE_URL=https://api.doppel.com
-      - CONNECTOR_TEMPLATE_API_KEY=changeme
+      - DOPPEL_API_BASE_URL=https://api.doppel.com
+      - DOPPEL_API_KEY=changeme
       - DOPPEL_ALERTS_ENDPOINT=/v1/alerts
       - DOPPEL_HISTORICAL_POLLING_DAYS=30
       - DOPPEL_MAX_RETRIES=3
       - DOPPEL_RETRY_DELAY=30
-      - CONNECTOR_TEMPLATE_TLP_LEVEL=green
+      - DOPPEL_TLP_LEVEL=clear
     restart: always
 ```
 
