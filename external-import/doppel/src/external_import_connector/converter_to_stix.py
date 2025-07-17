@@ -65,13 +65,13 @@ class ConverterToStix:
             severity = f"{raw_severity} severity"
 
             description = (
-                 f"**Platform**: {platform}  \n"
-                 f"**Entity State**: {entity_state}  \n"
-                 f"**Queue State**: {queue_state}  \n"
-                 f"**Severity**: {severity}  \n"
-                 f"**Entity Content**:  \n"
-                 f"{formatted_entity_content}"
-             )
+                f"**Platform**: {platform}  \n"
+                f"**Entity State**: {entity_state}  \n"
+                f"**Queue State**: {queue_state}  \n"
+                f"**Severity**: {severity}  \n"
+                f"**Entity Content**:  \n"
+                f"{formatted_entity_content}"
+            )
 
             raw_score = alert.get("score")
             try:
