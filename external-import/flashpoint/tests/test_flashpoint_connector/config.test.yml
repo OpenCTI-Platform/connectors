@@ -1,0 +1,25 @@
+opencti:
+  url: "http://test-opencti-url/"
+  token: "test-opencti-token"
+
+connector:
+  id: "test-connector-id"
+  name: "External Import Connector"
+  scope: "test"
+  log_level: "info"
+  run_and_terminate: false
+  duration_period: "PT1H" # Interval given for scheduler process in ISO-8601 format
+
+flashpoint:
+  api_key: "test-flashpoint-api-key"
+  import_start_date: "P30D"
+  import_reports: true
+  indicators_in_reports: true
+  guess_relationships_from_reports: false
+  import_alerts: true
+  alert_create_related_entities: true
+  import_indicators: true
+  import_communities: true
+  communities_queries: "cybersecurity,cyberattack"
+  import_ccm_alerts: true
+  fresh_ccm_alerts_only: true

@@ -1,0 +1,1 @@
+"""Offer techniques OpenCTI entities."""

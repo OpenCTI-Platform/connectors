@@ -5,7 +5,7 @@ Collect Sekoia.io CTI data in an existing OpenCTI instance for any operational p
 
 ## Prerequisites
 - An operational OpenCTI on-prem instance with administrator privileges or an OpenCTI Saas version
-- An active Sekoia CTI subscription (Sekoia Intelligence) : https://www.sekoia.io/en/product/cti/. If you want to test Sekoia CTI please contact : contact@sekoia.io 
+- An active Sekoia CTI subscription (Sekoia Intelligence) : https://www.sekoia.io/en/product/cti/. If you want to test Sekoia CTI please contact : contact@sekoia.io
 - [Creating a Sekoia.io API KEY](https://docs.sekoia.io/getting_started/manage_api_keys/) with the "View intelligence" premission (at least)
 
 ## OpenCTI on-prem version configuration
@@ -31,6 +31,7 @@ connector-sekoia:
       - SEKOIA_LIMIT=100                # Optional, the number of elements to fetch in each request. Defaults to 200, maximum 2000
       - SEKOIA_CREATE_OBSERVABLES=true  # Create observables from indicators
       - SEKOIA_IMPORT_SOURCE_LIST=false # Create the list of sources observed by Sekoia as label
+      - SEKOIA_IMPORT_IOC_RELATIONSHIPS=true # Optional, Import IOCs relationships and related objects - Default: true
     restart: always
     depends_on:
       - opencti
@@ -77,13 +78,31 @@ On this page, you can find the following information:
 2. Navigate the Sekoia Intelligence Feed
 Here are the elements of the Sekoia feed that can be found on OpenCTI after export:
 
-| **OpenCTI**    | 	**Sekoia.io** |
-|----------------|----------------|
-| Reports        | Threat-reports |
-| Observables    | Sightings      |
-| Malwares	      | Malwares       |
-| Intrusion Set	 | Intrusion-sets |
-| Indicators	    | Indicators     |
+| **OpenCTI**   | **Sekoia.io**  |
+|---------------|----------------|
+| Reports       | Threat-reports |
+| Observables   | Sightings      |
+| Malwares      | Malwares       |
+| Intrusion Set | Intrusion-sets |
+| Indicators    | Indicators     |
+
+## Known behavior
+
+The configuration option `SEKOIA_IMPORT_IOC_RELATIONSHIPS` is setting to `true` by default to obtain in OpenCTI the same richness of information as offered through your portal BUT please note that as we ingest more data, the process of ingesting an IOC may take longer.
+
+To enhance ingestion performance, deploy two specialized connectors:
+
+- Primary Connector: Rapidly ingests IOCs without related objects for immediate processing
+
+- Secondary Connector: Asynchronously enriches IOCs with related objects during off-peak periods
+
+This parallel approach decouples initial ingestion from relationship processing, significantly reducing latency while maintaining data completeness. The separation of concerns allows:
+
+- Near-real-time IOC availability
+
+- Reduced load during peak ingestion windows
+
+- Gradual relationship mapping without blocking core ingestion
 
 ## Troubleshoot
 

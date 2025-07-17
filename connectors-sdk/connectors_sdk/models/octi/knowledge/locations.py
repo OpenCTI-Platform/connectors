@@ -1,0 +1,1 @@
+"""Offer locations OpenCTI entities."""
