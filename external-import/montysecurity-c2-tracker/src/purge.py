@@ -1,9 +1,11 @@
-from pycti import OpenCTIApiClient
 import os
+
+from pycti import OpenCTIApiClient
 
 api_url = os.getenv("OPENCTI_URL")
 api_token = os.getenv("OPENCTI_C2TRACKER_TOKEN")
 opencti_api_client = OpenCTIApiClient(api_url, api_token)
+
 
 def delete_current_indicators():
     final_indicators = []
@@ -26,7 +28,9 @@ def delete_current_indicators():
             if str(indicator["objectLabel"][i]["value"]) == "c2-tracker":
                 opencti_api_client.stix_domain_object.delete(id=indicator["id"])
 
+
 def main():
     delete_current_indicators()
+
 
 main()

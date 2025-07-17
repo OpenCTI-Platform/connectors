@@ -1,25 +1,29 @@
-import requests
-import re
-from time import sleep
-from pycti import OpenCTIApiClient
 import os
+import re
 from datetime import date
-from stix2 import TLP_WHITE
 from time import sleep
+
+import requests
+from pycti import OpenCTIApiClient
+from stix2 import TLP_WHITE
+
 
 def get_current_c2_tracker_ips():
     print("[+] Getting Current IOCs...")
     all_ips = set()
     url = "https://github.com/montysecurity/C2-Tracker/tree/main/data"
     request = requests.get(url)
-    tools = list(set(re.findall("\"[\w|\s|\d|\.]+IPs\.txt\"", request.text)))
+    tools = list(set(re.findall('"[\w|\s|\d|\.]+IPs\.txt"', request.text)))
     i = 0
     for tool in tools:
         tools[i] = str(tool).strip('"')
         i += 1
     for tool in tools:
         print(f"[+] Looking at {tool}")
-        url = str("https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/" + str(tool).replace(" ", "%20"))
+        url = str(
+            "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"
+            + str(tool).replace(" ", "%20")
+        )
         request = requests.get(url)
         # Get IPs for C2
         ips = str(request.text).split("\n")
@@ -28,6 +32,7 @@ def get_current_c2_tracker_ips():
         for ip in ips:
             all_ips.add(ip)
     return all_ips
+
 
 def add_indicator(c2, ip):
     print(f"[+] Adding {c2} indicator", ip)
@@ -40,7 +45,7 @@ def add_indicator(c2, ip):
 
     # Get TLP Clear ID
     TLP_WHITE_CTI = opencti_api_client.marking_definition.read(id=TLP_WHITE["id"])
-    
+
     # Create indicator
     indicator = opencti_api_client.indicator.create(
         name=f"{c2} IP - {ip}",
@@ -51,11 +56,14 @@ def add_indicator(c2, ip):
         valid_from=date_now,
         update=True,
         confidence=100,
-        markingDefinitions=[TLP_WHITE_CTI["id"]]
+        markingDefinitions=[TLP_WHITE_CTI["id"]],
     )
 
     # Add label to indicator
-    opencti_api_client.stix_domain_object.add_label(id=indicator["id"], label_id=label["id"])
+    opencti_api_client.stix_domain_object.add_label(
+        id=indicator["id"], label_id=label["id"]
+    )
+
 
 def update_opencti(current_opencti_c2_tracker_indicators):
     # Create variable to hold all IPs
@@ -64,14 +72,17 @@ def update_opencti(current_opencti_c2_tracker_indicators):
     url = "https://github.com/montysecurity/C2-Tracker/tree/main/data"
     request = requests.get(url)
     # Get all file names ending in " IPs.txt"
-    tools = list(set(re.findall("\"[\w|\s|\d|\.]+IPs\.txt\"", request.text)))
+    tools = list(set(re.findall('"[\w|\s|\d|\.]+IPs\.txt"', request.text)))
     # Strip quotes
     i = 0
     for tool in tools:
         tools[i] = str(tool).strip('"')
         i += 1
     for tool in tools:
-        url = str("https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/" + str(tool).replace(" ", "%20"))
+        url = str(
+            "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/"
+            + str(tool).replace(" ", "%20")
+        )
         request = requests.get(url)
         # Remove " IPs.txt"
         tool = str(tool)[:-8]
@@ -83,9 +94,10 @@ def update_opencti(current_opencti_c2_tracker_indicators):
             if ip not in current_opencti_c2_tracker_indicators:
                 add_indicator(tool, ip)
                 # use break for testing 1 IP of all tools
-                #break
+                # break
             elif ip in current_opencti_c2_tracker_indicators:
                 print("[+] Skipping upload of", ip, "as it is already in OpenCTI")
+
 
 def opencti_indicator_loop(current_c2_tracker_ips, delete_old_iocs):
     print("[+] Deleting old indicators")
@@ -115,8 +127,9 @@ def opencti_indicator_loop(current_c2_tracker_ips, delete_old_iocs):
                         opencti_api_client.stix_domain_object.delete(id=indicator["id"])
                 elif not delete_old_iocs:
                     current_opencti_c2_tracker_indicators.add(ioc)
-    
+
     return current_opencti_c2_tracker_indicators
+
 
 def check_mitre():
     mitre = False
@@ -138,6 +151,7 @@ def check_mitre():
                 print("MITRE is enabled")
                 break
     return mitre
+
 
 def get_current_indicators():
     final_indicators = []
@@ -161,6 +175,7 @@ def get_current_indicators():
                 print(indicator["name"] + " --- " + indicator["id"])
     return final_indicators
 
+
 def get_malware():
     final_malware = []
     data = {"pagination": {"hasNextPage": True, "endCursor": None}}
@@ -176,8 +191,9 @@ def get_malware():
             orderMode="asc",
         )
         final_malware += data["entities"]
-    
+
     return final_malware
+
 
 def get_tools():
     final_tools = []
@@ -194,8 +210,9 @@ def get_tools():
             orderMode="asc",
         )
         final_tools += data["entities"]
-    
+
     return final_tools
+
 
 def create_relationships(indicators, tools):
     # Create the tag (if not exists)
@@ -204,7 +221,6 @@ def create_relationships(indicators, tools):
         color="#ffa500",
     )
     TLP_WHITE_CTI = opencti_api_client.marking_definition.read(id=TLP_WHITE["id"])
-
 
     mapping = {
         # MITRE: C2Tracker
@@ -218,7 +234,7 @@ def create_relationships(indicators, tools):
         "Brute Ratel C4": "Brute Ratel C4 IP",
         "Empire": "Empire C2 IP",
         "Sliver": "Sliver C2 IP",
-        "Remcos": "Remcos Pro RAT Trojan IP"
+        "Remcos": "Remcos Pro RAT Trojan IP",
     }
     indicator_tool_malware_names = set()
     for i in indicators:
@@ -227,7 +243,7 @@ def create_relationships(indicators, tools):
     tool_names = set()
     for t in tools:
         tool_names.add(str(t["name"]))
-    
+
     for i in indicators:
         n = str(i["name"]).split(" - ")[0]
         for m in mapping:
@@ -243,10 +259,13 @@ def create_relationships(indicators, tools):
                             first_seen=str(date.today().strftime("%Y-%m-%dT%H:%M:%SZ")),
                             last_seen=str(date.today().strftime("%Y-%m-%dT%H:%M:%SZ")),
                             description="This is a server hosting the tool",
-                            markingDefinitions=[TLP_WHITE_CTI["id"]]
+                            markingDefinitions=[TLP_WHITE_CTI["id"]],
                         )
                         # Add label to relationship
-                        opencti_api_client.stix_core_relationship.add_label(id=relationship["id"], label_id=label["id"])
+                        opencti_api_client.stix_core_relationship.add_label(
+                            id=relationship["id"], label_id=label["id"]
+                        )
+
 
 def main():
     api_url = os.getenv("OPENCTI_URL")
@@ -256,7 +275,9 @@ def main():
     global opencti_api_client
     opencti_api_client = OpenCTIApiClient(api_url, api_token)
     current_c2_tracker_ips = get_current_c2_tracker_ips()
-    current_opencti_c2_tracker_indicators = opencti_indicator_loop(current_c2_tracker_ips, delete_old_iocs=False)
+    current_opencti_c2_tracker_indicators = opencti_indicator_loop(
+        current_c2_tracker_ips, delete_old_iocs=False
+    )
     opencti_indicator_loop(current_c2_tracker_ips, delete_old_iocs=True)
     update_opencti(current_opencti_c2_tracker_indicators)
     mitre = check_mitre()
@@ -267,6 +288,7 @@ def main():
         create_relationships(indicators, tools=malware)
         create_relationships(indicators, tools)
 
+
 def loop():
     try:
         main()
@@ -275,6 +297,7 @@ def loop():
         print(e)
         sleep(10)
         loop()
+
 
 if __name__ == "__main__":
     loop()
