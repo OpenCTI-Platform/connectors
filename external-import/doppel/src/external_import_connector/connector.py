@@ -37,11 +37,18 @@ class DoppelConnector:
             alerts = self._collect_alerts()
             if alerts:
                 bundle = self.converter.convert_alerts_to_stix(alerts)
-                bundle_sent = self.helper.send_stix2_bundle(bundle)
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, "Connector feed"
+                )
+                bundle_sent = self.helper.send_stix2_bundle(bundle, work_id=work_id)
                 self.helper.connector_logger.info(
                     "STIX bundle sent", {"objects": len(bundle_sent)}
                 )
                 set_last_run(self.helper)
+                self.helper.api.work.to_processed(
+                    work_id, f"{self.helper.connect_name} connector successfully run"
+                )
+
         except Exception as err:
             self.helper.connector_logger.error(
                 f"[DoppelConnector] Error in process_message: {str(err)}"

@@ -10,12 +10,10 @@ connector:
   log_level: 'info'
   duration_period: 'PT1H'  # ISO-8601 format for 1 hour
 
-connector_template:
+doppel:
   api_base_url: 'https://api.doppel.com/v1'
   api_key: 'changeMe'
   tlp_level: 'clear'  # Options: clear, white, green, amber, amber+strict, red
-
-doppel:
   alerts_endpoint: '/alerts'
   historical_polling_days: 30
   max_retries: 3
