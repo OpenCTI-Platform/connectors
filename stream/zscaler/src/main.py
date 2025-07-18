@@ -38,7 +38,6 @@ if __name__ == "__main__":
         )
 
         connector.authenticate_with_zscaler()
-        #Stay start
         connector.start()
 
     except Exception:

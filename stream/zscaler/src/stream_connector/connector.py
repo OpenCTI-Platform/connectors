@@ -60,9 +60,6 @@ class ZscalerConnector:
         self.rate_limit = 400  # Limit to 400 requests per hour
         self.retry_delay = 65  # Retry delay in seconds
 
-        self.rate_limit = 400 # Limit to 400 requests per hour 
-        self.retry_delay = 65 
-
     def authenticate_with_zscaler(self):
         """Authenticate with Zscaler and obtain a session token."""
         self.helper.connector_logger.info("Authenticating with Zscaler...")
