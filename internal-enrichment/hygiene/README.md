@@ -35,12 +35,11 @@ file of OpenCTI.
 | `label_name`                | `HYGIENE_LABEL_NAME`               | No        | Set the label name. The default is`hygiene`.                                                                                                                                |
 | `label_parent_name`         | `HYGIENE_LABEL_PARENT_NAME`        | No        | Label name to be used when enriching sub-domains, by default `hygiene_parent`.                                                                                              |
 | `label_color`               | `HYGIENE_LABEL_COLOR`              | No        | Color to use for the label, by default `#fc0341`.                                                                                                                           |
-| `label_parent_color`        | `HYGIENE_LABEL_COLOR`              | No        | Color to use for the label when enriching subdomains, by default `#fc0341`.                                                                                                 |                                                                                                                                            |
+| `label_parent_color`        | `HYGIENE_LABEL_PARENT_COLOR`       | No        | Color to use for the label when enriching subdomains, by default `#fc0341`.                                                                                                 |                                                                                                                                            |
 | `enrich_subdomains`         | `HYGIENE_ENRICH_SUBDOMAINS`        | No        | Enable enrichment of sub-domains, This option will add "hygiene_parent" label and ext refs of the parent domain to the subdomain, if sub-domain is not found but parent is. |
 
 ## Behavior
 
-1. Adds a `hygiene` or `yygiene_parent` label by default on items that correspond to a warning list entry. These are configurable(both color and label name)
-2. Adds an external reference for every matching warning list.
-3. Sets the score of all related indicators to a value based on the number of
+1. Adds a `hygiene` or `hygiene_parent` label by default on items that correspond to a warning list entry. These are configurable(both color and label name)
+2. Sets the score of all related indicators to a value based on the number of
    reported entries (1:15, >=3:10, >=5:5, default:20).

@@ -38,6 +38,7 @@ class IndicatorImporterConfig(NamedTuple):
     indicator_high_score: int
     indicator_high_score_labels: Set[str]
     indicator_unwanted_labels: Set[str]
+    no_file_trigger_import: bool
 
 
 class IndicatorImporter(BaseImporter):
@@ -71,12 +72,13 @@ class IndicatorImporter(BaseImporter):
         self.indicator_high_score_labels = config.indicator_high_score_labels
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
         self.next_page: Optional[str] = None
+        self.no_file_trigger_import = config.no_file_trigger_import
 
         if not (self.create_observables or self.create_indicators):
             msg = "'create_observables' and 'create_indicators' false at the same time"
             raise ValueError(msg)
 
-        self.report_fetcher = ReportFetcher(config.helper)
+        self.report_fetcher = ReportFetcher(config.helper, self.no_file_trigger_import)
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""

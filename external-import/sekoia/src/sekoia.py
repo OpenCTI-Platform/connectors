@@ -46,7 +46,13 @@ class Sekoia(object):
 
         self.base_url = self.get_config("base_url", config, "https://api.sekoia.io")
         self.start_date: str = self.get_config("start_date", config, None)
-        self.limit = self.get_config("limit", config, 200)
+        self.limit = get_config_variable(
+            "SEKOIA_LIMIT",
+            ["sekoia", "limit"],
+            config,
+            isNumber=True,
+            default=200,
+        )
         self.collection = self.get_config(
             "collection", config, "d6092c37-d8d7-45c3-8aff-c4dc26030608"
         )
@@ -203,7 +209,11 @@ class Sekoia(object):
         items = self._clean_ic_fields(items)
         self._add_files_to_items(items)
 
+        # Getting source refs and add as labels in entity
+        self._add_sources_to_items(items)
+
         if self.import_ioc_relationships:
+            # Retrieve all related object to IOC and relationship
             [all_related_objects, all_relationships] = (
                 self._retrieve_related_objects_and_relationships(items)
             )
@@ -265,14 +275,7 @@ class Sekoia(object):
 
     @staticmethod
     def _field_to_ignore(field: str) -> bool:
-        to_ignore = [
-            "x_ic_impacted_locations",
-            "x_ic_impacted_sectors",
-        ]
-        return (
-            (field.startswith("x_ic") or field.startswith("x_inthreat"))
-            and (field.endswith("ref") or field.endswith("refs"))
-        ) or field in to_ignore
+        return field.startswith("x_ic")
 
     def _retrieve_related_objects_and_relationships(self, indicators: List[Dict]):
         all_related_objects = []

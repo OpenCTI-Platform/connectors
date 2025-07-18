@@ -49,6 +49,7 @@ class Orchestrator:
         self.client_api = ClientAPI(config, logger)
         self.converter = ConvertToSTIX(config, logger, tlp_level)
         self.batch_processor = self._create_batch_processor()
+        self.current: int = 0
 
     def _create_batch_processor(self) -> GenericBatchProcessor:
         """Create and configure the batch processor.
@@ -124,17 +125,21 @@ class Orchestrator:
             self._flush_batch_processor()
 
     def _update_report_index_inplace(self) -> None:
-        """Use to update the work message, trying to keep track of the number of reports."""
+        """Update the work message to reflect current report progress."""
 
-        def replacer(m: Any) -> str:
-            current = int(m.group(1))
-            actual_total = self.client_api.real_total_reports
-            return f"({current + 1}/{actual_total} reports)"
+        def replacer(match: Any) -> str:
+            actual_total = self.client_api.real_total_reports or 0
 
+            if actual_total == 0:
+                return "(~ 0/0 reports)"
+
+            self.current += 1
+            return f"(~ {self.current}/{actual_total} reports)"
+
+        pattern = r"\(~ (\d+)/(\d+) reports\)"
+        template = self.batch_processor.config.work_name_template
         self.batch_processor.config.work_name_template = re.sub(
-            r"\((\d+)/(\d+) reports\)",
-            replacer,
-            self.batch_processor.config.work_name_template,
+            pattern, replacer, template
         )
 
     def _flush_batch_processor(self) -> None:
