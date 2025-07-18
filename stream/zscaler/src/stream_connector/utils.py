@@ -43,18 +43,3 @@ def handle_rate_limit(request_func, retry_delay, *args, **kwargs):
         except requests.RequestException as e:
             logging.error(f"Error making request: {e}")
             time.sleep(retry_delay)
-
-def sanitize_payload(payload, keys_to_mask=None):
-    """
-    Replaces sensitive values in a dictionary with ‘**MASKED**’.
-    :param payload: dictionary to be cleaned
-    :param keys_to_mask: list of keys to be masked
-    :return: cleaned dictionary
-    """
-    if keys_to_mask is None:
-        keys_to_mask = ["username", "password", "apiKey", "token", "authorization"]
-
-    return {
-        k: "***MASKED***" if k in keys_to_mask else v
-        for k, v in payload.items()
-    }
