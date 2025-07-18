@@ -157,7 +157,7 @@ class CriminalIPC2DailyFeedConnector:
                             bundle_objects.append(located_at)
 
                     self.helper.log_info("Creating STIX Bundle")
-                    self.helper.log_info(f"Bundle: {bundle_objects}")
+                    self.helper.log_debug(f"Bundle: {bundle_objects}")
                     bundle = self.helper.stix2_create_bundle(bundle_objects)
                     self.helper.log_info("Sending STIX Bundle")
                     work_id = self.helper.api.work.initiate_work(
