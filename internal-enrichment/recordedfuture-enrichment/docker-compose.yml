@@ -7,7 +7,7 @@ services:
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=Recorded Future Enrichment
-      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,domain-name,url,stixfile
+      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,domain-name,url,stixfile,vulnerability
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=error
       - RECORDED_FUTURE_TOKEN=CHANGEME #required
