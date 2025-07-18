@@ -76,67 +76,70 @@ class RFClient:
             res.raise_for_status()
             data = res.json()
             total = data.get("counts").get("total")
-            for note in data["data"]:
-                attributes = note["attributes"]
-                msg = f'[ANALYST NOTES] Processing note "{attributes["title"]}"'
-                self.helper.connector_logger.info(msg)
+            if data.get("counts").get("returned") > 0:
+                for note in data["data"]:
+                    attributes = note["attributes"]
+                    msg = f'[ANALYST NOTES] Processing note "{attributes["title"]}"'
+                    self.helper.connector_logger.info(msg)
 
-                attributes["attachments"] = []
-                if "attachment" in attributes and attributes.get("attachment").endswith(
-                    ".pdf"
-                ):
-                    try:
-                        result = self.get_analyst_note_attachment(note["id"])
-                        if result:
-                            attachment = {
-                                "name": attributes.get("attachment"),
-                                "content": result,
-                                "type": "pdf",
-                            }
-                            attributes["attachments"].append(attachment)
-                        else:
-                            msg = f'[ANALYST NOTES] No attachment found for note: {attributes["title"]}'
+                    attributes["attachments"] = []
+                    if "attachment" in attributes and attributes.get(
+                        "attachment"
+                    ).endswith(".pdf"):
+                        try:
+                            result = self.get_analyst_note_attachment(note["id"])
+                            if result:
+                                attachment = {
+                                    "name": attributes.get("attachment"),
+                                    "content": result,
+                                    "type": "pdf",
+                                }
+                                attributes["attachments"].append(attachment)
+                            else:
+                                msg = f'[ANALYST NOTES] No attachment found for note: {attributes["title"]}'
+                                self.helper.connector_logger.error(msg)
+                        except requests.exceptions.HTTPError as err:
+                            msg = f'[ANALYST NOTES] An exception occurred while retrieving PDF attachment of note: {attributes["title"]}, {str(err)}'
                             self.helper.connector_logger.error(msg)
-                    except requests.exceptions.HTTPError as err:
-                        msg = f'[ANALYST NOTES] An exception occurred while retrieving PDF attachment of note: {attributes["title"]}, {str(err)}'
-                        self.helper.connector_logger.error(msg)
 
-                elif (
-                    pull_signatures
-                    and "attachment" in attributes
-                    and attributes.get("attachment")
-                ):
-                    try:
-                        result = self.get_attachment(note["id"])
-                        if result:
-                            attachment = {
-                                "name": attributes.get("attachment"),
-                                "content": result["rules"][0]["content"],
-                                "type": result["type"],
-                            }
-                            attributes["attachments"].append(attachment)
-                        else:
-                            msg = "[ANALYST NOTES] No attachment found"
-                            self.helper.connector_logger.error(msg)
-                    except requests.exceptions.HTTPError as err:
-                        if "403" in str(err):
-                            msg = "[ANALYST NOTES] Your API token does not have permission to pull Detection Rules"
-                            self.helper.connector_logger.error(msg)
-                        else:
-                            raise err
-                    except (KeyError, IndexError):
-                        self.helper.connector_logger.error(
-                            "[ANALYST NOTES] Problem with API response for detection"
-                            "rule for note {}. Rule will not be added".format(
-                                note["id"]
+                    elif (
+                        pull_signatures
+                        and "attachment" in attributes
+                        and attributes.get("attachment")
+                    ):
+                        try:
+                            result = self.get_attachment(note["id"])
+                            if result:
+                                attachment = {
+                                    "name": attributes.get("attachment"),
+                                    "content": result["rules"][0]["content"],
+                                    "type": result["type"],
+                                }
+                                attributes["attachments"].append(attachment)
+                            else:
+                                msg = "[ANALYST NOTES] No attachment found"
+                                self.helper.connector_logger.error(msg)
+                        except requests.exceptions.HTTPError as err:
+                            if "403" in str(err):
+                                msg = "[ANALYST NOTES] Your API token does not have permission to pull Detection Rules"
+                                self.helper.connector_logger.error(msg)
+                            else:
+                                raise err
+                        except (KeyError, IndexError):
+                            self.helper.connector_logger.error(
+                                "[ANALYST NOTES] Problem with API response for detection"
+                                "rule for note {}. Rule will not be added".format(
+                                    note["id"]
+                                )
                             )
-                        )
 
-                notes.append(note)
-            if total == len(notes):
-                has_more = False
+                    notes.append(note)
+                if total == len(notes):
+                    has_more = False
+                else:
+                    note_params["from"] = data.get("next_offset")
             else:
-                note_params["from"] = data.get("next_offset")
+                has_more = False
         return notes
 
     def get_risk_ip_addresses(self, limit: int = 1000, risk_threshold=65):
