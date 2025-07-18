@@ -868,7 +868,12 @@ class ImportExternalReferenceConnector:
 
         # 3) register clean-shutdown on Ctrl-C or SIGTERM
         for sig in (signal.SIGINT, signal.SIGTERM):
-            loop.add_signal_handler(sig, lambda: loop.call_soon_threadsafe(loop.stop))
+            try:
+                loop.add_signal_handler(sig, lambda: loop.call_soon_threadsafe(loop.stop))
+            except NotImplementedError:
+                if sys.platform == "win32":
+                    # Windows does not support add_signal_handler for most signals
+                    pass
 
         # 4) launch the OpenCTI listen() in its own thread
         def _listen_in_thread():
