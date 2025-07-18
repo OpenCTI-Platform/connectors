@@ -14,16 +14,36 @@ from connector.src.custom.configs.gti_config_common import (
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
 )
-from pydantic import field_validator
+from pydantic import Field, field_validator
 
 
 class GTIReportConfig(GTIBaseConfig):
     """Configuration for GTI report imports."""
 
-    report_import_start_date: str = "P1D"
-    import_reports: bool = True
-    report_types: List[str] | str = "All"
-    report_origins: List[str] | str = "All"
+    report_import_start_date: str = Field(
+        default="P1D",
+        description="ISO 8601 duration string specifying how far back to import reports (e.g., P1D for 1 day, P7D for 7 days)",
+        pattern=r"^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$",
+    )
+
+    import_reports: bool = Field(
+        default=True,
+        description="Whether to enable importing report data from GTI",
+    )
+
+    report_types: List[str] | str = Field(
+        default="All",
+        description="Comma-separated list of report types to import, or 'All' for all types. "
+        f"Allowed values: {', '.join(ALLOWED_REPORT_TYPES)}",
+        examples=["All", "Actor Profile,Malware Profile", "Threat Activity Alert"],
+    )
+
+    report_origins: List[str] | str = Field(
+        default="All",
+        description="Comma-separated list of report origins to import, or 'All' for all origins. "
+        f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
+        examples=["All", "partner,google threat intelligence", "crowdsourced"],
+    )
 
     @field_validator("report_types", mode="before")
     @classmethod
