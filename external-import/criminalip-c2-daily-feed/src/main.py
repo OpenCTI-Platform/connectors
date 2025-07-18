@@ -1,17 +1,19 @@
+import csv
 import os
 import time
-import requests
-import csv
 from datetime import datetime
+
+import pycountry
+import requests
 import stix2
 import yaml
-import pycountry
 from pycti import (
     Indicator,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     get_config_variable,
 )
+
 
 class CriminalIPC2DailyFeedConnector:
     def __init__(self):
@@ -23,14 +25,13 @@ class CriminalIPC2DailyFeedConnector:
         )
         self.helper = OpenCTIConnectorHelper(config)
         self.interval = get_config_variable(
-            "CRIMINALIP_INTERVAL",
-            ["criminalipc2dailyfeed", "interval"],
-            config, True
+            "CRIMINALIP_INTERVAL", ["criminalipc2dailyfeed", "interval"], config, True
         )
         self.score = get_config_variable(
             "CRIMINALIP_CONFIDENCE_SCORE",
             ["criminalipc2dailyfeed", "score"],
-            config, True
+            config,
+            True,
         )
         self.csv_url = get_config_variable(
             "CRIMINALIP_CSV_URL", ["criminalipc2dailyfeed", "csv_url"], config
@@ -39,7 +40,7 @@ class CriminalIPC2DailyFeedConnector:
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name="Criminal IP C2 Daily Feed",
-            description="Daily C2 Feed from Criminal IP"
+            description="Daily C2 Feed from Criminal IP",
         )
 
     def get_interval(self):
@@ -62,13 +63,17 @@ class CriminalIPC2DailyFeedConnector:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         "Connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")
+                        + datetime.utcfromtimestamp(last_run).strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
                     )
                 else:
                     last_run = None
                     self.helper.log_info("Connector has never run")
 
-                if last_run is None or ((timestamp - last_run) > (int(self.interval) * 60 * 60 * 24)):
+                if last_run is None or (
+                    (timestamp - last_run) > (int(self.interval) * 60 * 60 * 24)
+                ):
                     # Initiate the run
                     self.helper.log_info("Connector will run!")
                     now = datetime.utcnow()
@@ -79,7 +84,9 @@ class CriminalIPC2DailyFeedConnector:
                     response = requests.get(url)
 
                     if response.status_code != 200:
-                        self.helper.log_info(f"Feed for {file_date} not available yet. Skipping run.")
+                        self.helper.log_info(
+                            f"Feed for {file_date} not available yet. Skipping run."
+                        )
                         time.sleep(60)
                         continue
 
@@ -110,7 +117,7 @@ class CriminalIPC2DailyFeedConnector:
                                 "x_opencti_main_observable_type": "IPv4-Addr",
                                 "x_opencti_score": confidence,
                             },
-                            description=description
+                            description=description,
                         )
                         stix_observable = stix2.IPv4Address(
                             value=ip,
@@ -120,7 +127,7 @@ class CriminalIPC2DailyFeedConnector:
                                 "x_opencti_score": confidence,
                                 "x_opencti_description": description,
                                 "x_opencti_labels": [c2],
-                            }
+                            },
                         )
                         relationship = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
@@ -129,9 +136,11 @@ class CriminalIPC2DailyFeedConnector:
                             relationship_type="based-on",
                             source_ref=stix_indicator.id,
                             target_ref=stix_observable.id,
-                            object_marking_refs=[stix2.TLP_WHITE]
+                            object_marking_refs=[stix2.TLP_WHITE],
                         )
-                        bundle_objects.extend([stix_indicator, stix_observable, relationship])
+                        bundle_objects.extend(
+                            [stix_indicator, stix_observable, relationship]
+                        )
 
                         location_ref = None
                         if country_code:
@@ -139,7 +148,7 @@ class CriminalIPC2DailyFeedConnector:
                                 name=self.get_country_name(country_code),
                                 type="Country",
                                 x_opencti_aliases=[country_code],
-                                x_opencti_location_type="Country"
+                                x_opencti_location_type="Country",
                             )
                             if location:
                                 location_ref = location["standard_id"]
@@ -152,7 +161,7 @@ class CriminalIPC2DailyFeedConnector:
                                 source_ref=stix_observable.id,
                                 target_ref=location_ref,
                                 created_by_ref=self.identity["standard_id"],
-                                object_marking_refs=[stix2.TLP_WHITE]
+                                object_marking_refs=[stix2.TLP_WHITE],
                             )
                             bundle_objects.append(located_at)
 
@@ -161,12 +170,17 @@ class CriminalIPC2DailyFeedConnector:
                     bundle = self.helper.stix2_create_bundle(bundle_objects)
                     self.helper.log_info("Sending STIX Bundle")
                     work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, f"Criminal IP C2 feed import {file_date}"
+                        self.helper.connect_id,
+                        f"Criminal IP C2 feed import {file_date}",
                     )
                     self.helper.send_stix2_bundle(bundle, work_id=work_id)
                     self.helper.set_state({"last_run": int(time.time())})
-                    self.helper.api.work.to_processed(work_id, f"Imported C2 data from {file_date}")
-                    self.helper.log_info("Run complete successfully. Next run in 24 hours.")
+                    self.helper.api.work.to_processed(
+                        work_id, f"Imported C2 data from {file_date}"
+                    )
+                    self.helper.log_info(
+                        "Run complete successfully. Next run in 24 hours."
+                    )
                     time.sleep(60)
                 else:
                     new_interval = self.get_interval() - (timestamp - last_run)
