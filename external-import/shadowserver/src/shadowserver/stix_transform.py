@@ -712,15 +712,15 @@ class ShadowserverStixTransformation:
                 content = str(element)
 
             abstract = f'Shadowserver {self.type} Report {self.report_id} - {element.get("timestamp", "") if isinstance(element, dict) else ""}'
-
+            created = (
+                note_timestamp_to_datetime(element.get("timestamp", ""))
+                if isinstance(element, dict)
+                else datetime.now()
+            )
             kwargs = {
                 "abstract": abstract,
                 "content": content,
-                "created": (
-                    note_timestamp_to_datetime(element.get("timestamp", ""))
-                    if isinstance(element, dict)
-                    else datetime.now()
-                ),
+                "created": created,
                 "created_by_ref": self.author_id,
                 "object_marking_refs": self.marking_refs,
                 "labels": labels,
@@ -737,7 +737,7 @@ class ShadowserverStixTransformation:
 
             if kwargs["object_refs"]:
                 stix_object = stix2.Note(
-                    id=pycti.Note.generate_id(abstract, content), **kwargs
+                    id=pycti.Note.generate_id(created, content), **kwargs
                 )
                 if stix_object and not self.stix_object_exists(kwargs.get("id")):
                     self.stix_objects.append(stix_object)
