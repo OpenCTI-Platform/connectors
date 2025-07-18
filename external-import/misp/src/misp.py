@@ -106,39 +106,15 @@ class Misp:
                 },
             )
 
-            events = []
-            try:
-                events = self.client.search_events(
-                    date_field_filter=self.config.misp.date_filter_field,
-                    date_value_filter=next_event_date,
-                    keyword=self.config.misp.import_keyword,
-                    included_tags=self.config.misp.import_tags,
-                    excluded_tags=self.config.misp.import_tags_not,
-                    enforce_warning_list=self.config.misp.enforce_warning_list,
-                    with_attachments=self.config.misp.import_with_attachments,
-                )
-            except MISPClientError as err:
-                self.helper.connector_logger.error(
-                    f"Error fetching misp event: {err}", {"error": err}
-                )
-                self.helper.metric.inc("client_error_count")
-                try:
-                    # TODO: add a real retry mechanism
-                    events = self.client.search_events(
-                        date_attribute_filter=self.config.misp.date_filter_field,
-                        date_value_filter=next_event_date,
-                        keyword=self.config.misp.import_keyword,
-                        included_tags=self.config.misp.import_tags,
-                        excluded_tags=self.config.misp.import_tags_not,
-                        enforce_warning_list=self.config.misp.enforce_warning_list,
-                        with_attachments=self.config.misp.import_with_attachments,
-                    )
-                except MISPClientError as err:
-                    self.helper.connector_logger.error(
-                        f"Error fetching misp event again: {err}", {"error": err}
-                    )
-                    self.helper.metric.inc("client_error_count")
-                    raise err
+            events = self.client.search_events(
+                date_field_filter=self.config.misp.date_filter_field,
+                date_value_filter=next_event_date,
+                keyword=self.config.misp.import_keyword,
+                included_tags=self.config.misp.import_tags,
+                excluded_tags=self.config.misp.import_tags_not,
+                enforce_warning_list=self.config.misp.enforce_warning_list,
+                with_attachments=self.config.misp.import_with_attachments,
+            )
 
             self.helper.connector_logger.info(
                 "MISP events found:", {"events_count": len(events)}
@@ -164,6 +140,10 @@ class Misp:
             self.helper.connector_logger.info(
                 "Updating connector state as:", current_state
             )
+
+        except MISPClientError as err:
+            self.helper.connector_logger.error(err)
+            self.helper.metric.inc("client_error_count")
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(

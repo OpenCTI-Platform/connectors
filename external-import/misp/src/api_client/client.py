@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from warnings import warn
 
 from api_client.models import EventRestSearchListItem
 from pydantic import ValidationError
 from pymisp import PyMISP, PyMISPError
+from requests.adapters import HTTPAdapter, Retry
 
 
 class MISPClientError(Exception):
@@ -20,8 +21,20 @@ class MISPClient:
         key: str,
         verify_ssl: bool = False,
         certificate: Optional[str] = None,
+        retry: int = 3,
+        backoff: timedelta = timedelta(seconds=1),
     ):
         """Initialize and wrap a PyMISP instance."""
+
+        retry_strategy = Retry(
+            total=retry,
+            backoff_factor=backoff.total_seconds(),
+            allowed_methods=None,  # allow retry on any verb
+            status_forcelist=[429, 500, 502, 503, 504],
+            respect_retry_after_header=True,
+            raise_on_status=False,  # let PyMISP handle the response
+        )
+        http_adapter = HTTPAdapter(max_retries=retry_strategy)
 
         self._client = PyMISP(
             url=url,
@@ -30,6 +43,7 @@ class MISPClient:
             ssl=verify_ssl,
             debug=False,
             tool="OpenCTI MISP connector",
+            https_adapter=http_adapter,
         )
 
     def search_events(
@@ -96,6 +110,5 @@ class MISPClient:
                 current_page += 1
             except PyMISPError as err:
                 raise MISPClientError(f"Error searching events in MISP: {err}") from err
-            # TODO: add a retry mechanism
 
         return events
