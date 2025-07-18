@@ -115,7 +115,9 @@ class TestFromListToCSV(unittest.TestCase):
             {"key1": "value3", "key2": "value4"},
         ]
         expected_output = "key1,key2\nvalue1,value2\nvalue3,value4\n"
-        self.assertEqual(from_list_to_csv(data), expected_output)
+        # Windows OS uses \r\n as line endings, we removed this behaviour for the test to work everywhere.
+        output = from_list_to_csv(data).replace("\r\n", "\n")
+        self.assertEqual(output, expected_output)
 
 
 class TestGetStixIDPrecedence(unittest.TestCase):
