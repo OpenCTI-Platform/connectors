@@ -39,7 +39,6 @@ if __name__ == "__main__":
 
         connector.authenticate_with_zscaler()
         connector.start()
-        
 
     except Exception:
         traceback.print_exc()
