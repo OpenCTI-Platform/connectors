@@ -18,18 +18,16 @@ class CustomConnector(ExternalImportConnector):
         super().__init__(helper, config)
         self.first_run = True
         self.lookback = None
-        self.now = datetime.now(UTC)
-        self.last_run_date = None
 
         # Get last run state or set the initial date.
-        self.current_state = self.helper.get_state()
-        if self.current_state and "last_run" in self.current_state:
-            # convert epoch to datetime
-            self.last_run_date = datetime.fromtimestamp(
-                self.current_state["last_run"], tz=UTC
+        if last_run := self.state.get("last_run"):
+            last_run = (
+                datetime.fromtimestamp(last_run, tz=UTC)  # For retro compatibility
+                if isinstance(last_run, float | int)
+                else datetime.fromisoformat(last_run)
             )
             #  Get days since last run
-            self.lookback = (self.now - self.last_run_date).days + LOOKBACK
+            self.lookback = (self.start_time - last_run).days + LOOKBACK
             self.first_run = False
         else:
             self.lookback = INITIAL_LOOKBACK
@@ -77,7 +75,7 @@ class CustomConnector(ExternalImportConnector):
         if subscription_list and isinstance(subscription_list, list):
             for subscription in subscription_list:
                 for days_lookback in range(self.lookback, -1, -1):
-                    date = self.now - timedelta(days=days_lookback)
+                    date = self.start_time - timedelta(days=days_lookback)
                     date_str = date.strftime("%Y-%m-%d")
                     self.helper.connector_logger.info(
                         f"Getting ({subscription}) reports from ({date_str})."

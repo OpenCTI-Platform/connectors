@@ -1,7 +1,6 @@
 import sys
 import traceback
 from datetime import UTC, datetime
-from functools import cached_property
 from typing import Any
 
 from pycti import OpenCTIConnectorHelper
@@ -24,10 +23,10 @@ class ExternalImportConnector:
     ) -> None:
         self.helper = helper
         self.config = config
-        self.start_time = datetime.now()  # Needs to be reset for each run
+        self.start_time = datetime.now(tz=UTC)  # Needs to be reset for each run
         self.work_id = None
 
-    @cached_property
+    @property
     def state(self) -> dict[str, Any]:
         return self.helper.get_state() or {}
 
@@ -91,7 +90,7 @@ class ExternalImportConnector:
         self.set_last_run()
 
     def process(self):
-        self.start_time = datetime.now(UTC)
+        self.start_time = datetime.now(tz=UTC)
 
         meta = {"connector_name": self.helper.connect_name}
         try:
