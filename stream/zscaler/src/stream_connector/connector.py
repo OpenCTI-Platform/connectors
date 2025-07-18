@@ -34,7 +34,9 @@ class ZscalerConnector:
         self.zscaler_username = zscaler_username
         self.zscaler_password = zscaler_password
         self.api_key = zscaler_api_key
-        self.zscaler_blacklist_name = zscaler_blacklist_name #Parameter for the blacklist
+        self.zscaler_blacklist_name = (
+            zscaler_blacklist_name  # Parameter for the blacklist
+        )
 
         self.api = OpenCTIApiClient(
             self.opencti_url, self.opencti_token, ssl_verify=self.ssl_verify
@@ -42,10 +44,10 @@ class ZscalerConnector:
 
         self.zscaler_token = None
         self.zscaler_token_expiry = None
-        self.session_cookie = None # To store the JSESSIONID
+        self.session_cookie = None  # To store the JSESSIONID
 
-        self.rate_limit = 400 # Limit to 400 requests per hour 
-        self.retry_delay = 65 # Retry delay in seconds
+        self.rate_limit = 400  # Limit to 400 requests per hour
+        self.retry_delay = 65  # Retry delay in seconds
 
     def authenticate_with_zscaler(self):
         """Authenticate with Zscaler and obtain a session token."""
@@ -69,14 +71,20 @@ class ZscalerConnector:
 
         # Secure logging with automatic masking of sensitive fields
         safe_payload = sanitize_payload(payload)
-        self.helper.connector_logger.debug(f"Payload sent (sanitized): {json.dumps(safe_payload, indent=4)}")
-        
+        self.helper.connector_logger.debug(
+            f"Payload sent (sanitized): {json.dumps(safe_payload, indent=4)}"
+        )
+
         if response:
-            self.helper.connector_logger.debug(f"Raw response from Zscaler: {response.text}")
+            self.helper.connector_logger.debug(
+                f"Raw response from Zscaler: {response.text}"
+            )
 
         if response and response.status_code == 200:
             self.session_cookie = response.cookies.get("JSESSIONID")
-            self.helper.connector_logger.info("Authenticated successfully with Zscaler.")
+            self.helper.connector_logger.info(
+                "Authenticated successfully with Zscaler."
+            )
         else:
             self.helper.connector_logger.error(
                 f"Failed to authenticate with Zscaler: {response.status_code if response else 'No response'} - {response.text if response else 'No text'}"
@@ -112,7 +120,9 @@ class ZscalerConnector:
         """Retrieve or renew the Zscaler session by getting the JSESSIONID cookie."""
 
         if self.session_cookie is None:
-            self.helper.connector_logger.warning("Zscaler session expired or missing. Re-authenticating...")
+            self.helper.connector_logger.warning(
+                "Zscaler session expired or missing. Re-authenticating..."
+            )
             self.authenticate_with_zscaler()
         return self.session_cookie
 
@@ -150,7 +160,9 @@ class ZscalerConnector:
             lookup_data = response.json()
             if isinstance(lookup_data, list) and len(lookup_data) > 0:
                 return lookup_data[0].get("urlClassifications", [])
-        self.helper.connector_logger.error(f"Failed to lookup domain {domain} in Zscaler.")
+        self.helper.connector_logger.error(
+            f"Failed to lookup domain {domain} in Zscaler."
+        )
         return None
 
     def get_zscaler_blocked_domains(self):
@@ -191,17 +203,25 @@ class ZscalerConnector:
         if domain:
             classification = self.get_domain_classification_in_zscaler(domain)
             if classification:
-                self.helper.connector_logger.info(f"Classification for {domain}: {classification}")
+                self.helper.connector_logger.info(
+                    f"Classification for {domain}: {classification}"
+                )
 
             blocked_domains = self.get_zscaler_blocked_domains()
 
             if domain in blocked_domains:
-                self.helper.connector_logger.info(f"The domain {domain} is already blocked.")
+                self.helper.connector_logger.info(
+                    f"The domain {domain} is already blocked."
+                )
             else:
-                self.helper.connector_logger.info(f"Sending domain {domain} to Zscaler...")
+                self.helper.connector_logger.info(
+                    f"Sending domain {domain} to Zscaler..."
+                )
                 self.send_to_zscaler(domain, event_type)
         else:
-            self.helper.connector_logger.error(f"Invalid domain pattern: {data['pattern']}")
+            self.helper.connector_logger.error(
+                f"Invalid domain pattern: {data['pattern']}"
+            )
 
     def send_to_zscaler(self, domain, event_type):
         """Send creation or deletion events to Zscaler."""
@@ -231,7 +251,9 @@ class ZscalerConnector:
         )
 
         if response and response.status_code == 200:
-            self.helper.connector_logger.info(f"Successfully sent {event_type} for {domain}.")
+            self.helper.connector_logger.info(
+                f"Successfully sent {event_type} for {domain}."
+            )
             self.activate_zscaler_changes()
         else:
             self.helper.connector_logger.error(
@@ -247,7 +269,9 @@ class ZscalerConnector:
         }
 
         activation_url = "https://zsapi.zscalertwo.net/api/v1/status/activate"
-        response = self.handle_rate_limit(requests.post, activation_url, headers=headers)
+        response = self.handle_rate_limit(
+            requests.post, activation_url, headers=headers
+        )
 
         if response and response.status_code == 200:
             self.helper.connector_logger.info("Zscaler configuration activated.")
@@ -272,5 +296,7 @@ class ZscalerConnector:
 
     def start(self):
         """Start listening for OpenCTI events."""
-        self.helper.connector_logger.info("Starting connector and listening for OpenCTI event...")
+        self.helper.connector_logger.info(
+            "Starting connector and listening for OpenCTI event..."
+        )
         self.helper.listen_stream(self._process_message)
