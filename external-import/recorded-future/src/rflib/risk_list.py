@@ -119,7 +119,7 @@ class RiskList(threading.Thread):
                     indicator.add_description(description)
                     if self.riskrules_as_label:
                         indicator.add_labels(labels)
-                    indicator.map_data(row, self.tlp, self.risklist_related_entities)
+                    indicator.map_data(row, self.risklist_related_entities)
                     indicator.build_bundle(indicator)
                     # Create bundle
                     bundle = indicator.to_stix_bundle()
