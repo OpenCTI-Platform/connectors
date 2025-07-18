@@ -6,6 +6,7 @@ from pycti import OpenCTIConnectorHelper
 from .client_api import ConnectorClient
 from .config_loader import ConfigConnector
 from .converter_to_stix import ConverterToStix
+from .utils import get_obs_value
 
 
 class NTIConnector:
@@ -13,7 +14,7 @@ class NTIConnector:
         """
         Initialize the Connector with necessary configurations
         """
-        self.work_id = ''
+        self.work_id = ""
         # read config file
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
@@ -22,7 +23,9 @@ class NTIConnector:
         self.package_type = self.config.package_type
         self.create_tasks = self.config.create_tasks
 
-        self.helper.connector_logger.info("[CONNECTOR] tasks initialized.", {"initialized tasks": self.create_tasks})
+        self.helper.connector_logger.info(
+            "[CONNECTOR] tasks initialized.", {"initialized tasks": self.create_tasks}
+        )
         self.client = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
@@ -37,7 +40,9 @@ class NTIConnector:
             "data.NTI.API.V2.0.url-basic-updated": self.create_url_basic,
             "data.NTI.API.V2.0.sample-updated": self.create_sample_basic,
         }
-        for intelligence_data, entity_type in self.client.acquire_feed_packages(self.create_tasks):
+        for intelligence_data, entity_type in self.client.acquire_feed_packages(
+            self.create_tasks
+        ):
             # call corresponding functions
             handler = switcher.get(entity_type)
             object_count = handler(intelligence_data)
@@ -261,6 +266,8 @@ class NTIConnector:
             self.start_work("IOC")
         else:
             return IOC_count
+        # merge duplicate indicators
+        indicators = self.merge_indicators(indicators)
         # Convert into STIX2 object and add it on a list
         relationship_list = []
         for indicator in indicators:
@@ -285,6 +292,36 @@ class NTIConnector:
         self.send_stix2_bundle(relationship_list)
         self.end_work()
         return IOC_count
+
+    def merge_indicators(self, indicators: list) -> list:
+        """
+        Used to merge [ threat_types, tags, threat_level, confidence ] from duplicate indicator objects
+        :param indicators: list of indicators
+        :return: A list of merged indicators
+        """
+        indicator_dict = dict()
+        for indicator in indicators:
+            indicator_value = get_obs_value(self.helper, indicator)
+            # merge threat_types, tags, threat_level, confidence
+            if indicator_value in indicator_dict:
+                threat_types = indicator_dict[indicator_value].get("threat_types", [])
+                threat_types.extend(indicator.get("threat_types", []))
+                tags = indicator_dict[indicator_value].get("tags", [])
+                tags.extend(indicator.get("tags", []))
+                threat_level = indicator_dict[indicator_value].get("threat_level", 0)
+                confidence = indicator_dict[indicator_value].get("confidence", 0)
+
+                indicator_dict[indicator_value]["threat_types"] = threat_types
+                indicator_dict[indicator_value]["tags"] = tags
+                indicator_dict[indicator_value]["threat_level"] = max(
+                    threat_level, indicator.get("threat_level", 0)
+                )
+                indicator_dict[indicator_value]["confidence"] = max(
+                    confidence, indicator.get("confidence", 0)
+                )
+            else:
+                indicator_dict[indicator_value] = indicator
+        return list(indicator_dict.values())
 
     @staticmethod
     def _is_ipv6(value: str) -> bool:
@@ -338,7 +375,7 @@ class NTIConnector:
             self.helper.api.work.to_processed(
                 self.work_id,
                 f"[CONNECTOR] Data collection failed: {str(err)}",
-                in_error=True
+                in_error=True,
             )
             self.helper.connector_logger.error(str(err))
             raise

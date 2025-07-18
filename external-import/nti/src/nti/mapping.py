@@ -1,5 +1,3 @@
-from hashlib import algorithms_available
-
 OBSERVABLE_TYPES = {
     "ipv4-addr": "IPv4-Addr",
     "ipv6-addr": "IPv6-Addr",
@@ -13,7 +11,7 @@ HASH_ALGORITHMS = {
     "MD5": "MD5",
     "SHA1": "SHA-1",
     "SHA256": "SHA-256",
-    "SHA3-256": "SHA3-256"
+    "SHA3-256": "SHA3-256",
 }
 
 THREAT_TYPE = {

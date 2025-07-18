@@ -1,14 +1,15 @@
 import stix2
-from pycti import Identity, Indicator, MarkingDefinition, StixCoreRelationship
+from pycti import Identity, Indicator, Location, MarkingDefinition, StixCoreRelationship
 
 from .mapping import (
     BUSINESS_TYPE,
     CONTENT_TYPE,
+    HASH_ALGORITHMS,
     INDUSTRY_OBJ,
     OBSERVABLE_TYPES,
     THREAT_TYPE,
-    HASH_ALGORITHMS,
 )
+from .utils import get_hash_name, get_obs_value
 
 
 class ConverterToStix:
@@ -86,7 +87,9 @@ class ConverterToStix:
         :return: Relationship STIX2 object
         """
         relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(relationship_type, source_id, target_id),
+            id=StixCoreRelationship.generate_id(
+                relationship_type, source_id, target_id
+            ),
             relationship_type=relationship_type,
             description=description,
             start_time=start_time,
@@ -102,11 +105,11 @@ class ConverterToStix:
         """
         Create observable.
         :param entity: observable entity
-        :return: Stix object for IPV4, IPV6 or Domain
+        :return: Stix object for IPV4, IPV6, Domain, File or URL
         """
         indicator_type = self.determine_indicator_type(entity)
         if indicator_type == "IPv6-Addr":
-            value = self.get_obs_value(entity)
+            value = get_obs_value(self.helper, entity)
             return stix2.IPv6Address(
                 value=value,
                 object_marking_refs=[self.tlp_marking.id],
@@ -115,7 +118,7 @@ class ConverterToStix:
                 },
             )
         elif indicator_type == "IPv4-Addr":
-            value = self.get_obs_value(entity)
+            value = get_obs_value(self.helper, entity)
             return stix2.IPv4Address(
                 value=value,
                 object_marking_refs=[self.tlp_marking.id],
@@ -124,7 +127,7 @@ class ConverterToStix:
                 },
             )
         elif indicator_type == "Domain-Name":
-            value = self.get_obs_value(entity)
+            value = get_obs_value(self.helper, entity)
             return stix2.DomainName(
                 value=value,
                 object_marking_refs=[self.tlp_marking.id],
@@ -133,7 +136,7 @@ class ConverterToStix:
                 },
             )
         elif indicator_type == "Url":
-            value = self.get_obs_value(entity)
+            value = get_obs_value(self.helper, entity)
             return stix2.URL(
                 value=value,
                 object_marking_refs=self.tlp_marking.id,
@@ -157,7 +160,7 @@ class ConverterToStix:
                 mime_type = None
             if "1KHASH" in hashes:
                 hashes.pop("1KHASH", None)
-            file_hash = self.get_hash_name(hashes)
+            file_hash = get_hash_name(hashes)
             return stix2.File(
                 hashes=hashes,
                 name=entity.get("names")[0] if entity.get("names") else file_hash,
@@ -175,25 +178,6 @@ class ConverterToStix:
                 "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
                 {"entity": entity},
             )
-
-    @staticmethod
-    def get_hash_name(hashes: dict):
-        """
-        :param hashes: hashes from File
-        :return: one hash used for naming a File
-        """
-        if not hashes:
-            return None
-        if hashes.get("MD5"):
-            return hashes.get("MD5")
-        elif hashes.get("SHA1"):
-            return hashes.get("SHA1")
-        elif hashes.get("SHA256"):
-            return hashes.get("SHA256")
-        elif hashes.get("SHA3-256"):
-            return hashes.get("SHA3-256")
-        else:
-            return hashes
 
     @staticmethod
     def get_url_content(contents: list) -> list:
@@ -235,10 +219,20 @@ class ConverterToStix:
         return business_translate
 
     def create_location(self, locations):
+        """
+        Create Location object for IP
+        :param locations: locations from IP data
+        :return: list of stix2 location objects
+        """
         location_object = []
         for location in locations:
+            name, location_type = self.obtain_location_name(location)
+            if not name or not location_type:
+                continue
             location_object.append(
                 stix2.Location(
+                    id=Location.generate_id(name, location_type),
+                    name=name,
                     latitude=location.get("latitude") or None,
                     longitude=location.get("longitude") or None,
                     region=location.get("region") or None,
@@ -254,11 +248,30 @@ class ConverterToStix:
             )
         return location_object
 
+    @staticmethod
+    def obtain_location_name(location) -> tuple:
+        """
+        Obtain name and location type from location object. They are used to generate location id.
+        :param location: one location object from IP data
+        :return: location name and corresponding location type
+        """
+        name = ""
+        location_type = ""
+        if location.get("street_address"):
+            name = location.get("street_address")
+        elif location.get("city"):
+            name = location.get("city")
+        elif location.get("region"):
+            name = location.get("region")
+        elif location.get("country"):
+            name = location.get("country")
+        return name, location_type
+
     def create_AutonomousSystem(self, autonomous: list) -> list:
         """
         Create AutonomousSystem for IP
         :param autonomous: AutonomousSystem from IP data
-        :return: list of AutonomousSystems
+        :return: list of stix2 AutonomousSystem objects
         """
         autonomous_object = []
         for asn in autonomous:
@@ -319,29 +332,6 @@ class ConverterToStix:
             )
             return None
 
-    def get_obs_value(self, entity):
-        """
-        Used to obtain value from observables.
-        :param entity: entire object
-        :return: value of this object
-        """
-        if entity.get("observables"):
-            observable = entity.get("observables")[0]
-            if observable.get("address"):
-                return observable.get("address").get("value")
-            elif observable.get("type") == "file":
-                return self.get_hash_name(observable.get("hashes"))
-            else:
-                return observable.get("value")
-        elif entity.get("object", {}).get("type"):
-            return entity.get("object", {}).get("value")
-        else:
-            self.helper.connector_logger.error(
-                "[CONNECTOR] get_obs_value error...",
-                entity,
-            )
-            return None
-
     @staticmethod
     def create_ext_references(ext_refs) -> list:
         """
@@ -384,7 +374,6 @@ class ConverterToStix:
                 pattern.append(condition)
         return "[" + " OR ".join(pattern) + "]"
 
-
     def create_indicator(self, entity):
         """
         Create a stix2 indicator.
@@ -393,7 +382,7 @@ class ConverterToStix:
         """
         # IOC package create indicators
         indicator_type = self.determine_indicator_type(entity)
-        name = self.get_obs_value(entity)
+        name = get_obs_value(self.helper, entity)
         tags = []
         for tag in entity.get("tags", []):
             tag_type = tag.get("tag_type")
@@ -406,6 +395,7 @@ class ConverterToStix:
                     tags.append(f"{tag_type}: {', '.join(tag_values)}")
         try:
             return stix2.Indicator(
+                id=Indicator.generate_id(entity.get("pattern")),
                 name=name,
                 pattern=entity.get("pattern"),
                 pattern_type="stix",
@@ -415,7 +405,9 @@ class ConverterToStix:
                 revoked=bool(entity.get("revoked")),
                 labels=tags,
                 created_by_ref=self.author,
-                indicator_types=[THREAT_TYPE.get(i) for i in entity.get("threat_types")],
+                indicator_types=[
+                    THREAT_TYPE.get(i) for i in entity.get("threat_types")
+                ],
                 object_marking_refs=[self.tlp_marking.id],
                 custom_properties=dict(
                     x_opencti_score=self.calculate_score(
