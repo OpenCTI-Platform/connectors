@@ -866,7 +866,7 @@ class Connector:
                     if "version" in source_ref:
                         softwares_resolved += f"-{source_ref['version']}"
                     context["softwares_resolved"].append(softwares_resolved)
-                case "remediates", "course_of_action":
+                case "remediates", "course-of-action":
                     context["courses_of_action"].append(f"{source_ref['name']}")
                 case "has", "infrastructure":
                     context["infrastructures"].append(f"{source_ref['name']}")
