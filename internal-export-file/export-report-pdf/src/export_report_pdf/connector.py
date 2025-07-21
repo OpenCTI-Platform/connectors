@@ -844,7 +844,7 @@ class Connector:
         context["vulnerability"] = _vulnerability
         context["marking_definitions"] = [
             entities_grouped_by_type_and_id["marking-definition"][marking_ref]["name"]
-            for marking_ref in _vulnerability["object_marking_refs"]
+            for marking_ref in _vulnerability.get("object_marking_refs", [])
         ]
 
         # Process each relationship in the bundle
