@@ -1,8 +1,9 @@
 import traceback
 
+from pycti import OpenCTIConnectorHelper
+
 from export_file_yara_connector import ConnectorExportFileYARA
 from export_file_yara_connector.config_loader import ConfigConnector
-from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     """
