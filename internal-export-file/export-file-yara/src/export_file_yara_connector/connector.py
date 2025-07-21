@@ -39,7 +39,7 @@ class ConnectorExportFileYARA:
 
             # workaround
             if splitext(file_name)[1] == ".unknown":
-                file_name = splitext(file_name)[0] + '.' + "yar"
+                file_name = splitext(file_name)[0] + "." + "yar"
 
             if export_scope == "selection":
                 main_filter = data.get("main_filter")
@@ -49,13 +49,15 @@ class ConnectorExportFileYARA:
                 yara_patterns = []
                 for entity_data_sdo in entities_data_sdo:
                     if entity_data_sdo.get("pattern_type") != "yara":
-                        self.helper.connector_logger.warning(f"Unable to process indicator name: {entity_data_sdo.get("name")}, pattern is not YARA")
+                        self.helper.connector_logger.warning(
+                            f"Unable to process indicator name: {entity_data_sdo.get("name")}, pattern is not YARA"
+                        )
                         errors.append({entity_data_sdo.get("name")})
                         continue
                     else:
                         yara_patterns.append(entity_data_sdo.get("pattern"))
 
-                yara_file_content = '\n\n'.join(yara_patterns)
+                yara_file_content = "\n\n".join(yara_patterns)
 
                 self.helper.api.stix_domain_object.push_list_export(
                     entity_id=entity_id,
@@ -63,13 +65,14 @@ class ConnectorExportFileYARA:
                     file_name=file_name,
                     file_markings=file_markings,
                     data=yara_file_content,
-                    mime_type=file_format
+                    mime_type=file_format,
                 )
 
                 if len(errors) > 0:
                     msg = f"unable to export the following indicators: {str(errors)}. See connector logs for details."
                     self.helper.api.work.report_expectation(
-                        work_id=self.helper.work_id, error={"error": msg, "source": "CONNECTOR"}
+                        work_id=self.helper.work_id,
+                        error={"error": msg, "source": "CONNECTOR"},
                     )
 
             elif export_scope == "query":
@@ -107,13 +110,15 @@ class ConnectorExportFileYARA:
                 yara_patterns = []
                 for entity_data_sdo in entities_list:
                     if entity_data_sdo.get("pattern_type") != "yara":
-                        self.helper.connector_logger.warning(f"Unable to process indicator name: {entity_data_sdo.get("name")}, pattern is not YARA")
+                        self.helper.connector_logger.warning(
+                            f"Unable to process indicator name: {entity_data_sdo.get("name")}, pattern is not YARA"
+                        )
                         errors.append({entity_data_sdo.get("name")})
                         continue
                     else:
                         yara_patterns.append(entity_data_sdo.get("pattern"))
 
-                yara_file_content = '\n\n'.join(yara_patterns)
+                yara_file_content = "\n\n".join(yara_patterns)
 
                 self.helper.api.stix_domain_object.push_list_export(
                     entity_id=entity_id,
@@ -121,7 +126,7 @@ class ConnectorExportFileYARA:
                     file_name=file_name,
                     file_markings=file_markings,
                     data=yara_file_content,
-                    mime_type=file_format
+                    mime_type=file_format,
                 )
 
             elif export_scope == "single":
@@ -158,16 +163,20 @@ class ConnectorExportFileYARA:
                                 file_markings=file_markings,
                             )
                         else:
-                            self.helper.connector_logger.warning(f"Unable to process indicator name: {entity_data.get("name")}, pattern is not YARA")
-                            msg = f"unable to export indicator: {entity_data.get("name")}. Indicator is not a YARA pattern"
+                            self.helper.connector_logger.warning(
+                                f"Unable to process indicator name: {entity_data.get('name')}, pattern is not YARA"
+                            )
+                            msg = f"unable to export indicator: {entity_data.get('name')}. Indicator is not a YARA pattern"
                             self.helper.api.work.report_expectation(
-                                work_id=self.helper.work_id, error={"error": msg, "source": "CONNECTOR"}
+                                work_id=self.helper.work_id,
+                                error={"error": msg, "source": "CONNECTOR"},
                             )
                     else:
-                        msg = f"Connector can only export Indicator of type YARA in the single export mode"
+                        msg = "Connector can only export Indicator of type YARA in the single export mode"
                         self.helper.connector_logger.warning(msg)
                         self.helper.api.work.report_expectation(
-                            work_id=self.helper.work_id, error={"error": msg, "source": "CONNECTOR"}
+                            work_id=self.helper.work_id,
+                            error={"error": msg, "source": "CONNECTOR"},
                         )
 
                 # case of a full export on a container
@@ -202,8 +211,10 @@ class ConnectorExportFileYARA:
 
                     else:
                         # Get the relations from the main entity to indicators
-                        stix_indicator_relations = self.helper.api_impersonate.stix_core_relationship.list(
-                            fromId=entity_id, toTypes=["Indicator"], getAll=True
+                        stix_indicator_relations = (
+                            self.helper.api_impersonate.stix_core_relationship.list(
+                                fromId=entity_id, toTypes=["Indicator"], getAll=True
+                            )
                         )
                         for stix_indicator_relation in stix_indicator_relations:
                             indicator = self.helper.api_impersonate.indicator.read(
@@ -215,10 +226,13 @@ class ConnectorExportFileYARA:
                     yara_patterns = []
 
                     for entity in entities_list:
-                        if entity.get("entity_type") == "Indicator" and entity.get("pattern_type") == "yara":
+                        if (
+                            entity.get("entity_type") == "Indicator"
+                            and entity.get("pattern_type") == "yara"
+                        ):
                             yara_patterns.append(entity.get("pattern"))
 
-                    yara_file_content = '\n\n'.join(yara_patterns)
+                    yara_file_content = "\n\n".join(yara_patterns)
                     self.helper.api.stix_domain_object.push_entity_export(
                         entity_id=entity_id,
                         file_name=file_name,
@@ -237,7 +251,7 @@ class ConnectorExportFileYARA:
                     )
             else:
                 raise ValueError(
-                    f'This connector currently only handles the entity types: "Indicators" with a YARA pattern.'
+                    'This connector currently only handles the entity types: "Indicators" with a YARA pattern.'
                 )
             return "Export done"
 
