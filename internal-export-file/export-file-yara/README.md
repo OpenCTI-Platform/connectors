@@ -1,4 +1,4 @@
-# OpenCTI Internal Export Connector Template
+# OpenCTI Export File YARA
 
 <!--
 General description of the connector
@@ -22,18 +22,21 @@ Table of Contents
     - [Deployment](#deployment)
         - [Docker Deployment](#docker-deployment)
         - [Manual Deployment](#manual-deployment)
-    - [Usage](#usage)
-    - [Behavior](#behavior)
     - [Debugging](#debugging)
     - [Additional information](#additional-information)
 
 ## Introduction
 
+The YARA connector enables the export of YARA rules in .yar format. 
+It offers two export modes: exporting a complete set of YARA indicators or exporting a single YARA indicator. 
+This connector ensures efficient management of indicators by facilitating their storage and transfer while ensuring compliance with cybersecurity standards.
+
+
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >=
+- OpenCTI Platform >= 6.7.5
 
 ## Configuration variables
 
@@ -57,25 +60,16 @@ Below are the parameters you'll need to set for running the connector properly:
 |-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
 | Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
 | Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `INTERNAL_EXPORT_FILE` for this connector.                       |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Connector Name  | name       | `CONNECTOR_NAME`            | ExportFileYARA  | Yes       | Name of the connector.                                                                   |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           | text/yara+plain | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
 | Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the connector:
-
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-|--------------|--------------|-----------------------------|---------|-----------|-------------|
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
 
 ## Deployment
 
 ### Docker Deployment
 
 Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
+version of OpenCTI you're running. Example, `pycti==6.7.5`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
@@ -108,46 +102,16 @@ Install the required python dependencies (preferably in a virtual environment):
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+Then, start the connector from export-file-yara/src:
 
 ```shell
 python3 main.py
 ```
 
-## Usage
-
-After Installation, the connector should require minimal interaction to use, and should update automatically at a
-regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
-
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
-
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
-
-## Behavior
-
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+The connector can be debugged by setting the appropriate log level.
+Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
 
 <!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
-
-## Additional information
-
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
