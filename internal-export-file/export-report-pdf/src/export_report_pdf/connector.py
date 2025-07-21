@@ -857,13 +857,15 @@ class Connector:
             ]
             match relationship["relationship_type"], source_ref_type:
                 case "has", "software":
-                    context["softwares_impacted"].append(
-                        f"{source_ref['vendor']}-{source_ref['name']}-{source_ref['version']}"
-                    )
+                    softwares_impacted = f"{source_ref['vendor']}-{source_ref['name']}"
+                    if "version" in source_ref:
+                        softwares_impacted += f"-{source_ref['version']}"
+                    context["softwares_impacted"].append(softwares_impacted)
                 case "remediates", "software":
-                    context["softwares_resolved"].append(
-                        f"{source_ref['vendor']}-{source_ref['name']}-{source_ref['version']}"
-                    )
+                    softwares_resolved = f"{source_ref['vendor']}-{source_ref['name']}"
+                    if "version" in source_ref:
+                        softwares_resolved += f"-{source_ref['version']}"
+                    context["softwares_resolved"].append(softwares_resolved)
                 case "remediates", "course_of_action":
                     context["courses_of_action"].append(f"{source_ref['name']}")
                 case "has", "infrastructure":
