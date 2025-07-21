@@ -1,0 +1,10 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_EXPORT_FILE'
+  name: 'ExportFileYARA'
+  scope: 'text/yara+plain'
+  log_level: 'info'
