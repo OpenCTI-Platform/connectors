@@ -2,12 +2,11 @@ import sys
 import traceback
 from datetime import datetime, timedelta, timezone
 
-import stix2
 from api_client.client import MISPClient, MISPClientError
 from api_client.models import EventRestSearchListItem
 from connector.config_loader import ConfigLoader
 from connector.threats_guesser import ThreatsGuesser
-from connector.use_cases import EventConverter
+from connector.use_cases import ConverterError, EventConverter
 from pycti import OpenCTIConnectorHelper
 
 
@@ -49,6 +48,100 @@ class Misp:
             ),
         )
 
+    def process_event(self, event: EventRestSearchListItem):
+        # Check against filter
+        if (
+            self.config.misp.import_creator_orgs
+            and event.Event.Orgc.name not in self.config.misp.import_creator_orgs
+        ):
+            self.helper.connector_logger.info(
+                "Event creator Organization not in `MISP_IMPORT_CREATOR_ORGS`, skipping event",
+                {"event_creator_organization": event.Event.Orgc.name},
+            )
+            return
+        if (
+            self.config.misp.import_creator_orgs_not
+            and event.Event.Orgc.name in self.config.misp.import_creator_orgs_not
+        ):
+            self.helper.connector_logger.info(
+                "Event creator Organization in `MISP_IMPORT_CREATOR_ORGS_NOT`, skipping event",
+                {"event_creator_organization": event.Event.Orgc.name},
+            )
+            return
+        if (
+            self.config.misp.import_owner_orgs
+            and event.Event.Org.name not in self.config.misp.import_owner_orgs
+        ):
+            self.helper.connector_logger.info(
+                "Event owner Organization not in `MISP_IMPORT_OWNER_ORGS`, skipping event",
+                {"event_owner_organization": event.Event.Org.name},
+            )
+            return
+        if (
+            self.config.misp.import_owner_orgs_not
+            and event.Event.Org.name in self.config.misp.import_owner_orgs_not
+        ):
+            self.helper.connector_logger.info(
+                "Event owner Organization in `MISP_IMPORT_OWNER_ORGS_NOT`, skipping event",
+                {"event_owner_organization": event.Event.Org.name},
+            )
+            return
+        if (
+            self.config.misp.import_distribution_levels
+            and event.Event.distribution
+            not in self.config.misp.import_distribution_levels
+        ):
+            self.helper.connector_logger.info(
+                "Event distribution level not in `MISP_IMPORT_DISTRIBUTION_LEVELS`, skipping event",
+                {"event_distribution_level": event.Event.distribution},
+            )
+            return
+        if (
+            self.config.misp.import_threat_levels
+            and event.Event.threat_level_id not in self.config.misp.import_threat_levels
+        ):
+            self.helper.connector_logger.info(
+                "Event threat level not in `MISP_IMPORT_THREAT_LEVELS`, skipping event",
+                {"event_threat_level": event.Event.threat_level_id},
+            )
+            return
+        if self.config.misp.import_only_published and not event.Event.published:
+            self.helper.connector_logger.info(
+                "Event not published and `MISP_IMPORT_ONLY_PUBLISHED` enabled, skipping event",
+                {"event_published": event.Event.published},
+            )
+            return
+
+        self.helper.connector_logger.info(
+            "Processing event",
+            {"event_id": event.Event.id, "event_uuid": event.Event.uuid},
+        )
+
+        bundle_objects = self.converter.process(event)
+        if bundle_objects:
+            now = datetime.now(tz=timezone.utc)
+
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id,
+                friendly_name="MISP run @ " + now.isoformat(timespec="seconds"),
+            )
+
+            bundle = self.helper.stix2_create_bundle(bundle_objects)
+            sent_bundles = self.helper.send_stix2_bundle(
+                bundle,
+                work_id=work_id,
+                cleanup_inconsistent_bundle=True,
+            )
+            self.helper.connector_logger.info(
+                "Sent STIX2 bundles:", {"sent_bundles_count": len(sent_bundles)}
+            )
+            self.helper.metric.inc("record_send", len(bundle_objects))
+
+            self.helper.api.work.to_processed(
+                work_id,
+                f"MISP event successfully imported (event id = {event.Event.id})",
+            )
+
     def process(self):
         """Connector main process to collect intelligence."""
         try:
@@ -56,9 +149,6 @@ class Misp:
 
             self.helper.metric.inc("run_count")
             self.helper.metric.state("running")
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name="MISP run @ " + now.isoformat()
-            )
 
             current_state = self.helper.get_state() or {}
             if "last_run" in current_state and "last_event" in current_state:
@@ -116,25 +206,62 @@ class Misp:
                 with_attachments=self.config.misp.import_with_attachments,
             )
 
-            self.helper.connector_logger.info(
-                "MISP events found:", {"events_count": len(events)}
-            )
+            processed_events_count = 0
+            last_event_datetime = None
 
-            # Process the event
-            processed_events_last_datetime = self.process_events(work_id, events)
+            for event in events:
+                self.helper.connector_logger.info(
+                    "MISP event found",
+                    {"event_id": event.Event.id, "event_uuid": event.Event.uuid},
+                )
 
-            success_message = "Connector ran successfully"
+                try:
+                    self.process_event(event)
+                except ConverterError as err:
+                    self.helper.connector_logger.error(
+                        f"Error while converting MISP event, skipping it. {err}",
+                        {"event_id": event.Event.id, "event_uuid": event.Event.uuid},
+                    )
+                    continue
+
+                # Line below will raise if `self.config.misp.datetime_attribute`` is not a valid field (i.e. defined in MISP models)
+                # This behavior is expected as it would mean that config/env vars are not validated correctly
+                event_datetime_value = getattr(
+                    event.Event, self.config.misp.datetime_attribute
+                )
+
+                if self.config.misp.datetime_attribute == "timestamp":
+                    event_datetime = datetime.fromtimestamp(
+                        int(event_datetime_value), tz=timezone.utc
+                    )
+                elif self.config.misp.datetime_attribute == "date":
+                    event_datetime = datetime.fromisoformat(
+                        event_datetime_value
+                    ).replace(tzinfo=timezone.utc)
+                else:
+                    # Should never be raised as it would mean that config/env vars are not validated correctly
+                    raise ValueError(
+                        "`MISP_DATETIME_ATTRIBUTE` must be either 'timestamp' or 'date'"
+                    )
+
+                # Need to check if datetime is more recent than the previous event since
+                # events are not ordered by datetime in API response
+                if last_event_datetime is None or event_datetime > last_event_datetime:
+                    last_event_datetime = event_datetime
+
+                processed_events_count += 1
+
             self.helper.connector_logger.info(
-                success_message, {"processed_events_count": len(events)}
+                "Connector ran successfully",
+                {"processed_events_count": processed_events_count},
             )
-            self.helper.api.work.to_processed(work_id, success_message)
 
             # Loop is over, storing the state
             # We cannot store the state before, because MISP events are NOT ordered properly
             # and there is NO WAY to order them using their library
             current_state["last_run"] = now.isoformat()
-            if processed_events_last_datetime:
-                current_state["last_event"] = processed_events_last_datetime.isoformat()
+            if last_event_datetime:
+                current_state["last_event"] = last_event_datetime.isoformat()
 
             self.helper.set_state(current_state)
             self.helper.connector_logger.info(
@@ -176,116 +303,6 @@ class Misp:
             message_callback=self.process,
             duration_period=self.config.connector.duration_period.total_seconds(),
         )
-
-    def process_events(
-        self, work_id, events: list[EventRestSearchListItem]
-    ) -> datetime:
-        last_event_datetime = None
-        for event in events:
-            self.helper.connector_logger.info(
-                "Processing event", {"event_uuid": event.Event.uuid}
-            )
-
-            # Line below will raise if `self.config.misp.datetime_attribute`` is not a valid field (i.e. defined in MISP models)
-            # This behavior is expected as it would mean that config/env vars are not validated correctly
-            event_datetime_value = getattr(
-                event.Event, self.config.misp.datetime_attribute
-            )
-
-            if self.config.misp.datetime_attribute == "timestamp":
-                event_datetime = datetime.fromtimestamp(
-                    int(event_datetime_value), tz=timezone.utc
-                )
-            elif self.config.misp.datetime_attribute == "date":
-                event_datetime = datetime.fromisoformat(event_datetime_value).replace(
-                    tzinfo=timezone.utc
-                )
-            else:
-                # Should never be raised as it would mean that config/env vars are not validated correctly
-                raise ValueError(
-                    "`MISP_DATETIME_ATTRIBUTE` must be either 'timestamp' or 'date'"
-                )
-
-            # Need to check if datetime is more recent than the previous event since
-            # events are not ordered by datetime in API response
-            if last_event_datetime is None or event_datetime > last_event_datetime:
-                last_event_datetime = event_datetime
-
-            # Check against filter
-            if (
-                self.config.misp.import_creator_orgs
-                and event.Event.Orgc.name not in self.config.misp.import_creator_orgs
-            ):
-                self.helper.connector_logger.info(
-                    "Event creator Organization not in `MISP_IMPORT_CREATOR_ORGS`, skipping event",
-                    {"event_creator_organization": event.Event.Orgc.name},
-                )
-                continue
-            if (
-                self.config.misp.import_creator_orgs_not
-                and event.Event.Orgc.name in self.config.misp.import_creator_orgs_not
-            ):
-                self.helper.connector_logger.info(
-                    "Event creator Organization in `MISP_IMPORT_CREATOR_ORGS_NOT`, skipping event",
-                    {"event_creator_organization": event.Event.Orgc.name},
-                )
-                continue
-            if (
-                self.config.misp.import_owner_orgs
-                and event.Event.Org.name not in self.config.misp.import_owner_orgs
-            ):
-                self.helper.connector_logger.info(
-                    "Event owner Organization not in `MISP_IMPORT_OWNER_ORGS`, skipping event",
-                    {"event_owner_organization": event.Event.Org.name},
-                )
-                continue
-            if (
-                self.config.misp.import_owner_orgs_not
-                and event.Event.Org.name in self.config.misp.import_owner_orgs_not
-            ):
-                self.helper.connector_logger.info(
-                    "Event owner Organization in `MISP_IMPORT_OWNER_ORGS_NOT`, skipping event",
-                    {"event_owner_organization": event.Event.Org.name},
-                )
-                continue
-            if (
-                self.config.misp.import_distribution_levels
-                and event.Event.distribution
-                not in self.config.misp.import_distribution_levels
-            ):
-                self.helper.connector_logger.info(
-                    "Event distribution level not in `MISP_IMPORT_DISTRIBUTION_LEVELS`, skipping event",
-                    {"event_distribution_level": event.Event.distribution},
-                )
-                continue
-            if (
-                self.config.misp.import_threat_levels
-                and event.Event.threat_level_id
-                not in self.config.misp.import_threat_levels
-            ):
-                self.helper.connector_logger.info(
-                    "Event threat level not in `MISP_IMPORT_THREAT_LEVELS`, skipping event",
-                    {"event_threat_level": event.Event.threat_level_id},
-                )
-                continue
-            if self.config.misp.import_only_published and not event.Event.published:
-                self.helper.connector_logger.info(
-                    "Event not published and `MISP_IMPORT_ONLY_PUBLISHED` enabled, skipping event",
-                    {"event_published": event.Event.published},
-                )
-                continue
-
-            bundle_objects = self.converter.process(event)
-
-            bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
-            self.helper.connector_logger.info("Sending event STIX2 bundle")
-
-            sent_bundles = self.helper.send_stix2_bundle(bundle, work_id=work_id)
-            self.helper.connector_logger.info(
-                "Sent STIX2 bundles:", {"sent_bundles_count": len(sent_bundles)}
-            )
-            self.helper.metric.inc("record_send", len(bundle_objects))
-        return last_event_datetime
 
 
 if __name__ == "__main__":
