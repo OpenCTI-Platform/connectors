@@ -1,10 +1,10 @@
 {
-  "$id": "https://www.filigran.io/[CHANGEME].schema.json",
-  "title": "CHANGEME",
-  "description": "CHANGEME",
-  "short_description": "CHANGEME",
-  "use_cases" : ["CHANGEME"],
-  "max_confidence_level" : 50,
+  "$id": "https://www.filigran.io/cve.schema.json",
+  "title": "CVE connector",
+  "description": "The OpenCTI CVE connector is a software component designed to automatically import information about Common Vulnerabilities and Exposures (CVEs) into the OpenCTI platform",
+  "short_description": "Collecting and updating CVE data in OpenCTI",
+  "use_cases" : ["Vulnerability Management", "Open Source Threat Intel"],
+  "max_confidence_level" : 80,
 
   "manager_supported": false,
   "container_version": "OCTI_VERSION",
