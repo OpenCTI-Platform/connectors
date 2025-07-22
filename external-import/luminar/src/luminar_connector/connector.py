@@ -209,42 +209,29 @@ class ConnectorLuminar:
         Generate a PyCTI ID for the given STIX object.
 
         :param obj: A dictionary representing a STIX object (e.g., malware, threat-actor).
-        :return: A dictionary with a single key 'id' containing the generated PyCTI ID.
+        :return: A stix object with 'id' containing the generated PyCTI ID for supported objects.
         """
         obj_type = obj.get("type", "")
         name = obj.get("name", "luminar")
-
         if obj_type == "malware":
-            return {"id": OpenCTIMalware.generate_id(name)}
-
-        if obj_type == "threat-actor":
-            return {"id": OpenCTIThreatActor.generate_id(name, "organization")}
-
-        if obj_type == "location":
-            return {"id": OpenCTILocation.generate_id(name, "country")}
-
-        if obj_type == "vulnerability":
-            return {"id": OpenCTIVulnerability.generate_id(name)}
-
-        if obj_type == "identity":
-            return {
-                "id": OpenCTIIdentity.generate_id(
-                    name=name, identity_class=obj.get("identity_class", "organization")
-                )
-            }
-
-        if obj_type == "campaign":
-            return {"id": OpenCTICampaign.generate_id(name)}
-
-        if obj_type == "tool":
-            return {"id": OpenCTITool.generate_id(name)}
-
-        if obj_type == "attack-pattern":
-            return {"id": OpenCTIAttackPattern.generate_id(name, "attack-pattern")}
-
-        # for observables stix2 id is sufficient.
-        if obj_type == "software":
-            return {"id": obj["id"]}
+            obj["id"] = OpenCTIMalware.generate_id(name)
+        elif obj_type == "threat-actor":
+            obj["id"] = OpenCTIThreatActor.generate_id(name, "organization")
+        elif obj_type == "location":
+            obj["id"] = OpenCTILocation.generate_id(name, "country")
+        elif obj_type == "vulnerability":
+            obj["id"] = OpenCTIVulnerability.generate_id(name)
+        elif obj_type == "identity":
+            obj["id"] = OpenCTIIdentity.generate_id(
+                name, identity_class=obj.get("identity_class", "organization")
+            )
+        elif obj_type == "campaign":
+            obj["id"] = OpenCTICampaign.generate_id(name)
+        elif obj_type == "tool":
+            obj["id"] = OpenCTITool.generate_id(name)
+        elif obj_type == "attack-pattern":
+            obj["id"] = OpenCTIAttackPattern.generate_id(name, "attack-pattern")
+        return obj
 
     def get_collection_objects(
         self, headers: Dict[str, str], collection: str, params: Dict[str, Any]
@@ -792,18 +779,14 @@ class ConnectorLuminar:
                     target_rec["description"] = self.get_description(target_rec)
                     source_rec_copy = source_rec.copy()
                     target_rec_copy = target_rec.copy()
-                    source_rec_copy.pop("id", None)  # Remove id to avoid conflicts
-                    target_rec_copy.pop("id", None)  # Remove id to avoid conflicts
                     source_stix = LUMINARCYBERFEEDS_X_STIX2[source_rec["type"]](
                         custom_properties=custom_prop,
                         allow_custom=True,
-                        **source_rec_copy,
                         **self.generate_pycti_id(source_rec_copy),
                     )
                     target_stix = LUMINARCYBERFEEDS_X_STIX2[target_rec["type"]](
                         custom_properties=custom_prop,
                         allow_custom=True,
-                        **target_rec_copy,
                         **self.generate_pycti_id(target_rec_copy),
                     )
 
@@ -832,11 +815,9 @@ class ConnectorLuminar:
                     ref_obj_copy = (
                         ref_obj.copy()
                     )  # Create a copy to avoid modifying the original
-                    ref_obj_copy.pop("id", None)  # Remove id to avoid conflicts
                     ref_stix = LUMINARCYBERFEEDS_X_STIX2[ref_type](
                         custom_properties=custom_prop,
                         allow_custom=True,
-                        **ref_obj_copy,
                         **self.generate_pycti_id(ref_obj_copy),
                     )
                     object_refs_stix.append(ref_stix.id)
