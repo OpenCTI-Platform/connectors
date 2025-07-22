@@ -17,6 +17,7 @@ from src.__init_config__ import ConfigLoader
 
 __OPENCTI_CURRENT_VERSION__ = "6.7.0"
 
+
 class ConnectorContractGenerator:
     """
     Specifications of the generator
@@ -77,7 +78,7 @@ class ConnectorContractGenerator:
         }
 
         for key, value in base_configurations.items():
-            extract_required_from_base = value["required"]
+            extract_required_from_base = value.get("required", "")
             custom_dict["required"].extend(extract_required_from_base)
 
             extract_properties_from_base = value["properties"]
