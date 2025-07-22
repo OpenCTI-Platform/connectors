@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Generator, Optional
 from warnings import warn
 
 from api_client.models import EventRestSearchListItem
@@ -57,11 +57,10 @@ class MISPClient:
         with_attachments: bool,
         limit: int = 10,
         page: int = 1,
-    ) -> list[EventRestSearchListItem]:
+    ) -> Generator[EventRestSearchListItem, None, None]:
         """
         Search for events in MISP with the given parameters.
         """
-        events = []
         current_page = page
 
         while True:
@@ -98,10 +97,12 @@ class MISPClient:
 
                 for result in results:
                     try:
-                        events.append(EventRestSearchListItem(**result))
+                        yield EventRestSearchListItem(**result)
                     except ValidationError as err:
+                        event_id = result.get("Event", {}).get("id", "unknown")
                         warn(
-                            f"MISP event data seems malformed, skipping it. Validation error: {err}",
+                            f"MISP event data seems malformed, skipping it (event id = {event_id}). "
+                            f"Validation error: {err}",
                             UserWarning,
                             stacklevel=3,
                         )
@@ -110,5 +111,3 @@ class MISPClient:
                 current_page += 1
             except PyMISPError as err:
                 raise MISPClientError(f"Error searching events in MISP: {err}") from err
-
-        return events
