@@ -33,12 +33,14 @@ class ConvertToSTIXReport(BaseConvertToSTIX):
                 stix_entities = [stix_entities]
 
             self.logger.debug(
-                f"{LOG_PREFIX} Converted report to {len(stix_entities)} STIX entities"
+                "Converted report to STIX entities",
+                {"prefix": LOG_PREFIX, "entity_count": len(stix_entities)},
             )
             return stix_entities
 
         except Exception as e:
             self.logger.error(
-                f"{LOG_PREFIX} Failed to convert report to STIX: {str(e)}"
+                "Failed to convert report to STIX",
+                {"prefix": LOG_PREFIX, "error": str(e)},
             )
             return []

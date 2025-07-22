@@ -55,7 +55,7 @@ class GlobalConfig:
             config_instance = config_class()
         except ValidationError as e:
             raise ConfigurationError(
-                f"Error loading the {config_class.__name__} configuration",
+                "Error loading configuration",
                 errors=e.errors,
             ) from e
         self.instanciate_configs.update(
@@ -76,7 +76,8 @@ class GlobalConfig:
             return self.instanciate_configs[config_name][1]
         else:
             raise ConfigurationError(
-                f"Configuration class {config_name} not found in global configuration."
+                "Configuration class not found in global configuration",
+                errors={"config_name": config_name},
             )
 
     def to_dict(self) -> Dict[str, Dict[str, Any]]:

@@ -16,9 +16,17 @@ class GTIMarkingCreationError(GTIConvertingError):
             tlp_level: The TLP level that failed to be created
 
         """
-        error_msg = f"Failed to create TLP marking: {message}"
         if tlp_level:
-            error_msg = f"Failed to create TLP '{tlp_level}' marking: {message}"
+            error_msg = "Failed to create TLP marking: {message}"
+        else:
+            error_msg = f"Failed to create TLP marking: {message}"
 
         super().__init__(error_msg)
         self.tlp_level = tlp_level
+
+        # Add structured data for logging
+        self.structured_data = {
+            "original_message": message,
+        }
+        if tlp_level:
+            self.structured_data["tlp_level"] = tlp_level
