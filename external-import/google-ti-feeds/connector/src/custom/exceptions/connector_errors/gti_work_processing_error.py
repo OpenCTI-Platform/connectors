@@ -24,10 +24,28 @@ class GTIWorkProcessingError(GTIBaseError):
             details: Additional details about the error
 
         """
-        error_msg = message
         if work_id:
-            error_msg = f"Error processing work {work_id}: {message}"
+            error_msg = "Error processing work: {message}"
+        else:
+            error_msg = message
 
         super().__init__(error_msg, details)
         self.work_id = work_id
         self.batch_number = batch_number
+
+        # Add structured data for logging
+        structured_details = details or {}
+        if work_id:
+            structured_details.update(
+                {
+                    "work_id": work_id,
+                    "original_message": message,
+                }
+            )
+        if batch_number is not None:
+            structured_details.update(
+                {
+                    "batch_number": batch_number,
+                }
+            )
+        self.details = structured_details

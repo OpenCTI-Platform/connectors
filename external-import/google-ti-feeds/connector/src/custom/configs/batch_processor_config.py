@@ -4,6 +4,7 @@ This module defines common utilities for batch processing GTI STIX objects
 using the generic batch processor system.
 """
 
+import logging
 from datetime import datetime, timezone
 from typing import Any, List, Optional
 
@@ -109,8 +110,6 @@ def log_batch_completion(stix_objects: List[Any], work_id: str) -> None:
         work_id: Work ID that was created
 
     """
-    import logging
-
     logger = logging.getLogger(__name__)
 
     object_types: dict[str, int] = {}
@@ -141,5 +140,11 @@ def log_batch_completion(stix_objects: List[Any], work_id: str) -> None:
         )
 
     logger.info(
-        f"{LOG_PREFIX} Batch {work_id} completed successfully: {total_count} objects ({type_summary})"
+        "Batch completed successfully",
+        {
+            "prefix": LOG_PREFIX,
+            "work_id": work_id,
+            "total_count": total_count,
+            "type_summary": type_summary,
+        },
     )

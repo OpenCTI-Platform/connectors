@@ -46,31 +46,45 @@ class Orchestrator:
         self.config = config
         self.tlp_level = tlp_level.lower()
 
-        self.logger.info(f"{LOG_PREFIX} API URL: {self.config.api_url}")
-        self.logger.info(f"{LOG_PREFIX} Initializing orchestrator")
+        self.logger.info(
+            "API URL", {"prefix": LOG_PREFIX, "api_url": self.config.api_url}
+        )
+        self.logger.info("Initializing orchestrator", {"prefix": LOG_PREFIX})
 
         if self.config.import_reports:
             self.logger.info(
-                f"{LOG_PREFIX} Report import start date: {self.config.report_import_start_date}"
+                "Report import start date",
+                {
+                    "prefix": LOG_PREFIX,
+                    "start_date": self.config.report_import_start_date,
+                },
             )
             self.report_orchestrator = OrchestratorReport(
                 work_manager, logger, config, tlp_level
             )
         if self.config.import_threat_actors:
             self.logger.info(
-                f"{LOG_PREFIX} Threat actor import start date: {self.config.threat_actor_import_start_date}"
+                "Threat actor import start date",
+                {
+                    "prefix": LOG_PREFIX,
+                    "start_date": self.config.threat_actor_import_start_date,
+                },
             )
             self.threat_actor_orchestrator = OrchestratorThreatActor(
                 work_manager, logger, config, tlp_level
             )
         if self.config.import_malware_families:
             self.logger.info(
-                f"{LOG_PREFIX} Malware family import start date: {self.config.malware_family_import_start_date}"
+                "Malware family import start date",
+                {
+                    "prefix": LOG_PREFIX,
+                    "start_date": self.config.malware_family_import_start_date,
+                },
             )
             self.malware_orchestrator = OrchestratorMalware(
                 work_manager, logger, config, tlp_level
             )
-        self.logger.info(f"{LOG_PREFIX} Orchestrator initialized")
+        self.logger.info("Orchestrator initialized", {"prefix": LOG_PREFIX})
 
     async def run_report(self, initial_state: Optional[Dict[str, Any]]) -> None:
         """Run the report orchestrator.
@@ -79,7 +93,7 @@ class Orchestrator:
             initial_state: Initial state for the orchestrator
 
         """
-        self.logger.info(f"{LOG_PREFIX} Starting report orchestration")
+        self.logger.info("Starting report orchestration", {"prefix": LOG_PREFIX})
         await self.report_orchestrator.run(initial_state)
 
     async def run_threat_actor(self, initial_state: Optional[Dict[str, Any]]) -> None:
@@ -89,7 +103,7 @@ class Orchestrator:
             initial_state: Initial state for the orchestrator
 
         """
-        self.logger.info(f"{LOG_PREFIX} Starting threat actor orchestration")
+        self.logger.info("Starting threat actor orchestration", {"prefix": LOG_PREFIX})
         await self.threat_actor_orchestrator.run(initial_state)
 
     async def run_malware_family(self, initial_state: Optional[Dict[str, Any]]) -> None:
@@ -99,5 +113,7 @@ class Orchestrator:
             initial_state: Initial state for the orchestrator
 
         """
-        self.logger.info(f"{LOG_PREFIX} Starting malware family orchestration")
+        self.logger.info(
+            "Starting malware family orchestration", {"prefix": LOG_PREFIX}
+        )
         await self.malware_orchestrator.run(initial_state)

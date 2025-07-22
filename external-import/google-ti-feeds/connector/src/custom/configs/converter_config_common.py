@@ -117,11 +117,18 @@ def add_to_refs(
             if object_ids:
                 linking_method(object_ids, parent)
                 _logger.debug(
-                    f"{LOG_PREFIX} Added {len(object_ids)} refs to {context_key}"
+                    "Added refs to context",
+                    {
+                        "log_prefix": LOG_PREFIX,
+                        "count": len(object_ids),
+                        "context_key": context_key,
+                    },
                 )
 
         except Exception as e:
-            _logger.warning(f"{LOG_PREFIX} Error adding refs: {str(e)}")
+            _logger.warning(
+                "Error adding refs", {"log_prefix": LOG_PREFIX, "error": str(e)}
+            )
 
         return stix_output
 
@@ -154,7 +161,8 @@ def create_relationship(
 
         if not hasattr(mapper_class, "create_relationship"):
             _logger.warning(
-                f"{LOG_PREFIX} Mapper {str(mapper_class)} lacks create_relationship method"
+                "Mapper lacks create_relationship method",
+                {"log_prefix": LOG_PREFIX, "mapper_class": str(mapper_class)},
             )
             return result
 
@@ -168,7 +176,12 @@ def create_relationship(
 
         except Exception as e:
             _logger.warning(
-                f"{LOG_PREFIX} Error creating {relationship_type}: {str(e)}"
+                "Error creating relationship",
+                {
+                    "log_prefix": LOG_PREFIX,
+                    "relationship_type": relationship_type,
+                    "error": str(e),
+                },
             )
 
         return result
@@ -193,21 +206,39 @@ def _create_single_relationship(
                 entity, relationship_type, context_entity
             )
             _logger.debug(
-                f"{LOG_PREFIX} Created reverse {relationship_type}: {entity.id} → {context_entity.id}"
+                "Created reverse relationship",
+                {
+                    "log_prefix": LOG_PREFIX,
+                    "relationship_type": relationship_type,
+                    "source_id": entity.id,
+                    "target_id": context_entity.id,
+                },
             )
         else:
             rel = mapper_class.create_relationship(
                 context_entity, relationship_type, entity
             )
             _logger.debug(
-                f"{LOG_PREFIX} Created {relationship_type}: {context_entity.id} → {entity.id}"
+                "Created relationship",
+                {
+                    "log_prefix": LOG_PREFIX,
+                    "relationship_type": relationship_type,
+                    "source_id": context_entity.id,
+                    "target_id": entity.id,
+                },
             )
 
         return rel
 
     except Exception as e:
         _logger.warning(
-            f"{LOG_PREFIX} Failed to create {relationship_type} for {entity.id}: {str(e)}"
+            "Failed to create relationship",
+            {
+                "log_prefix": LOG_PREFIX,
+                "relationship_type": relationship_type,
+                "entity_id": entity.id,
+                "error": str(e),
+            },
         )
         return None
 
@@ -237,18 +268,26 @@ def manage_context(operation: str, context_key: Optional[str] = None) -> Any:
 
                 if entity:
                     set_context(context_key, entity)
-                    _logger.debug(f"{LOG_PREFIX} Set {context_key} context")
+                    _logger.debug(
+                        "Set context",
+                        {"log_prefix": LOG_PREFIX, "context_key": context_key},
+                    )
 
             elif operation == "clear" and context_key:
                 clear_context(context_key)
-                _logger.debug(f"{LOG_PREFIX} Cleared {context_key} context")
+                _logger.debug(
+                    "Cleared context",
+                    {"log_prefix": LOG_PREFIX, "context_key": context_key},
+                )
 
             elif operation == "clear_all":
                 clear_all_contexts()
-                _logger.debug(f"{LOG_PREFIX} Cleared all contexts")
+                _logger.debug("Cleared all contexts", {"log_prefix": LOG_PREFIX})
 
         except Exception as e:
-            _logger.warning(f"{LOG_PREFIX} Error managing context: {str(e)}")
+            _logger.warning(
+                "Error managing context", {"log_prefix": LOG_PREFIX, "error": str(e)}
+            )
 
         return stix_output
 
@@ -315,12 +354,18 @@ def context_to_report_relationship(
                 )
                 result.append(rel)
                 _logger.debug(
-                    f"{LOG_PREFIX} Created relationship: {entity.id} → {report.id}"
+                    "Created relationship",
+                    {
+                        "log_prefix": LOG_PREFIX,
+                        "source_id": entity.id,
+                        "target_id": report.id,
+                    },
                 )
 
         except Exception as e:
             _logger.warning(
-                f"{LOG_PREFIX} Error creating context-to-report relationship: {str(e)}"
+                "Error creating context-to-report relationship",
+                {"log_prefix": LOG_PREFIX, "error": str(e)},
             )
 
         return result
@@ -340,11 +385,15 @@ def add_context_to_report_refs(context_key: str) -> Any:
             report = _find_report_in_output(stix_output)
             if report:
                 GTIReportToSTIXReport.add_object_refs([entity.id], report)
-                _logger.debug(f"{LOG_PREFIX} Added {entity.id} to report refs")
+                _logger.debug(
+                    "Added entity to report refs",
+                    {"log_prefix": LOG_PREFIX, "entity_id": entity.id},
+                )
 
         except Exception as e:
             _logger.warning(
-                f"{LOG_PREFIX} Error adding context to report refs: {str(e)}"
+                "Error adding context to report refs",
+                {"log_prefix": LOG_PREFIX, "error": str(e)},
             )
 
         return stix_output
