@@ -4,6 +4,7 @@
   "description": "ServiceNow provides Security Incident Response and Security Incident Tasks module handled by this connector which collects SIR and SIT and related entities.",
   "short_description": "Ingestion of SIR and SIT as Case Incident and Tasks.",
   "use_cases": ["Incident Response & Ticketing"],
+  "max_confidence_level" : 50,
 
   "manager_supported": true,
   "container_version": "6.7.0",

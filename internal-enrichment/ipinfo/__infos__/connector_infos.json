@@ -4,6 +4,7 @@
   "description": "Accurate IP address data that keeps pace with secure, specific, and forward-looking use cases",
   "short_description": "IpInfo enrichment connector",
   "use_cases": ["Incident Response & Ticketing","Enrichment"],
+  "max_confidence_level" : 75,
 
   "manager_supported": true,
   "container_image": "opencti/connector-ipinfo",
