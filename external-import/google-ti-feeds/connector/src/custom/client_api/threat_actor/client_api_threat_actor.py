@@ -5,11 +5,11 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
 
-LOG_PREFIX = "[FetcherThreatActor]"
-
 
 class ClientAPIThreatActor(BaseClientAPI):
     """Threat actor-specific client API for fetching and processing threat actor data."""
+
+    LOG_PREFIX = "[FetcherThreatActor]"
 
     def __init__(
         self,
@@ -63,7 +63,8 @@ class ClientAPIThreatActor(BaseClientAPI):
 
         except Exception as e:
             self.logger.error(
-                f"{LOG_PREFIX} Failed to build threat actor filter configurations: {str(e)}"
+                "Failed to build threat actor filter configurations",
+                {"prefix": self.LOG_PREFIX, "error": str(e)},
             )
             return [
                 {
@@ -100,7 +101,7 @@ class ClientAPIThreatActor(BaseClientAPI):
         elif total_items:
             page_info = f" (total of {total_items} items)"
 
-        return f"{LOG_PREFIX} Fetched {data_count} {entity_description} from API{page_info}{cursor_info}"
+        return f"Fetched {data_count} {entity_description} from API{page_info}{cursor_info}"
 
     async def fetch_threat_actors(
         self, initial_state: Optional[Dict[str, Any]]
@@ -132,7 +133,12 @@ class ClientAPIThreatActor(BaseClientAPI):
             endpoint_params = filter_config.get("params", {})
 
             self.logger.info(
-                f"{LOG_PREFIX} Fetching threat actors from endpoint 'threat_actors' with filters: {endpoint_params}"
+                "Fetching threat actors from endpoint 'threat_actors'",
+                {
+                    "prefix": self.LOG_PREFIX,
+                    "endpoint": "threat_actors",
+                    "filters": endpoint_params,
+                },
             )
 
             async for threat_actor_data in self._paginate_with_cursor(

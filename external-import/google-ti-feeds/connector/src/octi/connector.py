@@ -79,7 +79,7 @@ class Connector:
                 gti_config = self._config.get_config_class(GTIConfig)
             except Exception as config_err:
                 raise GTIConfigurationError(
-                    f"Failed to load GTI configuration: {str(config_err)}"
+                    f"Failed to load GTI configuration, {config_err}"
                 ) from config_err
 
             try:
@@ -93,8 +93,8 @@ class Connector:
         except (KeyboardInterrupt, SystemExit):
             error_message = "Connector stopped due to user interrupt"
             self._logger.info(
-                f"{LOG_PREFIX} {error_message}...",
-                {"connector_name": self._helper.connect_name},
+                "Connector stopped due to user interrupt",
+                {"prefix": LOG_PREFIX, "connector_name": self._helper.connect_name},
             )
             error_flag = True
             raise
@@ -102,16 +102,16 @@ class Connector:
         except asyncio.CancelledError:
             error_message = "Operation was cancelled"
             self._logger.info(
-                f"{LOG_PREFIX} {error_message}.",
-                {"connector_name": self._helper.connect_name},
+                "Operation was cancelled",
+                {"prefix": LOG_PREFIX, "connector_name": self._helper.connect_name},
             )
             error_flag = True
 
         except GTIConfigurationError as config_err:
             error_message = f"Configuration error: {str(config_err)}"
             self._logger.error(
-                f"{LOG_PREFIX} {error_message}",
-                meta={"error": str(config_err)},
+                "Configuration error",
+                meta={"prefix": LOG_PREFIX, "error": str(config_err)},
             )
             error_flag = True
 
@@ -121,8 +121,9 @@ class Connector:
                 work_err, "work_id", self.work_manager.get_current_work_id()
             )
             self._logger.warning(
-                f"{LOG_PREFIX} {error_message}",
+                "Work processing error",
                 meta={
+                    "prefix": LOG_PREFIX,
                     "error": str(work_err),
                     "work_id": work_id,
                 },
@@ -132,26 +133,26 @@ class Connector:
         except Exception as err:
             error_message = f"Unexpected error: {str(err)}"
             self._logger.error(
-                f"{LOG_PREFIX} {error_message}", meta={"error": str(err)}
+                "Unexpected error", meta={"prefix": LOG_PREFIX, "error": str(err)}
             )
             error_flag = True
 
         finally:
             self._logger.info(
-                f"{LOG_PREFIX} Connector stopped...",
-                {"connector_name": self._helper.connect_name},
+                "Connector stopped",
+                {"prefix": LOG_PREFIX, "connector_name": self._helper.connect_name},
             )
             try:
                 self.work_manager.process_all_remaining_works(
                     error_flag=error_flag, error_message=error_message
                 )
                 self._logger.info(
-                    f"{LOG_PREFIX} All remaining works marked to process."
+                    "All remaining works marked to process", {"prefix": LOG_PREFIX}
                 )
             except Exception as cleanup_err:
                 self._logger.error(
-                    f"{LOG_PREFIX} Error during cleanup: {str(cleanup_err)}",
-                    meta={"error": str(cleanup_err)},
+                    "Error during cleanup",
+                    meta={"prefix": LOG_PREFIX, "error": str(cleanup_err)},
                 )
 
     async def _process_gti_imports(self, gti_config: GTIConfig) -> Optional[str]:
@@ -168,7 +169,7 @@ class Connector:
             and not malware_families_enabled
         ):
             self._logger.info(
-                f"{LOG_PREFIX} No GTI imports are enabled in configuration"
+                "No GTI imports are enabled in configuration", {"prefix": LOG_PREFIX}
             )
             return None
 
@@ -186,12 +187,15 @@ class Connector:
                 )
         except (KeyboardInterrupt, asyncio.CancelledError):
             self._logger.info(
-                f"{LOG_PREFIX} GTI imports processing interrupted by user"
+                "GTI imports processing interrupted by user", {"prefix": LOG_PREFIX}
             )
             raise
         except Exception as e:
             error_msg = f"Unexpected error in GTI imports processing: {str(e)}"
-            self._logger.error(f"{LOG_PREFIX} {error_msg}")
+            self._logger.error(
+                "Unexpected error in GTI imports processing",
+                {"prefix": LOG_PREFIX, "error": str(e)},
+            )
             return error_msg
 
     async def _process_gti_parallel(self, gti_config: GTIConfig) -> Optional[str]:
@@ -205,7 +209,8 @@ class Connector:
             enabled_imports.append("malware_families")
 
         self._logger.info(
-            f"{LOG_PREFIX} Starting parallel processing of: {', '.join(enabled_imports)}"
+            "Starting parallel processing",
+            {"prefix": LOG_PREFIX, "enabled_imports": ", ".join(enabled_imports)},
         )
 
         tasks = []
@@ -238,7 +243,10 @@ class Connector:
                 task_name = task.get_name()
                 try:
                     result = task.result()
-                    self._logger.info(f"{LOG_PREFIX} {task_name} processing completed")
+                    self._logger.info(
+                        "Processing completed",
+                        {"prefix": LOG_PREFIX, "task_name": task_name},
+                    )
 
                     if result:
                         if not any_error:
@@ -247,14 +255,18 @@ class Connector:
 
                 except Exception as e:
                     error_msg = f"Error in {task_name} processing: {str(e)}"
-                    self._logger.error(f"{LOG_PREFIX} {error_msg}")
+                    self._logger.error(
+                        "Error in processing",
+                        {"prefix": LOG_PREFIX, "task_name": task_name, "error": str(e)},
+                    )
                     if not any_error:
                         first_error = error_msg
                         any_error = True
 
         except (KeyboardInterrupt, asyncio.CancelledError):
             self._logger.info(
-                f"{LOG_PREFIX} Parallel processing interrupted, cancelling tasks..."
+                "Parallel processing interrupted, cancelling tasks",
+                {"prefix": LOG_PREFIX},
             )
 
             for task in tasks:
@@ -274,51 +286,61 @@ class Connector:
         malware_families_enabled: bool,
     ) -> Optional[str]:
         """Process GTI imports sequentially."""
-        self._logger.info(f"{LOG_PREFIX} Starting sequential processing...")
+        self._logger.info("Starting sequential processing...", {"prefix": LOG_PREFIX})
 
         try:
             if reports_enabled:
-                self._logger.info(f"{LOG_PREFIX} Starting GTI reports processing...")
+                self._logger.info(
+                    "Starting GTI reports processing...", {"prefix": LOG_PREFIX}
+                )
                 error_result = await self._process_gti_reports(gti_config)
                 if error_result:
                     return error_result
             else:
                 self._logger.info(
-                    f"{LOG_PREFIX} GTI reports import is disabled in configuration"
+                    "GTI reports import is disabled in configuration",
+                    {"prefix": LOG_PREFIX},
                 )
 
             if threat_actors_enabled:
                 self._logger.info(
-                    f"{LOG_PREFIX} Starting GTI threat actors processing..."
+                    "Starting GTI threat actors processing", {"prefix": LOG_PREFIX}
                 )
                 error_result = await self._process_gti_threat_actors(gti_config)
                 if error_result:
                     return error_result
             else:
                 self._logger.info(
-                    f"{LOG_PREFIX} GTI threat actors import is disabled in configuration"
+                    "GTI threat actors import is disabled in configuration",
+                    {"prefix": LOG_PREFIX},
                 )
 
             if malware_families_enabled:
                 self._logger.info(
-                    f"{LOG_PREFIX} Starting GTI malware families processing..."
+                    "Starting GTI malware families processing", {"prefix": LOG_PREFIX}
                 )
                 error_result = await self._process_gti_malware_families(gti_config)
                 if error_result:
                     return error_result
             else:
                 self._logger.info(
-                    f"{LOG_PREFIX} GTI malware families import is disabled in configuration"
+                    "GTI malware families import is disabled in configuration",
+                    {"prefix": LOG_PREFIX},
                 )
 
             return None
 
         except (KeyboardInterrupt, asyncio.CancelledError):
-            self._logger.info(f"{LOG_PREFIX} Sequential processing interrupted by user")
+            self._logger.info(
+                "Sequential processing interrupted by user", {"prefix": LOG_PREFIX}
+            )
             raise
         except Exception as e:
             error_msg = f"Unexpected error in sequential processing: {str(e)}"
-            self._logger.error(f"{LOG_PREFIX} {error_msg}")
+            self._logger.error(
+                "Unexpected error in sequential processing",
+                {"prefix": LOG_PREFIX, "error": str(e)},
+            )
             return error_msg
 
     async def _process_gti_reports(self, gti_config: GTIConfig) -> Optional[str]:
@@ -336,15 +358,20 @@ class Connector:
             )
 
             initial_state = self._helper.get_state()
-            self._logger.info(f"{LOG_PREFIX} Retrieved state: {initial_state}")
+            self._logger.info(
+                "Retrieved state",
+                {"prefix": LOG_PREFIX, "initial_state": initial_state},
+            )
 
-            self._logger.info(f"{LOG_PREFIX} Starting GTI full ingestion...")
+            self._logger.info("Starting GTI full ingestion...", {"prefix": LOG_PREFIX})
             await orchestrator.run_report(initial_state)
             return None
 
         except Exception as e:
             error_msg = f"GTI reports processing failed: {str(e)}"
-            self._logger.error(f"{LOG_PREFIX} {error_msg}")
+            self._logger.error(
+                "GTI reports processing failed", {"prefix": LOG_PREFIX, "error": str(e)}
+            )
             return error_msg
 
     async def _process_gti_threat_actors(self, gti_config: GTIConfig) -> Optional[str]:
@@ -362,15 +389,23 @@ class Connector:
             )
 
             initial_state = self._helper.get_state()
-            self._logger.info(f"{LOG_PREFIX} Retrieved state: {initial_state}")
+            self._logger.info(
+                "Retrieved state",
+                {"prefix": LOG_PREFIX, "initial_state": initial_state},
+            )
 
-            self._logger.info(f"{LOG_PREFIX} Starting GTI threat actors ingestion...")
+            self._logger.info(
+                "Starting GTI threat actors ingestion...", {"prefix": LOG_PREFIX}
+            )
             await orchestrator.run_threat_actor(initial_state)
             return None
 
         except Exception as e:
             error_msg = f"GTI threat actors processing failed: {str(e)}"
-            self._logger.error(f"{LOG_PREFIX} {error_msg}")
+            self._logger.error(
+                "GTI threat actors processing failed",
+                {"prefix": LOG_PREFIX, "error": str(e)},
+            )
             return error_msg
 
     async def _process_gti_malware_families(
@@ -390,17 +425,23 @@ class Connector:
             )
 
             initial_state = self._helper.get_state()
-            self._logger.info(f"{LOG_PREFIX} Retrieved state: {initial_state}")
+            self._logger.info(
+                "Retrieved state",
+                {"prefix": LOG_PREFIX, "initial_state": initial_state},
+            )
 
             self._logger.info(
-                f"{LOG_PREFIX} Starting GTI malware families ingestion..."
+                "Starting GTI malware families ingestion", {"prefix": LOG_PREFIX}
             )
             await orchestrator.run_malware_family(initial_state)
             return None
 
         except Exception as e:
             error_msg = f"GTI malware families processing failed: {str(e)}"
-            self._logger.error(f"{LOG_PREFIX} {error_msg}")
+            self._logger.error(
+                "GTI malware families processing failed",
+                {"prefix": LOG_PREFIX, "error": str(e)},
+            )
             return error_msg
 
     def run(self) -> None:
