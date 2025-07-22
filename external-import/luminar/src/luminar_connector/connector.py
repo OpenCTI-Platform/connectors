@@ -242,9 +242,9 @@ class ConnectorLuminar:
         if obj_type == "attack-pattern":
             return {"id": OpenCTIAttackPattern.generate_id(name, "attack-pattern")}
 
-        #for observables stix2 id is sufficient. 
+        # for observables stix2 id is sufficient.
         if obj_type == "software":
-            return {"id": obj['id']}
+            return {"id": obj["id"]}
 
     def get_collection_objects(
         self, headers: Dict[str, str], collection: str, params: Dict[str, Any]
