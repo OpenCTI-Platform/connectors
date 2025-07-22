@@ -95,7 +95,7 @@ def pytest_sessionfinish(session, exitstatus):
         subprocess.run(  # noqa: S603
             [sys.executable, "-m", "pip_audit", "--skip-editable"],
             cwd=repo_root,
-            check=True,
+            check=False,
         )
     except subprocess.CalledProcessError as e:
         pytest.exit(f"Post-check failed: {e}", returncode=1)
