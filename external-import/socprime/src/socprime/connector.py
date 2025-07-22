@@ -1,5 +1,4 @@
 import sys
-import time
 from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Union
@@ -434,7 +433,7 @@ class SocprimeConnector:
         try:
             current_state = self._load_state()
             self.helper.connector_logger.debug(
-                f"Loaded state", {"current_state": current_state}
+                "Loaded state", {"current_state": current_state}
             )
 
             last_run = self._get_state_value(current_state, self._STATE_LAST_RUN)
@@ -455,10 +454,10 @@ class SocprimeConnector:
             self.send_rules_from_tdm(work_id)
 
             new_state = current_state.copy()
-            new_state[self._STATE_LAST_RUN] = now.isoformat()
+            new_state[self._STATE_LAST_RUN] = now.isoformat(timespec="seconds")
 
             self.helper.connector_logger.info(
-                f"Storing new state", {"new_state": new_state}
+                "Storing new state", {"new_state": new_state}
             )
             self.helper.set_state(new_state)
 
