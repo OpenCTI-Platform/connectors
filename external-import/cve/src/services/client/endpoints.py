@@ -2,10 +2,11 @@
 API URL VARIABLES
 """
 
-from services.utils.configVariables import ConfigCVE  # type: ignore
+from src.services.utils import CVEConfig  # type: ignore
 
 # Base
-config = ConfigCVE()
-API_URL = config.base_url
+config = CVEConfig()
+config_instance = config.load
+API_URL = config_instance.cve.base_url
 API_VERSION = "/2.0"
 BASE_URL = API_URL + API_VERSION
