@@ -1,4 +1,3 @@
-
 import traceback
 
 from external_import_connector import ConnectorAbuseIPDB
@@ -19,4 +18,3 @@ if __name__ == "__main__":
     except Exception:
         traceback.print_exc()
         exit(1)
-        
