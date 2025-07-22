@@ -55,12 +55,16 @@ ListFromString = Annotated[
 ]
 
 
-class OpenCTIConfig(BaseModel):
+class BaseModelWithExtra(BaseModel):
+    model_config = SettingsConfigDict(extra="ignore")
+
+
+class OpenCTIConfig(BaseModelWithExtra):
     url: HttpUrl
     token: str
 
 
-class ConnectorConfig(BaseModel):
+class ConnectorConfig(BaseModelWithExtra):
     id: str
     name: str = Field(default="SocPrime")
     type: Literal["EXTERNAL_IMPORT"] = Field(default="EXTERNAL_IMPORT")
@@ -98,7 +102,6 @@ class ConnectorSettings(BaseSettings):
         env_nested_delimiter="_",
         env_nested_max_split=1,
         enable_decoding=False,
-        extra="allow",
         yaml_file=f"{_FILE_PATH}/../config.yml",
     )
 
