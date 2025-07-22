@@ -3,16 +3,14 @@ import datetime
 import io
 import json
 import os
-import sys
 import time
 
 import cairosvg
 import cmarkgfm
-import yaml
-from cmarkgfm.cmark import Options as cmarkgfmOptions
+from cmarkgfm import Options as cmarkgfmOptions
+from export_report_pdf.config import ConnectorConfig
 from jinja2 import Environment, FileSystemLoader
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from pycti.utils.constants import StixCyberObservableTypes
+from pycti import OpenCTIConnectorHelper, StixCyberObservableTypes
 from pygal_maps_world.i18n import COUNTRIES
 from pygal_maps_world.maps import World
 from weasyprint import HTML
@@ -24,70 +22,14 @@ CMARKGFM_OPTIONS = (
 )
 
 
-class ExportReportPdf:
-    def __init__(self):
+class Connector:
+    def __init__(self, config: ConnectorConfig, helper: OpenCTIConnectorHelper) -> None:
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.config = config
+        self.helper = helper
 
-        # ExportReportPdf specific config settings
-        self.primary_color = get_config_variable(
-            "EXPORT_REPORT_PDF_PRIMARY_COLOR",
-            ["export_report_pdf", "primary_color"],
-            config,
-        )
-        self.secondary_color = get_config_variable(
-            "EXPORT_REPORT_PDF_SECONDARY_COLOR",
-            ["export_report_pdf", "secondary_color"],
-            config,
-        )
-        self.current_dir = os.path.abspath(os.path.dirname(__file__))
+        self.current_dir = os.path.abspath(os.path.dirname(__file__)) + "/../"
         self._set_colors()
-        self.company_address_line_1 = get_config_variable(
-            "EXPORT_REPORT_PDF_COMPANY_ADDRESS_LINE_1",
-            ["export_report_pdf", "company_address_line_1"],
-            config,
-        )
-        self.company_address_line_2 = get_config_variable(
-            "EXPORT_REPORT_PDF_COMPANY_ADDRESS_LINE_2",
-            ["export_report_pdf", "company_address_line_2"],
-            config,
-        )
-        self.company_address_line_3 = get_config_variable(
-            "EXPORT_REPORT_PDF_COMPANY_ADDRESS_LINE_3",
-            ["export_report_pdf", "company_address_line_3"],
-            config,
-        )
-        self.company_phone_number = get_config_variable(
-            "EXPORT_REPORT_PDF_COMPANY_PHONE_NUMBER",
-            ["export_report_pdf", "company_phone_number"],
-            config,
-        )
-        self.company_email = get_config_variable(
-            "EXPORT_REPORT_PDF_COMPANY_EMAIL",
-            ["export_report_pdf", "company_email"],
-            config,
-        )
-        self.company_website = get_config_variable(
-            "EXPORT_REPORT_PDF_COMPANY_WEBSITE",
-            ["export_report_pdf", "company_website"],
-            config,
-        )
-        self.indicators_only = get_config_variable(
-            "EXPORT_REPORT_PDF_INDICATORS_ONLY",
-            ["export_report_pdf", "indicators_only"],
-            config,
-        )
-        self.defang_urls = get_config_variable(
-            "EXPORT_REPORT_PDF_DEFANG_URLS",
-            ["export_report_pdf", "defang_urls"],
-            config,
-        )
 
     def _get_readable_date_time(self, str_date_time):
         """
@@ -140,9 +82,11 @@ class ExportReportPdf:
             self._process_threat_actor_group(entity_id, file_name, file_markings)
         elif entity_type == "Threat-Actor-Individual":
             self._process_threat_actor_individual(entity_id, file_name, file_markings)
+        elif entity_type == "Vulnerability":
+            self._process_vulnerability(entity_id, file_name, file_markings)
         else:
             raise ValueError(
-                f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor-Group", "Threat-Actor-Individual", "Case-Incident", "Case-Rfi", "Case-Rft", not "{entity_type}".'
+                f'This connector currently only handles the entity types: "Report", "Intrusion-Set", "Threat-Actor-Group", "Threat-Actor-Individual", "Case-Incident", "Case-Rfi", "Case-Rft", Vulnerability, not "{entity_type}".'
             )
 
         return "Export done"
@@ -217,12 +161,12 @@ class ExportReportPdf:
                 "list_filters": str(main_filter),
                 "list_marking": list_marking,
                 "list_report_date": list_report_date,
-                "company_address_line_1": self.company_address_line_1,
-                "company_address_line_2": self.company_address_line_2,
-                "company_address_line_3": self.company_address_line_3,
-                "company_phone_number": self.company_phone_number,
-                "company_email": self.company_email,
-                "company_website": self.company_website,
+                "company_address_line_1": self.config.company_address_line_1,
+                "company_address_line_2": self.config.company_address_line_2,
+                "company_address_line_3": self.config.company_address_line_3,
+                "company_phone_number": self.config.company_phone_number,
+                "company_email": self.config.company_email,
+                "company_website": self.config.company_website,
                 "entities": {},
                 "observables": {},
             }
@@ -234,7 +178,7 @@ class ExportReportPdf:
                 ):
                     # If only include indicators and
                     # the observable doesn't have an indicator, skip it
-                    if self.indicators_only and not entity["indicators"]:
+                    if self.config.indicators_only and not entity["indicators"]:
                         self.helper.log_info(
                             f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
                         )
@@ -244,7 +188,7 @@ class ExportReportPdf:
                         context["observables"][obj_entity_type] = []
 
                     # Defang urls
-                    if self.defang_urls and obj_entity_type == "Url":
+                    if self.config.defang_urls and obj_entity_type == "Url":
                         entity["observable_value"] = entity["observable_value"].replace(
                             "http", "hxxp", 1
                         )
@@ -341,12 +285,12 @@ class ExportReportPdf:
             "report_confidence": report_confidence,
             "report_external_refs": report_external_refs,
             "report_date": report_date,
-            "company_address_line_1": self.company_address_line_1,
-            "company_address_line_2": self.company_address_line_2,
-            "company_address_line_3": self.company_address_line_3,
-            "company_phone_number": self.company_phone_number,
-            "company_email": self.company_email,
-            "company_website": self.company_website,
+            "company_address_line_1": self.config.company_address_line_1,
+            "company_address_line_2": self.config.company_address_line_2,
+            "company_address_line_3": self.config.company_address_line_3,
+            "company_phone_number": self.config.company_phone_number,
+            "company_email": self.config.company_email,
+            "company_website": self.config.company_website,
             "entities": {},
             "observables": {},
         }
@@ -372,7 +316,7 @@ class ExportReportPdf:
                 ):
                     # If only include indicators and
                     # the observable doesn't have an indicator, skip it
-                    if self.indicators_only and not entity["indicators"]:
+                    if self.config.indicators_only and not entity["indicators"]:
                         self.helper.log_info(
                             f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
                         )
@@ -382,7 +326,7 @@ class ExportReportPdf:
                         context["observables"][obj_entity_type] = []
 
                     # Defang urls
-                    if self.defang_urls and obj_entity_type == "Url":
+                    if self.config.defang_urls and obj_entity_type == "Url":
                         entity["observable_value"] = entity["observable_value"].replace(
                             "http", "hxxp", 1
                         )
@@ -429,12 +373,12 @@ class ExportReportPdf:
             "entities": {},
             "target_map_country": None,
             "report_date": now_date,
-            "company_address_line_1": self.company_address_line_1,
-            "company_address_line_2": self.company_address_line_2,
-            "company_address_line_3": self.company_address_line_3,
-            "company_phone_number": self.company_phone_number,
-            "company_email": self.company_email,
-            "company_website": self.company_website,
+            "company_address_line_1": self.config.company_address_line_1,
+            "company_address_line_2": self.config.company_address_line_2,
+            "company_address_line_3": self.config.company_address_line_3,
+            "company_phone_number": self.config.company_phone_number,
+            "company_email": self.config.company_email,
+            "company_website": self.config.company_website,
         }
 
         # Get a bundle of all objects affiliated with the intrusion set
@@ -530,12 +474,12 @@ class ExportReportPdf:
             "entities": {},
             "target_map_country": None,
             "report_date": now_date,
-            "company_address_line_1": self.company_address_line_1,
-            "company_address_line_2": self.company_address_line_2,
-            "company_address_line_3": self.company_address_line_3,
-            "company_phone_number": self.company_phone_number,
-            "company_email": self.company_email,
-            "company_website": self.company_website,
+            "company_address_line_1": self.config.company_address_line_1,
+            "company_address_line_2": self.config.company_address_line_2,
+            "company_address_line_3": self.config.company_address_line_3,
+            "company_phone_number": self.config.company_phone_number,
+            "company_email": self.config.company_email,
+            "company_website": self.config.company_website,
         }
 
         # Get a bundle of all objects affiliated with the threat actor group
@@ -631,12 +575,12 @@ class ExportReportPdf:
             "entities": {},
             "target_map_country": None,
             "report_date": now_date,
-            "company_address_line_1": self.company_address_line_1,
-            "company_address_line_2": self.company_address_line_2,
-            "company_address_line_3": self.company_address_line_3,
-            "company_phone_number": self.company_phone_number,
-            "company_email": self.company_email,
-            "company_website": self.company_website,
+            "company_address_line_1": self.config.company_address_line_1,
+            "company_address_line_2": self.config.company_address_line_2,
+            "company_address_line_3": self.config.company_address_line_3,
+            "company_phone_number": self.config.company_phone_number,
+            "company_email": self.config.company_email,
+            "company_website": self.config.company_website,
         }
 
         # Get a bundle of all objects affiliated with the threat actor individual
@@ -773,12 +717,12 @@ class ExportReportPdf:
             "case_id": case_id,
             "case_external_refs": case_external_refs,
             "case_report_date": case_report_date,
-            "company_address_line_1": self.company_address_line_1,
-            "company_address_line_2": self.company_address_line_2,
-            "company_address_line_3": self.company_address_line_3,
-            "company_phone_number": self.company_phone_number,
-            "company_email": self.company_email,
-            "company_website": self.company_website,
+            "company_address_line_1": self.config.company_address_line_1,
+            "company_address_line_2": self.config.company_address_line_2,
+            "company_address_line_3": self.config.company_address_line_3,
+            "company_phone_number": self.config.company_phone_number,
+            "company_email": self.config.company_email,
+            "company_website": self.config.company_website,
             "tasks": case_tasks,
             "case_type": case_type,
             "case_priority": case_priority,
@@ -809,7 +753,7 @@ class ExportReportPdf:
                 ):
                     # If only include indicators and
                     # the observable doesn't have an indicator, skip it
-                    if self.indicators_only and not entity["indicators"]:
+                    if self.config.indicators_only and not entity["indicators"]:
                         self.helper.log_info(
                             f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
                         )
@@ -819,7 +763,7 @@ class ExportReportPdf:
                         context["observables"][obj_entity_type] = []
 
                     # Defang urls
-                    if self.defang_urls and obj_entity_type == "Url":
+                    if self.config.defang_urls and obj_entity_type == "Url":
                         entity["observable_value"] = entity["observable_value"].replace(
                             "http", "hxxp", 1
                         )
@@ -854,15 +798,108 @@ class ExportReportPdf:
             mime_type="application/pdf",
         )
 
+    def _process_vulnerability(self, entity_id, file_name, file_markings):
+        """
+        Process a Vulnerability entity and upload as pdf.
+        """
+        now_date = datetime.datetime.now().strftime("%b %d %Y")
+        # Prepare our context
+        context = {
+            "report_date": now_date,
+            "company_address_line_1": self.config.company_address_line_1,
+            "company_address_line_2": self.config.company_address_line_2,
+            "company_address_line_3": self.config.company_address_line_3,
+            "company_phone_number": self.config.company_phone_number,
+            "company_email": self.config.company_email,
+            "company_website": self.config.company_website,
+            # these will be filled in:
+            "vulnerability": None,
+            "softwares_impacted": [],
+            "softwares_resolved": [],
+            "courses_of_action": [],
+            "infrastructures": [],
+        }
+
+        # Retrieve the full STIX bundle
+        bundle = (
+            self.helper.api_impersonate.stix2.get_stix_bundle_or_object_from_entity_id(
+                entity_type="Vulnerability", entity_id=entity_id, mode="full"
+            )
+        )
+
+        entities_grouped_by_type_and_id = {
+            entity_type: {
+                entity["id"]: entity
+                for entity in bundle["objects"]
+                if entity["type"] == entity_type
+            }
+            for entity_type in {entity["type"] for entity in bundle["objects"]}
+        }
+
+        # We have only one vulnerability in the bundle
+        _vulnerability = next(
+            iter(entities_grouped_by_type_and_id["vulnerability"].values())
+        )
+
+        context["vulnerability"] = _vulnerability
+        context["marking_definitions"] = [
+            entities_grouped_by_type_and_id["marking-definition"][marking_ref]["name"]
+            for marking_ref in _vulnerability["object_marking_refs"]
+        ]
+
+        # Process each relationship in the bundle
+        for relationship in entities_grouped_by_type_and_id.get(
+            "relationship", {}
+        ).values():
+            source_ref_type = relationship["source_ref"].split("--")[0]
+            source_ref = entities_grouped_by_type_and_id[source_ref_type][
+                relationship["source_ref"]
+            ]
+            match relationship["relationship_type"], source_ref_type:
+                case "has", "software":
+                    context["softwares_impacted"].append(
+                        f"{source_ref['vendor']}-{source_ref['name']}-{source_ref['version']}"
+                    )
+                case "remediates", "software":
+                    context["softwares_resolved"].append(
+                        f"{source_ref['vendor']}-{source_ref['name']}-{source_ref['version']}"
+                    )
+                case "remediates", "course_of_action":
+                    context["courses_of_action"].append(f"{source_ref['name']}")
+                case "has", "infrastructure":
+                    context["infrastructures"].append(f"{source_ref['name']}")
+
+        # Render HTML and generate the PDF
+        env = Environment(
+            loader=FileSystemLoader(self.current_dir), finalize=self._finalize
+        )
+        template = env.get_template("resources/vulnerability.html")
+        html_string = template.render(context)
+        pdf_contents = HTML(
+            string=html_string, base_url=f"{self.current_dir}/resources"
+        ).write_pdf()
+
+        # Push it back into OpenCTI
+        self.helper.log_info(f"Uploading Vulnerability PDF: {file_name}")
+        self.helper.api.stix_domain_object.push_entity_export(
+            entity_id=entity_id,
+            file_name=file_name,
+            data=pdf_contents,
+            file_markings=file_markings,
+            mime_type="application/pdf",
+        )
+
     def _set_colors(self):
         for root, dirs, files in os.walk(self.current_dir):
             for file_name in files:
                 if file_name.endswith(".css.template"):
                     with open(os.path.join(root, file_name), "r") as f:
                         new_css = f.read()
-                        new_css = new_css.replace("<primary_color>", self.primary_color)
                         new_css = new_css.replace(
-                            "<secondary_color>", self.secondary_color
+                            "<primary_color>", self.config.primary_color
+                        )
+                        new_css = new_css.replace(
+                            "<secondary_color>", self.config.secondary_color
                         )
 
                     file_name = file_name.replace(".template", "")
@@ -934,15 +971,5 @@ class ExportReportPdf:
         return reader.get(entity_type.lower(), None)
 
     # Start the main loop
-    def start(self):
+    def run(self):
         self.helper.listen(self._process_message)
-
-
-if __name__ == "__main__":
-    try:
-        connector_export_report_pdf = ExportReportPdf()
-        connector_export_report_pdf.start()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
