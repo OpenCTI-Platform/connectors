@@ -6,7 +6,6 @@ import re
 import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union
-from uuid import UUID, uuid5
 
 import requests
 from pycti import AttackPattern as OpenCTIAttackPattern
@@ -57,7 +56,6 @@ HEADERS = {
 }
 TIMEOUT = 60.0
 LUMINAR_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
-SCO_DET_ID_NAMESPACE = UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
 
 
 IOC_MAPPING = {
