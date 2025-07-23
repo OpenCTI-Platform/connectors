@@ -12,6 +12,11 @@ from .indicators import IndicatorHandler
 from .reports import ReportHandler
 
 
+# When the connector runs for the first time, it will retrieve from the beginning of 2025.
+# If there is a better / more customisable way to do this, such as an extra parameter to the connector
+# I'd be happy to implement that instead.
+FIRST_RUN_START_DATE = 1735689600  
+
 class TeamT5Connector:
 
     def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
@@ -140,6 +145,7 @@ class TeamT5Connector:
                      self.helper.connector_logger.error(f"Could not convert last run datetime {last_run} to timestamp, using 0.")
             else:
                 self.helper.connector_logger.info("Connector has never run...")
+                last_run_timestamp = FIRST_RUN_START_DATE
 
             # Attempt to Retrieve and Post Reports to OpenCTI
             try:
