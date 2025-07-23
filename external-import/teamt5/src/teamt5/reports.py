@@ -4,8 +4,6 @@ from pycti import OpenCTIConnectorHelper
 from pycti import Report as pyctiReport
 from stix2 import ExternalReference, Identity, Report, parse
 
-
-
 REPORT_TYPE_CONVERSIONS = {
     "Campaign Tracking Report": ["campaign"],
     "Monthly Report": ["report"],
@@ -118,7 +116,6 @@ class ReportHandler:
             f"Retrieval Complete. {num_reports} New Reports Were Found."
         )
 
-
     def _req_stix_data(self, stix_url: str):
         """
         Retrieve and Parse Stix Data from a provided URL utilising the
@@ -159,7 +156,9 @@ class ReportHandler:
 
                 # Construct the stix URL of the bundle and retrieve it. If a report has no stix URL, we must move on as there are
                 # literally no other provided ways of downloading it besides as a PDF.
-                stix_url = f"{self.api_url.rstrip('/')}/api/v2/reports/{report['alias']}.stix"
+                stix_url = (
+                    f"{self.api_url.rstrip('/')}/api/v2/reports/{report['alias']}.stix"
+                )
                 stix_bundle = self._req_stix_data(stix_url)
                 if stix_bundle is None:
                     self.helper.connector_logger.error(
@@ -186,7 +185,11 @@ class ReportHandler:
                     published=published,
                     object_refs=[obj.get("id", None) for obj in stix_content],
                     external_references=[external_ref],
-                    report_types=[REPORT_TYPE_CONVERSIONS.get(report.get("type_name",""),"report")],
+                    report_types=[
+                        REPORT_TYPE_CONVERSIONS.get(
+                            report.get("type_name", ""), "report"
+                        )
+                    ],
                     object_marking_refs=[self.tlp_ref.id],
                 )
                 stix_content.append(report_obj)
@@ -196,7 +199,7 @@ class ReportHandler:
 
                 # Push the bundle to the platform
                 bundle = self.helper.stix2_create_bundle(stix_content)
-                bundles_sent = self.helper.send_stix2_bundle(
+                self.helper.send_stix2_bundle(
                     bundle, work_id=work_id, cleanup_inconsistent_bundle=False
                 )
 

@@ -35,8 +35,8 @@ class ConfigConnector:
         Connector configuration variables
         :return: None
         """
-        
-        #Core connector configurations
+
+        # Core connector configurations
 
         self.name = get_config_variable(
             "CONNECTOR_NAME",
@@ -47,9 +47,9 @@ class ConfigConnector:
         self.duration_period = get_config_variable(
             "CONNECTOR_DURATION_PERIOD",
             ["connector", "duration_period"],
-            self.load, default="P1D"
+            self.load,
+            default="P1D",
         )
-
 
         # Extra parameters
         self.api_url = get_config_variable(
@@ -70,4 +70,3 @@ class ConfigConnector:
             self.load,
             default="clear",
         )
-
