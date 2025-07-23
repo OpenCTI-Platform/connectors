@@ -69,14 +69,17 @@ class DummyConfig:
         self.report_import_start_date = report_import_start_date
         self.threat_actor_import_start_date = "P1D"
         self.malware_family_import_start_date = "P1D"
+        self.vulnerability_import_start_date = "P1D"
         self.api_url = api_url
         self.import_reports = import_reports
         self.import_threat_actors = True
         self.import_malware_families = True
+        self.import_vulnerabilities = True
         self.report_types = report_types
         self.report_origins = report_origins
         self.threat_actor_origins = ["All"]
         self.malware_family_origins = ["All"]
+        self.vulnerability_origins = ["All"]
         self.tlp_level = tlp_level
 
 
@@ -113,6 +116,7 @@ def patch_perform_single_attempt(monkeypatch: Any) -> Any:
             "GTIReportResponse": "main_reports",
             "GTIThreatActorResponse": "main_threat_actors",
             "GTIMalwareFamilyResponse": "main_malware_families",
+            "GTIVulnerabilityResponse": "main_vulnerabilities",
             "GTIReportData": "reports",
         }
 
@@ -283,6 +287,43 @@ def expected_malware_family_log_messages() -> list[str]:
     ]
 
 
+@pytest.fixture
+def expected_vulnerability_log_messages() -> list[str]:
+    """Fixture for expected log messages in vulnerability orchestration."""
+    return [
+        "Fetched 1 vulnerabilities from API (total of 1 items) - {'prefix': '[FetcherVulnerability]'}",
+        "Fetched 1 malware_families relationships from API - {'prefix': '[BaseFetcher]'}",
+        "Retrieved relationship IDs - {'prefix': '[FetcherShared]', 'count': 1, 'subentity_type': 'malware_families', 'entity_name': 'entity_id', 'entity_id': 'vulnerability--cve-2021-26855'}",
+        "Fetched 1 reports relationships from API - {'prefix': '[BaseFetcher]'}",
+        "Retrieved relationship IDs - {'prefix': '[FetcherShared]', 'count': 1, 'subentity_type': 'reports', 'entity_name': 'entity_id', 'entity_id': 'vulnerability--cve-2021-26855'}",
+        "Fetched 1 attack_techniques relationships from API - {'prefix': '[BaseFetcher]'}",
+        "Retrieved relationship IDs - {'prefix': '[FetcherShared]', 'count': 1, 'subentity_type': 'attack_techniques', 'entity_name': 'entity_id', 'entity_id': 'vulnerability--cve-2021-26855'}",
+        "Fetched 1 threat_actors relationships from API - {'prefix': '[BaseFetcher]'}",
+        "Retrieved relationship IDs - {'prefix': '[FetcherShared]', 'count': 1, 'subentity_type': 'threat_actors', 'entity_name': 'entity_id', 'entity_id': 'vulnerability--cve-2021-26855'}",
+        "Finished gathering relationships - {'prefix': '[FetcherShared]', 'entity_name': 'entity_id', 'entity_id': 'vulnerability--cve-2021-26855'}",
+        "Found relationships - {'prefix': '[OrchestratorVulnerability]', 'current': 1, 'total': 1, 'relationships': 'malware_families: 1, reports: 1, attack_techniques: 1, threat_actors: 1'}",
+        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 4}",
+        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'malware families'}",
+        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'reports'}",
+        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'attack techniques'}",
+        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'threat actors'}",
+        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'malware_families: 1, reports: 1, attack_techniques: 1, threat_actors: 1'}",
+        "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 34, 'entity_type': 'malware families'}",
+        "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 15, 'entity_type': 'reports'}",
+        "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 2, 'entity_type': 'attack techniques'}",
+        "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 54, 'entity_type': 'threat actors'}",
+        "Converted to STIX entities - {'prefix': '[OrchestratorVulnerability]', 'current': 1, 'total': 1, 'entities_count': 106, 'entities_summary': 'vulnerability: 1, identity: 39, malware: 1, relationship: 45, report: 1, attack-pattern: 1, location: 17, intrusion-set: 1'}",
+        "Adding items to batch processor - {'prefix': '[GenericBatchProcessor]', 'count': 106, 'display_name': 'STIX objects'}",
+        "Successfully added items - {'prefix': '[GenericBatchProcessor]', 'added_count': 106, 'total_count': 106, 'display_name': 'STIX objects'}",
+        "Flushing remaining items - {'prefix': '[GenericBatchProcessor]', 'count': 108, 'display_name': 'STIX objects'}",
+        "Processing batch - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'batch_size': 108, 'display_name': 'STIX objects', 'total_processed': 108}",
+        "Sent batch to OpenCTI - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1}",
+        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 108, 'type_summary': 'identity: 40, marking-definition: 1, vulnerability: 1, malware: 1, relationship: 45, report: 1, attack-pattern: 1, location: 17, intrusion-set: 1'}",
+        "Successfully processed batch #1. Total STIX objects sent: 108 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 108}",
+        "State update: Setting next_cursor_date - {'prefix': '[GenericBatchProcessor]', 'latest_date': '2025-06-25T10:22:55'}",
+    ]
+
+
 # =====================
 # Test Cases
 # =====================
@@ -366,6 +407,33 @@ async def test_full_orchestration_malware_families(
     )
 
 
+@pytest.mark.asyncio
+@pytest.mark.order(2)
+async def test_full_orchestration_vulnerabilities(
+    caplog: Any,
+    gti_config: DummyConfig,
+    expected_vulnerability_log_messages: list[str],
+) -> None:
+    """Test the full vulnerability orchestration workflow from A to Z using stubs.
+
+    - Uses exactly the stubs under tests/custom/debug_responses/:
+      •   vulnerabilities_*.json
+      •   relationships_*.json
+      •   <entity_type>_*.json
+    - Verifies the expected log messages and orchestration results.
+    """
+    # Given an orchestrator with test configuration and logging setup
+    orchestrator = _given_orchestrator_with_test_setup(gti_config, caplog)
+
+    # When the vulnerability orchestration workflow is executed
+    await _when_vulnerability_orchestration_executed(orchestrator)
+
+    # Then the orchestration should complete successfully with expected results and logs
+    _then_orchestration_completed_successfully(
+        caplog, expected_vulnerability_log_messages
+    )
+
+
 # =====================
 # GWT Gherkin-style functions
 # =====================
@@ -415,6 +483,13 @@ async def _when_malware_family_orchestration_executed(orchestrator: Any) -> Any:
     return result
 
 
+# When the vulnerability orchestration workflow is executed
+async def _when_vulnerability_orchestration_executed(orchestrator: Any) -> Any:
+    """Execute the vulnerability orchestration workflow."""
+    result = await orchestrator.run_vulnerability(initial_state=None)
+    return result
+
+
 # Then the orchestration should complete successfully with expected results and logs
 def _then_orchestration_completed_successfully(
     caplog: Any, expected_log_messages: list[str]
@@ -443,6 +518,7 @@ def _load_debug_responses(debug_folder: Path) -> Dict[str, Any]:
         "main_reports",
         "main_threat_actors",
         "main_malware_families",
+        "main_vulnerabilities",
         "reports",
         "relationships",
         "attack_techniques",

@@ -162,11 +162,13 @@ class Connector:
         reports_enabled = gti_config.import_reports
         threat_actors_enabled = gti_config.import_threat_actors
         malware_families_enabled = gti_config.import_malware_families
+        vulnerabilities_enabled = gti_config.import_vulnerabilities
 
         if (
             not reports_enabled
             and not threat_actors_enabled
             and not malware_families_enabled
+            and not vulnerabilities_enabled
         ):
             self._logger.info(
                 "No GTI imports are enabled in configuration", {"prefix": LOG_PREFIX}
@@ -175,7 +177,10 @@ class Connector:
 
         try:
             if enable_parallelism and (
-                reports_enabled or threat_actors_enabled or malware_families_enabled
+                reports_enabled
+                or threat_actors_enabled
+                or malware_families_enabled
+                or vulnerabilities_enabled
             ):
                 return await self._process_gti_parallel(gti_config)
             else:
@@ -184,6 +189,7 @@ class Connector:
                     reports_enabled,
                     threat_actors_enabled,
                     malware_families_enabled,
+                    vulnerabilities_enabled,
                 )
         except (KeyboardInterrupt, asyncio.CancelledError):
             self._logger.info(
@@ -207,6 +213,8 @@ class Connector:
             enabled_imports.append("threat_actors")
         if gti_config.import_malware_families:
             enabled_imports.append("malware_families")
+        if gti_config.import_vulnerabilities:
+            enabled_imports.append("vulnerabilities")
 
         self._logger.info(
             "Starting parallel processing",
@@ -232,6 +240,12 @@ class Connector:
                 self._process_gti_malware_families(gti_config), name="malware_families"
             )
             tasks.append(malware_families_task)
+
+        if gti_config.import_vulnerabilities:
+            vulnerabilities_task = asyncio.create_task(
+                self._process_gti_vulnerabilities(gti_config), name="vulnerabilities"
+            )
+            tasks.append(vulnerabilities_task)
 
         any_error = False
         first_error = None
@@ -284,6 +298,7 @@ class Connector:
         reports_enabled: bool,
         threat_actors_enabled: bool,
         malware_families_enabled: bool,
+        vulnerabilities_enabled: bool,
     ) -> Optional[str]:
         """Process GTI imports sequentially."""
         self._logger.info("Starting sequential processing...", {"prefix": LOG_PREFIX})
@@ -325,6 +340,19 @@ class Connector:
             else:
                 self._logger.info(
                     "GTI malware families import is disabled in configuration",
+                    {"prefix": LOG_PREFIX},
+                )
+
+            if vulnerabilities_enabled:
+                self._logger.info(
+                    "Starting GTI vulnerabilities processing", {"prefix": LOG_PREFIX}
+                )
+                error_result = await self._process_gti_vulnerabilities(gti_config)
+                if error_result:
+                    return error_result
+            else:
+                self._logger.info(
+                    "GTI vulnerabilities import is disabled in configuration",
                     {"prefix": LOG_PREFIX},
                 )
 
@@ -440,6 +468,42 @@ class Connector:
             error_msg = f"GTI malware families processing failed: {str(e)}"
             self._logger.error(
                 "GTI malware families processing failed",
+                {"prefix": LOG_PREFIX, "error": str(e)},
+            )
+            return error_msg
+
+    async def _process_gti_vulnerabilities(
+        self, gti_config: GTIConfig
+    ) -> Optional[str]:
+        """Process GTI vulnerabilities using the orchestrator."""
+        try:
+            from connector.src.custom.orchestrators.orchestrator import (
+                Orchestrator,
+            )
+
+            orchestrator = Orchestrator(
+                work_manager=self.work_manager,
+                logger=self._logger,
+                config=gti_config,
+                tlp_level=self._config.connector_config.tlp_level,
+            )
+
+            initial_state = self._helper.get_state()
+            self._logger.info(
+                "Retrieved state",
+                {"prefix": LOG_PREFIX, "initial_state": initial_state},
+            )
+
+            self._logger.info(
+                "Starting GTI vulnerabilities ingestion", {"prefix": LOG_PREFIX}
+            )
+            await orchestrator.run_vulnerability(initial_state)
+            return None
+
+        except Exception as e:
+            error_msg = f"GTI vulnerabilities processing failed: {str(e)}"
+            self._logger.error(
+                "GTI vulnerabilities processing failed",
                 {"prefix": LOG_PREFIX, "error": str(e)},
             )
             return error_msg
