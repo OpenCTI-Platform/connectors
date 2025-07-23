@@ -9,9 +9,14 @@ from connector.src.custom.configs.report.gti_config_report import GTIReportConfi
 from connector.src.custom.configs.threat_actor.gti_config_threat_actor import (
     GTIThreatActorConfig,
 )
+from connector.src.custom.configs.vulnerability.gti_config_vulnerability import (
+    GTIVulnerabilityConfig,
+)
 
 
-class GTIConfig(GTIReportConfig, GTIThreatActorConfig, GTIMalwareConfig):
+class GTIConfig(
+    GTIReportConfig, GTIThreatActorConfig, GTIMalwareConfig, GTIVulnerabilityConfig
+):
     """Unified configuration for the Google Threat Intelligence (GTI) connector.
 
     This class combines all entity-specific configurations through multiple inheritance,
@@ -21,6 +26,7 @@ class GTIConfig(GTIReportConfig, GTIThreatActorConfig, GTIMalwareConfig):
     - Report imports (from GTIReportConfig)
     - Threat actor imports (from GTIThreatActorConfig)
     - Malware family imports (from GTIMalwareConfig)
+    - Vulnerability imports (from GTIVulnerabilityConfig)
     - Base GTI API settings (from GTIBaseConfig via inheritance)
 
     The configuration supports both YAML file-based and environment variable-based
