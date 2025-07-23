@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
-  name: 'External Import Connector Template'
+  name: 'Team T5 External Import Connector'
   scope: 'ChangeMe'
   log_level: 'info'
   duration_period: 'P1D' # Interval given for scheduler process in ISO-8601 format
@@ -13,4 +13,4 @@ connector:
 teamt5:
   api_base_url: 'ChangeMe'
   api_key: 'ChangeMe'
-  tlp_level: 'ChangeMe' # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
+  tlp_level: 'clear' # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
