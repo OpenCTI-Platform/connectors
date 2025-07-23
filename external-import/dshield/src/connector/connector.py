@@ -85,9 +85,6 @@ class DshieldConnector:
             )
 
             # Performing the collection of intelligence
-            # ===========================
-            # === Add your code below ===
-            # ===========================
             stix_objects = self._collect_intelligence()
 
             if len(stix_objects):
@@ -102,9 +99,6 @@ class DshieldConnector:
                     "Sending STIX objects to OpenCTI...",
                     {"bundles_sent": {str(len(bundles_sent))}},
                 )
-            # ===========================
-            # === Add your code above ===
-            # ===========================
 
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug(
