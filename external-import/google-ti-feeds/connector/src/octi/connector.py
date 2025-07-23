@@ -1,7 +1,7 @@
 """Core connector as defined in the OpenCTI connector template."""
 
 import asyncio
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional
 
 from connector.src.custom.configs.gti_config import GTIConfig
 from connector.src.custom.exceptions.connector_errors.gti_work_processing_error import (
@@ -9,6 +9,9 @@ from connector.src.custom.exceptions.connector_errors.gti_work_processing_error 
 )
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
+)
+from connector.src.custom.orchestrators.orchestrator import (
+    Orchestrator,
 )
 from connector.src.octi.work_manager import WorkManager
 
@@ -204,8 +207,8 @@ class Connector:
             )
             return error_msg
 
-    async def _process_gti_parallel(self, gti_config: GTIConfig) -> Optional[str]:
-        """Process GTI imports in parallel."""
+    def _get_enabled_imports(self, gti_config: GTIConfig) -> List[str]:
+        """Get list of enabled import types."""
         enabled_imports = []
         if gti_config.import_reports:
             enabled_imports.append("reports")
@@ -215,12 +218,10 @@ class Connector:
             enabled_imports.append("malware_families")
         if gti_config.import_vulnerabilities:
             enabled_imports.append("vulnerabilities")
+        return enabled_imports
 
-        self._logger.info(
-            "Starting parallel processing",
-            {"prefix": LOG_PREFIX, "enabled_imports": ", ".join(enabled_imports)},
-        )
-
+    def _create_processing_tasks(self, gti_config: GTIConfig) -> List[Any]:
+        """Create asyncio tasks for enabled import types."""
         tasks = []
 
         if gti_config.import_reports:
@@ -247,50 +248,89 @@ class Connector:
             )
             tasks.append(vulnerabilities_task)
 
+        return tasks
+
+    def _process_completed_tasks(
+        self, done_tasks: List[asyncio.Task[Any]]
+    ) -> tuple[bool, Optional[str]]:
+        """Process completed tasks and return error status."""
         any_error = False
         first_error = None
 
+        for task in done_tasks:
+            task_name = task.get_name()
+            try:
+                result = task.result()
+                self._logger.info(
+                    "Processing completed",
+                    {"prefix": LOG_PREFIX, "task_name": task_name},
+                )
+
+                if result and not any_error:
+                    first_error = f"Error in {task_name} processing: {result}"
+                    any_error = True
+
+            except Exception as e:
+                error_msg = f"Error in {task_name} processing: {str(e)}"
+                self._logger.error(
+                    "Error in processing",
+                    {"prefix": LOG_PREFIX, "task_name": task_name, "error": str(e)},
+                )
+                if not any_error:
+                    first_error = error_msg
+                    any_error = True
+
+        return any_error, first_error
+
+    async def _cancel_remaining_tasks(self, tasks: List[asyncio.Task[Any]]) -> None:
+        """Cancel any remaining tasks and wait for cleanup."""
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def _process_gti_parallel(self, gti_config: GTIConfig) -> Optional[Any]:
+        """Process GTI imports in parallel."""
+        enabled_imports = self._get_enabled_imports(gti_config)
+        self._logger.info(
+            "Starting parallel processing",
+            {"prefix": LOG_PREFIX, "enabled_imports": ", ".join(enabled_imports)},
+        )
+
+        tasks = self._create_processing_tasks(gti_config)
+
         try:
             done, pending = await asyncio.wait(tasks, return_when=asyncio.ALL_COMPLETED)
-
-            for task in done:
-                task_name = task.get_name()
-                try:
-                    result = task.result()
-                    self._logger.info(
-                        "Processing completed",
-                        {"prefix": LOG_PREFIX, "task_name": task_name},
-                    )
-
-                    if result:
-                        if not any_error:
-                            first_error = f"Error in {task_name} processing: {result}"
-                            any_error = True
-
-                except Exception as e:
-                    error_msg = f"Error in {task_name} processing: {str(e)}"
-                    self._logger.error(
-                        "Error in processing",
-                        {"prefix": LOG_PREFIX, "task_name": task_name, "error": str(e)},
-                    )
-                    if not any_error:
-                        first_error = error_msg
-                        any_error = True
+            any_error, first_error = self._process_completed_tasks(done)
+            return first_error if any_error else None
 
         except (KeyboardInterrupt, asyncio.CancelledError):
             self._logger.info(
                 "Parallel processing interrupted, cancelling tasks",
                 {"prefix": LOG_PREFIX},
             )
-
-            for task in tasks:
-                if not task.done():
-                    task.cancel()
-
-            await asyncio.gather(*tasks, return_exceptions=True)
+            await self._cancel_remaining_tasks(tasks)
             raise
 
-        return first_error if any_error else None
+    async def _process_import_type(
+        self,
+        import_type: str,
+        enabled: bool,
+        gti_config: GTIConfig,
+        processor_func: Callable[[GTIConfig], Awaitable[Any]],
+    ) -> Optional[Any]:
+        """Process a specific import type if enabled."""
+        if enabled:
+            self._logger.info(
+                f"Starting GTI {import_type} processing", {"prefix": LOG_PREFIX}
+            )
+            return await processor_func(gti_config)
+        else:
+            self._logger.info(
+                f"GTI {import_type} import is disabled in configuration",
+                {"prefix": LOG_PREFIX},
+            )
+            return None
 
     async def _process_gti_sequential(
         self,
@@ -299,62 +339,43 @@ class Connector:
         threat_actors_enabled: bool,
         malware_families_enabled: bool,
         vulnerabilities_enabled: bool,
-    ) -> Optional[str]:
+    ) -> Optional[Any]:
         """Process GTI imports sequentially."""
         self._logger.info("Starting sequential processing...", {"prefix": LOG_PREFIX})
 
         try:
-            if reports_enabled:
-                self._logger.info(
-                    "Starting GTI reports processing...", {"prefix": LOG_PREFIX}
-                )
-                error_result = await self._process_gti_reports(gti_config)
-                if error_result:
-                    return error_result
-            else:
-                self._logger.info(
-                    "GTI reports import is disabled in configuration",
-                    {"prefix": LOG_PREFIX},
-                )
+            error_result = await self._process_import_type(
+                "reports", reports_enabled, gti_config, self._process_gti_reports
+            )
+            if error_result:
+                return error_result
 
-            if threat_actors_enabled:
-                self._logger.info(
-                    "Starting GTI threat actors processing", {"prefix": LOG_PREFIX}
-                )
-                error_result = await self._process_gti_threat_actors(gti_config)
-                if error_result:
-                    return error_result
-            else:
-                self._logger.info(
-                    "GTI threat actors import is disabled in configuration",
-                    {"prefix": LOG_PREFIX},
-                )
+            error_result = await self._process_import_type(
+                "threat actors",
+                threat_actors_enabled,
+                gti_config,
+                self._process_gti_threat_actors,
+            )
+            if error_result:
+                return error_result
 
-            if malware_families_enabled:
-                self._logger.info(
-                    "Starting GTI malware families processing", {"prefix": LOG_PREFIX}
-                )
-                error_result = await self._process_gti_malware_families(gti_config)
-                if error_result:
-                    return error_result
-            else:
-                self._logger.info(
-                    "GTI malware families import is disabled in configuration",
-                    {"prefix": LOG_PREFIX},
-                )
+            error_result = await self._process_import_type(
+                "malware families",
+                malware_families_enabled,
+                gti_config,
+                self._process_gti_malware_families,
+            )
+            if error_result:
+                return error_result
 
-            if vulnerabilities_enabled:
-                self._logger.info(
-                    "Starting GTI vulnerabilities processing", {"prefix": LOG_PREFIX}
-                )
-                error_result = await self._process_gti_vulnerabilities(gti_config)
-                if error_result:
-                    return error_result
-            else:
-                self._logger.info(
-                    "GTI vulnerabilities import is disabled in configuration",
-                    {"prefix": LOG_PREFIX},
-                )
+            error_result = await self._process_import_type(
+                "vulnerabilities",
+                vulnerabilities_enabled,
+                gti_config,
+                self._process_gti_vulnerabilities,
+            )
+            if error_result:
+                return error_result
 
             return None
 
@@ -374,10 +395,6 @@ class Connector:
     async def _process_gti_reports(self, gti_config: GTIConfig) -> Optional[str]:
         """Process GTI reports using the orchestrator."""
         try:
-            from connector.src.custom.orchestrators.orchestrator import (
-                Orchestrator,
-            )
-
             orchestrator = Orchestrator(
                 work_manager=self.work_manager,
                 logger=self._logger,
@@ -405,10 +422,6 @@ class Connector:
     async def _process_gti_threat_actors(self, gti_config: GTIConfig) -> Optional[str]:
         """Process GTI threat actors using the orchestrator."""
         try:
-            from connector.src.custom.orchestrators.orchestrator import (
-                Orchestrator,
-            )
-
             orchestrator = Orchestrator(
                 work_manager=self.work_manager,
                 logger=self._logger,
@@ -441,10 +454,6 @@ class Connector:
     ) -> Optional[str]:
         """Process GTI malware families using the orchestrator."""
         try:
-            from connector.src.custom.orchestrators.orchestrator import (
-                Orchestrator,
-            )
-
             orchestrator = Orchestrator(
                 work_manager=self.work_manager,
                 logger=self._logger,
@@ -477,10 +486,6 @@ class Connector:
     ) -> Optional[str]:
         """Process GTI vulnerabilities using the orchestrator."""
         try:
-            from connector.src.custom.orchestrators.orchestrator import (
-                Orchestrator,
-            )
-
             orchestrator = Orchestrator(
                 work_manager=self.work_manager,
                 logger=self._logger,

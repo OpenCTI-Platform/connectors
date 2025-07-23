@@ -243,6 +243,45 @@ def _create_single_relationship(
         return None
 
 
+def _find_entity_in_output(stix_output: Any, context_key: str) -> Any:
+    """Find entity in STIX output based on context key."""
+    entity = None
+    if isinstance(stix_output, list):
+        for obj in stix_output:
+            if hasattr(obj, "type") and obj.type == context_key.replace("_", "-"):
+                entity = obj
+                break
+    elif hasattr(stix_output, "type"):
+        entity = stix_output
+    return entity
+
+
+def _handle_set_operation(stix_output: Any, context_key: str) -> None:
+    """Handle the 'set' operation for context management."""
+    entity = _find_entity_in_output(stix_output, context_key)
+    if entity:
+        set_context(context_key, entity)
+        _logger.debug(
+            "Set context",
+            {"log_prefix": LOG_PREFIX, "context_key": context_key},
+        )
+
+
+def _handle_clear_operation(context_key: str) -> None:
+    """Handle the 'clear' operation for context management."""
+    clear_context(context_key)
+    _logger.debug(
+        "Cleared context",
+        {"log_prefix": LOG_PREFIX, "context_key": context_key},
+    )
+
+
+def _handle_clear_all_operation() -> None:
+    """Handle the 'clear_all' operation for context management."""
+    clear_all_contexts()
+    _logger.debug("Cleared all contexts", {"log_prefix": LOG_PREFIX})
+
+
 def manage_context(operation: str, context_key: Optional[str] = None) -> Any:
     """Manage context storage.
 
@@ -255,34 +294,11 @@ def manage_context(operation: str, context_key: Optional[str] = None) -> Any:
     def postprocess(stix_output: Any) -> Any:
         try:
             if operation == "set" and context_key:
-                entity = None
-                if isinstance(stix_output, list):
-                    for obj in stix_output:
-                        if hasattr(obj, "type") and obj.type == context_key.replace(
-                            "_", "-"
-                        ):
-                            entity = obj
-                            break
-                elif hasattr(stix_output, "type"):
-                    entity = stix_output
-
-                if entity:
-                    set_context(context_key, entity)
-                    _logger.debug(
-                        "Set context",
-                        {"log_prefix": LOG_PREFIX, "context_key": context_key},
-                    )
-
+                _handle_set_operation(stix_output, context_key)
             elif operation == "clear" and context_key:
-                clear_context(context_key)
-                _logger.debug(
-                    "Cleared context",
-                    {"log_prefix": LOG_PREFIX, "context_key": context_key},
-                )
-
+                _handle_clear_operation(context_key)
             elif operation == "clear_all":
-                clear_all_contexts()
-                _logger.debug("Cleared all contexts", {"log_prefix": LOG_PREFIX})
+                _handle_clear_all_operation()
 
         except Exception as e:
             _logger.warning(
