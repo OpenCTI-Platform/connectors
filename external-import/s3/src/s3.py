@@ -32,11 +32,11 @@ mapped_keys = [
     "x_cvss_v2_temporal_score",
     "x_cvss_v3_temporal_score",
     "x_first_seen_active",
+    "x_history",
+    "x_acti_uuid",
 ]
 ignored_keys = [
-    "x_history",
     "x_acti_guid",
-    "x_acti_uuid",
     "x_version",
     "x_product",
     "x_vendor",
@@ -197,6 +197,28 @@ class S3Connector:
                     created=obj["created"],
                     abstract=obj["x_title"],
                     content=obj["x_analysis"],
+                    object_refs=[obj["id"]],
+                    object_marking_refs=[self.s3_marking["id"]],
+                    created_by_ref=(
+                        self.identity["standard_id"]
+                        if self.identity is not None
+                        else None
+                    ),
+                )
+                new_bundle_objects.append(note)
+
+            # History Note
+            if "x_history" in obj and obj["x_history"]:
+                note_content = "| Timestamp | Comment |\n|---------|---------|\n"
+                for history in obj.get("x_history"):
+                    note_content += f"| {history.get('timestamp', '')} | {history.get('comment', '')} |\n"
+
+                abstract = obj.get("name")+ " - History"
+                note = stix2.Note(
+                    id=Note.generate_id(obj["created"], abstract),
+                    created=obj["created"],
+                    abstract=abstract,
+                    content=note_content,
                     object_refs=[obj["id"]],
                     object_marking_refs=[self.s3_marking["id"]],
                     created_by_ref=(
