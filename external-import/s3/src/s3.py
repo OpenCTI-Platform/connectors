@@ -228,6 +228,17 @@ class S3Connector:
             if "x_product" in obj:
                 obj["x_opencti_product"] = obj["x_product"]
 
+            # x_acti_uuid
+            if "x_acti_uuid" in obj:
+                external_ref = {
+                    "source_name": "ACTI UUID",
+                    "external_id": obj["x_acti_uuid"]
+                },
+                if "external_references" in obj:
+                    obj["external_references"].append(external_ref)
+                else:
+                    obj["external_references"] = [external_ref]
+
             # Relationships "has"
             if (
                 obj["type"] == "relationship"
