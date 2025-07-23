@@ -50,7 +50,6 @@ There are a number of configuration options, which are set either in `docker-com
 | Parameter            | config.yml           | Docker environment variable     | Default         | Description                                                                              |
 |----------------------|---------------------|---------------------------------|-----------------|------------------------------------------------------------------------------------------|
 | Connector ID         | connector.id        | `CONNECTOR_ID`                  |                | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type       | connector.type      |                                 | EXTERNAL_IMPORT | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
 | Connector Name       | connector.name      | `CONNECTOR_NAME`                | TeamT5 External Import Connector | Name of the connector.                                                                   |
 | Connector Scope      | connector.scope     | `CONNECTOR_SCOPE`               |                 | The scope applied to the connector. |
 | Log Level            | connector.log_level | `CONNECTOR_LOG_LEVEL`           | info            | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
@@ -61,9 +60,9 @@ There are a number of configuration options, which are set either in `docker-com
 
 | Parameter    | config.yml         | Docker environment variable | Default | Description                                                                                      |
 |--------------|-------------------|-----------------------------|---------|--------------------------------------------------------------------------------------------------|
-| API base URL | teamt5.api_base_url | `CONNECTOR_API_BASE_URL`   |         | The base URL for the TeamT5 API.                                                                 |
-| API key      | teamt5.api_key      | `CONNECTOR_API_KEY`        |         | The API key for authenticating with the TeamT5 API.                                              |
-| TLP Level    | teamt5.tlp_level    | `CONNECTOR_TLP_LEVEL`      | clear   | TLP marking for ingested data. Options: clear, white, green, amber, amber+strict, red.           |
+| API base URL | teamt5.api_base_url | `TEAMT5_API_BASE_URL`   |         | The base URL for the TeamT5 API.                                                                 |
+| API key      | teamt5.api_key      | `TEAMT5_API_KEY`        |         | The API key for authenticating with the TeamT5 API.                                              |
+| TLP Level    | teamt5.tlp_level    | `TEAMT5_TLP_LEVEL`      | clear   | TLP marking for ingested data. Options: clear, white, green, amber, amber+strict, red.           |
 
 ## Deployment
 
