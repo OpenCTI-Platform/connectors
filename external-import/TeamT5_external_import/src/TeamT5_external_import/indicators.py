@@ -1,4 +1,3 @@
-from collections import deque
 from datetime import datetime
 
 from pycti import OpenCTIConnectorHelper
@@ -12,10 +11,8 @@ class IndicatorHandler:
         helper: OpenCTIConnectorHelper,
         author: Identity,
         fcn_request_data,
-        fcn_update_timestamps,
         fcn_append_author_tlp,
         tlp_ref,
-        timestamps: dict,
         api_url: str,
     ) -> None:
         """
@@ -24,20 +21,15 @@ class IndicatorHandler:
         :param helper: The OpenCTI connector helper object.
         :param author: The STIX Identity of the author.
         :param fcn_request_data: Function to request data from the Team T5 API.
-        :param fcn_update_timestamps: Function to update the Connector's state / stored timestamps.
         :param fcn_append_author_tlp: Function to append author and TLP to a list of stix objects.
         :param tlp_ref: The TLP marking definition reference.
-        :param timestamps: A dictionary of last run timestamps.
         """
 
         self.helper = helper
         self._request_data = fcn_request_data
         self.author = author
 
-        # Initialise a queue to handle the indicators.
-        self.indicator_queue = deque()
-        self._update_timestamps = fcn_update_timestamps
-        self.timestamps = timestamps
+        self.indicators = []
 
         self._append_author_tlp = fcn_append_author_tlp
         self.tlp_ref = tlp_ref
@@ -74,7 +66,7 @@ class IndicatorHandler:
             return None
         return None
 
-    def retrieve_indicators(self) -> None:
+    def retrieve_indicators(self, last_run_timestamp: int) -> None:
         """
         Retrieve any new (relative to the last Indicator Bundle timestamp we have stored) Indicator
         Bundles from the Team T5 Platform
@@ -82,89 +74,72 @@ class IndicatorHandler:
         :return: None
         """
 
-        INDICATORS_URL = f"{self.api_url.rstrip('/')}/api/v2/ioc_bundles"
-        MAX_RETRIES = 3
+        indicators_url = f"{self.api_url.rstrip('/')}/api/v2/ioc_bundles"
 
         num_indicators = 0
-        num_retires = 0
+        all_indicators = []
 
-        # This loop 'should' exit once having found all recent reports successfully and appending them to the report
-        # queue. However, in the case of strange responses or any other issues, the while True statement is capped
-        # by a maximum number of retries that can occur in the request for a single set of Indicator Bundles.
-
-        while True and num_retires < MAX_RETRIES:
+        while True:
 
             # Retrieve Indicator Bundles at the current offset. Note that the API responds with most to least recent.
-            PARAMS = {"offset": num_indicators}
-            response = self._request_data(INDICATORS_URL, PARAMS)
+            params = {"offset": num_indicators}
+            response = self._request_data(indicators_url, params)
 
             # Handle Edge Cases in responses.
-            if response is None:
-                self.helper.connector_logger.error(
-                    "Failed to retrieve indicators: No response from server"
-                )
-                num_retires += 1
-                continue
-
             data = response.json()
-            if data.get("success", "") == "" or data.get("ioc_bundles", "") == "":
+            if not data.get("success", None) or not data.get("ioc_bundles", None):
                 self.helper.connector_logger.info(
                     "Failed to retrieve indicators: Indicator Bundle request failed or response is empty"
                 )
-                num_retires += 1
                 continue
 
-            # Having passed edge cases, we reset our 'retries' counter.
-            num_retires = 0
-
-            # Deconstruct the Indicators in theta(n) time, saving on space.
-            indicators = data.get("ioc_bundles")
             indicators = [
                 {
                     # Urls can be reconstructed from the ID. As such, a boolean
                     # is used to determine the existence of each type of url (which
-                    # appears to vary accross bundles)
+                    # appears to vary across bundles)
                     "id": indicator.get("id", ""),
                     "created_at": indicator.get("created_at", 0),
                     "stix": (indicator.get("stix_url") is not None),
                     "csv": (indicator.get("csv_url") is not None),
                     "text": (indicator.get("txt_url") is not None),
                 }
-                for indicator in indicators
+                for indicator in data["ioc_bundles"]
             ]
 
             # Find the index where the Bundle last pushed to OpenCTI is, this is where we should cutoff
             cutoff_index = next(
                 (
                     i
-                    for i, b in enumerate(indicators)
-                    if b.get("created_at") <= self.timestamps["last_indicator_ts"]
+                    for i, bundle in enumerate(indicators)
+                    if bundle.get("created_at") <= last_run_timestamp
                 ),
                 None,
             )
 
-            # If such an index is found, exploration stops and the queue is appropriately full
+            # If such an index is found, exploration stops and the list is appropriately full
             if cutoff_index is None:
                 self.helper.connector_logger.debug(
                     f"Found {len(indicators)} Indicator Bundles. Continuing...."
                 )
-                self.indicator_queue.extend(indicators)
+                all_indicators.extend(indicators)
                 num_indicators += len(indicators)
                 continue
 
-            # If such an index is not found, further exploration is required to populate the queue.
+            # If such an index is not found, further exploration is required to populate the list.
             self.helper.connector_logger.info(
                 f"Found {len(indicators[:cutoff_index])} more Indicator Bundles. End Reached."
             )
-            self.indicator_queue.extend(indicators[:cutoff_index])
+            all_indicators.extend(indicators[:cutoff_index])
             num_indicators += cutoff_index
             break
 
+        self.indicators = all_indicators
         self.helper.connector_logger.info(
             f"Retrieval Complete. {num_indicators} New Indicator Bundles Were Found."
         )
 
-    # Note this function is identical in both files, but exists in both for future changes.
+
     def _req_stix_data(self, stix_url: str):
         """
         Retrieve and Parse Stix Data from a provided URL utilising the
@@ -189,7 +164,7 @@ class IndicatorHandler:
 
     def post_indicators(self, work_id: str) -> int:
         """
-        Process each Indicator Bundle in the queue, as follows:
+        Process each Indicator Bundle in the list, as follows:
         1. Determine the URL from which the bundle can be retrieved.
         2. Retrieve the bundle
         3. Add TLP Markings and an Author to each object in the bundle
@@ -200,11 +175,8 @@ class IndicatorHandler:
         """
 
         num_pushed = 0
-        while self.indicator_queue:
+        for indicator in self.indicators:
             try:
-
-                # Dequeue the oldest Indicator Bundle
-                indicator = self.indicator_queue.popleft()
                 self.helper.connector_logger.debug(
                     f"Processing Indicator Bundle from: {datetime.fromtimestamp(indicator.get('created_at')).strftime('%H:%M %d/%m/%Y')}"
                 )
@@ -239,13 +211,11 @@ class IndicatorHandler:
                     f"Indicator Bundle With {len(bundles_sent)} Items Pushed to OpenCTI Successfully"
                 )
 
-                # Update the stored timestamp of the last pushed Indicator Bundle
-                self.timestamps["last_indicator_ts"] = indicator.get("created_at")
-                self._update_timestamps()
                 num_pushed += 1
             except Exception as e:
                 self.helper.connector_logger.error(
                     f"An Error Occurred Whilst Processing an Indicator Bundle: {e}"
                 )
 
+        self.indicators = []
         return num_pushed

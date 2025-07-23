@@ -11,8 +11,6 @@ from .config_loader import ConfigConnector
 from .indicators import IndicatorHandler
 from .reports import ReportHandler
 
-STATE_FILE_NAME = "connector_state.json"
-
 
 class TeamT5Connector:
 
@@ -36,30 +34,14 @@ class TeamT5Connector:
         )
 
         # Based on the format for inputting TLPS, we get the corresponding stix2 object
+        if self.config.tlp_level.lower() == "clear":
+            self.config.tlp_level = "white"
         normalised_tlp = self.config.tlp_level.lower().replace("+", "_")
         self.tlp_ref = getattr(stix2, f"TLP_{normalised_tlp}".upper(), None)
 
-        # Attempt to open the state file, housing the timestamps of the last retrieved Report and Indicator Bundle.
-        state_file = Path(__file__).resolve().parent.parent / STATE_FILE_NAME
-        try:
-            with open(state_file, "r") as f:
-                timestamps = json.load(f)
-            self.timestamps = {
-                "last_report_ts": int(timestamps.get("last_report_ts", 0)),
-                "last_indicator_ts": int(timestamps.get("last_indicator_ts", 0)),
-            }
-
-        except Exception as e:
-            self.helper.connector_logger.error(f"Error loading connector state: {e}")
-            raise
-
-        # Store our timestamps as datetime objects for use in logging
-        self.last_report_datetime = datetime.fromtimestamp(
-            self.timestamps["last_report_ts"]
-        )
-        self.last_indicator_datetime = datetime.fromtimestamp(
-            self.timestamps["last_indicator_ts"]
-        )
+        if self.tlp_ref is None:
+            self.helper.connector_logger.error(f"Error: Invalid TLP Level in Configuration. Please see the documentation and change it to one of the allowed values.")
+            sys.exit(1)
 
         # Initialise the Report and Indicator Handler, of which are quite similar in nature, but have been differentiated so that they can be changed
         # separately in future.
@@ -67,10 +49,8 @@ class TeamT5Connector:
             helper=helper,
             author=self.author,
             fcn_request_data=self.client._request_data,
-            fcn_update_timestamps=self.update_timestamps,
             fcn_append_author_tlp=self.append_author_tlp,
             tlp_ref=self.tlp_ref,
-            timestamps=self.timestamps,
             api_url=self.config.api_url,
         )
 
@@ -78,10 +58,8 @@ class TeamT5Connector:
             helper=helper,
             author=self.author,
             fcn_request_data=self.client._request_data,
-            fcn_update_timestamps=self.update_timestamps,
             fcn_append_author_tlp=self.append_author_tlp,
             tlp_ref=self.tlp_ref,
-            timestamps=self.timestamps,
             api_url=self.config.api_url,
         )
 
@@ -125,53 +103,6 @@ class TeamT5Connector:
 
         return new_objects
 
-    def update_timestamps(self) -> None:
-        """
-        Update the Connector's State / storage of timestamps.
-        :return: None
-        """
-
-        state_file = Path(__file__).resolve().parent.parent / STATE_FILE_NAME
-
-        temp_file = state_file.with_suffix(".json.tmp")
-        new_data = {
-            "last_report_ts": self.timestamps["last_report_ts"],
-            "last_indicator_ts": self.timestamps["last_indicator_ts"],
-        }
-
-        try:
-            with open(temp_file, "w") as f:
-                json.dump(new_data, f, indent=4)
-            temp_file.replace(state_file)
-
-        except Exception as e:
-            self.helper.connector_logger.error(f"Failed to update timestamps file: {e}")
-            if temp_file.exists():
-                temp_file.unlink()
-            raise
-
-    def _init_work(self, work_name):
-        """
-        Initialise work within the platform, logging a message corresponding to its name
-
-        :param work_name: The name/message of the work to be initiated.
-        :return: The ID of the initiated work unit.
-        """
-        work_id = self.helper.api.work.initiate_work(self.helper.connect_id, work_name)
-        self.helper.connector_logger.info(work_name)
-        return work_id
-
-    def _end_work(self, end_message, work_id):
-        """
-        Finish work within the platform, logging a message upon completion
-
-        :param end_message: The message to record for the completed work.
-        :param work_id: The ID of the work unit to be marked as processed.
-        :return: None
-        """
-        self.helper.api.work.to_processed(work_id, end_message)
-        self.helper.connector_logger.info(end_message)
-
     def main(self) -> None:
         """
         The main execution loop of the connector follows such a structure:
@@ -195,6 +126,7 @@ class TeamT5Connector:
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
+            last_run_timestamp = 0
             if current_state is not None and "last_run" in current_state:
                 last_run = current_state["last_run"]
 
@@ -202,35 +134,30 @@ class TeamT5Connector:
                     "Connector last run",
                     {"last_run_datetime": last_run},
                 )
+                try:
+                    last_run_timestamp = int(datetime.strptime(last_run, "%Y-%m-%d %H:%M:%S").timestamp())
+                except Exception:
+                     self.helper.connector_logger.error(f"Could not convert last run datetime {last_run} to timestamp, using 0.")
             else:
                 self.helper.connector_logger.info("Connector has never run...")
 
             # Attempt to Retrieve and Post Reports to OpenCTI
             try:
 
-                # Job 1: retrieve reports
-                WORK_NAME = (
-                    f"Retrieving Reports From After: {self.last_report_datetime}"
-                )
-                WORK_END = "Finished retrieving reports"
+                #Retrieve Reports from TT5
+                self.helper.connector_logger.info(f"Retrieving Reports From After: {datetime.fromtimestamp(last_run_timestamp)}")
+                self.report_handler.retrieve_reports(last_run_timestamp)
+                self.helper.connector_logger.info("Finished retrieving reports")
 
-                work_id = self._init_work(WORK_NAME)
-                self.report_handler.retrieve_reports()
-                self._end_work(end_message=WORK_END, work_id=work_id)
 
-                # Job 2: upload reports
-                WORK_NAME = "Creating OpenCTI Reports"
-                WORK_END = "Finished Creating Reports"
-
-                work_id = self._init_work(WORK_NAME)
+                #Upload Reports via Worker
+                work_name = "Creating OpenCTI Reports"
+                work_id = self.helper.api.work.initiate_work(self.helper.connect_id, work_name)
                 num_pushed = self.report_handler.post_reports(work_id)
-                self.helper.connector_logger.info(
-                    f"Connector created {num_pushed} reports"
-                )
-                self._end_work(end_message=WORK_END, work_id=work_id)
-                self.last_report_datetime = datetime.fromtimestamp(
-                    self.timestamps["last_report_ts"]
-                )
+                push_message = f"Connector created {num_pushed} reports"
+                self.helper.connector_logger.info(push_message)
+                self.helper.api.work.to_processed(work_id, push_message)
+
 
             except Exception as e:
                 self.helper.connector_logger.error(
@@ -239,28 +166,19 @@ class TeamT5Connector:
 
             # Attempt to Retrieve and Push Indicator Bundles to OpenCTI
             try:
+                #Retrieve Indicators from TT5
+                self.helper.connector_logger.info(f"Retrieving Indicator Bundles From After: {datetime.fromtimestamp(last_run_timestamp)}")
+                self.indicator_handler.retrieve_indicators(last_run_timestamp)
+                self.helper.connector_logger.info( "Finished retrieving Indicator Bundles")
 
-                # Job 3: retrieve indicators
-                WORK_NAME = f"Retrieving Indicator Bundles From After: {self.last_indicator_datetime}"
-                WORK_END = "Finished retrieving Indicator Bundles"
 
-                work_id = self._init_work(WORK_NAME)
-                self.indicator_handler.retrieve_indicators()
-                self._end_work(end_message=WORK_END, work_id=work_id)
-
-                # Job 4: upload indicators
-                WORK_NAME = "Pushing Indicator Bundles to OpenCTI"
-                WORK_END = "Finished Pushing Indicator Bundles"
-
-                work_id = self._init_work(WORK_NAME)
+                #Upload Indicators via Worker
+                work_name = "Pushing Indicator Bundles to OpenCTI"
+                work_id = self.helper.api.work.initiate_work(self.helper.connect_id, work_name)
                 num_pushed = self.indicator_handler.post_indicators(work_id)
-                self.helper.connector_logger.info(
-                    f"Connector Pushed {num_pushed} indicator bundles"
-                )
-                self._end_work(end_message=WORK_END, work_id=work_id)
-                self.last_indicator_datetime = datetime.fromtimestamp(
-                    self.timestamps["last_indicator_ts"]
-                )
+                push_message = f"Connector Pushed {num_pushed} indicator bundles"
+                self.helper.connector_logger.info(push_message)
+                self.helper.api.work.to_processed(work_id, push_message)
 
             except Exception as e:
                 self.helper.connector_logger.error(
@@ -294,7 +212,7 @@ class TeamT5Connector:
 
     def run(self) -> None:
         """
-        Run the connector on a schedule.
+        Run the connector on a scheduler.
         :return: None
         """
         self.helper.schedule_iso(
