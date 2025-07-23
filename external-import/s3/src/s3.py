@@ -26,21 +26,21 @@ mapped_keys = [
     "x_zero_day",
     "x_notable_vuln",
     "x_name",
+    "x_cwe",
     "x_cvss_v2",
     "x_cvss_v2_vector",
     "x_cvss_v2_temporal_score",
     "x_cvss_v3_temporal_score",
+    "x_first_seen_active",
 ]
 ignored_keys = [
     "x_history",
-    "x_first_seen_active",
     "x_acti_guid",
     "x_acti_uuid",
     "x_version",
     "x_product",
     "x_vendor",
     "x_and_prior_versions",
-    "x_cwe",
     "x_credit",
 ]
 
@@ -144,7 +144,6 @@ class S3Connector:
             if "object_marking_refs" not in obj:
                 obj["object_marking_refs"] = [self.s3_marking["id"]]
 
-            # TODO, TBD
             if "x_severity" in obj:
                 if obj["x_severity"] == "high":
                     obj["x_opencti_score"] = 90
@@ -182,6 +181,10 @@ class S3Connector:
             # CWE
             if "x_cwe" in obj:
                 obj["x_opencti_cwe"] = [obj["x_cwe"]]
+
+            # First seen active
+            if "x_first_seen_active" in obj:
+                obj["x_opencti_first_seen_active"] = obj["x_first_seen_active"]
 
             # Ad-hoc desc
             if "x_description" in obj:
@@ -221,9 +224,9 @@ class S3Connector:
                 else:
                     obj["labels"] = ["notable-vuln"]
 
-            # Software
-            if obj["type"] == "software":
-                obj["name"] = obj["x_product"] + " " + obj["version"]
+            # x_product
+            if "x_product" in obj:
+                obj["x_opencti_product"] = obj["x_product"]
 
             # Relationships "has"
             if (

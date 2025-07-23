@@ -90,6 +90,8 @@ class ConnectorAccenture:
                     self.config.tlp_level
                 )
                 stix_objects.append(json.loads(marking.serialize()))
+
+                new_entities_for_bundle = []
                 for stix_object in stix_objects:
 
                     # add Accenture as report author
@@ -99,12 +101,28 @@ class ConnectorAccenture:
                     stix_object["object_marking_refs"] = [marking.id]
 
                     if stix_object.get("type") == "report":
+                        # generate entities from labels
+                        generated_entities = self.converter_to_stix.generate_entities(
+                            stix_object.get("labels", [])
+                        )
+                        # new labels
+                        stix_object["labels"] = generated_entities["labels"]
+
+                        # new entities
+                        new_entities = generated_entities["entities"]
+                        new_entities_for_bundle.extend(
+                            [json.loads(e.serialize()) for e in new_entities]
+                        )
+
+                        # add new object ids
+                        stix_object["object_refs"].extend(
+                            [entity.id for entity in new_entities]
+                        )
 
                         # report description HTML to markdown
                         stix_object["description"] = convert_to_markdown(
                             stix_object.get("description")
                         )
-
                         # add custom extension 'x_severity' and 'x_threat_type' as report label
                         custom_extension_labels = []
                         if "x_severity" in stix_object and stix_object.get(
@@ -138,7 +156,7 @@ class ConnectorAccenture:
                                     item.get("target_ref")
                                 )
                                 stix_objects.remove(item)
-
+                stix_objects.extend(new_entities_for_bundle)
                 bundles_sent = self.helper.send_stix2_bundle(
                     json.dumps(stix_bundle),
                     work_id=work_id,
