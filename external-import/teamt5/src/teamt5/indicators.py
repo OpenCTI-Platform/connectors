@@ -139,7 +139,6 @@ class IndicatorHandler:
             f"Retrieval Complete. {num_indicators} New Indicator Bundles Were Found."
         )
 
-
     def _req_stix_data(self, stix_url: str):
         """
         Retrieve and Parse Stix Data from a provided URL utilising the
@@ -203,12 +202,12 @@ class IndicatorHandler:
 
                 # Push the bundle to the platform
                 bundle = self.helper.stix2_create_bundle(stix_content)
-                bundles_sent = self.helper.send_stix2_bundle(
+                self.helper.send_stix2_bundle(
                     bundle, work_id=work_id, cleanup_inconsistent_bundle=False
                 )
 
                 self.helper.connector_logger.info(
-                    f"Indicator Bundle With {len(bundles_sent)} Items Pushed to OpenCTI Successfully"
+                    f"Indicator Bundle With {len(stix_content)} Items Pushed to OpenCTI Successfully"
                 )
 
                 num_pushed += 1
