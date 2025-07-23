@@ -213,7 +213,7 @@ class S3Connector:
                 for history in obj.get("x_history"):
                     note_content += f"| {history.get('timestamp', '')} | {history.get('comment', '')} |\n"
 
-                abstract = obj.get("name")+ " - History"
+                abstract = obj.get("name") + " - History"
                 note = stix2.Note(
                     id=Note.generate_id(obj["created"], abstract),
                     created=obj["created"],
@@ -252,10 +252,9 @@ class S3Connector:
 
             # x_acti_uuid
             if "x_acti_uuid" in obj:
-                external_ref = {
-                    "source_name": "ACTI UUID",
-                    "external_id": obj["x_acti_uuid"]
-                },
+                external_ref = (
+                    {"source_name": "ACTI UUID", "external_id": obj["x_acti_uuid"]},
+                )
                 if "external_references" in obj:
                     obj["external_references"].append(external_ref)
                 else:
