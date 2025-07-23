@@ -17,6 +17,9 @@ from connector.src.custom.orchestrators.report.orchestrator_report import (
 from connector.src.custom.orchestrators.threat_actor.orchestrator_threat_actor import (
     OrchestratorThreatActor,
 )
+from connector.src.custom.orchestrators.vulnerability.orchestrator_vulnerability import (
+    OrchestratorVulnerability,
+)
 from connector.src.octi.work_manager import WorkManager
 
 LOG_PREFIX = "[Orchestrator]"
@@ -84,6 +87,17 @@ class Orchestrator:
             self.malware_orchestrator = OrchestratorMalware(
                 work_manager, logger, config, tlp_level
             )
+        if self.config.import_vulnerabilities:
+            self.logger.info(
+                "Vulnerability import start date",
+                {
+                    "prefix": LOG_PREFIX,
+                    "start_date": self.config.vulnerability_import_start_date,
+                },
+            )
+            self.vulnerability_orchestrator = OrchestratorVulnerability(
+                work_manager, logger, config, tlp_level
+            )
         self.logger.info("Orchestrator initialized", {"prefix": LOG_PREFIX})
 
     async def run_report(self, initial_state: Optional[Dict[str, Any]]) -> None:
@@ -117,3 +131,13 @@ class Orchestrator:
             "Starting malware family orchestration", {"prefix": LOG_PREFIX}
         )
         await self.malware_orchestrator.run(initial_state)
+
+    async def run_vulnerability(self, initial_state: Optional[Dict[str, Any]]) -> None:
+        """Run the vulnerability orchestrator.
+
+        Args:
+            initial_state: Initial state for the orchestrator
+
+        """
+        self.logger.info("Starting vulnerability orchestration", {"prefix": LOG_PREFIX})
+        await self.vulnerability_orchestrator.run(initial_state)
