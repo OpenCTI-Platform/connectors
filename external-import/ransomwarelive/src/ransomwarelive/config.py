@@ -1,11 +1,19 @@
 import abc
-import datetime
 import os
+import warnings
+from datetime import timedelta
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, BeforeValidator, Field, HttpUrl, PlainSerializer
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    Field,
+    HttpUrl,
+    PlainSerializer,
+    model_validator,
+)
 from pydantic_core.core_schema import SerializationInfo
 from pydantic_settings import (
     BaseSettings,
@@ -82,7 +90,7 @@ class ConnectorConfig(BaseModel):
     name: str
     type: Literal["EXTERNAL_IMPORT"] = Field(default="EXTERNAL_IMPORT")
     scope: ListFromString
-    duration_period: datetime.timedelta
+    duration_period: timedelta
     log_level: LogLevelType
 
     expose_metrics: bool = Field(default=False)
@@ -156,8 +164,8 @@ class _ConnectorConfig(ConnectorConfig):
     log_level: LogLevelType = Field(
         default=LogLevelType.ERROR, description="Determines the verbosity of the logs"
     )
-    duration_period: datetime.timedelta = Field(
-        default=datetime.timedelta(minutes=10),
+    duration_period: timedelta = Field(
+        default=timedelta(minutes=10),
         description="Duration between two scheduled runs of the connector (ISO 8601 format)",
     )
 
@@ -168,7 +176,6 @@ class _ConnectorConfig(ConnectorConfig):
     create_threat_actor: bool = Field(
         default=False, description="Whether to create a Threat Actor object"
     )
-    interval: str = Field(default=None)  # Warning: Deprecated
 
 
 class ConnectorSettings(BaseConnectorSettings):
@@ -178,3 +185,21 @@ class ConnectorSettings(BaseConnectorSettings):
     )
 
     connector: _ConnectorConfig
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_interval(cls, data: dict) -> dict:
+        """
+        Env var `CONNECTOR_RUN_EVERY` is deprecated.
+        This is a workaround to keep the old config working while we migrate to `CONNECTOR_DURATION_PERIOD`.
+        """
+        connector_data: dict = data.get("connector", {})
+
+        if run_every := connector_data.pop("run_every", None):
+            warnings.warn(
+                "Env var 'CONNECTOR_RUN_EVERY' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
+            )
+
+            connector_data["duration_period"] = timedelta(minutes=int(run_every))
+
+        return data

@@ -1,4 +1,3 @@
-import re
 import sys
 from datetime import datetime, timedelta, timezone
 
@@ -70,46 +69,50 @@ class RansomwareAPIConnector:
         if sector == "":
             return None
 
-        sector_out = None
-        rubbish = [" and ", " or ", " ", ";"]
-        for item in rubbish:
-            sector = " ".join(sector.split(item))
+        try:
+            sector_out = None
+            rubbish = [" and ", " or ", " ", ";"]
+            for item in rubbish:
+                sector = " ".join(sector.split(item))
 
-        sector_out = self.helper.api.identity.read(
-            filters={
-                "mode": "and",
-                "filters": [
-                    {
-                        "key": "entity_type",
-                        "values": ["Sector"],
-                        "operator": "eq",
-                    },
-                ],
-                "filterGroups": [
-                    {
-                        "mode": "or",
-                        "filters": [
-                            {
-                                "key": "name",
-                                "values": sector,
-                                "operator": "eq",
-                            },
-                            {
-                                "key": "x_opencti_aliases",
-                                "values": sector,
-                                "operator": "eq",
-                            },
-                        ],
-                        "filterGroups": [],
-                    }
-                ],
-            },
-        )
+            sector_out = self.helper.api.identity.read(
+                filters={
+                    "mode": "and",
+                    "filters": [
+                        {
+                            "key": "entity_type",
+                            "values": ["Sector"],
+                            "operator": "eq",
+                        },
+                    ],
+                    "filterGroups": [
+                        {
+                            "mode": "or",
+                            "filters": [
+                                {
+                                    "key": "name",
+                                    "values": sector,
+                                    "operator": "eq",
+                                },
+                                {
+                                    "key": "x_opencti_aliases",
+                                    "values": sector,
+                                    "operator": "eq",
+                                },
+                            ],
+                            "filterGroups": [],
+                        }
+                    ],
+                },
+            )
 
-        if sector_out and sector_out.get("standard_id").startswith("identity--"):
-            return sector_out.get("standard_id")
-
-        return None
+            if sector_out and sector_out.get("standard_id").startswith("identity--"):
+                return sector_out.get("standard_id")
+        except Exception as e:
+            self.helper.connector_logger.error(
+                "Error fetching sector", {"sector": sector, "error": e}
+            )
+            return None
 
     def create_bundle_list(self, item, group_data):
         """
@@ -557,23 +560,7 @@ class RansomwareAPIConnector:
 
     def run(self):
         """Run the main process encapsulated in a scheduler"""
-        if self.config.connector.duration_period:
-            self.helper.schedule_iso(
-                message_callback=self.process_message,
-                duration_period=self.config.connector.duration_period,
-            )
-        else:
-            # Warning : run_every is deprecated
-            self.helper.connector_logger.warning(
-                "[Warning] 'run_every' is deprecated. Please use 'duration_period' instead"
-            )
-            run_every = self.config.connector.run_every
-            if run_every:
-                run_every = run_every if re.match(r"^\d+[dhms]$", run_every) else None
-            else:
-                run_every = None
-            self.helper.schedule_unit(
-                message_callback=self.process_message,
-                duration_period=run_every,
-                time_unit=self.helper.TimeUnit.MINUTES,
-            )
+        self.helper.schedule_iso(
+            message_callback=self.process_message,
+            duration_period=self.config.connector.duration_period,
+        )
