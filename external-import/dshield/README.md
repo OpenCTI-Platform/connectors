@@ -43,9 +43,11 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for DShield connector:
 
-| Parameter        | config.yml         | Docker environment variable | Default                               | Mandatory | Description                    |
-|------------------|--------------------|-----------------------------|---------------------------------------|-----------|--------------------------------|
-| DShield Base URL | base_url           | `DSHIELD_BASE_URL`          | https://feeds.dshield.org/block.txt   | Yes       | URL of DShield Blocking list . |
+| Parameter        | config.yml  | Docker environment variable | Default                             | Mandatory | Description                                                                                                                        |
+|------------------|-------------|-----------------------------|-------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------------|
+| DShield Base URL | base_url    | `DSHIELD_API_BASE_URL`      | https://feeds.dshield.org/block.txt | Yes       | URL of DShield Blocking list .                                                                                                     |
+| TLP Level        | tlp_level   | `DSHIELD_TLP_LEVEL`         | 'clear'                             | No        | Traffic Light Protocol Marking definition level for ingested objects should be in 'white', 'green', 'amber', 'amber+strict', 'red' |
+
 For more details about this project, see the link below:
 
 - [DShield Sensor](https://www.dshield.org/howto.html)

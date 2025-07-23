@@ -44,14 +44,14 @@ class ConfigConnector:
 
         # Connector extra parameters
         self.api_base_url = get_config_variable(
-            "CONNECTOR_TEMPLATE_API_BASE_URL",
+            "DSHIELD_API_BASE_URL",
             ["dshield", "api_base_url"],
             self.load,
         )
 
         self.tlp_level = get_config_variable(
-            "CONNECTOR_TEMPLATE_TLP_LEVEL",
-            ["connector_template", "tlp_level"],
+            "DSHIELD_TLP_LEVEL",
+            ["dshield", "tlp_level"],
             self.load,
             default="clear",
         )
