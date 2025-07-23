@@ -1,7 +1,5 @@
-import json
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
 import stix2
 from pycti import Identity, OpenCTIConnectorHelper
