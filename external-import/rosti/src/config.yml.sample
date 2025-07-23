@@ -5,10 +5,10 @@ opencti:
 connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
-  name: 'Accenture ACTI'
-  scope: 'accenture'
+  name: 'Rösti'
+  scope: 'rosti'
   log_level: 'info'
-  duration_period: 'PT1H' # Interval given for scheduler process in ISO-8601 format
+  duration_period: 'P1D' # Interval given for scheduler process in ISO-8601 format
   #============================================#
   # Optional connector's definition parameters #
   #============================================#
@@ -19,10 +19,8 @@ connector:
   #send_to_directory_path: 'ChangeMe'
   #send_to_directory_retention: 7
 
-accenture_acti:
-  username: 'ChangeMe'
-  password: 'ChangeMe'
-  user_pool_id: 'ChangeMe'
-  client_id: 'ChangeMe'
-  tlp_level: 'ChangeMe' # available values are: clear, white, green, amber, amber+strict, red - Default: 'amber+strict'
+connector_rosti:
+  api_base_url: 'https://rosti.bin.re/api/v1/'
+  api_key: 'ChangeMe'
+  tlp_level: 'ChangeMe' # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
   relative_import_start_date: 'P60D'

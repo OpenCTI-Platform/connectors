@@ -61,7 +61,7 @@ class TestCatalystConnector:
 
         self.mock_client.get_entities.return_value = mock_stix_objects
 
-        result = self.connector._collect_intelligence()
+        result = self.connector._collect_intelligence(since)
 
         assert len(result) == 2
         assert mock_stix_objects[0] in result
@@ -82,7 +82,7 @@ class TestCatalystConnector:
         self.mock_client.get_entities.return_value = [{"type": "indicator"}]
 
         with pytest.raises(ValueError, match="Unexpected entity type"):
-            self.connector._collect_intelligence()
+            self.connector._collect_intelligence(since)
 
         self.mock_logger.error.assert_called_once()
 
@@ -91,7 +91,7 @@ class TestCatalystConnector:
         invalid_entity = 123  # Not a STIX object or dict
         self.mock_client.get_entities.return_value = [invalid_entity]
 
-        result = self.connector._collect_intelligence()
+        result = self.connector._collect_intelligence(since)
 
         # Verify warning is logged and no objects returned
         assert len(result) == 0
