@@ -10,6 +10,9 @@ from connector.src.custom.client_api.report.client_api_report import ClientAPIRe
 from connector.src.custom.client_api.threat_actor.client_api_threat_actor import (
     ClientAPIThreatActor,
 )
+from connector.src.custom.client_api.vulnerability.client_api_vulnerability import (
+    ClientAPIVulnerability,
+)
 from connector.src.custom.configs.fetcher_config import FETCHER_CONFIGS
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient
@@ -30,11 +33,9 @@ class ClientAPI:
 
         self.logger.info("Initializing client API", {"prefix": LOG_PREFIX})
 
-        # Create shared API client and fetcher factory once
         self._shared_api_client = self._create_api_client()
         self._shared_fetcher_factory = self._create_fetcher_factory()
 
-        # Pass shared instances to specialized clients
         if self.config.import_reports:
             self.report_client = ClientAPIReport(
                 config, logger, self._shared_api_client, self._shared_fetcher_factory
@@ -45,6 +46,10 @@ class ClientAPI:
             )
         if self.config.import_malware_families:
             self.malware_client = ClientAPIMalware(
+                config, logger, self._shared_api_client, self._shared_fetcher_factory
+            )
+        if self.config.import_vulnerabilities:
+            self.vulnerability_client = ClientAPIVulnerability(
                 config, logger, self._shared_api_client, self._shared_fetcher_factory
             )
         self.shared_client = ClientAPIShared(
@@ -65,6 +70,11 @@ class ClientAPI:
     def real_total_malware_families(self) -> int:
         """Get the real total number of malware families from the malware client."""
         return self.malware_client.real_total_malware_families
+
+    @property
+    def real_total_vulnerabilities(self) -> int:
+        """Get the real total number of vulnerabilities from the vulnerability client."""
+        return self.vulnerability_client.real_total_vulnerabilities
 
     async def fetch_reports(
         self, initial_state: Optional[Dict[str, Any]]
@@ -117,6 +127,24 @@ class ClientAPI:
             initial_state
         ):
             yield malware_family_data
+
+    async def fetch_vulnerabilities(
+        self, initial_state: Optional[Dict[str, Any]] = None
+    ) -> AsyncGenerator[Dict[Any, Any], None]:
+        """Fetch vulnerabilities from the API.
+
+        Args:
+            initial_state (Optional[Dict[str, Any]]): The initial state of the fetcher.
+
+        Yields:
+            Dict[str, Any]: The fetched vulnerabilities.
+
+        """
+        self.logger.info("Starting vulnerability fetching", {"prefix": LOG_PREFIX})
+        async for vulnerability_data in self.vulnerability_client.fetch_vulnerabilities(
+            initial_state
+        ):
+            yield vulnerability_data
 
     async def fetch_subentities_ids(
         self, entity_name: str, entity_id: str, subentity_types: list[str]
