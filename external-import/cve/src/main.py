@@ -1,6 +1,6 @@
 """OpenCTI CVE connector main module"""
 
-import time
+import traceback
 
 from connector import CVEConnector
 
@@ -11,7 +11,6 @@ if __name__ == "__main__":
     try:
         connector = CVEConnector()
         connector.run()
-    except Exception as err:
-        print(err)
-        time.sleep(10)
-        exit(0)
+    except Exception:
+        traceback.print_exc()
+        exit(1)
