@@ -11,7 +11,6 @@ from connector.src.custom.exceptions import (
     GTIRelationshipFetchError,
     GTITechniqueFetchError,
     GTIUrlFetchError,
-    GTIVulnerabilityFetchError,
 )
 from connector.src.custom.models.gti.gti_attack_technique_model import (
     GTIAttackTechniqueData,
@@ -28,9 +27,6 @@ from connector.src.custom.models.gti.gti_ip_addresses_model import (
 from connector.src.custom.models.gti.gti_url_model import (
     GTIURLData,
 )
-from connector.src.custom.models.gti.gti_vulnerability_model import (
-    GTIVulnerabilityData,
-)
 from connector.src.utils.fetchers.generic_fetcher_config import GenericFetcherConfig
 
 GTI_ATTACK_TECHNIQUE_FETCHER_CONFIG = GenericFetcherConfig(
@@ -39,19 +35,6 @@ GTI_ATTACK_TECHNIQUE_FETCHER_CONFIG = GenericFetcherConfig(
     display_name="attack techniques",
     exception_class=GTITechniqueFetchError,
     response_model=GTIAttackTechniqueData,
-    method="GET",
-    headers={"accept": "application/json"},
-    timeout=60.0,
-    response_key="data",
-)
-
-GTI_VULNERABILITY_FETCHER_CONFIG = GenericFetcherConfig(
-    entity_type="vulnerabilities",
-    endpoint="/collections/{entity_id}",
-    display_name="vulnerabilities",
-    display_name_singular="vulnerability",
-    exception_class=GTIVulnerabilityFetchError,
-    response_model=GTIVulnerabilityData,
     method="GET",
     headers={"accept": "application/json"},
     timeout=60.0,
@@ -121,7 +104,6 @@ GTI_IP_FETCHER_CONFIG = GenericFetcherConfig(
 
 COMMON_FETCHER_CONFIGS = {
     "attack_techniques": GTI_ATTACK_TECHNIQUE_FETCHER_CONFIG,
-    "vulnerabilities": GTI_VULNERABILITY_FETCHER_CONFIG,
     "relationships": GTI_RELATIONSHIP_FETCHER_CONFIG,
     "domains": GTI_DOMAIN_FETCHER_CONFIG,
     "files": GTI_FILE_FETCHER_CONFIG,

@@ -431,6 +431,11 @@ def set_report_context() -> Any:
     return set_context_for("report")
 
 
+def set_vulnerability_context() -> Any:
+    """Store vulnerability in context for later use."""
+    return set_context_for("vulnerability")
+
+
 def entity_to_report(
     context_key: str, entity_type: str, relationship_creator: Any
 ) -> Any:
@@ -460,6 +465,17 @@ def malware_family_to_report() -> Any:
 
     def postprocess(stix_output: Any) -> Any:
         result = add_context_to_report_refs("malware")(stix_output)
+
+        return result
+
+    return postprocess
+
+
+def vulnerability_to_report() -> Any:
+    """Create relationship + add ref from vulnerability to report."""
+
+    def postprocess(stix_output: Any) -> Any:
+        result = add_context_to_report_refs("vulnerability")(stix_output)
 
         return result
 

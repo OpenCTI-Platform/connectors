@@ -14,6 +14,9 @@ from connector.src.custom.configs.report.batch_processor_config_report import (
 from connector.src.custom.configs.threat_actor.batch_processor_config_threat_actor import (
     THREAT_ACTOR_BATCH_PROCESSOR_CONFIG,
 )
+from connector.src.custom.configs.vulnerability.batch_processor_config_vulnerability import (
+    VULNERABILITY_BATCH_PROCESSOR_CONFIG,
+)
 
 from .converter_config import CONVERTER_CONFIGS
 from .fetcher_config import FETCHER_CONFIGS
@@ -26,4 +29,5 @@ __all__ = [
     "REPORT_BATCH_PROCESSOR_CONFIG",
     "THREAT_ACTOR_BATCH_PROCESSOR_CONFIG",
     "MALWARE_FAMILY_BATCH_PROCESSOR_CONFIG",
+    "VULNERABILITY_BATCH_PROCESSOR_CONFIG",
 ]
