@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-c2tracker:
-    image: opencti/montysecurity-c2-tracker:6.7.5
+    image: opencti/montysecurity-c2-tracker:6.7.7
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_C2TRACKER_TOKEN=${OPENCTI_C2TRACKER_TOKEN}
