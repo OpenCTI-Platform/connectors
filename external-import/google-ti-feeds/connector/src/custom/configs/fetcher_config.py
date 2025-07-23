@@ -16,10 +16,14 @@ from connector.src.custom.configs.report.fetcher_config_report import (
 from connector.src.custom.configs.threat_actor.fetcher_config_threat_actor import (
     THREAT_ACTOR_FETCHER_CONFIGS,
 )
+from connector.src.custom.configs.vulnerability.fetcher_config_vulnerability import (
+    VULNERABILITY_FETCHER_CONFIGS,
+)
 
 FETCHER_CONFIGS = {
     **REPORT_FETCHER_CONFIGS,
     **THREAT_ACTOR_FETCHER_CONFIGS,
     **MALWARE_FETCHER_CONFIGS,
+    **VULNERABILITY_FETCHER_CONFIGS,
     **COMMON_FETCHER_CONFIGS,
 }
