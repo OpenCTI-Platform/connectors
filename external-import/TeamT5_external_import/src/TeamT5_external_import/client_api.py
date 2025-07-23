@@ -22,44 +22,22 @@ class ConnectorClient:
 
     def _request_data(self, url: str, params=None):
         """
-        Makes a get request to a Team T5 API url, with required retry
-        and delay logic included as a means of basic rate handling.
+        Makes a get request to a Team T5 API url.
 
         :param url: The URL to request data from.
         :param params: Optional dictionary of query parameters.
         :return: A response object on success, or None on failure.
         """
-
-        DELAY_BETWEEN_CALLS = 1
-        NUM_RETIRES = 5
-        RETRY_DELAY = 2
         TIMEOUT = 5
+        try:
+            # validate the response and add a small delay as to not overload the API
+            response = self.session.get(url, params=params, timeout=TIMEOUT)
+            response.raise_for_status()
+            return response
 
-        for i in range(NUM_RETIRES):
-
-            try:
-                # validate the response and add a small delay as to not overload the API
-                response = self.session.get(url, params=params, timeout=TIMEOUT)
-                response.raise_for_status()
-                time.sleep(DELAY_BETWEEN_CALLS)
-                return response
-
-            except requests.RequestException as err:
-                self.helper.connector_logger.error(
-                    "Request Error while fetching data",
-                    {"url_path": {url}, "error": {str(err)}},
-                )
-
-            except Exception as e:
-                self.helper.connector_logger.error(
-                    "General Error while fetching data",
-                    {"url_path": {url}, "error": {str(e)}},
-                )
-
-            # If a request attempt failed, wait and then retry until retries are maxed out.
-            time.sleep(RETRY_DELAY)
-
-        self.helper.connector_logger.error(
-            f"Error fetching data from {url}, retires exceeded with no response received. "
-        )
+        except requests.RequestException as err:
+            self.helper.connector_logger.error(
+                "Request Error while fetching data",
+                {"url_path": {url}, "error": {str(err)}},
+            )
         return None
