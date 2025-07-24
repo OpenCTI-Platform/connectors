@@ -5,7 +5,7 @@ import pycti
 import stix2
 from pycti import OpenCTIConnectorHelper
 
-from .api_client import RansomwareAPIClient
+from .api_client import RansomwareAPIClient, RansomwareAPIError
 from .config import ConnectorSettings
 from .converter_to_stix import ConverterToStix
 from .utils import domain_extractor, is_domain, safe_datetime
@@ -339,23 +339,31 @@ class RansomwareAPIConnector:
                 response_json = self.api_client.get_feed(path)
 
                 for item in response_json:
+                    try:
+                        bundle_list = self.create_bundle_list(
+                            item=item, group_data=group_data
+                        )
 
-                    bundle_list = self.create_bundle_list(
-                        item=item, group_data=group_data
-                    )
+                        if bundle_list:
+                            # Add Author object
+                            bundle_list = [self.converter_to_stix.author] + bundle_list
 
-                    if bundle_list:
-                        # Add Author object
-                        bundle_list = [self.converter_to_stix.author] + bundle_list
+                            nb_stix_objects += len(bundle_list)
 
-                        nb_stix_objects += len(bundle_list)
+                            # Deduplicate the objects
+                            bundle_list = self.helper.stix2_deduplicate_objects(
+                                bundle_list
+                            )
 
-                        # Deduplicate the objects
-                        bundle_list = self.helper.stix2_deduplicate_objects(bundle_list)
-
-                        bundles.append(self.helper.stix2_create_bundle(bundle_list))
-                    else:
-                        self.helper.connector_logger.info("No new data to process")
+                            bundles.append(self.helper.stix2_create_bundle(bundle_list))
+                        else:
+                            self.helper.connector_logger.info("No new data to process")
+                    except stix2.exceptions.STIXError as error:
+                        self.helper.connector_logger.error(
+                            "Error during creation of bundle on collect historic intelligence",
+                            {"error": error},
+                        )
+                        continue
 
                 if bundles:
                     # Initiate new work
@@ -419,30 +427,36 @@ class RansomwareAPIConnector:
                 ).seconds  # pushing all the data from the last 24 hours
 
             if time_diff < ONE_DAY_IN_SECONDS:
+                try:
+                    bundle_list = self.create_bundle_list(
+                        item=item,
+                        group_data=group_data,
+                    )  # calling the stix_object_generator method to create stix objects
 
-                bundle_list = self.create_bundle_list(
-                    item=item,
-                    group_data=group_data,
-                )  # calling the stix_object_generator method to create stix objects
+                    if bundle_list:
+                        # Add Author object at first
+                        bundle_list = [self.converter_to_stix.author] + bundle_list
 
-                if bundle_list:
-                    # Add Author object at first
-                    bundle_list = [self.converter_to_stix.author] + bundle_list
+                        # Deduplicate the objects
+                        bundle_list = self.helper.stix2_deduplicate_objects(bundle_list)
 
-                    # Deduplicate the objects
-                    bundle_list = self.helper.stix2_deduplicate_objects(bundle_list)
+                        nb_stix_objects += len(bundle_list)
 
-                    nb_stix_objects += len(bundle_list)
+                        self.helper.connector_logger.info(
+                            "Sending STIX objects to OpenCTI...",
+                            {"len_bundle_list": len(bundle_list)},
+                        )
 
-                    self.helper.connector_logger.info(
-                        "Sending STIX objects to OpenCTI...",
-                        {"len_bundle_list": len(bundle_list)},
+                        # Creating Bundle
+                        bundles.append(self.helper.stix2_create_bundle(bundle_list))
+                    else:
+                        self.helper.connector_logger.info("No new data to process")
+                except stix2.exceptions.STIXError as error:
+                    self.helper.connector_logger.error(
+                        "Error during creation of bundle on collect intelligence",
+                        {"error": error},
                     )
-
-                    # Creating Bundle
-                    bundles.append(self.helper.stix2_create_bundle(bundle_list))
-                else:
-                    self.helper.connector_logger.info("No new data to process")
+                    continue
 
         if bundles:
             # Initiate new work
@@ -517,28 +531,32 @@ class RansomwareAPIConnector:
                     self.collect_historic_intelligence()
                 else:
                     self.collect_intelligence()
-            except Exception as e:
+
+                # Store the current timestamp as a last run
+                self.helper.connector_logger.debug(
+                    "Getting current state and update it with last run",
+                    {
+                        "current_state": self.last_run,
+                        "new_last_run_start_datetime": now.isoformat(
+                            timespec="seconds"
+                        ),
+                    },
+                )
+
+                current_state["last_run"] = now.isoformat(timespec="seconds")
+
+                if self.last_run_datetime_with_ingested_data:
+                    current_state["last_run_datetime_with_ingested_data"] = (
+                        self.last_run_datetime_with_ingested_data
+                    )
+
+                self.helper.set_state(current_state)
+
+            except RansomwareAPIError as e:
                 self.helper.connector_logger.error(
-                    "Error during bundle creation", {"error": e}
+                    "Error while fetching Ransomware API", {"error": e}
                 )
 
-            # Store the current timestamp as a last run
-            self.helper.connector_logger.debug(
-                "Getting current state and update it with last run",
-                {
-                    "current_state": self.last_run,
-                    "new_last_run_start_datetime": now.isoformat(timespec="seconds"),
-                },
-            )
-
-            current_state["last_run"] = now.isoformat(timespec="seconds")
-
-            if self.last_run_datetime_with_ingested_data:
-                current_state["last_run_datetime_with_ingested_data"] = (
-                    self.last_run_datetime_with_ingested_data
-                )
-
-            self.helper.set_state(current_state)
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "Connector stopped", {"connector_name": self.helper.connect_name}

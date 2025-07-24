@@ -19,24 +19,6 @@ from .utils import (
 )
 
 
-def handle_stix2_error(decorated_function):
-    """
-    Decorate ConverterToStix instance method to handle STIX 2.1 exceptions.
-    In case of an exception, log the error and return None.
-    :param decorated_function: Method to decorate
-    :return: Decorated method
-    """
-
-    def decorator(self, *args, **kwargs):
-        try:
-            return decorated_function(self, *args, **kwargs)
-        except stix2.exceptions.STIXError as e:
-            self.helper.connector_logger.error(str(e))
-            return None
-
-    return decorator
-
-
 class ConverterToStix:
     """
     Provides methods for converting various types of input data into STIX 2.1 objects.
@@ -71,7 +53,6 @@ class ConverterToStix:
 
         return author
 
-    @handle_stix2_error
     def create_domain(self, domain_name: str, description="-"):
         """
         Create a STIX object for a domain
@@ -92,7 +73,6 @@ class ConverterToStix:
         )
         return domain
 
-    @handle_stix2_error
     def create_external_reference(self, url: str, description: str):
         """
         Create a STIX object for an ExternalReference
@@ -110,7 +90,6 @@ class ConverterToStix:
         )
         return external_reference
 
-    @handle_stix2_error
     def create_identity(self, victim_name: str, identity_class: str):
         """
         Create a STIX object for an Identity
@@ -131,7 +110,6 @@ class ConverterToStix:
         )
         return identity
 
-    @handle_stix2_error
     def create_ipv4(self, ip: str):
         """
         Create STIX 2.1 IPv4 Address object
@@ -149,7 +127,6 @@ class ConverterToStix:
             allow_custom=True,
         )
 
-    @handle_stix2_error
     def create_ipv6(self, ip: str):
         """
         Create STIX 2.1 IPv6 Address object
@@ -167,7 +144,6 @@ class ConverterToStix:
             allow_custom=True,
         )
 
-    @handle_stix2_error
     def create_intrusionset(
         self,
         name: str,
@@ -192,7 +168,6 @@ class ConverterToStix:
         )
         return intrusionset
 
-    @handle_stix2_error
     def create_location(self, country_stix_id: str, country_name: str):
         """
         Create STIX 2.1 Location object
@@ -213,7 +188,6 @@ class ConverterToStix:
         )
         return location
 
-    @handle_stix2_error
     def create_relationship(
         self,
         source_ref: str,
@@ -250,7 +224,6 @@ class ConverterToStix:
         )
         return relation
 
-    @handle_stix2_error
     def create_report(
         self,
         name: str,
@@ -288,7 +261,6 @@ class ConverterToStix:
         )
         return report
 
-    @handle_stix2_error
     def create_threat_actor(
         self,
         threat_actor_name: str,
