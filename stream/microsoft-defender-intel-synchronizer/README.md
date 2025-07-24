@@ -67,9 +67,19 @@ Below are the parameters you'll need to set for Sentinel Connector:
 | RBAC Group Names                                   | `rbac_group_names`    | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RBAC_GROUP_NAMES`    | `[]`     | No        | `["group1", "group2"]`                        | JSON array of RBAC group names. Example: `["My Team", "The Other Team - Linux Servers"]`. |
 | Educate URL                                        | `educate_url`         | `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EDUCATE_URL`         | /        | No        | `https://support.example.com`                  | Custom notification/support URL for Block/Warn actions. |
 
+### Important Note on Permissions
+
+The user impersonating this connector **must** have the capability "Access data sharing → Manage data sharing" in OpenCTI. Without this permission, the connector will fail with a `FORBIDDEN_ACCESS` error, and you will see a message similar to:
+
+```txt
+ValueError: {'name': 'FORBIDDEN_ACCESS', 'error_message': 'You are not allowed to do this.'}
+```
+
+Please ensure the connector's user has this permission assigned, in addition to the usual required permissions.
+
 ### Known Behavior
 
-- When creating, updating or deleting and IOC, it can take few minutes before seeing it into Microsoft Sentinel TI
+- When creating, updating or deleting an IOC, it can take a few minutes before seeing it in Microsoft Sentinel TI
 - When creating an email address, it will display the `Types` as `Other`
 
 ![Display of Email Address on MSTI](doc/ioc_msti.png)

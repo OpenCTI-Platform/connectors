@@ -124,11 +124,13 @@ class ConfigConnector:
                 if not isinstance(self.rbac_group_names, list):
                     raise ValueError
             except (json.JSONDecodeError, ValueError):
-                self.helper.log_warning(
-                    "Warning: rbac_group_names is not a valid JSON array."
-                    " Using empty list."
+                self.helper.connector_logger.error(
+                    "Error: rbac_group_names is not a valid JSON array."
+                    " Connector will terminate."
                 )
-                self.rbac_group_names = []
+                raise RuntimeError(
+                    "Invalid configuration: rbac_group_names must be a JSON array."
+                )
         elif isinstance(rbac_group_names_raw, list):
             self.rbac_group_names = rbac_group_names_raw
         else:
