@@ -1,106 +1,21 @@
-"""GTI feed connector configuration—defines environment-based settings and validators."""
+"""GTI feed connector configuration—defines environment-based settings and validators.
 
-from typing import ClassVar, List
+This module combines all GTI configuration classes from the specialized modules
+into a single GTIConfig class that inherits from all entity-specific configurations.
+"""
 
-from connector.src.custom.exceptions.gti_configuration_error import (
-    GTIConfigurationError,
+from connector.src.custom.configs.malware.gti_config_malware import GTIMalwareConfig
+from connector.src.custom.configs.report.gti_config_report import GTIReportConfig
+from connector.src.custom.configs.threat_actor.gti_config_threat_actor import (
+    GTIThreatActorConfig,
 )
-from connector.src.octi.interfaces.base_config import BaseConfig
-from pydantic import field_validator
-from pydantic_settings import SettingsConfigDict
-
-ALLOWED_REPORT_TYPES = [
-    "All",
-    "Actor Profile",
-    "Country Profile",
-    "Cyber Physical Security Roundup",
-    "Event Coverage/Implication",
-    "Industry Reporting",
-    "Malware Profile",
-    "Net Assessment",
-    "Network Activity Reports",
-    "News Analysis",
-    "OSINT Article",
-    "Patch Report",
-    "Strategic Perspective",
-    "TTP Deep Dive",
-    "Threat Activity Alert",
-    "Threat Activity Report",
-    "Trends and Forecasting",
-    "Weekly Vulnerability Exploitation Report",
-]
-
-ALLOWED_ORIGINS = [
-    "All",
-    "partner",
-    "crowdsourced",
-    "google threat intelligence",
-]
 
 
-class GTIConfig(BaseConfig):
-    """Configuration for the GTI part of the connector."""
+class GTIConfig(GTIReportConfig, GTIThreatActorConfig, GTIMalwareConfig):
+    """Configuration for the GTI part of the connector.
 
-    yaml_section: ClassVar[str] = "gti"
-    model_config = SettingsConfigDict(env_prefix="gti_")
+    This class combines all entity-specific configurations through multiple inheritance,
+    providing a unified configuration interface for the entire GTI connector.
+    """
 
-    api_key: str
-    import_start_date: str = "P1D"
-    api_url: str = "https://www.virustotal.com/api/v3"
-    import_reports: bool = True
-    report_types: List[str] | str = "All"
-    origins: List[str] | str = "All"
-
-    @field_validator("report_types", mode="before")
-    @classmethod
-    def split_and_validate(cls, v: str) -> List[str]:
-        """Split and validate a comma-separated string into a list and validate its contents."""
-        try:
-            parts = None
-
-            if isinstance(v, str):
-                parts = [item.strip() for item in v.split(",") if item.strip()]
-
-            if not parts:
-                raise GTIConfigurationError(
-                    "At least one report type must be specified."
-                )
-
-            invalid = set(parts) - set(ALLOWED_REPORT_TYPES)
-            if invalid:
-                raise GTIConfigurationError(
-                    f"Invalid report types: {', '.join(invalid)}. "
-                    f"Allowed values: {', '.join(ALLOWED_REPORT_TYPES)}."
-                )
-            return parts
-        except GTIConfigurationError:
-            raise
-        except Exception as e:
-            raise GTIConfigurationError(
-                f"Failed to validate report types: {str(e)}"
-            ) from e
-
-    @field_validator("origins", mode="before")
-    @classmethod
-    def split_and_validate_origins(cls, v: str) -> List[str]:
-        """Split and validate a comma-separated string into a list and validate its contents."""
-        try:
-            parts = None
-
-            if isinstance(v, str):
-                parts = [item.strip() for item in v.split(",") if item.strip()]
-
-            if not parts:
-                raise GTIConfigurationError("At least one origin must be specified.")
-
-            invalid = set(parts) - set(ALLOWED_ORIGINS)
-            if invalid:
-                raise GTIConfigurationError(
-                    f"Invalid origins: {', '.join(invalid)}. "
-                    f"Allowed values: {', '.join(ALLOWED_ORIGINS)}."
-                )
-            return parts
-        except GTIConfigurationError:
-            raise
-        except Exception as e:
-            raise GTIConfigurationError(f"Failed to validate origins: {str(e)}") from e
+    pass

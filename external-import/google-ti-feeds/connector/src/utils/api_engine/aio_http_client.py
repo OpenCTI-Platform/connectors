@@ -131,24 +131,24 @@ class AioHttpClient(BaseHttpClient):
                     if response.status >= 400:
                         response_text = await response.text()
 
-                        self._logger.error(
+                        self._logger.warning(
                             f"{LOG_PREFIX} HTTP Error {response.status} for {method} {url}: {response_text}",
                         )
                         raise ApiHttpError(response.status, response_text)
                     return await response.json(content_type=None)
         except TimeoutError as e:
-            self._logger.error(
+            self._logger.warning(
                 f"{LOG_PREFIX} Request to {url} timed out after {actual_timeout.total}s: {e}",
             )
             raise ApiTimeoutError("Request timed out") from e
         except ClientError as e:
             if self._is_network_error(e):
-                self._logger.error(
+                self._logger.warning(
                     f"{LOG_PREFIX} Network connectivity issue for {method} {url}: {str(e)}",
                 )
                 raise ApiNetworkError(f"Network connectivity issue: {str(e)}") from e
             else:
-                self._logger.error(
+                self._logger.warning(
                     f"{LOG_PREFIX} ClientError for {url}: {e}",
                 )
                 raise ApiHttpError(0, str(e)) from e
@@ -156,12 +156,12 @@ class AioHttpClient(BaseHttpClient):
             raise
         except Exception as e:
             if self._is_network_error(e):
-                self._logger.error(
+                self._logger.warning(
                     f"{LOG_PREFIX} Network connectivity issue for {method} {url}: {str(e)}",
                 )
                 raise ApiNetworkError(f"Network connectivity issue: {str(e)}") from e
 
-            self._logger.error(
+            self._logger.warning(
                 f"{LOG_PREFIX} Unexpected error during request to {url}: {e}",
             )
             raise ApiError(f"Unexpected error: {str(e)}") from e

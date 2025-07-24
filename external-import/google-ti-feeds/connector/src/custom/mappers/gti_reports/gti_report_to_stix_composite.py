@@ -14,9 +14,12 @@ from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import (
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_sector import (
     GTIReportToSTIXSector,
 )
-from connector.src.custom.models.gti_reports.gti_report_model import GTIReportData
+from connector.src.custom.models.gti.gti_report_model import GTIReportData
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
 
 
 class GTIReportToSTIXComposite(BaseMapper):
@@ -25,8 +28,8 @@ class GTIReportToSTIXComposite(BaseMapper):
     def __init__(
         self,
         report: GTIReportData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
     ) -> None:
         """Initialize the composite mapper.
 
