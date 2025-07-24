@@ -28,7 +28,7 @@ dependencies = [
     "stix2 ~=3.0.1",
     "isodate ~=0.7.2",
     "dotenv ~= 0.9.9",
-    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.7.3#subdirectory=connectors-sdk",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.7.7#subdirectory=connectors-sdk",
 ]
 
 [project.optional-dependencies]
