@@ -199,7 +199,19 @@ class ConnectorSettings(BaseConnectorSettings):
             warnings.warn(
                 "Env var 'CONNECTOR_RUN_EVERY' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
             )
-
-            connector_data["duration_period"] = timedelta(minutes=int(run_every))
-
+            unit_run_every = run_every[-1:]
+            if unit_run_every == "d":
+                connector_data["duration_period"] = timedelta(days=int(run_every[:-1]))
+            elif unit_run_every == "h":
+                connector_data["duration_period"] = timedelta(hours=int(run_every[:-1]))
+            elif unit_run_every == "m":
+                connector_data["duration_period"] = timedelta(
+                    minutes=int(run_every[:-1])
+                )
+            elif unit_run_every == "s":
+                connector_data["duration_period"] = timedelta(
+                    seconds=int(run_every[:-1])
+                )
+            else:
+                raise ValueError(f"Invalid value for CONNECTOR_RUN_EVERY: {run_every}")
         return data
