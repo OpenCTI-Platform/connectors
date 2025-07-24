@@ -30,3 +30,8 @@ misp_feed:
   source_type: 'url' # Optional, url or s3
   bucket_name: '' # Required, if source_type = s3
   bucket_prefix: '' # Optional, filter objects on bucket
+  sftp_host: ''
+  sftp_port: 22
+  sftp_login: 'changeme'
+  sftp_password: 'changeme'
+  sftp_private_key: 'changeme'

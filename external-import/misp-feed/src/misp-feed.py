@@ -1,3 +1,6 @@
+import io
+import paramiko
+import tempfile
 import json
 import os
 import re
@@ -206,6 +209,27 @@ class MispFeed:
             )
 
             self.s3 = boto3.resource("s3").Bucket(bucket_name)
+
+        elif self.source_type == "sftp":
+            self.sftp_host = get_config_variable(
+                "MISP_SFTP_HOST", ["misp_feed", "sftp_host"], config, required=True
+            )
+
+            self.sftp_port = get_config_variable(
+                "MISP_SFTP_PORT", ["misp_feed", "sftp_port"], config, isNumber=True, default=22, required=True
+            )
+
+            self.sftp_login = get_config_variable(
+                "MISP_SFTP_LOGIN", ["misp_feed", "sftp_login"], config, required=True
+            )
+
+            self.sftp_password = get_config_variable(
+                "MISP_SFTP_PASSWORD", ["misp_feed", "sftp_password"], config, required=False
+            )
+
+            self.sftp_private_key = get_config_variable(
+                "MISP_SFTP_PRIVATE_KEY", ["misp_feed", "sftp_private_key"], config, required=False
+            )
 
     def _get_interval(self):
         return int(self.misp_feed_interval) * 60
@@ -2103,40 +2127,82 @@ class MispFeed:
                         os.remove(file_name)
                         self.helper.set_state({"last_file": file_name})
                         self.helper.log_info("Sending event STIX2 bundle...")
-
                     except Exception as e:
                         self.helper.log_error(str(e))
 
-            if self.source_type == "url":
+            elif self.source_type == "sftp":
+                try:
+                    transport = paramiko.Transport((self.sftp_host, self.sftp_port))
+
+                    if self.sftp_private_key:
+                        try:
+                            key_stream = io.StringIO(self.sftp_private_key)
+                            pkey = paramiko.RSAKey.from_private_key(key_stream)
+                            transport.connect(username=self.sftp_login, pkey=pkey)
+                            self.helper.log_info("Connected via private key authentication.")
+                        except Exception as e:
+                            self.helper.log_error("Private key authentication failed: " + str(e))
+                            return
+                    elif self.sftp_password:
+                        try:
+                            transport.connect(username=self.sftp_login, password=self.sftp_password)
+                            self.helper.log_info("Connected via password authentication.")
+                        except Exception as e:
+                            self.helper.log_error("Password authentication failed: " + str(e))
+                            return
+                    else:
+                        self.helper.log_error("No valid SFTP authentication method provided (password or private key).")
+                        return
+
+                    sftp = paramiko.SFTPClient.from_transport(transport)
+                    files = sftp.listdir(".")
+
+                    for file_name in files:
+                        if not file_name.endswith(".json"):
+                            continue
+
+                        remote_file_path = f"./{file_name}"
+                        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+                            sftp.get(remote_file_path, tmp_file.name)
+                            tmp_file_path = tmp_file.name
+
+                        try:
+                            with open(tmp_file_path, "r") as f:
+                                events = json.load(f)
+                            bundle = self._process_event(events)
+                            self._send_bundle(work_id, bundle)
+                            sftp.remove(remote_file_path)
+                            self.helper.set_state({"last_file": file_name})
+                            self.helper.log_info(f"Processed and removed {file_name} from SFTP")
+                        except Exception as e:
+                            self.helper.log_error(str(e))
+                        finally:
+                            os.remove(tmp_file_path)
+
+                    sftp.close()
+                    transport.close()
+
+                except Exception as e:
+                    self.helper.log_error("SFTP processing failed: " + str(e))
+
+            elif self.source_type == "url":
                 if (
-                    current_state is not None
-                    and "last_run" in current_state
-                    and "last_event_timestamp" in current_state
-                    and "last_event" in current_state
+                        current_state is not None
+                        and "last_run" in current_state
+                        and "last_event_timestamp" in current_state
+                        and "last_event" in current_state
                 ):
                     last_run = parse(current_state["last_run"])
                     last_event = parse(current_state["last_event"])
                     last_event_timestamp = current_state["last_event_timestamp"]
-                    self.helper.log_info(
-                        "Connector last run: "
-                        + last_run.astimezone(pytz.UTC).isoformat()
-                    )
-                    self.helper.log_info(
-                        "Connector latest event: "
-                        + last_event.astimezone(pytz.UTC).isoformat()
-                    )
+                    self.helper.log_info("Connector last run: " + last_run.isoformat())
+                    self.helper.log_info("Connector latest event: " + last_event.isoformat())
                 elif current_state is not None and "last_run" in current_state:
                     last_run = parse(current_state["last_run"])
                     last_event = last_run
                     last_event_timestamp = int(last_event.timestamp())
-                    self.helper.log_info(
-                        "Connector last run: "
-                        + last_run.astimezone(pytz.UTC).isoformat()
-                    )
-                    self.helper.log_info(
-                        "Connector latest event: "
-                        + last_event.astimezone(pytz.UTC).isoformat()
-                    )
+                    self.helper.log_info("Connector last run: " + last_run.isoformat())
+                    self.helper.log_info("Connector latest event: " + last_event.isoformat())
                 else:
                     if self.misp_feed_import_from_date is not None:
                         last_event = parse(self.misp_feed_import_from_date)
@@ -2159,47 +2225,28 @@ class MispFeed:
                         if item["timestamp"] > last_event_timestamp:
                             last_event_timestamp = item["timestamp"]
                             self.helper.log_info(
-                                "Processing event "
-                                + item["info"]
-                                + " (date="
-                                + item["date"]
-                                + ", modified="
-                                + datetime.utcfromtimestamp(last_event_timestamp)
-                                .astimezone(pytz.UTC)
-                                .isoformat()
-                                + ")"
+                                f"Processing event {item['info']} (date={item['date']}, modified="
+                                f"{datetime.utcfromtimestamp(last_event_timestamp).isoformat()})"
                             )
 
                             event = json.loads(
                                 self._retrieve_data(
-                                    self.misp_feed_url
-                                    + "/"
-                                    + item["event_key"]
-                                    + ".json"
+                                    self.misp_feed_url + "/" + item["event_key"] + ".json"
                                 )
                             )
                             bundle = self._process_event(event)
                             self.helper.log_info("Sending event STIX2 bundle...")
                             self._send_bundle(work_id, bundle)
-                            number_events = number_events + 1
+                            number_events += 1
                             message = (
-                                "Event processed, storing state (last_run="
-                                + now.astimezone(pytz.utc).isoformat()
-                                + ", last_event="
-                                + datetime.utcfromtimestamp(last_event_timestamp)
-                                .astimezone(pytz.UTC)
-                                .isoformat()
-                                + ", last_event_timestamp="
-                                + str(last_event_timestamp)
+                                f"Event processed, storing state (last_run={now.isoformat()}, "
+                                f"last_event={datetime.utcfromtimestamp(last_event_timestamp).isoformat()}, "
+                                f"last_event_timestamp={last_event_timestamp})"
                             )
                             self.helper.set_state(
                                 {
-                                    "last_run": now.astimezone(pytz.utc).isoformat(),
-                                    "last_event": datetime.utcfromtimestamp(
-                                        last_event_timestamp
-                                    )
-                                    .astimezone(pytz.UTC)
-                                    .isoformat(),
+                                    "last_run": now.isoformat(),
+                                    "last_event": datetime.utcfromtimestamp(last_event_timestamp).isoformat(),
                                     "last_event_timestamp": last_event_timestamp,
                                 }
                             )
@@ -2207,25 +2254,16 @@ class MispFeed:
                 except Exception as e:
                     self.helper.log_error(str(e))
 
-                # Store the current timestamp as a last run
                 message = (
-                    "Connector successfully run ("
-                    + str(number_events)
-                    + " events have been processed), storing state (last_run="
-                    + now.astimezone(pytz.utc).isoformat()
-                    + ", last_event="
-                    + datetime.utcfromtimestamp(last_event_timestamp)
-                    .astimezone(pytz.UTC)
-                    .isoformat()
-                    + ", last_event_timestamp="
-                    + str(last_event_timestamp)
-                    + ")"
+                    f"Connector successfully run ({number_events} events processed), storing state "
+                    f"(last_run={now.isoformat()}, last_event={datetime.utcfromtimestamp(last_event_timestamp).isoformat()}, "
+                    f"last_event_timestamp={last_event_timestamp})"
                 )
+
             self.helper.log_info(message)
             self.helper.api.work.to_processed(work_id, message)
-
-            # Sleep
             time.sleep(self._get_interval())
+
         except (KeyboardInterrupt, SystemExit):
             self.helper.log_info("Connector stop")
             sys.exit(0)
