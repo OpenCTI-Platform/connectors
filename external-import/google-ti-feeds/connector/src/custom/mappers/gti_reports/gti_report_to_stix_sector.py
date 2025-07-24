@@ -2,13 +2,17 @@
 
 from typing import List, Optional
 
-from connector.src.custom.models.gti_reports.gti_report_model import (
+from connector.src.custom.models.gti.gti_report_model import (
     GTIReportData,
     TargetedIndustry,
 )
 from connector.src.stix.octi.models.identity_sector_model import OctiIdentitySectorModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+    OrganizationAuthor,
+    TLPMarking,
+)
+from stix2.v21 import Identity  # type: ignore
 
 
 class GTIReportToSTIXSector(BaseMapper):
@@ -17,15 +21,15 @@ class GTIReportToSTIXSector(BaseMapper):
     def __init__(
         self,
         report: GTIReportData,
-        organization: Identity,
-        tlp_marking: MarkingDefinition,
+        organization: OrganizationAuthor,
+        tlp_marking: TLPMarking,
     ):
         """Initialize the GTIReportToSTIXSector object.
 
         Args:
             report (GTIReportData): The GTI report data to convert.
-            organization (Identity): The organization identity object.
-            tlp_marking (MarkingDefinition): The TLP marking definition.
+            organization (OrganizationAuthor): The organization identity object.
+            tlp_marking (TLPMarking): The TLP marking definition.
 
         """
         self.report = report

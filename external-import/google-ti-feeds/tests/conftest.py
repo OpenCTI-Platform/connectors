@@ -62,7 +62,7 @@ def disable_config_yml() -> Any:
 @fixture(autouse=True)
 def mock_opencti_api_client() -> Any:
     """Fixture to mock OpenCTI API calls and clean up after."""
-    mock_api = patch("requests.Session.post")
+    mock_api = patch("requests.Session")
     mock_healthcheck = patch(
         "pycti.api.opencti_api_client.OpenCTIApiClient.health_check"
     )

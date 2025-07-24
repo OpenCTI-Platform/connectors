@@ -20,7 +20,7 @@ from tests.conftest import mock_env_vars
 @pytest.fixture(
     params=[
         {
-            "opencti_url": "http://localhost:8080",
+            "opencti_url": "http://fake:8080",
             "opencti_token": f"{uuid4()}",
             "connector_id": f"{uuid4()}",
         }
@@ -137,6 +137,7 @@ def invalid_connector_type_config(request) -> dict[str, str]:  # type: ignore
 
 
 # Scenario: Create a connector with the minimum required configuration.
+@pytest.mark.order(0)
 def test_connector_config_min_required(  # type: ignore
     capfd, min_required_config: Dict[str, str]
 ) -> None:
@@ -152,6 +153,7 @@ def test_connector_config_min_required(  # type: ignore
 
 
 # Scenario: Create a connector with all optional configuration.
+@pytest.mark.order(0)
 def test_connector_config_all_optional(  # type: ignore
     capfd, min_required_config, all_optional_config
 ) -> None:
@@ -166,7 +168,10 @@ def test_connector_config_all_optional(  # type: ignore
 
 
 # Scenario: Ensure that all defaulted values are set correctly.
-def test_connector_config_all_defaulted(capfd, min_required_config, all_defaulted_config) -> None:  # type: ignore
+@pytest.mark.order(0)
+def test_connector_config_all_defaulted(
+    capfd, min_required_config, all_defaulted_config
+) -> None:  # type: ignore
     """Test for the connector to check all the defaulted values."""
     # Given a minimum required configuration
     mock_env = _given_setup_env_vars(min_required_config)
@@ -178,6 +183,7 @@ def test_connector_config_all_defaulted(capfd, min_required_config, all_defaulte
 
 
 # Scenario: Test for the connector with all valid log level values.
+@pytest.mark.order(0)
 def test_connector_config_valid_log_level(  # type: ignore
     capfd, min_required_config, valid_log_level_config
 ) -> None:
@@ -192,6 +198,7 @@ def test_connector_config_valid_log_level(  # type: ignore
 
 
 # Scenario: Test for the connector for invalid log level values.
+@pytest.mark.order(0)
 def test_connector_config_invalid_log_level(  # type: ignore
     min_required_config, invalid_log_level_config
 ) -> None:
@@ -206,6 +213,7 @@ def test_connector_config_invalid_log_level(  # type: ignore
 
 
 # Scenario: Test for the connector with all valid connector type values.
+@pytest.mark.order(0)
 def test_connector_config_valid_connector_type(  # type: ignore
     capfd, min_required_config, valid_connector_type_config
 ) -> None:
@@ -220,6 +228,7 @@ def test_connector_config_valid_connector_type(  # type: ignore
 
 
 # Scenario: Test for the connector for invalid connector type values.
+@pytest.mark.order(0)
 def test_connector_config_invalid_connector_type(  # type: ignore
     min_required_config, invalid_connector_type_config
 ) -> None:

@@ -1,3 +1,4 @@
+
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -21,11 +22,13 @@ dependencies = [
     "aiohttp ~=3.12.14",
     "pycti ~=6.7.5",
     "pydantic ~=2.11.4",
+    "Markdown ~=3.8.2",
     "pydantic_settings ~=2.10.1",
     "python-dotenv ~=1.0.1",
     "stix2 ~=3.0.1",
     "isodate ~=0.7.2",
     "dotenv ~= 0.9.9",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.7.7#subdirectory=connectors-sdk",
 ]
 
 [project.optional-dependencies]
