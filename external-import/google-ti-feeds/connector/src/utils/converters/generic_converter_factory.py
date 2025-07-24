@@ -264,6 +264,18 @@ class GenericConverterFactory:
             },
         )
 
+    def get_config(self, name: str) -> Optional[GenericConverterConfig]:
+        """Get a registered converter configuration by name.
+
+        Args:
+            name: Name of the registered configuration
+
+        Returns:
+            The converter configuration if found, None otherwise
+
+        """
+        return self._converter_registry.get(name)
+
     def _merge_dependencies(
         self,
         config: GenericConverterConfig,
