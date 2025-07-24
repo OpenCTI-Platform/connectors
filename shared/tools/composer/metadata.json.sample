@@ -1,6 +1,7 @@
 {
   "$id": "https://www.filigran.io/[CHANGEME].schema.json",
   "title": "CHANGEME",
+  "slug": "change-me",
   "description": "CHANGEME",
   "short_description": "CHANGEME",
   "use_cases" : ["CHANGEME"],
