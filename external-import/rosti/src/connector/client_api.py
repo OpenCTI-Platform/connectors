@@ -36,18 +36,42 @@ class ConnectorClient:
             )
             return None
 
-    def get_reports(self, since=None) -> dict:
+    def get_reports(self, since=None) -> list:
         """
-        If params is None, retrieve all reports
-        :param since: Optional since to filter what list to return
-        :return: A list of dicts of the complete collection of CVE from NVD
+        Retrieve all full reports, handling pagination.
+        :param since: Optional since to filter the date from which to pull the reports
+        :return: A list of dicts of the complete collection of reports
         """
         try:
-            params = {"fromdate": since}
-            response = self._request_data(self.config.api_base_url + "reports",params=params)
+            all_reports = []
+            offset = 0
+            report_ids = []
 
-            return response.json()
+            # Step 1: Fetch all report summaries and collect IDs
+            while True:
+                params = {"fromdate": since, "offset": offset}
+                response = self._request_data(self.config.api_base_url + "reports", params=params)
+                if response is None:
+                    break
 
+                page_data = response.json()
+                report_ids.extend([report.get("id") for report in page_data if report.get("id")])
 
+                pagination_count = int(response.headers.get("X-Pagination-Count", 0))
+                pagination_limit = int(response.headers.get("X-Pagination-Limit", 100))
+
+                if pagination_count < pagination_limit:
+                    break
+
+                offset += pagination_limit
+
+            # Step 2: Fetch full reports
+            for report_id in report_ids:
+                full_report_response = self._request_data(f"{self.config.api_base_url}reports/{report_id}")
+                if full_report_response is not None:
+                    all_reports.append(full_report_response.json())
+
+            return all_reports
         except Exception as err:
             self.helper.connector_logger.error(err)
+            return []
