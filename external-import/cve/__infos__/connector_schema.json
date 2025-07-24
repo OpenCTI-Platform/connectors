@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://www.filigran.io/cve.schema.json",
   "title": "CVE connector",
+  "slug": "cve-connector",
   "description": "The OpenCTI CVE connector is a software component designed to automatically import information about Common Vulnerabilities and Exposures (CVEs) into the OpenCTI platform",
   "short_description": "Collecting and updating CVE data in OpenCTI",
   "use_cases": [

@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://www.filigran.io/servicenow.schema.json",
   "title": "ServiceNow connector",
+  "slug": "servicenow-connector",
   "description": "ServiceNow provides Security Incident Response and Security Incident Tasks module handled by this connector which collects SIR and SIT and related entities.",
   "short_description": "Ingestion of SIR and SIT as Case Incident and Tasks.",
   "use_cases": [
