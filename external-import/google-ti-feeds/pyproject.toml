@@ -21,6 +21,7 @@ dependencies = [
     "PyYAML ~=6.0.2",
     "aiohttp ~=3.12.14",
     "Markdown ~=3.8.2",
+    "markdownify ~=1.1.0",
     "pycti ~=6.7.6",
     "pydantic ~=2.11.7",
     "pydantic_settings ~=2.10.1",
