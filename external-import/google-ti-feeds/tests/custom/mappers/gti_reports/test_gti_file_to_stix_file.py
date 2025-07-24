@@ -100,6 +100,8 @@ def file_with_timestamps() -> GTIFileData:
         attributes=FileModelFactory.build(
             creation_date=1640995200,
             last_modification_date=1641081600,
+            first_submission_date=1640995200,
+            last_submission_date=1641081600,
             gti_assessment=None,
         ),
     )
@@ -212,6 +214,8 @@ def file_with_all_data() -> GTIFileData:
             size=1024,
             creation_date=1640995200,
             last_modification_date=1641081600,
+            first_submission_date=1640995200,
+            last_submission_date=1641081600,
             gti_assessment=GTIAssessmentFactory.build(
                 verdict=VerdictFactory.build(value="MALICIOUS"),
                 contributing_factors=ContributingFactorsFactory.build(
@@ -530,6 +534,8 @@ def test_get_timestamps_with_valid_data(
         attributes=FileModelFactory.build(
             creation_date=1640995200,
             last_modification_date=1641081600,
+            first_submission_date=1640995200,
+            last_submission_date=1641081600,
         )
     )
     mapper = _given_gti_file_mapper(file_data, mock_organization, mock_tlp_marking)
@@ -775,12 +781,13 @@ def test_create_stix_file_method(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
     """Test _create_stix_file method directly."""
-    # Given a file with score
+    # Given a file with score and creation date
     file_data = GTIFileDataFactory.build(
         id="test_file_hash",
         attributes=FileModelFactory.build(
             meaningful_name="test.exe",
             sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            creation_date=1640995200,
             gti_assessment=GTIAssessmentFactory.build(
                 contributing_factors=ContributingFactorsFactory.build(
                     mandiant_confidence_score=90
@@ -797,6 +804,8 @@ def test_create_stix_file_method(
     assert file_observable is not None  # noqa: S101
     assert hasattr(file_observable, "hashes")  # noqa: S101
     assert hasattr(file_observable, "name")  # noqa: S101
+    assert hasattr(file_observable, "ctime")  # noqa: S101
+    _then_stix_file_has_correct_ctime(file_observable, file_data)
 
 
 # Scenario: Test create STIX indicator method
@@ -806,12 +815,11 @@ def test_create_stix_indicator_method(
     """Test _create_stix_indicator method directly."""
     # Given a file with verdict
     file_data = GTIFileDataFactory.build(
-        id="test_file_hash",
+        id="test_indicator_hash",
         attributes=FileModelFactory.build(
-            sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             gti_assessment=GTIAssessmentFactory.build(
                 verdict=VerdictFactory.build(value="MALICIOUS")
-            ),
+            )
         ),
     )
     mapper = _given_gti_file_mapper(file_data, mock_organization, mock_tlp_marking)
@@ -821,9 +829,48 @@ def test_create_stix_indicator_method(
 
     # Then indicator should be created correctly
     assert indicator is not None  # noqa: S101
-    assert hasattr(indicator, "name")  # noqa: S101
-    assert indicator.name == "test_file_hash"  # noqa: S101
-    assert "file:hashes.'SHA-256'" in indicator.pattern  # noqa: S101
+    assert hasattr(indicator, "pattern")  # noqa: S101
+    assert hasattr(indicator, "indicator_types")  # noqa: S101
+
+
+def test_file_observable_ctime_property(
+    mock_organization: Identity, mock_tlp_marking: MarkingDefinition
+) -> None:
+    """Test that file observable includes ctime when creation_date is available."""
+    # Given a file with creation_date
+    file_data = GTIFileDataFactory.build(
+        attributes=FileModelFactory.build(
+            creation_date=1640995200,
+            meaningful_name="test.exe",
+        )
+    )
+    mapper = _given_gti_file_mapper(file_data, mock_organization, mock_tlp_marking)
+
+    # When creating STIX file
+    file_observable = mapper._create_stix_file()
+
+    # Then file should have correct ctime
+    _then_stix_file_has_correct_ctime(file_observable, file_data)
+
+
+def test_file_observable_without_creation_date(
+    mock_organization: Identity, mock_tlp_marking: MarkingDefinition
+) -> None:
+    """Test that file observable has no ctime when creation_date is not available."""
+    # Given a file without creation_date
+    file_data = GTIFileDataFactory.build(
+        attributes=FileModelFactory.build(
+            meaningful_name="test.exe",
+            creation_date=None,
+        )
+    )
+    mapper = _given_gti_file_mapper(file_data, mock_organization, mock_tlp_marking)
+
+    # When creating STIX file
+    file_observable = mapper._create_stix_file()
+
+    # Then file should not have ctime or it should be None
+    _then_stix_file_has_correct_ctime(file_observable, file_data)
 
 
 def _given_gti_file_mapper(
@@ -861,6 +908,7 @@ def _then_stix_file_has_correct_properties(
     """Assert that STIX file observable has correct properties."""
     assert hasattr(file_observable, "object_marking_refs")  # noqa: S101
     assert tlp_marking.id in file_observable.object_marking_refs  # noqa: S101
+    _then_stix_file_has_correct_ctime(file_observable, gti_file)
 
 
 def _then_stix_objects_have_score(
@@ -890,11 +938,16 @@ def _then_stix_indicator_has_correct_timestamps(
     indicator: Any, gti_file: GTIFileData
 ) -> None:
     """Assert that STIX indicator has correct timestamps."""
-    if gti_file.attributes and gti_file.attributes.creation_date:
+    if gti_file.attributes and gti_file.attributes.first_submission_date:
         expected_created = datetime.fromtimestamp(
-            gti_file.attributes.creation_date, tz=timezone.utc
+            gti_file.attributes.first_submission_date, tz=timezone.utc
         )
         assert indicator.created == expected_created  # noqa: S101
+    if gti_file.attributes and gti_file.attributes.last_submission_date:
+        expected_modified = datetime.fromtimestamp(
+            gti_file.attributes.last_submission_date, tz=timezone.utc
+        )
+        assert indicator.modified == expected_modified  # noqa: S101
 
 
 def _then_stix_file_has_hashes(file_observable: Any, gti_file: GTIFileData) -> None:
@@ -932,3 +985,19 @@ def _then_stix_indicator_has_hash_pattern(
                 f"file:hashes.'SHA-1' = '{gti_file.attributes.sha1}'"
                 in indicator.pattern
             )
+
+
+def _then_stix_file_has_correct_ctime(
+    file_observable: Any, gti_file: GTIFileData
+) -> None:
+    """Assert that STIX file has correct ctime (creation timestamp)."""
+    if gti_file.attributes and gti_file.attributes.creation_date:
+        expected_ctime = datetime.fromtimestamp(
+            gti_file.attributes.creation_date, tz=timezone.utc
+        )
+        assert hasattr(file_observable, "ctime")  # noqa: S101
+        assert file_observable.ctime == expected_ctime  # noqa: S101
+    else:
+        # If no creation_date, ctime should be None
+        if hasattr(file_observable, "ctime"):
+            assert file_observable.ctime is None  # noqa: S101

@@ -1,6 +1,7 @@
 # OpenCTI Microsoft Defender Intel
 
-This connector allows you to stream indicators from OpenCTI to Microsoft Defender Intelligence utilizing native Microsoft Defender APIs.
+This connector allows you to stream indicators from OpenCTI to Microsoft Defender Intelligence utilizing native
+Microsoft Defender APIs.
 
 ## Installation
 
@@ -42,14 +43,14 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter `connector`       | config.yml                    | Docker environment variable             | Default  | Mandatory | Example                                | Description                                                                            |
-|-----------------------------|-------------------------------|-----------------------------------------|----------|-----------|----------------------------------------|----------------------------------------------------------------------------------------|
-| ID                          | `id`                          | `CONNECTOR_ID`                          | /        | Yes       | `fe418972-1b42-42c9-a665-91544c1a9939` | A unique `UUIDv4` identifier for this connector instance.                              |
-| Name                        | `name`                        | `CONNECTOR_NAME`                        | /        | Yes       | `Microsoft Defender Intel`             | Full name of the connector : `Microsoft Sentinel`.                                     |
-| Log Level                   | `log_level`                   | `CONNECTOR_LOG_LEVEL`                   | `error`  | No        | `error`                                | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
-| Live stream id              | `live_stream_id`              | `CONNECTOR_LIVE_STREAM_ID`              | /        | Yes       | `9f204482-47a4-4fa4-b88b-ff4f390f31dd` | The Live Stream ID of the stream created in the OpenCTI interface. A unique `UUIDv4`.  |
-| Live stream listen delete   | `live_stream_listen_delete`   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | `true`   | No        | `true`                                 | The Live Stream listen delete must be `true`.                                          |
-| Live stream no dependencies | `live_stream_no_dependencies` | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | `true`   | No        | `true`                                 | The Live Stream no dependencies must be `true`.                                        |
+| Parameter `connector`       | config.yml                    | Docker environment variable             | Default | Mandatory | Example                                | Description                                                                            |
+|-----------------------------|-------------------------------|-----------------------------------------|---------|-----------|----------------------------------------|----------------------------------------------------------------------------------------|
+| ID                          | `id`                          | `CONNECTOR_ID`                          | /       | Yes       | `fe418972-1b42-42c9-a665-91544c1a9939` | A unique `UUIDv4` identifier for this connector instance.                              |
+| Name                        | `name`                        | `CONNECTOR_NAME`                        | /       | Yes       | `Microsoft Defender Intel`             | Full name of the connector : `Microsoft Sentinel`.                                     |
+| Log Level                   | `log_level`                   | `CONNECTOR_LOG_LEVEL`                   | `error` | No        | `error`                                | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
+| Live stream id              | `live_stream_id`              | `CONNECTOR_LIVE_STREAM_ID`              | /       | Yes       | `9f204482-47a4-4fa4-b88b-ff4f390f31dd` | The Live Stream ID of the stream created in the OpenCTI interface. A unique `UUIDv4`.  |
+| Live stream listen delete   | `live_stream_listen_delete`   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | `true`  | No        | `true`                                 | The Live Stream listen delete must be `true`.                                          |
+| Live stream no dependencies | `live_stream_no_dependencies` | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | `true`  | No        | `true`                                 | The Live Stream no dependencies must be `true`.                                        |
 
 Below are the parameters you'll need to set for Sentinel Connector:
 
