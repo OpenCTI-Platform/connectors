@@ -1,14 +1,15 @@
 opencti:
-  url: 'http://localhost:4000'
+  url: 'http://localhost:4242'
   token: 'ChangeMe'
 
 connector:
   id: 'ChangeMe'
   name: 'Recorded Future Enrichment'
   scope: 'ipv4-addr,ipv6-addr,domain-name,url,stixfile,vulnerability'
-  log_level: 'info'
+  log_level: 'error'
 
-recordedfuture-enrichment:
-  token: 'ChangeMe' #required
+recorded_future:
+  token: 'ChangeMe'
   create_indicator_threshold: 0
-  max_tlp: 'TLP:AMBER'
+  info_max_tlp: 'TLP:AMBER'
+  vulnerability_enrichment_optional_fields: 'analystNotes,aiInsights,risk'
