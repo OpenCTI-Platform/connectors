@@ -8,7 +8,7 @@ connector:
   scope: 'ipv4-addr,ipv6-addr,domain-name,url,stixfile,vulnerability'
   log_level: 'info'
 
-recordedfuture-enrichment:
+recorded_future:
   token: 'ChangeMe' #required
   create_indicator_threshold: 0
-  max_tlp: 'TLP:AMBER'
+  info_max_tlp: 'TLP:AMBER'
