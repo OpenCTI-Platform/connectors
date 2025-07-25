@@ -1,4 +1,4 @@
-validators==0.33.0
+validators==0.35.0
 requests==2.32.3
 pycti==6.7.7
 urllib3==2.5.0
