@@ -82,7 +82,7 @@ class ConfigConnector:
             "MICROSOFT_DEFENDER_INTEL_ACTION",
             ["microsoft_defender_intel", "action"],
             self.load,
-            default="alert",
+            default="Alert",
         )
         self.passive_only = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_PASSIVE_ONLY",
