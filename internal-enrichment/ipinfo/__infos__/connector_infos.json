@@ -1,7 +1,7 @@
 {
   "$id": "https://www.filigran.io/ipinfo.schema.json",
-  "title": "IpInfo connector",
-  "slug": "ipinfo-connector",
+  "title": "IpInfo",
+  "slug": "ipinfo",
   "description": "Accurate IP address data that keeps pace with secure, specific, and forward-looking use cases",
   "short_description": "IpInfo enrichment connector",
   "use_cases": ["Incident Response & Ticketing","Enrichment"],
