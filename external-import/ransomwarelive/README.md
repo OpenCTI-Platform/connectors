@@ -9,6 +9,10 @@ General description of the connector
 * ...
 -->
 
+| Status            | Date       | Comment |
+| ----------------- |------------| ------- |
+| Filigran Verified | 2025-07-25 |    -    |
+
 ## Installation
 
 ### Requirements
