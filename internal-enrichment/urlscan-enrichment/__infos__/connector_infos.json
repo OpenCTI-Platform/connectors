@@ -7,7 +7,7 @@
   "use_cases" : ["Enrichment & Analysis"],
   "max_confidence_level" : 60,
 
-  "manager_supported": true,
+  "manager_supported": false,
   "container_version": "6.7.0",
   "container_image": "opencti/connector-urlscan-enrichment",
   "container_type": "INTERNAL_ENRICHMENT",

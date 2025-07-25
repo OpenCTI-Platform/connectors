@@ -7,7 +7,7 @@
   "use_cases" : ["Vulnerability Management"],
   "max_confidence_level" : 80,
 
-  "manager_supported": true,
+  "manager_supported": false,
   "container_version": "6.7.0",
   "container_image": "opencti/connector-tenable-vuln-management",
   "container_type": "EXTERNAL_IMPORT",
