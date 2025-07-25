@@ -1,7 +1,7 @@
 {
   "$id": "https://www.filigran.io/email-intel-imap.schema.json",
   "title": "Email Intel IMAP",
-  "slug": "email-intel-imap-connector",
+  "slug": "email-intel-imap",
   "description": "The Email Intel IMAP Connector enables the ingestion of cyber threat intelligence reports received via email into the OpenCTI platform using the IMAP protocol. This connector allows organizations to automate the collection of intelligence shared through email by regularly polling a mailbox and transforming each message into an OpenCTI report.\n\nThis connector is designed to connect to an IMAP-compatible email inbox, extract email content and attachments, and convert the data into structured CTI reports within OpenCTI. The connector is suitable for any threat intel flow that relies on email as a delivery method and is compatible with standard IMAP servers.\n\nThe connector is also compatible with Google Workspace mailboxes.",
   "short_description": "The Email Intel IMAP Connector enables the ingestion of cyber threat intelligence reports received via email into the OpenCTI platform using the IMAP protocol.",
   "use_cases" : ["Email", "Threat Intelligence"],
