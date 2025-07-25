@@ -1,57 +1,22 @@
 """Connector to enrich IOCs with Recorded Future data"""
 
-import os
-from pathlib import Path
+from pycti import OpenCTIConnectorHelper
+from .config_loader import ConnectorConfig
+from .rf_client import RFClient, RFClientError
+from .rf_to_stix2 import ConversionError, EnrichedIndicator, EnrichedVulnerability
 
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from rflib import (
-    APP_VERSION,
-    ConversionError,
-    EnrichedIndicator,
-    EnrichedVulnerability,
-    RFClient,
-    RFClientError,
-)
+from rflib import APP_VERSION
 
 
 class RFEnrichmentConnector:
     """Enrichment connector class"""
 
-    def __init__(self):
+    def __init__(self, config: ConnectorConfig, helper: OpenCTIConnectorHelper):
         """Instantiate the connector with config variables"""
-        config_file_path = Path(__file__).parents[1].joinpath("config.yml")
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        # Hardcode connector's type - not configurable anymore
-        config["connector"] = config.get("connector", {})
-        config["connector"]["type"] = "INTERNAL_ENRICHMENT"
+        self.config = config
+        self.helper = helper
 
-        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
-
-        self.token = get_config_variable(
-            "RECORDED_FUTURE_TOKEN",
-            ["recordedfuture-enrichment", "token"],
-            config,
-        )
-        self.max_tlp = get_config_variable(
-            "RECORDED_FUTURE_INFO_MAX_TLP",
-            ["recordedfuture-enrichment", "max_tlp"],
-            config,
-        )
-
-        self.create_indicator_threshold = get_config_variable(
-            "RECORDED_FUTURE_CREATE_INDICATOR_THRESHOLD",
-            ["recordedfuture-enrichment", "create_indicator_threshold"],
-            config,
-            True,
-            0,
-        )
-
-        self.rf_client = RFClient(self.token, APP_VERSION)
+        self.rf_client = RFClient(self.config.recorded_future.token, APP_VERSION)
 
     @staticmethod
     def to_rf_type(observable_type: str) -> str:
@@ -107,7 +72,8 @@ class RFEnrichmentConnector:
 
         data = self.rf_client.get_observable_enrichment(rf_type, observable_value)
 
-        create_indicator = data["risk"]["score"] >= self.create_indicator_threshold
+        max_risk_score = self.config.recorded_future.create_indicator_threshold
+        create_indicator = data["risk"]["score"] >= max_risk_score
         indicator = EnrichedIndicator(
             type_=data["entity"]["type"],
             observable_id=observable_id,
@@ -170,8 +136,11 @@ class RFEnrichmentConnector:
                 if marking_definition["definition_type"] == "TLP":
                     tlp = marking_definition["definition"]
 
-            if not self.helper.check_max_tlp(tlp, self.max_tlp):
-                message = f"Do not send any data, TLP of the observable is ({tlp}), which is greater than MAX TLP: ({self.max_tlp})"
+            if not self.helper.check_max_tlp(
+                tlp, self.config.recorded_future.info_max_tlp
+            ):
+                message = f"Do not send any data, TLP of the observable is ({tlp}), "
+                f"which is greater than MAX TLP: ({self.config.recorded_future.info_max_tlp})"
                 self.helper.connector_logger.warning(message)
                 return message
 
