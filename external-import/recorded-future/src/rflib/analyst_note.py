@@ -136,8 +136,9 @@ class AnalystNote(threading.Thread):
                     self.rf_TA_to_intrusion_set,
                     self.risk_as_score,
                     self.risk_threshold,
+                    self.tlp
                 )
-                stix_note.from_json(note, self.tlp)
+                stix_note.from_json(note)
                 stix_note.create_relations()
                 bundle = stix_note.to_stix_bundle()
                 self.helper.connector_logger.info(

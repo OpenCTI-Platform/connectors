@@ -82,7 +82,7 @@ class ThreatMap(threading.Thread):
                                 )
 
                                 # Map data with related entities
-                                entity_to_stix2.map_data(entity_with_links, self.tlp)
+                                entity_to_stix2.map_data(entity_with_links)
 
                                 # Create bundle
                                 entity_to_stix2.build_bundle(entity_to_stix2)
