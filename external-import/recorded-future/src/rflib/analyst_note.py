@@ -138,7 +138,10 @@ class AnalystNote(threading.Thread):
                     self.risk_threshold,
                 )
                 stix_note.from_json(note, self.tlp)
-                stix_note.create_relations()
+                if note.get("events"):
+                    stix_note.create_event_relations(events=note["events"])
+                else:
+                    stix_note.create_relations()
                 bundle = stix_note.to_stix_bundle()
                 self.helper.connector_logger.info(
                     "[ANALYST NOTES] Sending Bundle to server with "
