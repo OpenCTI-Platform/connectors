@@ -13,7 +13,7 @@ connector:
   name: "Sublime Security Incidents"
   scope: "sublime"
   log_level: "info"
-  duration_period: "PT5M"  # ISO 8601 duration (PT10M = 10 minutes)
+  duration_period: "PT3M"  # ISO 8601 duration (PT10M = 10 minutes)
 
 # Sublime Security Configuration
 sublime:
@@ -29,7 +29,7 @@ sublime:
   incident_type: "phishing"  # STIX incident type
 
   # Optional - Naming Configuration
-  incident_prefix: "Sublime Incident - "
+  incident_prefix: "Sublime Alert - "
   case_prefix: "Case - "
 
   # Optional - Case Management
