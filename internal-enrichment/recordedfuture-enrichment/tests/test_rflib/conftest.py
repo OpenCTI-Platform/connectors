@@ -6,10 +6,10 @@ from unittest.mock import Mock, patch
 import pytest
 
 
-@pytest.fixture(
-    name="config_dict",
-)
+@pytest.fixture(name="config_dict")
 def fixture_config_dict() -> dict[str, dict[str, Any]]:
+    """Fixture to provide the expected configuration dictionary for OpenCTIConnectorHelper."""
+
     return {
         "opencti": {
             "json_logging": True,
@@ -39,6 +39,7 @@ def fixture_config_dict() -> dict[str, dict[str, Any]]:
             "token": "recorded-future-token",
             "create_indicator_threshold": 0,
             "info_max_tlp": "TLP:CLEAR",
+            "vulnerability_enrichment_optional_fields": "",  # empty comma-separated list
         },
     }
 
@@ -47,6 +48,8 @@ def fixture_config_dict() -> dict[str, dict[str, Any]]:
 def fixture_mocked_environ(
     config_dict: dict[str, dict[str, Any]],
 ) -> Generator[Mock, None, None]:
+    """Fixture to mock os.environ with necessary env vars. Cleaned between each test."""
+
     environ = deepcopy(os.environ)
     for key, value in config_dict.items():
         for sub_key, sub_value in value.items():
