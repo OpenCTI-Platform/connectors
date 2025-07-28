@@ -31,6 +31,15 @@ SCOPE_ENTITIES = [
     "vulnerability",
 ]
 
+VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS = [
+    "cvss_ratings",
+    "cpe22_uri",
+    "linked_malware",
+    "related_links",
+    "analyst_notes",
+    "ai_insights",
+]
+
 """
 All the variables that have default values will override configuration from the OpenCTI helper.
 
@@ -169,6 +178,17 @@ class _RecordedFutureConfig(_ConfigBaseModel):
         "TLP:AMBER+STRICT",
         "TLP:RED",
     ] = Field(default="TLP:AMBER")
+    vulnerability_enrichment_optional_fields: ListFromString = Field(default=[])
+
+    @field_validator("vulnerability_enrichment_optional_fields", mode="after")
+    @classmethod
+    def validate_vulnerability_enrichment_optional_fields(
+        cls, vulnerability_enrichment_optional_fields: list[str]
+    ) -> list[str]:
+        for field in vulnerability_enrichment_optional_fields:
+            if field.lower() not in VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS:
+                raise ValueError("Invalid vulnerability enrichment optional field(s)")
+        return vulnerability_enrichment_optional_fields
 
 
 class ConnectorConfig(BaseSettings):
