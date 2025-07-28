@@ -307,7 +307,7 @@ def expected_vulnerability_log_messages_no_software() -> list[str]:
         "Sent batch to OpenCTI - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1}",
         "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 94, 'type_summary': 'identity: 26, marking-definition: 1, vulnerability: 1, note: 1, malware: 1, relationship: 45, attack-pattern: 1, location: 17, intrusion-set: 1'}",
         "Successfully processed batch #1. Total STIX objects sent: 94 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 94}",
-        "State update: Setting next_cursor_date - {'prefix': '[GenericBatchProcessor]', 'latest_date': '2025-06-25T10:22:55'}",
+        "State update: Setting next_cursor_date - {'prefix': '[GenericBatchProcessor]', 'latest_date': '2025-06-25T08:22:55+00:00'}",
     ]
 
 
@@ -335,7 +335,7 @@ def expected_vulnerability_log_messages() -> list[str]:
         "Sent batch to OpenCTI - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1}",
         "Batch completed successfully - {'prefix': '[GenericBatchProcessor]', 'work_id': None, 'total_count': 142, 'type_summary': 'identity: 26, marking-definition: 1, vulnerability: 1, software: 24, note: 1, relationship: 69, malware: 1, attack-pattern: 1, location: 17, intrusion-set: 1'}",
         "Successfully processed batch #1. Total STIX objects sent: 142 - {'prefix': '[GenericBatchProcessor]', 'batch_num': 1, 'total_items_sent': 142}",
-        "State update: Setting next_cursor_date - {'prefix': '[GenericBatchProcessor]', 'latest_date': '2025-06-25T10:22:55'}",
+        "State update: Setting next_cursor_date - {'prefix': '[GenericBatchProcessor]', 'latest_date': '2025-06-25T08:22:55+00:00'}",
     ]
 
 
@@ -577,9 +577,7 @@ def _load_debug_responses(debug_folder: Path) -> Dict[str, Any]:
         files = sorted(debug_folder.glob(f"{response_type}_*.json"))
         assert (  # noqa: S101
             len(files) == 1
-        ), (
-            f"Expected exactly one {response_type}_*.json under {debug_folder}, got {len(files)}"
-        )
+        ), f"Expected exactly one {response_type}_*.json under {debug_folder}, got {len(files)}"
 
         data = json.loads(files[0].read_text(encoding="utf-8"))
         response_data[response_type] = data.get("response", data)
