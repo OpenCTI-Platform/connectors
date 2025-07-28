@@ -239,7 +239,7 @@ class SublimeConnector:
 
         self.helper.log_info("[*] Sublime connector initialized")
         self.helper.log_info(
-            '[*] Configuration: verdicts={}, confidence={}, incident_type={}, duration_period:{}, historical_ingest: {}'.format(
+            "[*] Configuration: verdicts={}, confidence={}, incident_type={}, duration_period:{}, historical_ingest: {}".format(
                 self.verdicts,
                 self.confidence_level,
                 self.incident_type,
