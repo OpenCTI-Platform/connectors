@@ -230,6 +230,7 @@ class SublimeConnector:
 
         # Create Sublime Identity for STIX objects
         self.sublime_identity = stix2.Identity(
+            id=self._make_deterministic_id("identity", "sublime-security-organization"),
             name="Sublime Security",
             identity_class="organization",
             description="Email Security Platform",
