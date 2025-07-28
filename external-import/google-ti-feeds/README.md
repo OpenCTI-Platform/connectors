@@ -36,7 +36,7 @@ Here’s a high-level overview to get the connector up and running:
 
 ### Requirements
 
-- OpenCTI Platform version **6.6.10** or higher
+- OpenCTI Platform version **6.7.7** or higher
 - Docker & Docker Compose (for containerized deployment)
 - Valid GTI API credentials (token)
 

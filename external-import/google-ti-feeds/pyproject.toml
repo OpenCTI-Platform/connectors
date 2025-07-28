@@ -22,7 +22,7 @@ dependencies = [
     "aiohttp ~=3.12.14",
     "Markdown ~=3.8.2",
     "markdownify ~=1.1.0",
-    "pycti ~=6.7.6",
+    "pycti ~=6.7.7",
     "pydantic ~=2.11.7",
     "pydantic_settings ~=2.10.1",
     "python-dotenv ~=1.1.1",
@@ -40,14 +40,14 @@ test = [
     "polyfactory ~=2.22.1",
 ]
 dev = [
-    "black ~=25.1",           # Code formatter
-    "isort ~=6.0.1",          # Import sorter
-    "ruff ~=0.7.2",           # linter
-    "mypy ~=1.17.0",          # Type validator
-    "pip_audit ~=2.9.0",      # Security checker
-    "pre-commit ~=4.3.0",     # Git hooks
-    "flake8 ~=7.3.0",         # Linter
-    "types-PyYAML ~=6.0.12",  # stubs for untyped module
+    "black ~=25.1",          # Code formatter
+    "isort ~=6.0.1",         # Import sorter
+    "ruff ~=0.7.2",          # linter
+    "mypy ~=1.17.0",         # Type validator
+    "pip_audit ~=2.9.0",     # Security checker
+    "pre-commit ~=4.3.0",    # Git hooks
+    "flake8 ~=7.3.0",        # Linter
+    "types-PyYAML ~=6.0.12", # stubs for untyped module
 ]
 all = ["GoogleTIFeeds[test,dev]"]
 
