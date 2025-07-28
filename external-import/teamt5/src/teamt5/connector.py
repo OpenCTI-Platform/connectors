@@ -2,7 +2,7 @@ import sys
 from datetime import datetime, timezone
 
 import stix2
-from pycti import Identity, OpenCTIConnectorHelper, MarkingDefinition
+from pycti import Identity, MarkingDefinition, OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
 from .config_loader import ConfigConnector
@@ -31,7 +31,6 @@ class TeamT5Connector:
             identity_class="organization",
         )
 
-
         # Normalise the TLP level and translate "clear" to "white"
         tlp_level = self.config.tlp_level.lower()
         if tlp_level == "clear":
@@ -52,7 +51,7 @@ class TeamT5Connector:
             ),
             "red": stix2.TLP_RED,
         }
-        
+
         self.tlp_ref = tlp_level_markings.get(tlp_level)
         if not self.tlp_ref:
             self.helper.connector_logger.error(
@@ -147,12 +146,11 @@ class TeamT5Connector:
                 last_run_timestamp = int(
                     datetime.strptime(last_run, "%Y-%m-%d %H:%M:%S").timestamp()
                 )
-  
-            #If the connector has never run, we should retrieve from the timestamp specified in configs
+
+            # If the connector has never run, we should retrieve from the timestamp specified in configs
             else:
                 self.helper.connector_logger.info("Connector has never run...")
                 last_run_timestamp = self.config.first_run_retrieval_timestamp
-
 
             # Retrieve Reports from TT5
             self.helper.connector_logger.info(
@@ -171,17 +169,12 @@ class TeamT5Connector:
             self.helper.connector_logger.info(push_message)
             self.helper.api.work.to_processed(work_id, push_message)
 
-
-
- 
             # Retrieve Indicators from TT5
             self.helper.connector_logger.info(
                 f"Retrieving Indicator Bundles From After: {datetime.fromtimestamp(last_run_timestamp)}"
             )
             self.indicator_handler.retrieve_indicators(last_run_timestamp)
-            self.helper.connector_logger.info(
-                "Finished retrieving Indicator Bundles"
-            )
+            self.helper.connector_logger.info("Finished retrieving Indicator Bundles")
 
             # Upload Indicators via Worker
             work_name = "Pushing Indicator Bundles to OpenCTI"
@@ -192,7 +185,6 @@ class TeamT5Connector:
             push_message = f"Connector Pushed {num_pushed} indicator bundles"
             self.helper.connector_logger.info(push_message)
             self.helper.api.work.to_processed(work_id, push_message)
-
 
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug("Updating Last Run")

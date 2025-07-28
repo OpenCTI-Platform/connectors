@@ -71,9 +71,10 @@ class ConfigConnector:
             default="clear",
         )
 
-        self.first_run_retrieval_timestamp = int(get_config_variable(
-            "TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP",
-            ["connector", "first_run_retrieval_timestamp"],
-            self.load,
-        ))
-
+        self.first_run_retrieval_timestamp = int(
+            get_config_variable(
+                "TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP",
+                ["connector", "first_run_retrieval_timestamp"],
+                self.load,
+            )
+        )
