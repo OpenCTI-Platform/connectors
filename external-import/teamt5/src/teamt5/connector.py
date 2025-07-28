@@ -2,17 +2,12 @@ import sys
 from datetime import datetime, timezone
 
 import stix2
-from pycti import Identity, OpenCTIConnectorHelper
+from pycti import Identity, OpenCTIConnectorHelper, MarkingDefinition
 
 from .client_api import ConnectorClient
 from .config_loader import ConfigConnector
 from .indicators import IndicatorHandler
 from .reports import ReportHandler
-
-# When the connector runs for the first time, it will retrieve from the beginning of 2025.
-# If there is a better / more customisable way to do this, such as an extra parameter to the connector
-# I'd be happy to implement that instead.
-FIRST_RUN_START_DATE = 1735689600
 
 
 class TeamT5Connector:
@@ -36,20 +31,35 @@ class TeamT5Connector:
             identity_class="organization",
         )
 
-        # Based on the format for inputting TLPS, we get the corresponding stix2 object
-        if self.config.tlp_level.lower() == "clear":
-            self.config.tlp_level = "white"
-        normalised_tlp = self.config.tlp_level.lower().replace("+", "_")
-        self.tlp_ref = getattr(stix2, f"TLP_{normalised_tlp}".upper(), None)
 
-        if self.tlp_ref is None:
+        # Normalise the TLP level and translate "clear" to "white"
+        tlp_level = self.config.tlp_level.lower()
+        if tlp_level == "clear":
+            tlp_level = "white"
+
+        tlp_level_markings = {
+            "white": stix2.TLP_WHITE,
+            "green": stix2.TLP_GREEN,
+            "amber": stix2.TLP_AMBER,
+            "amber+strict": stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                custom_properties=dict(
+                    x_opencti_definition_type="TLP",
+                    x_opencti_definition="TLP:AMBER+STRICT",
+                ),
+            ),
+            "red": stix2.TLP_RED,
+        }
+        
+        self.tlp_ref = tlp_level_markings.get(tlp_level)
+        if not self.tlp_ref:
             self.helper.connector_logger.error(
-                "Error: Invalid TLP Level in Configuration. Please see the documentation and change it to one of the allowed values."
+                "Error: Invalid TLP Level in Configuration. Please see the documentation and change it to an allowed value."
             )
             sys.exit(1)
 
-        # Initialise the Report and Indicator Handler, of which are quite similar in nature, but have been differentiated so that they can be changed
-        # separately in future.
         self.report_handler = ReportHandler(
             helper=helper,
             author=self.author,
@@ -125,82 +135,64 @@ class TeamT5Connector:
         self.helper.connector_logger.info(f"{self.config.name}: Starting Run")
 
         try:
-
-            # Template code for handling the last run time
             now = datetime.now()
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
-            last_run_timestamp = 0
             if current_state is not None and "last_run" in current_state:
                 last_run = current_state["last_run"]
-
                 self.helper.connector_logger.info(
-                    "Connector last run",
-                    {"last_run_datetime": last_run},
+                    "Connector last run", {"last_run_datetime": last_run}
                 )
-                try:
-                    last_run_timestamp = int(
-                        datetime.strptime(last_run, "%Y-%m-%d %H:%M:%S").timestamp()
-                    )
-                except Exception:
-                    self.helper.connector_logger.error(
-                        f"Could not convert last run datetime {last_run} to timestamp, using 0."
-                    )
+                last_run_timestamp = int(
+                    datetime.strptime(last_run, "%Y-%m-%d %H:%M:%S").timestamp()
+                )
+  
+            #If the connector has never run, we should retrieve from the timestamp specified in configs
             else:
                 self.helper.connector_logger.info("Connector has never run...")
-                last_run_timestamp = FIRST_RUN_START_DATE
+                last_run_timestamp = self.config.first_run_retrieval_timestamp
 
-            # Attempt to Retrieve and Post Reports to OpenCTI
-            try:
 
-                # Retrieve Reports from TT5
-                self.helper.connector_logger.info(
-                    f"Retrieving Reports From After: {datetime.fromtimestamp(last_run_timestamp)}"
-                )
-                self.report_handler.retrieve_reports(last_run_timestamp)
-                self.helper.connector_logger.info("Finished retrieving reports")
+            # Retrieve Reports from TT5
+            self.helper.connector_logger.info(
+                f"Retrieving Reports From After: {datetime.fromtimestamp(last_run_timestamp)}"
+            )
+            self.report_handler.retrieve_reports(last_run_timestamp)
+            self.helper.connector_logger.info("Finished retrieving reports")
 
-                # Upload Reports via Worker
-                work_name = "Creating OpenCTI Reports"
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, work_name
-                )
-                num_pushed = self.report_handler.post_reports(work_id)
-                push_message = f"Connector created {num_pushed} reports"
-                self.helper.connector_logger.info(push_message)
-                self.helper.api.work.to_processed(work_id, push_message)
+            # Upload Reports via Worker
+            work_name = "Creating OpenCTI Reports"
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, work_name
+            )
+            num_pushed = self.report_handler.post_reports(work_id)
+            push_message = f"Connector created {num_pushed} reports"
+            self.helper.connector_logger.info(push_message)
+            self.helper.api.work.to_processed(work_id, push_message)
 
-            except Exception as e:
-                self.helper.connector_logger.error(
-                    f"An Error Occurred Whilst Processing Reports: {e}"
-                )
 
-            # Attempt to Retrieve and Push Indicator Bundles to OpenCTI
-            try:
-                # Retrieve Indicators from TT5
-                self.helper.connector_logger.info(
-                    f"Retrieving Indicator Bundles From After: {datetime.fromtimestamp(last_run_timestamp)}"
-                )
-                self.indicator_handler.retrieve_indicators(last_run_timestamp)
-                self.helper.connector_logger.info(
-                    "Finished retrieving Indicator Bundles"
-                )
 
-                # Upload Indicators via Worker
-                work_name = "Pushing Indicator Bundles to OpenCTI"
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, work_name
-                )
-                num_pushed = self.indicator_handler.post_indicators(work_id)
-                push_message = f"Connector Pushed {num_pushed} indicator bundles"
-                self.helper.connector_logger.info(push_message)
-                self.helper.api.work.to_processed(work_id, push_message)
+ 
+            # Retrieve Indicators from TT5
+            self.helper.connector_logger.info(
+                f"Retrieving Indicator Bundles From After: {datetime.fromtimestamp(last_run_timestamp)}"
+            )
+            self.indicator_handler.retrieve_indicators(last_run_timestamp)
+            self.helper.connector_logger.info(
+                "Finished retrieving Indicator Bundles"
+            )
 
-            except Exception as e:
-                self.helper.connector_logger.error(
-                    f"An Error Occurred Whilst Processing Indicator Bundles: {e}"
-                )
+            # Upload Indicators via Worker
+            work_name = "Pushing Indicator Bundles to OpenCTI"
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, work_name
+            )
+            num_pushed = self.indicator_handler.post_indicators(work_id)
+            push_message = f"Connector Pushed {num_pushed} indicator bundles"
+            self.helper.connector_logger.info(push_message)
+            self.helper.api.work.to_processed(work_id, push_message)
+
 
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug("Updating Last Run")
