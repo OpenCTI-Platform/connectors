@@ -32,9 +32,12 @@ SCOPE_ENTITIES = [
 ]
 
 VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS = [
-    "analystNotes",
-    "aiInsights",
-    "risk",
+    "cvss_ratings",
+    "cpe22_uri",
+    "linked_malware",
+    "related_links",
+    "analyst_notes",
+    "ai_insights",
 ]
 
 """
@@ -175,6 +178,7 @@ class _RecordedFutureConfig(_ConfigBaseModel):
         "TLP:AMBER+STRICT",
         "TLP:RED",
     ] = Field(default="TLP:AMBER")
+    vulnerability_enrichment_optional_fields: ListFromString = Field(default=[])
 
     @field_validator("vulnerability_enrichment_optional_fields", mode="after")
     @classmethod
@@ -182,9 +186,10 @@ class _RecordedFutureConfig(_ConfigBaseModel):
         cls, vulnerability_enrichment_optional_fields: list[str]
     ) -> list[str]:
         for field in vulnerability_enrichment_optional_fields:
-            if field not in VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS:
+            if field.lower() not in VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS:
                 raise ValueError("Invalid vulnerability enrichment optional field(s)")
         return vulnerability_enrichment_optional_fields
+
 
 class ConnectorConfig(BaseSettings):
     """
