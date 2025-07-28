@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   connector-recordedfuture-enrichment:
     image: opencti/connector-recordedfuture-enrichment:rolling
