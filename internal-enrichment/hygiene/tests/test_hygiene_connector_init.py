@@ -1,4 +1,5 @@
 import pytest
+
 from hygiene import HygieneConnector
 
 DEFAULT_LABEL_NAME = "hygiene"
