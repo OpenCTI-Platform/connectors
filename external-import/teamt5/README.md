@@ -63,6 +63,7 @@ There are a number of configuration options, which are set either in `docker-com
 | API base URL | teamt5.api_base_url | `TEAMT5_API_BASE_URL`   |         | The base URL for the TeamT5 API.                                                                 |
 | API key      | teamt5.api_key      | `TEAMT5_API_KEY`        |         | The API key for authenticating with the TeamT5 API.                                              |
 | TLP Level    | teamt5.tlp_level    | `TEAMT5_TLP_LEVEL`      | clear   | TLP marking for ingested data. Options: clear, white, green, amber, amber+strict, red.           |
+| First Run Retrieval Timestamp | teamt5.first_run_retrieval_timestamp | `TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP` |         | Unix timestamp (integer). On the connector's first run, Reports and Indicator Bundles created after this timestamp will be retrieved. After this first run, the connector will automatically only retrieve the newest Reports and Indicator Bundles.|
 
 ## Deployment
 
