@@ -993,6 +993,7 @@ class SublimeConnector:
 
         # Create indicator with proper metadata
         indicator = stix2.Indicator(
+            id=self._make_deterministic_id("indicator", pattern),
             pattern=pattern,
             pattern_type="stix",
             labels=["malicious-activity"],
