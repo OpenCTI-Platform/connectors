@@ -46,22 +46,24 @@ class ImportTTPsFileNavigator:
                 }
             )
             if ttp_object:  # Handles the case of an existing TTP
-                stix_ttp = self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
-                    entity_type=ttp_object["entity_type"],
-                    entity_id=ttp_object["id"],
-                    only_entity=True,
+                stix_ttp = (
+                    self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                        entity_type=ttp_object["entity_type"],
+                        entity_id=ttp_object["id"],
+                        only_entity=True,
+                    )
                 )
                 stix_attack_pattern = stix_ttp
             # going to create an AttackPattern with name = technique_id
             else:
                 stix_attack_pattern = stix2.AttackPattern(
-                    id=AttackPattern.generate_id(name=technique_id, x_mitre_id=technique_id),
+                    id=AttackPattern.generate_id(
+                        name=technique_id, x_mitre_id=technique_id
+                    ),
                     name=technique_id,
                     labels=[],
                     object_marking_refs=[],
-                    custom_properties={
-                        "x_mitre_id": technique_id
-                    },
+                    custom_properties={"x_mitre_id": technique_id},
                 )
             techniques_objects.append(stix_attack_pattern)
 
@@ -91,8 +93,7 @@ class ImportTTPsFileNavigator:
 
         else:
             bundle_json = stix2.Bundle(
-                objects=technique_entities,
-                allow_custom=True
+                objects=technique_entities, allow_custom=True
             ).serialize()
 
         bundles_sent = self.helper.send_stix2_bundle(
@@ -134,8 +135,10 @@ class ImportTTPsFileNavigator:
                 if "x_opencti_id" in stix_object
                 and stix_object["x_opencti_id"] == stix_entity["id"]
             ][0]
-            if (entity_stix.get("type") == "identity" and
-                    entity_stix.get("x_opencti_type", None) == "SecurityPlatform"):
+            if (
+                entity_stix.get("type") == "identity"
+                and entity_stix.get("x_opencti_type", None) == "SecurityPlatform"
+            ):
                 for technique in stix_techniques:
                     rel = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
@@ -144,15 +147,17 @@ class ImportTTPsFileNavigator:
                         relationship_type="should-cover",
                         source_ref=entity_stix.get("id"),
                         target_ref=technique.get("id"),
-                        allow_custom=True
+                        allow_custom=True,
                     )
                     stix_relationships.append(rel)
                 stix_techniques = stix_techniques + stix_relationships
 
-            if (entity_stix.get("type") == "intrusion-set" or
-                    entity_stix.get("type") == "threat-actor" or
-                    entity_stix.get("type") == "malware" or
-                    entity_stix.get("type") == "campaign"):
+            if (
+                entity_stix.get("type") == "intrusion-set"
+                or entity_stix.get("type") == "threat-actor"
+                or entity_stix.get("type") == "malware"
+                or entity_stix.get("type") == "campaign"
+            ):
                 for technique in stix_techniques:
                     rel = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
@@ -161,7 +166,7 @@ class ImportTTPsFileNavigator:
                         relationship_type="uses",
                         source_ref=entity_stix.get("id"),
                         target_ref=technique.get("id"),
-                        allow_custom=True
+                        allow_custom=True,
                     )
                     stix_relationships.append(rel)
                 stix_techniques = stix_techniques + stix_relationships
