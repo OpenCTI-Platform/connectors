@@ -177,7 +177,14 @@ class _RecordedFutureConfig(_ConfigBaseModel):
         "TLP:AMBER",
         "TLP:AMBER+STRICT",
         "TLP:RED",
-    ] = Field(default="TLP:AMBER")
+    ] = Field(
+        description="Max TLP marking of the entity to enrich (inclusive).",
+        default="TLP:AMBER",
+    )
+    vulnerability_enrichment_optional_fields: ListFromString = Field(
+        description="A list of optional fields to enrich vulnerabilities with. (For vulnerability enrichment only)",
+        default=[],
+    )
 
     @field_validator("vulnerability_enrichment_optional_fields", mode="after")
     @classmethod
@@ -188,6 +195,7 @@ class _RecordedFutureConfig(_ConfigBaseModel):
             if field not in VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS:
                 raise ValueError("Invalid vulnerability enrichment optional field(s)")
         return vulnerability_enrichment_optional_fields
+
 
 class ConnectorConfig(BaseSettings):
     """

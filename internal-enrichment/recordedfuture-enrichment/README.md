@@ -82,7 +82,7 @@ Below are the parameters you'll need to set for this connector:
 | Indicator creation threshold             | create_indicator_threshold               | `RECORDED_FUTURE_CREATE_INDICATOR_THRESHOLD`               | `0`         | no        | The risk score threshold at which an indicator will be created for enriched observables. If set to zero, all enriched observables will automatically create an indicator. If set to 100, no enriched observables will create an indicator. Reccomended thresholds are: `0`, `25`, `65`, `100` |
 | Vulnerability enrichment optional fields | vulnerability_enrichment_optional_fields | `RECORDED_FUTURE_VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS` | `''`        | no        | A comma-separated list of optional fields to enrich vulnerabilities with. Currently, available fields are `analystNotes`, `aiInsights`, `risk`. See [RecordedFuture enrichment fields doc](https://docs.recordedfuture.com/reference/enrichment-field-attributes) for more details.           |
 
-Also note that the Indicator's STIX2 confidence field is set to the Risk Score. However, at this time OpenCTI does not automatically import the STIX2 confidence field as the OpenCTI score, it's logical equivalent
+Notes:
 
 - the Indicator's STIX2 confidence field is set to the Risk Score. However, at this time OpenCTI does not automatically import the STIX2 confidence field as the OpenCTI score, it's logical equivalent.
 - the following fields are _always_ queried during vulnerabilities enrichment: `commonNames`, `cpe`, `cvss`, `cvssv3`, `cvssv4`, `intelCard`, `lifecycleStage`, `nvdDescription`, `nvdReferences`, `relatedLinks`.
