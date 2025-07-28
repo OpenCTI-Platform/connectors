@@ -70,7 +70,7 @@ class OrchestratorThreatActor(BaseOrchestrator):
         """
         subentity_types = [
             "malware_families",
-            "reports",
+            # "reports",
             "attack_techniques",
             "vulnerabilities",
             #            "domains",
