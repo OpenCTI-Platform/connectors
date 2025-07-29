@@ -1,6 +1,7 @@
 # OpenCTI DShield connector
 
 The DShield connector is a standalone Python process that collects data from the DShield.org Recommended Block List.
+Idea:damians-filigran
 
 ## Summary
 
