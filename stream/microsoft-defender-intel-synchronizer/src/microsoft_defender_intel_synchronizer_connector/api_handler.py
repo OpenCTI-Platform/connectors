@@ -219,7 +219,7 @@ class DefenderApiHandler:
                     reason = item.get("failureReason", "Unknown reason")
                     failed_reasons.append(f"{reason}")
         if failed_count > 0:
-            self.helper.connector_logger.warn(
+            self.helper.connector_logger.warning(
                 "[API] Some indicators failed to import.",
                 {
                     "failed_count": failed_count,
