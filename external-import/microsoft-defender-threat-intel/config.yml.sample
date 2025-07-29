@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+#  name: 'Microsoft Defender Threat Intel'
+#  scope: 'microsoft-defender-threat-intel'
+#  log_level: 'error'
+#  duration_period: 'PT1H'
+
+microsoft_defender_threat_intel:
+  tenant_id: 'ChangeMe'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
