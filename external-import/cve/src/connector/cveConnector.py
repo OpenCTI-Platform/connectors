@@ -196,8 +196,8 @@ class CVEConnector:
         :return: Dict of CVE params
         """
         return {
-            "lastModStartDate": start_date.isoformat(),
-            "lastModEndDate": end_date.isoformat(),
+            "lastModStartDate": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "lastModEndDate": end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
 
     def process_data(self) -> None:
