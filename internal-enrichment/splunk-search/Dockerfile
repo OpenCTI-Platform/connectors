@@ -1,6 +1,7 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
+<<<<<<< HEAD
 COPY src /opt/opencti-connector-splunk-search
 
 RUN apk update && apk upgrade && \
@@ -14,3 +15,21 @@ COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["python3", "/opt/opencti-connector-splunk-search/main.py"]
+=======
+# Copy the connector
+COPY src /opt/opencti-connector-template
+
+# Install Python modules
+# hadolint ignore=DL3003
+RUN apk update && apk upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+
+RUN cd /opt/opencti-connector-template && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git build-base
+
+# Expose and entrypoint
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+>>>>>>> 7a60e94c2a (Init splunk-search connector)
