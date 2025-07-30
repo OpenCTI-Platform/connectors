@@ -19,7 +19,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Name                        | `name`                        | `CONNECTOR_NAME`                        | /       | Yes       | `S3 Bucket`                            | Full name of the connector : `Microsoft Sentinel`.                                     |
 | Log Level                   | `log_level`                   | `CONNECTOR_LOG_LEVEL`                   | `error` | No        | `error`                                | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
 
-Below are the parameters you'll need to set for Sentinel Connector:
+Below are the parameters you'll need to set for s3 Connector:
 
 | Parameter `s3`    | config.yml          | Docker environment variable | Default        | Mandatory | Example        | Description                                      |
 |-------------------|---------------------|-----------------------------|----------------|-----------|----------------|--------------------------------------------------|
