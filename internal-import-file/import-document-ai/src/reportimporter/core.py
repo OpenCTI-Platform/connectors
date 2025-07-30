@@ -189,7 +189,7 @@ class ReportImporter:
         observables, entities, uuid_to_stix, uuid_to_text = (
             self._process_parsing_results(parsed, entity)
         )
-        predicted_rels = parsed.get("relationships", [])
+        predicted_rels = parsed.get("relations", [])
 
         # Step 4: Build the STIX bundle (attach to context or wrap in a new report) + send bundle
         counts = self._process_parsed_objects(
