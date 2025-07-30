@@ -15,6 +15,7 @@ import pycti
 import stix2
 import stix2.exceptions
 
+from rf_client.models import CVSS2, CVSS3, CVSS4
 from .rf_utils import validate_ip_or_cidr, validate_mitre_attack_pattern
 
 SUPPORTED_RF_TYPES = ("IpAddress", "InternetDomainName", "Hash", "URL")
@@ -697,18 +698,18 @@ class EnrichedVulnerability:
     def from_json(
         self,
         commonNames: list[str],
-        cvss: str,
-        cvssv3: str,
-        cvssv4: str,
+        cvss: CVSS2,
+        cvssv3: CVSS3,
+        cvssv4: CVSS4,
         intelCard: str,
         lifecycleStage: str,
     ):
         """Creates STIX objects from enriched entity json"""
 
         vulnerability_description = self._vulnerability_description
-        for cvss_data in [cvss, cvssv3, cvssv4]:
-            cvss_source_name = cvss_data.get("source")
-            cvss_version = cvss_data.get("version", "")
+        for cvss_object in [cvss, cvssv3, cvssv4]:
+            cvss_source_name = cvss_object.source
+            cvss_version = cvss_object.version
             if cvss_source_name:
                 source_description = f"CVSS {cvss_version} Source: {cvss_source_name}"
                 if source_description not in vulnerability_description:
@@ -730,58 +731,40 @@ class EnrichedVulnerability:
                 custom_properties=dict(
                     x_opencti_aliases=commonNames,
                     # On OpenCTI, CVSS are v3 by default
-                    x_opencti_cvss_vector_string=cvssv3.get("vectorString"),
-                    x_opencti_cvss_base_score=cvssv3.get("baseScore"),
-                    x_opencti_cvss_base_severity=cvssv3.get("baseSeverity"),
-                    x_opencti_cvss_attack_vector=cvssv3.get("attackVector"),
-                    x_opencti_cvss_attack_complexity=cvssv3.get("attackComplexity"),
-                    x_opencti_cvss_privileges_required=cvssv3.get("privilegesRequired"),
-                    x_opencti_cvss_user_interaction=cvssv3.get("userInteraction"),
-                    x_opencti_cvss_scope=cvssv3.get("scope"),
-                    x_opencti_cvss_confidentiality_impact=cvssv3.get("vectorString"),
-                    x_opencti_cvss_integrity_impact=cvssv3.get("vectorString"),
-                    x_opencti_cvss_availability_impact=cvssv3.get("vectorString"),
+                    x_opencti_cvss_vector_string=cvssv3.vectorString,
+                    x_opencti_cvss_base_score=cvssv3.baseScore,
+                    x_opencti_cvss_base_severity=cvssv3.baseSeverity,
+                    x_opencti_cvss_attack_vector=cvssv3.attackVector,
+                    x_opencti_cvss_attack_complexity=cvssv3.attackComplexity,
+                    x_opencti_cvss_privileges_required=cvssv3.privilegesRequired,
+                    x_opencti_cvss_user_interaction=cvssv3.userInteraction,
+                    x_opencti_cvss_scope=cvssv3.scope,
+                    x_opencti_cvss_confidentiality_impact=cvssv3.vectorString,
+                    x_opencti_cvss_integrity_impact=cvssv3.vectorString,
+                    x_opencti_cvss_availability_impact=cvssv3.vectorString,
                     # On RecordedFuture, CVSS are v2 by default
-                    x_opencti_cvss_v2_vector_string=cvss.get("vectorString"),
-                    x_opencti_cvss_v2_access_vector=cvss.get("accessVector"),
-                    x_opencti_cvss_v2_access_complexity=cvss.get("accessComplexity"),
-                    x_opencti_cvss_v2_authentication=cvss.get("authentication"),
-                    x_opencti_cvss_v2_confidentiality_impact=cvss.get(
-                        "confidentiality"
-                    ),
-                    x_opencti_cvss_v2_integrity_impact=cvss.get("integrity"),
-                    x_opencti_cvss_v2_availability_impact=cvss.get("availability"),
+                    x_opencti_cvss_v2_vector_string=cvss.vectorString,
+                    x_opencti_cvss_v2_access_vector=cvss.accessVector,
+                    x_opencti_cvss_v2_access_complexity=cvss.accessComplexity,
+                    x_opencti_cvss_v2_authentication=cvss.authentication,
+                    x_opencti_cvss_v2_confidentiality_impact=cvss.confidentiality,
+                    x_opencti_cvss_v2_integrity_impact=cvss.integrity,
+                    x_opencti_cvss_v2_availability_impact=cvss.availability,
                     # CVSS v4
-                    x_opencti_cvss_v4_vector_string=cvssv4.get("vectorString"),
-                    x_opencti_cvss_v4_base_score=cvssv4.get("baseScore"),
-                    x_opencti_cvss_v4_base_severity=cvssv4.get("baseSeverity"),
-                    x_opencti_cvss_v4_attack_vector=cvssv4.get("attackVector"),
-                    x_opencti_cvss_v4_attack_complexity=cvssv4.get("attackComplexity"),
-                    x_opencti_cvss_v4_attack_requirements=cvssv4.get(
-                        "attackRequirements"
-                    ),
-                    x_opencti_cvss_v4_privileges_required=cvssv4.get(
-                        "privilegesRequired"
-                    ),
-                    x_opencti_cvss_v4_user_interaction=cvssv4.get("userInteraction"),
-                    x_opencti_cvss_v4_confidentiality_impact_v=cvssv4.get(
-                        "vulnerableSystemConfidentiality"
-                    ),
-                    x_opencti_cvss_v4_confidentiality_impact_s=cvssv4.get(
-                        "subsequentSystemConfidentiality"
-                    ),
-                    x_opencti_cvss_v4_integrity_impact_v=cvssv4.get(
-                        "vulnerableSystemIntegrity"
-                    ),
-                    x_opencti_cvss_v4_integrity_impact_s=cvssv4.get(
-                        "subsequentSystemIntegrity"
-                    ),
-                    x_opencti_cvss_v4_availability_impact_v=cvssv4.get(
-                        "vulnerableSystemAvailability"
-                    ),
-                    x_opencti_cvss_v4_availability_impact_s=cvssv4.get(
-                        "subsequentSystemAvailability"
-                    ),
+                    x_opencti_cvss_v4_vector_string=cvssv4.vectorString,
+                    x_opencti_cvss_v4_base_score=cvssv4.baseScore,
+                    x_opencti_cvss_v4_base_severity=cvssv4.baseSeverity,
+                    x_opencti_cvss_v4_attack_vector=cvssv4.attackVector,
+                    x_opencti_cvss_v4_attack_complexity=cvssv4.attackComplexity,
+                    x_opencti_cvss_v4_attack_requirements=cvssv4.attackRequirements,
+                    x_opencti_cvss_v4_privileges_required=cvssv4.privilegesRequired,
+                    x_opencti_cvss_v4_user_interaction=cvssv4.userInteraction,
+                    x_opencti_cvss_v4_confidentiality_impact_v=cvssv4.vulnerableSystemConfidentiality,
+                    x_opencti_cvss_v4_confidentiality_impact_s=cvssv4.subsequentSystemConfidentiality,
+                    x_opencti_cvss_v4_integrity_impact_v=cvssv4.vulnerableSystemIntegrity,
+                    x_opencti_cvss_v4_integrity_impact_s=cvssv4.subsequentSystemIntegrity,
+                    x_opencti_cvss_v4_availability_impact_v=cvssv4.vulnerableSystemAvailability,
+                    x_opencti_cvss_v4_availability_impact_s=cvssv4.subsequentSystemAvailability,
                 ),
             )
         except stix2.exceptions.STIXError as err:
