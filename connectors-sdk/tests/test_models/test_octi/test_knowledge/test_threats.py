@@ -2,10 +2,10 @@
 """Offer tests for observations OpenCTI entities."""
 
 import pytest
-import stix2
 from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
 from pydantic import ValidationError
+from stix2 import IntrusionSet as stix2_IntrusionSet
 
 ### INTRUSION SET
 
@@ -73,4 +73,4 @@ def test_intrusion_set_to_stix2_object_returns_valid_stix_object(
     # When: calling to_stix2_object method
     stix2_obj = intrusion_set.to_stix2_object()
     # Then: A valid STIX2.1 IntrusionSet is returned
-    assert isinstance(stix2_obj, stix2.v21.IntrusionSet)
+    assert isinstance(stix2_obj, stix2_IntrusionSet)

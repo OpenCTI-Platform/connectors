@@ -2,10 +2,10 @@
 """Offer tests for observations OpenCTI entities."""
 
 import pytest
-import stix2
 from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
 from pydantic import ValidationError
+from stix2 import Identity as stix2_Identity
 
 ### ORGANIZATION
 
@@ -53,7 +53,7 @@ def test_organization_to_stix2_object_returns_valid_stix_object(
     # When: calling to_stix2_object method
     stix2_obj = organization.to_stix2_object()
     # Then: A valid STIX2.1 Identity is returned
-    assert isinstance(stix2_obj, stix2.v21.Identity)
+    assert isinstance(stix2_obj, stix2_Identity)
 
 
 #### SECTOR
@@ -103,4 +103,4 @@ def test_sector_to_stix2_object_returns_valid_stix_object(
     stix2_obj = sector.to_stix2_object()
 
     # Then: A valid STIX Identity is returned
-    assert isinstance(stix2_obj, stix2.Identity)
+    assert isinstance(stix2_obj, stix2_Identity)

@@ -1,7 +1,6 @@
 """Offer tests for OpenCTI relationships."""
 
 import pytest
-import stix2
 from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.activities.observations import Indicator, Observable
 from connectors_sdk.models.octi.relationships import (
@@ -16,6 +15,7 @@ from connectors_sdk.models.octi.relationships import (
     related_to,
 )
 from pydantic import create_model
+from stix2 import IPv4Address as stix2_IPv4Address
 
 # Add the newly implemented relationship in this list
 IMPLEMENTED_RELATIONSHIPS = [
@@ -135,7 +135,7 @@ def test_based_on_can_use_pipe_syntax():
 
         def to_stix2_object(self):
             """Dummy method to satisfy the interface."""
-            return stix2.v21.IPv4Address(value="127.0.0.1")
+            return stix2_IPv4Address(value="127.0.0.1")
 
     obs = DummyObservable()
     # When using the pipe syntax to create a relationship

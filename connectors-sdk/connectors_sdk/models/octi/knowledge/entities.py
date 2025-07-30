@@ -2,10 +2,16 @@
 
 from typing import Optional
 
-import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
-import stix2  # type: ignore[import-untyped]  # stix2 does not provide stubs
-from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
+from pycti import (  # type: ignore[import-untyped]  # pycti does not provide stubs
+    Identity as pycti_Identity,
+)
 from pydantic import Field
+from stix2 import (  # type: ignore[import-untyped]  # stix2 does not provide stubs
+    Identity as stix2_Identity,
+)
+
+from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
+from connectors_sdk.models.octi.enums import IndustrySector, Reliability
 
 
 @MODEL_REGISTRY.register
@@ -52,7 +58,7 @@ class Organization(BaseIdentifiedEntity):
         description="Aliases of the organization.",
     )
 
-    def to_stix2_object(self) -> stix2.v21.Identity:
+    def to_stix2_object(self) -> stix2_Identity:
         """Make stix object.
 
         Notes:
@@ -61,8 +67,8 @@ class Organization(BaseIdentifiedEntity):
         """
         identity_class = "organization"
 
-        return stix2.Identity(
-            id=pycti.Identity.generate_id(
+        return stix2_Identity(
+            id=pycti_Identity.generate_id(
                 identity_class=identity_class, name=self.name
             ),
             identity_class=identity_class,
@@ -106,12 +112,11 @@ class Sector(BaseIdentifiedEntity):
         description="Description of the sector.",
         default=None,
     )
-    sectors: Optional[list[str]] = Field(
+    sectors: Optional[list[IndustrySector]] = Field(
         description="The list of industry sectors that this Identity belongs to.",
         default=None,
     )
-    reliability: Optional[str] = Field(
-        None,
+    reliability: Optional[Reliability] = Field(
         description="OpenCTI Reliability of the sector. By default, OpenCTI handles: "
         "'A - Completely reliable', "
         "'B - Usually reliable', "
@@ -120,13 +125,14 @@ class Sector(BaseIdentifiedEntity):
         "'E - Unreliable', "
         "'F - Reliability cannot be judged'. "
         "See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts",
+        default=None,
     )
     aliases: Optional[list[str]] = Field(
         description="Aliases of the sector.",
         default=None,
     )
 
-    def to_stix2_object(self) -> stix2.Identity:
+    def to_stix2_object(self) -> stix2_Identity:
         """Make stix object.
 
         Notes:
@@ -135,8 +141,8 @@ class Sector(BaseIdentifiedEntity):
         """
         identity_class = "class"
 
-        return stix2.Identity(
-            id=pycti.Identity.generate_id(
+        return stix2_Identity(
+            id=pycti_Identity.generate_id(
                 identity_class=identity_class, name=self.name
             ),
             identity_class=identity_class,
@@ -149,21 +155,9 @@ class Sector(BaseIdentifiedEntity):
             ],
             object_marking_refs=[marking.id for marking in self.markings or []],
             created_by_ref=self.author.id if self.author else None,
-            custom_properties=dict(  # noqa: C408  # No literal dict for maintainability
-                x_opencti_reliability=self.reliability,
-                x_opencti_aliases=self.aliases,
-            ),
-            # unused
-            created=None,
-            modified=None,
-            roles=None,
-            contact_information=None,
-            revoked=None,
-            labels=None,
-            confidence=None,
-            lang=None,
-            granular_markings=None,
-            extensions=None,
+            allow_custom=True,
+            x_opencti_reliability=self.reliability,
+            x_opencti_aliases=self.aliases,
         )
 
 

@@ -3,19 +3,9 @@
 from abc import ABC
 from typing import Any, Literal, Optional, Unpack
 
-import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
-import stix2  # type: ignore[import-untyped]  # stix2 does not provide stubs
-from connectors_sdk.models.octi._common import (
-    MODEL_REGISTRY,
-    BaseIdentifiedEntity,
+from pycti import (  # type: ignore[import-untyped]  # pycti does not provide stubs
+    StixCoreRelationship as pycti_StixCoreRelationship,
 )
-from connectors_sdk.models.octi.activities.observations import (
-    Indicator,
-    Observable,
-)
-from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
-from connectors_sdk.models.octi.knowledge.locations import Country
-from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
 from pydantic import (
     AwareDatetime,
     ConfigDict,
@@ -24,6 +14,15 @@ from pydantic import (
     create_model,
     model_validator,
 )
+from stix2 import (  # type: ignore[import-untyped]  # stix2 does not provide stubs
+    Relationship as stix2_Relationship,
+)
+
+from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
+from connectors_sdk.models.octi.activities.observations import Indicator, Observable
+from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
+from connectors_sdk.models.octi.knowledge.locations import Country
+from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
 
 
 class _RelationshipBuilder:
@@ -68,30 +67,28 @@ class Relationship(ABC, BaseIdentifiedEntity):
     _builder: Optional[_RelationshipBuilder] = PrivateAttr(None)
 
     source: BaseIdentifiedEntity = Field(
-        ...,
         description="The source entity of the relationship.",
     )
     target: BaseIdentifiedEntity = Field(
-        ...,
         description="The target entity of the relationship.",
     )
     description: Optional[str] = Field(
-        None,
         description="Description of the relationship.",
+        default=None,
     )
     start_time: Optional[AwareDatetime] = Field(
-        None,
         description="Start time of the relationship in ISO 8601 format.",
+        default=None,
     )
     stop_time: Optional[AwareDatetime] = Field(
-        None,
         description="End time of the relationship in ISO 8601 format.",
+        default=None,
     )
 
-    def to_stix2_object(self) -> stix2.v21.Relationship:
+    def to_stix2_object(self) -> stix2_Relationship:
         """Make stix object."""
-        return stix2.Relationship(
-            id=pycti.StixCoreRelationship.generate_id(
+        return stix2_Relationship(
+            id=pycti_StixCoreRelationship.generate_id(
                 relationship_type=self._relationship_type,
                 source_ref=self.source.id,
                 target_ref=self.target.id,
@@ -115,9 +112,6 @@ class Relationship(ABC, BaseIdentifiedEntity):
             external_references=[
                 ref.to_stix2_object() for ref in self.external_references or []
             ],
-            # unused
-            created=None,
-            modified=None,
         )
 
     @model_validator(mode="before")
@@ -175,11 +169,9 @@ class BasedOn(Relationship):
     _relationship_type: Literal["based-on"] = "based-on"
 
     source: Indicator = Field(
-        ...,
         description="Reference to the source entity of the relationship. Here an Indicator.",
     )
     target: Observable = Field(
-        ...,
         description="Reference to the target entity of the relationship. Here an Observable.",
     )
 
@@ -227,11 +219,9 @@ class Indicates(Relationship):
     _relationship_type: Literal["indicates"] = "indicates"
 
     source: Indicator = Field(
-        ...,
         description="Reference to the source entity of the relationship. Here an Indicator.",
     )
     target: IntrusionSet = Field(
-        ...,
         description="Reference to the target entity of the relationship. Here an IntrusionSet.",
     )
 
@@ -255,11 +245,9 @@ class Targets(Relationship):
     _relationship_type: Literal["targets"] = "targets"
 
     source: IntrusionSet = Field(
-        ...,
         description="Reference to the source entity of the relationship. Here an Intrusion Set.",
     )
     target: Country | Organization = Field(
-        ...,
         description="Reference to the target entity of the relationship. Here a Country or an Organization.",
     )
 
@@ -283,11 +271,9 @@ class LocatedAt(Relationship):
     _relationship_type: Literal["located-at"] = "located-at"
 
     source: Organization | Sector = Field(
-        ...,
         description="Reference to the source entity of the relationship. Here a Sector.",
     )
     target: Country = Field(
-        ...,
         description="Reference to the target entity of the relationship. Here a Country.",
     )
 

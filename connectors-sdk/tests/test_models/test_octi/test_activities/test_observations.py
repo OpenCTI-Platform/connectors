@@ -4,7 +4,6 @@
 from datetime import datetime
 
 import pytest
-import stix2
 from connectors_sdk.models.octi._common import BaseIdentifiedEntity
 from connectors_sdk.models.octi.activities.observations import (
     Indicator,
@@ -12,6 +11,8 @@ from connectors_sdk.models.octi.activities.observations import (
     Observable,
 )
 from pydantic import ValidationError
+from stix2 import Indicator as stix2_Indicator
+from stix2 import IPv4Address as stix2_IPv4Address
 
 ### OBSERVABLE BASE TYPE
 
@@ -33,7 +34,7 @@ def test_observable_has_required_fields():
 
         def to_stix2_object(self):
             """Dummy method to satisfy the interface."""
-            return stix2.v21.IPv4Address(value="127.0.0.1")
+            return stix2_IPv4Address(value="127.0.0.1")
 
     # When creating an instance of DummyObservable
     observable = DummyObservable()
@@ -134,7 +135,7 @@ def test_indicator_to_stix2_object_returns_valid_stix_object(
     stix2_obj = indicator.to_stix2_object()
 
     # Then: A valid STIX Indicator is returned
-    assert isinstance(stix2_obj, stix2.Indicator)
+    assert isinstance(stix2_obj, stix2_Indicator)
 
 
 ### OBSERVABLES
@@ -179,4 +180,4 @@ def test_ip_v4_address_to_stix2_object_returns_valid_stix_object():
     # When: calling to_stix2_object method
     stix2_obj = ipv4_address.to_stix2_object()
     # Then: A valid STIX2.1 IPV4Address is returned
-    assert isinstance(stix2_obj, stix2.v21.IPv4Address)
+    assert isinstance(stix2_obj, stix2_IPv4Address)
