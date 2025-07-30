@@ -83,6 +83,8 @@ class ZscalerConnector:
             msg = f"Authenticated successfully with Zscaler. JSESSIONID: {self.session_cookie}"
             self.helper.connector_logger.info(msg)
         else:
+            status_code = response.status_code if response else "No response"
+            text = response.text if response else "No text"
             msg = f"Failed to authenticate with Zscaler: {status_code} - {text}"
             self.helper.connector_logger.error(msg)
             self.session_cookie = None
@@ -175,6 +177,9 @@ class ZscalerConnector:
 
         if response and response.status_code == 200:
             return response.json().get("urls", [])
+        code = response.status_code if response else "No response"
+        text = response.text if response else "No text"
+
         msg = f"Failed to retrieve blocked domains: {code} - {text}"
         self.helper.connector_logger.error(msg)
         return []
@@ -228,7 +233,7 @@ class ZscalerConnector:
         elif event_type == "delete":
             base_url = f"https://zsapi.zscalertwo.net/api/v1/urlCategories/{self.zscaler_blacklist_name}?action=REMOVE_FROM_LIST"
         else:
-            msg = f"Unsupported event type."
+            msg = "Unsupported event type."
             self.helper.connector_logger.error(msg)
             return
 
@@ -263,10 +268,10 @@ class ZscalerConnector:
         )
 
         if response and response.status_code == 200:
-            msg = f"Zscaler configuration activated."
+            msg = "Zscaler configuration activated."
             self.helper.connector_logger.info(msg)
         else:
-            msg = f"Failed to activate Zscaler config: {response.text if response else 'No response'}"
+            msg = "Failed to activate Zscaler config: {response.text if response else 'No response'}"
             self.helper.connector_logger.error(msg)
 
     def _process_message(self, msg):
@@ -281,12 +286,12 @@ class ZscalerConnector:
             elif msg.event == "delete":
                 self.check_and_send_to_zscaler(structured_data, "delete")
         else:
-            msg = f"Ignoring non-STIX indicator."
+            msg = "Ignoring non-STIX indicator."
             self.helper.connector_logger.info(msg)
 
     def start(self):
         """Start listening for OpenCTI events."""
 
-        msg = f"Starting connector and listening for OpenCTI event..."
+        msg = "Starting connector and listening for OpenCTI event..."
         self.helper.connector_logger.info(msg)
         self.helper.listen_stream(self._process_message)
