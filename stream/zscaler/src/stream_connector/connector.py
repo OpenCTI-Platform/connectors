@@ -80,14 +80,11 @@ class ZscalerConnector:
             )
 
         if response and response.status_code == 200:
-            self.session_cookie = response.cookies.get("JSESSIONID")
-            self.helper.connector_logger.info(
-                "Authenticated successfully with Zscaler."
-            )
+            msg = f"Authenticated successfully with Zscaler. JSESSIONID: {self.session_cookie}"
+            self.helper.connector_logger.info(msg)
         else:
-            self.helper.connector_logger.error(
-                f"Failed to authenticate with Zscaler: {response.status_code if response else 'No response'} - {response.text if response else 'No text'}"
-            )
+            msg = f"Failed to authenticate with Zscaler: {status_code} - {text}"
+            self.helper.connector_logger.error(msg)
             self.session_cookie = None
 
     def handle_rate_limit(self, request_func, *args, **kwargs):
@@ -102,14 +99,12 @@ class ZscalerConnector:
                 return response
             if response and response.status_code == 429:
                 retry_after = response.headers.get("Retry-After", retry_delay)
-                self.helper.connector_logger.warning(
-                    f"Rate limit exceeded. Retrying in {retry_after} seconds..."
-                )
+                msg = f"Rate limit exceeded. Retrying in {retry_after} seconds..."
+                self.helper.connector_logger.warning(msg)
                 time.sleep(int(retry_after))
             else:
-                self.helper.connector_logger.error(
-                    f"Request failed: {response.status_code if response else 'No response'} - {response.text if response else 'No text'}"
-                )
+                msg = f"Request failed with status {response.status_code}: {response.text}"
+                self.helper.connector_logger.error(msg)
                 return None
 
         self.helper.connector_logger.error("Max retries reached. Request failed.")
@@ -154,7 +149,8 @@ class ZscalerConnector:
             requests.post, lookup_url, headers=headers, data=payload
         )
 
-        self.helper.connector_logger.debug(f"=== Checking domain {domain} ===")
+        msg = f"=== Checking domain {domain} ==="
+        self.helper.connector_logger.debug(msg)
         if response and response.status_code == 200:
             lookup_data = response.json()
             if isinstance(lookup_data, list) and len(lookup_data) > 0:
@@ -179,9 +175,8 @@ class ZscalerConnector:
 
         if response and response.status_code == 200:
             return response.json().get("urls", [])
-        self.helper.connector_logger.error(
-            f"Failed to retrieve blocked domains: {response.status_code if response else 'No code'} - {response.text if response else 'No response'}"
-        )
+        msg = f"Failed to retrieve blocked domains: {code} - {text}"
+        self.helper.connector_logger.error(msg)
         return []
 
     def get_current_configured_name(self):
@@ -202,25 +197,21 @@ class ZscalerConnector:
         if domain:
             classification = self.get_domain_classification_in_zscaler(domain)
             if classification:
-                self.helper.connector_logger.info(
-                    f"Classification for {domain}: {classification}"
-                )
+                msg = f"Classification found for {domain}: {classification}"
+                self.helper.connector_logger.info(msg)
 
             blocked_domains = self.get_zscaler_blocked_domains()
 
             if domain in blocked_domains:
-                self.helper.connector_logger.info(
-                    f"The domain {domain} is already blocked."
-                )
+                msg = f"The domain {domain} is already in the Blacklist."
+                self.helper.connector_logger.info(msg)
             else:
-                self.helper.connector_logger.info(
-                    f"Sending domain {domain} to Zscaler..."
-                )
+                msg = f"Sending domain {domain} to Zscaler..."
+                self.helper.connector_logger.info(msg)
                 self.send_to_zscaler(domain, event_type)
         else:
-            self.helper.connector_logger.error(
-                f"Invalid domain pattern: {data['pattern']}"
-            )
+            msg = f"Invalid domain pattern: {data['pattern']}"
+            self.helper.connector_logger.error(msg)
 
     def send_to_zscaler(self, domain, event_type):
         """Send creation or deletion events to Zscaler."""
@@ -237,7 +228,8 @@ class ZscalerConnector:
         elif event_type == "delete":
             base_url = f"https://zsapi.zscalertwo.net/api/v1/urlCategories/{self.zscaler_blacklist_name}?action=REMOVE_FROM_LIST"
         else:
-            self.helper.connector_logger.error("Unsupported event type.")
+            msg = f"Unsupported event type."
+            self.helper.connector_logger.error(msg)
             return
 
         payload = {
@@ -250,14 +242,12 @@ class ZscalerConnector:
         )
 
         if response and response.status_code == 200:
-            self.helper.connector_logger.info(
-                f"Successfully sent {event_type} for {domain}."
-            )
+            msg = f"Successfully sent {event_type} for {domain}."
+            self.helper.connector_logger.info(msg)
             self.activate_zscaler_changes()
         else:
-            self.helper.connector_logger.error(
-                f"Failed to send {event_type} event: {response.text if response else 'No response'}"
-            )
+            msg = f"Failed to send {event_type} event: {response.text if response else 'No response'}"
+            self.helper.connector_logger.error(msg)
 
     def activate_zscaler_changes(self):
         """Activate configuration changes in Zscaler."""
@@ -273,17 +263,17 @@ class ZscalerConnector:
         )
 
         if response and response.status_code == 200:
-            self.helper.connector_logger.info("Zscaler configuration activated.")
+            msg = f"Zscaler configuration activated."
+            self.helper.connector_logger.info(msg)
         else:
-            self.helper.connector_logger.error(
-                f"Failed to activate Zscaler config: {response.text if response else 'No response'}"
-            )
+            msg = f"Failed to activate Zscaler config: {response.text if response else 'No response'}"
+            self.helper.connector_logger.error(msg)
 
     def _process_message(self, msg):
         """Process messages from the OpenCTI stream."""
         data = json.loads(msg.data)["data"]
 
-        # Only process indicators with pattern_type 'sti
+        # Only process indicators with pattern_type 'stix'
         if data.get("type") == "indicator" and data.get("pattern_type") == "stix":
             structured_data = {"pattern": data.get("pattern")}
             if msg.event == "create":
@@ -291,11 +281,12 @@ class ZscalerConnector:
             elif msg.event == "delete":
                 self.check_and_send_to_zscaler(structured_data, "delete")
         else:
-            self.helper.connector_logger.info("Ignoring non-STIX indicator.")
+            msg = f"Ignoring non-STIX indicator."
+            self.helper.connector_logger.info(msg)
 
     def start(self):
         """Start listening for OpenCTI events."""
-        self.helper.connector_logger.info(
-            "Starting connector and listening for OpenCTI event..."
-        )
+
+        msg = f"Starting connector and listening for OpenCTI event..."
+        self.helper.connector_logger.info(msg)
         self.helper.listen_stream(self._process_message)
