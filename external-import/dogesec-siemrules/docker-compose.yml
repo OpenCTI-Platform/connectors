@@ -6,7 +6,7 @@ services:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGME
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=Siemrules
+      - CONNECTOR_NAME="SIEM Rules"
       - CONNECTOR_SCOPE=siemrules
       - CONNECTOR_CONFIDENCE_LEVEL=70
       - CONNECTOR_LOG_LEVEL=error

@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'CHANGEME'
   type: 'EXTERNAL_IMPORT'
-  name: 'Siemrules'
+  name: 'SIEM Rules'
   scope: 'siemrules'
   confidence_level: 70
   update_existing_data: false
