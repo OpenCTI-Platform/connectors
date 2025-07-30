@@ -1,8 +1,8 @@
 """Connector to enrich IOCs with Recorded Future data"""
 
 from pycti import OpenCTIConnectorHelper
+from rf_client import RFClient, RFClientError
 from .config_loader import ConnectorConfig
-from .rf_client import RFClient, RFClientError
 from .rf_to_stix2 import ConversionError, EnrichedIndicator, EnrichedVulnerability
 
 from rflib import APP_VERSION
@@ -101,7 +101,10 @@ class RFEnrichmentConnector:
             },
         )
 
-        data = self.rf_client.get_vulnerability_enrichment(vulnerability_name)
+        data = self.rf_client.get_vulnerability_enrichment(
+            name=vulnerability_name,
+            optional_fields=self.config.recorded_future.vulnerability_enrichment_optional_fields,
+        )
 
         vulnerability = EnrichedVulnerability(
             name=vulnerability_name,
@@ -109,12 +112,12 @@ class RFEnrichmentConnector:
             opencti_helper=self.helper,
         )
         vulnerability.from_json(
-            commonNames=data["commonNames"],
-            cvss=data["cvss"],
-            cvssv3=data["cvssv3"],
-            cvssv4=data["cvssv4"],
-            intelCard=data["intelCard"],
-            lifecycleStage=data["lifecycleStage"],
+            commonNames=data.commonNames,
+            cvss=data.cvss,
+            cvssv3=data.cvssv3,
+            cvssv4=data.cvssv4,
+            intelCard=data.intelCard,
+            lifecycleStage=data.lifecycleStage,
         )
 
         return vulnerability
