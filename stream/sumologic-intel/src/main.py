@@ -1,7 +1,6 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-
 from sumologic_intel_connector import SumologicIntelConnector
 from sumologic_intel_connector.config_loader import ConfigConnector
 
