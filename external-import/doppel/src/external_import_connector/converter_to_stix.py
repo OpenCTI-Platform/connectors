@@ -2,18 +2,29 @@ import json
 
 from pycti import Identity as PyCTIIdentity
 from pycti import Indicator as PyCTIIndicator
-from stix2 import Identity, Indicator
+from pycti import MarkingDefinition
+from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, Identity, Indicator
+from stix2 import MarkingDefinition as Stix2MarkingDefinition
 
 from .utils import parse_iso_datetime
 
 
 class ConverterToStix:
+    """
+    Provides methods for converting various types of input data into STIX 2.1 objects.
+    """
+
     def __init__(self, helper, config):
         self.helper = helper
         self.config = config
         self.author = self._create_identity()
+        self.tlp_marking = self._create_tlp_marking(level=self.config.tlp_level.lower())
 
-    def _create_identity(self):
+    def _create_identity(self) -> Identity:
+        """
+        Create Identity
+        :return: Identity Stix2 object
+        """
         return Identity(
             id=PyCTIIdentity.generate_id(name="Doppel", identity_class="organization"),
             name="Doppel",
@@ -22,19 +33,47 @@ class ConverterToStix:
             allow_custom=True,
         )
 
-    def convert_alerts_to_stix(self, alerts):
+    @staticmethod
+    def _create_tlp_marking(level: str) -> Stix2MarkingDefinition:
+        """
+        Create TLP marking
+        :return: Stix2 MarkingDefinition object
+        """
+        mapping = {
+            "white": TLP_WHITE,
+            "clear": TLP_WHITE,
+            "green": TLP_GREEN,
+            "amber": TLP_AMBER,
+            "amber+strict": Stix2MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                custom_properties={
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:AMBER+STRICT",
+                },
+            ),
+            "red": TLP_RED,
+        }
+        return mapping[level]
+
+    def convert_alerts_to_stix(self, alerts: list):
+        """
+        Convert list of alerts to stix2 Indicator objects
+        :return: stix2 bundle json
+        """
         stix_objects = [self.author]
         created_by_ref = self.author.id
 
         for alert in alerts:
+            alert_id = alert.get("id", "unknown")
+            self.helper.connector_logger.info(
+                "Processing alert", {"alert_id": alert_id}
+            )
+
             entity = alert.get("entity", "Unknown")
             pattern = f"[entity:value ='{entity}']"
-            alert_id = alert.get("id", "unknown")
-
-            # Corrected: Removed invalid keyword argument `pattern_type`
             indicator_id = PyCTIIndicator.generate_id(pattern=pattern)
-
-            self.helper.log_info(f"Processing alert ID: {alert_id}")
 
             created_at = parse_iso_datetime(
                 alert.get("created_at", ""), "created_at", alert_id, self.helper
@@ -88,6 +127,7 @@ class ConverterToStix:
                 created=created_at,
                 modified=modified,
                 created_by_ref=created_by_ref,
+                object_marking_refs=[self.tlp_marking["id"]],
                 external_references=[
                     {
                         "source_name": self.author.name,
