@@ -7,7 +7,7 @@
   "use_cases" : ["Commercial Threat Intel"],
   "max_confidence_level" : 55,
 
-  "manager_supported": true,
+  "manager_supported": false,
   "container_version": "6.7.0",
   "container_image": "opencti/connector-recorded-future",
   "container_type": "EXTERNAL_IMPORT",

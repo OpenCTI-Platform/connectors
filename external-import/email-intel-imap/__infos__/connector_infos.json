@@ -7,7 +7,7 @@
   "use_cases" : ["Email", "Threat Intelligence"],
   "max_confidence_level" : 50,
 
-  "manager_supported": true,
+  "manager_supported": false,
   "container_version": "6.7.0",
   "container_image": "opencti/connector-email-intel-imap",
   "container_type": "EXTERNAL_IMPORT",
