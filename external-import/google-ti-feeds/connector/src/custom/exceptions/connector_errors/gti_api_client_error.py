@@ -22,10 +22,20 @@ class GTIApiClientError(GTIBaseError):
             details: Additional details about the error
 
         """
-        error_msg = message
         if client_component:
-            error_msg = f"API client error in {client_component}: {message}"
+            error_msg = "API client error in component: {message}"
+        else:
+            error_msg = message
 
         super().__init__(error_msg)
         self.client_component = client_component
         self.details = details or {}
+
+        # Add structured data for logging
+        if client_component:
+            self.details.update(
+                {
+                    "client_component": client_component,
+                    "original_message": message,
+                }
+            )

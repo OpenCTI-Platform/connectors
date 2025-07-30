@@ -33,12 +33,14 @@ class ConvertToSTIXThreatActor(BaseConvertToSTIX):
                 stix_entities = [stix_entities]
 
             self.logger.debug(
-                f"{LOG_PREFIX} Converted threat actor to {len(stix_entities)} STIX entities"
+                "Converted threat actor to STIX entities",
+                {"prefix": LOG_PREFIX, "entity_count": len(stix_entities)},
             )
             return stix_entities
 
         except Exception as e:
             self.logger.error(
-                f"{LOG_PREFIX} Failed to convert threat actor to STIX: {str(e)}"
+                "Failed to convert threat actor to STIX",
+                {"prefix": LOG_PREFIX, "error": str(e)},
             )
             return []

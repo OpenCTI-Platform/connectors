@@ -79,7 +79,9 @@ class WorkManager:
 
         """
         self._current_work_id = work_id
-        self._logger.info(f"{LOG_PREFIX} Current work ID set to {work_id}")
+        self._logger.info(
+            "Current work ID set", {"prefix": LOG_PREFIX, "work_id": work_id}
+        )
 
     def update_state(
         self, state_key: str, date_str: str = "", error_flag: bool = False
@@ -106,7 +108,10 @@ class WorkManager:
             current_state[state_key] = now
             self._helper.set_state(state=current_state)
             self._helper.force_ping()
-            self._logger.info(f"{LOG_PREFIX} Updated state for {state_key} to {now}")
+            self._logger.info(
+                "Updated state",
+                {"prefix": LOG_PREFIX, "state_key": state_key, "date": now},
+            )
 
     def initiate_work(self, name: str, work_counter: Optional[int] = None) -> str:
         """Initiate a new work for the Connector.
@@ -125,7 +130,10 @@ class WorkManager:
             self._helper.connect_id, name
         )
         self._current_work_id = work_id
-        self._logger.info(f"{LOG_PREFIX} Initiated work {work_id} for {name}")
+        self._logger.info(
+            "Initiated work",
+            {"prefix": LOG_PREFIX, "work_id": work_id, "work_name": name},
+        )
         return work_id
 
     def work_to_process(
@@ -153,7 +161,10 @@ class WorkManager:
         )
         if self._current_work_id == work_id:
             self._current_work_id = None
-        self._logger.info(f"{LOG_PREFIX} Work {work_id} marked to be processed")
+        self._logger.info(
+            "Work marked to be processed",
+            {"prefix": LOG_PREFIX, "work_id": work_id},
+        )
 
     def process_all_remaining_works(
         self, error_flag: bool = False, error_message: Optional[str] = None
@@ -176,7 +187,9 @@ class WorkManager:
                     error_message=error_message,
                 )
         self._current_work_id = None
-        self._logger.info(f"{LOG_PREFIX} All remaining works marked to be process.")
+        self._logger.info(
+            "All remaining works marked to be process.", {"prefix": LOG_PREFIX}
+        )
 
     def send_bundle(self, work_id: str, bundle: Any) -> None:
         """Send a bundle to OpenCTI.
@@ -193,6 +206,6 @@ class WorkManager:
             cleanup_inconsistent_bundle=True,
         )
         self._logger.info(
-            f"{LOG_PREFIX} STIX objects sent to OpenCTI queue.",
-            {"bundles_sent": str(len(bundles_sent))},
+            "STIX objects sent to OpenCTI queue",
+            {"prefix": LOG_PREFIX, "bundles_sent": str(len(bundles_sent))},
         )

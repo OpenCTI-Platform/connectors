@@ -55,7 +55,13 @@ class BaseOrchestrator:
         rel_summary = ", ".join([f"{k}: {len(v)}" for k, v in subentities_ids.items()])
         if len(rel_summary) > 0:
             self.logger.info(
-                f"[BaseOrchestrator] ({current_idx + 1}/{total}) Found relationships {{{rel_summary}}}"
+                "Found relationships",
+                {
+                    "prefix": "[BaseOrchestrator]",
+                    "current": current_idx + 1,
+                    "total": total,
+                    "relationships": rel_summary,
+                },
             )
 
     def _log_entities_summary(
@@ -79,7 +85,14 @@ class BaseOrchestrator:
                 )
         entities_summary = ", ".join([f"{k}: {v}" for k, v in entity_types.items()])
         self.logger.info(
-            f"[BaseOrchestrator] ({current_idx + 1}/{total}) Converted to {len(all_entities)} STIX entities {{{entities_summary}}}"
+            "Converted to STIX entities",
+            {
+                "prefix": "[BaseOrchestrator]",
+                "current": current_idx + 1,
+                "total": total,
+                "entities_count": len(all_entities),
+                "entities_summary": entities_summary,
+            },
         )
 
     def _check_batch_size_and_flush(
@@ -96,7 +109,8 @@ class BaseOrchestrator:
             batch_processor.get_current_batch_size() + len(all_entities)
         ) >= batch_processor.config.batch_size:
             self.logger.info(
-                "[BaseOrchestrator] Need to Flush before adding next items to preserve consistency of the bundle"
+                "Need to Flush before adding next items to preserve consistency of the bundle",
+                {"prefix": LOG_PREFIX},
             )
             batch_processor.flush()
 
