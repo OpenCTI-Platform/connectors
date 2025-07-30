@@ -10,13 +10,30 @@
 """
 
 import urllib.parse
+from typing import Literal
 
 import requests
+from pydantic import ValidationError
 
-from .rf_utils import extract_and_combine_links
+from .models import VulnerabilityEnrichment
+from .utils import extract_and_combine_links
 
 API_BASE = "https://api.recordedfuture.com"
 API_BASE_V2 = urllib.parse.urljoin(API_BASE, "/v2")
+
+VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS = [
+    "analystNotes",
+    "aiInsights",
+    "risk",
+]
+
+VulnerabilityEnrichmentOptionalFields = list[
+    Literal[
+        "analystNotes",
+        "aiInsights",
+        "risk",
+    ]
+]
 
 
 class RFClientError(Exception):
@@ -91,7 +108,11 @@ class RFClient:
                 "Unexpected error while fetching RecordedFuture API"
             ) from err
 
-    def get_vulnerability_enrichment(self, name: str) -> dict:
+    def get_vulnerability_enrichment(
+        self,
+        name: str,
+        optional_fields: VulnerabilityEnrichmentOptionalFields = None,
+    ) -> VulnerabilityEnrichment:
         enrichment_fields = [
             "commonNames",
             "cvss",
@@ -100,6 +121,15 @@ class RFClient:
             "intelCard",
             "lifecycleStage",
         ]
+        if optional_fields:
+            if any(
+                field not in VULNERABILITY_ENRICHMENT_OPTIONAL_FIELDS
+                for field in optional_fields
+            ):
+                raise RFClientError(
+                    "Invalid optional field(s) provided for vulnerability enrichment"
+                )
+            enrichment_fields.extend(optional_fields)
 
         url = f"{API_BASE_V2}/vulnerability/{urllib.parse.quote(name, safe='')}"
         query_params = {"fields": ",".join(enrichment_fields)}
@@ -116,7 +146,9 @@ class RFClient:
             if not data:
                 raise RFClientError("RecordedFuture API response does not include data")
 
-            return data
+            return VulnerabilityEnrichment(**data)
+        except ValidationError as err:
+            raise RFClientError("Invalid vulnerability enrichment data") from err
         except requests.exceptions.HTTPError as err:
             raise RFClientError("An HTTP error occurred") from err
         except requests.exceptions.RequestException as err:
