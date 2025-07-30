@@ -9,8 +9,7 @@ from .utils import is_stix_indicator
 
 
 class SumologicIntelConnector:
-    """
-    """
+    """ """
 
     def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
         """
@@ -33,7 +32,6 @@ class SumologicIntelConnector:
         ):
             raise ValueError("Missing stream ID, please check your configurations.")
 
-
     def validate_json(self, msg) -> dict | JSONDecodeError:
         """
         Validate the JSON data from the stream
@@ -55,16 +53,16 @@ class SumologicIntelConnector:
         :param data: Streamed data (representing either an observable or an indicator)
         """
         if is_stix_indicator(data):
-            self.sumologic_client.upload_stix_indicator(source_name=self.source_name, stix_indicator=data)
+            self.sumologic_client.upload_stix_indicator(
+                source_name=self.source_name, stix_indicator=data
+            )
         else:
             if data.get("type") == "indicator":
                 msg = f"Indicator of pattern type: {data.get('pattern_type')} not supported"
             else:
                 msg = f"Entity type: {data.get('type')} not supported"
 
-            self.helper.connector_logger.warning(
-                message=msg
-            )
+            self.helper.connector_logger.warning(message=msg)
 
     def _handle_delete_event(self, data):
         """
@@ -72,16 +70,16 @@ class SumologicIntelConnector:
         :param data: Streamed data (representing either an observable or an indicator)
         """
         if is_stix_indicator(data):
-            self.sumologic_client.delete_stix_indicator(source_name=self.source_name, stix_indicator=data)
+            self.sumologic_client.delete_stix_indicator(
+                source_name=self.source_name, stix_indicator=data
+            )
         else:
             if data.get("type") == "indicator":
                 msg = f"Indicator of pattern type: {data.get('pattern_type')} not supported"
             else:
                 msg = f"Entity type: {data.get('type')} not supported"
 
-            self.helper.connector_logger.warning(
-                message=msg
-            )
+            self.helper.connector_logger.warning(message=msg)
 
     def process_message(self, msg) -> None:
         """
@@ -102,7 +100,6 @@ class SumologicIntelConnector:
                 self._handle_delete_event(data)
         except Exception:
             raise ValueError("Cannot process the message")
-
 
     def run(self) -> None:
         """

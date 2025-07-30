@@ -1,5 +1,6 @@
 #  Utilities: helper functions, classes, or modules that provide common, reusable functionality across a codebase
 
+
 def is_stix_indicator(data: dict) -> bool:
     """
     Check if data represents a STIX Indicator.

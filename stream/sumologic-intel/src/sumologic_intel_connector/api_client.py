@@ -29,19 +29,18 @@ class SumologicClient:
         # STIX extensions not supported by sumologic
         del stix_indicator["extensions"]
 
-        body = {
-            "source": source_name,
-            "indicators": [stix_indicator]
-        }
+        body = {"source": source_name, "indicators": [stix_indicator]}
 
         self.helper.connector_logger.debug(
             f"Uploading STIX Indicator name: {stix_indicator.get('name')}"
         )
 
-        url = self.config.api_base_url+"/api/v1/threatIntel/datastore/indicators/stix"
+        url = self.config.api_base_url + "/api/v1/threatIntel/datastore/indicators/stix"
 
         try:
-            response = self._send_request(method="POST", url=url, body=body, retry_status_forcelist=[429])
+            response = self._send_request(
+                method="POST", url=url, body=body, retry_status_forcelist=[429]
+            )
             if response.status_code == 200:
                 return response.ok
             else:
@@ -85,19 +84,18 @@ class SumologicClient:
         :return:
         """
 
-        body = {
-            "source": source_name,
-            "indicatorIds": [stix_indicator.get('id')]
-        }
+        body = {"source": source_name, "indicatorIds": [stix_indicator.get("id")]}
 
         self.helper.connector_logger.debug(
             f"Deleting STIX Indicator name: {stix_indicator.get('name')}"
         )
 
-        url = self.config.api_base_url+"/api/v1/threatIntel/datastore/indicators"
+        url = self.config.api_base_url + "/api/v1/threatIntel/datastore/indicators"
 
         try:
-            response = self._send_request(method="DELETE", url=url, body=body, retry_status_forcelist=[429])
+            response = self._send_request(
+                method="DELETE", url=url, body=body, retry_status_forcelist=[429]
+            )
 
             if response.status_code == 204:
                 return response.ok
@@ -133,6 +131,7 @@ class SumologicClient:
             return None
 
         return response
+
     @staticmethod
     def backoff_delay(backoff_factor: float, attempts: int) -> float:
         """
@@ -151,13 +150,13 @@ class SumologicClient:
         return delay
 
     def _send_request(
-            self,
-            method: str,
-            url: str,
-            body: dict,
-            backoff_factor: int = 30,
-            total: int = 4,
-            retry_status_forcelist: Optional[List[int]] = None,
+        self,
+        method: str,
+        url: str,
+        body: dict,
+        backoff_factor: int = 30,
+        total: int = 4,
+        retry_status_forcelist: Optional[List[int]] = None,
     ) -> Optional[Response]:
         """
         Send a POST request with retry logic and exponential backoff for specified HTTP statuses.
@@ -184,9 +183,7 @@ class SumologicClient:
         # Implement retry logic
         for attempt in range(total):
 
-            response = self.session.request(
-                method=method, url=url, json=body
-            )
+            response = self.session.request(method=method, url=url, json=body)
             if response.status_code in retry_status_forcelist:
                 # Implement backoff
                 delay = self.backoff_delay(backoff_factor, attempt)

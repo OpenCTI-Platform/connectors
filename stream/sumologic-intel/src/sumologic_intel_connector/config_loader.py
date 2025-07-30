@@ -42,19 +42,19 @@ class ConfigConnector:
             "CONNECTOR_SUMOLOGIC_INTEL_API_BASE_URL",
             ["sumologic_intel", "api_base_url"],
             self.load,
-            required=True
+            required=True,
         )
 
         self.access_id = get_config_variable(
             "CONNECTOR_SUMOLOGIC_INTEL_ACCESS_ID",
             ["sumologic_intel", "access_id"],
             self.load,
-            required=True
+            required=True,
         )
 
         self.access_key = get_config_variable(
             "CONNECTOR_SUMOLOGIC_INTEL_ACCESS_KEY",
             ["sumologic_intel", "access_key"],
             self.load,
-            required=True
+            required=True,
         )
