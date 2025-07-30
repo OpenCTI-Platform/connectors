@@ -134,7 +134,7 @@ class SiemrulesConnector:
             self.update_pack_state(pack_id, name=pack_name)
             self.helper.log_info(f"processing {pack_repr}")
             self.process_updated_rules(dpack)
-            self.update_pack_state(last_run=datetime.now(UTC).isoformat())
+            self.update_pack_state(pack_id, last_run=datetime.now(UTC).isoformat())
         self.update_state(last_run_completed=datetime.now(UTC).isoformat())
 
     def update_pack_state(self, pack_id, **kwargs):
