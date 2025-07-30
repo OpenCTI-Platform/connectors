@@ -1,14 +1,14 @@
 import time
-from typing import Optional, List
+from typing import List, Optional
 
 import requests
+from pycti import OpenCTIConnectorHelper
+from requests.adapters import HTTPAdapter
+from requests.exceptions import ConnectionError, HTTPError, Timeout
 from requests.models import Response
+from urllib3.util.retry import Retry
 
 from .config_loader import ConfigConnector
-from urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
-from pycti import OpenCTIConnectorHelper
-from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 
 class SumologicClient:

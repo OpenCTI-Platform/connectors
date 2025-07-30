@@ -3,8 +3,8 @@ from json import JSONDecodeError
 
 from pycti import OpenCTIConnectorHelper
 
-from .config_loader import ConfigConnector
 from .api_client import SumologicClient
+from .config_loader import ConfigConnector
 from .utils import is_stix_indicator
 
 
