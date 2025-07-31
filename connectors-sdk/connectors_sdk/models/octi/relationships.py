@@ -3,9 +3,12 @@
 from abc import ABC
 from typing import Any, Literal, Optional, Unpack
 
-from pycti import (  # type: ignore[import-untyped]  # pycti does not provide stubs
-    StixCoreRelationship as pycti_StixCoreRelationship,
-)
+from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
+from connectors_sdk.models.octi.activities.observations import Indicator, Observable
+from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
+from connectors_sdk.models.octi.knowledge.locations import Country
+from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
+from pycti import StixCoreRelationship as pycti_StixCoreRelationship
 from pydantic import (
     AwareDatetime,
     ConfigDict,
@@ -14,15 +17,7 @@ from pydantic import (
     create_model,
     model_validator,
 )
-from stix2 import (  # type: ignore[import-untyped]  # stix2 does not provide stubs
-    Relationship as stix2_Relationship,
-)
-
-from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
-from connectors_sdk.models.octi.activities.observations import Indicator, Observable
-from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
-from connectors_sdk.models.octi.knowledge.locations import Country
-from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
+from stix2 import Relationship as stix2_Relationship
 
 
 class _RelationshipBuilder:

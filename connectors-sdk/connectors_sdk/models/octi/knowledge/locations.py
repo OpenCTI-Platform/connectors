@@ -2,16 +2,11 @@
 
 from typing import Optional
 
-from pycti import (  # type: ignore[import-untyped]  # pycti does not provide stubs
-    Location as pycti_Location,
-)
-from pydantic import Field
-from stix2 import (  # type: ignore[import-untyped]  # stix2 does not provide stubs
-    Location as stix2_Location,
-)
-
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import LocationType
+from pycti import Location as pycti_Location
+from pydantic import Field
+from stix2 import Location as stix2_Location
 
 
 class OCTIStixLocation(stix2_Location):  # type: ignore[misc]  # stix2 does not provide stubs

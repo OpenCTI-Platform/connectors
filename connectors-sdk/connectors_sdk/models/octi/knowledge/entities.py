@@ -2,16 +2,11 @@
 
 from typing import Optional
 
-from pycti import (  # type: ignore[import-untyped]  # pycti does not provide stubs
-    Identity as pycti_Identity,
-)
-from pydantic import Field
-from stix2 import (  # type: ignore[import-untyped]  # stix2 does not provide stubs
-    Identity as stix2_Identity,
-)
-
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import IndustrySector, Reliability
+from pycti import Identity as pycti_Identity
+from pydantic import Field
+from stix2 import Identity as stix2_Identity
 
 
 @MODEL_REGISTRY.register

@@ -4,8 +4,8 @@ import ipaddress
 from abc import ABC, abstractmethod
 from typing import Any, Literal, Optional
 
-import pycti  # type: ignore[import-untyped]  # pycti does not provide stubs
-import stix2  # type: ignore[import-untyped] # stix2 does not provide stubs
+import pycti
+import stix2
 from connectors_sdk.models.octi._common import (
     MODEL_REGISTRY,
     AssociatedFile,

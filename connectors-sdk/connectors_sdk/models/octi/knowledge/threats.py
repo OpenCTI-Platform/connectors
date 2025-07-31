@@ -2,16 +2,11 @@
 
 from typing import Optional
 
-from pycti import (  # type: ignore[import-untyped]  # pycti does not provide stubs
-    IntrusionSet as pycti_IntrusionSet,
-)
-from pydantic import AwareDatetime, Field
-from stix2 import (  # type: ignore[import-untyped] # stix2 does not provide stubs
-    IntrusionSet as stix2_IntrusionSet,
-)
-
 from connectors_sdk.models.octi._common import MODEL_REGISTRY, BaseIdentifiedEntity
 from connectors_sdk.models.octi.enums import AttackMotivation, AttackResourceLevel
+from pycti import IntrusionSet as pycti_IntrusionSet
+from pydantic import AwareDatetime, Field
+from stix2 import IntrusionSet as stix2_IntrusionSet
 
 
 @MODEL_REGISTRY.register

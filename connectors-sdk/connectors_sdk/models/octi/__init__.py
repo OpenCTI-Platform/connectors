@@ -1,6 +1,5 @@
 """Offer OpenCTI models."""
 
-import stix2  # type: ignore[import-untyped]  # stix2 does not provide stubs
 from connectors_sdk.models.octi._common import (
     MODEL_REGISTRY,
     AssociatedFile,
@@ -28,6 +27,7 @@ from connectors_sdk.models.octi.relationships import (
     targets,
 )
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
+from stix2 import Identity as stix2_Identity
 
 __all__ = [
     # Models flat list
@@ -72,7 +72,7 @@ class OrganizationAuthor(Author, Organization):
 
     """
 
-    def to_stix2_object(self) -> stix2.v21.Identity:
+    def to_stix2_object(self) -> stix2_Identity:
         """Make stix object."""
         return Organization.to_stix2_object(self)
 
