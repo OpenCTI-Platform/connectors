@@ -53,6 +53,19 @@ class AttackResourceLevel(PermissiveEnum):
     GOVERNMENT = "government"
 
 
+class CvssSeverity(StrEnum):
+    """CVSS Severity Enum.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/domain/vulnerability.js#L13
+    """
+
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+    UNKNOWN = "Unknown"
+
+
 class IndustrySector(PermissiveEnum):
     """Industry Sector Open Vocabulary.
 
