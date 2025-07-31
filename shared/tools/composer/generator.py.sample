@@ -16,6 +16,8 @@ from pydantic.json_schema import GenerateJsonSchema
 from src.__init_config__ import ConfigLoader
 
 __OPENCTI_CURRENT_VERSION__ = "6.7.0"
+__CONNECTOR_INFOS_FILENAME__ = "connector_infos.json"
+__CONNECTOR_SCHEMA_FILENAME__ = "connector_schema.json"
 
 
 class ConnectorContractGenerator:
@@ -26,8 +28,6 @@ class ConnectorContractGenerator:
     """
 
     def __init__(self):
-        self.connector_infos_filename = "connector_infos.json"
-        self.connector_schema_filename = "connector_schema.json"
         self.connector_model_configs = ConfigLoader  # Should be a Pydantic model or config loader
 
     def load_connector_infos(self) -> dict:
@@ -35,7 +35,7 @@ class ConnectorContractGenerator:
         Utility function to load a json file to a dict
         :return: dict containing connector information
         """
-        filepath = os.path.join(os.path.dirname(__file__), "__infos__", self.connector_infos_filename)
+        filepath = os.path.join(os.path.dirname(__file__), "__infos__", __CONNECTOR_INFOS_FILENAME__)
         with open(filepath, encoding="utf-8") as json_file:
             return json.load(json_file)
 
@@ -174,7 +174,7 @@ class ConnectorContractGenerator:
         connector_json_schema = self.generate_connector_schema()
         format_connector_schema = json.dumps(connector_json_schema, indent=2)
 
-        filepath = os.path.join(os.path.dirname(__file__), "__infos__", self.connector_schema_filename)
+        filepath = os.path.join(os.path.dirname(__file__), "__infos__", __CONNECTOR_SCHEMA_FILENAME__)
         with open(filepath, "w") as file:
             file.write(format_connector_schema)
         print(f"✅- Connector contract written to {filepath}")
