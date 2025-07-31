@@ -24,6 +24,7 @@ FEATURE_NAMES = [
     "Sector",
     "Targets",
     "TLPMarking",
+    "Vulnerability",
     "based_on",
     "located_at",
     "related_to",
