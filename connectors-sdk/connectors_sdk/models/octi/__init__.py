@@ -12,6 +12,7 @@ from connectors_sdk.models.octi.activities.observations import (
     Indicator,
     IPV4Address,
 )
+from connectors_sdk.models.octi.knowledge.arsenal import Vulnerability
 from connectors_sdk.models.octi.knowledge.entities import Organization, Sector
 from connectors_sdk.models.octi.knowledge.locations import City, Country
 from connectors_sdk.models.octi.knowledge.threats import IntrusionSet
@@ -27,7 +28,7 @@ from connectors_sdk.models.octi.relationships import (
     targets,
 )
 from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
-from stix2 import Identity as stix2_Identity
+from stix2.v21 import Identity as stix2_Identity
 
 __all__ = [
     # Models flat list
@@ -48,6 +49,7 @@ __all__ = [
     "Sector",
     "Targets",
     "TLPMarking",
+    "Vulnerability",
     # Relationship builders
     "based_on",
     "located_at",
