@@ -30,7 +30,8 @@ class ConnectorContractGenerator:
     def __init__(self):
         self.connector_model_configs = ConfigLoader  # Should be a Pydantic model or config loader
 
-    def load_connector_infos(self) -> dict:
+    @staticmethod
+    def load_connector_infos() -> dict:
         """
         Utility function to load a json file to a dict
         :return: dict containing connector information
@@ -47,18 +48,15 @@ class ConnectorContractGenerator:
         :return: OrderedDict with $schema and connector info.
         """
         connector_infos = self.load_connector_infos()
+        schema_attribute = {"$schema": schema}
 
-        key_order = []
-        sorted_dict = OrderedDict()
-        key_order.append("$schema")
-        sorted_dict["$schema"] = schema
-
-        for key, value in connector_infos.items():
-            if key == "container_version":
-                value = __OPENCTI_CURRENT_VERSION__
-            key_order.append(key)
-            sorted_dict[key] = value
-
+        sorted_dict = schema_attribute | OrderedDict({
+            key: (
+                __OPENCTI_CURRENT_VERSION__ if key == "container_version"
+                else value
+            )
+            for key, value in connector_infos.items()
+        })
         return sorted_dict
 
     @staticmethod
@@ -73,44 +71,49 @@ class ConnectorContractGenerator:
 
         custom_dict = {
             "default": {},
-            "required": [],
+            "required": [
+                item for value in base_configurations.values()
+                if value.get("required")
+                for item in value["required"]
+            ],
             "properties": {},
         }
 
         for key, value in base_configurations.items():
-            extract_required_from_base = value.get("required", "")
-            custom_dict["required"].extend(extract_required_from_base)
-
             extract_properties_from_base = value["properties"]
 
             for config_name, config_value in extract_properties_from_base.items():
-                keys_to_exclude = ["title"]
-                for key_to_exclude in keys_to_exclude:
-                    if key_to_exclude in config_value:
-                        del config_value[key_to_exclude]
+                # Remove "title"
+                if config_value.get("title"):
+                    del config_value["title"]
 
+                # Add default configurations
                 if "default" in config_value:
                     if config_value["default"] is not None:
                         custom_dict["properties"].update({config_name: config_value})
                         custom_dict["default"].update({config_name: config_value["default"]})
                     del config_value["default"]
+
+                # Extract data from anyOf attributes generated for each property
                 if "anyOf" in config_value:
                     for config_value_type in config_value["anyOf"]:
+                        props = value["properties"][config_name]  # Cache for cleaner code
+
                         if "format" in config_value_type:
-                            value["properties"][config_name]["format"] = config_value_type["format"]
-                        if "items" in config_value_type:
-                            if config_value_type["items"].get("type"):
-                                value["properties"][config_name]["type"] = config_value_type["items"]["type"]
-                            if config_value_type["items"].get("enum"):
-                                value["properties"][config_name]["enum"] = config_value_type["items"]["enum"]
-                        if "string" in config_value_type["type"]:
-                            value["properties"][config_name]["type"] = config_value_type["type"]
-                        if "integer" in config_value_type["type"]:
-                            value["properties"][config_name]["type"] = config_value_type["type"]
-                        if "boolean" in config_value_type["type"]:
-                            value["properties"][config_name]["type"] = config_value_type["type"]
+                            props["format"] = config_value_type["format"]
+
                         if "enum" in config_value_type:
-                            value["properties"][config_name]["enum"] = config_value_type["enum"]
+                            props["enum"] = config_value_type["enum"]
+
+                        items = config_value_type.get("items")
+                        if items:
+                            if "type" in items:
+                                props["type"] = items["type"]
+                            if "enum" in items:
+                                props["enum"] = items["enum"]
+
+                        if config_value_type["type"] in ["string", "integer", "boolean"]:
+                            value["properties"][config_name]["type"] = config_value_type["type"]
 
                     # Remove to be compliant with current usage of connector manager
                     del config_value["anyOf"]
