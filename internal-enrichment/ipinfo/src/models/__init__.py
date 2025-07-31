@@ -1,7 +1,3 @@
-from src.models.common import ConfigBaseSettings
-from src.models.config_loader import ConfigLoader
+from src.models.configs.config_loader import ConfigLoader
 
-__all__ = [
-    "ConfigLoader",
-    "ConfigBaseSettings",
-]
+__all__ = ["ConfigLoader"]

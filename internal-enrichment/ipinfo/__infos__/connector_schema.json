@@ -22,11 +22,11 @@
   "subscription_link": "https://ipinfo.io/support",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/ipinfo",
   "type": "object",
-  "additionalProperties": true,
   "default": {
-    "CONNECTOR_TYPE": "INTERNAL_ENRICHMENT",
-    "CONNECTOR_NAME": "IPInfo",
+    "CONNECTOR_ID": "ipinfo--43cf861c-72a7-4e45-864a-b19e32e6a8bc",
+    "CONNECTOR_NAME": "IP Info",
     "CONNECTOR_SCOPE": "IPv4-Addr,IPv6-Addr",
+    "CONNECTOR_TYPE": "INTERNAL_ENRICHMENT",
     "CONNECTOR_LOG_LEVEL": "error",
     "CONNECTOR_AUTO": true,
     "IPINFO_MAX_TLP": "amber",
@@ -35,7 +35,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_ID",
     "IPINFO_TOKEN"
   ],
   "properties": {
@@ -50,35 +49,35 @@
       "type": "string",
       "description": "The token of the user who represents the connector in the OpenCTI platform."
     },
+    "CONNECTOR_ID": {
+      "type": "string",
+      "description": "A unique UUIDv4 identifier for this connector instance."
+    },
+    "CONNECTOR_NAME": {
+      "type": "string",
+      "description": "Name of the connector."
+    },
+    "CONNECTOR_SCOPE": {
+      "type": "string",
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only)."
+    },
     "CONNECTOR_TYPE": {
       "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
       "type": "string"
     },
-    "CONNECTOR_NAME": {
-      "description": "Name of the connector.",
-      "type": "string"
-    },
-    "CONNECTOR_SCOPE": {
-      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
-      "type": "string"
-    },
     "CONNECTOR_LOG_LEVEL": {
       "description": "Determines the verbosity of the logs.",
-      "type": "string",
       "enum": [
         "debug",
         "info",
         "warn",
         "error"
-      ]
+      ],
+      "type": "string"
     },
     "CONNECTOR_AUTO": {
       "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
       "type": "boolean"
-    },
-    "CONNECTOR_ID": {
-      "type": "string",
-      "description": "A unique UUIDv4 identifier for this connector instance."
     },
     "CONNECTOR_LISTEN_PROTOCOL": {
       "description": "Protocol used for listening.",
@@ -110,14 +109,14 @@
     },
     "IPINFO_MAX_TLP": {
       "description": "Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
-      "type": "string",
       "enum": [
         "clear",
         "green",
         "amber",
         "amber+strict",
         "red"
-      ]
+      ],
+      "type": "string"
     },
     "IPINFO_USE_ASN_NAME": {
       "description": "If enabled, uses the ASN name instead of the ASN number in enrichment results.",

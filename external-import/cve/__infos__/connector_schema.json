@@ -22,8 +22,10 @@
   "subscription_link": "https://nvd.nist.gov/contact",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cve",
   "type": "object",
-  "additionalProperties": true,
   "default": {
+    "CONNECTOR_ID": "cve--e0c380ad-6665-4f2e-8558-5d2610e5abcf",
+    "CONNECTOR_NAME": "Common Vulnerabilities and Exposures",
+    "CONNECTOR_SCOPE": "cve",
     "CONNECTOR_TYPE": "EXTERNAL_IMPORT",
     "CONNECTOR_LOG_LEVEL": "error",
     "CONNECTOR_DURATION_PERIOD": "PT24H",
@@ -51,6 +53,18 @@
       "type": "string",
       "description": "The token of the user who represents the connector in the OpenCTI platform."
     },
+    "CONNECTOR_ID": {
+      "type": "string",
+      "description": "A unique UUIDv4 identifier for this connector instance."
+    },
+    "CONNECTOR_NAME": {
+      "type": "string",
+      "description": "Name of the connector."
+    },
+    "CONNECTOR_SCOPE": {
+      "type": "string",
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only)."
+    },
     "CONNECTOR_TYPE": {
       "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
       "type": "string"
@@ -68,18 +82,6 @@
     "CONNECTOR_DURATION_PERIOD": {
       "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
       "format": "duration",
-      "type": "string"
-    },
-    "CONNECTOR_ID": {
-      "description": "A unique UUIDv4 identifier for this connector instance.",
-      "type": "string"
-    },
-    "CONNECTOR_NAME": {
-      "description": "Name of the connector.",
-      "type": "string"
-    },
-    "CONNECTOR_SCOPE": {
-      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
       "type": "string"
     },
     "CONNECTOR_QUEUE_THRESHOLD": {
