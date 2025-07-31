@@ -4,9 +4,9 @@
 | ----------------- |------------| ------- |
 | Filigran Verified | 2025-03-18 |    -    |
 
-This connector allows Enterprise Edition Organizations to feed information from document to OpenCTI, with more capabilities than regular Import Document connector.
+This connector allows Enterprise Edition Organizations to feed information from documents to OpenCTI, with more capabilities than regular Import Document connector.
 
-This connector add more extraction capabilities : it is possible to extract `Malware`, `Country` and `Intrusion-Set` entities.  
+This connector adds more extraction capabilities : it is possible to extract `Malware`, `Country` and `Intrusion-Set` entities.  
 
 ## General overview
 
@@ -65,7 +65,7 @@ This way you will get a log entry for every parsing step to verify each step.
 
 ### Supported formats
 
-*Please open a feature requests in case the current implemention doesn't fit your needs*
+*Please open a feature requests in case the current implementation doesn't fit your needs*
 
 **File input format**
 
@@ -116,6 +116,8 @@ This way you will get a log entry for every parsing step to verify each step.
 *Reference: <https://docs.oasis-open.org/cti/stix/v2.1/cs01/stix-v2.1-cs01.html>*
 
 **Extractable Relations/Stix Relations Objects**
+
+Note: When the connector is triggered with a context entity that is not a container (e.g., not a Report, Case, Grouping, etc.), the connector will automatically add `related-to` relationships from all extracted observables to that entity.
 
 <details>
     <summary>Uses</summary>
