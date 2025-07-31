@@ -11,7 +11,7 @@ from pydantic_settings import (
 from src.models.configs import (
     ConfigBaseSettings,
     _ConfigLoaderConnector,
-    _ConfigLoaderCVE,
+    _ConfigLoaderIPInfo,
     _ConfigLoaderOCTI,
 )
 
@@ -21,17 +21,17 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
 
     id: str = Field(
         alias="CONNECTOR_ID",
-        default="cve--e0c380ad-6665-4f2e-8558-5d2610e5abcf",
+        default="ipinfo--43cf861c-72a7-4e45-864a-b19e32e6a8bc",
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(
         alias="CONNECTOR_NAME",
-        default="Common Vulnerabilities and Exposures",
+        default="IP Info",
         description="Name of the connector.",
     )
     scope: str = Field(
         alias="CONNECTOR_SCOPE",
-        default="cve",
+        default="IPv4-Addr,IPv6-Addr",
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
 
@@ -47,9 +47,9 @@ class ConfigLoader(ConfigBaseSettings):
         default_factory=ConfigLoaderConnector,
         description="Connector configurations.",
     )
-    cve: _ConfigLoaderCVE = Field(
-        default_factory=_ConfigLoaderCVE,
-        description="CVE configurations.",
+    ipinfo: _ConfigLoaderIPInfo = Field(
+        default_factory=_ConfigLoaderIPInfo,
+        description="IPInfo configurations.",
     )
 
     @classmethod
